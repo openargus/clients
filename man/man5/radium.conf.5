@@ -1,0 +1,339 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RADIUM.CONF 1 "07 November 2000" "radium.conf 3.0.8"
+.SH NAME
+\fBradium.conf\fP \- \fBradium\fP resource file.
+.SH SYNOPSIS
+.B radium.conf
+.SH DESCRIPTION
+
+Radium will open this radium.conf if its installed as /etc/radium.conf.
+It will also search for this file as radium.conf in directories
+specified in $RADIUMPATH, or $RADIUMHOME, $RADIUMHOME/lib,
+or $HOME, $HOME/lib, and parse it to set common configuration
+options.  All values in this file can be overriden by command
+line options, or other files of this format that can be read in
+using the -F option.
+
+.SH Variable Syntax
+
+Variable assignments must be of the form:
+.nf
+  VARIABLE=
+.fi
+with no white space between the VARIABLE and the '=' sign.
+Quotes are optional for string arguments, but if you want
+to embed comments, then quotes are required.
+
+.SH RADIUM_DAEMON
+
+Radium is capable of running as a daemon, doing all the right things
+that daemons do.  When this configuration is used for the system
+daemon process, say for /etc/radium.conf, this variable should be
+set to "yes".
+
+The default value is to not run as a daemon.
+
+This example is to support the ./support/Startup/radium script
+which requires that this variable be set to "yes".
+
+Commandline equivalent  -d
+
+\fBRADIUM_DAEMON=\fPno
+
+.SH RADIUM_MONITOR_ID
+
+Radium Monitor Data is uniquely identifiable based on the source
+identifier that is included in each output record.  This is to
+allow you to work with Argus Data from multiple monitors at the
+same time.  The ID is 32 bits long, and supports a number of
+formats as legitimate values. Radium supports unsigned ints, IPv4
+addresses and 4 bytes strings, as values.
+
+The formats are discerned from the values provided.  Double-quoted
+values are treated as strings, and are truncated to 4 characters.
+Non-quoted values are tested for whether they are hostnames, and if
+not, then they are tested wheter they are numbers.
+
+The configuration allows for you to use host names, however, do
+have some understanding how `hostname` will be resolved by the
+nameserver before commiting to this strategy completely.
+
+For convenience, argus supports the notion of "`hostname`" for
+assigning the probe's id.  This is to support management of
+large deployments, so you can have one argus.conf file that works
+for a lot of probes.
+
+For security, argus does not rely on system programs, like hostname.1.
+It implements the logic of hostname itself, so don't try to run
+arbitrary programs using this method, because it won't work.
+
+Commandline equivalent   -e
+
+\fBRADIUM_MONITOR_ID\fP=`hostname`    // IPv4 address returned
+\fBRADIUM_MONITOR_ID\fP=10.2.45.3     // IPv4 address
+\fBRADIUM_MONITOR_ID\fP=2435          // Number
+\fBRADIUM_MONITOR_ID\fP="en0"         // String
+
+
+.SH RADIUM_ARGUS_SERVER
+
+Radium can attach to any number of remote argus servers, and
+collect argus data in real time.  The syntax for this variable
+is a hostname or a dot notation IP address, followed by an
+optional port value, separated by a ':'.  If the port is not
+specified, the default value of 561 is used.
+
+Commandline equivalent   -S <host[:port]>
+
+\fBRADIUM_ARGUS_SERVER\fP=localhost:561
+
+.SH RADIUM_CISCONETFLOW_PORT
+
+Radium can read Cicso Netflow records directly from Cisco
+routers.  Specifying this value will alert Radium to open
+a UDP based socket listening for data from this name or address.
+
+Commandline equivalent   -C
+
+\fBRADIUM_CISCONETFLOW_PORT\fP=9996
+
+.SH RADIUM_USER_AUTH, RADIUM_AUTH_PASS
+
+When argus is compiled with SASL support, ra* clients may be
+required to authenticate to the argus server before the argus
+will accept the connection.  This variable will allow one to
+set the user and authorization id's, if needed.  Although
+not recommended you can provide a password through the
+RADIUM_AUTH_PASS variable.  The format for this variable is:
+
+Commandline equivalent   -U
+
+\fBRADIUM_USER_AUTH\fP=user_id/authorization_id
+\fBRADIUM_AUTH_PASS\fP=the_password
+
+.SH RADIUM_ACCESS_PORT
+
+Radium monitors can provide a real-time remote access port
+for collecting Radium data.  This is a TCP based port service and
+the default port number is tcp/561, the "experimental monitor"
+service.  This feature is disabled by default, and can be forced
+off by setting it to zero (0).
+
+When you do want to enable this service, 561 is a good choice,
+as all ra* clients are configured to try this port by default.
+
+Commandline equivalent  -P
+
+\fBRADIUM_ACCESS_PORT=\fP561
+
+.SH RADIUM_BIND_IP
+
+When remote access is enabled (see above), you can specify that
+Radium should bind only to a specific IP address.  This is useful,
+for example, in restricting access to the local host, or binding
+to a private interface while capturing from another. The default
+is to bind to any IP address.
+
+Commandline equivalent  -B
+
+\fBRADIUM_BIND_IP=\fP"127.0.0.1"
+
+.SH RADIUM_OUTPUT_FILE
+
+Radium can write its output to one or a number of files,
+default limit is 5 concurrent files, each with their own
+independant filters.
+
+The format is:
+.nf
+     RADIUM_OUTPUT_FILE=/full/path/file/name
+     RADIUM_OUTPUT_FILE=/full/path/file/name "filter"
+.fi
+
+Most sites will have radium write to a file, for reliablity 
+and performance.  The example file name is used here as
+supporting programs, such as ./support/Archive/radiumarchive
+are configured to use this file.
+
+Commandline equivalent  -w
+
+\fBRADIUM_OUTPUT_FILE=\fP/var/log/radium/radium.out
+
+.SH RADIUM_SET_PID
+
+When Radium is configured to run as a daemon, with the -d
+option, Radium can store its pid in a file, to aid in
+managing the running daemon.  However, creating a system
+pid file requires priviledges that may not be appropriate
+for all cases.
+
+When configured to generate a pid file, if Radium cannot
+create the pid file, it will fail to run.  This variable
+is available to override the default, in case this gets
+in your way.
+
+The default value is to generate a pid.
+
+No Commandline equivalent   
+
+\fBRADIUM_SET_PID\fP=yes
+
+ 
+.SH RADIUM_ADJUST_TIME
+
+Radium can correct for time synchronization problems that
+may exist between data sources.  If configured to do so,
+radium will adjust all the timestamps in records by the
+calculated drift between radium and its many data sources.
+Records whose timevalues have been 'corrected' are marked
+so that subsequent readers can differentiate between 
+true primitive time and modified time.
+
+Commandline equivalent   -T
+ 
+\fBRADIUM_ADJUST_TIME=\fPno
+
+.SH RADIUM_MAR_STATUS_INTERVAL
+
+Radium will periodically report on a its own health, providing
+interface status, total packet and bytes counts, packet drop
+rates, and flow oriented statistics.
+
+These records can be used as "keep alives" for periods when
+there is no network traffic to be monitored.
+
+The default value is 300 seconds, but a value of 60 seconds is
+very common.
+
+Commandline equivalent   -M
+
+\fBRADIUM_MAR_STATUS_INTERVAL\fP=60
+
+.SH RADIUM_DEBUG_LEVEL
+
+If compiled to support this option, Radium is capable of
+generating a lot of debug information.
+
+The default value is zero (0).
+
+Commandline equivalent  -D
+
+\fBRADIUM_DEBUG_LEVEL=\fP0
+
+.SH RADIUM_FILTER_OPTIMIZER
+
+Radium uses the packet filter capabilities of libpcap.  If
+there is a need to not use the libpcap filter optimizer,
+you can turn it off here.  The default is to leave it on.
+
+Commandline equivalent  -O
+
+\fBRADIUM_FILTER_OPTIMIZER=\fPyes
+
+.SH RADIUM_FILTER
+
+You can provide a filter expression here, if you like.
+It should be limited to 2K in length.  The default is to
+not filter.
+
+No Commandline equivalent
+
+\fBRADIUM_FILTER=\fP""
+
+
+.SH RADIUM_CHROOT_DIR
+
+Radium supports chroot(2) in order to control the file system that
+radium exists in and can access.  Generally used when radium is running
+with privleges, this limits the negative impacts that radium could
+inflict on its host machine.  
+
+This option will cause the output file names to be relative to this
+directory, and so consider this when trying to find your output files.
+
+Commandline equivalent   -C
+
+\fBRADIUM_CHROOT_DIR=\fP""
+ 
+ 
+.SH RADIUM_SETUSER_ID
+
+Radium can be directed to change its user id using the setuid() system
+call.  This is can used when radium is started as root, in order to
+access privleged resources, but then after the resources are opened,
+this directive will cause radium to change its user id value to
+a 'lesser' capable account.  Recommended when radium is running as a
+daemon. 
+
+Commandline equivalent   -u 
+
+\fBRADIUM_SETUSER_ID=\fP"user"
+ 
+.SH RADIUM_SETGROUP_ID
+ 
+Radium can be directed to change its group id using the setgid() system
+call.  This is can used when radium is started as root, in order to
+access privleged resources, but then after the resources are opened,
+this directive can be used to change argu's group id value to
+a 'lesser' capable account.  Recommended when radium is running as a
+daemon.
+
+Commandline equivalent   -g
+
+\fBRADIUM_SETGROUP_ID=\fP"group"
+
+
+.SH RADIUM_CLASSIFIER_FILE
+
+Radium can be used to label records as they are distributed.
+This can be used to classify flow records, or simply to mark
+them for post processing purposes.
+
+When provided with a ralabel.conf formatted file, radium will
+label all matching records.
+
+Commandline equivalent   none
+
+\fBRADIUM_CLASSIFIER_FILE\fP=/usr/local/argus/ralabel.conf
+
+
+.SH RADIUM_CORRELATE
+
+Radium has a correlation function, where flow data from multiple
+source's can be compared and 'correlateda.
+
+This function is enabled with a single radium configuration
+keyword RADIUM_CORRELATE="yes".  With this variable set, radium().
+will buffer incoming data to generate delay, and will correlate
+data from multiple sources with an event window of about 3 seconds.
+Data that is matchable, which means that it has the same flow identifiers,
+or the same hints, will treated as if they were "observed" by multiple
+probes, and merged.
+
+ Commandline equivalent   none
+
+\fBRADIUM_CORRELATE=\fP"no"
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient  All rights reserved.
+
+.RE
+.SH SEE ALSO
+.BR radium (8)
+

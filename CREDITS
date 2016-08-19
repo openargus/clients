@@ -1,0 +1,187 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ */
+
+CREDITS
+
+To my colleagues who contributed so much to the theory of Argus and its
+applications in networking and computer science:
+   Dr. Tony Przygienda
+   Rob Coltun
+   Lou Berger
+
+Of course much thanks to the past and current support of Chas
+DiFatta and Mark Poepping, from the Carnegie Mellon Univ (CMU) days.
+
+Thanks to the late Dr. Hank Dardy formerly of the U.S. Naval Research
+Laboratory for his amazing support of flow monitoring and the great people
+at NRL that provided support, opinions, suggestions, criticisms and/or
+attitude about flows:
+   Basil Decina
+   Larry O'Ferrall 
+   Chas Williams 
+   Eric Kinzie 
+   Heidi Hornstein
+   Dharmesh Shah
+   Dave Burton
+   Cho Chang
+
+Much of the work on Argus has been done by the members of the Argus
+mailing list that contributed so much over all the years.
+
+   Peter Van Epp
+   Russell Fulton
+
+   0100 (four)
+   Aashish Sharma
+   Abdun Mahmood
+   Adrian Bool
+   Alfredo Laguna Vazquez
+   Alexander Bochmann
+   Andreas Ostling
+   Andrew Kompanek
+   Andrew Pollock
+   Andrew Thompson
+   Avi Freedman
+   Bamm Visscher
+   Bjoern Weiland
+   Borjz Marcos
+   Brian Zeigler
+   Carlw
+   Cedric Vieau
+   Charles King
+   Chris Keladis
+   Christoph Badura
+   Christopher Jones
+   Clauss Strauch
+   Conor McGrath
+   CS Lee
+   Darren Spruell
+   Dave Plonka
+   Dez Blanchfield
+   Dietmar Goldbeck
+   Dustin
+   Earl
+   E.J. Gamarro
+   Eric Graham
+   Eric Pancer
+   Ernie Johanson
+   Esteban G
+   George Nychis
+   Guilsson
+   Harry Hoffman
+   Henrik Strom
+   Jake Babbin
+   Jason Baekey
+   Jason Ish
+   JD Durick
+   Jean Michel Rizzardi
+   Jean-Marc Pouchoulon
+   Jim O'Gorman
+   Johannes Russek
+   John Lauro
+   John Nagro
+   John Rodenbiker
+   John Wade
+   Jonathan Towne
+   Joost Bijl
+   Kevin Kadow
+   Karl Tatgenhorst
+   Kevin Branch
+   Kieran Rhysling
+   Kjell Tore Fossbakk
+   Kulwant Sohi
+   Laird Anglesey
+   Lei Wei
+   Mark Bartlett
+   Mark Borrie
+   Martin Bauer
+   Martin Holste
+   Matthew Derenski
+   Matthew Weiner
+   mel
+   Michael Arcamone
+   Michael Hornung
+   Michael Meisel
+   Michael Sandee
+   Michael Sanderson
+   Mike Iglesias
+   Mike Patterson
+   Mike Slifcak
+   miodek (Michael)
+   MN (mike)
+   morfoh (Chris)
+   Morten Christensen
+   Murali Raju
+   Neil Long
+   Nick Diel
+   Nick Giordano
+   Nyuk Loong Kiw
+   Olaf Gellert
+   OlRoy
+   Pablo Rebollo-Sosa
+   Patrick Forsberg
+   Patrick Green
+   Pete Troxell
+   Peter Hill
+   Peter Moody
+   Phillip Deneault
+   Phillip Letschert
+   Poncenby Smythe
+   Raffael Marty
+   Ralf Spenneberg
+   Ramon Kagan
+   Real Melancon
+   Riccardo Veraldi
+   Richard Bejtlich
+   Richard Johnson
+   Rick Denton
+   Robert Leyba
+   Robin Gruyters
+   Russ McRee
+   Scott Dexter
+   Scott McIntyre
+   ScottO
+   Shaheen Bakhtiar
+   Silas Porterfield
+   Stefan Esser
+   Stephane Peters
+   Steve McInerney
+   Stewart Gray
+   Susan Mcgill
+   Terry Burton
+   Tim Lavoie
+   Timo Schilling
+   Timo Suhl
+   Tim-Fang Yen
+   Todd Michael
+   Tom Briglia
+   Tony Stout
+   Tony Webster
+   Torbin Wictorin
+   Tu Nguyen
+   Urtho
+   Vaibhav Kaware
+   William Setzer
+   Wimmie
+   Wolfgang Barth
+   Yotam Rubin
+
+(I hope I didn't miss anyone):

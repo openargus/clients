@@ -1,0 +1,57 @@
+#
+#  Argus Client Software.  Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+#
+# Various configurable paths (remember to edit Makefile.in, not Makefile)
+#
+
+Mon Aug  4 09:04:17 EDT 2008
+Currently in performance trials with the latest incarnation.
+This program is being used as the foundation for most of the
+situational awareness backing stores.  The trial is establishing
+a series of database tables that are being updated continuously.
+
+   raisql -nnd -S apophis -M rmon -P ratop:etherHost -m srcid smac saddr \
+      -s stime dur srcid smac saddr pkts bytes -U root - ip
+
+   raisql -nnd -S apophis -P ratop:etherMatrix -m srcid macmatrix \
+      -s stime dur srcid smac dmac pkts bytes -U root
+
+
+These two databases provide most of the base information for understanding
+probes observation domain, what L2 identities are being observed, and
+the L3 addresses that are behind those L2 identities.
+
+Mon Jan 12 16:29:36 EST 2004
+ 
+raisql is turning into a very interesting program.
+when using -S 'host', it will load up a mysql table with
+data using the RADIUM_SQL_FIELDS to specify the database key.
+ 
+   raisql -f raisql.conf -S host -P projectName -n - tcp or udp
+ 
+Currently the -n and the 'tcp or udp' filter are important
+as icmp traffic does not generate a good SQL key, and it
+tries to insert icmp entries when it collides with an existing
+one, creating a "DUPLICATE ..." error in mysql().
+ 
+The ratop style cache is maintained in the database, and
+the update rate, is controlled by the update timers, ala
+ratop().
+ 

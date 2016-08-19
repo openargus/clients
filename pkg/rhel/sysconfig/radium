@@ -1,0 +1,14 @@
+#
+# Local configuration sample options for radium daemons 
+#
+# This file is sourced by /etc/init.d/radium
+#
+# Sample values
+# Default option - just be a daemon and read config from /etc/radium.conf
+  DAEMON_ARGS="-d"
+#
+# Monitoring on the default argus port with argus configured  using 562
+# DAEMON_ARGS="-d -P 561 -S localhost:562"
+#
+#  Where radium  is installed (override for testing)
+  ARGUSDIR=/usr/sbin

@@ -1,0 +1,126 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RASTRIP 1 "07 November 2000" "rastrip 3.0.8"
+.SH NAME
+\fBrastrip\fP \- strip \fBargus(8)\fP data file.
+.SH SYNOPSIS
+.B rastrip
+[\fB\-M\fP [replace] [+|-]\fIdsr\fP [-M ...]]
+[\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "rastrip command"  ""  "\fLrastrip\fP \(em argus data"
+.LP
+.B Rastrip
+reads
+.BR argus
+data from an \fIargus-data\fP source, strips the records based on
+the criteria specified on the command line, and outputs a valid
+\fIargus-stream\fP. This is useful to reduce the size of argus data files.
+Rastrip always removes argus management transactions, thus having
+the same effect as a 'not man' filter expression. 
+.SH OPTIONS
+Rastrip, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression.
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBrastrip(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4 4
+.B \-M [+|-]dsr
+Strip specified dsr (data set record).
+
+Supported dsrs are:
+.PP
+.RS
+.TP
+.B flow
+flow key data (proto, saddr, sport, dir, daddr, dport)
+.TP
+.B time
+time stamp fields (stime, ltime).
+.TP
+.B metric
+basic ([s|d]bytes, [s|d]pkts, [s|d]rate, [s|d]load)
+.TP
+.B agr
+aggregation stats (trans, avgdur, mindur, maxdur, stdev).
+.TP
+.B net
+network objects (tcp, esp, rtp, icmp data).
+.TP
+.B vlan
+VLAN tag data 
+.TP
+.B mpls
+MPLS label data
+.TP
+.B jitter
+Jitter data ([s|d]jit, [s|d]intpkt)
+.TP
+.B ipattr
+IP attributes ([s|d]ipid, [s|d]tos, [s|d]dsb, [s|d]ttl)
+.TP
+.B suser
+src user captured data bytes (suser)
+.TP
+.B duser
+dst captured user data bytes (duser)
+.TP
+.B mac
+MAC addresses (smac, dmac)
+.TP
+.B icmp
+ICMP specific data (icmpmap, inode)
+.TP
+.B encaps
+Flow encapsulation type indications
+.PD
+.RE
+
+In the default mode, without the -M option, rastrip removes the following default set of dsrs: encaps, agr, vlan, mpls, mac, icmp, ipattr, jitter, suser, duser
+
+.TP 4 4
+.B \-M replace
+Replace the existing file with the newly striped file.
+
+.SH INVOCATION
+A sample invocation of \fBrastrip(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and strips the default dsr set but keeps MAC addresses and writes the result
+to \fBoutputfile\fP:
+
+\fBrastrip -M +mac -r inputfile -w outputfile\fP
+
+This call removes only captured user data and timings and writes the result to stdout:
+
+\fBrastrip -M -suser -M -duser -M -time -r inputfile\fP
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+.SH FILES
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS

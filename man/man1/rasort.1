@@ -1,0 +1,239 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RASORT 1 "07 November 2000" "rasort 3.0.8"
+.SH NAME
+\fBrasort\fP \- sort \fBargus(8)\fP data file.
+.SH SYNOPSIS
+.B rasort
+[[\fB\-M\fP \fIsortmode\fP] [\fB\-m\fP \fIsort fields\fP] ...]
+[\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "rasort command"  ""  "\fLrasort\fP \(em argus data"
+.LP
+.B Rasort
+reads
+.BR argus
+data from an \fIargus-data\fP source, sorts the records based on
+the criteria specified on the command line, and outputs a valid
+\fIargus-stream\fP.
+.SH OPTIONS
+Rasort, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression.
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBrasort(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4
+.B \-M replace
+Replace the existing file(s) with the sorted output(s).
+
+.TP 4
+.BI \-m "\| field [field ...]\^"
+Supported sort fields are:
+.PP
+.RS
+.TP 15
+.B stime
+record start time <default>
+.TP
+.B ltime
+record last time.
+.TP
+.B trans
+aggregation record count.
+.TP
+.B dur
+record total duration.
+.TP
+.B avgdur
+record average duration.
+.TP
+.B mindur
+record minimum duration.
+.TP
+.B maxdur
+record maximum duration.
+.TP
+.B smac
+source MAC addr.
+.TP
+.B dmac
+destination MAC addr.
+.TP
+.B soui
+oui portion of the source MAC addr.
+.TP
+.B doui
+oui portion of the destination MAC addr.
+.TP
+.B saddr[/cidr]
+source IP addr, with optional cidr specification for IPv4 addresses.
+.TP
+.B daddr[/cidr]
+destination IP addr, with optional cidr specification for IPv4 addresses.
+.TP
+.B proto
+transaction protocol.
+.TP
+.B sport
+source port number.
+.TP
+.B dport
+destination port number.
+.TP
+.B stos
+source TOS byte value.
+.TP
+.B dtos
+destination TOS byte value.
+.TP
+.B sttl
+src -> dst TTL value.
+.TP
+.B dttl
+dst -> src TTL value.
+.TP
+.B bytes
+total transaction bytes.
+.TP
+.B sbytes
+src -> dst transaction bytes.
+.TP
+.B dbytes
+dst -> src transaction bytes.
+.TP
+.B pkts
+total transaction packet count.
+.TP
+.B spkts
+src -> dst packet count.
+.TP
+.B dpkts
+dst -> src packet count.
+.TP
+.B load
+bits per second.
+.TP
+.B sload
+source bits per second.
+.TP
+.B dload
+destination bits per second.
+.TP
+.B loss
+pkts retransmitted or dropped.
+.TP
+.B sloss
+source pkts retransmitted or dropped.
+.TP
+.B dloss
+destination pkts retransmitted or dropped.
+.TP
+.B ploss
+percent pkts retransmitted or dropped.
+.TP 
+.B sploss
+percent source pkts retransmitted or dropped. 
+.TP
+.B dploss
+percent destination pkts retransmitted or dropped.
+.TP
+.B rate
+pkts per second.
+.TP
+.B srate
+source pkts per second.
+.TP
+.B drate
+destination pkts per second.
+.TP
+.B tranref
+argus transaction reference number.
+.TP
+.B seq
+argus sequence number.
+.TP
+.B smpls
+source MPLS identifier.
+.TP
+.B dmpls
+destination MPLS identifier.
+.TP
+.B svlan
+source VLAN identifier.
+.TP
+.B dvlan
+destination VLAN identifier.
+.TP
+.B srcid
+argus source identifier.
+.TP
+.B stcpb
+source TCP base sequence number.
+.TP
+.B dtcpb
+destination TCP base sequence number.
+.TP
+.B tcprtt
+TCP connection setup round-trip time.
+.TP
+.B smeansz
+source mean packet size
+.TP
+.B dmeansz
+destination mean packet size
+.TP
+.B sco
+source country code
+.TP
+.B dco
+destination country code
+.TP
+.B sas
+source autonomous system number
+.TP
+.B das
+destination autonomous system number
+
+.PD
+.RE
+
+.SH INVOCATION
+A sample invocation of \fBrasort(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and sorts the IP protocol based \fBargus(8)\fP data, first
+by the destination IP address, then by the service (destination) port number
+and then by the source IP address, and writes the results to stdout.
+For most services, this arranges \fBargus(8)\fP formatted data by server,
+service, and then by client.
+.TP 5
+\fBrasort\fP -r inputfile -m daddr dport saddr - ip
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH SEE ALSO
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+.SH FILES
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS

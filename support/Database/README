@@ -1,0 +1,53 @@
+/*
+ * Argus Software
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software and
+ * its documentation for any purpose and without fee is hereby granted, 
+ * provided that the above copyright notice appear in all copies and
+ * that both that copyright notice and this permission notice appear
+ * in supporting documentation, and that the name of QoSient not be
+ * used in advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.  
+ * 
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+ * RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+ * CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ */
+
+These scripts are intended to manage various aspects of using MySQL
+with Argus data.  While the list is short now, we hope that it will
+grow quickly.
+
+MySQL.Archive.sh - This program moves argus data from a standard MySQL
+    archive to a standard native file system archive, and indexes for
+    time. Standard implies that the database table and the native file
+    system repository have the datetime as a part of its name.
+
+    This program is intended to provide repository migration for formal
+    data rention policies.  The notion is that you'll have data in the
+    database for some period of time, and then you will want to move the
+    primitive data, so that its available, but not within the RDMBS.
+
+    The database repository should have been created using rasqlinsert(),
+    and have the 'record' attribute in its schema definition.  This is
+    the actual argus record that will be inserted into the native file
+    system archive.  rasql() will read the data from the data base,
+    and pipe its output to rasplit() which will populate the native
+    file system archive.
+
+    You will need to set these variables to your liking:
+       MYSQL_USER="the mysql account that has permissions on the table"
+       MYSQL_HOST="the host where mysql runs"
+       MYSQL_DATABASE="the mysql database name"
+       MYSQL_TABLE="the table name, the script will add the data string to the end"
+
+       ARCHIVE_FILESYSTEM="/Path/To/The/Argus/Archive"
+
+If you have any issues, send email to the list.

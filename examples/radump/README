@@ -1,0 +1,47 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ *
+ *  radump -  decode argus record captured user data
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+
+This directory contains source code for radump.1, an example program that
+processes the user data found in argus records, and decodes them using
+the style of tcpdump.
+
+The basic idea is that argus has parsed all the traditional transport
+headers, TCP, UDP, ICMP, etc ... and the payload data that argus can
+capture is a binary copy of the data in the packet found just after these
+transport headers.  Tcpdump, has printing routines for payloads, generally
+categorized by transport protocol type and port numbers.  Because this
+data is available in argus flow status records, the tcpdump " printers "
+can be used, with only minor modification.
+
+Because argus data usually does not capture the complete packet payload,
+the routines must ensure that they deal with truncation well.  Tcpdump
+generally does a great job at this.
+
+Radump.1 is an example, and as such, you should be able to add your own
+decoders, pretty quickly.  Use one of the ones provided in the example
+as a guide.
+
+See the manpage for radump.1 for details.

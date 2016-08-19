@@ -1,0 +1,156 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RASQLINSERT 1 "12 August 2009" "rasqlinsert 3.0.8"
+.SH NAME
+\fBrasqlinsert\fP \- write \fBargus(8)\fP data into mysql database tables.
+.SH SYNOPSIS
+.B rasqlinsert
+[\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+
+.SH DESCRIPTION
+.IX  "rasqlinsert command"  ""  "\fBrasqlinsert\fP \(em argus data"
+.LP
+\fBRasqlinsert\fP writes
+.BR argus
+data into a mysql database. 
+
+The principal function of \fBrasqlinsert\fP  is to insert and update flow data attributes,
+into a MySQL database table. Using the same syntax and strategies for all other 
+ra* programs, \fBrasqlinsert\fP creates databases and database tables, based on 
+the print specification on the either the command-line or the .rarc file.
+
+The concept is that where a ra* program would print fields to standard out in
+ascii, \fBrasqlinsert\fP will insert those fields into the database as attributes.
+The flow key, as defined by the "-m fields" option, provides the definition of
+any keys that would be used in the schema.  A "-m none" option, will remove
+the use of any DBMS keys for inserted data, and is the method to use when inserting
+streaming, unprocessed, primitive argus data into a database table.
+
+The schema is important for database utility and performance. You can use MySQL
+querys against the attributes that you insert into the tables, such searching and
+sorting on IP addresses, time, packet counts, etc....  While \fBrasqlinsert\fP
+does not limit you to the number of attributes (columns) per record you provide, the
+RDBMS performance will quide you as to how many fields are useful.  
+
+\fBRasqlinsert\fP by default, includes the actual binary argus 'record' in the
+schema, and inserts and updates the binary record when needed.  This enables
+a large number of fucnctions that extend beyond simple RDBMS schema's that
+are useful.  Adding the 'record' is expensive, and some will elect to not
+use this feature.  This can be controlled using the option '-s -record' as a
+print field option in the standard \fBra.1\fP command line.  When the 'record'
+attribute is present, \fBrasql.1\fP can read the records directly from the database,
+to provide additional processing on the database table contents.  
+
+When keys are used, the database will enforce that any insertions meet the
+relaitional requirements, i.e. that the keys be unique.  This requirement demands
+a sense of caching and key tracking, which \fBrasqlinsert\fP is specifically
+designed to provide.
+
+\fBRasqlinsert\fP by default, will append data to existing tables, without checking
+the schema for consistency.  If your schema has keys, and you attempt to append
+new records to an existing table, there is a high likelyhood for error, as
+\fBrasqlinsert\fP will attempt to insert a record that collides with an existing
+flow key.  Use the "-M cache" option to cause \fBrasqlinsert\fP to reference the
+table contents prior to aggregation and insertion.
+
+The binary data \fBrasqlinsert\fP inserts by default, is read using \fBrasql\fP.
+
+.LP
+.SH RASQLINSERT SPECIFIC OPTIONS
+\fBRasqlinsert\fP, like all ra based clients, supports a number of \fBra options\fP 
+including filtering of input argus records through a terminating filter expression. 
+\fBRasqlinsert(1)\fP specific options are:
+.TP 4 4
+.B \-M cache
+This causes \fBrasqlinsert\fP to use the database table as its persistent
+cache store. This mechanism is used to control memory use when dealing with large
+amounts of data and flow keys.
+.TP 4 4
+.B \-M drop
+This causes \fBrasqlinsert\fP to drop any pre-existing database table that
+has the same name as the target table name, on startup.
+
+.SH INVOCATION
+This invocation writes aggregated \fBargus(8)\fP data from the \fIfile\fP into
+a database table.  The standard 5-tuple fields, 'saddr daddr proto sport dport'
+are used as keys for each entry. \fBrasqlinsert\fP will aggregate all the data
+prior to inserting the data into the database:
+.nf
+ 
+   \fBrasqlinsert\fP -r file -w mysql://user@localhost/db/table
+
+.fi
+Because aggregation can require a lot of memory, \fBrasqlinsert\fP provides an
+option '-M cache' to have \fBrasqlinsert\fP use the database table as the persistent
+cache store for the aggregation.  With this example, the standard 5-tuple fields,
+'saddr daddr proto sport dport' are still used as keys for each entry, but
+\fBrasqlinsert\fP will aggregate data over short spans of time as it reads the data
+from the file, and then commit the data to the database.  If additional data arrives
+that matches that unique flow, \fBrasqlinsert\fP will fetch the entry from the
+database, aggregate, and then update the data entry in the database.
+.nf
+
+   \fBrasqlinsert\fP -M cache -r file -w mysql://user@localhost/db/table 
+ 
+.fi
+\fBrasqlinsert\fP can provide the same function for streaming data read directly from
+an argus data source.  This allows \fBrasqlinsert\fP to reassemble all status
+records for an individual flow, such that the resulting table has only a single entry
+for each communciation relationship seen.
+.nf
+  
+   \fBrasqlinsert\fP -M cache -S argus -w mysql://user@localhost/db/table
+  
+.fi
+This invocation writes \fBargus(8)\fP data from the \fIfile\fP into a database
+table, without aggregation, by specifying no relational key in the data.  
+.nf
+  
+   \fBrasqlinsert\fP -m none -r file -w mysql://user@localhost/db/table
+  
+.fi
+This invocation writes \fBargus(8)\fP data from the \fIstream\fP into a database
+table, without modification.
+.nf
+ 
+   \fBrasqlinsert\fP -m none -S argus -w mysql://user@localhost/db/table
+
+.fi
+This invocation writes \fBargus(8)\fP data from the \fIstream\fP into a daily
+database table, without modification. \fBrasqlinsert\fP will generate table names
+based on time and insert its data relative to the timestamps found in the flow
+records it processes.  In this specific example, "-M time 1d" specifies daily
+tables.
+.nf
+
+   \fBrasqlinsert\fP -m none -S argus -w mysql://user@localhost/db/table_%Y_%m_%d -M time 1d
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR rasql(1),
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

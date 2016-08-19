@@ -1,0 +1,33 @@
+ /*
+ * Argus Software
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.*
+ *  
+ *  racurses - curses / readline based terminal based GUI
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+racurses is currently the next generation ratop curses application.
+Supporting upto 6 threads to handle the processing, this is the
+framework for building multi-windowed argus data processing
+applications and analytics.
+
+Mon Jun 25 12:56:53 EDT 2012
+Current racurses() is a full function ratop with raevents integration
+The next steps are to integrate rasqlinsert -r functionality, so we
+can read from database tables, and of course the final step is rampc().

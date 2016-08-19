@@ -1,0 +1,1087 @@
+Sun Jun  5 15:34:56 EDT 2016
+Mods for racluster.conf strategy for using "none" to force no aggregation
+
+Wed Jun  1 14:45:00 EDT 2016
+Many, many, many, many changes to fix bugs and to support new features from argus and argus use.
+Consider this a major bug release from 3.0.8 clients but is basically backward compatible.
+Primary changes are in ratop.1, rabins.1, ralabel.1, ra.1 and radium.1.
+
+Tue Aug 26 09:10:03 EDT 2014
+Fixes for pkg'ing.
+Add check for agg in racluster.c
+
+Tue Aug 19 17:10:56 EDT 2014
+Fixes for srcid printing error with integer values.
+Fixes for rasqlinsert issues with autoid and -m none flag.
+New man pages added for ratop and racolor.conf
+
+Tue Jul 15 13:16:29 EDT 2014
+Change for CIDR masklen reporting with aggregation.
+Fixes for rtime factor processing.
+Add pkg support for debian and rhel/ubuntu
+
+
+Fri Jun 27 16:23:56 EDT 2014
+Changes for AS number printing and filtering.
+Added configuration and filter support for asplain, asdot and asdot+ formats.
+
+Tue Jun 17 00:52:10 EDT 2014
+Force all array indexes to be ints (filter issues on list).
+
+Thu Jun 12 18:02:44 EDT 2014
+Lots of work to get netflow v9 working.  issues with multi-flowset packets
+processing the full count of records (not updating ptr).
+ratop performance issues when idle.
+
+Mon Jun  9 20:12:31 EDT 2014
+Fixes for netflow v5 and v9 parsing. Fixes for ratop()
+performance when files read, and we're just browsing.
+Fixes for aggregation when the flow key is " none ".
+Lots of changes to deal with time issues.
+
+Wed Jun  4 14:14:28 EDT 2014
+Migrate netflow parsing code from argus to clients ...
+
+Tue May 27 12:35:23 EDT 2014
+Updates for ipv6 filtering and aggregation
+Updates for rasqlinsert() to flush records when we get a new table
+
+Thu May 22 12:43:58 EDT 2014
+Fixes to fix fix for racluster status and idle timers.
+Fix for default SQL engine when using -X option
+
+Thu May 15 17:07:53 EDT 2014
+Fixes for racluster with status and idle timers.
+Fixes for label tree insertion and processing.
+
+Tue May 13 01:03:54 EDT 2014
+Fixes for rapath as option processing
+Fixes for ralabel.conf parsing issues with errant free fault
+
+Fri May  2 10:52:48 EDT 2014
+Mods for floating point equivalence tests to be sensitive to precision definition
+
+Tue Apr 29 11:57:15 EDT 2014
+Fix for Pluribus specific record issues (mar little endian and reconnect).
+
+Mon Apr 14 10:28:37 EDT 2014
+Fixes for getting past sanity checks parsing records.
+Zeroing out the METRICS DSR when doesn't pass, and
+using the ARGUS_ERROR status value to get to the next record.
+Valgrind run with memory use corrections
+
+Tue Mar 18 20:33:34 EDT 2014
+Fixes for rasqlinsert flushing buffers.
+Fixes for ratop repeated search generating segfault
+Fixes for ratop cursor display
+Change configure to compile without pcre by default...Mac OS X bad pcre
+Modify queue sorting routines to provide arraylen for other operations
+Fix character attribute bleeding in ratop color support
+
+Tue Feb 18 08:44:12 EST 2014
+Lots of changes to get ready for release
+Fixed SIG_ABRT from ArgusProcessDirection()
+
+Wed Dec 18 23:19:51 EST 2013
+Added tcp option filtering.
+Fixes for rasqlinsert() duplicate record issues with cache mode.
+
+Mon Nov 25 12:03:21 EST 2013
+Fixes for radium initial mar record.  Big Endian issues.
+Added xz decompression support.
+Fixes for ratop on Linux, eating cpu in curses character reading loop
+
+Thu Oct 17 15:25:10 EDT 2013
+Reviewed mutex use for mysql() server access.
+
+Wed Oct 16 13:02:40 EDT 2013
+Added dup metric processing.
+
+Tue Oct  1 11:47:36 EDT 2013
+Fixes for netflow parsing of port indexes rather than mac addresses
+Fixes for GeoIP metro values...updated GeoIP support for version 1.5.1
+Fixes for changing print mode (all, port, proto, none) during client run
+
+Thu Sep 26 21:30:20 EDT 2013
+Lots of work to eliminate warnings on Linux's.
+Lots of memory checking to deal with stack corruption issue.
+
+Fri Sep  6 00:05:44 EDT 2013
+Rework most label routines:
+   ArgusLabelRecord()
+   ArgusMergeLabel()
+   ArgusAddToRecordLabel()
+
+Thu Sep  5 09:20:14 EDT 2013
+Mods for SQL processing of large records.
+Increased memory for label processing.
+Fixed complaints from cppcheck()...cool tool.
+
+Tue Aug 20 09:47:10 EDT 2013
+Updates for rapath()
+Mods for most clients to deal with standard modes "-M " option
+Mods for rapath() to improve options output.  Changed default
+output
+
+Thu Jul 11 15:40:28 EDT 2013
+Updates to rapolicy and radecode.
+
+Wed Jul  3 11:06:36 EDT 2013
+Fixes for aggregation with status and idle timers in racluster.conf.
+Lots of changes for rasqlinsert() to increase threads and get better
+SQL operations.
+
+Added radecode().
+
+Wed Jun 19 13:04:01 EDT 2013
+Restructured many of the record processing routines to structure
+a case statement for the record type.
+
+Tue May 14 07:33:34 EDT 2013
+Fixed floating point parsing in filter.
+Fix for flow correction when aggregation model is not default.
+
+Mon May  6 23:05:18 EDT 2013
+Added abr, and [s|d]tf
+Fixes for ratop, rabins, rasplit and rastream for time issues.
+
+Mon Mar 25 12:09:19 EDT 2013
+Lots of changes for the rapolicy.  Created a rapolicy.conf file,
+where rapolicy() configuration can preceed a modern CISCO ACL list.
+
+Tue Mar 12 09:22:52 EDT 2013
+Added IPv6 support for GeoIP
+
+Wed Mar  6 22:24:16 EST 2013
+A few more fixes. Sys_nerr fix when available.  ArgusNewAggregator failure issue.
+
+Tue Mar  5 13:22:25 EST 2013
+Many fixes for Solaris 5.10 port effort.  Seems that we drifted away a bit from Solaris.
+Fixes for a number of issues on the mailing list, including:
+   segfault with rasplit() when using $vars in output filename.
+   segfault with poor network address specification in filter
+   closing file descriptors when using the "-M ind" option
+
+Wed Feb 27 14:12:55 EST 2013
+Fixes for rasplit() seg fault when using $ directives in output file spec.
+Fixes for filter problem when passing numbers to hosts (uninitialized mask).
+Fix for bad loss distribution when splitting records
+Fix for memory leak using GeoIP library (asn).
+
+Tue Feb  5 11:35:41 EST 2013
+Fixes for radium() memory leak using labels.
+Fixes for country code labels, so we don't write into unallocated memory.
+
+Tue Jan  7 11:41:37 EST 2013
+Fixes for IPv6 netflowv9 support.
+
+Fri Dec 14 12:33:44 EST 2012
+Big time changes for direction, to support rarc specification
+of LOCAL placement in ratop().
+
+Mon Dec  3 10:03:39 EST 2012
+Huge fixes for netflow v9 parsing support.  Now working ....
+Fixes for pcre library detection and use.
+Addition of color ratop as the default ratop.
+
+Wed Oct 31 16:22:34 EDT 2012
+Modified acsite.m4 and configure.ac, as well as various includes and
+source files to accomodate automatic detection of pcre and use it.
+
+Wed Oct 24 10:44:35 EDT 2012
+Mods for ramysql code to deal with table creation correctly (TYPE vs ENGINE).
+rasqlinsert() is/was correct, need to propagate strategy to rasql and rasqltimeindex.
+
+Fri Oct 19 13:14:13 EDT 2012
+Fix documentation in ./include/argus_def.h to get Cause and Vers in right order.
+
+Mon Oct  8 15:18:06 EDT 2012
+Modification for relative time printing to work when there isn't
+any time DSRs in the record.
+
+Wed Sep 12 08:12:46 EDT 2012
+Bug fixes for TCP direction and aggregation
+
+Sun Sep  2 10:49:15 EDT 2012
+Addition of label directive in racluster.conf support.
+The label directive has been redefined, where it was the
+keyword to provide 'grep' label support, it now defines
+the label to be added to the record.  The keyword 'grep' is
+now used for the abiltiy to grep any existing flow records
+for a match.
+
+Fri Aug  3 12:50:24 EDT 2012
+Mods to finish Netflow V9 import implementation.
+
+Mon Jun 25 10:15:49 EDT 2012
+Mods for port format specification on the commandline (str, int, unsigned int)
+
+Wed Jun 13 19:07:08 EDT 2012
+Fixes for country code reversal using " -M rmon " in order to generate
+country code based reports.
+Fixes for RIR country code parsing (problem with non aligned CIDR address insertion).
+
+Mon Jun 11 10:13:01 EDT 2012
+Fixes for radium deadlock, and dealing with port scanners on listen port.
+Mods for allocating blocks in ArgusMergeData.
+
+Fri May 11 12:47:25 EDT 2012
+Add events to srcid filter
+Mods for objective-c client linking - move argus_int.h definitions into argus_util.c
+Mods to bring gargoyle and argus into sync with label processing.
+   - artificial limit to 4 values per attribute to handle argus-events
+
+Wed May  2 18:28:05 EDT 2012
+Fixes for memory leaks in Aggregators
+Modified label and user data buffer processing for buffer overflow issues.
+
+Wed Apr 18 09:04:30 EDT 2012
+Create argus-3.0.7.1 after branching code to  argus-3.0.6
+Fix raconvert so it can read from stdin and write to stdout.
+
+Fri Apr 10 16:16:18 EDT 2012
+Use stdout instead of stderr for usage printing
+Added mutex for printing out records.  some algorithms use parser->RaPrintIndex,
+and this was being trounced.
+
+Mon Apr  2 11:35:32 EDT 2012
+Fixes for racluster.  Now can parse output of ra -F rarc.print.all.conf
+
+Tue Mar 27 23:46:53 EDT 2012
+Many many fixes for time management
+Man page updates.
+Fixes for default behavior of most ra* programs.
+Fixes for ratop.1 to deal with specific :x characters.
+Fix for ra.1 to flush output file descriptors on each timeout.
+
+Mon Mar 12 23:47:51 EDT 2012
+Mods or -N oNum... so that it pertains to writing records to a file.
+Fixes for default printing (with no ~/.rarc file)
+radump.1 fix for printing correct address in arp responses.
+Fix for printing IPv6 addresses properly.
+Update for man pages.
+
+Thu Mar  8 00:38:41 EST 2012
+Fixes for date filtering using wildcards.
+Fix for time values with single timestamps in the record.
+Fix for rabins.1 to not autocorrect flows with modified key aggregation
+Add 'correct' and 'nocorrect' as modes to racluster.1 and rabins.1
+
+Sun Mar  4 13:19:17 EST 2012
+Fixed sorting and printing by load.
+Fixed gap value printing issues.
+Modified ^C behavior for racluster, rabins.  Quickly terminates.
+Fixed filter problems on radium and argus
+Added printing addresses as integers, unsigned or signed, hex, etc...
+Mods to improve ArgusFetch.... coverage.  smac and dmac.
+
+Mon Feb 13 14:10:57 EST 2012
+Fixed icmp code and type formats when using -n option.
+Added new metrics to histogram processing.
+Added ethernet vendor printing to rarc file.
+Added commandline mode for oui label printing.
+Added soui and doui for printing, sorting, aggregation.
+Added format specification to field printing options for IP Addresses.
+
+Wed Feb  1 15:39:40 EST 2012
+Addition of gap reporting.  Bytes unobserved in data stream.
+
+Fri Jan 27 10:00:58 EST 2012
+Fix for password obfuscation.  Couldn't pass the conditional.
+Added Obfuscate option to the rarc template
+Removed the separate obfuscation variable
+
+Sun Jan 22 16:29:42 EST 2012
+Mods to change default ascii printer for user data.
+Added 'obfuscate' as a printer, added "-M printer=<printer>"
+change .rarc support and manpages.
+
+Thu Dec 29 17:51:31 EST 2011
+Added output range filtering using the -N [io]<num> option.
+Mods to fix rasplit() timestamp problem, where resulting start time is zero,
+or very early.
+
+Sun Dec 18 16:52:45 EST 2011
+Fixes for ArgusAlignRecord (rasplit) for errant times.
+Fixed timerange specifications for year and year/month.
+
+Mon Dec  5 12:41:08 EST 2011
+Mods for Ubuntu configure isssues and compiler warnings
+Mods for ArgusAlignRecord and ArgusGenerateRecordStruct to deal with timestamp issues
+
+Thu Nov 17 12:36:30 EST 2011
+Fixes for rasplit to deal with event and management records correctly.  Was just dropping them.
+Fix for sorting event records.  Was generating dump
+Mods for racovert, improving the README file, and adding compressed file support.
+
+Fri Nov  4 14:06:57 EDT 2011
+Reorganization of distro based on clients and examples.
+
+Fri Oct 21 09:12:16 EDT 2011
+Add 'proto' automatically when sport or dport are used in "-m" option
+
+Fri Oct  7 15:10:45 EDT 2011
+Added tcpopt back to client distribution
+
+Mon Oct  3 11:25:36 EDT 2011
+Bug fix for command line parsing error with " -t date - " option.
+Minor change to usage output for ragraph.pl
+
+Fri Aug 12 13:01:09 EDT 2011
+Bug fixes for rasqlinsert(). Fixed insert/update designations.  Should be much faster.
+
+Wed Jul 27 20:50:45 EDT 2011
+Implemented '-M uni' option
+
+Fri Jul 15 10:13:40 EDT 2011
+Fixes for PID file create, ala fixes in argus.
+Fixes for IPv6 CIDR address parsing.  Note type and set masklen correctly.
+Fix for ether proto string printing when there is field overflow.
+
+Wed Jun 29 18:11:36 EDT 2011
+Update to racount() usage() output.
+Fixes to incorrect flow qual parsing for protocol type (sorting error)
+fixes to correct sort direction for ports (set to ascending order)
+
+Tue Jun 28 21:02:28 EDT 2011
+Added flow-tools file format reading.
+Fix for CIDR based mask aggregation.
+
+Thu Jun 23 13:35:43 EDT 2011
+Fix for error when ':' are in filename without leading "::"
+
+Mon Jun 20 16:24:47 EDT 2011
+Fixed label length issues.  Labels sometimes has trash at the end.
+Added support for 4byte string srcid's and fixes int srcid processing.
+Fixed rapolicy() bug and printing for rule matches ala manpage.
+
+Fri Jun  3 14:23:00 EDT 2011
+Fixed error in ARGUS_JITTER_DSR XDR processing code.
+Performance tuning - removed bzero's from ArgusGenerateRecordStruct and ArgusPrintRecord.
+
+Tue May 24 16:37:38 EDT 2011
+Fixes for ./configure on Mac OS X, with the default readline library.
+Fixes for pipe closure on additional OS's, needed to use feof().
+
+Fri May 13 15:38:40 EDT 2011
+Fixes for ratop not compiling when curses not available
+Fixes for field overflow. should have them all covered now
+
+Mon May  9 12:40:50 EDT 2011
+Fixes for poorly formatted time dsr from argus.
+Fixes typos in ra.1 for encaps and silence suppression description
+Fixed some display nits in ratop().
+Addressing filter inconsistencies.
+Working on improving ra() result codes (0 good/match, 1 good/no match, 2 not good).
+
+Fri Apr 29 12:14:59 EDT 2011
+Fixed closing when printing to stdout fails. (pipe closes)
+
+Reviewed state filter keyword support, and fixed a bunch of bugs there.
+'start' and 'init' are now equivalent, and we're testing the right place
+in the header, and we added ipstatus == 'con' support.
+Need to go through state output and find ways of matching using filters.
+
+Tue Apr 26 00:33:21 EDT 2011
+Added support for changing storage engine in rasqlinsert.
+Fixes for memory management in clients.
+
+Mon Apr 18 13:27:59 EDT 2011
+Put back in tests for zlib.h and change method for using -lz. Introduce ZLIB
+Fixes for problems with time dsr compression.
+
+Wed Apr 13 11:51:18 EDT 2011
+Fixes for simple time dsr compression.  remove redundant timestamps.
+Added 'seq' to the filter expression and man page.
+Fix for rasplit() to get the directory right.  Modified ArgusFetchStartuSecTime()
+
+Tue Apr 12 11:35:16 EDT 2011
+Improvements to rapath()
+Fixes to enable mysql autoreconnect in rasqlinsert().
+Update to racount() to put back the proto breakdown and address type reporting.
+Mods to radium() so it can't write into the same file twice.
+
+Mon Apr 11 10:58:48 EDT 2011
+Fixed cidr/0 address again when provided in filter.  Now matches any IP address.
+Added '*' when state field overflows column width.
+
+Tue Mar 29 09:30:09 EDT 2011
+Fixed cidr/0 address when provided in filter.  Now matches any IP address.
+Fixed separator for addr port combinations, when separator is space " \t".
+Fixed bug in load calculations.  load and sload and dload provided inconsistent values.
+Fixed RA_AGG_METRIC for racluster() and update man page.
+
+Mon Mar 28 19:06:41 EDT 2011
+Addition of 'sum' and 'runtime' attributes.  Currently implemented as
+(agr->meanval * arg->n), will need to generalize at a later date.
+
+Mon Mar 14 13:08:24 EDT 2011
+Fixes for patricia tree insertion routines used by ratree.1
+Additions for AS merging and sorting.
+Fixes for rapath, with updates for rapath.1
+Fixes for racluster, to merge based on sas, das and ias, as well as inode[/cidr | mask]
+
+Mon Feb 28 10:50:56 EST 2011
+Fixes for ratop command line printing when debug set to > 0
+Fixes for proto aggregation
+Additional man pages
+
+Fri Feb 25 13:54:38 EST 2011
+Lots and lots of modifications getting ready for release.
+Mods to fix control input line for ratop.
+Lots of ratop fixes, format etc...
+
+Sun Dec 19 14:52:59 EST 2010
+Lots and lots of modifications getting ready for release.
+Fixes for IPv6 CIDR address processing in filter
+
+Wed Oct 13 15:53:09 EDT 2010
+Lots and lots of modifications for bugs relating to time processing,
+rasplit() etc.... Added a few new printable metrics (smeansz and dmeansz)
+and updated man pages.
+
+Mon Sep 27 15:55:38 EDT 2010
+Lots and Lots of modifications for bugs on the list.
+Changes to rauserdata() and raservices() to finish the port.
+Many changes for memory management for ra* (especially rasql*) programs.
+Added CIDR address printing for ra* programs.
+Added automatic addr mask printing when aggregated data seen.
+
+Thu Sep  2 17:55:25 EDT 2010
+Fix for TcpRtt printing.
+
+Mon Jul 19 13:26:24 EDT 2010
+Fix for XML escaping for user data buffers
+
+Thu Jul 15 17:16:56 EDT 2010
+Fix for editline and readline use when rl_replace_line() is not available.
+
+Wed Jul 14 22:54:36 EDT 2010
+Fix to add "-s +col" to database schema in rasql.c
+Triple check HAVE's and configure.ac
+
+Mon Jul 12 12:07:34 EDT 2010
+Fix for Mac OS X mktime() bug?  where if tm_isdst is set, it believes it?
+
+Fri Jul  9 12:15:30 EDT 2010
+Updated acsite.m4 to correct errors.
+Fix for rabins.c from email list
+
+Wed Jul  7 12:56:38 EDT 2010
+Added configure.ac and support for pkg-config for client distribution.
+
+Mon Jun 28 19:35:28 EDT 2010
+Fixes for ratop readline support and totals printing.
+Support for database user, host  and table specification in .rarc.
+Mods for time match strategies to match documentation.
+Support for -S cisco://any:9969 or -r cisco:/path/to/file
+
+Thu Jun 24 10:38:51 EDT 2010
+Polishing up rasql* programs.  Fixed "-t" option support for tables that
+have time fields in them.
+
+Wed Jun 23 11:17:57 EDT 2010
+Fixed jitter decode in ArgusGenerateRecordStruct.
+
+Thu Jun 10 20:16:58 EDT 2010
+Mods for correcting Netflow data conversion bug.
+
+Wed Jun  2 15:39:27 EDT 2010
+Mods for checking bounds on ArgusPrintRecord
+Fix for attaching to IPv6 based server addresses "ra -S ::1"
+
+Tue May 11 23:08:01 EDT 2010
+Fix for ArgusReverseLabel buffer overflow?
+
+Tue May  4 13:21:49 EDT 2010
+Fixed ArgusTcpServiceAvailability() so that it had a simpler srv failure logic.
+
+Mon May  3 23:58:11 EDT 2010
+Contination of massive changes for tiet client strategy.
+Generating ./include/argus_config.h.
+
+Mon Apr 26 14:34:51 EDT 2010
+Massive changes to introduce tiet client support.
+Restructured the include files.  Copying lib and includes
+by default now.  Need to fix the rpm spec.
+Added back isis merging logic
+
+Wed Apr  7 20:36:57 EDT 2010
+rasqltimeindex() is now working.
+
+Tue Apr  6 20:15:29 EDT 2010
+Retuned direction logic for weird TCP scans (syn_ack scans).
+
+Mon Apr  5 16:48:28 EDT 2010
+Correction for racluster() corrupting records due to packet size DSR issue.
+
+Mon Mar 29 17:27:03 EDT 2010
+Mods for ra.1 to update -n flag description.
+
+Fri Mar 26 09:41:14 EDT 2010
+Fix for argus-2.x data reading error.
+Mods for correctly escaping & in XML mode.
+
+Wed Mar 17 15:52:14 EDT 2010
+Added ragrep() back to handle grep() options, pattern specification in a file, etc...
+
+Wed Feb 17 12:52:19 EST 2010
+Fix XML printing and delimiter issues.
+
+Tue Feb 16 22:03:22 EST 2010
+Fix for -N flag when given a range
+
+Wed Feb 10 17:42:44 EST 2010
+Updates for argus-udp reading 
+Added teredo tunnel support
+
+Tue Feb  9 12:33:35 EST 2010
+Mods to rasql() to calculate the set of files from a "-t " time filter.
+
+Mon Feb  8 15:29:56 EST 2010
+Start of argus-clients-3.0.3
+Fixes for rafilteraddr() and ralabel().
+Fixes for RTP record parsing.
+Fixes for merging fixes for TCP based loss stats.
+
+Thu Dec 10 12:23:18 EST 2009
+Fix for swin and dwin printing generating a dump (bus error).
+
+Tue Nov  3 20:41:28 EST 2009
+Fix for clearing the key buffer for rasqlinsert()
+Mods to lib/argus-clients.spec for RPM_BUILD_DIR and other issues.
+
+Wed Oct 28 15:07:37 EDT 2009
+Bug fix for racluster() dealing with user data buffers correctly.
+
+Tue Oct 27 00:05:10 EDT 2009
+Fix for strncpy() weirdness in rasqlinsert().
+
+Thu Oct 15 11:53:45 EDT 2009
+Fix for rasqlinsert() and specifying keys.
+Fix for rarp aggregation error.
+
+Thu Aug 27 22:27:19 EDT 2009
+Fixes for ralabel() to properly insert country codes.
+Fixes for racluster() to aggregate correctly fow country codes.
+
+Tue Aug 25 19:04:23 EDT 2009
+Changes to thisid and argusid processing for CISCO conversion
+Changes to rahisto() for better control of output (added -c option support).
+
+Thu Aug 13 13:20:15 EDT 2009
+Fix for racluster configuration to enable preservation when specified
+in the configuration.  Getting ready to fix problems where records
+headers are corrupt.
+
+Sun Aug  9 19:44:21 EDT 2009
+Fix for printing duration correctly when we have all the timestamps lite up.
+
+Fri Jul 31 11:47:29 EDT 2009
+Fix for 2.0 record conversion.  rtcp dsr inserted with len of 1 and
+ArgusNtoH was corrupting other DSRs trying to little-endian the field.
+
+Wed Jul 29 13:46:38 EDT 2009
+Wow, "-S 1.2.3.4" didn't work, so fixed that.
+
+Wed Jul 22 00:46:11 EDT 2009
+Fix for trans processing in rahisto().
+Modification of 'autoid' support in rasqlinsert().
+
+Thu Jul  9 15:35:05 EDT 2009
+Fix for rasplit() bug where the $srcid directive is ignored in some
+situations. Not good.
+
+Wed Jul  8 15:49:13 EDT 2009
+Fix for TCP synAck flows.  Extend appbyte check in case argus wasn't 
+configured to generate appbytes.
+Fix for ratop ^L key.
+
+Fri Jun 19 12:20:24 EDT 2009
+Fix for ASN for inode IP address little endian converstion problem.
+
+Mon Jun 15 09:12:25 EDT 2009
+Major fix for processing IPv6 ICMP data.
+Major fix for processing User data DSR.
+Fix to not print field delimiter when  printing fields.
+
+Thu May 21 13:11:59 EDT 2009
+New fix for rasplit when spliting on anything bigger than hours.
+New faster strategy for dealing with daylight savings time issues.
+Updates for rabins for new spliting strategies.
+
+Fri May 15 13:26:09 EDT 2009
+Mods to fix RA_FIELD_WIDTH behavior.
+
+Thu May  7 12:47:06 EDT 2009
+Massive changes for Geolocation.
+AS number reporting (change as from short to int).
+Improved DNS reporting formats so field number is constant.
+Fixed merging record problem.
+
+Mon Apr 13 17:55:47 EDT 2009
+Modified RA_FIELD_WIDTH behavior with using '-c' on the command line.
+Added RA_FIELD_WIDTH to rarc.
+
+Fixed problem with RaPrintIndex and rasqlinsert.
+Modified rasqlinsert() minimum field width to be 256, so that addresses
+will always be big enough.
+
+Modified RA_TIME_FORMAT string parsing ala Dan Klien, to get non time
+oriented characters and escaped sequences parsed correctly.
+
+Mon Apr  6 11:37:36 EDT 2009
+Fixed v2 -> v3 conversion.  ArgusNetworkStruct len was a few bytes too long.
+Fixed mode parsing for rasplit().
+Fix for rasplit() finding filename on split 'd','w','m','y'.  Algorithm
+chose GMT not local timezone.
+
+Fri Apr  3 12:53:15 EDT 2009
+Fixes for rasqlinsert() to better deal with strftime() based table names.
+Fixed ratree() to work in argus-3.0.
+
+Mon Mar 30 16:34:24 EDT 2009
+Added table date specifications for rasqlinsert().
+Fix for memory problem when opening lots of files or directories.
+Added RA_TIMEOUT_INTERVAL to rarc file.
+Fixed short DSR parsing.
+
+Fri Mar 27 09:41:05 EDT 2009
+Fix for tcprtt propagation during merge when first record
+is a ARGUS_TCP_INIT type DSR.
+
+Fix for little-endian treatment of Authoritative response
+in DNS printing routines of radump().
+
+Wed Mar 25 16:09:53 EDT 2009
+Mods to complete library to fix issues with -M rmon option.
+Problem caused duplicate records generated by "-M rmon"
+to be corrected before being aggregated.  Big problem,
+basically just doubling metrics, but not flow ids.
+
+Mon Mar 23 14:51:21 EDT 2009
+Mod to ArgusClientInit in rabins() to deal with calling without
+a -B option to specify the range.  Seems to work now.
+
+Fri Mar 13 14:53:46 EDT 2009
+Minor changes for raservices and rauserdata.
+May have broken "finding" possible protocol types, need
+to work on this this  weekend.
+
+Thu Mar 12 11:40:14 EDT 2009
+Removed -lz from aclocal.m4 an configure.in.  Will need
+to add it back soon.
+
+Wed Mar 11 20:30:17 EDT 2009
+Fixed record searching when the read buffer boundary is
+too short for searching for new data record.  Reordered
+logic to do test, when enough bytes are available, and
+to break way out if not enough bytes.
+
+Mon Mar  9 12:45:03 EDT 2009
+Fixed aggregation rules for FRAGMENT reporting in flow.
+argus changes its reporting of FRAGMENTS scope to the single
+flow record, and that revealed that merging was messing
+up the IP attributes flags.  
+
+Fri Mar  6 13:38:36 EST 2009
+Added record searching for argus-2.x data sets when out of sync.
+fixed early file closing for ra*.
+
+Mon Mar  2 14:28:02 EST 2009
+Release candidate #1 for clients-3.0.2.  This has all the support
+for next wave argus DSRs (histograms and events), and many bug
+fixes from the mailing list and beyond.
+
+Mods to TCP direction corrections, to be more strict on what
+we'll reverse.
+
+Fixes for backward compatiblity for argus-2.x data streams.
+
+Added rauserdata and rasservices to distribution to assist in user
+data analysis.
+
+Wed Feb 25 16:01:36 EST 2009
+Complete integration of gargoyle client code back to argus,
+without IB and control plane flow monitoring.  Major
+rewrite of rabins(), ratop() and racluster() for ARMA
+functions.  Completely differnt compiler filtering strategies
+to allow for DSR specific filtering.
+
+Addition of mysql insertion and query programs, but no NTAIS
+project support.
+
+Elimination of ragrep(), by merging grep capabilities into all
+ra* programs.
+
+Tue Feb 24 10:07:24 EST 2009
+Major mods to fix graphing problems exposed by ArgusGraph and Topology.
+Added sub-second bins, and better reliablity.
+
+Tue Oct 28 23:32:29 EDT 2008
+Major modifications for introducing new linear histogram
+reporting for interpacket arrival times.
+
+Mon Oct 27 10:44:42 EDT 2008
+Major modifications for restructuring library strategies to accomodate
+new client architectures.
+
+Fri Sep  5 13:27:01 EDT 2008
+Fixes for rasql, rasqlinsert, all is well.
+Terminatd xml ArgusDataStream in rasql.
+
+Fri Aug  1 10:39:35 EDT 2008
+Massive changes for all things.
+MySQL programs now working well.
+
+Tue Apr  8 14:55:09 EDT 2008
+Fixes for time filter problem and addition of UTC input.
+Fixes for radump() to parse user buffer.
+
+Sat Mar 15 17:14:31 EDT 2008
+Fixes for printing when srcid is not an IP address.
+
+Thu Feb 28 19:38:40 EST 2008
+Fixes for rastream() and to get the right readline
+on the mac.
+
+Wed Feb 13 00:17:15 EST 2008
+Added support for Multipath
+
+Mon Feb 11 22:45:40 EST 2008
+Mods for putting listen() down on all address families.
+Mod for Makefiles to remove .PHONY for OpenBSD
+
+Tue Jan 29 13:36:49 EST 2008
+Fixes for new flex 2.5.34 issues
+
+Mon Jan 21 20:03:26 EST 2008
+Fixes for default unidirectional flow record matching
+Minor modifications to handle compiler warnings
+
+Mon Jan 14 13:31:40 EST 2008
+Fix for racluster() -M rmon memory leak.
+
+Fri Nov  2 10:44:18 EDT 2007
+Fix for rastream() memory leak.
+
+Mon Oct 29 21:57:41 EDT 2007
+Fixes for ratop(), rastream() and radark.pl.
+Fixes to allow .threads to work again.
+
+Thu Oct 18 23:52:09 EDT 2007
+Update to add radark, and to improve useability
+of a number of routines for tree parsing and filtering.
+
+Mon Oct 15 10:36:41 EDT 2007
+Update to fix UDP Netflow reading that was broken with
+the getnameinfo(), gethostinfo() changes.
+
+Sun Oct 14 22:37:42 EDT 2007
+Fixes for many many issues, integrated bi-directional time
+values into time filtering, reintroduced threads into
+radium and other packages, additional DSR support, fixes
+for dumping and time stamp issue corrections
+
+Tue Oct  9 12:14:31 EDT 2007
+Fixes for man pages, added radark.pl and fixes for
+mailing list bug reports.
+
+Wed Oct  3 20:13:51 EDT 2007
+Added printing country codes.  ralabel added to code base.
+Many fixes for radium.c.  Moved address patricia tree into
+client library.
+
+Thu Sep 27 17:38:09 EDT 2007
+Major fixes for mailing list bug reports.
+Time filter mods, ragraph() issues, radium!!!!!
+racluster aggregatation and direction bug fixed.
+
+Fri Sep 21 15:52:04 EDT 2007
+Mods to correct for a number of time parsing issues.
+Added correlation structs back to basic records, experimental.
+
+Tue Sep 18 11:28:05 EDT 2007
+Remove threads from clients, and add back non-threaded
+support for ratop.c
+
+Mon Sep 17 11:56:25 EDT 2007
+Many fixes for radium, threaded model, ragraph to bring
+it upto date with new column formats.
+
+Wed Sep  5 20:47:25 EDT 2007
+Added OpenBSD sched.h include file to argus_os.h
+Fixed compile errors without .threads tag
+
+Wed Sep  5 11:58:35 EDT 2007
+Added back packet size reporting.
+Moved/cleaned up printing definitions
+
+Tue Sep  4 22:40:33 EDT 2007
+Fixed radium explosion on startup
+
+Fri Aug 31 09:34:33 EDT 2007
+Fixes for frees and ArgusFree calls.
+Fixes for ratop() command line parsing
+
+Sun Aug 26 19:58:09 EDT 2007
+Many fixes for memory in thread model
+
+Tue Aug  7 23:54:14 EDT 2007
+Fixed thread model to support multiple inputs and outputs
+
+Fri Jun  8 10:52:21 EDT 2007
+Man page updates.
+Fix for -w file filter mess up.
+Many changes to ratop() to get to support readline.
+
+Tue May  8 17:08:27 EDT 2007
+Many changes to ratop() to get to support searching.
+New vi based interface for ratop().
+Mods for load and rate printing.
+
+Mon Apr 30 22:12:33 EDT 2007
+argus-clients-3.0.0.rc.43
+Mods for cygwin port.
+
+Sun Apr 29 15:48:02 EDT 2007
+argus-clients-3.0.0.rc.43
+Changes to add searching to ratop.  Fixes for dsr parsing.
+Added ploss to compiler (so you can do gt and lt on
+ploss value).
+
+Wed Apr 18 15:15:19 EDT 2007
+argus-clients-3.0.0.rc.42
+Mods for ragraph.pl to handle "-" filter separator.
+
+Mon Apr 16 23:41:13 EDT 2007
+argus-clients-3.0.0.rc.42
+Fixes for '-t' time filter specifications.
+Added clarification in ra.1 manpage for ipv4, ipv6 and icmp.
+
+Fri Apr 13 11:37:54 EDT 2007
+argus-clients-3.0.0.rc.42
+Added -X option to not read .rarc file.
+Added [percent]loss sorting
+
+Fri Mar  9 18:52:38 EST 2007
+argus-clients-3.0.0.rc.41
+Modified signal handling for pthreads.
+Only one thread to handle remote connection maintenance.
+Non-blocking DNS thread modified signal blocking calls.
+
+Mon Feb 26 20:19:12 EST 2007
+argus-clients-3.0.0.rc.40
+Added ArgusNewHashTable()
+Mods for proper pthread_muxtex_init() calls.
+Add '-M replace' for racluster().
+Add '-M rmon' to ra().
+
+Fri Feb 23 22:59:36 EST 2007
+argus-clients-3.0.0.rc.40
+Mods to improve ranonymize().
+Remove raxml() and add xml printing support for all ra* programs.
+Added "%f" to RA_TIME_FORMAT specification, to support
+   printing fraction of seconds.
+
+Wed Feb 14 16:25:42 EST 2007
+argus-clients-3.0.0.rc.40
+Mods for Sparc/Solaris porting.
+Fixed filter bug problem for ratop/et al.
+Added ranonymize, rahosts.pl, raports.pl, rapath as clients.
+But, haven't added manpage support yet.  Thats coming.
+Added TZ environment variable mod support.
+Added file byte offset printing.
+
+Fri Jan 26 16:26:49 EST 2007
+argus-clients-3.0.0.rc.39
+Mods for time filter wildcarding, Solaris port
+
+Wed Jan 24 17:32:57 EST 2007
+argus-clients-3.0.0.rc.39
+Fixes for many issues on this mailing list.
+Indicator field consistency modifications.
+Default precision for floating point fields.
+Mods to get range printing labels correct.
+Move daemon mapping for stdout and stderr.
+Fix racluster() configuration file support.
+
+Tue Jan 23 15:46:37 EST 2007
+argus-clients-3.0.0.rc.38
+Added non-blocking DNS for ra* programs.  Set as
+default for ratop, configuration item for all other
+programs.
+
+Wed Jan  3 15:06:21 EST 2007
+argus-clients-3.0.0.rc.38
+Changes for time range specification issues.  (yyyy/mm)
+Fix for high end protocol field string bug.
+Fix TCP state/status reporting.
+Enabled Netflow v 5 decoding.
+
+Mon Dec 18 12:29:46 EST 2006
+argus-clients-3.0.0.rc.37
+Changes for backward compatibility for loss.
+Fixed proto strings for high order numbers.
+
+Mon Dec 11 12:00:23 EST 2006
+argus-clients-3.0.0.rc.36
+Mods to fix mutex initialization and locking.
+
+Mon Nov 27 20:23:36 EST 2006
+argus-clients-3.0.0.rc.36
+Mods to fix rabins and moving averages in ratop
+
+Fri Nov 17 11:39:20 EST 2006
+argus-clients-3.0.0.rc.35
+Added rahisto and ramatrix.
+Mods to man pages.
+
+Fri Nov 10 15:45:08 EST 2006
+argus-clients-3.0.0.rc.31-35
+Huge changes, just haven't updated the changelog.
+
+Tue Sep 26 17:29:15 EDT 2006
+argus-clients-3.0.0.rc.30
+Changes for directionality. Fix for rabins, when the file
+is not sorted in startime.  Fixes issue with ragraph
+
+Fri Sep  8 12:37:13 EDT 2006
+argus-clients-3.0.0.rc.29
+mods for v.2.x backward compatibiliity
+TCP directionality reversal mods to not correct for scan data.
+Fix some reversal problems.
+
+Mon Aug 28 22:33:06 EDT 2006
+argus-clients-3.0.0.rc.28
+Many mods for v.2.x backward compatibiliity
+Fixed problem with RTP DSR found in esp traffic
+TCP state modifcations
+Added spi as filter keyword.
+
+Wed Aug 23 22:56:16 EDT 2006
+argus-clients-3.0.0.rc.27
+Fixes for some TCP relevant 'reverseals'
+
+Fri Aug 18 10:31:39 EDT 2006
+argus-clients-3.0.0.rc.26
+Fixes for Suse Makefile compatibility
+
+Thu Aug 10 13:17:45 EDT 2006
+argus-clients-3.0.0.rc.25
+Fixes for argus v2.x -> 3.0 conversion. fragments and other issues.
+Makefile changes to support suggestions from list.
+
+Tue Aug  1 23:24:03 EDT 2006
+argus-clients-3.0.0.rc.24
+argus-clients-3.0.0.rc.23
+Fixes for igmp, rtp and rtcp conversion.
+Fixes for ip attribute processing, little endian issues with
+conversion, and a lot of column printing support.
+
+Mon Jul 17 22:37:58 EDT 2006
+argus-clients-3.0.0.rc.21
+fix sasl support.  works on linux with sasl(1)
+still need to work on sasl2
+
+Mon Jul 17 13:37:52 EDT 2006
+argus-clients-3.0.0.rc.20
+fix switch problem and mac flow conversion
+
+Fri Jul 14 19:12:18 EDT 2006
+argus-clients-3.0.0.rc.19
+big mods for rarp/arp, and added configure support for curses,
+ncurses.
+
+Tue Jul 11 16:14:16 EDT 2006
+argus-clients-3.0.0.rc.18
+Fixes for printing and a management record parsing fix.
+Added back appbytes support.
+
+Tue Jul 11 11:53:42 EDT 2006
+argus-clients-3.0.0.rc.17
+Mods for solaris port.  Remove strsep().
+Fix tcpwrapper test and move some aclocal.m4
+things around.
+
+Mon Jul 10 13:01:11 EDT 2006
+argus-clients-3.0.0.rc.16
+Fix to insert ARGUS_NETWORK_DSR when ICMP packet,
+to get the network part correct.
+
+Fri Jun 30 11:04:31 EDT 2006
+argus-clients-3.0.0.rc.15
+Many fixes for nits like bombing without parameters, etc....
+Mod to configure.in to get -l pthread in for powerpc other than darwin.
+Mods to correct jitter data conversion.
+
+Mon Jun 26 19:27:07 EDT 2006
+argus-clients-3.0.0.rc.14
+Found nasty bug with #pragma pack in argus_out.h.
+Could explain a lot of weirdness.
+
+Mon Jun 26 12:38:41 EDT 2006
+argus-clients-3.0.0.rc.12
+Complete rewrite of printing routines.
+Change startime to stime and lasttime to ltime.
+
+Thu Jun 22 16:57:13 EDT 2006
+argus-clients-3.0.0.rc.11
+Fixed ip attribute conversion for 2.x -> 3.x records.
+minor issue for NetBSD to get MAX_LONG
+
+Thu Jun 22 13:20:52 EDT 2006
+argus-clients-3.0.0.rc.10
+replace localtime() with localtime_r().
+pid file support for all ra* programs.
+Mods to support better control over potential filtering strategies.
+Changes for racount().  Basically remove -aA option support.
+Man page update to reflect mods, but still need work to
+   describe the '-M addr' option.
+Additional cleanup for DISTDIR.
+Add installation directives for missing man pages.
+
+Thu Jun 20 10:11:24 EDT 2006
+argus-clients-3.0.0.rc.9
+Mods for the xxxBSD ports.
+
+Fri Jun 16 12:25:58 EDT 2006
+argus-clients-3.0.0.rc.8
+Some changes for porting.
+Big fix for converting from 2.0 on little-endian machines.
+
+Thu Jun 15 17:55:47 EDT 2006
+argus-clients-3.0.0.rc.4-7
+Many many many changes for porting.
+Fixed big problem with 2.0 -> 3.0 upconversion with
+little endian machines.
+
+Thu Jun  8 14:14:36 EDT 2006
+argus-clients-3.0.0.rc.4
+Fix to ra for getting flags 'a' and 'c' right.
+Updated man page.
+
+Thu Jun  8 12:12:43 EDT 2006
+argus-clients-3.0.0.rc.3
+Fixes for sloppy fix for arp header parsing and printing.
+Fix segfault reference parser when its NULL.
+
+Thu Jun  8 03:47:10 EDT 2006
+argus-clients-3.0.0.rc.3
+Print field name array length needed fixing.
+
+Thu Jun  8 02:24:31 EDT 2006
+argus-clients-3.0.0.rc.2
+Mods to fix reverse arp record processing.
+
+Wed Jun  7 23:38:10 EDT 2006
+argus-clients-3.0.0.rc.1
+Mods to fix discovered problems.
+   Fix make clean and make clobber to remove all *.o files.
+   <byteswap.h> not found on the *BSD machines, so
+      needed to fix the definition of ntohll().
+   Fix HAVE_ETHER_HOSTOTN #if defs in argus_util.h
+   Change ARGUS_MAX_PRINT_ALG to the right number of array elements.
+
+Tue Jun  6 16:53:06 EDT 2006
+argus-clients-3.0.0 started using gargoyle as base.

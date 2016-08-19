@@ -1,0 +1,65 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ *
+ *   raconvert - ascii to binary data record conversion
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+raconvert.1 will convert an ascii flow record file/stream into binary record format.
+raconvert.1 will uncompress files that have been compressed using gzip or bzip2.
+The filename extensions for compression must be in the filename for this to happen.
+
+The file/stream should be created using ra* style programs, with a field delimiter,
+such as ',' (CSV).
+
+    ra -r file -c, > file.txt
+
+This invocation generates a file with column names as the first line and data on
+each subsequent line.  The ra* programs, when the -c option is used, will not
+truncate field values, such as IP addresses and port names.  Raconvert.1 cannot
+process fields that have been truncated due to column width restrictions, and
+will fail if a column has a '*' at the end.
+
+The trick to raconvert.1, is that the first line must have the column titles.
+raconvert.1 will parse the column titles and expect those values in the subsequent
+data strings that follow.  Order does not matter, other than when columns are
+duplicated, the resulting argus record value will be the last column encountered
+in the input string.
+
+raconvert.1 discovers the delimiting character in the file, so prior knowledge
+of a files content is not necessary.
+
+StartTime,Flgs,Proto,SrcAddr,Sport,Dir,DstAddr,Dport,SrcPkts,DstPkts,SrcBytes,DstBytes,State
+2011/11/17.00:23:43.564228, e        ,udp,192.168.0.2,mdns, ->,224.0.0.251,mdns,66,0,21070,0,INT
+2011/11/17.00:09:34.852007, e        ,udp,192.168.0.32,mdns, ->,224.0.0.251,mdns,608,0,122367,0,INT
+2011/11/17.00:00:04.056957, e        ,udp,192.168.0.33,tivoconnect, ->,192.168.0.255,tivoconnect,861,0,169617,0,INT
+2011/11/17.00:00:05.315724, e        ,udp,192.168.0.33,mdns, ->,224.0.0.251,mdns,1363,0,258586,0,INT
+2011/11/17.00:23:43.707389, e        ,udp,192.168.0.34,mdns, ->,224.0.0.251,mdns,68,0,23802,0,INT
+2011/11/17.00:00:03.435544, e        ,udp,192.168.0.66,ipp, ->,192.168.0.255,ipp,1680,0,369600,0,REQ
+2011/11/17.00:02:00.990029, e        ,udp,192.168.0.66,netbios-ns, ->,192.168.0.255,netbios-ns,303,0,29088,0,INT
+2011/11/17.00:03:36.440374, e        ,udp,192.168.0.66,mdns, ->,224.0.0.251,mdns,128,0,25253,0,INT
+2011/11/17.00:00:02.010673, e r      ,tcp,192.168.0.68,49157, ->,192.168.0.70,monitor,312617,314397,20632741,123271363,CON
+
+
+raconvert() will convert the protocol and port names it encounters,into protocol and port numbers, if possible,
+using its local machines /etc/services file.  If a conversion cannot be done, raconvert.1 will fail.
+
+

@@ -1,0 +1,69 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RALABEL 1 "12 August 2003" "ralabel 3.0.8"
+.SH NAME
+\fBralabel\fP \- inserts fixed form or free form metadata labels into \fBargus(8)\fP.
+\fBralabel\fP supports a number of strategies for labeling including 1) address based,
+providing free form metadata, country code, geo data and fully qualified domain name
+(FQDN) labeling; 2)port based, providing free form labels using IANA port definitions,
+and 3) flow filter, providing free form labels based on argus filter specicfications.
+
+
+.SH SYNOPSIS
+.B ralabel
+\fB\-f\fP \fIaddress.file\fP [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ralabel command"  ""  "\fBralabel\fP \(em argus data"
+.LP
+\fBRalabel\fP reads
+.BR argus
+data from an \fIargus-data\fP source, and selects records that include IP addresses
+specified by the \fBaddress.spec\fP file.  This program provides high performance
+address matching for any number of addresses.
+
+.SH RALABEL ADDRESS SPECIFICATION
+Ralabel, reads a number of standard IANA IP address file formats that
+specific IPv4 addresses, CIDR addresses and IPV4 prefix address specification.
+Examples of these file types are provided in ./support/Config.
+
+\fBralabel(1)\fP specific options are:
+.TP 4 4
+.BI \-f "\| label.strategy.specification.file\^"
+
+.SH INVOCATION
+This invocation reads \fBargus(8)\fP data from \fBargusfile\fP and labels
+records that match any options in the \fBralabel.conf\fP file.
+.nf
+ 
+   \fBralabel\fP -r argusfile -f ralabel.conf - ip
+ 
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ralabel.conf.5,
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

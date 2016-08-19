@@ -1,0 +1,1615 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\" 
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\" 
+.
+.de TQ
+.  br
+.  ns
+.  TP \\$1
+..
+.TH RA 1 "12 November 2007" "ra 3.0.8"
+.SH NAME
+\fBra\fP \- read \fBargus(8)\fP data.
+.SH SYNOPSIS
+\fBra [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ra command"  ""  "\fLra\fP \(em argus data"
+.LP
+.B Ra
+reads
+.BR argus(8)
+data from either \fIstdin\fP, an \fIargus-file\fP, or from a
+remote data source, which can either be an \fIargus-server\fP, 
+or a netflow data server, filters the records it encounters
+based on an optional \fIfilter-expression\fP and either prints
+the contents of the
+.BR argus(5)
+records that it encounters to \fBstdout\fP or appends them into an
+.B argus(5)
+datafile.
+.LP
+.SH OPTIONS
+.TP 4 4
+.B \-A
+Print aggregate statistics for the input stream on termination.
+.TP 4 4
+.B \-b
+Dump the compiled transaction-matching code to standard output and stop.
+This is useful for debugging filter expressions.
+.TP 4 4
+.B \-c <char>
+Specify a delimiter character for output columns (default is ' ').
+.TP 4 4
+.B \-C <[host]:portnum>      (deprecated)
+Specify a source of Netflow data. The optional host is the local
+interface address where Netflow Cisco records are going to be read.
+If absent, then it is implied that the interface address is AF_ANY.
+This option is deprecated and the '-S cisco://address:port' is now the
+recommended option.
+.TP 4 4
+.B \-D <level>
+Print debug information corresponding to \fB<level>\fP to stderr, if program
+compiled to support debug printing.  As the level increases, so does the
+amount of debug information
+.B ra(1)
+will print.  Values range from 1-8.
+.TP 4 4
+.B \-d
+Toggle whether to run this program as a daemon.
+.TP 4 4
+.B \-e <regex>
+Match regular expression in flow user data fields.  Prepend the regex with
+either "s:" or "d:" to limit the match to either the source or destination
+user data fields. At this time null bytes in the user data buffer terminate 
+search.  Examples include:
+.nf
+   "^SSH-"           - Look for ssh connections on any port.
+   "s:^GET"          - Look for HTTP GET requests in the source buffer.
+   "d:^HTTP.*Unauth" - Find unauthorized http response.
+.fi
+
+Depending on the regular expression library that the system supports,
+you will be able to match many types of binary, octal and hex 
+expressions.  See regex.3, pcre.3 and the web for examples.
+
+.TP 4 4
+.B \-E <file>
+When using a filter expression at the end of the command, this option will
+cause
+.B ra(1)
+to append the records that are rejected by the filter into
+.B <file>
+.TP 4 4
+.B \-F <conffile>
+Use \fB<conffile>\fP as a source of configuration information.  The format of
+this file is identical to \fBrarc(5)\fP.  The data read from \fB<conffile>\fP
+overrides any prior configuration information.
+.TP 4 4
+.B \-h
+Print an explanation of all the arguments. 
+.TP 4 4
+.B \-H
+Abbreviate numeric metrics, to make reading large values easier.  Use the \fB-p <num>\fP
+option to specify the precision right of the decimal.
+
+.TP 4 4
+.B \-L <n>
+Specify how \fBra\fP will print header labels for the output.
+.nf
+   Supported values are:
+      -1  Don't print header labels.
+       0  Print the header labels only once, as the beginning of output.
+     > 0  Print the header labels every \fIn\fP lines of output.
+
+.TP 4 4
+.B \-M <mode [mode ...]>
+Provide addition mode operators.  These are generally specific to the
+individual ra* program, or a specific function. Available modes for ra()
+are:
+
+.nf
+   disa             - interpret DSCodepoints using the US DISA encodings
+   dsrs=dsrlist     - process these dsrs
+      Where a dsrlist has the format:
+         [+/-]dsr[,[+/-]dsr]
+ 
+         Supported dsrs are:
+           trans    transport information, such as source id and seq number.
+           flow     flow key data (proto, saddr, sport, dir, daddr, dport)
+           time     time stamp fields (stime, ltime).
+           metric   basic ([s|d]bytes, [s|d]pkts, [s|d]rate, [s|d]load)
+           agr      aggregation stats (trans, avgdur, mindur, maxdur, stdev).
+           net      network objects (tcp, esp, rtp, icmp data).
+           vlan     VLAN tag data
+           mpls     MPLS label data
+           jitter   Jitter data ([s|d]jit, [s|d]intpkt)
+           ipattr   IP attributes ([s|d]ipid, [s|d]tos, [s|d]dsb, [s|d]ttl)
+           psize    packet size information
+           mac      MAC addresses (smac, dmac)
+           icmp     ICMP specific data (icmpmap, inode)
+           encaps   Flow encapsulation type indications
+           behavior Behavioral metrics and data
+           tadj     Time adjustment data
+           cor      Multi-probe correlation data
+           cocode   Country Codes
+           asn      Autonomous System Number data
+           suser    src user captured data bytes (suser)
+           duser    dst captured user data bytes (duser)
+ 
+      Examples are:
+         -M dsrs=time,flow,metric
+         -M dsrs=-suser,-duser
+
+   label="regex"    - match flow label with regex(3) regular expression.
+   man              - print management records
+   noman            - do not print management records
+   oui              - print oui labels in mac addresses
+
+   printer="format" - specify printer formats for printing user data.
+      Supported formats are:
+           ascii      print user buffer as ascii string. use '.' for unprintable chars.
+           obfuscate  ascii printer with password obfuscation.
+           hex        print hex dump of user buffer on separate lines.
+           encode32   print user buffer as 32-bit chars.
+           encode64   print user buffer using 64-bit chars.
+
+   poll             - successfully attach to remote data source and then exit
+   rmon             - modify data to support unidiretional RMON stat reporting
+   rtime:factor     - read data from a file, clocking records in as if they
+                      being read in realtime.  Factor provides an opportunity
+                      to specify a multiplication factor, enabling you to
+                      read records in a fraction of real time, slowing down
+                      reading considerably, or a factor of time, enabling
+                      controlled speedup of the reading rate.
+
+   saslmech="mech"  - specify a mandatory SASL mech
+   sql="select"     - use "select" as select clause in mysql calls when supported.
+   TZ="tzset"       - specify a tzset(3) time zone specification
+   uni              - generate unidirectional flow data
+   xml              - print output in xml format.
+
+.fi
+Illegal modes are not detectable by the standard library, and so unexpected
+results in command line parsing may occur if care is not taken with use
+of this option.
+.TP 4 4
+.B \-n
+Modify number to name converstion.  This flag supports 4 states, specified
+by the modulus of the number of -n flags set.  By default ra* programs do
+not provide hostname lookups, but they do lookup port and protocol names.
+The first \fB-n\fP will suppress port number to service conversion, \fB-nn\fP
+will suppress translation of protocol numbers to names (no lookups).  \fB-nnn\fP
+will return you to full conversion, translating hostnames, port and protocol
+names, and \fB-nnnn\fP will return you to the default behavior.   Because this
+indicator can be set in the .rarc file, multiple \fB-n\fP flags progress through
+the cycle.
+.TP 4 
+.B \-N [io]<num>, [io]<start-end>, [io]<start+num>
+Process the first \fB<num>\fP records, the inclusive range \fB<start - end>\fP,
+or process <num + 1> records starting at index number \fB<start>\fP.  The
+optional 1st character indicates whether the specification is applied to the input
+or the output stream of records, the default is input.  If applied to the input,
+these are the range of records that match the input filter.
+.TP 4 4
+.B \-p <digits>
+Print \fB<digits>\fP number of units of precision for floating point values.
+.TP 4 4
+.B \-q
+Run in quiet mode. Configure Ra to not print out the contents of records.
+This can be used for a number of maintenance tasks, where you would be
+interested in the outcome of a program, or its progress, say with the -D
+option, without printing each input record.
+.TP 4 4
+.B \-r [- | <[type:]file[::soffset[:eoffset]] ...>]
+Read \fB<type>\fP data from \fB<files>\fP in the order presented on the
+commandline. '\fB\-\fP' denotes stdin.  Ra supports reading \fBargus\fP
+type data (default), \fBcisco\fP and \fBft\fP, flow-tools type data.  If you want to read a set of
+files and then, when done, read stdin, use multiple occurences of
+the \fI-r\fP option.  Ra can read \fBgzip(1)\fP, \fBbzip2(1)\fP, \fBxz(1)\fP and 
+\fBcompress(1)\fP compressed data files. Byte offset values allow
+the specification of a range of records within an uncompressed file.
+Byte offsets must be aligned to record boundaries. Valid record
+offsets can be obtained using +offset as an output field even from compressed files.
+
+Examples are:
+.nf
+   -r file1 file2              read argus records from file1, then file2.
+   -r file::34876              read argus records starting at byte offset 34876 
+   -r file::34876:35846        read argus records starting at byte offset 34876 and ending at 35846 
+   -r cisco:file               read cisco netflow records from file
+   -r ft:file                  read flow-tools based records
+.fi
+
+.TP 4 4
+.B \-R <dir dir ...>
+Recursively decend the directory and process all the regular
+files that are encountered.  The function does not decend to links, or
+directories that begin with '.'.  The feature, like the -r command,
+does not do any file type checking.
+.TP 4 4
+.B \-s <[-][[+[#]]field[:len[:format]] ...>
+Specify the \fBfields\fP to print.  \fBra.1\fP gets the field print list
+either from its rarc configuration files or from the command-line.
+In the case where there is no configuration given \fBra.1\fP uses a
+default printing field list, with default field lengths.  By specifying a space
+separated list of fields, this option provides a means to completely redefine
+the list from the command line.  Using the optional '-' and '+[#]' prepended
+to the field list, you can add or subtract fields from the configured list.  
+Field lengths are hard constraints, and field output that exceeds the field
+length will be truncated, and a '*' will be inserted as the last character.
+When you see this, add more to the length specification for that specific field.
+Field lengths (len) less than 1, are not permitted and will generate an error.
+The optional 'format' specification, uses \fBsprintf.1\fP syntax to format the value.
+The available fields to print are:
+
+.PD 0
+.RS
+.TP 12
+.B srcid
+argus source identifier.
+.TP
+.B rank
+Ordinal value of this output flow record i.e. sequence number.
+.TP
+.B stime
+record start time
+.TP
+.B ltime
+record last time.
+.TP
+.B trans
+aggregation record count.
+.TP
+.B flgs
+flow state flags seen in transaction.
+.TP
+.B seq
+argus sequence number.
+.TP
+.B dur
+record total duration.
+.TP
+.B runtime
+total active flow run time.  This value is generated through aggregation, and is the sum of the records duration.
+.TP
+.B idle
+time since the last packet activity.  This value is useful in real-time processing, and is the current time - last time.
+.TP
+.B mean
+average duration of aggregated records.
+.TP
+.B stddev
+standard deviation of aggregated duration times.
+.TP
+.B sum
+total accumulated durations of aggregated records.
+.TP
+.B min
+minimum duration of aggregated records.
+.TP
+.B max
+maximum duration of aggregated records.
+.TP
+.B smac
+source MAC addr.
+.TP
+.B dmac
+destination MAC addr.
+.TP
+.B soui
+oui portion of the source MAC addr.
+.TP
+.B doui
+oui portion of the destination MAC addr.
+.TP
+.B saddr
+source IP addr.
+.TP
+.B daddr
+destination IP addr.
+.TP
+.B proto
+transaction protocol.
+.TP
+.B sport
+source port number.
+.TP
+.B dport
+destination port number.
+.TP
+.B stos
+source TOS byte value.
+.TP
+.B dtos
+destination TOS byte value.
+.TP
+.B sdsb
+source diff serve byte value.
+.TP
+.B ddsb
+destination diff serve byte value.
+.TP
+.B sco
+source IP address country code.
+.TP
+.B dco
+destination IP address country code.
+.TP
+.B sttl
+src -> dst TTL value.
+.TP
+.B dttl
+dst -> src TTL value.
+.TP
+.B shops
+estimate of number of IP hops from src to this point.
+.TP
+.B dhops
+estimate of number of IP hops from dst to this point.
+.TP
+.B sipid
+source IP identifier.
+.TP
+.B dipid
+destination IP identifier.
+.TP
+.B smpls
+source MPLS identifier.
+.TP
+.B dmpls
+destination MPLS identifier.
+.TP
+.B autoid
+Auto generated identifier (mysql).
+.TP
+.B sas
+Src origin AS
+.TP
+.B das
+Dst origin AS
+.TP
+.B ias
+Intermediate origin AS, AS of ICMP generator
+.TP
+.B cause
+Argus record cause code.  Valid values are Start, Status, Stop, Close, Error
+.TP
+.B nstroke
+Number of observed keystrokes.
+.TP
+.B snstroke
+Number of observed keystrokes from initiator (src) to target (dst).
+.TP
+.B dnstroke
+Number of observed keystrokes from target (dst) to initiator (src).
+.TP
+.B pkts
+total transaction packet count.
+.TP
+.B spkts
+src -> dst packet count.
+.TP
+.B dpkts
+dst -> src packet count.
+.TP
+.B bytes
+total transaction bytes.
+.TP
+.B sbytes
+src -> dst transaction bytes.
+.TP
+.B dbytes
+dst -> src transaction bytes.
+.TP
+.B appbytes
+total application bytes.
+.TP
+.B sappbytes
+src -> dst application bytes.
+.TP
+.B dappbytes
+dst -> src application bytes.
+.TP
+.B pcr
+producer consumer  ratio.
+.TP
+.B load
+bits per second.
+.TP
+.B sload
+source bits per second.
+.TP
+.B dload
+destination bits per second.
+.TP
+.B loss
+pkts retransmitted or dropped.
+.TP
+.B sloss
+source pkts retransmitted or dropped.
+.TP
+.B dloss
+destination pkts retransmitted or dropped.
+.TP
+.B ploss
+percent pkts retransmitted or dropped.
+.TP
+.B psloss
+percent source pkts retransmitted or dropped.
+.TP
+.B pdloss
+percent destination pkts retransmitted or dropped.
+.TP
+.B retrans
+pkts retransmitted.
+.TP
+.B sretrans
+source pkts retransmitted.
+.TP
+.B dretrans
+destination pkts retransmitted.
+.TP
+.B pretrans
+percent pkts retransmitted.
+.TP
+.B psretrans
+percent source pkts retransmitted.
+.TP
+.B pdretrans
+percent destination pkts retransmitted.
+.TP
+.B sgap
+source bytes missing in the data stream. Available after argus-3.0.4
+.TP
+.B dgap
+destination bytes missing in the data stream. Available after argus-3.0.4
+.TP
+.B rate
+pkts per second.
+.TP
+.B srate
+source pkts per second.
+.TP
+.B drate
+destination pkts per second.
+.TP
+.B dir
+direction of transaction
+.TP
+.B sintpkt
+source interpacket arrival time (mSec)
+.TP
+.B sintdist
+source interpacket arrival time distribution
+.TP
+.B sintpktact
+source active interpacket arrival time (mSec)
+.TP
+.B sintdistact
+source active interpacket arrival time (mSec)
+.TP
+.B sintpktidl
+source idle interpacket arrival time (mSec)
+.TP
+.B sintdistidl
+source idle interpacket arrival time (mSec)
+.TP
+.B dintpkt
+destination interpacket arrival time (mSec)
+.TP
+.B dintdist
+destination interpacket arrival time distribution
+.TP
+.B dintpktact
+destination active interpacket arrival time (mSec)
+.TP
+.B dintdistact
+destination active interpacket arrival time distribution (mSec)
+.TP
+.B dintpktidl
+destination idle interpacket arrival time (mSec)
+.TP
+.B dintdistidl
+destination idle interpacket arrival time distribution
+.TP
+.B sjit
+source jitter (mSec).
+.TP
+.B sjitact
+source active jitter (mSec).
+.TP
+.B sjitidle
+source idle jitter (mSec).
+.TP
+.B djit
+destination jitter (mSec).
+.TP
+.B djitact
+destination active jitter (mSec).
+.TP
+.B djitidle
+destination idle jitter (mSec).
+.TP
+.B state
+transaction state
+.TP
+.B label
+Metadata label.
+.TP
+.B suser
+source user data buffer.
+.TP
+.B duser
+destination user data buffer.
+.TP
+.B swin
+source TCP window advertisement.
+.TP
+.B dwin
+destination TCP window advertisement.
+.TP
+.B svlan
+source VLAN identifier.
+.TP
+.B dvlan
+destination VLAN identifier.
+.TP
+.B svid
+source VLAN identifier.
+.TP
+.B dvid
+destination VLAN identifier.
+.TP
+.B svpri
+source VLAN priority.
+.TP
+.B dvpri
+destination VLAN priority.
+.TP
+.B srng
+start time for the filter timerange.
+.TP
+.B erng
+end time for the filter timerange.
+.TP
+.B stcpb
+source TCP base sequence number
+.TP
+.B dtcpb
+destination TCP base sequence number
+.TP
+.B tcprtt
+TCP connection setup round-trip time, the sum of 'synack' and 'ackdat'.
+.TP
+.B synack
+TCP connection setup time, the time between the SYN and the SYN_ACK packets.
+.TP
+.B ackdat
+TCP connection setup time, the time between the SYN_ACK and the ACK packets.
+.TP
+.B tcpopt
+The TCP connection options seen at initiation.  The \fItcpopt\fP indicator
+consists of a fixed length field, that reports presence of any of the 
+TCP options that argus tracks
+The format is:
+.nf
+.sp .5
+
+ M            -  Maxiumum Segment Size
+  w           -  Window Scale 
+   s          -  Selective ACK OK
+    S         -  Selective ACK
+     e        -  TCP Echo
+      E       -  TCP Echo Reply
+       T      -  TCP Timestamp
+        c     -  TCP CC
+         N    -  TCP CC New
+          O   -  TCP CC Echo 
+           S  -  Source Explicit Congestion Notification
+            D -  Destination Explicit Congestion Notification
+
+.TP
+.B inode
+ICMP intermediate node.
+.TP
+.B offset
+record byte offset in file or stream.
+.TP
+.B smeansz
+Mean of the flow packet size transmitted by the src (initiator).
+.TP
+.B dmeansz
+Mean of the flow packet size transmitted by the dst (target).
+
+.TP
+.B spktsz
+histogram for the src packet size distribution
+.TP
+.B smaxsz
+maximum packet size for traffic transmitted by the src.
+.TP
+.B dpktsz
+histogram for the dst packet size distribution
+.TP
+.B dmaxsz
+maximum packet size for traffic transmitted by the dst.
+.TP
+.B sminsz
+minimum packet size for traffic transmitted by the src.
+.TP
+.B dminsz
+minimum packet size for traffic transmitted by the dst.
+
+.TP
+.B dminsz
+minimum packet size for traffic transmitted by the dst.
+.PD 1
+.RE
+.RS
+
+Examles are:
+.nf
+   -s saddr      print only the source address.
+   -s -bytes     removes the bytes field from list.
+   -s +2srcid    adds the source identifier as the 2nd field.
+   -s spkts:18   prints src pkt count with a column width of 18.
+   -s smpls      print the local mpls label in the flow.
+.fi
+.RE
+.TP 4 4
+.B \-S <[URI://][user[:pass]@]host[:portnum]>
+Specify a remote source of flow data. 
+Read flow data from various data format and transport strategies, using the URI format
+to indicate the type of flow data record of interest (argus-tcp, argus-udp, cisco,
+jflow, sflow) and the source, as a name or an addresss, providing an option user and
+password for protected access.  Use the optional ':portnum' to specify a port number
+other than the default; 561. 
+
+Examles are:
+.nf
+   -S localhost                 request remote argus records from localhost, using default methods.
+   -S user@localhost            request argus records from localhost, as 'user'.
+   -S user:pass@localhost       request argus records from localhost, as 'user', with 'pass' password.
+   -S 192.168.0.4:12345         request via TCP argus records from 192.168.0.4, port 12345.
+   -S argus://user@anubis       request argus records from anubis, via TCP port 561, as 'user'.
+   -S argus-tcp://thoth:12345   request argus records via TCP from thoth, port 12345.
+   -S argus-udp://set:12345     request argus records via UDP from set, port 12345.
+   -S cisco://any:9996          read cisco netflow records from AF_ANY, on port 9996.
+   -S jflow://10.0.0.2:9898     read jflow records sent to 10.0.0.2, on port 9898.
+   -S sflow://localhost:6343    read sflow records sent to localhost interface, port 6343.
+.fi
+
+.TP 4 4
+.B \-t <timerange>
+Specify the \fB<time range>\fP for matching \fBargus(5)\fP records. This
+option supports a high degree of flexibility in specifing explicit and
+relative time ranges with support for time field wildcarding.
+
+The syntax for the \fB<time range>\fP is:
+.nf
+[timeComparisonInd]timeSpecification[-timeSpecification]
+   timeComparisonInd: [x]i | n | c    (default = i)
+     x  negation   reverses the result of the time comparison
+     i  intersects match records that were active during this time period
+     n  includes   match records that start before and end after the period
+     c  contained  match records that start and end during the period
+
+   timeSpecification: [[[yyyy/]mm/]dd.]HH[:MM[:SS]]
+                        [yyyy/]mm/dd
+                        yyyy
+                        %d{ymdHMS}
+                        seconds
+                        { + | - }%d{ymdHMS}
+
+   where '*' can be used as a wildcard.
+
+.fi
+Examples are:
+.nf
+   -t 14              specify the time range 2pm-3pm for today
+   -t 15-23           specify the time range 3pm-11pm for today
+   -t 2011            all records in the year 2011
+   -t 2011/08         all records in Aug of the year 2011
+   -t 2011/08-2011/10 all records in Aug, Sept, and Oct of the year 2011
+
+   -t **.14           specify 2pm-3pm, every day this month
+   -t 1270616652+2s   all records that span 10/04/07.01:04:12 EDT.
+   -t 1999y1m23d10h   matches 10-11am on Jan, 23, 1999
+   -t 10d*h*m15s      matches records that intersect the 15 sec,
+                      any minute, any hour, on the 10th of this month
+   -t ****/11/23      all records in Nov 23rd, any year
+   -t 23.11:10-14     11:10:00 - 2pm on the 23rd of this month
+   -t -10m            matches 10 minutes before, to the present
+   -t -1M+1d          matches the first day of the this month.
+   -t -2h5m+5m        matches records that start before and end
+                      after the range starting 2 hours 5 minutes
+                      prior to the present, and lasting 5 minutes.
+
+.fi
+Time is compared using basic intersection operations.  A record
+\fBi\Pntersects a specified time range if there is any intersection
+between the time range of the record and the comparison time range.
+This is the default behavior.  A record \fBi\fPncludes the comparison
+time range if the intersection of the two ranges equals the 
+comparison time, and a record is \fBc\fPontained when the intersection
+equals the duration of the record.  The comparison indicator is the
+first character of the range specification, without spaces.
+
+Examples are:
+.nf
+   -t n14:10:15-14:10:19  records include these 4s.
+   -t c14:10-14:10:10     record starts and ends within these 10s.
+   -t xi-5s+25s           record starts or ends 5 seconds earlier and
+                          20 seconds after 'now'.
+.fi
+
+.TP 4 4
+.B \-T <secs>
+Read \fBargus(5)\fP from remote server for \fB<secs>\fP of time.
+.TP 4 4
+.B \-u
+Print time values using Unix time format (seconds from the Epoch).
+.TP 4 4
+.B \-w <file> [filter-expression]
+Append matching data to \fB<file>\fP, in
+.B argus
+file format. An \fIoutput-file\fP of '-' directs 
+.B ra
+to write the \fBargus(5)\fP records to stdout, allowing for "chaining"
+.B ra*
+style commands together.  The optional filter-expression can be used
+to select specific output.
+.TP 4 4
+.B \-X
+Resets all options to their default values and overrides the rarc file contents (Use as the first option.)
+.TP 4 4
+.B \-z
+Modify status field to represent TCP state changes. The values of the
+status field when this is enabled are:
+.nf
+  's' - Syn Transmitted
+  'S' - Syn Acknowledged
+  'E' - TCP Established
+  'f' - Fin Transmitted  (FIN Wait State 1)
+  'F' - Fin Acknowledged (FIN Wait State 2)
+  'R' - TCP Reset
+.fi
+.TP 4 4
+.B \-Z <s|d|b>
+Modify status field to reprsent actual TCP flag values. <'s'rc | 'd'st | 'b'oth>.
+The characters that can be present in the status field when this is enabled are:
+
+.nf
+  'F' - Fin
+  'S' - Syn
+  'R' - Reset
+  'P' - Push
+  'A' - Ack
+  'U' - Urgent Pointer
+  '7' - Undefined 7th bit set
+  '8' - Undefined 8th bit set
+.fi
+
+.SH RETURN VALUES
+\fBra\fP exits with one of the following values:
+.nf
+
+   0  Records matched condition, considering the options provided.  
+
+   1  No records matched the condition, or the source was not an argus stream.
+
+ > 1  An error occurred.
+.fi
+
+.SH FILTER EXPRESSION
+If arguments remain after option processing, the collection is
+interpreted as a single filter \fBexpression\fP.  In order to indicate
+the end of arguments, a '\-\-' (double dash) is required before the
+filter expression is added to the command line.  Historically, a '\-'
+(single dash) was used to separate the filter \fBexpression\fP from the
+command line options, but newer versions of \fBgetopt.1\fP now require
+the '\-\-' (double dash).
+
+
+The filter expression specifies which \fBargus(5)\fP records will
+be selected for processing.  If no \fIexpression\fP is given, all
+records are selected, otherwise, only those records for which
+\fIexpression\fP is `true' will be printed.
+
+The syntax is very similar to the expression syntax for \fBtcpdump(1)\fP,
+as the tcpdump compiler was a starting point for the \fBargus(5)\fP filter
+expression compiler.  However, the semantics for \fBtcpdump(1)'s\fP packet
+filter expressions are different when applied to transaction record
+filtering, so there are some major differences.
+
+When attached to a remote argus, \fBra\fP will send the filter to the argus
+process, which compiles the filter, and uses it to select which argus
+records will be transmitted to the \fBra\fP application.  If you do not
+want to send a filter to the remote argus, prepend the filter with the
+keyword "local", to indicate that the filtering will be done within the
+local \fBra\fP process.
+
+.LP
+The \fIexpression\fP consists of one or more
+.I primitives.
+Primitives usually consist of an
+.I id
+(name or number) preceded by one or more qualifiers.  There are three
+different kinds of qualifier:
+.IP \fItype\fP
+qualifiers say what kind of thing the id name or number refers to.
+Possible types are
+.BR srcid,
+.BR encaps,
+.BR ether,
+.BR host,
+.BR net,
+.BR co,
+.BR port,
+.BR tos,
+.BR ttl,
+.BR ptks,
+.BR bytes,
+.BR appbytes,
+.BR pcr,
+.BR data,
+.BR rate,
+.BR load,
+.BR loss,
+.BR ploss,
+.BR vid,
+.BR vpri,
+and
+.BR mid.
+
+E.g., `srcid isis`, `encaps gre', `host sphynx', `net 192.168.0.0/16', `port domain', `ttl 1', 'ptks gt 2', 'ploss lt 5'.
+If there is no type qualifier,
+.B host
+is assumed.
+.IP \fIdir\fP
+qualifiers specify a particular transfer direction to and/or from
+.I an id.
+Possible directions are
+.BR src ,
+.BR dst ,
+.B "src or dst"
+and
+.BR "src and dst" .
+E.g., `src sphynx', `dst net 192.168.0.0/24', `src or dst port ftp',
+`src and dst tos 0x0a', `src or dst vid 0x12`, `dst vpri 0x02` .
+If there is no dir qualifier,
+.B "src or dst"
+is assumed.
+.IP \fIproto\fP
+qualifiers restrict the match to a particular protocol.  Possible
+values are those specified in the \fB/etc/protocols\fP system file
+and a small number of extensions, (that should be defined
+but aren't).  Specific extended values are
+.BR 'ipv4' ,
+(to specify just ip version 4), in contrast to the defined proto
+.BR 'ipv6' .
+The defined proto
+.BR 'ip' 
+reduces to the filter 'ipv4 or ipv6'.
+
+When preceeded by \fIether\fP, the protocol names and numbers that
+are valid are specified in ./include/ethernames.h.
+.LP
+In addition to the above, there are some special `primitive' keywords
+that don't follow the pattern:
+.BR gateway ,
+.BR multicast ,
+and
+.BR broadcast .
+All of these are described below.
+.LP
+More complex filter expressions are built up by using the words
+.BR and ,
+.B or
+and
+.B not
+to combine primitives.  E.g., `host foo and not port ftp and not port ftp-data'.
+To save typing, identical qualifier lists can be omitted.  E.g.,
+`tcp dst port ftp or ftp-data or domain' is exactly the same as
+`tcp dst port ftp or tcp dst port ftp-data or tcp dst port domain'.
+.LP
+Allowable primitives are:
+.IP "\fBsrcid \fIargusid\fR"
+True if the argus identifier field in the Argus record is \fIsrcid\fP,
+which may be an IP address, a name or a decimal/hexidecimal number.
+.IP "\fBseq [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the transport sequence number in the Argus record matches the
+\fIsequence number expression\fP. 
+.IP "\fBencaps \fItype\fR"
+True if the encapsulation used by the flow in the Argus record includes
+the \fItype\fP.  The list of valid encapsulation types is:
+.nf
+.sp .5
+   eth, mpls, 802q, llc, pppoe, isl, gre, erspan, ah, ipnip, ipnip6, hdlc, chdlc,
+   atm, sll, fddi, slip, arc, wlan, prism, avs, lrh, grh, teredo, udt, ipsec, juniper
+
+.IP "\fBdst host \fIhost\fR"
+True if the IP destination field in the Argus record is \fIhost\fP,
+which may be either an address or a name.
+.IP "\fBsrc host \fIhost\fR"
+True if the IP source field in the Argus record is \fIhost\fP.
+.IP "\fBhost \fIhost\fP
+True if either the IP source or destination in the Argus record is \fIhost\fP.
+Any of the above host expressions can be prepended with the keywords
+\fBip\fP, \fBarp\fP, or \fBrarp\fP as in:
+.in +.5i
+.nf
+\fBip\fP host \fIhost\fR
+.fi
+.in -.5i
+which is equivalent to:
+.in +.5i
+.nf
+\fBether proto \fB\ip\fP and host \fIhost\fR
+.fi
+.in -.5i
+If \fIhost\fR is a name with multiple IP addresses, each address will
+be checked for a match.
+.IP "\fBether dst \fIehost\fP
+True if the ethernet destination address is \fIehost\fP.  \fIEhost\fP
+may be either a name from /etc/ethers or a number (see
+.IR ethers (3N)
+for numeric format).
+.IP "\fBether src \fIehost\fP
+True if the ethernet source address is \fIehost\fP.
+.IP "\fBether host \fIehost\fP
+True if either the ethernet source or destination address is \fIehost\fP.
+.IP "\fBgateway\fP \fIhost\fP
+True if the transaction used \fIhost\fP as a gateway.  I.e., the ethernet
+source or destination address was \fIhost\fP but neither the IP source
+nor the IP destination was \fIhost\fP.  \fIHost\fP must be a name and
+must be found in both /etc/hosts and /etc/ethers.  (An equivalent
+expression is
+.in +.5i
+.nf
+\fBether host \fIehost \fBand not host \fIhost\fR
+.fi
+.in -.5i
+which can be used with either names or numbers for \fIhost / ehost\fP.)
+.IP "\fBdst net \fIcidr\fR"
+True if the IP destination address in the Argus record matches the
+\fIcidr\fP address.
+.IP "\fBsrc net \fIcidr\fR"
+True if the IP source address in the Argus record matches the \fIcidr\fP
+address.
+.IP "\fBnet \fIcidr\fR"
+True if either the IP source or destination address in the Argus record matches 
+\fIcidr\fP address.
+.IP "\fBdst port \fIport\fR"
+True if the network transaction is IP based, using either the TCP or UDP transport
+protocols, and a destination port value of \fIport\fP.
+The \fIport\fP can be a number or a name as configured in the /etc/services file.(see
+.IR tcp (4P)
+and
+.IR udp (4P)).
+If a name is used, both the protocol number and port number, are checked.
+If a number or ambiguous name is used, the port number is checked for both UDP and
+TCP protocols (e.g., \fBdst port 513\fR will print both tcp/login traffic and
+udp/who traffic, and \fBport domain\fR will match both tcp/domain and udp/domain traffic).
+Port ranges can be specified using numeric values, such as \fBport 53-215\fR.
+
+.IP "\fBsrc port \fIport\fR"
+True if the network transaction has a source port value of \fIport\fP.
+.IP "\fBport \fIport\fR"
+True if either the source or destination port in the Argus record is \fIport\fP.
+Any of the above port expressions can be prepended with the keywords,
+\fBtcp\fP or \fBudp\fP, as in:
+.in +.5i
+.nf
+\fBtcp src port \fIport\fR
+.fi
+.in -.5i
+which matches only tcp connections.
+.IP "\fBip proto \fIprotocol\fR"
+True if the Argus record is an ip transaction (see
+.IR ip (4P))
+of protocol type \fIprotocol\fP.
+\fIProtocol\fP can be a number or any of the string values found
+in \fI/etc/protocols\fP.
+.IP \fBmulticast\fR
+True if the network transaction involved an ip multicast address.
+By specifing ether multicast, you can select argus records that
+involve an ethernet multicast address.
+.IP \fBbroadcast\fR
+True if the network transaction involved an ip broadcast address.
+By specifing ether broadcast, you can select argus records that
+involve an ethernet broadcast address.
+.IP  "\fBether proto \fIprotocol\fR"
+True if the Argus record is of ether type \fIprotocol\fR.
+\fIProtocol\fP can be a number or a name like
+\fIip\fP, \fIarp\fP, or \fIrarp\fP.
+.IP "\fB[src | dst] ttl [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the TTL in the Argus record equals \fInumber\fP.
+.IP "\fB[src | dst] tos [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the TOS in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] vid [gt | gte | lt | lte | eq] \fInumber\fR"
+True if th VLAN id in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] vpri [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the VLAN priority in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] mid [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the MPLS Label in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] pkts [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the packet count in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] bytes [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the byte count in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] appbytes [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the application byte count in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] rate [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the rate in the Argus record (default) equals \fInumber\fP.
+.IP "\fB[src | dst] load [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the load in the Argus record (default) equals \fInumber\fP.
+
+.LP
+Ra filter expressions support primitives that are specific
+to flow states and can be used to select flow records that
+were in these states at the time they were generated.
+\fInormal\fP,
+\fIwait\fP,
+\fItimeout\fP,
+\fIest\fP or \fIcon\fP
+
+Primitives that select flows that experienced fragmentation.
+\fIfrag\fP and
+\fIfragonly\fP
+
+Support for selecting flows that used multiple pairs of MAC
+addresses during their lifetime.
+\fImultipath\fP
+
+.LP
+Primitives specific to TCP flows are supported.
+\fIsyn\fP,
+\fIsynack\fP,
+\fIecn\fP,
+\fIfin\fP,
+\fIfinack\fP,
+\fIreset\fP,
+\fIretrans\fP,
+\fIoutoforder\fP and
+\fIwinshut\fP
+
+Primitives specific to TCP options are supported.
+\fItcpopt\fP,
+\fImss\fP,
+\fIwscale\fP,
+\fIselackok\fP,
+\fIselack\fP,
+\fItcpecho\fP,
+\fItcpechoreply\fP,
+\fItcptimestamp\fP,
+\fItcpcc\fP,
+\fItcpccnew\fP,
+\fItcpccecho\fP,
+\fIsecn\fP and
+\fIdecn\fP
+
+Primitives specific to ICMP flows are supported.
+\fIecho\fP,
+\fIunreach\fP,
+\fIredirect\fP and
+\fItimexed\fP
+
+.LP
+For some primitives, a direction qualifier is appropriate.
+These are
+\fIfrag\fP,
+\fIreset\fP,
+\fIretrans\fP,
+\fIoutoforder\fP and
+\fIwinshut\fP
+
+.LP
+Primitives may be combined using:
+.IP
+A parenthesized group of primitives and operators
+(parentheses are special to the Shell and must be escaped).
+.IP
+Negation (`\fB!\fP' or `\fBnot\fP').
+.IP
+Concatenation (`\fBand\fP').
+.IP
+Alternation (`\fBor\fP').
+.LP
+Negation has highest precedence.
+Alternation and concatenation have equal precedence and associate
+left to right.  Note that explicit \fBand\fR tokens, not juxtaposition,
+are now required for concatenation.
+.LP
+If an identifier is given without a keyword, the most recent keyword
+is assumed.
+For example,
+.in +.5i
+.nf
+\fBnot host sphynx and anubis\fR
+.fi
+.in -.5i
+is short for
+.in +.5i
+.nf
+\fBnot host sphynx and host anubis\fR
+.fi
+.in -.5i
+which should not be confused with
+.in +.5i
+.nf
+\fBnot ( host sphynx or anubis )\fR
+.fi
+.in -.5i
+.LP
+Expression arguments can be passed to \fBra(1)\fP as either a single argument
+or as multiple arguments, whichever is more convenient.
+Generally, if the expression contains Shell metacharacters, it is
+easier to pass it as a single, quoted argument.
+Multiple arguments are concatenated with spaces before being parsed.
+
+.SS "Startup Processing"
+\fBRa\fP begins by searching for the configuration file \fB.rarc\fP first
+in the directory, \fB$ARGUSHOME\fP and then \fB$HOME\fP.  If a \fB.rarc\fP
+is found, all variables specified in the file are set.
+.PP
+\fBRa\fP then parses its command line options and set its internal variables
+accordingly.
+.PP
+If a configuration file is specified on the command-line, using the "-f <confile>"
+option, the values in this .rarc formatted file superceed all other values.
+
+
+.SH EXAMPLES
+.LP
+To report all TCP transactions from and to host 'narly.wave.com',
+reading transaction data from \fIargus-file\fP argus.data:
+.RS
+.nf
+\fBra -r argus.data - tcp and host narly.wave.com\fP
+.fi
+.RE
+.LP
+To report all UDP based DNS traffic,
+reading transaction data from the remote \fIargus.server\fP:
+.RS
+.nf
+\fBra -S argus.server - udp port domain
+.fi
+.RE
+.LP
+To report all UDP transactions seen by the remote \fIargus.server\fP
+on the port range 53-256, but not sending the filter to the remote
+argus process:
+.RS
+.nf
+\fBra -S argus.server - local udp port 53-256
+.fi
+.RE
+.LP
+Create the \fIargus-file\fP icmp.log with all ICMP events involving
+the host nimrod, using data from \fIargus-file\fP, but reading the
+transaction data from \fIstdin\fP:
+.RS
+.nf
+\fBcat \fIargus-file\fP | ra -r - -w icmp.log - icmp and host nimrod\fP
+.fi
+.RE
+.LP
+Read an \fIargus-file\fP at twice normal speed.
+.RS
+.nf
+\fBra -r argus.file -M rtime:2
+.fi
+
+.RE
+.br
+.SH OUTPUT FORMAT
+.LP
+The following is a brief description of the default output of .B ra.
+While this is by no means the 'preferred' set of data that one should
+generate, it represents a starting point for using flow data in general.
+This also looks pretty good on 80 column terminals.  The format is:
+.RE
+.RS
+.nf
+.sp .1
+\fI  time  flgs proto  shost  dir  daddr metrics state\fP
+.sp .1
+.fi
+.RE
+.TP 4 4
+.BI time
+The format of the \fItime\fP field is specified by the .rarc file, using
+syntax supported by the routine
+.B strftime(3V).
+The default is '%T'.
+.B Argus
+transactional data contains both starting and ending transaction times,
+with precision to the microsecond. However,
+.B ra
+by default prints out the 'stime' field, the records starting time.
+.TP 4 4
+.BI flgs
+The \fIflgs\fP indicator consists of a fixed length field. That reports
+various flow record and protocol identifiers, states and attributes.
+The format is:
+.nf
+.sp .5
+
+ T        -  Time Corrected/Adjusted
+ N        -  Netflow Originated Data
+  *       -  Multiple sub-IP encapsulations
+  e       -  Ethernet encapsulated flow
+  E       -  ERSPAN encapsulation
+  M       -  Multiple mac addresses seen
+  m       -  MPLS encapsulated flow
+  l       -  LLC encapsulated flow
+  v       -  802.1Q encapsulations/tags
+  w       -  802.11 wireless encapsulation
+  p       -  PPP over Enternet encapsulated flow
+  i       -  ISL encapsulated flow
+  G       -  GRE encapsulation
+  a       -  AH encapsulation
+  P       -  IP tunnel encapsulation
+  6       -  IPv6 tunnel encapsulation
+  H       -  HDLC encapsulation
+  C       -  Cisco HDLC encapsulation
+  A       -  ATM encapsulation
+  S       -  SLL encapsulation
+  F       -  FDDI encapsulation
+  s       -  SLIP encapsulation
+  R       -  ARCNET encapsulation
+   I      -  ICMP events mapped to this flow
+   U      -  ICMP Unreachable event mapped to this flow
+   R      -  ICMP Redirect event mapped to this flow
+   T      -  ICMP Time Exceeded mapped to this flow
+    *     -  Both Src and Dst loss/retransmission
+    s     -  Src loss/retransmissions
+    d     -  Dst loss/retransmissions
+    g     -  Gaps in sequence numbers were observed
+    &     -  Both Src and Dst packet out of order
+    i     -  Src packets out of order
+    r     -  Dst packets out of order
+     @    -  Both Src and Dst Window Closure
+     S    -  Src TCP Window Closure
+     D    -  Dst TCP Window Closure
+     *    -  Silence suppression used by both src and dst (RTP)
+     s    -  Silence suppression used by src
+     d    -  Silence suppression used by dst
+      E   -  Both Src and Dst ECN
+      x   -  Src Explicit Congestion Notification
+      t   -  Dst ECN
+       V  -  Fragment overlap seen (if fragments seen)
+       f  -  Partial Fragment (if fragments seen)
+       F  -  Fragments seen
+        O  -  multiple IP options set
+        S  -  IP option Strict Source Route
+        L  -  IP option Loose Source Route
+        T  -  IP option Time Stamp
+        +  -  IP option Security
+        R  -  IP option Record Route
+        A  -  IP option Router Alert
+        U  -  unknown IP options set
+.fi
+
+.TP 4 4
+.BI proto
+The proto field indicates the upper protocol used in the transaction.
+This field will contain the first 4 characters of the official
+name for the protocol used, as defined in RFC-1700, and configured
+using the /etc/protocols file.  Argus attempts to discovery the Realtime
+Transport Protocol (rtp), when it is being used.
+When it encounters rtp, it will indicate its use in this field, with
+the string 'rtp'.  Use of the
+.B -n
+option, twice (-nn), will cause the actual protocol number to be
+displayed.
+.TP 4 4
+.BI shost
+The \fIshost\fP field is meant to convey the originator of the
+data in the flow.  This field is protocol dependent, and for IP
+protocols will contain the src IP address/name.  For TCP and UDP,
+the field will also contain the port number/name, separated by a
+period.
+
+The 'src' is generally the entity that first transmits a packet
+that is a part of a flow.  However, the assignment of 'src'
+and 'dst' semantics is somewhat complicated by the notion of loss,
+or half-duplex monitoring, especially when connection-oriented
+protocol 
+, such
+as TCP, are
+reported.  In this case the 'src' is the entity that initiated
+the flow.
+.TP 3 3
+.BI dir
+The \fIdir\fP field will have the direction of the transaction,
+as can be best determined from the datum, and is used to indicate
+which hosts are transmitting. For TCP, the dir field indicates
+the actual source of the TCP connection, and the center character
+indicating the state of the transaction.
+.RS
+.nf
+.sp .5
+     -  - transaction was NORMAL
+     |  - transaction was RESET
+     o  - transaction TIMED OUT.
+     ?  - direction of transaction is unknown.
+.fi
+.RE
+.TP 4 4
+.BI daddr
+The \fIdaddr\fP field is meant to convey the recipient of the
+data in the flow.  Like the shost field, this field is protocol
+dependent, and for IP protocols will contain the dst IP address/name,
+and optionally the DSAP.
+
+.TP 4 4
+.BI metrics
+\fImetrics\fP represent the general sets of fields that reflect
+the activity of the flow.  In the default output, there are 4 fields.
+The first 2 are the packet counts and the last 2 are the byte counts
+for the specific transaction.  The fields are paired with the
+previous host fields, and represent the packets transmitted by
+the respective host.
+.TP 4 4
+.BI state
+The \fIstate\fP field indicates the principle state for the transaction
+report, and is protocol dependent.  For all the protocols, except ICMP,
+this field reports on the basic state of a transaction.
+.TP 4 4
+.in .25i
+.B REQ|INT (requested|initial)
+This indicates that this is the \fIinitial\fP state report for a
+transaction and is seen only when the \fIargus-server\fP is in DETAIL
+mode.  For TCP connections this is \fBREQ\fP, indicating that a
+connection is being requested.  For the connectionless protocols,
+such as UDP, this is \fBINT\fP.
+.TP 4 4
+.in .25i
+.B ACC (accepted)
+This indicates that a request/response condition has occurred,
+and that a transaction has been detected between two hosts.
+For TCP, this indicates that a connection request has been
+answered, and the connection will be accepted.  This is only seen
+when the \fIargus-server\fP is in DETAIL mode.  For the
+connectionless protocols, this state indicates that there
+has been a single packet exchange between two hosts, and could
+qualify as a request/response transaction.
+.TP 4 4
+.in .25i
+.B EST|CON (established|connected)
+This record type indicates that the reported transaction is active, and
+has been established or is continuing.  This should be interpreted as a
+state report of a currently active transaction.
+For TCP, the EST state is only seen in DETAIL mode, and indicates
+that the three way handshake has been completed for a connection.
+.TP 4 4
+.in .25i
+.B CLO (closed) 
+TCP specific, this record type indicates that the TCP connection has
+closed normally.
+.TP 4 4
+.in .25i
+.B TIM (timeout)
+Activity was not seen relating to this transaction, during the
+.B argus
+server's timeout period for this protocol.  This state is seen
+only when there were packets recorded since the last report for
+this transaction.
+
+.LP
+For the ICMP and ICMPv6 protocols, the \fIstate\fP field displays
+specific aspects of the ICMP type.  ICMP state can have the values:
+.nf
+.in 10
+
+\fBECO\fP     Echo Request
+\fBECR\fP     Echo Reply
+\fBSRC\fP     Source Quench
+\fBRED\fP     Redirect
+\fBRTA\fP     Router Advertisement
+\fBRTS\fP     Router Solicitation
+\fBTXD\fP     Time Exceeded
+\fBPAR\fP     Parameter Problem
+\fBTST\fP     Time Stamp Request
+\fBTSR\fP     Time Stamp Reply
+\fBIRQ\fP     Information Request
+\fBIRR\fP     Information Reply
+\fBMAS\fP     Mask Request
+\fBMSR\fP     Mask Reply
+\fBURN\fP     Unreachable network
+\fBURH\fP     Unreachable host
+\fBURP\fP     Unreachable port
+\fBURF\fP     Unreachable need fragmentation
+\fBURS\fP     Unreachable source failed
+\fBURNU\fP    Unreachable dst network unknown
+\fBURHU\fP    Unreachable dst host unknown
+\fBURISO\fP   Unreachable source host isolated
+\fBURNPRO\fP  Unreachable network administrative prohibited
+\fBURHPRO\fP  Unreachable host administrative prohibited
+\fBURNTOS\fP  Unreachable network TOS prohibited
+\fBURHTOS\fP  Unreachable host TOS prohibited
+\fBURFIL\fP   Unreachable administrative filter
+\fBURPRE\fP   Unreachable precedence violation
+\fBURCUT\fP   Unreachable precedence cutoff
+
+\fBMRQ\fP     Membership Query
+\fBMHR\fP     Membership Report
+\fBNRS\fP     Neighbor Discovery Router Solicit
+\fBNRA\fP     Neighbor Discovery Router Advertisement
+\fBNNS\fP     Neighbor Discovery Neighbor Solicit
+\fBNNA\fP     Neighbor Discovery Neighbor Advertisement
+\fBPTB\fP     Packet Too Big
+.fi
+
+.LP
+.br
+.SH OUTPUT EXAMPLES
+
+These examples show typical \fBra\fP output, and demonstrates a
+number of variations seen in \fBargus\fP data.  This \fBra\fP
+output was generated using the \fB-n\fP option to suppress
+number translation.
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 06:40:32   S tcp  132.3.31.15.6439   -> 12.23.14.77.23   CLO
+.fi
+.ft R
+.in +6n
+.ll -1n
+This is a normal tcp transaction to the telnet port on host 12.23.14.77.
+The IP Option strict source route was seen.
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 06:40:32     tcp  132.3.31.15.6200  <|  12.23.14.77.25   RST
+.fi
+.ft R
+.in +6n
+.ll -1n
+This tcp transaction from the smtp port of host 12.23.14.77
+was \fBRESET\fP.  In many cases this indicates that the transaction was
+rejected, however some os's will use RST to close an active TCP.  Use
+either the -z or -Zb options to specify exactly what conditions existed
+during the connection.
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 03:39:05  M  igmp 12.88.14.10       <-> 128.2.2.10       CON
+.fi
+.ft R
+.in +6n
+.ll -1n
+This is an igmp transaction state report, usually seen with MBONE traffic.
+There was more than one source and destination MAC address pair used to
+support the transaction, suggesting a possible routing loop.
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 06:40:05 *   tcp  12.23.14.23.1043  <-> 12.23.14.27.6000 TIM
+.fi
+.ft R
+.fi
+.in +6n
+.ll -1n
+This is an X-windows transaction, that has \fBTIMEDOUT\fP.   Packets
+were retransmitted during the connection.
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 07:42:09     udp   12.9.1.115.2262   -> 28.12.141.6.139  INT
+.fi
+.ft R
+.in +6n
+.ll -1n
+This is an initial netbios UDP transaction state report, indicating
+that this is the first datagram encountered for this transaction. 
+
+.in -6n
+.ll +1n
+.ft B
+.nf
+Thu 12/29 06:42:09     icmp  12.9.1.115       <-> 12.68.5.127      ECO
+.fi
+.ft R
+.in +6n
+.ll -1n
+This example represents a "ping" of host 12.9.1.115, and its response. 
+.in -6n
+.ll +1n
+
+.ss 12
+.cs B
+.ft R
+This next example shows the \fBra\fP output of a complete TCP transaction,
+with the preceeding Arp and DNS requests, while reading from a remote
+\fIargus-server\fP.   The '*' in the CLO report indicates that at least
+one TCP packet was retransmitted during the transaction.  The hostnames
+in this example are ficticious.
+
+.nf
+% ra -S argus-tcp://\fIargus-server\fP and host i.qosient.com
+ra: Trying argus-server port 561
+ra: connected Argus Version 3.0
+Sat 12/03 15:29:38     arp  i.qosient.com     who-has  dsn.qosient.com  INT
+Sat 12/03 15:29:39     udp  i.qosient.com.1542  <->    dns.qosient.53   INT
+Sat 12/03 15:29:39     arp  i.qosient.com     who-has  qosient.com      INT
+Sat 12/03 15:29:39 *   tcp  i.qosient.com.1543   ->    qosient.com.smtp CLO
+.fi
+.ss 12
+.cs B
+.ft
+.fi
+.br
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH FILES
+.BR /etc/ra.conf
+.SH SEE ALSO
+.BR rarc (5)
+.BR argus (8)
+.LP
+Postel, Jon,
+.IR "Internet Protocol",
+.SM RFC
+791,
+Network Information Center,
+.SM SRI
+International, Menlo Park, Calif.,
+May 1981.
+.LP
+Postel, Jon, 
+.IR "Internet Control Message Protocol" ,
+.SM RFC
+792,
+Network Information Center, SRI International, Menlo Park, Calif.,
+May 1981.
+.LP
+Postel, Jon, 
+.IR "Transmission Control Protocol" ,
+.SM RFC
+793,
+Network Information Center, SRI International, Menlo Park, Calif.,
+May 1981.
+.LP
+Postel, Jon,
+.IR "User Datagram Protocol" ,
+.SM RFC
+768,
+Network Information Center, SRI International, Menlo Park, Calif.,
+May 1980.
+.LP
+McCanne, Steven, and Van Jacobson,
+.IR "The BSD Packet Filter: A New Architecture for User-level Capture" ,
+Lawrwnce Berkeley Laboratory, One Cyclotron Road, Berkeley, Calif., 94720,
+December 1992.

@@ -1,0 +1,47 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\" 
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\" 
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\" 
+.\" Manpage for radecode.
+.TH RADECODE 1 "09 July 2013" "radecode 3.0.8"
+.SH NAME
+radecode \- tshark-like decode of argus(1) user data
+.SH SYNOPSIS
+.B radecode 
+\fB\-r\fP \fIargusFlowFile\fP
+.SH DESCRIPTION
+.IX  "radecode command"  ""  "\fLradecode\fP \(em argus data"
+.LP
+.B
+Radecode 
+is a perl script that uses text2pcap(1) and tshark(1) from the wireshark(1) distribution to decode TCP and UDP flow associated user data from an 
+.BR argus 
+flow capture file.
+You must enable 
+.BR argus 
+user data capture with the -U nnnn option or there will be no data to decode. Due to limitations in test2pcap only TCP and UDP flows are decoded. The other flow data are silently ignored.
+.SH OPTIONS
+In addition to the source file name all ra(1) options are available but may not make sense.
+.SH SEE ALSO
+tshark(1), text2pcap(1), ra(1)
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH AUTHORS
+.nf
+Carter Bullard
+Dave Edelman
+.fi
+.SH BUGS

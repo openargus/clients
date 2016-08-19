@@ -1,0 +1,55 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+.\" SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+.\" FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+.\" SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+.\" RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+.\" CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+.\" CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.\"
+.\"
+.TH RANONYMIZE 1 "04 December 2001" "ranonymize 3.0.8"
+.SH NAME
+\fBranonymize\fP \- anonymize \fBargus(8)\fP data fields.
+.SH SYNOPSIS
+.B ranonymize [\fB-f anonymize.conf\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ranonymize command"  ""  "\fLranonymize\fP \(em argus data"
+.LP
+.B Ranonymize
+reads
+.BR argus
+data from an \fIargus-data\fP source, strips out specific fields, 
+and anonymizes the remaining fields in Argus records, including the network
+addresses, protocol specific port numbers, timestamps, transaction reference
+numbers, TCP base sequence numbers, IP identifiers, and any record sequence
+numbers.
+
+Anonymization is controlled through an anonymization configuration file.
+See \fBranonymize(5)\fP for a complete description.
+
+.SH OPTIONS
+Ranonymize, shares all the same options as \fBra(1)\fP.
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBranonymize(1)\fP specific options are:
+.PP
+.PD 0
+.TP 3
+.BI \-f
+anonymization.confile
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH SEE ALSO
+.BR ra(1),
+.BR rarc(5),
+.BR ranonymize(5),
+.SH FILES
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS

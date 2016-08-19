@@ -1,0 +1,116 @@
+#!/bin/sh
+#  Argus Software
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+#
+# rasplit     This shell script takes care of starting and stopping rasplit.
+#
+# chkconfig: 2345 55 45
+# description: rasplit-3.0 collects and writes argus data into an archive.
+# processname: rasplit
+# config: none
+
+#
+# The assumption here is that rasplit is not using any special configurations
+# i.e. that /etc/rarc.conf does not exist.
+#
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then 
+. /etc/init.d/functions
+else
+if [ -f /etc/rc.d/init.d/functions ]; then 
+. /etc/init.d/functions
+fi
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 1
+
+
+# Set rasplit path by defining $RASPLITHOME for this script.
+# If rasplit was installed in another way, modify PATH to
+# include the directory where the rasplit binary was installed.
+
+RASPLITDIR=/usr/local/bin
+ARGUSARCHIVE=/usr/local/argus/archive
+
+export PATH=$RASPLITDIR:$PATH
+
+[ -f $RASPLITDIR/rasplit ] || exit 1
+
+RETVAL=0
+RASPLIT=$RASPLITDIR/rasplit
+RASPLITOPTIONS="-d -M time 5m -w $ARGUSARCHIVE/\$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S > /dev/null 2>&1"
+
+start() {
+	# Start daemons.
+	echo -n "Starting rasplit: "
+	if [ ! -d $ARGUSARCHIVE ] then
+		mkdir $ARGUSARCHIVE
+	fi
+	initlog -c "$RASPLIT $RASPLITOPTIONS" && success || failure
+        RETVAL=$?
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/rasplit
+	echo
+}
+
+stop() {
+	# Stop daemons.
+	echo -n "Stopping rasplit: "
+	killproc rasplit
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/rasplit
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	RETVAL=$?
+	;;
+  stop)
+	stop
+	RETVAL=$?
+	;;
+  restart|reload)
+	stop
+	start
+	RETVAL=$?
+	;;
+  condrestart)
+	if [ -f /var/lock/subsys/rasplit ]; then
+	    stop
+	    start
+	    RETVAL=$?
+	fi
+	;;
+  status)
+	status rasplit
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: rasplit {start|stop|restart|condrestart|status}"
+	exit 1
+	;;
+esac
+exit $RETVAL

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>Radium</string>
+	<key>OrderPreference</key>
+	<string>Late</string>
+	<key>Provides</key>
+	<array>
+		<string>Radium</string>
+	</array>
+	<key>Uses</key>
+	<array>
+		<string>Argus</string>
+		<string>SystemLog</string>
+		<string>mDNSResponder</string>
+	</array>
+	<key>KeepAlive</key>
+		<true/>
+	<key>Program</key>
+		<string>/usr/local/sbin/radium</string>
+	<key>Label</key>
+		<string>com.qosient.radium</string>
+        <key>Disabled</key>
+                <false/>
+</dict>
+</plist>

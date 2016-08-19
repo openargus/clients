@@ -1,0 +1,117 @@
+#!/bin/sh
+#
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+#
+#  Permission to use, copy, modify, and distribute this software and
+#  its documentation for any purpose and without fee is hereby granted,
+#  provided that the above copyright notice appear in all copies and
+#  that both that copyright notice and this permission notice appear
+#  in supporting documentation, and that the name of QoSient not be
+#  used in advertising or publicity pertaining to distribution of the
+#  software without specific, written prior permission.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+#  FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+#  RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+#  CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+#  CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# rasplit     This shell script takes care of starting and stopping
+#            rasplit, on RH-style Linux.  
+#
+# chkconfig: 2345 57 43
+# description: rasplit separates flows into archive files
+# processname: rasplit
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then 
+. /etc/init.d/functions
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 1
+
+#
+# no default args: use  DAEMON_ARGS in /etc/sysconfig/rasplit 
+#
+# Note: -X -d will be forced to prevent inadvertent use of client config by daemon
+#       Use -F to add a config 
+
+DAEMON_ARGS=""
+
+#
+# default archive home
+#
+ARGUSARCHIVE=/usr/local/argus/archive
+
+# Set argus path by defining $ARGUSHOME for this script.
+# If rasplit was installed in another way, modify /etc/sysconfig/rasplit
+# to specify ARGUSDIR  where the argus binary was installed.
+
+ARGUSDIR=/usr/bin
+
+# Source rasplit configuration.
+. /etc/sysconfig/rasplit
+
+ARGUSHOME=$ARGUSDIR
+export PATH=$ARGUSHOME:$PATH
+
+[ -f $ARGUSHOME/rasplit ] || exit 1
+
+RETVAL=0
+
+start() {
+	# Start daemons.
+
+	echo -n "Starting rasplit: "
+	rasplit  -X -d $DAEMON_ARGS > /dev/null 2>&1 && success || failure
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/rasplit
+	echo
+}
+
+stop() {
+	# Stop daemons.
+	echo -n "Shutting down rasplit: "
+	killproc rasplit
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/rasplit
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	stop
+	start
+	RETVAL=$?
+	;;
+  condrestart)
+	if [ -f /var/lock/subsys/rasplit ]; then
+	    stop
+	    start
+	    RETVAL=$?
+	fi
+	;;
+  status)
+	status rasplit
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: rasplit {start|stop|restart|condrestart|status}"
+	exit 1
+	;;
+esac
+exit $RETVAL

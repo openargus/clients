@@ -1,0 +1,422 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RABINS 1 "12 August 2003" "rabins 3.0.8"
+.SH NAME
+\fBrabins\fP \- process \fBargus(8)\fP data within specified bins.
+.SH SYNOPSIS
+.B rabins
+\fB[\-B\fB \fIsecs\fP\fB] \-M\fP \fIsplitmode\fP [\fIoptions\fP]] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "rabins command"  ""  "\fBrabins\fP \(em argus data"
+.LP
+\fBRabins\fP reads
+.BR argus
+data from an \fIargus-data\fP source, and adjusts the data so that
+it is aligned to a set of bins, or slots, that are based on either time,
+input size, or count.  The resulting output is split, modified, and
+optionally aggregated so that the data fits to the constraints of the
+specified bins.  \fBrabins\fP is designed to be a combination of
+\fBrasplit\fP and \fBracluster\fP, acting on multiple contexts of argus
+data.
+
+The principal function of \fBrabins\fP is to align input data to a series
+of bins, and then process the data within the context of each bin.  This is
+the basis for real-time stream block processing.  Time series stream block
+processing is cricital for flow data graphing, comparing, analyzing, and correlation.
+Fixed load stream block processing, based on the number of argus data records
+('count'), or a fixed volume of data ('size') allows for control of resources
+in processing.  While load based options are very useful, they are rather esoteric.
+See the online examples and rasplit.1 for examples of using these modes of operation.
+
+.SH Time Series Bins
+Time series bin'ing is specified using the \fB-M\fP \fItime\fP option.
+Time bins are specified by the size and granularity of the time bin.
+The granularity, 's'econds, 'm'inutes, 'h'ours, 'd'ays, 'w'eeks, 'M'onths,
+and 'y'ears, dictates where the bin boundaries lie.  To ensure that 0.5d and 12h
+start on the same point in time, second, minute, hour, and day based bins
+start at midnight, Jan 1st of the year of processing.  Week, month and year
+bins all start on natural time boundaries, for the period.
+
+\fBrabins\fP provides a separate processing context for each bin, so that
+aggregation and sorting occur only within the context of each time period.
+Records are placed into bins based on load or time.  For load based bins,
+input records are processed in received order and are not modified. When
+using time based bins, records are placed into bins based on the starting
+time of the record.  By default, records that span a time boundary are split
+into as many records as needed to fit the record into appropriate bin sizes,
+using the algorithms used by \fBrasplit.1\fP.  Metrics are distributed
+uniformly within all the appropriate bins. The result is a series of data
+and/or fragments that are time aligned, appropriate for time seried analysis,
+and visualization.
+
+When a record is split to conform to a time series bin, the resulting starting
+and ending timestamps may or may not coincide with the timestamps of the bins
+themselves. For some applications, this treatment is critical to the analytics
+that are working on the resulting data, such as transaction duration, and
+flow traffic burst behavior.  However, for other analytics, like average load,
+and rate analysis and reporting, the timestamps need to be modified so that
+they reflect the time range of the actual time bin boundaries.  Rabins
+supports the optional \fBhard\fP option to specify that timestamps should
+conform to bin boundaries.  One of the results of this is that all durations
+in the reported records will be the bin duration.  This is extremely important
+when processing certain time series metrics, like load.
+
+.SH Load Based Bins
+Load based bin'ing is specified using the \fB-M size\fP or \fB-M count\fP
+options.  Load bins are used to constrain the resource used in bin
+processing.  So much load is input, aggregation is performed on the input
+load, and when a threshold is reached, the entire aggregation cache is
+dumped, reinitiallized, and reused.  These can be used effectively to
+provide realtime data reduction, but within a fixed amount of memory.
+
+
+.SH Output Processing
+\fBrabins\fP has two basic modes of output, the default holds all output in main memory
+until EOF is encountered on input, where each sorted bin is written out. The second
+output mode, has \fBrabins\fP writing out the contents of individual sorted bins,
+periodically based on a holding time, specified using the \fI-B secs\fP option.
+The \fIsecs\fP value should be chosen such that \fBrabins\fP will have seen all 
+the appropriate incoming data for that time period.  This is determined by the
+ARGUS_FLOW_STATUS_INTERVAL used by the collection of argus data sources in the 
+input data stream, as well as any time drift that may exist amoung argus data
+processin elements.  When there is good time sync, and with an ARGUS_FLOW_STATUS_INTERVAL
+of 5 seconds, appropriate \fIsecs\fP values are between 5-15 seconds.
+
+The output of \fBrabins\fP when using the \fI-B secs\fP option, is appropriate to drive
+a number of processing elements, such as near real-time visualizations and alarm and
+reporting.
+
+
+.SH Output Stream
+
+Like all \fBra.1\fP client programs, the output of \fBrabins.1\fP is an argus
+data stream, that can be written as binary data to a file or standard output,
+or can be printed.  \fBrabins\fP supports all the output functions provided by
+\fBrasplit.1\fP. 
+
+
+The output files name consists of a prefix, which is specified using
+the \fI-w\fP \fIra option\fP, and for all modes except \fBtime\fP mode,
+a suffix, which is created for each resulting file.  If no prefix is
+provided, then \fBrabins\fP will use 'x' as the default prefix.  The suffix
+that is used is determined by the mode of operation.  When \fBrabins\fP
+is using the default count mode or the size mode, the suffix is a group
+of letters 'aa', 'ab', and so on, such that concatenating the output files
+in sorted order by file name produces the original input file.  If
+\fBrabins\fP will need to create more output files than are allowed
+by the default suffix strategy, more letters will be added, in order
+to accomodate the needed files.
+
+When \fBrabins\fP is spliting based on time, \fBrabins\fP uses a default
+extension of %Y.%m.%d.%h.%m.%s.  This default can be overrided by adding
+a '%' extension to the name provided using the \fI-w\fP option.
+
+When standard out is specified, using \fI-w -\fP, \fBrabins\fP
+will output a single \fBargus-stream\fP with START and STOP argus management
+records inserted appropriately to indicate where the output is split.
+See \fBargus(8)\fP for more information on output stream formats.
+
+When \fBrabins\fP is spliting on output record count (the default), the
+number of records is specified as an ordinal counter, the default is
+1000 records.  When \fBrabins\fP is spliting based on the maximum output
+file size, the size is specified as bytes.  The scale of the bytes can be
+specified by appending 'b', 'k' and 'm' to the number provided.
+
+When \fBrabins\fP is spliting base on time, the time period is specified
+with the option, and can be any period based in seconds (s), minutes (m),
+hours (h), days (d), weeks (w), months (M) or years (y).  \fBRabins\fP
+will create and modify records as required to split on prescribed time
+boundaries.  If any record spans a time boundary, the record is split
+and the metrics are adjusted using a uniform distribution model to
+distribute the statistics between the two records.
+
+See \fBrasplit.1\fP for specifics.
+
+
+.SH RABINS SPECIFIC OPTIONS
+\fBrabins\fP, like all ra based clients, supports a number of \fBra options\fP including
+remote data access, reading from multiple files and filtering of input argus
+records through a terminating filter expression.  Rabins also provides
+all the functions of \fBracluster.1\fP and \fBrasplit.1\fP, for processing and
+outputing data.  \fBrabins\fP specific options are:
+
+.TP 5
+.BI \-B "\| secs\^"
+Holding time in seconds before closing a bin and outputing its contents.
+.PP
+.TP 5
+.BI \-M "\| splitmode\^"
+Supported spliting modes are:
+.PP
+.RS
+.TP 5
+.B time <n[smhdwMy]>
+bin records into time slots of n size.  This is used for time series
+analytics, especially graphing.  Records, by default are split, so that
+their timestamps do not span the time range specified.  Metrics are
+uniformly distributed among the resulting records.
+.TP
+.B count <n[kmb]>
+bin records into chunks based on the number of records.  This is used
+for archive management and parallel processing analytics, to limit the
+size of data processing to fixed numbers of records.
+.TP
+.B size <n[kmb]>
+bin records into chunks based on the number of total bytes.  This is used
+for archive management and parallel processing analytics, to limit the
+size of data processing to fixed byte limitations.
+.RE
+.TP 5
+.BI \-M "\| modes\^"
+Supported processing modes are:
+.PD 0
+.PP
+.RS
+.TP 5
+.B hard
+split on hard time boundaries.  Each flow records start and stop times will
+be the time boundary times.  The default is to use the original start and stop
+timestamps from the records that make up the resulting aggregation.
+.TP
+.B nomodify
+Do not split the record when including it into a time bin.  This allows a time
+bin to represent times outside of its defintion.  This option should
+not be used with the 'hard' option, as you will modify metrics and semantics.
+.RE
+.TP 5
+.BI \-m "\| aggregation object\^"
+Supported aggregation objects are:
+.PD 0
+.PP
+.RS
+.TP 15
+.B none
+use a null flow key.
+.TP
+.B srcid
+argus source identifier.
+.TP
+.B smac
+source mac(ether) addr.
+.TP
+.B dmac
+destination mac(ether) addr.
+.TP
+.B soui
+oui portion of the source mac(ether) addr.
+.TP
+.B doui
+oui portion of the destination mac(ether) addr.
+.TP
+.B smpls
+source mpls label.
+.TP
+.B dmpls
+destination label addr.
+.TP
+.B svlan
+source vlan label.
+.TP
+.B dvlan
+destination vlan addr.
+.TP
+.B saddr/[l|m]
+source IP addr/[cidr len | m.a.s.k].
+.TP
+.B daddr/[l|m]
+destination IP addr/[cidr len | m.a.s.k].
+.TP
+.B matrix/l
+sorted src and dst IP addr/cidr len.
+.TP
+.B proto
+transaction protocol.
+.TP
+.B sport
+source port number. Implies use of 'proto'.
+.TP
+.B dport
+destination port number. Implies use of 'proto'.
+.TP
+.B stos
+source TOS byte value.
+.TP
+.B dtos
+destination TOS byte value.
+.TP
+.B sttl
+src -> dst TTL value.
+.TP
+.B dttl
+dst -> src TTL value.
+.TP
+.B stcpb
+src -> dst TCP base sequence number.
+.TP
+.B dtcpb
+dst -> src TCP base sequence number.
+.TP
+.B inode[/l|m]]
+intermediate node IP addr/[cidr len | m.a.s.k], source of ICMP mapped events.
+.TP
+.B sco
+source ARIN country code, if present.
+.TP
+.B dco
+destination ARIN country code, if present.
+.TP
+.B sas
+source node origin AS number, if available.
+.TP
+.B das
+destination node origin AS number, if available.
+.TP
+.B ias
+intermediate node origin AS number, if available.
+.RE
+
+.TP 5
+.BI \-P "\| sort field\^"
+\fBRabins\fP can sort its output based on a sort field
+specification.  Because the \fB-m\fP option is used for
+aggregation fields, \fB-P\fP is used to specify the 
+print priority order.  See \fBrasort(1)\fP for the list of
+sortable fields.
+
+.TP 5
+.BI \-w "\| filename\^"
+\fBRabins\fP supports an extended \fI-w\fP option that allows for
+output record contents to be inserted into the output filename.
+Specified using '$' (dollar) notation, any printable field can be used.
+Care should be taken to honor any shell escape requirements when
+specifying on the command line.  See \fBra(1)\fP for the list of
+printable fields.
+
+Another extended feature, when using \fBtime\fP mode, \fBrabins\fP
+will process the supplied filename using \fBstrftime(3)\fP, so that
+time fields can be inserted into the resulting output filename.
+
+.SH INVOCATION
+This invocation aggregates \fBinputfile\fP based on 10 minute time boundaries.
+Input is split to fit within a 10 minute time boundary, and within those boundaries,
+argus records are aggregated.  The resulting output its streamed to a single file.
+.nf
+   
+   \fBrabins\fP -r * -M time 10m -w outputfile
+  
+.fi
+.P
+This next invocation aggregates \fBinputfiles\fP based on 5 minute time boundaries, and
+the output is written to 5 minute files.  Input is split such that all records
+conform to hard 10 minute time boundaries, and within those boundaries, argus
+records are aggregated, in this case, based on IP address matrix.  
+.P
+The resulting output its streamed to files that are named relative to the
+records output content, a prefix of \fI/matrix/%Y/%m/%d/argus.\fP and the suffixes \fI%H.%M.%S\fP.
+.ft CW
+.nf
+   
+   \fBrabins\fP -r * -M hard time 5m -m matrix -w "/matrix/%Y/%m/%d/argus.%H.%M.%S"
+  
+.fi
+.ft P
+.P
+This next invocation aggregates \fBinput.stream\fP based on matrix/24 into 10 second time
+boundaries, holds the data for an additional 5 seconds after the time boundary has
+passed, and then prints the complete sorted contents of each bin to standard output.
+The output is printed at 10 second intervals, and the output is the content of the
+previous  10 sec time bin.  This example is meant to provide, every 10 seconds, the
+summary of all Class C subnet activity seen.  It is intended to run indefinately
+printing out aggregated summary records.  By modifying the aggregation model,
+using the "-f racluster.conf" option, you can achieve a great deal of data reduction
+with a lot of semantic reporting.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+
+% \fBrabins\fP -S localhost -m matrix/24 -B 5s -M hard time 10s -p0 -s +1trans - ipv4
+           StartTime  Trans  Proto            SrcAddr   Dir            DstAddr  SrcPkts  DstPkts     SrcBytes     DstBytes State 
+ 2012/02/15.13:37:00      5     ip     192.168.0.0/24   <->     192.168.0.0/24       41       40         2860        12122   CON
+ 2012/02/15.13:37:00      2     ip     192.168.0.0/24    ->       224.0.0.0/24        2        0          319            0   INT
+[ 10 seconds pass]
+ 2012/02/15.13:37:10     13     ip     192.168.0.0/24   <->    208.59.201.0/24      269      351        97886       398700   CON
+ 2012/02/15.13:37:10     14     ip     192.168.0.0/24   <->     192.168.0.0/24       86       92         7814        46800   CON
+ 2012/02/15.13:37:10      1     ip    17.172.224.0/24   <->     192.168.0.0/24       52       37        68125         4372   CON
+ 2012/02/15.13:37:10      1     ip     192.168.0.0/24   <->      199.7.55.0/24        7        7          784         2566   CON
+ 2012/02/15.13:37:10      1     ip     184.85.13.0/24   <->     192.168.0.0/24        6        5         3952         2204   CON
+ 2012/02/15.13:37:10      2     ip    66.235.132.0/24   <->     192.168.0.0/24        5        6          915         3732   CON
+ 2012/02/15.13:37:10      1     ip    74.125.226.0/24   <->     192.168.0.0/24        3        4          709          888   CON
+ 2012/02/15.13:37:10      3     ip       66.39.3.0/24   <->     192.168.0.0/24        3        3          369          198   CON
+ 2012/02/15.13:37:10      1     ip     192.168.0.0/24   <->     205.188.1.0/24        1        1           54          356   CON
+[ 10 seconds pass]
+ 2012/02/15.13:37:20      6     ip     192.168.0.0/24   <->    208.59.201.0/24      392      461        60531       623894   CON
+ 2012/02/15.13:37:20      8     ip     192.168.0.0/24   <->     192.168.0.0/24       95      111         6948        93536   CON
+ 2012/02/15.13:37:20      3     ip     72.14.204.0/24   <->     192.168.0.0/24       38       32        38568         4414   CON
+ 2012/02/15.13:37:20      1     ip    17.112.156.0/24   <->     192.168.0.0/24       26       13        21798         7116   CON
+ 2012/02/15.13:37:20      2     ip    66.235.132.0/24   <->     192.168.0.0/24        6        3         1232         4450   CON
+ 2012/02/15.13:37:20      1     ip    66.235.133.0/24   <->     192.168.0.0/24        1        2           82          132   CON
+[ 10 seconds pass]
+ 2012/02/15.13:37:30    117     ip     192.168.0.0/24   <->    208.59.201.0/24      697      663       369769       134382   CON
+ 2012/02/15.13:37:30     11     ip     192.168.0.0/24   <->     192.168.0.0/24      147      187        11210       193253   CON
+ 2012/02/15.13:37:30      1     ip     184.85.13.0/24   <->     192.168.0.0/24       13        9        13408         9031   CON
+ 2012/02/15.13:37:30      2     ip    66.235.132.0/24   <->     192.168.0.0/24        8        7         1920        11563   CON
+ 2012/02/15.13:37:30      1     ip     192.168.0.0/24   <->    207.46.193.0/24        5        3          802          562   CON
+ 2012/02/15.13:37:30      1     ip    17.112.156.0/24   <->     192.168.0.0/24        5        2          646         3684   CON
+ 2012/02/15.13:37:30      2     ip     192.168.0.0/24    ->       224.0.0.0/24        2        0          382            0   REQ
+[ 10 seconds pass]
+
+.vs
+.ps
+.ft P
+.fi
+
+This next invocation reads IP \fBargus(8)\fP data from \fBinputfile\fP and processes,
+the \fBargus(8)\fP data stream based on input byte size of no greater than 1 Megabyte.
+The resulting output stream is written to a single \fIargus.out\fP data file.
+.nf
+ 
+   \fBrabins\fP -r argusfile -M size 1m -s +1dur -m proto -w argus.out - ip
+ 
+.fi
+
+This invocation reads IP \fBargus(8)\fP data from \fBinputfile\fP and aggregates
+the \fBargus(8)\fP data stream based on input file size of no greater
+than 1K flows.  The resulting output stream is printed to the screen as 
+standard argus records.
+.nf
+
+   \fBrabins\fP -r argusfile -M count 1k -m proto -s stime dur proto spkts dpkts - ip
+
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ra(1),
+.BR racluster(1),
+.BR rasplit(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

@@ -1,0 +1,16 @@
+Source: argus-clients
+Section: utils
+Priority: optional
+Maintainer: Carter Bullard <info@qosient.com>
+Build-Depends: debhelper (>= 9.0.0), autotools-dev, zlib1g-dev, libreadline-dev, libgeoip-dev, libncurses5-dev, libmysqlclient-dev, flow-tools-dev, flex, bison, libpcre3-dev
+Standards-Version: 3.9.6
+Homepage: http://qosient.com/argus
+
+Package: argus-clients
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: network flow clients
+ A set of clients for the Argus system.
+ The clients peform a rich set of auditing and forensic functions
+ Clients can contact live argus sensors, read/write archive files
+ or mysql tables

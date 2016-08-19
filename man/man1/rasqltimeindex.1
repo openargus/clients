@@ -1,0 +1,76 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RASQLTIMEINDEX 1 "12 August 2009" "rasqltimeindex 3.0.8"
+.SH NAME
+\fBrasqltimeindex\fP \- read \fBargus(8)\fP data from mysql database.
+.SH SYNOPSIS
+.B rasqltimeindex -r argus.data.file -w mysql://user@host/db
+.SH DESCRIPTION
+.IX  "rasqltimeindex command"  ""  "\fBrasqltimeindex\fP \(em argus data"
+.LP
+\fBRasqltimeindex\fP index
+.BR argus
+data files by time.
+
+The principal function of rasqltimeindex is to provide fast access
+to indexed argus data files based on time.
+
+Rasqltimeindex, like all ra based clients, supports a number of \fBra options\fP 
+\fBrasqltimeindex(1)\fP specific options are:
+
+.SH RASQLTIMEINDEX SPECIFIC OPTIONS
+.TP 4 4
+.B \-w <mysql://[user[:pass]@]host[:port]/db>
+Specify the mysql database to use in maintaining the 'Seconds', 'Probe', and 'Filename'
+database index tables.
+
+
+.SH INVOCATION
+This invocation reads \fBargus(8)\fP data from the \fIfile\fP argus.file and
+creates an index of every second in the file in the \fIdb\fP database, using
+the \fIuser\fP database account.
+.nf
+ 
+   \fBrasqltimeindex\fP -r argus.file -w mysql://user@localhost/db
+ 
+.fi
+
+To take advantage of the speedup provided by the time indexing, use \fBrasql\fP to
+read the mysql database, with a time filter.  This example will read from the database
+that contains the 'Seconds', 'Probe', and 'Filename' database index tables, 
+and search for all flow records from 00:00:00 - 00:00:25, 20 days ago.
+.nf
+
+   \fBrasql\fP -r mysql://user@localhost/db -t -20d+25s
+
+.fi
+
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ra(1),
+.BR rasql(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

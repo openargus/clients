@@ -1,0 +1,85 @@
+#
+#  Argus Software
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+# 
+#  Various configurable paths (remember to edit Makefile.in, not Makefile)
+#
+# $Id: //depot/argus/clients/common/Makefile.in#12 $
+# $DateTime: 2010/02/12 14:58:10 $
+# $Change: 1850 $
+#
+#
+
+NOOP = $(SHELL) -c true
+NOECHO = @
+
+# Top level hierarchy
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+
+# Pathname of directory to install the include files
+INCLDEST = @includedir@/argus
+
+# VPATH
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+#
+# You shouldn't need to edit anything below.
+#
+
+INSTALL = @INSTALL@
+
+CLEANFILES = Makefile argus_config.h
+
+all: /tmp
+
+install: force 
+	[ -d $(DESTDIR)$(INCLDEST) ] || \
+		(mkdir -p $(DESTDIR)$(INCLDEST); chmod 755 $(DESTDIR)$(INCLDEST))
+
+	$(INSTALL) $(srcdir)/*.h $(DESTDIR)$(INCLDEST)
+
+	[ -d $(DESTDIR)$(INCLDEST)/argus ] || \
+		(mkdir -p $(DESTDIR)$(INCLDEST)/argus; chmod 755 $(DESTDIR)$(INCLDEST)/argus)
+	$(INSTALL) $(srcdir)/argus/*.h $(DESTDIR)$(INCLDEST)/argus
+
+	[ -d $(DESTDIR)$(INCLDEST)/net ] || \
+		(mkdir -p $(DESTDIR)$(INCLDEST)/net; chmod 755 $(DESTDIR)$(INCLDEST)/net)
+	$(INSTALL) $(srcdir)/net/*.h $(DESTDIR)$(INCLDEST)/net
+
+	[ -d $(DESTDIR)$(INCLDEST)/netinet ] || \
+		(mkdir -p $(DESTDIR)$(INCLDEST)/netinet; chmod 755 $(DESTDIR)$(INCLDEST)/netinet)
+	$(INSTALL) $(srcdir)/netinet/*.h $(DESTDIR)$(INCLDEST)/netinet
+
+uninstall: force all
+	rm -rf $(DESTDIR)$(INCLDEST)
+
+distclean:
+	rm -f $(CLEANFILES)
+
+clean:	/tmp
+force:	/tmp
+depend:	/tmp
+	$(NOECHO) $(NOOP)
+
+# Prevent GNU make v3 from overflowing arg limit on SysV.
+.NOEXPORT:
+

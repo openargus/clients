@@ -1,0 +1,76 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RACOLOR.CONF 1 "07 November 2009" "racolor.conf 3.0.8"
+.SH NAME
+\fBracolor.conf\fP \- \fBracolor\fP resource file.
+.SH SYNOPSIS
+.B racolor.conf
+.SH DESCRIPTION
+
+This configuration is a color configuration file for ratop.1.
+It is modeled after a ralabel(1) configuration file.  This
+configuration would be referenced in a \fBratop.1\fP
+\fBrarc.5\fP configuration file, using the RA_COLOR_CONFIG variable.
+
+The concept is to provide a number of painting strategies
+for any or all fields in an argus record.  This allows the
+user to specify the order of the painting, hopefully to get
+a useful end result.
+
+The method used is flow filter based field painting, which 
+uses the standard flow filter strategies to provide a general 
+purpose coloring scheme.
+
+The concept is similar to racluster()'s fall through matching
+scheme.  Fall through the list of filters, if it matches, use
+the color specification to paint specific fields in the record.
+If you want to continue through the list, once there is
+a match,  add a "cont" to the end of the matching rule.
+
+.nf
+The format is:
+   filter="ra filter"  color="field[,field,...]:COLOR[+ATTRIBUTE]"  [cont]
+
+   filter can be any working ra flow record filter, contained in double quotes
+
+   color is composed of a comma separated list of fields, that will be painted
+   using the ncurses supported COLOR(s) and an optional ATTRIBUTE(s).
+
+   each line can be followed with an optional "cont"inue label, to indicate
+   that it should not stop with this match, but keep going down the list.
+
+
+A working example color specification is:
+
+   filter="udp"                    color="proto:VIOLET"                                cont
+   filter="tcp"                    color="saddr,daddr,dir,sport,dport,proto:WHITE"     cont
+   filter="tcp and dst port http"  color="dport:GREEN"                                 cont
+   filter="tcp"                    color="sport:BLUE+DIM"                              cont
+   filter="dst port domain"        color="dport:CYAN+DIM"                              cont
+   filter="dst port imaps"         color="dport:MAGENTA+DIM"                           cont
+   filter="src pkts gt 50"         color="spkts,dpkts,sbytes,dbytes:RED+BLINK"
+   filter="src co CN"              color="all:RED+BLINK" 
+.fi
+
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.RE
+.SH SEE ALSO
+.BR ratop (1)

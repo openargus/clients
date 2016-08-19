@@ -1,0 +1,114 @@
+#!/bin/sh
+#
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+#
+#  Permission to use, copy, modify, and distribute this software and
+#  its documentation for any purpose and without fee is hereby granted,
+#  provided that the above copyright notice appear in all copies and
+#  that both that copyright notice and this permission notice appear
+#  in supporting documentation, and that the name of QoSient not be
+#  used in advertising or publicity pertaining to distribution of the
+#  software without specific, written prior permission.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+#  FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+#  RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+#  CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+#  CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# radium     This shell script takes care of starting and stopping
+#            radium, on RH-style Linux.  
+#
+# chkconfig: 2345 56 44
+# description: radium multiplexes argus flows for clients
+# processname: radium
+# config: /etc/radium.conf
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then 
+. /etc/init.d/functions
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 1
+
+#
+# The assumption here is that /etc/radium.conf specifies ARGUS_DAEMON=no.
+# If not the system will hang running radium.  If this is not set to the
+# default, change DAEMON_ARGS in /etc/sysconfig/radium 
+#
+
+DAEMON_ARGS="-d"
+
+
+# Set radium path by defining $ARGUSHOME for this script.
+# If radium was installed in another way, modify /etc/sysconfig/radium
+# to specify ARGUSDIR  where the radium binary was installed.
+
+ARGUSDIR=/usr/sbin
+
+# Source radium configuration.
+. /etc/sysconfig/radium
+
+ARGUSHOME=$ARGUSDIR
+export PATH=$ARGUSHOME:$PATH
+
+[ -f $ARGUSHOME/radium ] || exit 1
+
+RETVAL=0
+
+start() {
+	# Start daemons.
+
+	echo -n "Starting radium: "
+	radium $DAEMON_ARGS > /dev/null 2>&1 && success || failure
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/radium
+	echo
+}
+
+stop() {
+	# Stop daemons.
+	echo -n "Shutting down radium: "
+	killproc radium
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/radium
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart|reload)
+	stop
+	start
+	RETVAL=$?
+	;;
+  condrestart)
+	if [ -f /var/lock/subsys/radium ]; then
+	    stop
+	    start
+	    RETVAL=$?
+	fi
+	;;
+  status)
+	status radium
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: radium {start|stop|restart|condrestart|status}"
+	exit 1
+	;;
+esac
+exit $RETVAL

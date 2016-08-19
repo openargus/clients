@@ -1,0 +1,29 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ *
+ *  rapolicy    - continuous access control policy verification
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ *          David Edelman
+ */
+
+Wed Jul 10 13:30:42 EDT 2013
+Updates for additional rapolicy.conf support.
+Minor format fixes for new printf statements

@@ -1,0 +1,61 @@
+#
+#  Argus Client Software
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+#
+#
+# Ralabel IANA Style Address Configuration File
+#
+# Carter Bullard
+# QoSient, LLC
+#
+#  This configuration is a ralabel(1) address configuration file.
+#
+#  This file allows you to specify CIDR addresses, or ranges of CIDR
+#  addresses #  and to provide optional labels that can be associated with
+#  those addresses.
+#
+#  Here is a valid and simple configuration file.   It represents
+#  the internal QoSient IPv4 address space.  And the complete Internet
+#  address space outside of QoSient.
+#
+#  Ralabel will insert into an IPv4 patricia tree, labels for the
+#  interior and leaf-nodes.  When ralabel() prints the label for a
+#  given address, it will be a concatenation of all the labels that
+#  apply to that address.  
+#
+#  Given the configuration below, ralabe() will return these strings
+#  for these addresses:
+#
+#     1.24.4.12       -  "Internet"
+#     192.168.0.67    -  "QoSient,Wired,SMTP"
+#     192.168.1.17    -  "QoSient,Switzerland"
+#     200.24.4.12     -  "Internet"
+#     255.255.255.255 -  "Broadcast"  (derived from iana-multicast-address)
+#
+
+#   
+#  Local Address Classifications
+#   
+
+0.0.0.0/8-192.167.255.255/32	Internet
+192.168.0.0/16			QoSient
+192.168.0.0/24			Wired
+192.168.0.67			SMTP
+192.168.1.0/24			Switzerland
+192.168.2.0/24			Wireless
+207.237.36.98			QoSient.com
+192.168.3.0/24-223.0.0.0/8	Internet
+
+
+#   
+#  Include standard IANA IPv4 address space specification
+#
+
+#include iana-ipv4-address
+
+#   
+#  Include standard IANA multicast address space specification
+#
+
+#include iana-multicast-address

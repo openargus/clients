@@ -1,0 +1,108 @@
+/*
+ * Argus Clients Software
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software and
+ * its documentation for any purpose and without fee is hereby granted, 
+ * provided that the above copyright notice appear in all copies and
+ * that both that copyright notice and this permission notice appear
+ * in supporting documentation, and that the name of QoSient not be
+ * used in advertising or publicity pertaining to distribution of the
+ * software without specific, written prior permission.  
+ * 
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+ * FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER
+ * RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
+ * CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ */
+
+These scripts are intended to help manage the starting/stopping of
+argus client daemons, such as radium and rasplit, both during system boot
+as well as in normal operation.  The strategies currently supported are Linux's
+chkconfig system, systemctl and Apple Mac OS X's launchctl, using
+/Library/StartupItems packages.
+
+With all of these examples, care needs to be taken to ensure that
+system configuration files, such as /etc/radium.conf, or /etc/rarc,
+are "in sync" with the intent of these daemons, and that the command
+line options set the appropriate mode of opertion.
+
+Generally, most system /etc configurations should set the program to
+NOT run as a daemon, and the startup scripts should use the "-d" option.
+However, this is simply a suggestion.
+
+
+Under Linux 
+
+The ./radium script takes one of four arguments, start, stop, restart
+and status.  If the specific /etc configuration file is not found,
+the daemon will be run with some assumptions about the system configuration
+and writes its logs to /var/log/radium.
+
+For installation on Linux:
+
+The linux chkconfig system, assumes that the scripts that are run from
+the /etc/init.d directory return, as the boot process runs each script
+sequentially, and doesn't progress until each process returns.
+
+This means that radium need to run as daemons, in the background.
+As a result, do check that the /etc/radium.conf configuration file,
+set the [ARGUS|RADIUM}_DAEMON variable to "yes".
+
+Edit the PATH variable in the script to the directory the binary is
+located in.
+
+Then, install the script in /etc/rc.d/init.d.  After this, if your system
+supports the chkconfig() utility, you can use that to install radium and
+then have it start when the system boots.
+
+
+      # cp radium /etc/rc.d/init.d
+      # chkconfig --add radium
+      # chkconfig --level 2345 radium on
+
+
+If your system doesn't have chkconfig(), then simply create a link to the
+/etc/rc.d/init.d/radium file in the run level that you want the daemon to
+run in.  Most systems will have this as run level 3.
+ 
+      # cd /etc/rc.d/rc3.d
+      # ln -s ../init.d/radium radium
+
+
+Systemctl
+
+The radium.service file can be used on Fedora (and RedHat Linux?) to automatically
+start radium at boot time.  Put the file radium.service in /lib/systemd/system, then
+run these two commands as root:
+
+ # systemctl enable radium.service
+ # systemctl start radium.service
+
+After that, radium should be automatically started when the system boots.
+
+
+Mac OS X
+
+Launchctl
+
+The com.qosient.radium.plist and com.qosient.rasplit.plist configuration files 
+are used with the Mac OS X launchctl system.  These files should be installed
+into the /Library/LaunchDaemons directory on the target machine.  This will
+allow Mac OS X to radium and rasplit  when the machine boots, and to ensure
+that they are always running.
+
+The included scripts assume that radium and rasplit have been installed in the
+default /usr/local/bin directory, so if you have done something out of the ordinary,
+you will need to modify the scripts.
+
+For installation on Mac OS X:
+   # cp com.qosient.radium.plist /Library/LaunchDaemons
+   # cp com.qosient.rasplit.plist /Library/LaunchDaemons
+   # launchctl load  /Library/LaunchDaemons/com.qosient.radium.plist
+   # launchctl load  /Library/LaunchDaemons/com.qosient.rasplit.plist

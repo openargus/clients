@@ -1,0 +1,123 @@
+# 
+#  Argus Software
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+#
+# Various configurable paths (remember to edit Makefile.in, not Makefile)
+#
+#  $Id: //depot/argus/clients/examples/rapath/Makefile.in#13 $
+#  $DateTime: 2016/06/01 15:17:28 $
+#  $Change: 3148 $
+#  
+
+
+# Top level hierarchy
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+
+# Pathname of directory to install the system binaries
+SBINDIR = @sbindir@
+# Pathname of directory to install the system binaries
+BINDIR = @bindir@
+# Pathname of directory to install the include files
+INCLDEST = @includedir@
+# Pathname of directory to install the library
+LIBDEST =  @libdir@
+# Pathname of directory to install the man page
+MANDEST = @mandir@
+
+# Pathname of preferred perl to use for perl scripts
+PERL = @V_PERL@
+
+# VPATH
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+#
+# You shouldn't need to edit anything below.
+#
+
+CC = @CC@
+CCOPT = @V_CCOPT@
+INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
+DEFS = @DEFS@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
+
+# Standard CFLAGS
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+
+INSTALL    = @INSTALL@
+INSTALLBIN = ../@INSTALL_BIN@
+INSTALLLIB = ../@INSTALL_LIB@
+RANLIB     = @V_RANLIB@
+
+#
+# Flex and bison allow you to specify the prefixes of the global symbols
+# used by the generated parser.  This allows programs to use lex/yacc
+# and link against libpcap.  If you don't have flex or bison, get them.
+#
+LEX = @V_LEX@
+YACC = @V_YACC@
+
+# Explicitly define compilation rule since SunOS 4's make doesn't like gcc.
+# Also, gcc does not remove the .o before forking 'as', which can be a
+# problem if you don't own the file but can write to the directory.
+.c.o:
+	@rm -f $@
+	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
+
+SRC = rapath.c
+
+PROGS = $(INSTALLBIN)/rapath
+
+all: $(PROGS)
+
+$(INSTALLBIN)/rapath: rapath.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rapath.o $(LIB) $(COMPATLIB)
+
+# We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
+# hack the extra indirection
+
+OBJ =	$(SRC:.c=.o)
+
+CLEANFILES = $(OBJ) $(PROGS)
+
+install: force all
+	[ -d $(DESTDIR)$(BINDIR) ] || \
+		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
+	$(INSTALL) $(INSTALLBIN)/rapath $(DESTDIR)$(BINDIR)
+
+uninstall: force all
+	rm -f $(DESTDIR)$(BINDIR)/rapath
+
+clean:
+	rm -f $(CLEANFILES)
+
+distclean:
+	rm -f $(CLEANFILES) Makefile
+
+tags: $(TAGFILES)
+	ctags -wtd $(TAGFILES)
+
+force:	/tmp
+depend:	$(GENSRC) force
+	../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)

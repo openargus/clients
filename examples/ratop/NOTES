@@ -1,0 +1,93 @@
+/*
+ * Argus Client Software.  Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ *  
+ *  racurses - curses / readline based terminal based GUI
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+Wed Dec  5 10:14:57 EST 2012
+Final tweaks for pcre library.  On Mac OS X, searching was broken,
+and the fix was to move the -L /opt/local/lib -l pcreposix -l pcre
+to the front of the link.  Not a good solution on Mac OS X.
+Still needs testing on linux and X.
+
+This version does have argus event correlation, but have to
+turn it on.
+
+Thu Nov 15 14:06:58 EST 2012
+Support for flow based coloring is done.  Seems to work fine.
+Entry in rarc file, and a reference to this racolor.conf
+file, which is in the ./support/Config directory.
+
+Tue Oct  9 10:11:51 EDT 2012
+Work on color.
+Need support for coloring lines based on country codes, IP addresses etc...
+
+Thu Aug 16 13:32:55 EDT 2012
+Added .rarc support to turn color on/off
+Fixed ':n' option.  No longer toggling, need to set the type you want.
+Fixed ':P' option to pause the screen.
+
+Tue Aug 14 11:26:01 EDT 2012
+Set color map for IP addresss.  BLUE is 'me', CYAN is 'my net',
+grey's are for multicast.  Search terms are VIOLET.
+
+Fri Jun 29 10:06:08 EDT 2012
+In order to serve all the basic functions, mpc (multiprobe
+correlation), tsc (trans semantic correlation), we need to
+have individual parser contexts per " srcid ".
+
+We've now got an ArgusDomainQueue that holds per observation
+domain structures, that currently has only the srcid and
+an ArgusWindowStruct.  In the first pass implementation, we
+have one domain, without a srcid, that holds the pre allocated
+RaDataWindowStruct as its window, which references the default
+RaDisplayWindow, as its window.  This is for testing purposes.  
+
+The RaDisplayWindow is the " current " window, and the idea is
+if you want to change observation domain focus, you will use 
+the new domain to assign a new RaDisplayWindow.
+
+All windows are in the ArgusWindowQueue, but are pointed to by
+the ArgusDomainStructs, which provide some form of ownership.
+There doesn't have to be a unique window per domain, but some
+domains may want to have compound windows, so we'll need to
+swap out that when we flip.
+
+We only update the RaDisplayWindow, and there must be a data
+source associated with the domain.  Because a single ArgusInput
+can provide data from multiple sources, and when an input goes
+away, we need to deal with all the sources, we'll want to
+put the ArgusDomainStruct maintenance, in the ArgusInput struct
+routines.
+
+That is the next step, assign data sources to ArgusDomainStructs.
+
+
+Fri Jun 29 10:05:14 EDT 2012
+Some work done to revive "-M rate bin:size" option to do a windowed
+view into data.  Lots of bugs fixed, but incomplete implementation
+at this time.
+
+
+Mon Jun 25 12:56:53 EDT 2012
+Current racurses() is a full function ratop with raevents integration
+The next steps are to integrate rasqlinsert -r functionality, so we
+can read from database tables, and of course the final step is rampc().

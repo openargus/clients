@@ -1,0 +1,8 @@
+
+   filter="dur lt 1"               label="fast"
+   filter="dur gte  1  and lt   5" label="not so fast"
+   filter="dur gte  5  and lt  10" label="not nearly as fast"
+   filter="dur gte  10 and lt  30" label="not fast at all"
+   filter="dur gte  30 and lt  60" label="slow"
+   filter="dur gte  60 and lt 120" label="slower"
+   filter="dur gte 120 and lt 300" label="slowest"

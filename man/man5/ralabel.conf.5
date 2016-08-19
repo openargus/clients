@@ -1,0 +1,201 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RALABEL.CONF 1 "07 November 2009" "ralabel.conf 3.0.8"
+.SH NAME
+\fBralabel.conf\fP \- \fBralabel\fP resource file.
+.SH SYNOPSIS
+.B ralabel.conf
+.SH DESCRIPTION
+
+This configuration is a ralabel(1) configuration file.
+
+The concept is to provide a number of labeling strategies
+with configuration capabilities for each of the labelers.
+This allows the user to specify the order of the labeling,
+which is provided to support hierarchical labeling.
+
+Here is a valid and simple configuration file.   It doesn't do
+anything in particular, but it is one that is used at some sites.
+
+.SH Supported Labeling Strategies
+.SH Addresss Based Classification
+
+Address based classifications involve building a patricia tree
+that we can hang labels against.  The strategy is to order the
+address label configuration files, to develop a hierarchical
+label scheme.
+
+
+.SH IANA IPv4 and IPv6 Address Classification Labeling
+.SH RALABEL_IANA_ADDRESS
+
+The type of IP network address can be used by many analysis
+programs to make decisions.  While IANA standard classifications
+don't change, this type of classification should be extendable
+to allow local sites to provide additional labeling capabilities.
+
+.nf
+\fBRALABEL_IANA_ADDRESS\fP=yes
+\fBRALABEL_IANA_ADDRESS_FILE\fP="/usr/local/argus/iana-address-file"
+.fi
+
+
+.SH Addresss Based Country Code Classification
+
+.SH RALABEL_ARIN_COUNTRY_CODES
+
+Address based country code classification leverages the feature
+where ra* clients cant print country codes for the IP addresses
+that are in a flow record.  Country codes are generated from the ARIN
+delegated address space files.  Specify the location of your
+DELEGATED_IP file here, or in your .rarc file (which is default).
+
+Unlike the GeoIP based country code labeling, these codes can be sorted
+filtered and aggregated, so if you want to do that type of operations
+with country codes, enable this feature here.
+
+.nf
+\fBRALABEL_ARIN_COUNTRY_CODES\fP=yes
+\fBRA_DELEGATED_IP\fP="/usr/local/argus/delegated-ipv4-latest"
+.fi
+
+.SH BIND Based Classification
+.SH RALABEL_BIND_NAME
+
+BIND services provide address to name translations, and these
+reverse lookup strategies can provide FQDN labels, or domain
+labels that can be added to flow.  The IP addresses that can be
+'labeled' are the saddr, daddr, or inode.  Keywords "yes" and "all"
+are synonomous and result in labeling all three IP addresses.
+
+Use this strategy to provide transient semantic enhancement based
+on ip address values.
+
+.nf
+\fBRALABEL_BIND_NAME\fP="all"
+.fi
+
+
+.SH Port Based Classification
+
+.SH RALABEL_IANA_PORT
+Port based classifications involves simple assignment of a text
+label to a specific port number.  While IANA standard classifications
+are supported throught the Unix /etc/services file assignments,
+and the basic "src port" and "dst port" ra* filter schemes,
+this scheme is used to enhance/modify that labeling strategy.
+The text associated with a port number is placed in the metadata
+label field, and is searched using the regular expression searching
+strategies that are available to label matching.
+
+Use this strategy to provide transient semantic enhancement based   
+on port values.
+
+.nf
+\fBRALABEL_IANA_PORT\fP=yes
+\fBRALABEL_IANA_PORT_FILE\fP="/usr/local/argus/iana-port-numbers"
+.fi
+
+
+.SH Flow Filter Based Classification
+
+Flow filter based classification uses the standard flow
+filter strategies to provide a general purpose labeling scheme.
+The concept is similar to racluster()'s fall through matching
+scheme.  Fall through the list of filters, if it matches, add the
+label.  If you want to continue through the list, once there is
+a match,  add a "cont" to the end of the matching rule.
+
+.SH RALABEL_ARGUS_FLOW
+
+.nf
+\fBRALABEL_ARGUS_FLOW\fP=yes
+\fBRALABEL_ARGUS_FLOW_FILE\fP="/usr/local/argus/argus-flow-file"
+.fi
+
+
+.SH GeoIP Based Labeling
+
+The labeling features can use the databases provided by MaxMind
+using the GeoIP LGPL libraries.  If your code was configured to use
+these libraries, then enable the features here.
+
+GeoIP provides a lot of support for geo-location, configure support
+by enabling a feature and providing the appropriate binary data files.
+ASN reporting is done from a separate set of data files, obtained from
+MaxMind.com, and so enabling this feature is independent of the
+traditional city data available.
+
+.SH RALABEL_GEOIP_ASN
+Labeling data with Origin ASN values involves simply indicating the
+desire, and the filename for the database of ASN numbers.
+
+.nf
+\fBRALABEL_GEOIP_ASN\fP=yes
+\fBRALABEL_GEOIP_ASN_FILE\fP="/usr/local/share/GeoIP/GeoIPASNum.dat"
+.fi
+
+
+.SH RALABEL_GEOIP_CITY
+Data for city relevant data is enabled through enabling and configuring
+the city database support.  The types of data available are:
+        country_code, country_code3, country_name, region, city, postal_code,
+        latitude, longitude, metro_code, area_code and continent_code.
+        time_offset is also available.  
+
+The concept is that you should be able to add semantics for any
+IP address that is in the argus record.  Support addresses are:
+        saddr, daddr, inode
+
+
+The labels provided will be tagged as:
+        scity, dcity, icity
+
+To configure what you want to have placed in the label, use the list of
+objects, in whatever order you like, as the RALABLE_GEOPIP_CITY string
+using these keywords:
+        cco   - country_code
+        cco3  - country_code3
+        cname - country_name
+        reg   - region
+        city  - city
+        pcode - postal_code
+        lat   - latitude
+        long  - longitude
+        metro - metro_code
+        area  - area_code
+        cont  - continent_code
+        off   - GMT time offset
+
+Working examples could be:
+        RALABEL_GEOIP_CITY="saddr,daddr:lat/lon"
+        RALABEL_GEOIP_CITY="*:city,region,cname,lat,lon"
+ 
+.nf
+\fBRALABEL_GEOIP_CITY\fP="saddr,daddr,inode:lat,lon"
+\fBRALABEL_GEOIP_CITY_FILE\fP="/usr/local/share/GeoIP/GeoIPCity.dat"
+.fi
+
+.RE
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient  All rights reserved.
+
+.RE
+.SH SEE ALSO
+.BR ralabel (1)
+

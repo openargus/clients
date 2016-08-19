@@ -1,0 +1,79 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RAFILTERADDR 1 "12 August 2003" "rafilteraddr 3.0.8"
+.SH NAME
+\fBrafilteraddr\fP \- select \fBargus(8)\fP data based on an IANA IP address file.
+.SH SYNOPSIS
+.B rafilteraddr
+\fB[\-f\fP \fIaddress.file\fP [\fB [\-v] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "rafilteraddr command"  ""  "\fBrafilteraddr\fP \(em argus data"
+.LP
+\fBRafilteraddr\fP reads
+.BR argus
+data from an \fIargus-data\fP source, and selects records that include IP addresses
+specified by the \fBaddress.spec\fP file.  This program provides high performance
+address matching for any number of addresses.
+
+.SH RAFILTERADDR ADDRESS SPECIFICATION
+Rafilteraddr, reads a number of standard IANA IP address file formats that
+specify IPv4, CIDR and IPV4 prefix addresses.  Examples of these file types
+are provided in ./support/Config.
+
+\fBrafilteraddr(1)\fP specific options are:
+.TP 4 4
+.B \-f <IPv4 address specification>>
+Specify the list of addresses used for the address filter. This file can be in
+several IANA based address specification formats, and is the same format as
+the address labels for \fBralabel.1\fP.
+
+.TP 4 4
+.BI \-v
+Invert the logic and print flows that don't match any of the addresses.
+
+.SH INVOCATION
+This invocation reads \fBargus(8)\fP data from \fBargusfile\fP and prints
+records that match any of the IP addresses in the iana-ipv4-addresses.
+.nf
+ 
+   \fBrafilteraddr\fP -r argusfile -f iana-ipv4-addresses -- ip
+ 
+.fi
+
+An example address specification that describes a mix of CIDR addresses,
+IPv4 address ranges and explicit addresses:
+.nf
+
+  192.168.0.0/24
+  192.168.1.3-192.168.2.45
+  207.237.36.98
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ralabel.conf.5,
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

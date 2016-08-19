@@ -1,0 +1,68 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RASQL 1 "12 August 2009" "rasql 3.0.8"
+.SH NAME
+\fBrasql\fP \- read \fBargus(8)\fP data from mysql database.
+.SH SYNOPSIS
+.B rasql
+[\fB\-M\fP \fIsql='where clause'\fP] -r mysql://user@host/db/table [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "rasql command"  ""  "\fBrasql\fP \(em argus data"
+.LP
+\fBRasql\fP reads
+.BR argus
+data from an argus-client generated mysql database. 
+
+The principal function of rasql is to extract the 'record' binary blob
+that is inserted by \fIrasqlinsert.1\fP when adding argus data to a
+mysql table.
+
+.SH RASQL SPECIFIC OPTIONS
+Rasql, like all ra based clients, supports a number of \fBra options\fP 
+including filtering of input argus records through a terminating filter expression. 
+\fBrasql(1)\fP specific options are:
+.TP 4 4
+.BI \-M "\| sql='where clause'\^"
+This appends the 'where clause' to the SELECT mysql database command.
+providing a means to use SQL select and join strategies when performing queries.
+
+
+.SH INVOCATION
+This invocation reads \fBargus(8)\fP data from the \fItable\fP table that
+is contained in the \fIdb\fP database, using the \fIuser\fP database account,
+and instructs MySQL to select records where the database attribute 'saddr'
+equals to the string '2.3.4.5'.
+
+.nf
+ 
+   \fBrasql\fP -r mysql://user@localhost/db/table -M sql="saddr='2.3.4.5'"
+ 
+.fi
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR ra(1),
+.BR rasqlinsert(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

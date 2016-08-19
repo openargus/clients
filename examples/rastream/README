@@ -1,0 +1,55 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ *
+ *  rastream -  argus data stream block processor
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+This directory contains source code for rastream.1, a program that extends
+the features of rasplit.1, and acts as a true stream block processor.
+
+The basic idea is that rasplit is good a generating files, but there isn't
+the idea that the file is " done " so that additional processing can be
+done.  With time based streaming data, you only need to wait until all the
+time data arrives and you then you can post-process the data.
+
+rastream.1 needs a time delay using the "-B secs" option (block buffer).
+This defines the time period needed to ensure that all the records have
+arrived from all the sensors being collected.  If all the argi generate
+5 second flow status records, and they are time synchronized, then the
+block buffer should be just greater than 5 seconds.  Because the time of
+day on each sensor is not quite perfect, we add a bit of wobble, so
+values such as "-B 15" are reasonable.   
+
+It is VERY important to know that when records are behind the block buffer,
+((record stime) < (current time - Boption)), they will be discarded !!!!
+rastream.1 should be able to figure out what the hold buffer should be,
+and that is for future work.
+
+When rastream.1 is splitting based on time, and the time boundary for the
+file is reached, rastream.1 will wait the hold buffer, and then it will
+close the file, and run a single program, passing the arguements
+ "-r filename".  This is where you provide the post-processing you want to
+do on the file.  Things like aggregation, filtering, indexing, and
+compression are very common.  Examples programs are provides in 
+./support/Config/rastream.sh.
+
+See the manpage for rastream.1 for details.

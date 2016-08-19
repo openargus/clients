@@ -1,0 +1,201 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RAGRAPH 1 "21 July 2001" "ragraph 3.0.8"
+.SH NAME
+\fBragraph\fP \- graph \fBargus(8)\fP data.
+.SH SYNOPSIS
+.B ragraph metric [object]
+[\fB\-M\fP \fImode\fP] [\fBoptions\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ragraph command"  ""  "\fLragraph\fP \(em argus data"
+.LP
+.B Ragraph
+reads \fBargus(8)\fP data from an \fIargus-file\fP, and graphs
+fields of interest from matching argus flow activity records.
+You must specify the metric(s), the flow object/identifier(s)
+and the time granularity required for the graph.  Standard
+raoptions are available to filter input and specify the time
+range of interest, and graphing options are provided to specify
+x and y axis labels, titles, upper and lower range limits, 
+and plot sizes.  Support for logorithmic scaling, object stacking,
+and split graphing are provided to provide some flexibility in
+the graphs you can produce.
+
+\fBRagraph\fP supports graphing most metrics that are available
+in argus data, including, bytes, packet counts, average duration,
+loss, jitter, load, and rate.  These metrics can be graphed in
+association with flow identifiers, such as source or destination
+address, network address, source identifier, protocol, port numbers,
+services, vlan id, mpls tag, ttl, and tos values.  Currently, there
+are limits to the number of metrics and objects that can be graphed
+at one time, so assume that \fBragraph\fP is a simple graphing tool.
+
+By default \fBragraph\fP writes its output to ragraph.png, in
+the current directory.  Use the '-w' raoption to specify an
+alternate output filename.
+
+\fBRagraph\fP is implemented as a perl script front-end to
+the routine \fBrabins\fP and rrd-tool, which is used to generate
+PNG formatted graphs. As a result \fBragraph\fP supports all the
+raoption and most of the options to the rrd-tool graphing functions.
+
+.LP
+.SH RA OPTIONS
+Ragraph, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression, and
+specifying an output filename using the -w option.
+ 
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+
+.SH RRDTOOL GRAPH OPTIONS
+Ragraph, when using rrdtool as the graphing backend, will pass
+rrdgraph specific options to the appropriate rrdtool module.
+These are the specific rrdtool options that are supported.
+.SH Appearance
+.TP 4 4
+.B \-fill
+Turn off area fill.
+.TP 4 4
+.B \-stack
+Turn off data stacking.
+.TP 4 4
+.B \-split
+Turn off axis splitting for src/dst(in/out) traffic.
+.TP 4 4
+.B \-invert
+Invert a split graph, so that src and dest data are flipped.
+.TP 4 4
+.B \-rigid
+Pass rrdtool rigid parameter to rrdgraph.
+.SH Labels
+.TP 4 4
+.B \-title string
+Specify a graph title.
+.TP 4 4
+.B \-vertical-label string
+Specify a vertically placed yaxis label.
+.SH Size
+.TP 4 4
+.B \-height pixels
+Specify height in pixels for the graph (275 pixels)
+.TP 4 4
+.B \-width pixels
+Specify width in pixels for the graph (800 pixels)
+.TP 4 4
+.B \-only-graph
+Generate only the graph with out any borders, title, labels, legend.
+.SH Limits
+.TP 4 4
+.B \-upper value
+Specify upper bounds for graphing data (automatic).
+.TP 4 4
+.B \-lower value
+Specify lower bounds for graphing data (automatic).  When data is
+split, you need to specify the value as a negative number.
+.TP 4 4
+.B \-alt-autoscale
+.TP 4 4
+.B \-alt-autoscale-max
+Use rrdtool alternate y-axis autoscale algorithm.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-no-gridfit
+Disable rrdtool grid scale modification strategies.  See rrdgraph manpage for information.
+.SH Grid
+.TP 4 4
+.B \-x-grid GTM:GST:MTM:MST:LTM:LST:LPR:LFM | none
+Modify rrdtool x-axis label definition.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-y-grid 'grid step:label factor' | none
+Modify rrdtool y-axis label definition.  The use of ' is important to parsing the
+option correctly. See rrdgraph manpage for information.
+.TP 4 4
+.B \-alt-y-grid
+Modify rrdtool default y-grid behavior.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-log
+Use logarithmic scale for y-axis.
+.TP 4 4
+.B \-units-exponent value
+Set the 10** exponent scaling of the y-axis.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-units-length value
+Set the width of the y-axis border.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-units=si
+Turn off expoenential notation for logarithmic graphs.  See rrdgraph manpage for information.
+.SH Miscellaneous
+.TP 4 4
+.B \-imginfo printfstr
+Adds img information to the graph.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-zoom factor
+Zoom the graphics by the given factor.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-font FONTTAG:size:[font]
+Modify rrdgraph default font.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-font-render-mode {normal,light,mono}
+Modify rrdgraph font smoothing strength.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-font-smoothing-threshold size
+Modify rrdgraph font smoothing font size.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-slope-mode
+Modify rrdgraph slope-mode option.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-no-legend
+Supress generation of the legend.
+.TP 4 4
+.B \-watermark string
+Adds the given string as a watermark.  See rrdgraph manpage for information.
+.TP 4 4
+.B \-norrdwmark
+Disables the default rrdtool watermark from appearing on the graph.
+
+.SH EXAMPLES
+.LP
+To graph the total load for the data in an \fIargus-file\fP argus.data
+at 10 second intervals:
+.RS
+.nf
+\fBragraph bytes -M 10s -r argus.data -title "Total Load"
+.fi
+.RE
+.LP
+To graph the rate (pkt/sec) on a destination port basis for the
+data from a specific probe in an \fIargus-file\fP argus.data at
+1 minute intervals:
+.RS
+.nf
+\fBragraph bytes dport -M 1m -r argus.data - srcid 192.168.0.10
+.fi
+.RE
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH SEE ALSO
+.BR rrdtool http://oss.oetiker.sh/rrdtool
+.BR ragraph (5),
+.BR ra (1),
+.BR rarc (5),
+.BR argus (8)

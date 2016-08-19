@@ -1,0 +1,234 @@
+/*
+ * Argus Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2016 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ *
+ */
+
+QUICK MAKE
+
+If you are reading this file, all is ready, and you should be able
+to make argus-clients by simply typing:
+
+   % ./configure
+   % make
+
+If you have any problems with this procedure, read further, if not
+congratulations.  You can proceed to INSTALLATION.
+
+
+DEPENDENCIES
+
+The Argus client package is dependant on two public domain packages
+flex and bison(), to generate the flow filter compilers.  Both of
+these packages are in most Linux, MacOS X, BSD and Cygwin distributions,
+but must be installed in order to compile argus-clients.
+
+The official site for flex is:
+http://www.gnu.org/software/flex
+
+The official site for bison is:
+http://www.gnu.org/software/bison
+
+Please refer to the individual packages for installation instructions.
+
+Some argus-clients use curses to maintain screen formating, such
+as ratop() and rasqlinsert().  For these programs, you should have a
+curses development package installed, such as "ncurses-devel". 
+Ratop would like to use the readline library, if available.  While not
+required, readline is recommended.
+
+For some OS's, such as Mac OS X, which does not ship with readline, due to
+licensing issues, installing these packages is optional.
+
+Some argi are configured to use strong authentication and encryption 
+when transporting it data over the wire.  Argus clients can be compiled
+to support this strong authentication strategy by compiling with ARGUS_SASL
+support and linking to the cryptographic package SASL, the Simple Authentication
+and Security Layer.  Because of its features and flexibility, we highly
+recommend using SASL, and becoming experienced with its administration.
+
+cyrus-sasl-1.5.24
+Carnegie Mellon Univeristy
+http://asg.web.cmu.edu/sasl
+ftp://ftp.andrew.cmu.edu/pub/cyrus-mail
+
+
+
+CONFIGURE
+
+The program, ./configure, will scan the file system, looking for
+the various programs, routines and libraries needed to compile
+the argus clients.  There are a large number of options that can
+be used when compiling the argus client programs.  Run:
+
+   ./configure --help
+
+to see what options are available.
+
+
+BUILDING ARGUS-CLIENTS
+So, after all that, to build Argus on a supported platform, first run
+./configure.  ./configure will determine your system attributes and
+generate subdirectories and the appropriate Makefiles from the Makefile.in
+files found in the distribution.  After running ./configure, run "make".
+If everything goes well, appropriate libraries and binaries will be found
+in the ./bin and ./lib subdirectories.  So, ....
+
+   % ./configure
+   % make
+
+The argus clients will be found in the ./bin directory, all starting with "ra".
+
+
+So, at this point you should have all the execuables needed.  But,
+if you are having problems, it may be related to your compiler, or
+the flex and bison utilities, the availability of sasl or readline,
+or other libraries that argus-clients needs.  So, ...
+
+You will need an ANSI C compiler to build argus.  If your compiler
+is not ANSI compliant, we highly recommend using the GNU C compiler,
+available via anonymous ftp:
+
+	ftp://prep.ai.mit.edu/pub/gnu/gcc-*.tar.gz
+
+
+As mentioned above, argus clients require bison and flex.  For
+flex, version 2.4.6 or higher is recommended.  The current version
+of flex and bison are available via anonymous ftp:
+
+        ftp://prep.ai.mit.edu/pub/gnu/bison-*.tar.gz
+        ftp://prep.ai.mit.edu/pub/non-gnu/flex/flex-*.tar.gz
+
+Now, if you are still having problems, ..., well its hard to say
+from here what it might be.  So, you may want to send us some email.
+
+
+ISSUES INVOLVING PERL
+
+There are a number of perl scripts in the argus-clients distribution,
+and if you are like many sites, you may have multiple versions of perl
+on your system.  We do not current provide a self configuring perl package
+for all the perl scripts, instead, we use ./configure to configure the
+perl scripts to find the path to the correct version of perl.
+
+If you want to specify a path for perl other than the discovered standard
+path for perl, use the "--with-perl dir" option to ./configure.  I use this
+option on my Snow Leopard machine, as I've installed the perl from MacPorts
+onto my system.
+
+   % ./configure --with-perl=/opt/local/bin
+
+
+
+INSTALLATION
+
+QUICK INSTALL
+
+If all things are well at this point, and you will be using
+the installation strategy that we provide, all you need to do
+ now is:
+
+   # make install
+
+If you are unsure about the standard installtion, run
+
+   % make -n install
+
+to review what make will try to do.  If you would like to
+do something other than the standard install, then please
+continue to read through this file.
+
+
+YOUR OWN INSTALL
+
+Argus-clients do not have any installation retrictions, so you
+can install them anywhere.  There are some conventions that have
+been established, and I'll present them here, but you can, of
+course, do your own thing.
+
+By default, argus-clients installation involves installing:
+   1.  the argus-client ra* executables into /usr/local/bin
+   2.  radium() into /usr/local/sbin
+   3.  argus-client include files into /usr/local/include/argus
+   4.  documentation into /usr/local/share/[man | doc]
+   5.  pkgconfig configuruation, argus-clients.pc, into /usr/local/lib/pkgconfig
+   6.  support files into /usr/local/argus
+
+All of these destinations share "/usr/local" which is the default ARGUSHOME.
+Changing this strategy is accomplished through the ./configure program.
+
+The ./configure program provides a large number of options for
+configuring your package.  Type "./configure --help" to see all
+the options that are available.
+
+I have found it useful in the past to have an argus home directory
+to hold the binaries, client configuration files, and hold my argus
+data archive.  With time, of course, things change, and the need for
+these functions to be in a common directory is no longer important.
+However, consolidating argus into a common directory structure is a
+good thing for many.  
+
+
+This is easily done setting the ./configure $prefix variable at run time.
+
+   % ./configure --prefix=/usr/argus
+   % make install
+
+This will result in creation of the /usr/argus directory, containing 
+populated ./argus, ./bin, ./include, ./lib, ./sbin and ./share directories.
+
+I have used /usr/argus, /opt/argus, /opt/local/argus with varying
+degrees of success, depending on the OS.  If you have any problems, do
+send email to the developers mailing list, or send a bug report.
+
+
+Argus-clients have a rc style configuration strategy, to set things
+like the output date format, what columns to print out etc .. 
+You can have a system wide configuration file that would reside
+as /etc/ra.conf.  Clients will look here by default for its base
+configuration, and then look for a .rarc file in your home directory.
+So you don't have to have a system wide configuration file, unless
+you prefer it.
+
+   # cp ./support/Config/ra.conf /etc/ra.conf
+
+You will want to edit this file to choose values of your
+liking.  The sample has all the common values set and is
+a good suggestion.  Please refer to the sample to make your
+personal changes.
+
+
+This should handle the basic installion.
+
+Any comments, patches, bug reports or additions should be sent to 
+argus@qosient.com.
+
+
+
+PORTABILITY
+
+Argus-clients have been developed on Sparc architectures under SunOS 4.1.x
+and Solaris 2.7, and have been successfully ported to Solaris, SGI, Ultrix,
+Linux, OpenBSD and FreeBSD platforms, as well as Cygwin.
+ 
+No claim is made as to the portability of argus-clients to other platforms,
+although it is much easier now that we've addressed the big endian little
+endian issues.  If you make any modifications to support installing and
+running argus-clients in any other environment, please send us comments
+and/or patches.  We will be most grateful.
+

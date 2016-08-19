@@ -1,0 +1,275 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.
+.de TQ
+.  br
+.  ns
+.  TP \\$1
+..
+.TH RATOP 1 "12 November 2007" "ratop 3.0.8"
+.SH NAME
+\fBratop\fP \- display and update sorted network flow data
+.SH SYNOPSIS
+\fBratop [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ratop command"  ""  "\fLra\fP \(em argus data"
+.LP
+.B Ratop
+reads
+.BR argus(8)
+data from an \fIargus-file\fP, or from a remote data source, and
+periodically displays a sorted list of network flow records.  When
+read from a file, \fBratop\fP displays the resulting flow caches
+when the file is completed, updating its status display line with
+each input.  When reading from a live argus data stream, \fBratop\fP
+will display data, asynchronously in realtime, as it is received
+from the source.
+
+Flow data is aggregated as its read, (see \fBracluster.1\fP), resulting
+in a single line for each network transaction encountered in the
+data stream.  The default sorting key is total packets per flow,
+but other keys can be used instead.  Flow records that have been 
+idle for more than the default 60s are removed.  
+Various output options, such as the specific columns of data to display,
+the entry idle timeout value, the screen refresh rate, etc ... are 
+all configurable.
+
+\fBratop\fP uses \fBncurses\fP and \fBreadline.3\fP, when available,
+to provide a \fBvi.1\fP look and feel for displaying, navigating and 
+modifying network flow data.  
+
+While running \fBratop\fP a lot of help can be obtained from the on-line
+help system, using the ":h" command.
+ 
+.SH OPTIONS
+Command line option specifications are processed from left to right.
+Options can be specified more than once.
+If conflicting options are specified, later specifications override earlier
+ones.
+This makes it viable to create a shell alias for
+.B ratop
+with preferred defaults specified, then override those preferred defaults as
+desired on the command line.
+
+\fBratop\fP, like all ra based clients, supports a number of \fBra options\fP
+including filtering of input argus records through a terminating filter
+expression, and the ability to specify the output style, format and contents
+for printing data.  See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBratop(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4 4
+.BI \-m "\| aggregation object\^"
+Supported aggregation objects are:
+.PP
+.RS
+.TP 15
+.B none
+use a null flow key.
+.TP
+.B srcid
+argus source identifier.
+.TP
+.B smac
+source mac(ether) addr.
+.TP
+.B dmac
+destination mac(ether) addr.
+.TP
+.B soui
+oui portion of the source mac(ether) addr.
+.TP
+.B doui
+oui portion of the destination mac(ether) addr.
+.TP
+.B smpls
+source mpls label.
+.TP
+.B dmpls
+destination label addr.
+.TP
+.B svlan
+source vlan label.
+.TP
+.B dvlan
+destination vlan addr.
+.TP
+.B saddr/[l|m]
+source IP addr/[cidr len | m.a.s.k].
+.TP
+.B daddr/[l|m]
+destination IP addr/[cidr len | m.a.s.k].
+.TP
+.B matrix/l
+sorted src and dst IP addr/cidr len.
+.TP
+.B proto
+transaction protocol.
+.TP
+.B sport
+source port number. Implies use of 'proto'.
+.TP
+.B dport
+destination port number. Implies use of 'proto'.
+.TP
+.B stos
+source TOS byte value.
+.TP
+.B dtos
+destination TOS byte value.
+.TP
+.B sttl
+src -> dst TTL value.
+.TP
+.B dttl
+dst -> src TTL value.
+.TP
+.B stcpb
+src -> dst TCP base sequence number.
+.TP
+.B dtcpb
+dst -> src TCP base sequence number.
+.TP
+.B inode[/l|m]]
+intermediate node IP addr/[cidr len | m.a.s.k], source of ICMP mapped events.
+.TP
+.B sco
+source ARIN country code, if present.
+.TP
+.B dco
+destination ARIN country code, if present.
+.TP
+.B sas
+source node origin AS number, if available.
+.TP
+.B das
+destination node origin AS number, if available.
+.TP
+.B ias
+intermediate node origin AS number, if available.
+
+.TP
+.RE
+.TP 4 4
+.BI \-M "\| modes\^"
+Supported modes are:
+.PP
+.RS
+.TP 15
+.B correct
+Attempt to correct the direction of flows by also searching the reverse
+flow key, if a match isn't found in the cache.  This mode is on by default
+when using the default full 5-tuple flow key definitions.
+.TP
+.B nocorrect
+Turn off flow correction for direction.  This mode is used by default
+if the flow key has been changed.
+.TP
+.B preserve
+Preserve fields when aggregating matching flow data.
+.TP
+.B nopreserve
+Do not preserve fields when aggregating matching flow data.
+.TP
+.B norep
+Do not generate an aggregate statistic for each flow.  This is used
+primarily when the output represents a single object.  Primarily used
+when merging status records to generate single flows that represent
+single transactions.
+.TP
+.B rmon
+Generate data suitable for producing RMON types of metrics.
+.TP
+.B nocurses
+Do not use the curses interface to present data. This option is
+primarily used when debugging ratop, to get around the issues
+of screen maniuplation within a debugger like gdb or lldb.
+.PD
+.RE
+.SH DISPLAY
+The first several lines of the
+.B ratop
+display show global state. The top line shows how ratop is running,
+with the list of command line options that are in effect.  In the upper
+most right corner is the current time.  The next line is the column title
+line, that labels each column.  The bottom line is the command line,
+where you will see and prepare ':' commands.  The line above the bottom
+line is the status line, showing the number of flows that are in the
+\fBratop\fP process queue, display queue, the total number of flows read,
+the rate of flow records read, and the current status, whether it is Active,
+reading records, or Idle, when all input is complete.  This line can be
+toggled on or off using ^G.
+
+Flows caches are displayed one per row and are sorted by total pkts,
+by default.  \fBratop\fP sorting can be configured using the \fIrarc\fP
+variable RA_SORT_ALGORITHMS, or by using the ":P" command.
+
+\fBratop\fP supports 3 basic filters.  Like all other ra* programs, \fBratop\fP
+will send its command line filter to its remote argus data sources, to limit the
+load on the wire.  This is the "remote" filter.  Also, \fBratop\fP supports
+a "local" filter, that is applied to flow record input.  Normally this is used
+when the remote argus data source doesn't support the syntax of the specific
+filter.  \fBratop\fP also support a "display" filter, that is used to select
+which flow records are to be displayed.  This filter does not have any
+impact on the internal flow caches that \fBratop\fP is tracking, so you
+can change the "display" filter at any time and see the current state of
+other flows.
+
+.SH COLOR
+\fBratop\fP supports color which is configured using the rarc file.
+The RA_COLOR_CONFIG file is a fall through specification of flow
+filters and field color definitions.  For flows that match a filter,
+specific fields in the row will be painted the configured color.
+Because the filter specification supports the " cont " directive,
+a single row can be painted by any number of color definitions.
+
+When color is enabled \fBratop\fP will attempt to color IP addresses
+to indicate that local host address, and the local network.  This is
+very helpful in mobile host installations, where you may not know
+what IP address has been assigned the localhost.  \fBratop\fP also supports
+coloring local addresses based on the RA_LOCAL rarc variable.
+
+See racolor.conf.5.
+
+
+.SH ARGUS EVENTS
+Introduced in argus-3.0.8, \fBratop\fP supports correlating specific 
+ARGUS_EVENT data with flow data, which can be turned on through the use
+of the RA_CORRELATE_EVENTS rarc variable.  \fBratop\fP will process
+argus-lsof event data generated by host bourne argi, and label flow
+data with user, pid and process name metadata.  While experimental,
+it is production level functionality, and can be used with other ra*
+programs to enhance flow data with host os process information.
+See argus-3.0.8 documentation on ARGUS_EVENTS.
+
+
+.SH EXAMPLES
+.TP
+ratop -r argus.file -s rank stime dur:14 saddr daddr proto pkts bytes
+
+Read the file argus.file, and display the resulting aggregated and sorted
+list of flow records, using the default sorting methods.
+
+.TP
+ratop -S localhost
+Run ratop as a live display of realtime flow traffic.
+
+.SH SEE ALSO
+rarc(5)
+racluster(1)
+racluster.conf(5)

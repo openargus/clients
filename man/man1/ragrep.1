@@ -1,0 +1,139 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RAGREP 1 "15 March 2010" "ragrep 3.0.8"
+.SH NAME
+\fBragrep\fP \- grep \fBargus(8)\fP user captured data.
+.SH SYNOPSIS
+.B ragrep
+[\fBoptions\fP] \fB\-e\fP \fIpattern\fP [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.br
+.B ragrep
+[\fBoptions\fP] \fB\-f file\fP    [\fBraoptions\fP] [\fB-\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ragrep command"  ""  "\fLragrep\fP \(em argus data"
+.LP
+.B Ragrep
+reads
+.BR argus
+data from an \fIargus-data\fP source, greps the records based on
+the regexp specified on the command line, and outputs a valid
+\fIargus-stream\fP.
+
+Ragrep works only on the fields for user captured data. Argus must be started with the configration option \fBARGUS_CAPTURE_DATA_LEN\fP set to
+a value greater than 0, to have these data captured. See \fBargus.conf(5)\fP for detail.
+
+Ragrep is based on GNU \fBgrep(1)\fP, so the \fIregexp\fP syntax is
+the same as for \fBgrep(1)\fP. 
+.SH OPTIONS
+Ragrep, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression.
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBragrep(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4 4
+.B \-c
+Suppress normal output; instead print a count of
+matching lines for each input file.
+With the
+.BR \-v ", " \-\^\-invert-match
+option (see below), count non-matching lines.
+
+.TP 4 4
+.B \-e <regex>
+Match regular expression in flow user data fields.  Prepend the regex with
+either "s:" or "d:" to limit the match to either the source or destination
+user data fields.  Examples include:
+.nf
+   "^SSH-"           - Look for ssh connections on any port.
+   "s:^GET"          - Look for HTTP GET requests in the source buffer.
+   "d:^HTTP.*Unauth" - Find unauthorized http response.
+
+.fi
+.TP
+.BI \-f " FILE" "\fR
+Obtain patterns from
+.IR FILE ,
+one per line.
+The empty file contains zero patterns, and therefore matches nothing.
+
+.TP
+.BR \-i
+Ignore case distinctions in both the
+.I PATTERN
+and the input files.
+
+.TP
+.BR \-L
+Suppress normal output; instead print the name
+of each input file from which no output would
+normally have been printed.  The scanning will stop
+on the first match.
+
+.TP
+.BR \-l
+Suppress normal output; instead print
+the name of each input file from which output
+would normally have been printed.  The scanning will
+stop on the first match.
+
+.TP
+.BR \-q
+Quiet; do not write anything to standard output.
+Exit immediately with zero status if any match is found,
+even if an error was detected.
+
+.TP
+.BR \-R
+Read all files under each directory, recursively;
+this is equivalent to the
+.B "\-d recurse"
+option.
+
+.TP
+.B \-v
+Reverse the expression matching logic.
+
+.SH DIAGNOSTICS
+.PP
+Normally, exit status is 0 if selected records are found and 1 otherwise.
+But the exit status is 2 if an error occurred, unless the
+.B \-q
+option is used and a selected line is found.
+
+
+.SH INVOCATION
+A sample invocation of \fBragrep(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and greps all http transactions that generated a "404 Not Found" error.
+
+.TP 5
+\fBragrep\fP -r inputfile -e "HTTP.*404"
+
+.SH SEE ALSO
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS

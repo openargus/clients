@@ -1,0 +1,14 @@
+pkg/radium.conf /etc/
+pkg/ubuntu/init.d/radium /etc/init.d/
+pkg/ubuntu/default/radium /etc/default/
+pkg/ubuntu/init.d/rasplit /etc/init.d/
+pkg/ubuntu/default/rasplit /etc/default/
+
+debian/tmp/usr/bin/ usr/
+debian/tmp/usr/sbin/ usr/
+debian/tmp/usr/lib/ usr/
+debian/tmp/usr/include/ usr/
+
+debian/tmp/usr/argus/ usr/share/
+support/ usr/share/doc/argus-clients
+

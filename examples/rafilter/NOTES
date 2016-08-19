@@ -1,0 +1,15 @@
+#
+#  APT1 Origin IPv4 Addresses
+#
+#  Net blocks corresponding to IP Addresses that APT1 
+#  used to access their hop points.
+#  
+#  Derived from Mandiant's " APT1 Exposing One of
+#  China's Cyber Espionage Units ".
+#
+
+223.166.0.0-223.167.255.255
+58.246.00-58.247.255.255
+112.64.0.0-112.65.255.255
+139.226.0.0-139.227.255.255
+114.80.0.0-114.95.255.255

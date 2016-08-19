@@ -1,0 +1,41 @@
+#!/bin/sh
+# preinst script for argus
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# summary of how this script can be called:
+#        * <new-preinst> `install'
+#        * <new-preinst> `install' <old-version>
+#        * <new-preinst> `upgrade' <old-version>
+#        * <old-preinst> `abort-upgrade' <new-version>
+# for details, see http://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+
+case "$1" in
+    install|upgrade)
+     #
+     # stop the daemon before upgrade
+     #
+     if [ -x "/etc/init.d/radium" ]; then
+	invoke-rc.d radium stop || exit $?
+     fi
+     if [ -x "/etc/init.d/rasplit" ]; then
+	invoke-rc.d rasplit stop || exit $?
+     fi
+    ;;
+
+    abort-upgrade)
+    ;;
+
+    *)
+        echo "preinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+#DEBHELPER#
+
+exit 0

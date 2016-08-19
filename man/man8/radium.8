@@ -1,0 +1,233 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RADIUM 8 "21 October 2001" "radium 3.0.8"
+.SH NAME
+radium \- argus record multiplexor
+.SH SYNOPSIS
+.B radium
+[
+.B options
+] [
+.B raoptions
+]
+.SH DESCRIPTION
+.IX  "radium command"  ""  "\fLradium\fP \(em Internet audit facility"
+.IX  servers  radium  ""  "\fLradium\fP \(em Internet audit facility"
+.LP
+.B Radium
+is a real-time Argus Record multiplexor that processes Argus records
+and Netflow records and outputs them to any number of client
+programs and files.
+.B Radium
+is a combination of the features of ra.1 and argus.8, supporting access
+for upto 128 client programs to argus records originating from remote
+data sources and/or local managed argus data files.  Using
+.B radium
+you can construct complex distribution networks for collecting and
+processing argus data, and providing a single point of access to
+archived argus data.
+.LP
+Designed to run as a daemon,
+.B radium
+generally reads argus records directly from a remote argus, and writes the
+transaction status information to a log file or open socket connected to an
+.B argus
+client (such as
+.BR ra(1) ).
+.B Radium
+provides the same data access controls as argus.8, including
+remote filtering, source address based access control, indivual
+oriented strong authentication and confidentiality protection for
+the distributed data, using \fBSASL\fP and \fBtcp_wrapper\fP
+technology.  Please refer to the INSTALL and README files for
+each distribution for a complete description.
+.LP
+.B Radium
+is normally configured from a system \fB/etc/radium.conf\fP configuration file,
+or from a configuration file either in the \fB$RADIUMHOME\fP directory, or specified
+on the command line.
+.SH RADIUM SPECIFIC OPTIONS
+Radium, like all ra based clients, supports
+a number of \fBra options\fP including remote data access, reading
+from multiple files and filtering of input argus records through a
+terminating filter expression.
+\fBradium(8)\fP specific options are:
+.SH OPTIONS
+.TP 5 5
+.B \-B <addr>
+Specify the bind interface address for remote access.  Acceptable values
+are IP version 4 addresses.  The default is to bind to INADDR_ANY
+address.
+.TP 5 5
+.BI \-d
+Run radium as a daemon.  This will cause radium to do the things that
+Unix daemons do and return, if there were no errors, with radium
+running as a detached process.
+.TP 5 5
+.B \-e <value>
+Specify the source identifier for this \fBradium\fP.  Acceptable values are
+numbers, hostnames or ip address.
+.TP 5 5
+.B \-f <radium.conf>
+Use \fIradium.conf\fP as a source of configuration information.
+Options set in this file override any other specification, and so 
+this is the last word on option values. This file is read after the
+system /etc/radium.conf file is processed. See \fIradium.conf.5\fP for
+the configuration file format.
+.TP 5 5
+.B \-O
+Turn off Berkeley Packet Filter optimizer.  No reason to do this unless
+you think the optimizer generates bad code.
+.TP 5 5
+.B \-p
+Override the persistent connection facility.
+.B Radium
+provides a fault tolerant feature for its remote argus data access 
+facility.  If the remote argus data source closes, 
+.B radium
+will maintain its client connections, and attempt to reestablish
+its connection with remote source.  This option overrides this behavior,
+causing
+.B radium
+to terminate if any of its remote sources closes.
+.TP 5 5
+.B \-P <portnum>
+Specifies the \fB<portnum>\fP for remote client connection.
+The default is to not support remote access.
+Setting the value to zero (0) will forceably turn off the
+facility.
+.TP 5 5
+.B \-S
+<host[:port][//full/path/to/argus.data.file]>
+Attach to a specific remote \fIhost\fP to receive argus records. Append
+an optional port specifier to attach to a port value other than the default 561.
+Without the optional full pathname, 
+.B radium 
+will continuously transmit a stream of real-time flow records as they are received.
+With the optional filename,
+.B radium
+will open the argus datafile specified, and stream the contents, closing
+the connection with the file EOF.
+
+.TP 5 5
+.B \-T threshold[smh] (secs)
+Indicate that \fIradium\fP should correct the timestamps of
+received \fIargus\fP records, if they are out of sync by threshold
+secconds.  Threshold can be specified with the extensions s, m, or
+h for seconds, minutes or hours.
+.B \-X
+Clear existing radium configuration.  This removes any initialization done prior
+to encountering this flag.  Allows you to eliminate the effects of the
+\fI/etc/radium.conf\fP file, or any radium.conf files that may have been loaded.
+
+.SH SIGNALS
+\fBRadium\fP catches a number of \fBsignal(3)\fP events.
+The three signals \fBSIGHUP\fP, \fBSIGINT\fP, and \fBSIGTERM\fP
+cause \fBradium\fP to exit, writing TIMEDOUT status records for
+all currently active transactions.  The signal \fBSIGUSR1\fP
+will turn on \fBdebug\fP reporting, and subsequent \fBSIGUSR1\fP
+signals, will increment the \fBdebug-level\fP. The signal \fBSIGUSR2\fP
+will cause \fBradium\fP to turn off all \fBdebug\fP reporting.
+
+.SH ENVIRONMENT
+.nf
+$RADIUMHOME - Radium Root directory
+$RADIUMPATH - Radium.conf search path (/etc:$RADIUMHOME:$HOME)
+.fi
+
+.SH FILES
+.nf
+/etc/radium.conf         - radium daemon configuration file 
+/var/run/radium.#.#.pid  - PID file 
+.fi
+
+.SH EXAMPLES
+.LP
+Run \fBradium\fP as a daemon, reading records from a remote host,
+using port 561, and writing all its transaction status reports to
+\fIoutput-file\fP.  This is a typical mode.
+.RS
+.nf
+\fBradium -S remotehost:561 -d -e `hostname` -w \fIoutput-file\fP
+.fi
+.RE
+.LP
+Collect records from multiple argi, using port 561 on one and port
+430 on the other, and make all of these records available to other
+programs on port 562.
+.RS
+.nf
+\fBradium -S host1:561 -S host2:430 -de `hostname` -P 562
+.fi
+.RE
+.LP
+Collect records from multiple Cisco Netflow sources, using
+the default port, and make the resulting argus records available
+on port 562.
+.RS
+.nf
+\fBradium -C -S host1 -S host2 -de `hostname` -P 562
+.fi
+.RE
+.LP
+Radium supports both input filtering and output filtering,
+and radium supports multiple output streams, each with their
+own independant filters.
+
+If you are interested in distributing IP traffic only (input
+filter) and want to separate traffic into differing files
+based on traffic type, this simple example separates ICMP
+traffic from other traffic.
+.RS
+.nf
+\fBradium -w \fIfile1\fP "icmp" -w \fIfile2\fP "not icmp" - ip
+.fi
+.RE
+.LP
+Audit the network activity that is flowing between the two
+gateway routers, whose ethernet addresses are 00:08:03:2D:42:01 and
+00:00:0C:18:29:F1.  Make records available to other programs through
+port 430/tcp.
+.RS
+.nf
+\fBradium -S source -P 430 - ether host (0:8:3:2d:42:1 and 0:0:c:18:29:f1)\fP &
+.fi
+.RE
+.LP
+Process argus records from a remote source only between 9am and 5pm every day
+and provide access to this stream on port 562.
+.RS
+.nf
+\fBradium -S remotehost -t 9-17 -P 562
+.fi
+
+.RE
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient, LLC   All rights reserved.
+.RE
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com)
+.RE
+.SH SEE ALSO
+.BR radium.conf (5),
+.BR argus (8),
+.BR hosts_access (5),
+.BR hosts_options (5),
+.BR tcpd (8),
+.BR tcpdump (1)

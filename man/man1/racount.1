@@ -1,0 +1,115 @@
+.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" All rights reserved.
+.\" 
+.\" This program is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2, or (at your option)
+.\" any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; if not, write to the Free Software
+.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH RACOUNT 1 "07 November 2000" "racount 3.0.8"
+.SH NAME
+\fBracount\fP \- count things from an \fBargus(8)\fP data file/stream.
+.SH SYNOPSIS
+.B racount
+.I [-M addr proto] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+
+.SH DESCRIPTION
+.IX  "racount command"  ""  "\fLracount\fP \(em argus data"
+.LP
+.B Racount
+reads
+.BR argus
+data from an \fIargus-file\fP list, and prints out various
+counts from the data in the file.  Racount supports, by default, a single line
+output that provide total records and pkt and byte counts, broken down by
+source and destination.
+
+.LP
+.SH OPTIONS
+Racount, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression.
+See \fBra(1)\fP for a complete description of \fBra options\fP.
+
+\fBracount\fP specfic options are:
+.PP
+.PD 0
+.TP 4 4
+.BI \-M "\| modes\^"
+Supported modes are:
+.PP
+.RS
+.TP 8
+.B proto
+Print a count breakdown on protocols seen.  \fBracount\fP will report on IP protocols, ether protocols, arp, rarp and unknowwn.
+
+.TP
+.B addr
+Print a summary report of the occurence of the various types of network
+addresses encountered.  The current list of IANA standard network address types include:
+    IPv4 Unicast ThisNet, Reserved, LoopBack, LinkLocal, TestNet and Private
+    IPv4 Multicast Local, Internet, AdHoc, Reserved, SdpSap, Nasdaq, DisTrans, SrcSpec, Glop, Admin, OrgLocal and SiteLocal
+    IPv6 Loopback, LinkLocal, SiteLocal, Global, V4Compat, V4Mapped and Unspecified 
+    IPv6 MulticastNodeLocal, MulticastLinkLocal, MulticastSiteLocal, MulticastOrgLocal and MulticastGlobal
+
+.SH EXAMPLE INVOCATION
+
+This example runs \fBracount\fP against a single argus data file, generating the default output.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+% racount -r argus.2012.02.13.17.20.00.out.gz
+racount   records     total_pkts     src_pkts       dst_pkts       total_bytes        src_bytes          dst_bytes
+    sum   336         21319          9266           12053          16954495           1329172            15625323          
+.vs
+.ps
+.ft P
+.fi
+
+This example runs \fBracount\fP against a directory containing argus data, generating a protocol breakdown
+as well as generating a network address summary.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+% racount -M proto addr -r argus.2012.02.13.17.20.00.out.gz
+racount   records     total_pkts     src_pkts       dst_pkts       total_bytes        src_bytes          dst_bytes
+    sum   336         21319          9266           12053          16954495           1329172            15625323          
+Protocol Summary
+    udp   1           28             28             0              14692              14692              0                 
+     ip   222         20751          8891           11860          16799531           1238670            15560861          
+    udp   103         513            324            189            138274             74068              64206             
+    udp   1           1              1              0              422                422                0                 
+    arp   7           16             12             4              936                680                256               
+Address Summary
+  IPv4 Unicast              src 0           dst 40        
+  IPv4 Unicast Private      src 6           dst 3         
+  IPv6 LinkLocal            src 3           dst 0         
+  IPv6 Multicast Link Local src 0           dst 3 
+.fi
+.vs
+.ps
+.ft P
+
+.SH COPYRIGHT
+Copyright (c) 2000-2016 QoSient. All rights reserved.
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH SEE ALSO
+.BR ra (1),
+.BR rarc (5),
+.BR argus (8)

@@ -1,0 +1,120 @@
+#!/bin/sh
+#  Argus Software
+#  Copyright (c) 2000-2016 QoSient, LLC
+#  All rights reserved.
+# 
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2, or (at your option)
+#  any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+#
+# radium     This shell script takes care of starting and stopping radium.
+#
+# chkconfig: 2345 55 45
+# description: radium-3.0 collects and processes argus data.
+# processname: radium
+# config: /etc/radium.conf
+
+#
+# The assumption here is that /etc/radium.conf specifies RADIUM_DAEMON=yes.
+# If not the system will hang running radium.  If this is not set, change
+# "daemon radium" below to "daemon radium -d"
+#
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then 
+. /etc/init.d/functions
+else
+if [ -f /etc/rc.d/init.d/functions ]; then 
+. /etc/init.d/functions
+fi
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 1
+
+
+# Set radium path by defining $RADIUMHOME for this script.
+# If radium was installed in another way, modify PATH to
+# include the directory where the radium binary was installed.
+
+RADIUMDIR=/usr/local/sbin
+RADIUMHOME=$RADIUMDIR
+export PATH=$RADIUMHOME:$PATH
+
+[ -f $RADIUMHOME/radium ] || exit 1
+
+RETVAL=0
+RADIUM=$RADIUMDIR/radium
+RADIUMOPTIONS="-de `hostname` -P 562 > /dev/null 2>&1"
+
+start() {
+	# Start daemons.
+
+	echo -n "Starting radium: "
+        if [ ! -e /etc/radium.conf ]
+        then
+		initlog -c "$RADIUM $RADIUMOPTIONS" && success || failure
+                RETVAL=$?
+        else
+		radium > /dev/null 2>&1 && success || failure
+		RETVAL=$?
+	fi
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/radium
+	echo
+}
+
+stop() {
+	# Stop daemons.
+	echo -n "Stopping radium: "
+	killproc radium
+	RETVAL=$?
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/radium
+	echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	RETVAL=$?
+	;;
+  stop)
+	stop
+	RETVAL=$?
+	;;
+  restart|reload)
+	stop
+	start
+	RETVAL=$?
+	;;
+  condrestart)
+	if [ -f /var/lock/subsys/radium ]; then
+	    stop
+	    start
+	    RETVAL=$?
+	fi
+	;;
+  status)
+	status radium
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: radium {start|stop|restart|condrestart|status}"
+	exit 1
+	;;
+esac
+exit $RETVAL

@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+#
+# stop the daemon before uninstall
+#
+if [ -x "/etc/init.d/radium" ]; then
+	invoke-rc.d radium stop || exit $?
+fi
+if [ -x "/etc/init.d/rasplit" ]; then
+	invoke-rc.d rasplit stop || exit $?
+fi
+
+#DEBHELPER#
+
+exit 0
