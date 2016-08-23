@@ -28,9 +28,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_client.c#339 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/argus/clients/common/argus_client.c#341 $
+ * $DateTime: 2016/08/22 00:42:29 $
+ * $Change: 3177 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -438,8 +438,14 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          if (rec && !done && !parser->RaParseDone) {
             int len = 0;
             if ((len = ArgusHandleRecord (ArgusParser, input, rec, &ArgusParser->ArgusFilterCode)) < 0) {
-               retn = 1;
-               done = 1;
+               input->offset += length;
+               input->ArgusReadPtr += length;
+               input->ArgusReadSocketCnt -= length;
+
+               if (input->ArgusReadSocketCnt < 128) {
+                  retn = 1;
+                  done = 1;
+               }
             } else {
 
                if (input->type == ARGUS_V2_DATA_SOURCE)
@@ -2832,6 +2838,11 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      case ARGUS_LABEL_DSR: {
                         struct ArgusLabelStruct *tlabel = (struct ArgusLabelStruct *) dsr;
                         int llen = ((tlabel->hdr.argus_dsrvl8.len - 1) * 4);
+
+                        if (tlabel->hdr.argus_dsrvl8.len <= 0) {
+                           retn = NULL;
+                           break;
+                        }
                         bzero((char *)&canon->label, sizeof(*tlabel));
                         bzero((char *)label, llen + 1);
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
@@ -2902,8 +2913,10 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   dsr = (struct ArgusDSRHeader *)((char *)dsr + cnt); 
 
                } else {
+/*
                   if (retn->dsrs[ARGUS_TIME_INDEX] == NULL)
                      retn = NULL;
+*/
                   break;
                }
             }
@@ -7767,7 +7780,6 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 #define TCP_MAX_WINDOWSIZE	65536
                                        if ((t1->src.seqbase - t2->src.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
                                           t1->src.ackbytes += (t2->src.seq + (0xffffffff - t2->src.seqbase));
-                                          t1->src.seqbase = 0;
                                        } else
                                           t1->src.seqbase = t2->src.seqbase;
                                     } else
@@ -7783,9 +7795,12 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 
                                     t1->dst.status   |= t2->dst.status;
                                     t1->dst.ack       = t2->dst.ack;
-                                    if (t2->dst.seqbase > t2->dst.seq) {
-                                       t1->dst.ackbytes += (t2->dst.seq + (0xffffffff - t2->dst.seqbase));
-                                       t1->dst.seqbase = 0;
+
+                                    if (t1->dst.seqbase > t2->dst.seqbase) {  // potential roll over
+                                       if ((t1->dst.seqbase - t2->dst.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
+                                          t1->dst.ackbytes += (t2->dst.seq + (0xffffffff - t2->dst.seqbase));
+                                       } else
+                                          t1->dst.seqbase = t2->dst.seqbase;
                                     } else
                                        t1->dst.seq       = t2->dst.seq;
 

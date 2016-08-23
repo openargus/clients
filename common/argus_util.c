@@ -41,9 +41,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_util.c#400 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/argus/clients/common/argus_util.c#401 $
+ * $DateTime: 2016/08/22 00:42:29 $
+ * $Change: 3177 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -7351,7 +7351,7 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
-         unsigned int value;
+         unsigned int value = 0;
          char pbuf[32];
 
          if (rec != NULL) {
@@ -7409,24 +7409,25 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             }
          }
 
-         if (parser->ArgusPrintXml) {
-            sprintf (buf, " SrcAddr = \"%s\"", value);
-         } else {
-            switch (parser->RaFieldWidth) {
-               case RA_FIXED_WIDTH:
-                  if (strlen(value) > len) {
-                     value[len - 1] = '*';
-                     value[len]     = '\0';
-                  }
-                  sprintf (buf, "%*.*s ", len, len, value);
-                  break;
-               default:
-                  sprintf (buf, "%s ", value);
-                  break;
+         if (value != NULL) {
+            if (parser->ArgusPrintXml) {
+               sprintf (buf, " SrcAddr = \"%s\"", value);
+            } else {
+               switch (parser->RaFieldWidth) {
+                  case RA_FIXED_WIDTH:
+                     if (strlen(value) > len) {
+                        value[len - 1] = '*';
+                        value[len]     = '\0';
+                     }
+                     sprintf (buf, "%*.*s ", len, len, value);
+                     break;
+                  default:
+                     sprintf (buf, "%s ", value);
+                     break;
+               }
             }
+            free(value);
          }
-
-         if (value != NULL) free(value);
          break;
       }
 

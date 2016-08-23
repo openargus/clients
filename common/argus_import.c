@@ -28,9 +28,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_import.c#30 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/argus/clients/common/argus_import.c#31 $
+ * $DateTime: 2016/08/22 00:42:29 $
+ * $Change: 3177 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1000,7 +1000,6 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
 //  using the matching template, parse out a single record.  we need to update ptr and
 //  len so that they represent marching through the buffer, parsing out the records.
 //  
-
    {
       CiscoFlowEntryV9_t *cflow = (CiscoFlowEntryV9_t *) tptr;
       CiscoFlowTemplateHeaderV9_t *tHdr = NULL;
@@ -1125,6 +1124,12 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                            break;
                         }
                         case k_CiscoV9InputSnmp: {
+                           struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
+                           uint16_t input = ntohs(value.val16[0]);
+                           bcopy((char *)&input, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost[4], 2);
+                           ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
+                           ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
+                           mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;
                            break;
                         }
                         case k_CiscoV9L4DstPort: {
@@ -1147,6 +1152,12 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                            break;
                         }
                         case k_CiscoV9OutputSnmp: {
+                           struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
+                           uint16_t output = ntohs(value.val16[0]);
+                           bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost[4], 2);
+                           ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
+                           ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
+                           mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;
                            break;
                         }
                         case k_CiscoV9IpV4NextHop: {
@@ -1535,9 +1546,29 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                         }
                      }
 
+                     if (input->addr.s_addr != 0) {
+                        struct ArgusTransportStruct *trans = &canon->trans;
+                        trans->srcid.a_un.ipv4 = input->addr.s_addr;
+                        ns->dsrindex |= 1 << ARGUS_TRANSPORT_INDEX;
+                        ns->dsrs[ARGUS_TRANSPORT_INDEX] = &canon->trans.hdr;
+                     }
+
                      for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
                         if (ns->dsrindex & (1 << i)) {
                            switch(i) {
+                              case ARGUS_TRANSPORT_INDEX: {
+                                 struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
+                                 trans->hdr.type               = ARGUS_TRANSPORT_DSR;
+                                 trans->hdr.subtype            = ARGUS_SRC;
+                                 trans->hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV4;
+                                 trans->hdr.argus_dsrvl8.len   = 2;
+
+                                 bcopy(&canon->trans, dsr, canon->trans.hdr.argus_dsrvl8.len * 4);
+                                 dsr += canon->trans.hdr.argus_dsrvl8.len;
+                                 canon->hdr.len += canon->trans.hdr.argus_dsrvl8.len;
+                                 break;
+                              }
+
                               case ARGUS_FLOW_INDEX: {
                                  canon->flow.hdr.type              = ARGUS_FLOW_DSR;
                                  canon->flow.hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;

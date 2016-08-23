@@ -20,9 +20,9 @@
  */
 
 /*
- * $Id: //depot/argus/clients/common/argus_label.c#76 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/argus/clients/common/argus_label.c#77 $
+ * $DateTime: 2016/06/06 11:08:02 $
+ * $Change: 3155 $
  */
 
 /*
