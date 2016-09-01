@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/clients/racount.c#45 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/racount.c#13 $
+ * $DateTime: 2015/07/07 15:55:24 $
+ * $Change: 3034 $
  */
 
 /*
@@ -184,16 +183,13 @@ int ArgusIPv6AddrMulticastSiteLocal[2] = {0,0};
 int ArgusIPv6AddrMulticastOrgLocal[2]  = {0,0};
 int ArgusIPv6AddrMulticastGlobal[2]    = {0,0};
 
-extern int ArgusTotalMarRecords;
-extern int ArgusTotalFarRecords;
-
 struct ArgusRecordStruct *ArgusIPProtoRecs[0x10000];
 struct ArgusRecordStruct *ArgusEtherProtoRecs[0x10000];
 struct ArgusRecordStruct *ArgusArpRecords;
 struct ArgusRecordStruct *ArgusRarpRecords;
 struct ArgusRecordStruct *ArgusUnknownRecords;
 
-signed long long ArgusTotalFlowRecs = 1;
+signed long long ArgusTotalFlowRecs = 0;
 
 struct ArgusHashTable *ArgusSrcAddrTable, *ArgusDstAddrTable;
 
@@ -242,6 +238,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             else
             if (!(strncasecmp (mode->mode, "noman", 5)))
                parser->ArgusPrintMan = 0;
+            else
+            if (!(strncasecmp (mode->mode, "nodir", 5)))
+               parser->ArgusDirectionFunction = 0;
 
             mode = mode->nxt;
          }
@@ -281,7 +280,7 @@ RaParseComplete (int sig)
 #else
          printf ("    sum   %-11Ld %-14Ld %-14Ld %-14Ld %-18Ld %-18Ld %-18Ld\n",
 #endif
-                       ArgusTotalFlowRecs,
+                       ArgusTotalFlowRecs +  ArgusParser->ArgusTotalEventRecords,
                        ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalSrcPkts, ArgusParser->ArgusTotalDstPkts,
                        ArgusParser->ArgusTotalBytes, ArgusParser->ArgusTotalSrcBytes, ArgusParser->ArgusTotalDstBytes);
 
@@ -438,9 +437,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 {
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
-      case ARGUS_EVENT: {
+      case ARGUS_EVENT:
          break;
-      }
 
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
@@ -655,112 +653,43 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 void
 RaTallyIPv4AddressType(struct ArgusParserStruct *parser, unsigned int addr, int type)
 {
-   if (IN_MULTICAST(addr)) {
-      if ((addr & 0xFF000000) == 0xE0000000) {
-         if ((addr & 0x00FFFFFF) <  0x00000100) ArgusIPv4AddrMulticastLocal[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x00000200) ArgusIPv4AddrMulticastInternet[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x0000FF00) ArgusIPv4AddrMulticastAdHoc[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x00020000) ArgusIPv4AddrMulticastReserved[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x00030000) ArgusIPv4AddrMulticastSdpSap[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x00030040) ArgusIPv4AddrMulticastNasdaq[type]++; else
-         if ((addr & 0x00FFFFFF) <  0x00FD0000) ArgusIPv4AddrMulticastReserved[type]++; else
-         if ((addr & 0x00FFFFFF) <= 0x00FD0000) ArgusIPv4AddrMulticastDisTrans[type]++;
-      }
-      if (((addr & 0xFF000000) > 0xE0000000) && ((addr & 0xFF000000) < 0xE8000000)) {
-         ArgusIPv4AddrMulticastReserved[type]++;
-      }
-      if ((addr & 0xFF000000) == 0xE8000000) {
-         ArgusIPv4AddrMulticastSrcSpec[type]++;
-      }
-      if ((addr & 0xFF000000) == 0xE9000000) {
-         ArgusIPv4AddrMulticastGlop[type]++;
-      }
-      if (((addr & 0xFF000000) >= 0xE9000000) && ((addr & 0xFF000000) <= 0xEE000000)) {
-         ArgusIPv4AddrMulticastReserved[type]++;
-      }
-      if ((addr & 0xFF000000) == 0xEF000000) {
-         ArgusIPv4AddrMulticastAdmin[type]++;
-         if (((addr & 0x00FF0000) >  0x00000000) && ((addr & 0x00FF0000) <  0x00C00000)) {
-            ArgusIPv4AddrMulticastReserved[type]++;
-         }
-         if (((addr & 0x00FF0000) >= 0x00C00000) && ((addr & 0x00FF0000) <  0x00FC0000)) {
-            ArgusIPv4AddrMulticastOrgLocal[type]++;
-         }
-         if (((addr & 0x00FF0000) >= 0x00FC0000) && ((addr & 0x00FF0000) <= 0x00FF0000)) {
-            ArgusIPv4AddrMulticastSiteLocal[type]++;
-         }
-      }
+   unsigned int addrType = RaIPv4AddressType(parser, addr);
 
-   } else {
-      if (((addr & 0xFF000000) == 0x00000000)) {
-         ArgusIPv4AddrUnicastThisNet[type]++;
-      } else 
-      if (((addr & 0xFF000000) > 0x00000000) && ((addr & 0xFF000000) <  0x03000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else 
-      if ((addr & 0xFF000000) == 0x05000000) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0x17000000) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0x1B000000) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) == 0x24000000) || ((addr & 0xFF000000) == 0x25000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) == 0x29000000) || ((addr & 0xFF000000) == 0x30000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0x49000000) && ((addr & 0xFF000000) <  0x50000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0x59000000) && ((addr & 0xFF000000) <  0x7F000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0x7F000000) {
-         ArgusIPv4AddrUnicastLoopBack[type]++;
-      } else
-      if ((addr & 0xFFFF0000) == 0xAC100000) {
-         ArgusIPv4AddrUnicastPrivate[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0xAD000000) && ((addr & 0xFF000000) <  0xBC000000)) {
-         if ((addr & 0xFFFF0000) == 0xA9FE0000)
-            ArgusIPv4AddrUnicastLinkLocal[type]++;
-         else
-            ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0xBE000000) && ((addr & 0xFF000000) <  0xC0000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0xC0000000) {
-         if ((addr & 0xFFFFFF00) == 0xC0000200)
-            ArgusIPv4AddrUnicastTestNet[type]++;
-         else
-         if ((addr & 0xFFFF0000) == 0xC0A80000)
-            ArgusIPv4AddrUnicastPrivate[type]++;
-         else
-            ArgusIPv4AddrUnicast[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0xC5000000) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0xDF000000) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0xBE000000) && ((addr & 0xFF000000) <  0xC0000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if (((addr & 0xFF000000) >= 0xF0000000) && ((addr & 0xFF000000) <= 0xFF000000)) {
-         ArgusIPv4AddrUnicastReserved[type]++;
-      } else
-      if ((addr & 0xFF000000) == 0x0A000000) {
-         ArgusIPv4AddrUnicastPrivate[type]++;
-      } else
-         ArgusIPv4AddrUnicast[type]++;
+   switch (addrType) {
+      case ARGUS_IPV4_UNICAST: ArgusIPv4AddrUnicast[type]++; break;
+      case ARGUS_IPV4_UNICAST_THIS_NET: ArgusIPv4AddrUnicastThisNet[type]++; break;
+      case ARGUS_IPV4_UNICAST_PRIVATE: ArgusIPv4AddrUnicastPrivate[type]++; break;
+      case ARGUS_IPV4_UNICAST_LINK_LOCAL: ArgusIPv4AddrUnicastLinkLocal[type]++; break;
+      case ARGUS_IPV4_UNICAST_LOOPBACK: ArgusIPv4AddrUnicastLoopBack[type]++; break;
+      case ARGUS_IPV4_UNICAST_TESTNET: ArgusIPv4AddrUnicastTestNet[type]++; break;
+      case ARGUS_IPV4_UNICAST_RESERVED: ArgusIPv4AddrUnicastReserved[type]++; break;
+
+      case ARGUS_IPV4_MULTICAST:
+      case ARGUS_IPV4_MULTICAST_LOCAL: ArgusIPv4AddrMulticastLocal[type]++; break;
+      case ARGUS_IPV4_MULTICAST_INTERNETWORK: ArgusIPv4AddrMulticastInternet[type]++;  break;
+      case ARGUS_IPV4_MULTICAST_RESERVED: ArgusIPv4AddrMulticastReserved[type]++; break;
+      case ARGUS_IPV4_MULTICAST_SDPSAP: ArgusIPv4AddrMulticastSdpSap[type]++; break;
+      case ARGUS_IPV4_MULTICAST_NASDAQ: ArgusIPv4AddrMulticastNasdaq[type]++; break;
+      case ARGUS_IPV4_MULTICAST_DIS: ArgusIPv4AddrMulticastDisTrans[type]++; break;
+
+      case ARGUS_IPV4_MULTICAST_SRCSPEC:ArgusIPv4AddrMulticastOrgLocal[type]++; break;
+      case ARGUS_IPV4_MULTICAST_GLOP: ArgusIPv4AddrMulticastGlop[type]++; break;
+
+      case ARGUS_IPV4_MULTICAST_ADMIN:
+      case ARGUS_IPV4_MULTICAST_SCOPED:
+      case ARGUS_IPV4_MULTICAST_SCOPED_ORG_LOCAL: ArgusIPv4AddrMulticastOrgLocal[type]++; break;
+      case ARGUS_IPV4_MULTICAST_SCOPED_SITE_LOCAL: ArgusIPv4AddrMulticastSiteLocal[type]++; break;
+      case ARGUS_IPV4_MULTICAST_SCOPED_REL: break;
+
+      case ARGUS_IPV4_MULTICAST_ADHOC:
+      case ARGUS_IPV4_MULTICAST_ADHOC_BLK1:
+      case ARGUS_IPV4_MULTICAST_ADHOC_BLK2:
+      case ARGUS_IPV4_MULTICAST_ADHOC_BLK3:
+         ArgusIPv4AddrMulticastAdHoc[type]++;
+         break;
    }
 }
+
 
 void
 RaTallyIPv6AddressType(struct ArgusParserStruct *parser, struct in6_addr *addr, int type)

@@ -1,0 +1,14 @@
+# (C) Copyright 2001,2002, Martin Roesch, Brian Caswell, et al.
+#    All rights reserved.
+# $Id: virus.rules,v 1.21.2.2 2004/03/22 16:18:34 cazz Exp $
+#------------
+# VIRUS RULES
+#------------
+#
+# NOTE: These rules are NOT being actively maintained.
+#
+#
+# These rules are going away.  We don't care about virus rules anymore.
+#
+
+alert tcp $HOME_NET any -> $EXTERNAL_NET 25 (msg:"VIRUS OUTBOUND bad file attachment"; flow:to_server,established; content:"Content-Disposition|3a|"; nocase; pcre:"/filename\s*=\s*.*?\.(?=[abcdehijlmnoprsvwx])(a(d[ep]|s[dfx])|c([ho]m|li|md|pp)|d(iz|ll|ot)|e(m[fl]|xe)|h(lp|sq|ta)|jse?|m(d[abew]|s[ip])|p(p[st]|if|[lm]|ot)|r(eg|tf)|s(cr|[hy]s|wf)|v(b[es]?|cf|xd)|w(m[dfsz]|p[dmsz]|s[cfh])|xl[stw]|bat|ini|lnk|nws|ocx)[\x27\x22\n\r\s]/iR"; classtype:suspicious-filename-detect; sid:721; rev:6;)

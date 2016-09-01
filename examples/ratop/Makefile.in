@@ -3,22 +3,20 @@
 #  Copyright (c) 2000-2022 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
 # 
-#
-# Various configurable paths (remember to edit Makefile.in, not Makefile)
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+# 
+#  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
 
 # Top level hierarchy
@@ -84,7 +82,8 @@ YACC = @V_YACC@
  
 OBJ =	$(SRC:.c=.o)
 
-LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a \
+	$(INSTALLLIB)/argus_client.a $(INSTALLLIB)/argus_output.a
 
 SRC = racurses.c raclient.c
 
@@ -93,7 +92,7 @@ PROGS = $(INSTALLBIN)/ratop
 all: $(PROGS)
 
 $(INSTALLBIN)/ratop: $(OBJ) $(LIB)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 

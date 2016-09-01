@@ -28,9 +28,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/ramysql/rasql.c#22 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#9 $
+ * $DateTime: 2014/10/17 09:01:31 $
+ * $Change: 2942 $
  */
 
 #ifdef HAVE_CONFIG_H

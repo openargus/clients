@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_main.h#37 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_main.h#8 $
+ * $DateTime: 2016/02/16 16:19:04 $
+ * $Change: 3094 $
  */
 
 #ifndef ArgusMain_h
@@ -62,7 +61,8 @@ extern "C" {
 #define MAJOR_VERSION_3    3
 #define MAJOR_VERSION_4    4
 #define MAJOR_VERSION_5    5
-#define VERSION_MAJOR      MAJOR_VERSION_3
+#define MAJOR_VERSION_6    6
+#define VERSION_MAJOR      MAJOR_VERSION_5
 #define VERSION_MINOR      MINOR_VERSION_0
 
 #ifndef MAXPATHNAMELEN
@@ -98,9 +98,10 @@ struct ArgusRfileStruct {
 };
 
 
-#define ARGUS_DATA		0x00
-#define CISCO_V5_DATA		0x01
-#define CISCO_V9_DATA		0x02
+#define ARGUS_DATA		0x01
+#define ARGUS_CISCO_V5_DATA	0x02
+#define ARGUS_CISCO_V9_DATA	0x04
+#define ARGUS_IPFIX_DATA	0x08
 
 struct ArgusWfileStruct {
    struct ArgusListObjectStruct *nxt, *prv;
@@ -190,6 +191,7 @@ int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, st
 void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 
 extern int ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *, int);
+void ArgusReadStreams (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 void ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 void ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *);
 
@@ -294,6 +296,7 @@ extern int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInpu
 extern void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 extern int ArgusReadRemoteConnection (int, struct nff_program *);
 extern int ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *, int);
+extern void ArgusReadStreams (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 extern void ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 extern void ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *);
 

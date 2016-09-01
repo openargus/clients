@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_os.h#24 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_os.h#6 $
+ * $DateTime: 2016/03/02 22:43:28 $
+ * $Change: 3101 $
  */
 
 #ifndef ArgusOs_h
@@ -124,45 +123,45 @@ typedef uint64_t u_int64_t;
 #endif
 
 #if !defined(ICMP6_MEMBERSHIP_QUERY)
-#define ICMP6_MEMBERSHIP_QUERY             130
+#define ICMP6_MEMBERSHIP_QUERY          130
 #endif
 #if !defined(ICMP6_MEMBERSHIP_REPORT)
-#define ICMP6_MEMBERSHIP_REPORT            131
+#define ICMP6_MEMBERSHIP_REPORT         131
 #endif
 #if !defined(ICMP6_MEMBERSHIP_REDUCTION)
-#define ICMP6_MEMBERSHIP_REDUCTION         132
+#define ICMP6_MEMBERSHIP_REDUCTION      132
 #endif
 
 
 #if !defined(ICMP6_MEMBERSHIP_REPORT_V2)
-#define ICMP6_MEMBERSHIP_REPORT_V2	   143
+#define ICMP6_MEMBERSHIP_REPORT_V2         143
 #endif
 #if !defined(ICMP6_HOME_AGENT_ADDR_REQUEST)
 #define ICMP6_HOME_AGENT_ADDR_REQUEST      144
 #endif
 #if !defined(ICMP6_HOME_AGENT_ADDR_REPLY)
-#define ICMP6_HOME_AGENT_ADDR_REPLY	   145
+#define ICMP6_HOME_AGENT_ADDR_REPLY        145
 #endif
 #if !defined(ICMP6_MOBILE_PREFIX_SOL)
-#define ICMP6_MOBILE_PREFIX_SOL		146
+#define ICMP6_MOBILE_PREFIX_SOL         146
 #endif
 #if !defined(ICMP6_MOBILE_PREFIX_ADV)
-#define ICMP6_MOBILE_PREFIX_ADV		147
+#define ICMP6_MOBILE_PREFIX_ADV         147
 #endif
 #if !defined(ICMP6_CERT_PATH_SOL)
-#define ICMP6_CERT_PATH_SOL		148
+#define ICMP6_CERT_PATH_SOL             148
 #endif
 #if !defined(ICMP6_CERT_PATH_ADV)
-#define ICMP6_CERT_PATH_ADV		149
+#define ICMP6_CERT_PATH_ADV             149
 #endif
 #if !defined(ICMP6_EXPER_MOBILITY)
-#define ICMP6_EXPER_MOBILITY		150
+#define ICMP6_EXPER_MOBILITY            150
 #endif
 #if !defined(ICMP6_MULTICAST_ROUTER_ADV)
-#define ICMP6_MULTICAST_ROUTER_ADV	151
+#define ICMP6_MULTICAST_ROUTER_ADV      151
 #endif
 #if !defined(ICMP6_MULTICAST_ROUTER_SOL)
-#define ICMP6_MULTICAST_ROUTER_SOL	152
+#define ICMP6_MULTICAST_ROUTER_SOL      152
 #endif
 
 #if !defined(linux)

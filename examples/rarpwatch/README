@@ -3,23 +3,60 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  *  
- *  rarpwatch - classic arpwatch functionality driven by argus flow data
+ *  rarpwatch - extended arpwatch functionality driven by argus flow data
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+/*
+
+   Rarpwatch is designed to 'watch' arp traffic and to provide awareness of
+   ethernet address resolution.  Because arp is used to a lot of basic functions,
+   a lot can be 'learned' from passively listening for arps's on the local network.
+
+   Classic arpwatch behavior consists of tracking solicited / unsolicited as well as
+   directed and undirected arp requests and responses, to provide address resolution
+   integrity, and is primarily used to detect arp poisoning within a network..
+
+   However, so much more can be derived from passively monitoring arp traffic.  rarpwatch
+   can be aware of active ethernet addresses in the current LAN, their interest in Layer
+   3 addresses, the occurence of unsolicited reverse arps to test availability of addresses,
+   all can provide discovery information for the specific LAN that the sensor has visibility to.
+
+   The primary thing for rarpwatch.1 is to track ethernet / IP address assignments. When argus
+   resides in an end system, tracking all the arp traffic allows one to track the state of
+   the hosts interface configuration (arp is used to test  the availability of the IP address
+   assigned to a given interface), and to understand how local Layer 3 addresses are mapped
+   to active Layer 2 addresses in the LAN.  In dynamic DHCP based networks, we can assume that
+   mappings change, and so coupling an awareness of DHCP and ARP traffic can provide an awareness
+   of dynamism in a LAN, especially for mobile end systems.
+
+   In untrusted networks, one should anticipate that arp can be used to spoof systems into
+   forwarding packets to inappropriate nodes, or to present fabricated LAN profiles to
+   an attached end system to modify its security stance.
+
+   One of the design goals of rarpwatch.1, is to be able to identify and track attachment to
+   foriegn LANs, especially for laptops and  mobile end systems.  Ideally, this would
+   provide LAN identifiation, with wireless SSID and BSSID identifiers if availabile,
+   entity inventory, IP address assignement determination (DHCP mediated static addressing ???)
+   router identification, and possible correlation with local routing tables.
+
+   These goals provide the situational awareness needed to discriminate changes in
+   Layer 2 and Layer 3 associations and to provide classification into familiar/unfamiliar,
+   friendly and unfriendly behavior.
+
+*/

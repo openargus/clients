@@ -770,6 +770,9 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
       }
    }
 
+   if (labeler->RaLabelLocality)
+      RaLocalityLabel (parser, argus);
+
 #if defined(ARGUS_GEOIP)
    ArgusLabelRecordGeoIP(parser, argus, label, MAXSTRLEN, &found);
 #elif defined(ARGUS_GEOIP2)
@@ -1308,7 +1311,9 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
                mask = 0xFFFFFFFF << (32 - tree->addr.masklen);
             else
                mask = 0;
-
+/*
+            mask = tree->addr.mask[0];
+*/
             taddr = tree->addr.addr[0] & mask;
             naddr = node->addr.addr[0] & mask;
 
@@ -1319,6 +1324,14 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
                         retn = tree;
                         done++;
                         break;
+                     }
+
+                  case ARGUS_MASK_MATCH: 
+                     if (tree->addr.masklen >= node->addr.masklen) {
+                        retn = tree;
+                        done++;
+                        break;
+*/
                      }
 
                   case ARGUS_MASK_MATCH: 
@@ -1853,6 +1866,9 @@ RaDeleteAddressTree(struct ArgusLabelerStruct *labeler, struct RaAddressStruct *
    if (node->asnlabel) { free(node->asnlabel); node->asnlabel = NULL;}
    if (node->ns) {ArgusDeleteRecordStruct(ArgusParser, node->ns); node->ns = NULL;}
 
+   if (node->status & ARGUS_NODE)
+      labeler->count--;
+
    ArgusFree(node);
 }
 
@@ -1889,6 +1905,7 @@ RaTimeoutAddressTree(struct ArgusLabelerStruct *labeler, struct RaAddressStruct 
          }
       }
    }
+
    return (retn);
 }
 
@@ -2730,6 +2747,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    long long i, step = 0, arange;
    unsigned int masklen = 32;
    double mstep = 0;
+   int retn = 0;
 
    if (labeler != NULL) {
       int state = ARGUS_PARSING_START_ADDRESS;
@@ -3759,7 +3777,7 @@ RaGenerateBinaryTrees(struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    if (ArgusSorter) {
       ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortSrvSignatures;
       ArgusSorter->ArgusSortAlgorithms[1] = NULL;
-      ArgusSortQueue (ArgusSorter, queue);
+      ArgusSortQueue (ArgusSorter, queue, ARGUS_LOCK);
    }
 
    while ((srv = (struct RaSrvSignature *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
@@ -4904,6 +4922,165 @@ RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    return (retn);
 }
 
+void
+RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
+{
+   struct ArgusLabelerStruct *labeler, *llabeler;
+
+   if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+      if (labeler->ArgusAddrTree) {
+         struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+
+         if (flow != NULL) {
+            switch(flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_LAYER_3_MATRIX:
+               case ARGUS_FLOW_CLASSIC5TUPLE: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        struct RaAddressStruct *raddr = NULL;
+                        struct RaAddressStruct node;
+
+                        bzero ((char *)&node, sizeof(node));
+ 
+                        node.addr.type = AF_INET;
+                        node.addr.len = 4;
+                        node.addr.addr[0] = flow->ip_flow.ip_src;
+                        node.addr.masklen = 32;
+                        if ((llabeler = parser->ArgusLocalLabeler) != NULL) {
+                           if (llabeler->RaLabelLocalityInterfaceIsMe) {
+                              if ((raddr = RaFindAddress (parser, llabeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
+                                 raddr = RaFindAddress (parser, llabeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+                           }
+                        }
+
+                        if (raddr == NULL)
+                           raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_LONGEST_MATCH);
+
+                        if (raddr != NULL) {
+                           if (raddr->locality > 0) {
+                              struct ArgusNetspatialStruct *nss = NULL;
+                              if ((nss = (struct ArgusNetspatialStruct *)argus->dsrs[ARGUS_LOCAL_INDEX]) == NULL) {
+                                 nss = (struct ArgusNetspatialStruct *) ArgusCalloc(1, sizeof(*nss));
+                                 nss->hdr.type = ARGUS_LOCAL_DSR;
+                                 nss->hdr.argus_dsrvl8.len = (sizeof(*nss) + 3) / 4;
+
+                                 argus->dsrs[ARGUS_LOCAL_INDEX] = &nss->hdr;
+                                 argus->dsrindex |= (0x1 << ARGUS_LOCAL_INDEX);
+
+                                 nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
+                                 nss->sloc = raddr->locality;
+
+                              } else {
+                                 if (labeler->RaLabelLocalityOverwrite) {
+                                    nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
+                                    nss->sloc = raddr->locality;
+                                 } else {
+                                    if (!(nss->hdr.argus_dsrvl8.qual & ARGUS_SRC_LOCAL)) {
+                                       nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
+                                       nss->sloc = raddr->locality;
+                                    }
+                                 }
+                              }
+                           
+                              if (raddr->asn > 0) {
+                                 struct ArgusAsnStruct *asn = (struct ArgusAsnStruct *) argus->dsrs[ARGUS_ASN_INDEX];
+
+                                 if (asn == NULL) {
+                                    if ((asn = ArgusCalloc(1, sizeof(*asn))) == NULL)
+                                       ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s", strerror(errno));
+
+                                    asn->hdr.type              = ARGUS_ASN_DSR;
+                                    asn->hdr.subtype           = ARGUS_ASN_LOCAL;
+                                    asn->hdr.argus_dsrvl8.qual = 0;
+                                    asn->hdr.argus_dsrvl8.len  = 3;
+
+                                    argus->dsrs[ARGUS_ASN_INDEX] = (struct ArgusDSRHeader *) asn;
+                                    argus->dsrindex |= (0x01 << ARGUS_ASN_INDEX);
+
+                                    asn->src_as = raddr->asn;
+
+                                 } else {
+                                    asn->hdr.subtype   = ARGUS_ASN_LOCAL;
+                                    asn->src_as        = raddr->asn;
+                                 }
+                              }
+                           }
+                        }
+
+                        node.addr.addr[0] = flow->ip_flow.ip_dst;
+                        raddr = NULL;
+
+                        if ((llabeler = parser->ArgusLocalLabeler) != NULL) {
+                           if (llabeler->RaLabelLocalityInterfaceIsMe) {
+                              if ((llabeler = parser->ArgusLocalLabeler) != NULL)
+                                 if ((raddr = RaFindAddress (parser, llabeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
+                                    raddr = RaFindAddress (parser, llabeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+                           }
+                        }
+
+                        if (raddr == NULL)
+                           raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_LONGEST_MATCH);
+
+                        if (raddr != NULL) {
+                           if (raddr->locality > 0) {
+                              struct ArgusNetspatialStruct *nss = NULL;
+                              if ((nss = (struct ArgusNetspatialStruct *)argus->dsrs[ARGUS_LOCAL_INDEX]) == NULL) {
+                                 nss = (struct ArgusNetspatialStruct *) ArgusCalloc(1, sizeof(*nss));
+                                 nss->hdr.type = ARGUS_LOCAL_DSR;
+                                 nss->hdr.argus_dsrvl8.len = (sizeof(*nss) + 3) / 4;
+
+                                 argus->dsrs[ARGUS_LOCAL_INDEX] = &nss->hdr;
+                                 argus->dsrindex |= (0x1 << ARGUS_LOCAL_INDEX);
+
+                                 nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
+                                 nss->dloc = raddr->locality;
+                              } else {
+                                 if (labeler->RaLabelLocalityOverwrite) {
+                                    nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
+                                    nss->dloc = raddr->locality;
+                                 } else {
+                                    if (!(nss->hdr.argus_dsrvl8.qual & ARGUS_DST_LOCAL)) {
+                                       nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
+                                       nss->dloc = raddr->locality;
+                                    }
+                                 }
+                              }
+
+                              if (raddr->asn > 0) {
+                                 struct ArgusAsnStruct *asn = (struct ArgusAsnStruct *) argus->dsrs[ARGUS_ASN_INDEX];
+
+                                 if (asn == NULL) {
+                                    if ((asn = ArgusCalloc(1, sizeof(*asn))) == NULL)
+                                       ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s", strerror(errno));
+
+                                    asn->hdr.type              = ARGUS_ASN_DSR;
+                                    asn->hdr.subtype           = ARGUS_ASN_LOCAL;
+                                    asn->hdr.argus_dsrvl8.qual = 0;
+                                    asn->hdr.argus_dsrvl8.len  = 3;
+
+                                    argus->dsrs[ARGUS_ASN_INDEX] = (struct ArgusDSRHeader *) asn;
+                                    argus->dsrindex |= (0x01 << ARGUS_ASN_INDEX);
+
+                                    asn->dst_as = raddr->asn;
+
+                                 } else {
+                                    asn->hdr.subtype   = ARGUS_ASN_LOCAL;
+                                    asn->dst_as        = raddr->asn;
+                                 }
+                              }
+                           }
+                        }
+                        break;
+                     }
+                  }
+                  break;
+               }
+            }
+         }
+      }
+   }
+}
+
 char RaIANAAddressLabel[128];
 
 char *RaLabelIPv4Address(struct ArgusParserStruct *, unsigned int *);
@@ -5742,6 +5919,76 @@ RaPrintLabelTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
            if (level == 0) printf (";\n");
            break;
         }
+      }
+   }
+   fflush(stdout);
+}
+
+
+void
+RaLabelSuperAddresses(struct RaAddressStruct *raddr)
+{
+   if (raddr != NULL) {
+      int superlocality = 0, superasn = 0;
+      struct RaAddressStruct *paddr = raddr;
+
+      do {
+         if (paddr->locality > 0) {
+            superlocality = paddr->locality;
+            break;
+         }
+      } while ((paddr = paddr->p) != NULL);
+    
+      if (superlocality > 0) {
+         paddr = raddr;
+         do {
+            if (paddr->locality != superlocality)
+               paddr->locality = superlocality;
+            else
+               break;
+         } while ((paddr = paddr->p) != NULL);
+      }
+    
+      paddr = raddr;
+      do {
+         if (paddr->asn > 0) {
+            superasn = paddr->asn;
+            break;
+         }
+      } while ((paddr = paddr->p) != NULL);
+    
+      if (superasn > 0) {
+         paddr = raddr;
+         do {
+            if (paddr->asn != superasn)
+               paddr->asn = superasn;
+            else
+               break;
+         } while ((paddr = paddr->p) != NULL);
+      }
+   }
+}
+
+
+void
+RaLabelSubAddresses(struct RaAddressStruct *raddr)
+{
+   if (raddr != NULL) {
+      if (raddr->l) {
+         if (raddr->l->locality < raddr->locality) {
+            raddr->l->locality = raddr->locality;
+            if (raddr->asn != 0)
+               raddr->l->asn = raddr->asn;
+            RaLabelSubAddresses(raddr->l);
+         }
+      }
+      if (raddr->r) {
+         if (raddr->r->locality < raddr->locality) {
+            raddr->r->locality = raddr->locality;
+            if (raddr->asn != 0)
+               raddr->r->asn = raddr->asn;
+            RaLabelSubAddresses(raddr->r);
+         }
       }
    }
    fflush(stdout);

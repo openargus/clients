@@ -21,11 +21,11 @@ set -e
 case "$1" in
     configure)
      if [ -x "/etc/init.d/radium" ]; then
-#	update-rc.d radium defaults 56 44 >/dev/null 
+	update-rc.d radium defaults 56 44 >/dev/null 
  	update-rc.d radium disable  >/dev/null 2>&1
      fi
      if [ -x "/etc/init.d/rasplit" ]; then
-#	update-rc.d rasplit defaults 57 43 >/dev/null 
+	update-rc.d rasplit defaults 57 43 >/dev/null 
  	update-rc.d rasplit disable  >/dev/null 2>&1
      fi
      exit 0
@@ -39,7 +39,5 @@ case "$1" in
         exit 1
     ;;
 esac
-
-#DEBHELPER#
 
 exit 0

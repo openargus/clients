@@ -3,19 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
@@ -42,9 +41,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus/gencode.h#21 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus/gencode.h#11 $
+ * $DateTime: 2015/10/20 23:06:23 $
+ * $Change: 3076 $
  */
 
 /*
@@ -100,6 +99,7 @@
 #define Q_FLOAT		140
 #define Q_GAP		141
 #define Q_DUP		142
+#define Q_MASKLEN	182
 
 /* Protocol qualifiers. */
 
@@ -136,7 +136,6 @@
 #define Q_QP		59
 
 #define	Q_DECNET	60
-#define	Q_LAT		62
 #define	Q_MOPRC		63
 #define	Q_MOPDL		64
 
@@ -231,6 +230,11 @@
 #define Q_OR		130
 #define Q_AND		131
 
+#define Q_LOCAL		178
+#define Q_REMOTE	179
+#define Q_LOR		180
+#define Q_LAND		181
+
 /* TCP Option qualifiers. */
 
 #define Q_TCPOPT		143
@@ -252,6 +256,26 @@
 #define Q_INTERACTIVE		158
 #define Q_INTERIDLE  		159
 
+#define Q_UNREACHNET		160
+#define Q_UNREACHHOST		161
+#define Q_UNREACHPROTO		162
+#define Q_UNREACHPORT		163
+#define Q_UNREACHFRAG		164
+#define Q_UNREACHSRCFAIL	165
+#define Q_UNREACHNETUNKNOWN	166
+#define Q_UNREACHHOSTUNKNOWN	167
+#define Q_UNREACHHOSTISOLATED	168
+#define Q_UNREACHHOSTPROHIBITED	169
+#define Q_UNREACHNETPROHIBITED	170
+#define Q_UNREACHNETTOS		171
+#define Q_UNREACHHOSTTOS	172
+#define Q_UNREACHFILTER		173
+#define Q_UNREACHHOSTPRECEDENCE	174
+#define Q_UNREACHPRECUTOFF	175
+
+#define Q_LAT			176
+#define Q_LON			177
+
 #define Q_DEFAULT	0
 #define Q_UNDEF		255
 
@@ -261,6 +285,7 @@
 #define Q_GREATER	3
 #define Q_GEQ		4
 #define Q_LEQ		5
+#define Q_NOTEQUAL	6
 
 /* DNS Opcode qualifiers. */
 #define Q_AUTH		1

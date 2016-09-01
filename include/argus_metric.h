@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_metric.h#36 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_metric.h#10 $
+ * $DateTime: 2016/03/07 20:28:24 $
+ * $Change: 3105 $
  */
 
 #ifndef ArgusMetric_h
@@ -32,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		115
-#define MAX_METRIC_ALG_TYPES		115
+#define ARGUS_MAX_METRIC_ALG		120
+#define MAX_METRIC_ALG_TYPES		120
 
 
 struct ArgusFetchValueStruct {
@@ -58,10 +57,17 @@ double ArgusFetchDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchuSecDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcMac (struct ArgusRecordStruct *ns);
 double ArgusFetchDstMac (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcMacOui (struct ArgusRecordStruct *ns);
+double ArgusFetchDstMacOui (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcAddr (struct ArgusRecordStruct *ns);
 double ArgusFetchDstAddr (struct ArgusRecordStruct *ns);
 double ArgusFetchProtocol (struct ArgusRecordStruct *ns);
 double ArgusFetchIpId (struct ArgusRecordStruct *ns);
+
+double ArgusFetchLocality (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcLocality (struct ArgusRecordStruct *ns);
+double ArgusFetchDstLocality (struct ArgusRecordStruct *ns);
+
 double ArgusFetchSrcPort (struct ArgusRecordStruct *ns);
 double ArgusFetchDstPort (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcMpls (struct ArgusRecordStruct *ns);
@@ -103,7 +109,6 @@ double ArgusFetchDstPktsCount (struct ArgusRecordStruct *ns);
 double ArgusFetchAppByteCount (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcAppByteCount (struct ArgusRecordStruct *ns);
 double ArgusFetchDstAppByteCount (struct ArgusRecordStruct *ns);
-
 double ArgusFetchAppByteRatio (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcTcpBase (struct ArgusRecordStruct *ns);
@@ -115,6 +120,7 @@ double ArgusFetchSrcTcpMax (struct ArgusRecordStruct *ns);
 double ArgusFetchDstTcpMax (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcGap (struct ArgusRecordStruct *ns);
 double ArgusFetchDstGap (struct ArgusRecordStruct *ns);
+
 /*
 double ArgusFetchSrcDup (struct ArgusRecordStruct *ns);
 double ArgusFetchDstDup (struct ArgusRecordStruct *ns);
@@ -315,7 +321,7 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
 #define ARGUSMETRICDSTWINDOW  63
    {"dwin", ArgusFetchDstWindow},
 #define ARGUSMETRICDELTADUR  64
-   {"deldur", ArgusFetchDeltaDuration},
+   {"dldur", ArgusFetchDeltaDuration},
 #define ARGUSMETRICDELTASTARTTIME 65
    {"dlstime", ArgusFetchDeltaStartTime},
 #define ARGUSMETRICDELTALASTTIME 66
@@ -396,7 +402,6 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"sgap", ArgusFetchSrcGap},
 #define ARGUSMETRICDSTTCPGAP  104
    {"dgap", ArgusFetchDstGap},
-
 #define ARGUSMETRICSRCINTPKTACTMIN  105
    {"sintpktactmin", ArgusFetchSrcIntPktActMin},
 #define ARGUSMETRICSRCINTPKTIDLMIN  106
@@ -405,7 +410,6 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"sintpktactmax", ArgusFetchSrcIntPktActMax},
 #define ARGUSMETRICSRCINTPKTIDLMAX  108
    {"sintpktidlmax", ArgusFetchSrcIntPktIdlMax},
-
 #define ARGUSMETRICDSTINTPKTACTMIN  109
    {"dintpktactmin", ArgusFetchDstIntPktActMin},
 #define ARGUSMETRICDSTINTPKTIDLMIN  110
@@ -419,10 +423,22 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"abr", ArgusFetchAppByteRatio},
 #define ARGUSMETRICPRODUCERCONSUMERRATIO  114
    {"pcr", ArgusFetchAppByteRatio},
+
+#define ARGUSMETRICLOCALITY        115
+   {"loc", ArgusFetchLocality},
+#define ARGUSMETRICSRCLOCALITY     116
+   {"sloc", ArgusFetchSrcLocality},
+#define ARGUSMETRICDSTLOCALITY     117
+   {"dloc", ArgusFetchDstLocality},
+#define ARGUSMETRICSRCMACOUI       118
+   {"soui", ArgusFetchSrcMacOui},
+#define ARGUSMETRICDSTMACOUI       119
+   {"doui", ArgusFetchDstMacOui},
+
 /*
-#define ARGUSMETRICSRCDUP  115
+#define ARGUSMETRICSRCDUP  118
    {"sdup", ArgusFetchSrcDup},
-#define ARGUSMETRICDSTDUP  116
+#define ARGUSMETRICDSTDUP  119
    {"ddup", ArgusFetchDstDup},
 */
 };
@@ -497,6 +513,8 @@ extern double ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaLastTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaSrcPkts (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaDstPkts (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcHopCount (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstHopCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchRetrans (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcRetrans (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstRetrans (struct ArgusRecordStruct *ns);

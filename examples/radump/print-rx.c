@@ -32,10 +32,12 @@
  * Ken Hornstein <kenh@cmf.nrl.navy.mil>
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
- 
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -575,7 +577,7 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 				goto trunc; \
 			bp += sizeof(int32_t); \
 			sprintf(&ArgusBuf[strlen(ArgusBuf)]," \""); \
-			if (fn_printn(bp, i, snapend, ArgusBuf)) \
+			if (fn_printn(bp, i, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) \
 				goto trunc; \
 			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\""); \
 			bp += ((i + sizeof(int32_t) - 1) / sizeof(int32_t)) * sizeof(int32_t); \

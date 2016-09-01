@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/clients/radium.c#16 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/radium.c#14 $
+ * $DateTime: 2015/12/09 22:14:36 $
+ * $Change: 3090 $
  */
 
 /*
@@ -54,12 +53,14 @@
 
 #include <rabins.h>
 
-int RaRealTime = 0;
-float RaUpdateRate = 1.0;
-                                                                                                                           
+
+#define RADIUM_MAX_ANALYTICS    128
+struct ArgusRecordStruct *(*RadiumAnalyticAlgorithmTable[RADIUM_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
+   NULL, NULL, NULL
+};
+
+
 struct timeval ArgusLastRealTime = {0, 0};
-struct timeval ArgusLastTime     = {0, 0};
-struct timeval ArgusThisTime     = {0, 0};
                                                                                                                            
 struct timeval dLastTime = {0, 0};
 struct timeval dRealTime = {0, 0};
@@ -85,38 +86,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    int pid, dflag;
 #if defined(ARGUS_THREADS)
    sigset_t blocked_signals;
-   int thread = 0;
-
-   thread++;
 #endif /* ARGUS_THREADS */
- 
-/*
-   if (thread == 0)
-      ArgusLog (LOG_ERR, "not compiled with pthread support.  exiting");
-*/
+
    parser->RaWriteOut = 1;
    parser->ArgusReverse = 1;
 
    if (!(parser->RaInitialized)) {
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "rtime", 5)) ||
-               (!(strncasecmp (mode->mode, "realtime", 8)))) {
-               char *ptr = NULL;
-               RaRealTime++;
-               if ((ptr = strchr(mode->mode, ':')) != NULL) {
-                  double value = 0.0;
-                  char *endptr = NULL;
-                  ptr++;
-                  value = strtod(ptr, &endptr);
-                  if (ptr != endptr) {
-                     RaUpdateRate = value;
-                  }
-               }
-            } else
-               if (isdigit(*optarg))
-                  setArgusMarReportInterval (ArgusParser, optarg);
-
+            if (!(strncasecmp (mode->mode, "zeroconf", 8)))
+               parser->ArgusZeroConf = 1;
             mode = mode->nxt;
          }
       }
@@ -196,6 +175,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (setuid(new_uid) < 0)
             ArgusLog (LOG_ERR, "ArgusInitOutput: setuid error %s", strerror(errno));
       }
+
 /*
    This is the basic new argus() strategy for processing output
    records.  The thread will do two basic things: 
@@ -203,7 +183,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          processing that this radium will do, such as time
          adjustment, aggregation, correction, and anonymization, etc...
 
-      2) it will manage the listen, to deal without remote client
+      2) it will establish the permanent and non-argus outputs
+         from the configuration file.
+
+      3) it will manage the listen, to deal without remote argus
          requests.  radium() can write its records to a file, and
          any number of remote clients, so ......
 
@@ -211,12 +194,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    and so it should be run, probably 4x a second, just for good
    measure.
 */
-
       parser->ArgusReliableConnection++;
-      parser->RaInitialized++;
 
-      parser->ArgusOutput = ArgusNewOutput (parser);
-      ArgusInitOutput (parser->ArgusOutput);
+      if ((parser->ArgusOutput = ArgusNewOutput (parser)) == NULL)
+         ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
 
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
@@ -236,6 +217,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTSTP, SIG_IGN);
       (void) signal (SIGTTOU, SIG_IGN);
       (void) signal (SIGTTIN, SIG_IGN);
+
+      parser->RaInitialized++;
    }
 }
 
@@ -344,27 +327,6 @@ ArgusClientTimeout ()
 {
    gettimeofday(&ArgusParser->ArgusRealTime, 0);
 
-   if (RaRealTime) {  /* establish value for time comparison */
-      if (ArgusLastTime.tv_sec != 0) {
-         if (ArgusLastRealTime.tv_sec > 0) {
-            RaDiffTime(&ArgusParser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-            thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-            dRealTime.tv_sec  = thisUsec / 1000000;
-            dRealTime.tv_usec = thisUsec % 1000000;
-                                                                                                                             
-            ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-            ArgusLastTime.tv_usec += dRealTime.tv_usec;
-                                                                                                                             
-            if (ArgusLastTime.tv_usec > 1000000) {
-               ArgusLastTime.tv_sec++;
-               ArgusLastTime.tv_usec -= 1000000;
-            }
-         }
-
-         ArgusLastRealTime = ArgusParser->ArgusRealTime;
-      }
-   }
-
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");
 #endif
@@ -396,13 +358,6 @@ usage ()
    fflush (stdout);
    exit(1);
 }
-
-
-#define RADIUM_MAX_ANALYTICS	128
-struct ArgusRecordStruct *(*RadiumAnalyticAlgorithmTable[RADIUM_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
-   NULL, NULL, NULL
-};
-
 
 
 void
@@ -442,94 +397,72 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          if (time != NULL) {
             if (parser->ArgusAdjustTime) {
-               long long ArgusDriftLevel = parser->ArgusAdjustTime * 1000000;
+               int secs = 0, usecs = 0;
 
-               if (time && ((argus->input->ArgusTimeDrift >  ArgusDriftLevel) || 
-                            (argus->input->ArgusTimeDrift < -ArgusDriftLevel))) {
-                  int secs  = argus->input->ArgusTimeDrift / 1000000;
-                  int usecs = argus->input->ArgusTimeDrift % 1000000;
+               if (parser->ProcessRealTime) {
+                  struct timeval tvpbuf, *now = &tvpbuf;
+                  double lastTime = ArgusFetchLastTime(argus);
 
-                  struct timeval startbuf, *start = &startbuf;
-                  struct timeval endbuf, *end = &endbuf;
+                  gettimeofday(now, NULL);
+                  secs  = now->tv_sec - (int)lastTime;
+                  usecs = now->tv_usec - ((lastTime - (int)lastTime) * 1000000);
+                  if (usecs < 0) { usecs += 1000000; secs--; }
 
-                  start->tv_sec  = time->src.start.tv_sec;
-                  start->tv_usec = time->src.start.tv_usec;
-
-                  end->tv_sec    = time->src.end.tv_sec;
-                  end->tv_usec   = time->src.end.tv_usec;
-
-#ifdef ARGUSDEBUG
-                  ArgusDebug (4, "RaProcessRecord() ArgusInput 0x%x adjusting timestamps by %d secs and %d usecs\n", argus->input, secs, usecs);
-#endif
-                  time->hdr.argus_dsrvl8.qual |= ARGUS_TIMEADJUST;
-                  start->tv_sec  +=  secs;
-                  start->tv_usec += usecs;
-                  if (start->tv_usec < 0) {
-                     start->tv_sec--; start->tv_usec += 1000000;
-                  }
-                  if (start->tv_usec > 1000000) {
-                     start->tv_sec++; start->tv_usec -= 1000000;
-                  }
-
-                  end->tv_sec  +=  secs;
-                  end->tv_usec += usecs;
-                  if (end->tv_usec < 0) {
-                     end->tv_sec--; end->tv_usec += 1000000;
-                  }
-                  if (end->tv_usec > 1000000) {
-                     end->tv_sec++; end->tv_usec -= 1000000;
-                  }
+               } else {
+                  long long ArgusDriftLevel = parser->ArgusAdjustTime * 1000000;
+                  if (time && ((argus->input->ArgusTimeDrift >  ArgusDriftLevel) || 
+                               (argus->input->ArgusTimeDrift < -ArgusDriftLevel))) {
+                        secs  = argus->input->ArgusTimeDrift / 1000000;
+                        usecs = argus->input->ArgusTimeDrift % 1000000;
+                     }
                }
-            }
 
-            ArgusThisTime.tv_sec  = time->src.start.tv_sec;
-            ArgusThisTime.tv_usec = time->src.start.tv_usec;
-
-            if (RaRealTime) {
-               if (ArgusLastTime.tv_sec == 0)
-                  ArgusLastTime = ArgusThisTime;
-                                                                                                                                 
-               if (!((ArgusLastTime.tv_sec  > ArgusThisTime.tv_sec) ||
-                  ((ArgusLastTime.tv_sec == ArgusThisTime.tv_sec) &&
-                   (ArgusLastTime.tv_usec > ArgusThisTime.tv_usec)))) {
-                                                                                                                                 
-                  while ((ArgusThisTime.tv_sec  > ArgusLastTime.tv_sec) ||
-                        ((ArgusThisTime.tv_sec == ArgusLastTime.tv_sec) &&
-                         (ArgusThisTime.tv_usec > ArgusLastTime.tv_usec))) {
-                     struct timespec ts = {0, 0};
-                     int thisRate;
-                                                                                                                                 
-                     RaDiffTime(&ArgusThisTime, &ArgusLastTime, &dThisTime);
-                     thisRate = ((dThisTime.tv_sec * 1000000) + dThisTime.tv_usec)/RaUpdateRate;
-                     thisRate = (thisRate > 100000) ? 100000 : thisRate;
-
-                     ts.tv_nsec = thisRate * 1000;
-                     nanosleep (&ts, NULL);
-                     ArgusClientTimeout ();
-
-                     gettimeofday(&parser->ArgusRealTime, 0);
-
-                     if (ArgusLastRealTime.tv_sec > 0) {
-                        RaDiffTime(&parser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-                        thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-                        dRealTime.tv_sec  = thisUsec / 1000000;
-                        dRealTime.tv_usec = thisUsec % 1000000;
-                                                                                                                                 
-                        ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-                        ArgusLastTime.tv_usec += dRealTime.tv_usec;
-                        if (ArgusLastTime.tv_usec > 1000000) {
-                           ArgusLastTime.tv_sec++;
-                           ArgusLastTime.tv_usec -= 1000000;
+               if ((secs > 0) || (usecs > 0)) {
+                  if (time->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START)) {
+                     time->hdr.argus_dsrvl8.qual |= ARGUS_TIMEADJUST;
+                     if (time->hdr.subtype & ARGUS_TIME_SRC_START) {
+                        if (time->src.start.tv_sec > 0) {
+                           time->src.start.tv_sec  += secs;
+                           time->src.start.tv_usec += usecs;
+                           if (time->src.start.tv_usec > 1000000) {
+                              time->src.start.tv_sec++;
+                              time->src.start.tv_usec -= 1000000;
+                           }
+                        }
+                        if (time->src.end.tv_sec > 0) {
+                           time->src.end.tv_sec  += secs;
+                           time->src.end.tv_usec += usecs;
+                           if (time->src.end.tv_usec > 1000000) {
+                              time->src.end.tv_sec++;
+                              time->src.end.tv_usec -= 1000000;
+                           }
                         }
                      }
 
-                     ArgusLastRealTime = parser->ArgusRealTime;
+                     if (time->hdr.subtype & ARGUS_TIME_DST_START) {
+                        if (time->dst.start.tv_sec > 0) {
+                           time->dst.start.tv_sec  += secs;
+                           time->dst.start.tv_usec += usecs;
+                           if (time->dst.start.tv_usec > 1000000) {
+                              time->dst.start.tv_sec++;
+                              time->dst.start.tv_usec -= 1000000;
+                           }
+                        }
+                        if (time->dst.end.tv_sec > 0) {
+                           time->dst.end.tv_sec  += secs;
+                           time->dst.end.tv_usec += usecs;
+                           if (time->dst.end.tv_usec > 1000000) {
+                              time->dst.end.tv_sec++;
+                              time->dst.end.tv_usec -= 1000000;
+                           }
+                        }
+                     }
+#ifdef ARGUSDEBUG
+                     ArgusDebug (4, "RaProcessRecord() ArgusInput 0x%x adjusting timestamps by %d secs and %d usecs\n", argus->input, secs, usecs);
+#endif
                   }
                }
-
-            } else
-               ArgusLastTime = parser->ArgusRealTime;
-
+            }
          }
          break;
       }
@@ -577,7 +510,7 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          22
+#define RADIUM_RCITEMS                          23
 
 #define RADIUM_DAEMON                           0
 #define RADIUM_MONITOR_ID                       1
@@ -601,6 +534,7 @@ void ArgusWindowClose(void) {
 #define RADIUM_SETUSER_ID                       19
 #define RADIUM_SETGROUP_ID                      20
 #define RADIUM_CLASSIFIER_FILE                  21
+#define RADIUM_ZEROCONF_REGISTER                22
 
 char *RadiumResourceFileStr [] = {
    "RADIUM_DAEMON=",
@@ -625,6 +559,7 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_SETUSER_ID=",
    "RADIUM_SETGROUP_ID=",
    "RADIUM_CLASSIFIER_FILE=",
+   "RADIUM_ZEROCONF_REGISTER=",
 };
 
 int
@@ -837,8 +772,6 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 
                         case RADIUM_FILTER_TAG:
                            if ((parser->ArgusRemoteFilter = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
-                              struct nff_program filter;
-
                               ptr = parser->ArgusRemoteFilter;
                               str = optarg;
                               while (*str) {
@@ -853,9 +786,6 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                  else
                                     str++;
                               }
-
-                              if (ArgusFilterCompile (&filter, parser->ArgusRemoteFilter, 0) < 0)
-                                 ArgusLog (LOG_ERR, "RaParseResourceFile: remote filter syntax error");
 #ifdef ARGUSDEBUG
                               ArgusDebug (1, "RadiumParseResourceFile: ArgusFilter \"%s\" \n", parser->ArgusRemoteFilter);
 #endif 
@@ -934,7 +864,6 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            break;
                         }
 
-
                         case RADIUM_CLASSIFIER_FILE: {
                            if (parser->ArgusLabeler == NULL) {
                               if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
@@ -945,6 +874,16 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                               ArgusLog (LOG_ERR, "ArgusClientInit: label conf file error %s", strerror(errno));
 
                            RadiumAnalyticAlgorithmTable[0] = ArgusLabelRecord;
+                           break;
+                        }
+
+                        case RADIUM_ZEROCONF_REGISTER: {
+                           if ((strncasecmp(optarg, "yes", 3)))
+                              setArgusZeroConf (parser, 0);
+                           else
+                              setArgusZeroConf (parser, 1);
+                           break;
+
                            break;
                         }
                      }

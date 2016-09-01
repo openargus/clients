@@ -10,11 +10,4 @@
 #export DH_VERBOSE=1
 
 %:
-	dh $@ --with autotools-dev
-
-override_dh_auto_configure:
-	dh_auto_configure -- --with-libpcre
-
-override_dh_auto_install:
-	dh_auto_install --destdir=$(CURDIR)/debian/tmp
-
+	dh $@ 

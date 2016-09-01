@@ -3,26 +3,24 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/radump/radump.c#11 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/radump/radump.c#7 $
+ * $DateTime: 2016/06/08 00:19:40 $
+ * $Change: 3165 $
  */
 
 /*
@@ -36,8 +34,6 @@
 
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -583,27 +579,30 @@ fn_print(register const u_char *s, register const u_char *ep, char *buf)
  * If ep is NULL, assume no truncation check is needed.
  * Return true if truncated.
  */                     
-int                     
+
+char *
 fn_printn(register const u_char *s, register u_int n,
           register const u_char *ep, char *buf)
 {
-        register u_char c;
+   register u_char c;
+   int len = strlen(buf);
+   char *ebuf = &buf[len];
 
-        while (n > 0 && (ep == NULL || s < ep)) {
-                n--;
-                c = *s++;
-                if (!isascii(c)) {
-                        c = toascii(c);
-                        sprintf(&buf[strlen(buf)], "%c", 'M');
-                        sprintf(&buf[strlen(buf)], "%c", '-');
-                }
-                if (!isprint(c)) {
-                        c ^= 0x40;      /* DEL to ?, others to alpha */
-                        sprintf(&buf[strlen(buf)], "%c", '^');
-                }
-                sprintf(&buf[strlen(buf)], "%c", c);
-        }
-        return (n == 0) ? 0 : 1;
+   while ((n > 0) && (ep == NULL || s < ep)) {
+      n--;
+      c = *s++;
+      if (!isascii(c)) {
+         c = toascii(c);
+         *ebuf++ = 'M';
+         *ebuf++ = '-';
+      }
+      if (!isprint(c)) {
+         c ^= 0x40;      /* DEL to ?, others to alpha */
+         *ebuf++ = '^';
+      }
+      *ebuf++ = c;
+   }
+   return (n == 0) ? ebuf : NULL;
 }
 
 /*

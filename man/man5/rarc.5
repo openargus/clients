@@ -42,17 +42,6 @@ the port number desired.
 
 \fBRA_ARGUS_SERVER=\fPlocalhost:561
 
-.SH RA_SOURCE_PORT
-
-You can change the default source port value that will be used on remote
-TCP and UDP connections, using this variable.  When you specify the
-remote server using the -S option, when you don't specify a port number,
-this is the port number it will use.
-
-The default port number is 561.
-
-\fBRA_SOURCE_PORT=\fP561
-
 
 .SH PID FILE SUPPORT
 
@@ -323,25 +312,6 @@ It should be limited to 2K in length.  The default is to
 not filter.  See ra(1) for the format of the filter expression.
 
 \fBRA_FILTER=\fP""
-
-
-.SH RA_FILTER_TIMEOUT
-
-The filter is compiled in a separate process, and all ra* programs
-need to wait a reasonable time for the filter compiler to finish,
-or time out and return an error, in the case of a fatal error in
-compiling.  Many systems are very busy, and could benefit from a
-prolonged wait period, however, this timeout value could generate
-a significant startup wait state for programs that have poor filter
-specifications, if the timer is too long.
-
-The current default is 1.5 seconds, but you can set this to any
-amount of time.
-
-No Commandline equivalent
-
-\fBRA_FILTER_TIMEOUT=\fP1.5
-
 
 .SH SASL SUPPPORT
 When argus is compiled with SASL support, ra* clients may be

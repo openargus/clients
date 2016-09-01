@@ -1,30 +1,27 @@
 dnl
 dnl Copyright (C) 2000-2022 QoSient, LLC.
 dnl
-dnl Copyright (c) 1995, 1996, 1997, 1998
-dnl   The Regents of the University of California.  All rights reserved.
+dnl Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+dnl Copyright (c) 2000-2013 QoSient, LLC
+dnl All rights reserved.
 dnl
-dnl Redistribution and use in source and binary forms, with or without
-dnl modification, are permitted provided that: (1) source code distributions
-dnl retain the above copyright notice and this paragraph in its entirety, (2)
-dnl distributions including binary code include the above copyright notice and
-dnl this paragraph in its entirety in the documentation or other materials
-dnl provided with the distribution, and (3) all advertising materials mentioning
-dnl features or use of this software display the following acknowledgement:
-dnl ``This product includes software developed by the University of California,
-dnl Lawrence Berkeley Laboratory and its contributors.'' Neither the name of
-dnl the University nor the names of its contributors may be used to endorse
-dnl or promote products derived from this software without specific prior
-dnl written permission.
-dnl THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
-dnl WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
-dnl MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+dnl THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+dnl AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+dnl EXPRESS PERMISSION OF QoSIENT, LLC.
+dnl 
+dnl QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+dnl SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+dnl AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+dnl SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+dnl WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+dnl IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+dnl ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+dnl THIS SOFTWARE.
 dnl
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
-dnl $DateTime: 2016/06/01 15:17:28 $
-dnl $Change: 3148 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
+dnl $DateTime: 2015/04/20 23:52:38 $
+dnl $Change: 3016 $
 dnl
-
 
 dnl QOSIENT and LBL autoconf macros
 dnl
@@ -991,6 +988,7 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
       fi
    fi])
 
+
 dnl
 dnl Improved version of AC_CHECK_LIB
 dnl
@@ -1206,7 +1204,7 @@ AC_SUBST(CMU_LIB_SUBDIR, $ac_cv_cmu_lib_subdir)
 dnl sasl.m4--sasl libraries and includes
 dnl Derrick Brashear
 dnl from KTH sasl and Arla
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 AC_DEFUN([CMU_SASL_INC_WHERE1], [
 saved_CPPFLAGS=$CPPFLAGS
@@ -1304,7 +1302,7 @@ fi])
 
 # sasl2.m4--sasl2 libraries and includes
 # Rob Siemborski
-# $Id: //depot/argus/clients/acsite.m4#45 $
+# $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 # SASL2_CRYPT_CHK
 # ---------------
@@ -1737,7 +1735,7 @@ CPPFLAGS=$cmu_saved_CPPFLAGS
 
 dnl
 dnl Additional macros for configure.in packaged up for easier theft.
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 dnl tjs@andrew.cmu.edu 6-may-1998
 dnl
 
@@ -1792,7 +1790,7 @@ AC_DEFUN([SASL2_CRYPT_CHK],[
 dnl bsd_sockets.m4--which socket libraries do we need?
 dnl Derrick Brashear
 dnl from Zephyr
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 dnl Hacked on by Rob Earhart to not just toss stuff in LIBS
 dnl It now puts everything required for sockets into LIB_SOCKET

@@ -17,7 +17,7 @@
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
-# radark.pl - Report on dark address space accesses.
+#  radark.pl - Report on dark address space accesses.
 #     This script takes as input an argus data stream (either file
 #     or live stream)  and generates a scanner report. 
 #     The strategy is to detect single host dark address accesses
@@ -44,9 +44,9 @@
 #     and what hosts responded to the the scan with data.
 #
 # 
-#  $Id: //depot/argus/clients/examples/radark/radark.pl#6 $
-#  $DateTime: 2016/06/01 15:17:28 $
-#  $Change: 3148 $
+#  $Id: //depot/gargoyle/clients/examples/radark/radark.pl#7 $
+#  $DateTime: 2014/10/07 15:00:33 $
+#  $Change: 2938 $
 # 
 #
 

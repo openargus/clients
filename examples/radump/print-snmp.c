@@ -56,12 +56,12 @@
  #   @(#)snmp.awk.x   1.1 (LANL) 1/15/90
  */
 
-
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -787,7 +787,7 @@ asn1_print(struct be *elem)
       p = elem->data.str;
       if (printable) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(p, asnlen, snapend, ArgusBuf)) {
+         if (fn_printn(p, asnlen, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
             goto trunc;
          }

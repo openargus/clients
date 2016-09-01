@@ -1,12 +1,12 @@
 %define name    argus-clients
-%define ver     3.0
+%define ver     5.0
 %if %{?rel:0}%{!?rel:1}
-%define rel     8.3
+%define rel     2
 %endif
 %if %{?srcext:0}%{!?srcext:1}
 %define srcext .gz
 %endif
-Summary: Argus Client Software
+Summary: Gargoyle Client Software
 Name: argus-clients
 Version: %ver
 Release: %rel
@@ -119,11 +119,17 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 %{argusbin}/rahisto
 %{argusbin}/rahosts
 %{argusbin}/ralabel
+%{argusbin}/ramatrix
+%{argusbin}/rampc
+%{argusbin}/rampcd
 %{argusbin}/ranonymize
+%{argusbin}/rap
 %{argusbin}/rapath
 %{argusbin}/rapolicy
 %{argusbin}/raports
+%{argusbin}/raqsort
 %{argusbin}/rarpwatch
+%{argusbin}/rascan
 %{argusbin}/raservices
 %{argusbin}/rasort
 %{argusbin}/rasplit
@@ -134,7 +140,10 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 %{argusbin}/rastrip
 %{argusbin}/ratemplate
 %{argusbin}/ratimerange
+%{argusbin}/ratod
 %{argusbin}/ratop
+%{argusbin}/ratrace
+%{argusbin}/ratree
 %{argusbin}/rauserdata
 
 %{argussbin}/radium

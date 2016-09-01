@@ -3,29 +3,28 @@
 #  Copyright (c) 2000-2022 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
 # 
-#  $Id: //depot/argus/clients/configure.ac#47 $
-#  $DateTime: 2016/06/01 15:17:28 $
-#  $Change: 3148 $
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+# 
+#  $Id: //depot/gargoyle/clients/configure.ac#26 $
+#  $DateTime: 2016/06/07 17:28:27 $
+#  $Change: 3162 $
 #
 #
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.61])
-AC_INIT([Argus Client Programs],[3.0.8],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+AC_INIT([Gargoyle Client Programs],[5.0.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 AC_CONFIG_SRCDIR([clients/ra.c])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADER([include/argus_config.h])
@@ -71,6 +70,15 @@ if test ! -z "$V_FLOWTOOLS"; then
 fi
 
 AC_QOSIENT_PCRE(V_PCRE, V_INCLS)
+if test ! -z "$V_PCRE"; then
+   if test -f "$V_PCRE"; then
+      if test -f lib/libpcre.a; then
+         rm -rf lib/libpcre.a
+      fi
+      pcredir=`echo $V_PCRE | sed -e 's/\.\./..\/../'`
+   fi
+   LIBS="$LIBS $V_PCRE"
+fi
 
 # Checks for header files.
 AC_HEADER_DIRENT
@@ -80,7 +88,8 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h stdbool.h])
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h libintl.h malloc.h memory.h netdb.h netinet/in.h net/if_dl.h])
 AC_CHECK_HEADERS([stdlib.h stddef.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h])
-AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h])
+
+AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h dns_sd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -412,14 +421,17 @@ AC_CONFIG_FILES([
    ./include/Makefile
    ./clients/Makefile 
    ./lib/argus-clients.pc
+
 ])
 
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
       ./examples/Makefile
+      ./examples/race/Makefile
       ./examples/raconvert/Makefile
-      ./examples/radark/Makefile
       ./examples/radecode/Makefile
+      ./examples/radns/Makefile
+      ./examples/radhcp/Makefile
       ./examples/radump/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
@@ -437,16 +449,25 @@ AS_IF([test "$with_examples" != no],
    ])
    
    AC_CONFIG_FILES([
+      ./examples/ramatrix/Makefile
+      ./examples/rampc/Makefile
+      ./examples/rap/Makefile
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile
+      ./examples/raqsort/Makefile
       ./examples/rarpwatch/Makefile
+      ./examples/rascanner/Makefile
       ./examples/raservices/Makefile
+      ./examples/rasnort/Makefile
       ./examples/rastream/Makefile
       ./examples/rastrip/Makefile
-      ./examples/ratop/Makefile
       ./examples/ratimerange/Makefile
       ./examples/ratemplate/Makefile
+      ./examples/ratod/Makefile
+      ./examples/ratop/Makefile
+      ./examples/ratrace/Makefile
+      ./examples/ratree/Makefile
    ])
 ])
 

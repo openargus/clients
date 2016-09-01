@@ -46,11 +46,18 @@ Don't print bins that have zero frequencies.
 .B \-M outlayer
 Print accumulated stats for outlayer values, i.e. the values that
 are outside the histogram range.
-.TP 15
-.BI \-H "\| metric bin[L]:range | size\^"
+
+.TP 4 4
+.BI \-H "\| [abs] metric bin[L]:range | size\^"
+Specify histogram options, metric, number of bins, whether to use
+logorithmic scales, and either a range specification to indicate
+start and stop times, or just the size of each bin.  The optional 'abs' 
+indicates that rahisto should use absolute values for the metric.
 
 .TP 5
-Supported metrics are:
+Rahisto supports 112 argus metrics, which include most of the metrics
+that can be printed.  See ra.1 for metric fields that are supported by
+the ra* programs.  The common metrics include:
 .PP
 .RS
 .TP 15

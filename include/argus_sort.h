@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_sort.h#39 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_sort.h#8 $
+ * $DateTime: 2015/10/20 23:06:23 $
+ * $Change: 3076 $
  */
 
 #ifndef ArgusSort_h
@@ -32,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		75
-#define MAX_SORT_ALG_TYPES		75
+#define ARGUS_MAX_SORT_ALG		77
+#define MAX_SORT_ALG_TYPES		77
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -62,6 +61,7 @@ struct ArgusSorterStruct {
 #define ARGUSSORTSRCMAC			8
 #define ARGUSSORTDSTMAC			9
 #define ARGUSSORTSRCADDR		10
+
 #define ARGUSSORTDSTADDR		11
 #define ARGUSSORTPROTOCOL		12
 #define ARGUSSORTSRCIPID		13
@@ -72,6 +72,7 @@ struct ArgusSorterStruct {
 #define ARGUSSORTDSTTOS			18
 #define ARGUSSORTSRCTTL			19
 #define ARGUSSORTDSTTTL			20
+
 #define ARGUSSORTBYTECOUNT		21
 #define ARGUSSORTSRCBYTECOUNT		22
 #define ARGUSSORTDSTBYTECOUNT		23
@@ -82,6 +83,7 @@ struct ArgusSorterStruct {
 #define ARGUSSORTSRCAPPBYTECOUNT	28
 #define ARGUSSORTDSTAPPBYTECOUNT	29
 #define ARGUSSORTLOAD			30
+
 #define ARGUSSORTSRCLOAD		31
 #define ARGUSSORTDSTLOAD		32
 #define ARGUSSORTLOSS			33
@@ -92,6 +94,7 @@ struct ArgusSorterStruct {
 #define ARGUSSORTTRANREF		38
 #define ARGUSSORTSEQ			39
 #define ARGUSSORTSRCMPLS		40
+
 #define ARGUSSORTDSTMPLS		41
 #define ARGUSSORTSRCVLAN		42
 #define ARGUSSORTDSTVLAN		43
@@ -102,6 +105,7 @@ struct ArgusSorterStruct {
 #define ARGUSSORTSRCLOSS		48
 #define ARGUSSORTDSTLOSS		49
 #define ARGUSSORTPERCENTSRCLOSS		50
+
 #define ARGUSSORTPERCENTDSTLOSS		51
 #define ARGUSSORTSRCMAXPKTSIZE		52
 #define ARGUSSORTSRCMINPKTSIZE		53
@@ -112,22 +116,25 @@ struct ArgusSorterStruct {
 #define ARGUSSORTSRCCOCODE 		58
 #define ARGUSSORTDSTCOCODE    		59
 #define ARGUSSORTSRCAS	 		60
+
 #define ARGUSSORTDSTAS    		61
 #define ARGUSSORTSUM    		62
 #define ARGUSSORTRUNTIME    		63
 #define ARGUSSORTIDLETIME   		64
 #define ARGUSSORTSRCOUI        		65
 #define ARGUSSORTDSTOUI        		66
-#define ARGUSSORTAPPBYTES        	67
-#define ARGUSSORTSRCAPPBYTES        	68
-#define ARGUSSORTDSTAPPBYTES        	69
-#define ARGUSSORTAPPBYTERATIO        	70
-#define ARGUSSORTINODE	        	71
- 
-#define ARGUSSORTSRCGAP	        	72
-#define ARGUSSORTDSTGAP	        	73
-#define ARGUSSORTSRCDUP	        	74
-#define ARGUSSORTDSTDUP	        	75
+#define ARGUSSORTAPPBYTERATIO        	67
+#define ARGUSSORTPRODCONSUMERRATIO    	68
+
+#define ARGUSSORTINODE	        	69
+#define ARGUSSORTLOCALITY	       	70
+#define ARGUSSORTSRCLOCALITY	       	71
+#define ARGUSSORTDSTLOCALITY	       	72
+#define ARGUSSORTSRCHOPS	       	72
+#define ARGUSSORTDSTHOPS	       	73
+
+#define ARGUSSORTSRCMASKLEN	       	74
+#define ARGUSSORTDSTMASKLEN	       	75
 
 #if defined(ArgusSort)
 
@@ -138,7 +145,7 @@ struct ArgusSorterStruct *ArgusNewSorter (struct ArgusParserStruct *parser);
 
 void ArgusDeleteSorter (struct ArgusSorterStruct *);
 void ArgusProcessSortOptions(void);
-void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *); 
+void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int); 
 int ArgusSortRoutine (const void *, const void *);
 
 int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -156,6 +163,11 @@ int ArgusSortDstMac (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortInode (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+int ArgusSortLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortSrcLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 int ArgusSortProtocol (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -219,8 +231,15 @@ int ArgusSortSum (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcOui (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstOui (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
-int ArgusSortSrcGap (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
-int ArgusSortDstGap (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortSrcLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+int ArgusSortSrcHops (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstHops (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+int ArgusSortSrcMasklen (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstMasklen (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 /*
 int ArgusSortSrcDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -253,16 +272,18 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortByteCount,
    ArgusSortSrcByteCount,
    ArgusSortDstByteCount,
-
    ArgusSortPktsCount,
    ArgusSortSrcPktsCount,
    ArgusSortDstPktsCount,
+
    ArgusSortAppByteCount,
    ArgusSortSrcAppByteCount,
    ArgusSortDstAppByteCount,
+
    ArgusSortLoad,
    ArgusSortSrcLoad,
    ArgusSortDstLoad,
+
    ArgusSortLoss,
    ArgusSortPercentLoss,
    ArgusSortRate,
@@ -297,15 +318,16 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortIdleTime,
    ArgusSortSrcOui,
    ArgusSortDstOui,
-
-   ArgusSortAppByteCount,
-   ArgusSortSrcAppByteCount,
-   ArgusSortDstAppByteCount,
    ArgusSortAppByteRatio,
    ArgusSortAppByteRatio,
    ArgusSortInode,
-   ArgusSortSrcGap,
-   ArgusSortDstGap,
+   ArgusSortLocality,
+   ArgusSortSrcLocality,
+   ArgusSortDstLocality,
+   ArgusSortSrcHops,
+   ArgusSortDstHops,
+   ArgusSortSrcMasklen,
+   ArgusSortDstMasklen,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -320,6 +342,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "smac",
    "dmac",
    "saddr",
+
    "daddr",
    "proto",
    "sipid",
@@ -330,6 +353,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "dtos",
    "sttl",
    "dttl",
+
    "bytes",
    "sbytes",
    "dbytes",
@@ -340,6 +364,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "sappbytes",
    "dappbytes",
    "load",
+
    "sload",
    "dload",
    "loss",
@@ -350,6 +375,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "tranref",
    "seq",
    "smpls",
+
    "dmpls",
    "svlan",
    "dvlan",
@@ -360,6 +386,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "sloss",
    "dloss",
    "sploss",
+
    "dploss",
    "smaxsz",
    "sminsz",
@@ -370,20 +397,24 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "sco",
    "dco",
    "sas",
+
    "das",
    "sum",
    "runtime",
    "idle",
    "soui",
    "doui",
-   "appbytes",
-   "sappbytes",
-   "dappbytes",
    "abr",
    "pcr",
    "inode",
-   "sgap",
-   "dgap",
+   "loc",
+
+   "sloc",
+   "dloc",
+   "shops",
+   "dhops",
+   "smask",
+   "dmask",
 };
 
 #else
@@ -395,7 +426,7 @@ extern int ArgusReverseSortDir;
 extern struct ArgusSorterStruct *ArgusNewSorter (struct ArgusParserStruct *parser);
 extern void ArgusDeleteSorter (struct ArgusSorterStruct *);
 extern void ArgusProcessSortOptions(void);
-extern void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *); 
+extern void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int); 
 extern int ArgusSortRoutine (const void *, const void *);
  
 extern int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -411,6 +442,11 @@ extern int ArgusSortMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *)
 extern int ArgusSortSrcAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortDstAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortInode (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+extern int ArgusSortLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortSrcLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortDstLocality (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 extern int ArgusSortProtocol (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortIpId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortSrcPort (struct ArgusRecordStruct *, struct ArgusRecordStruct *);

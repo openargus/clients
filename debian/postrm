@@ -4,7 +4,3 @@ if [ "$1" = "purge" ] ; then
 	update-rc.d -f radium  remove >/dev/null
 	update-rc.d -f rasplit  remove >/dev/null
 fi
-
-#DEBHELPER#
-
-exit 0

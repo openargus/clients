@@ -3,24 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- * 
- * $Id: //depot/argus/clients/clients/rasort.c#53 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */
+
+/*
+ * $Id: //depot/gargoyle/clients/clients/rasort.c#15 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 /*
@@ -204,7 +205,7 @@ RaParseComplete (int sig)
          count = ArgusSorter->ArgusRecordQueue->count;
 
          if (count > 0) {
-            ArgusSortQueue (ArgusSorter, ArgusSorter->ArgusRecordQueue);
+            ArgusSortQueue (ArgusSorter, ArgusSorter->ArgusRecordQueue, ARGUS_LOCK);
             count = ArgusSorter->ArgusRecordQueue->arraylen;
  
             for (i = 0; i < count; i++) {
@@ -358,8 +359,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
-         break;
-
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
@@ -373,11 +372,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    }
 }
 
+
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 int
 RaSendArgusRecord(struct ArgusRecordStruct *ns)
 {
    int retn = 1;
-   char buf[0x10000];
 
    if (ns->status & ARGUS_RECORD_WRITTEN)
       return (retn);
@@ -399,7 +400,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                if (pass != 0) {
                   if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
@@ -413,6 +414,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
       }
 
    } else {
+      char buf[MAXSTRLEN];
       if (!ArgusParser->qflag) {
          if (ArgusParser->Lflag) {
             if (ArgusParser->RaLabel == NULL)

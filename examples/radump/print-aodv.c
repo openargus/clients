@@ -30,11 +30,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stddef.h>
 
-#include <argus_compat.h>
 #include <rabins.h>
 #include <argus_util.h>
 #include <argus_client.h>

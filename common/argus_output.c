@@ -3,19 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
@@ -40,6 +39,10 @@
 #include <stdlib.h>
 #include <grp.h>
 #include <pwd.h>
+
+#if defined(HAVE_DNS_SD_H)
+#include <dns_sd.h>
+#endif
 
 #if defined(HAVE_SYS_VFS_H)
 #include <sys/vfs.h>
@@ -133,6 +136,17 @@ getArgusMarReportInterval(struct ArgusParserStruct *parser) {
 
 #include <netdb.h>
 
+#if defined(HAVE_DNS_SD_H)
+void RadiumDNSServiceCallback (DNSServiceRef, DNSServiceFlags, DNSServiceErrorType, const char *, const char *, const char *, void *);
+
+void
+RadiumDNSServiceCallback (DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context)
+{
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "RadiumDNSServiceCallback(%s, %c, %s, %p) returned %d\n", name, regtype, domain, errorCode);
+#endif
+}
+#endif
 
 int
 ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
@@ -204,7 +218,6 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
                   s = -1;
                }
             }
-
             host = host->ai_next;
 
          } while ((host != NULL) && (retn == -1));
@@ -255,6 +268,32 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
       } else
          ArgusLog(LOG_ERR, " ArgusEstablishListen: socket() error");
 #endif
+
+#if defined(HAVE_DNS_SD_H)
+      if (parser->ArgusZeroConf > 0) {
+         if (parser->ArgusListens > 0) {
+            DNSServiceRef *ssr = &parser->dnsSrvRef;
+            int err = 0;
+
+            DNSServiceFlags flags   = kDNSServiceFlagsNoAutoRename;
+            const char *name        = NULL;
+            const char *regtype     = "_argus._tcp";
+            const char *domain      = NULL; // default domain
+            const char *host        = NULL; // default host
+
+            if ((err = DNSServiceRegister(ssr, flags, 0, name, regtype, domain, host, htons(port), 0, NULL, RadiumDNSServiceCallback, NULL)) != kDNSServiceErr_NoError) {
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "DNSServiceRegister(%p, %p, %d, 0, %s, %s, %d) returned error %d\n", parser, ssr, flags, name, regtype, port, err);
+#endif
+            } else {
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "DNSServiceRegister(%p, %p, %d, 0, %s, %s, %d) returned OK\n", parser, ssr, flags, name, regtype, port);
+#endif
+            }
+         }
+      }
+#endif
+
    }
      
 #ifdef ARGUSDEBUG
@@ -280,9 +319,6 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
 #if defined(ARGUS_THREADS)
 #include <pthread.h>
 #endif
-
-
-typedef int (*ArgusHandler)(struct ArgusSocketStruct *, unsigned char *, int, void *);
 
 
 struct ArgusOutputStruct *
@@ -319,9 +355,7 @@ ArgusNewOutput (struct ArgusParserStruct *parser)
    gettimeofday (&retn->ArgusStartTime, 0L);
    retn->ArgusLastMarUpdateTime = retn->ArgusStartTime;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&retn->lock, NULL);
-#endif
+   ArgusInitOutput(retn);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusNewOutput() returning retn 0x%x\n", retn);
@@ -333,6 +367,83 @@ ArgusNewOutput (struct ArgusParserStruct *parser)
 
 void
 ArgusDeleteOutput (struct ArgusParserStruct *parser, struct ArgusOutputStruct *output)
+{
+#if defined(ARGUS_THREADS)
+   pthread_mutex_destroy(&output->lock);
+#endif
+
+   ArgusDeleteList(output->ArgusInputList, ARGUS_OUTPUT_LIST);
+   ArgusDeleteList(output->ArgusOutputList, ARGUS_OUTPUT_LIST);
+   ArgusDeleteQueue(output->ArgusClients);
+
+   if (output->ArgusInitMar != NULL)
+      ArgusFree(output->ArgusInitMar);
+
+   parser->ArgusOutputList = NULL;
+   ArgusFree(output);
+
+
+#if defined(HAVE_DNS_SD_H)
+   if (parser->ArgusZeroConf > 0) {
+      DNSServiceRefDeallocate(parser->dnsSrvRef);
+#ifdef ARGUSDEBUG
+      ArgusDebug (1, "ArgusDeleteOutput(0x%x, 0x%x) DNSServiceRefDeallocate\n", parser, output);
+#endif
+   }
+#endif
+
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusDeleteOutput(0x%x, 0x%x)\n", parser, output);
+#endif
+}
+
+
+struct ArgusOutputStruct *
+ArgusNewControlChannel (struct ArgusParserStruct *parser)
+{
+   struct ArgusOutputStruct *retn = NULL;
+   int i;
+
+   if ((retn = (struct ArgusOutputStruct *) ArgusCalloc (1, sizeof (struct ArgusOutputStruct))) == NULL)
+     ArgusLog (LOG_ERR, "ArgusNewControlChannel() ArgusCalloc error %s\n", strerror(errno));
+
+   if ((retn->ArgusClients = ArgusNewQueue()) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewControlChannel: clients queue %s", strerror(errno));
+
+   retn->ArgusParser      = parser;
+   retn->ArgusControlPort = parser->ArgusControlPort;
+   retn->ArgusBindAddr    = parser->ArgusBindAddr;
+   retn->ArgusWfileList   = parser->ArgusWfileList;
+
+   for (i = 0; i < parser->ArgusListens; i++)
+      retn->ArgusLfd[i] = parser->ArgusLfd[i];
+
+   retn->ArgusListens = parser->ArgusListens;
+
+   retn->ArgusInputList   = parser->ArgusOutputList;
+   parser->ArgusWfileList = NULL;
+
+   retn->ArgusMarReportInterval   = parser->ArgusMarReportInterval;
+   retn->ArgusReportTime.tv_sec   = parser->ArgusGlobalTime.tv_sec + parser->ArgusMarReportInterval.tv_sec;
+   retn->ArgusReportTime.tv_usec += parser->ArgusMarReportInterval.tv_usec;
+   retn->ArgusLastMarUpdateTime   = parser->ArgusGlobalTime;
+
+   gettimeofday (&retn->ArgusStartTime, 0L);
+   retn->ArgusLastMarUpdateTime = retn->ArgusStartTime;
+
+   ArgusInitControlChannel(retn);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusNewControlChannel() returning retn 0x%x\n", retn);
+#endif
+
+   return (retn);
+}
+
+
+void
+ArgusDeleteControlChannel (struct ArgusParserStruct *parser, struct ArgusOutputStruct *output)
 {
 #if defined(ARGUS_THREADS)
    pthread_mutex_destroy(&output->lock);
@@ -373,179 +484,393 @@ static const struct sasl_callback argus_cb[] = {
 void
 ArgusInitOutput (struct ArgusOutputStruct *output)
 {
-   struct ArgusWfileStruct *wfile;
-   int len = 0;
+   if (output != NULL) {
+      struct ArgusWfileStruct *wfile;
+      int len = 0;
 
 #if defined(ARGUS_SASL)
-   int retn = 0;
+      int retn = 0;
 #endif /* ARGUS_SASL */
 
 #if defined(ARGUS_THREADS)
-   pthread_attr_t attrbuf, *attr = &attrbuf;
-#endif /* ARGUS_THREADS */
+      pthread_attr_t attrbuf, *attr = &attrbuf;
 
-   if ((output->ArgusOutputList = ArgusNewList()) == NULL)
-      ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusList %s", strerror(errno));
+      pthread_mutex_init(&output->lock, NULL);
+#endif
 
-   if (output->ArgusInitMar != NULL)
-      ArgusFree (output->ArgusInitMar);
+      if ((output->ArgusOutputList = ArgusNewList()) == NULL)
+         ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusList %s", strerror(errno));
 
-   if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
-      ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusGenerateInitialMar error %s", strerror(errno));
+      if (output->ArgusInitMar != NULL)
+         ArgusFree (output->ArgusInitMar);
 
-   len = ntohs(output->ArgusInitMar->hdr.len) * 4;
+      if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusGenerateInitialMar error %s", strerror(errno));
 
-   if (output->ArgusWfileList != NULL) {
-      int i, retn, count = output->ArgusWfileList->count;
+      len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
-      if (setuid(getuid()) < 0)
-         ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusCalloc %s", strerror(errno));
+      if (output->ArgusWfileList != NULL) {
+         int i, retn, count = output->ArgusWfileList->count;
 
-      for (i = 0; i < count; i++) {
-         if ((wfile = (struct ArgusWfileStruct *) ArgusPopFrontList(output->ArgusWfileList, ARGUS_LOCK)) != NULL) {
-            struct ArgusClientData *client = (void *) ArgusCalloc (1, sizeof(struct ArgusClientData));
+         if (setuid(getuid()) < 0)
+            ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusCalloc %s", strerror(errno));
 
-            if (client == NULL)
-               ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusCalloc %s", strerror(errno));
+         for (i = 0; i < count; i++) {
+            if ((wfile = (struct ArgusWfileStruct *) ArgusPopFrontList(output->ArgusWfileList, ARGUS_LOCK)) != NULL) {
+               struct ArgusClientData *client = (void *) ArgusCalloc (1, sizeof(struct ArgusClientData));
 
-            if (strcmp (wfile->filename, "-")) {
-               if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
-                   (!(strncmp (wfile->filename, "cisco-udp://", 12))) ||
-                   (!(strncmp (wfile->filename, "udp://", 6)))) {
+               if (client == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusCalloc %s", strerror(errno));
 
-                  char *baddr = strstr (wfile->filename, "udp://");
-                  baddr = &baddr[6];
+               if (strcmp (wfile->filename, "-")) {
+                  if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
+                      (!(strncmp (wfile->filename, "argus-tcp://", 12))) ||
+                      (!(strncmp (wfile->filename, "udp://", 6))) ||
+                      (!(strncmp (wfile->filename, "tcp://", 6))) ||
+                      (!(strncmp (wfile->filename, "nfv5-udp://", 7))) ||
+                      (!(strncmp (wfile->filename, "nfv9-udp://", 11))) ||
+                      (!(strncmp (wfile->filename, "nfv9-tcp://", 11))) ||
+                      (!(strncmp (wfile->filename, "ipfix-udp://", 12))) ||
+                      (!(strncmp (wfile->filename, "ipfix-tcp://", 12)))) {
+
+                     char *baddr = strstr (wfile->filename, "udp://");
+                     baddr = &baddr[6];
 
 #if HAVE_GETADDRINFO
-                  struct addrinfo hints, *hp;
-                  int retn = 0;
-                  char *port;
+                     struct addrinfo hints, *hp;
+                     int retn = 0;
+                     char *port;
 
-                  if ((port = strchr(baddr, ':')) != NULL) {
-                     *port++ = '\0';
-                  } else {
-                     port = "561";
-                  }
-
-                  memset(&hints, 0, sizeof(hints));
-                  hints.ai_family   = PF_INET;
-                  hints.ai_socktype = SOCK_DGRAM;
-
-                  if ((retn = getaddrinfo(baddr, port, &hints, &client->host)) != 0) {
-                     switch (retn) {
-                        case EAI_AGAIN:
-                           ArgusLog(LOG_ERR, "dns server not available");
-                           break;
-                        case EAI_NONAME:
-                           ArgusLog(LOG_ERR, "bind address %s unknown", optarg);
-                           break;
-#if defined(EAI_ADDRFAMILY)
-                        case EAI_ADDRFAMILY:
-                           ArgusLog(LOG_ERR, "bind address %s has no IP address", optarg);
-                           break;
-#endif
-                        case EAI_SYSTEM:
-                           ArgusLog(LOG_ERR, "bind address %s name server error %s", optarg, strerror(errno));
-                           break;
+                     if ((port = strchr(baddr, ':')) != NULL) {
+                        *port++ = '\0';
+                     } else {
+                        port = "561";
                      }
-                  }
 
-                  hp = client->host;
+                     memset(&hints, 0, sizeof(hints));
+                     hints.ai_family   = PF_INET;
+                     hints.ai_socktype = SOCK_DGRAM;
 
-                  do {
-                     if ((client->fd = socket (hp->ai_family, hp->ai_socktype, hp->ai_protocol)) >= 0) {
-                        unsigned char ttl = 128;
-                        int ttl_size = sizeof(ttl);
-                        if (setsockopt(client->fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, ttl_size) < 0)
-                           ArgusLog (LOG_ERR, "ArgusInitOutput: setsockopt set multicast TTL: %s", strerror(errno));
-                     } else
-                        ArgusLog (LOG_ERR, "ArgusInitOutput: socket %s: %s", wfile->filename, strerror(errno));
-                     hp = hp->ai_next;
-                  } while (hp != NULL);
+                     if ((retn = getaddrinfo(baddr, port, &hints, &client->host)) != 0) {
+                        switch (retn) {
+                           case EAI_AGAIN:
+                              ArgusLog(LOG_ERR, "dns server not available");
+                              break;
+                           case EAI_NONAME:
+                              ArgusLog(LOG_ERR, "bind address %s unknown", optarg);
+                              break;
+#if defined(EAI_ADDRFAMILY)
+                           case EAI_ADDRFAMILY:
+                              ArgusLog(LOG_ERR, "bind address %s has no IP address", optarg);
+                              break;
+#endif
+                           case EAI_SYSTEM:
+                              ArgusLog(LOG_ERR, "bind address %s name server error %s", optarg, strerror(errno));
+                              break;
+                        }
+                     }
+
+                     hp = client->host;
+
+                     do {
+                        if ((client->fd = socket (hp->ai_family, hp->ai_socktype, hp->ai_protocol)) >= 0) {
+                           unsigned char ttl = 128;
+                           int ttl_size = sizeof(ttl);
+                           if (setsockopt(client->fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, ttl_size) < 0)
+                              ArgusLog (LOG_ERR, "ArgusInitOutput: setsockopt set multicast TTL: %s", strerror(errno));
+                        } else
+                           ArgusLog (LOG_ERR, "ArgusInitOutput: socket %s: %s", wfile->filename, strerror(errno));
+                        hp = hp->ai_next;
+                     } while (hp != NULL);
 #endif
 
-                  if (strstr (wfile->filename, "cisco")) {
-                     wfile->format = CISCO_V9_DATA;
-                  }
+                     wfile->format = ARGUS_DATA;
 
-                  client->format = wfile->format;
+                     if (strstr (wfile->filename, "nfv5"))  wfile->format = ARGUS_CISCO_V5_DATA;
+                     if (strstr (wfile->filename, "nfv9"))  wfile->format = ARGUS_CISCO_V9_DATA;
+                     if (strstr (wfile->filename, "ipfix")) wfile->format = ARGUS_IPFIX_DATA;
+
+                     client->format = wfile->format;
+
+                  } else {
+                     if ((client->fd = open (wfile->filename, O_WRONLY|O_APPEND|O_CREAT|O_NONBLOCK, 0x1a4)) < 0)
+                        ArgusLog (LOG_ERR, "ArgusInitOutput: open %s: %s", wfile->filename, strerror(errno));
+
+                     wfile->format = ARGUS_DATA;
+                     client->format = wfile->format;
+                  }
 
                } else {
-                  if ((client->fd = open (wfile->filename, O_WRONLY|O_APPEND|O_CREAT|O_NONBLOCK, 0x1a4)) < 0)
-                     ArgusLog (LOG_ERR, "ArgusInitOutput: open %s: %s", wfile->filename, strerror(errno));
-               }
-            } else {
-               client->fd = 1;
-               output->ArgusWriteStdOut++;
-            }
-
-            if (wfile->filterstr != NULL) {
-               if (ArgusFilterCompile (&client->ArgusNFFcode, wfile->filterstr, 1) < 0)
-                  ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusFilter syntax error: %s", wfile->filter);
-               client->ArgusFilterInitialized++;
-            }
-
-            if ((client->sock = ArgusNewSocket(client->fd)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusNewSocket error %s", strerror(errno));
-
-            if (client->host != NULL) {
-               if (client->format == ARGUS_DATA)
-                  if ((retn = sendto(client->fd, (char *) output->ArgusInitMar, len, 0, client->host->ai_addr, client->host->ai_addrlen)) < 0)
-                     ArgusLog (LOG_ERR, "ArgusInitOutput: sendto(): retn %d %s", retn, strerror(errno));
-
-            } else {
-               struct ArgusClientData *oc = (struct ArgusClientData *)output->ArgusClients->start;
-               int x, count = output->ArgusClients->count;
-
-               stat (wfile->filename, &client->sock->statbuf);
-
-               for (x = 0; x < count; x++) {
-                  if ((oc->sock->statbuf.st_dev == client->sock->statbuf.st_dev) &&
-                      (oc->sock->statbuf.st_ino == client->sock->statbuf.st_ino))
-                     ArgusLog (LOG_ERR, "ArgusInitOutput: writing to same file multiple times.");
-                  oc = (struct ArgusClientData *)oc->qhdr.nxt;
+                  client->fd = 1;
+                  output->ArgusWriteStdOut++;
                }
 
-               if ((retn = write (client->fd, (char *) output->ArgusInitMar, len)) != len) {
-                  if (!output->ArgusWriteStdOut) {
-                     close (client->fd);
-                     unlink (wfile->filename);
+               if (wfile->filterstr != NULL) {
+                  if (ArgusFilterCompile (&client->ArgusNFFcode, wfile->filterstr, 1) < 0)
+                     ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusFilter syntax error: %s", wfile->filter);
+                  client->ArgusFilterInitialized++;
+               }
+
+               if ((client->sock = ArgusNewSocket(client->fd)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusNewSocket error %s", strerror(errno));
+
+               if (client->host != NULL) {
+                  switch (client->format) {
+                     case ARGUS_DATA:
+                     if ((retn = sendto(client->fd, (char *) output->ArgusInitMar, len, 0, client->host->ai_addr, client->host->ai_addrlen)) < 0)
+                        ArgusLog (LOG_ERR, "ArgusInitOutput: sendto(): retn %d %s", retn, strerror(errno));
+                     break;
                   }
-                  ArgusLog (LOG_ERR, "ArgusInitOutput: write(): %s", strerror(errno));
+
+               } else {
+                  struct ArgusClientData *oc = (struct ArgusClientData *)output->ArgusClients->start;
+                  int x, count = output->ArgusClients->count;
+
+                  stat (wfile->filename, &client->sock->statbuf);
+
+                  for (x = 0; x < count; x++) {
+                     if ((oc->sock->statbuf.st_dev == client->sock->statbuf.st_dev) &&
+                         (oc->sock->statbuf.st_ino == client->sock->statbuf.st_ino))
+                        ArgusLog (LOG_ERR, "ArgusInitOutput: writing to same file multiple times.");
+                     oc = (struct ArgusClientData *)oc->qhdr.nxt;
+                  }
+
+                  if ((retn = write (client->fd, (char *) output->ArgusInitMar, len)) != len) {
+                     if (!output->ArgusWriteStdOut) {
+                        close (client->fd);
+                        unlink (wfile->filename);
+                     }
+                     ArgusLog (LOG_ERR, "ArgusInitOutput: write(): %s", strerror(errno));
+                  }
                }
+
+               if (strcmp(wfile->filename, "/dev/null"))
+                  client->sock->filename = strdup(wfile->filename);
+
+               ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
+
+               client->ArgusClientStart++;
+               ArgusPushBackList (output->ArgusWfileList, (struct ArgusListRecord *) wfile, ARGUS_LOCK);
             }
-
-            if (strcmp(wfile->filename, "/dev/null"))
-               client->sock->filename = strdup(wfile->filename);
-
-            ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
-
-            client->ArgusClientStart++;
-            ArgusPushBackList (output->ArgusWfileList, (struct ArgusListRecord *) wfile, ARGUS_LOCK);
          }
       }
-   }
 
 #ifdef ARGUS_SASL
-   if ((retn = sasl_server_init(argus_cb, ArgusParser->ArgusProgramName)) != SASL_OK)
-      ArgusLog (LOG_ERR, "ArgusInitOutput() sasl_server_init failed %d\n", retn);
+      if ((retn = sasl_server_init(argus_cb, ArgusParser->ArgusProgramName)) != SASL_OK)
+         ArgusLog (LOG_ERR, "ArgusInitOutput() sasl_server_init failed %d\n", retn);
 #endif /* ARGUS_SASL */
 
 #if defined(ARGUS_THREADS)
-   pthread_attr_init(attr); 
+      pthread_attr_init(attr); 
 
-   if (getuid() == 0)
-      pthread_attr_setschedpolicy(attr, SCHED_RR);
-   else
-      attr = NULL;
+      if (getuid() == 0)
+         pthread_attr_setschedpolicy(attr, SCHED_RR);
+      else
+         attr = NULL;
 
-   if ((pthread_create(&output->thread, attr, ArgusOutputProcess, (void *) output)) != 0)
-      ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+      if ((pthread_create(&output->thread, attr, ArgusOutputProcess, (void *) output)) != 0)
+         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+   }
 
 #endif /* ARGUS_THREADS */
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusInitOutput() done\n");
+#endif
+}
+
+
+void
+ArgusInitControlChannel (struct ArgusOutputStruct *output)
+{
+   if (output != NULL) {
+      struct ArgusWfileStruct *wfile;
+      int len = 0;
+
+#if defined(ARGUS_SASL)
+      int retn = 0;
+#endif /* ARGUS_SASL */
+
+#if defined(ARGUS_THREADS)
+      pthread_attr_t attrbuf, *attr = &attrbuf;
+
+      pthread_mutex_init(&output->lock, NULL);
+#endif
+
+      if ((output->ArgusOutputList = ArgusNewList()) == NULL)
+         ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusList %s", strerror(errno));
+
+      if (output->ArgusInitMar != NULL)
+         ArgusFree (output->ArgusInitMar);
+
+      if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusGenerateInitialMar error %s", strerror(errno));
+
+      len = ntohs(output->ArgusInitMar->hdr.len) * 4;
+
+      if (output->ArgusWfileList != NULL) {
+         int i, retn, count = output->ArgusWfileList->count;
+
+         if (setuid(getuid()) < 0)
+            ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
+
+         for (i = 0; i < count; i++) {
+            if ((wfile = (struct ArgusWfileStruct *) ArgusPopFrontList(output->ArgusWfileList, ARGUS_LOCK)) != NULL) {
+               struct ArgusClientData *client = (void *) ArgusCalloc (1, sizeof(struct ArgusClientData));
+
+               if (client == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
+
+               if (strcmp (wfile->filename, "-")) {
+                  if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
+                      (!(strncmp (wfile->filename, "argus-tcp://", 12))) ||
+                      (!(strncmp (wfile->filename, "udp://", 6))) ||
+                      (!(strncmp (wfile->filename, "tcp://", 6))) ||
+                      (!(strncmp (wfile->filename, "nfv5-udp://", 7))) ||
+                      (!(strncmp (wfile->filename, "nfv9-udp://", 11))) ||
+                      (!(strncmp (wfile->filename, "nfv9-tcp://", 11))) ||
+                      (!(strncmp (wfile->filename, "ipfix-udp://", 12))) ||
+                      (!(strncmp (wfile->filename, "ipfix-tcp://", 12)))) {
+
+                     char *baddr = strstr (wfile->filename, "udp://");
+                     baddr = &baddr[6];
+
+#if HAVE_GETADDRINFO
+                     struct addrinfo hints, *hp;
+                     int retn = 0;
+                     char *port;
+
+                     if ((port = strchr(baddr, ':')) != NULL) {
+                        *port++ = '\0';
+                     } else {
+                        port = "561";
+                     }
+
+                     memset(&hints, 0, sizeof(hints));
+                     hints.ai_family   = PF_INET;
+                     hints.ai_socktype = SOCK_DGRAM;
+
+                     if ((retn = getaddrinfo(baddr, port, &hints, &client->host)) != 0) {
+                        switch (retn) {
+                           case EAI_AGAIN:
+                              ArgusLog(LOG_ERR, "dns server not available");
+                              break;
+                           case EAI_NONAME:
+                              ArgusLog(LOG_ERR, "bind address %s unknown", optarg);
+                              break;
+#if defined(EAI_ADDRFAMILY)
+                           case EAI_ADDRFAMILY:
+                              ArgusLog(LOG_ERR, "bind address %s has no IP address", optarg);
+                              break;
+#endif
+                           case EAI_SYSTEM:
+                              ArgusLog(LOG_ERR, "bind address %s name server error %s", optarg, strerror(errno));
+                              break;
+                        }
+                     }
+
+                     hp = client->host;
+
+                     do {
+                        if ((client->fd = socket (hp->ai_family, hp->ai_socktype, hp->ai_protocol)) >= 0) {
+                           unsigned char ttl = 128;
+                           int ttl_size = sizeof(ttl);
+                           if (setsockopt(client->fd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, ttl_size) < 0)
+                              ArgusLog (LOG_ERR, "ArgusInitControlChannel: setsockopt set multicast TTL: %s", strerror(errno));
+                        } else
+                           ArgusLog (LOG_ERR, "ArgusInitControlChannel: socket %s: %s", wfile->filename, strerror(errno));
+                        hp = hp->ai_next;
+                     } while (hp != NULL);
+#endif
+
+                     wfile->format = ARGUS_DATA;
+
+                     if (strstr (wfile->filename, "nfv5"))  wfile->format = ARGUS_CISCO_V5_DATA;
+                     if (strstr (wfile->filename, "nfv9"))  wfile->format = ARGUS_CISCO_V9_DATA;
+                     if (strstr (wfile->filename, "ipfix")) wfile->format = ARGUS_IPFIX_DATA;
+
+                     client->format = wfile->format;
+
+                  } else 
+                     if ((client->fd = open (wfile->filename, O_WRONLY|O_APPEND|O_CREAT|O_NONBLOCK, 0x1a4)) < 0)
+                        ArgusLog (LOG_ERR, "ArgusInitControlChannel: open %s: %s", wfile->filename, strerror(errno));
+
+               } else {
+                  client->fd = 1;
+                  output->ArgusWriteStdOut++;
+               }
+
+               if (wfile->filterstr != NULL) {
+                  if (ArgusFilterCompile (&client->ArgusNFFcode, wfile->filterstr, 1) < 0)
+                     ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusFilter syntax error: %s", wfile->filter);
+                  client->ArgusFilterInitialized++;
+               }
+
+               if ((client->sock = ArgusNewSocket(client->fd)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusNewSocket error %s", strerror(errno));
+
+               if (client->host != NULL) {
+                  switch (client->format) {
+                     case ARGUS_DATA:
+                     if ((retn = sendto(client->fd, (char *) output->ArgusInitMar, len, 0, client->host->ai_addr, client->host->ai_addrlen)) < 0)
+                        ArgusLog (LOG_ERR, "ArgusInitControlChannel: sendto(): retn %d %s", retn, strerror(errno));
+                     break;
+                  }
+
+               } else {
+                  struct ArgusClientData *oc = (struct ArgusClientData *)output->ArgusClients->start;
+                  int x, count = output->ArgusClients->count;
+
+                  stat (wfile->filename, &client->sock->statbuf);
+
+                  for (x = 0; x < count; x++) {
+                     if ((oc->sock->statbuf.st_dev == client->sock->statbuf.st_dev) &&
+                         (oc->sock->statbuf.st_ino == client->sock->statbuf.st_ino))
+                        ArgusLog (LOG_ERR, "ArgusInitControlChannel: writing to same file multiple times.");
+                     oc = (struct ArgusClientData *)oc->qhdr.nxt;
+                  }
+
+                  if ((retn = write (client->fd, (char *) output->ArgusInitMar, len)) != len) {
+                     if (!output->ArgusWriteStdOut) {
+                        close (client->fd);
+                        unlink (wfile->filename);
+                     }
+                     ArgusLog (LOG_ERR, "ArgusInitControlChannel: write(): %s", strerror(errno));
+                  }
+               }
+
+               if (strcmp(wfile->filename, "/dev/null"))
+                  client->sock->filename = strdup(wfile->filename);
+
+               ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
+
+               client->ArgusClientStart++;
+               ArgusPushBackList (output->ArgusWfileList, (struct ArgusListRecord *) wfile, ARGUS_LOCK);
+            }
+         }
+      }
+
+#ifdef ARGUS_SASL
+      if ((retn = sasl_server_init(argus_cb, ArgusParser->ArgusProgramName)) != SASL_OK)
+         ArgusLog (LOG_ERR, "ArgusInitControlChannel() sasl_server_init failed %d\n", retn);
+#endif /* ARGUS_SASL */
+
+#if defined(ARGUS_THREADS)
+      pthread_attr_init(attr); 
+
+      if (getuid() == 0)
+         pthread_attr_setschedpolicy(attr, SCHED_RR);
+      else
+         attr = NULL;
+
+      if ((pthread_create(&output->thread, attr, ArgusControlChannelProcess, (void *) output)) != 0)
+         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+   }
+
+#endif /* ARGUS_THREADS */
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusInitControlChannel() done\n");
 #endif
 }
 
@@ -581,6 +906,7 @@ ArgusCloseOutput(struct ArgusOutputStruct *output)
 
 void ArgusCheckClientStatus (struct ArgusOutputStruct *, int);
 int ArgusCheckClientMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
+int ArgusCheckControlMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
 int ArgusCongested = 0;
 
 struct timeval *getArgusMarReportInterval(struct ArgusParserStruct *);
@@ -629,7 +955,7 @@ ArgusOutputProcess(void *arg)
 #endif /* ARGUS_THREADS */
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (8, "ArgusOutputProcess(0x%x) starting\n", output);
+   ArgusDebug (2, "ArgusOutputProcess(0x%x) starting\n", output);
 #endif
 
 #if defined(ARGUS_THREADS)
@@ -749,7 +1075,6 @@ ArgusOutputProcess(void *arg)
                      break;
 
                   case ARGUS_NETFLOW:
-                  case ARGUS_AFLOW:
                   case ARGUS_FAR: {
                      struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
                      if (trans != NULL) {
@@ -905,7 +1230,7 @@ ArgusOutputProcess(void *arg)
 #if defined(ARGUS_THREADS)
          struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
 #ifdef ARGUSDEBUG
-         ArgusDebug (6, "ArgusOutputProcess() waiting for ArgusOutputList 0x%x\n", output);
+         ArgusDebug (4, "ArgusOutputProcess() waiting for ArgusOutputList 0x%x\n", output);
 #endif
          nanosleep (ts, NULL);
 #endif
@@ -944,6 +1269,331 @@ ArgusOutputProcess(void *arg)
 }
 
 
+
+void *
+ArgusControlChannelProcess(void *arg)
+{
+   struct ArgusOutputStruct *output = (struct ArgusOutputStruct *) arg;
+   struct timeval ArgusUpDate = {0, 50000}, ArgusNextUpdate = {0,0};
+   int val, count;
+   void *retn = NULL;
+
+#if defined(ARGUS_THREADS)
+   sigset_t blocked_signals;
+#endif /* ARGUS_THREADS */
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusControlChannelProcess(0x%x) starting\n", output);
+#endif
+
+#if defined(ARGUS_THREADS)
+   sigfillset(&blocked_signals);
+   pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
+
+   while (!(output->status & ARGUS_STOP)) {
+#else
+   {
+#endif
+      struct ArgusListStruct *list = NULL;
+      struct ArgusRecordStruct *rec = NULL;
+
+      if (output && ((list = output->ArgusOutputList) != NULL)) {
+         gettimeofday (&output->ArgusGlobalTime, 0L);
+
+    /* check to see if there are any new clients */
+         
+         if ((output->ArgusControlPort != 0) &&
+            ((output->ArgusGlobalTime.tv_sec >  ArgusNextUpdate.tv_sec) ||
+            ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
+             (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
+         
+            if (output->ArgusListens) {
+               struct timeval wait = {0, 0}; 
+               fd_set readmask;
+               int i, width = 0;
+ 
+               FD_ZERO(&readmask);
+
+               for (i = 0; i < output->ArgusListens; i++) {
+                  if (output->ArgusLfd[i] != -1) {
+                     FD_SET(output->ArgusLfd[i], &readmask);
+                     width = (output->ArgusLfd[i] > width) ? output->ArgusLfd[i] : width;
+                  }  
+               }
+
+               if (output->ArgusClients) {
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_lock(&output->ArgusClients->lock);
+#endif
+                  if ((count = output->ArgusClients->count) > 0) {
+                     struct ArgusClientData *client = (void *)output->ArgusClients->start;
+                     int i;
+
+                     for (i = 0; i < count && client; i++) {
+                        if (client->sock && !(client->sock->filename)) {
+                           if (client->fd != -1) {
+                              FD_SET(client->fd, &readmask);
+                              width = (client->fd > width) ? client->fd : width;
+                           }
+                        } 
+                        client = (void *) client->qhdr.nxt;
+                     }
+                  }
+
+                  if (width) {
+                     if ((val = select (width + 1, &readmask, NULL, NULL, &wait)) >= 0) {
+                        if (val > 0) {
+                           struct ArgusClientData *client = (void *)output->ArgusClients->start;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (1, "ArgusControlChannelProcess() select returned with tasks\n");
+#endif
+                           for (i = 0; i < output->ArgusListens; i++)
+                              if (FD_ISSET(output->ArgusLfd[i], &readmask))
+                                 ArgusCheckClientStatus(output, output->ArgusLfd[i]);
+
+                           if (client != NULL)  {
+                              do {
+                                 if (client->fd != -1) {
+                                    if (FD_ISSET(client->fd, &readmask)) {
+                                       if (ArgusCheckControlMessage(output, client) < 0) {
+                                          ArgusDeleteSocket(output, client);
+                                       }
+                                    }
+                                 }
+                                 client = (void *) client->qhdr.nxt;
+                              } while (client != (void *)output->ArgusClients->start);
+                           }
+                        }
+                     }
+                  }
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_unlock(&output->ArgusClients->lock);
+#endif
+               }
+
+               ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
+               ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
+
+               if (ArgusNextUpdate.tv_usec > 1000000) {
+                  ArgusNextUpdate.tv_sec++;
+                  ArgusNextUpdate.tv_usec -= 1000000;
+               }
+            }
+         }
+
+         while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
+            int done = 0;
+            ArgusLoadList(output->ArgusOutputList, output->ArgusInputList);
+
+            if (ArgusOutputStatusTime(output)) {
+               if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
+                  ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
+
+               output->ArgusLastMarUpdateTime = output->ArgusGlobalTime;
+            }
+
+            while (!done && ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL)) {
+               u_int seqnum = 0;
+               output->ArgusTotalRecords++;
+               switch (rec->hdr.type & 0xF0) {
+                  case ARGUS_MAR:
+                  case ARGUS_EVENT:
+                     break;
+
+                  case ARGUS_NETFLOW:
+                  case ARGUS_AFLOW:
+                  case ARGUS_FAR: {
+                     struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
+                     if (trans != NULL) {
+                        seqnum = trans->seqnum;
+                     }
+                     break;
+                  }
+               }
+               output->ArgusOutputSequence = seqnum;
+#ifdef ARGUSDEBUG
+               if (seqnum == 0)
+                  ArgusDebug (1, "ArgusControlChannelProcess() received mar 0x%x totals %lld count %d remaining %d\n",
+                            rec, output->ArgusTotalRecords, output->ArgusInputList->count, output->ArgusOutputList->count);
+#endif
+               count = 0;
+
+               if (output->ArgusClients) {
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_lock(&output->ArgusClients->lock);
+#endif
+                  if (output->ArgusClients->count) {
+                     struct ArgusClientData *client = (void *)output->ArgusClients->start;
+                     int i, ArgusWriteRecord = 0;
+#ifdef ARGUSDEBUG
+                  ArgusDebug (5, "ArgusControlChannelProcess() %d client(s) for record 0x%x\n", output->ArgusClients->count, rec);
+#endif
+                     for (i = 0; i < output->ArgusClients->count; i++) {
+                        if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
+#ifdef ARGUSDEBUG
+                           ArgusDebug (5, "ArgusControlChannelProcess() client 0x%x ready fd %d sock 0x%x start %d", client, client->fd, client->sock, client->ArgusClientStart);
+#endif
+                           ArgusWriteRecord = 1;
+                           if (client->ArgusFilterInitialized)
+                              if (!(ArgusFilterRecord ((struct nff_insn *)client->ArgusNFFcode.bf_insns, rec)))
+                                 ArgusWriteRecord = 0;
+
+                           if (ArgusWriteRecord) {
+                              if (ArgusWriteSocket (output, client, rec) < 0) {    // post record for transmit
+                                 ArgusDeleteSocket(output, client);
+                              } else {
+                                 if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
+                                    ArgusDeleteSocket(output, client);
+                                 }
+                              }
+
+                           } else {
+#ifdef ARGUSDEBUG
+                              ArgusDebug (5, "ArgusControlChannelProcess() client 0x%x filter blocks fd %d sock 0x%x start %d", client, client->fd, client->sock, client->ArgusClientStart);
+#endif
+                           }
+
+                        } else {
+                           struct timeval tvbuf, *tvp = &tvbuf;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (5, "ArgusControlChannelProcess() %d client(s) not ready fd %d sock 0x%x start %d", output->ArgusClients->count, client->fd, client->sock, client->ArgusClientStart);
+#endif
+                           RaDiffTime (&output->ArgusGlobalTime, &client->startime, tvp);
+                           if (tvp->tv_sec >= ARGUS_CLIENT_STARTUP_TIMEOUT) {
+                              if (client->sock != NULL) {
+                                 ArgusDeleteSocket(output, client);
+                                 ArgusLog (LOG_WARNING, "ArgusControlChannelProcess: client %s never started: timed out", client->hostname);
+                              }
+                              client->ArgusClientStart = 1;
+                           }
+                        }
+                        client = (void *) client->qhdr.nxt;
+                     }
+                  }
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_unlock(&output->ArgusClients->lock);
+#endif
+               } else {
+#ifdef ARGUSDEBUG
+                  ArgusDebug (5, "ArgusControlChannelProcess() no client for record 0x%x\n", rec);
+#endif
+               }
+               ArgusDeleteRecordStruct(ArgusParser, rec);
+            }
+
+            if (output->ArgusWriteStdOut)
+               fflush (stdout);
+         }
+
+#if defined(ARGUS_THREADS)
+         pthread_mutex_lock(&output->ArgusClients->lock);
+#endif
+         if ((output->ArgusControlPort != 0) && (output->ArgusClients->count)) {
+            struct ArgusClientData *client = (void *)output->ArgusClients->start;
+            int i, status;
+
+            for (i = 0; i < output->ArgusClients->count; i++) {
+               if ((client->fd != -1) && (client->sock != NULL)) {
+                  if ((output->status & ARGUS_STOP) || (output->status & ARGUS_SHUTDOWN)) {
+#ifdef ARGUSDEBUG
+                     ArgusDebug (1, "ArgusControlChannelProcess() draining queue\n");
+#endif
+                     ArgusWriteOutSocket (output, client);
+                     ArgusDeleteSocket(output, client);
+                  } else {
+                     if (ArgusWriteOutSocket (output, client) < 0) {
+                        ArgusDeleteSocket(output, client);
+                     } else {
+                        if (client->pid > 0) {
+                           if (waitpid(client->pid, &status, WNOHANG) == client->pid) {
+                              client->ArgusClientStart++;
+                              ArgusDeleteSocket(output, client);
+                           }
+                        }
+                     }
+                  }
+               }
+               client = (void *) client->qhdr.nxt;
+            }
+
+            for (i = 0, count = output->ArgusClients->count; (i < count) && output->ArgusClients->count; i++) {
+               if ((client->fd == -1) && (client->sock == NULL) && client->ArgusClientStart) {
+                  ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
+#ifdef ARGUSDEBUG
+                  ArgusDebug (1, "ArgusControlChannelProcess: client %s removed", client->hostname);
+#endif
+                  ArgusFree(client);
+                  i = 0; count = output->ArgusClients->count;
+                  client = (void *)output->ArgusClients->start;
+               } else
+                  client = (void *)client->qhdr.nxt;
+            }
+         }
+
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&output->ArgusClients->lock);
+#endif
+
+#if defined(ARGUS_THREADS)
+         if (ArgusListEmpty(list)) {
+            struct timeval tvp;
+            struct timespec tsbuf, *ts = &tsbuf;
+ 
+            gettimeofday (&tvp, 0L);
+            ts->tv_sec = tvp.tv_sec;
+            ts->tv_nsec = tvp.tv_usec * 1000;
+            ts->tv_nsec += 20000000;
+            if (ts->tv_nsec > 1000000000) {
+               ts->tv_sec++; 
+               ts->tv_nsec -= 1000000000;
+            }
+            pthread_mutex_lock(&list->lock);
+            pthread_cond_timedwait(&list->cond, &list->lock, ts);
+            pthread_mutex_unlock(&list->lock);
+         }
+#endif
+
+      } else {
+#if defined(ARGUS_THREADS)
+         struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+#ifdef ARGUSDEBUG
+         ArgusDebug (4, "ArgusControlChannelProcess() waiting for ArgusOutputList 0x%x\n", output);
+#endif
+         nanosleep (ts, NULL);
+#endif
+      }
+#if !defined(ARGUS_THREADS)
+   }
+#else
+   }
+#endif /* ARGUS_THREADS */
+
+   if (output->status & ARGUS_SHUTDOWN) {
+      struct ArgusClientData *client;
+#ifdef ARGUSDEBUG
+      ArgusDebug (1, "ArgusControlChannelProcess() shuting down\n");
+#endif
+      while ((client = (void *) output->ArgusClients->start) != NULL) {
+         if ((client->fd != -1) && (client->sock != NULL)) {
+             ArgusWriteOutSocket (output, client);
+             ArgusDeleteSocket(output, client);
+          }
+          ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
+          ArgusFree(client);
+       }
+    }
+
+#if defined(ARGUS_THREADS)
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusControlChannelProcess() exiting\n");
+#endif
+   pthread_exit(retn);
+
+#else
+   return (retn);
+#endif /* ARGUS_THREADS */
+}
+
 int ArgusAuthenticateClient (struct ArgusClientData *);
 static char clienthost[NI_MAXHOST*2+1] = "[local]";
 
@@ -977,7 +1627,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
       int flags = fcntl (fd, F_GETFL, 0L);
       if ((fcntl (fd, F_SETFL, flags | O_NONBLOCK)) >= 0) {
          bzero(clienthost, sizeof(clienthost));
-         if (ArgusTcpWrapper (fd, &from, clienthost) >= 0) {
+         if (ArgusTcpWrapper (output, fd, &from, clienthost) >= 0) {
             if (output->ArgusClients->count < ARGUS_MAXLISTEN) {
                struct ArgusClientData *client = (void *) ArgusCalloc (1, sizeof(struct ArgusClientData));
 
@@ -986,6 +1636,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
 
                gettimeofday (&client->startime, 0L);
                client->fd = fd;
+               client->format = ARGUS_DATA;
 
                if (strlen(clienthost) > 0)
                   client->hostname = strdup(clienthost);
@@ -1152,12 +1803,12 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
  
 char *ArgusClientCommands[ARGUSMAXCLIENTCOMMANDS] =
 {
-   "START: ",
-   "DONE: ",
-   "FILTER: ",
-   "MODEL: ",
-   "PROJECT: ",
-   "FILE: ",
+   "START:",
+   "DONE:",
+   "FILTER:",
+   "MODEL:",
+   "PROJECT:",
+   "FILE:",
 };
 
 
@@ -1315,6 +1966,179 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "ArgusCheckClientMessage: returning %d\n", retn);
+#endif
+
+   return (retn);
+}
+
+struct ArgusControlHandlerStruct ArgusControlCommands[ARGUSMAXCONTROLCOMMANDS] = {
+   { "START: ", NULL},
+   { "DONE: ", NULL},
+   { "DISPLAY: ", NULL},
+   { "HIGHLIGHT: ", NULL},
+   { "SEARCH: ", NULL},
+   { "FILTER: ", NULL},
+   { "TREE: ", NULL}
+};
+
+int
+ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientData *client)
+{
+   int retn = 0, cnt = 0, i, found, fd = client->fd;
+   char buf[MAXSTRLEN], *ptr = buf;
+   unsigned int value = 0;
+    
+#ifdef ARGUS_SASL
+   const char *outputbuf = NULL;
+   unsigned int outputlen = 0;
+#endif /* ARGUS_SASL */
+
+   bzero(buf, MAXSTRLEN);
+
+   if (value == 0)
+      value = MAXSTRLEN;
+
+   if ((cnt = recv (fd, buf, value, 0)) <= 0) {
+      switch(errno) {
+         default:
+         case EBADF:
+         case EINVAL:
+         case EIO:
+         case ENOMEM:
+         case ECONNREFUSED:
+#ifdef ARGUSDEBUG
+            ArgusDebug (3, "ArgusCheckControlMessage (0x%x, %d) recv() returned error %s\n", client, fd, strerror(errno));
+#endif
+            break;
+
+         case EINTR:
+         case ENOTSOCK:
+         case EWOULDBLOCK:
+            break;
+      }
+      return (-1);
+
+   } else {
+#ifdef ARGUSDEBUG
+      ArgusDebug (3, "ArgusCheckControlMessage (0x%x, %d) recv() returned %d bytes\n", client, fd, cnt);
+#endif
+   }
+
+#ifdef ARGUS_SASL
+   if ((client->sasl_conn)) {
+      const int *ssfp;
+      int result;
+
+      if ((result = sasl_getprop(client->sasl_conn, SASL_SSF, (const void **) &ssfp)) != SASL_OK)
+         ArgusLog (LOG_ERR, "sasl_getprop: error %s\n", sasl_errdetail(client->sasl_conn));
+
+      if (ssfp && (*ssfp > 0)) {
+         if (sasl_decode (client->sasl_conn, buf, cnt, &outputbuf, &outputlen) != SASL_OK) {
+            ArgusLog (LOG_WARNING, "ArgusCheckControlMessage(0x%x, %d) sasl_decode (0x%x, 0x%x, %d, 0x%x, %d) failed",
+                       client, fd, client->sasl_conn, buf, cnt, &outputbuf, outputlen);
+            return(-1);
+         } else {
+#ifdef ARGUSDEBUG
+            ArgusDebug (3, "ArgusCheckControlMessage (0x%x, %d) sasl_decode() returned %d bytes\n", client, fd, outputlen);
+#endif
+         }
+         if (outputlen > 0) {
+            if (outputlen < MAXSTRLEN) {
+               bzero (buf, MAXSTRLEN);
+               bcopy (outputbuf, buf, outputlen);
+               cnt = outputlen;
+            } else
+               ArgusLog (LOG_ERR, "ArgusCheckControlMessage(0x%x, %d) sasl_decode returned %d bytes\n", client, fd, outputlen);
+        
+         } else {
+            return (0);
+         }
+      }
+   }
+#endif /* ARGUS_SASL */
+
+   ptr[strcspn(ptr, "\r\n")] = '\0';
+
+#ifdef ARGUSDEBUG
+   if (strlen(ptr))
+      ArgusDebug (1, "ArgusCheckControlMessage (0x%x, %d) read %s", client, fd, ptr);
+#endif
+
+   for (i = 0, found = 0; i < ARGUSMAXCONTROLCOMMANDS; i++) {
+      if (!(strncmp (ptr, ArgusControlCommands[i].command, strlen(ArgusClientCommands[i])))) {
+         if (ArgusControlCommands[i].handler != NULL) {
+            char **result;
+            if ((result = ArgusControlCommands[i].handler(ptr)) != NULL) {
+               int sindex = 0;
+               char *rstr = NULL;
+
+               while ((rstr = result[sindex++]) != NULL) {
+                  int slen = strlen(rstr);
+                  if ((cnt = send (fd, rstr, slen, 0)) != slen) {
+                     retn = -3;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (3, "ArgusCheckControlMessage: send error %s\n", strerror(errno));
+#endif
+                  }
+               }
+               if (retn != -3) {
+                  if ((cnt = send (fd, "OK\n", 3, 0)) != 3) {
+                     retn = -3;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (3, "ArgusCheckControlMessage: send error %s\n", strerror(errno));
+#endif
+                  } else {
+                     retn = 0;
+                  }
+               }
+            }
+
+         } else {
+            found++;
+            switch (i) {
+               case CONTROL_START: client->ArgusClientStart++; retn = 0; break;
+               case CONTROL_DONE:  {
+#ifdef ARGUSDEBUG
+                  if (client->hostname != NULL)
+                     ArgusDebug (2, "ArgusCheckControlMessage: client %s sent DONE", client->hostname);
+                  else
+                     ArgusDebug (2, "ArgusCheckControlMessage: received DONE");
+#endif
+                  retn = -4;
+                  break; 
+               }
+
+               case CONTROL_DISPLAY: 
+               case CONTROL_HIGHLIGHT: 
+               case CONTROL_SEARCH: 
+               case CONTROL_FILTER:
+               default:
+#ifdef ARGUSDEBUG
+                  if (client->hostname)
+                     ArgusDebug (2, "ArgusCheckControlMessage: client %s sent %s",  client->hostname, ptr);
+                  else
+                     ArgusDebug (2, "ArgusCheckControlMessage: received %s",  ptr);
+#endif
+                  break;
+            }
+
+            break;
+         }
+         break;
+      }
+   }
+
+   if (!found) {
+#ifdef ARGUSDEBUG
+      if (client->hostname)
+         ArgusDebug (2, "ArgusCheckControlMessage: client %s sent %s",  client->hostname, ptr);
+      else
+         ArgusDebug (2, "ArgusCheckControlMessage: received %s",  ptr);
+#endif
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (5, "ArgusCheckControlMessage: returning %d\n", retn);
 #endif
 
    return (retn);
@@ -1572,70 +2396,72 @@ int deny_severity  = LOG_WARNING;   /* ditto */
 
 
 int
-ArgusTcpWrapper (int fd, struct sockaddr *from, char *clienthost)
+ArgusTcpWrapper (struct ArgusOutputStruct *output, int fd, struct sockaddr *from, char *clienthost)
 {
    int retn = 0;
 
+   if (output->ArgusUseWrapper) {
+
 #if defined(HAVE_TCP_WRAPPER)
-   struct request_info request;
+      struct request_info request;
 
-   /*
-    * Find out the endpoint addresses of this conversation. Host name
-    * lookups and double checks will be done on demand.
-    */
- 
-   request_init(&request, RQ_DAEMON, ArgusParser->ArgusProgramName, RQ_FILE, STDIN_FILENO, 0);
-   request.fd = fd;
-   fromhost(&request);
+      /*
+       * Find out the endpoint addresses of this conversation. Host name
+       * lookups and double checks will be done on demand.
+       */
+    
+      request_init(&request, RQ_DAEMON, ArgusParser->ArgusProgramName, RQ_FILE, STDIN_FILENO, 0);
+      request.fd = fd;
+      fromhost(&request);
 
-   /*
-    * Optionally look up and double check the remote host name. Sites
-    * concerned with security may choose to refuse connections from hosts
-    * that pretend to have someone elses host name.
-    */
- 
+      /*
+       * Optionally look up and double check the remote host name. Sites
+       * concerned with security may choose to refuse connections from hosts
+       * that pretend to have someone elses host name.
+       */
+    
 #ifdef PARANOID
-   if (STR_EQ(eval_hostname(request.client), paranoid)) {
-      ArgusLog (deny_severity, "refused connect from %s", eval_client(&request)); 
-      if (request.sink)
-         request.sink(request.fd);
-      return -1;
-   }
+      if (STR_EQ(eval_hostname(request.client), paranoid)) {
+         ArgusLog (deny_severity, "refused connect from %s", eval_client(&request)); 
+         if (request.sink)
+            request.sink(request.fd);
+         return -1;
+      }
 #endif
 
-    /*
-     * The BSD rlogin and rsh daemons that came out after 4.3 BSD disallow
-     * socket options at the IP level. They do so for a good reason.
-     * Unfortunately, we cannot use this with SunOS 4.1.x because the
-     * getsockopt() system call can panic the system.
-     */  
+       /*
+        * The BSD rlogin and rsh daemons that came out after 4.3 BSD disallow
+        * socket options at the IP level. They do so for a good reason.
+        * Unfortunately, we cannot use this with SunOS 4.1.x because the
+        * getsockopt() system call can panic the system.
+        */  
 
 #if defined(KILL_IP_OPTIONS)
-   fix_options(&request);
+      fix_options(&request);
 #endif /* KILL_IP_OPTIONS */
 
-    /*
-     * Find out and verify the remote host name. Sites concerned with
-     * security may choose to refuse connections from hosts that pretend to
-     * have someone elses host name.
-     */  
+       /*
+        * Find out and verify the remote host name. Sites concerned with
+        * security may choose to refuse connections from hosts that pretend to
+        * have someone elses host name.
+        */  
 
 #ifdef HOSTS_ACCESS
-   if (!hosts_access(&request)) {
-      ArgusLog  (deny_severity, "refused connect from %s", eval_client(&request));
-      if (request.sink)
-         request.sink(request.fd);
-      return -1;
-   } else
+      if (!hosts_access(&request)) {
+         ArgusLog  (deny_severity, "refused connect from %s", eval_client(&request));
+         if (request.sink)
+            request.sink(request.fd);
+         return -1;
+      } else
 #endif
 
-    /* Report remote client */
-   sprintf (clienthost, "%s", eval_client(&request));
-   ArgusLog  (allow_severity, "connect from %s", clienthost);
-   return (retn);
+       /* Report remote client */
+      sprintf (clienthost, "%s", eval_client(&request));
+      ArgusLog  (allow_severity, "connect from %s", clienthost);
+      return (retn);
 
 #else
-    /* Report remote client */
+       /* Report remote client */
 
 #if HAVE_GETADDRINFO
    struct sockaddr_storage remoteaddr, localaddr;
@@ -1655,26 +2481,27 @@ ArgusTcpWrapper (int fd, struct sockaddr *from, char *clienthost)
       }
       niflags = NI_NUMERICHOST;
 #ifdef NI_WITHSCOPEID
-      if (((struct sockaddr *)&remoteaddr)->sa_family == AF_INET6)
-         niflags |= NI_WITHSCOPEID;
+         if (((struct sockaddr *)&remoteaddr)->sa_family == AF_INET6)
+            niflags |= NI_WITHSCOPEID;
 #endif
-      if (getnameinfo((struct sockaddr *)&remoteaddr, salen, hbuf, sizeof(hbuf), NULL, 0, niflags) != 0)
-         strncpy(hbuf, "unknown", sizeof(hbuf));
+         if (getnameinfo((struct sockaddr *)&remoteaddr, salen, hbuf, sizeof(hbuf), NULL, 0, niflags) != 0)
+            strncpy(hbuf, "unknown", sizeof(hbuf));
 
-      sprintf(&clienthost[strlen(clienthost)], "[%s]", hbuf);
+         sprintf(&clienthost[strlen(clienthost)], "[%s]", hbuf);
 
-      salen = sizeof(localaddr);
-      if (getsockname(fd, (struct sockaddr *)&localaddr, &salen) == 0) {
-         if ((iptostring((struct sockaddr *)&remoteaddr, salen, remoteip, sizeof(remoteip)) == 0) && 
-              iptostring((struct sockaddr *)&localaddr, salen, localip, sizeof(localip)) == 0) {
-            retn = 1;
+         salen = sizeof(localaddr);
+         if (getsockname(fd, (struct sockaddr *)&localaddr, &salen) == 0) {
+            if ((iptostring((struct sockaddr *)&remoteaddr, salen, remoteip, sizeof(remoteip)) == 0) && 
+                 iptostring((struct sockaddr *)&localaddr, salen, localip, sizeof(localip)) == 0) {
+               retn = 1;
+            }
          }
       }
-   }
 
-   ArgusLog  (allow_severity, "connect from %s", clienthost);
+      ArgusLog  (allow_severity, "connect from %s", clienthost);
 #endif
 #endif /* HAVE_TCP_WRAPPER */
+   }
 
    return (retn);
 }
@@ -1815,48 +2642,57 @@ ArgusWriteOutSocket (struct ArgusOutputStruct *output, struct ArgusClientData *c
 
                while ((asock->rec == NULL) && ArgusGetListCount(list)) {
                   if ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-                     if (client->format == ARGUS_DATA) {
-                        if (ArgusGenerateRecord (rec, 0, (char *)&asock->buf)) {
-                           int cnt = ((struct ArgusRecord *)&asock->buf)->hdr.len * 4;
+
+                     switch (client->format) {
+                        case ARGUS_DATA: {
+                           if (ArgusGenerateRecord (rec, 0, (char *)&asock->buf)) {
+                              int cnt = ((struct ArgusRecord *)&asock->buf)->hdr.len * 4;
 #if defined(_LITTLE_ENDIAN)
-                           ArgusHtoN((struct ArgusRecord *)&asock->buf);
+                              ArgusHtoN((struct ArgusRecord *)&asock->buf);
 #endif
 #ifdef ARGUS_SASL
-                           if (client->sasl_conn) {
-                              unsigned int outputlen = 0;
-                              const char *output =  NULL;
+                              if (client->sasl_conn) {
+                                 unsigned int outputlen = 0;
+                                 const char *output =  NULL;
 #ifdef ARGUSDEBUG
-                              ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, 0x%x, %d, 0x%x, 0x%x)\n",
-                                                         client->sasl_conn, rec, cnt, &output, &outputlen);
+                                 ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, 0x%x, %d, 0x%x, 0x%x)\n",
+                                                            client->sasl_conn, rec, cnt, &output, &outputlen);
 #endif
-                              if ((retn = sasl_encode(client->sasl_conn, (const char *) asock->buf, (unsigned int) cnt,
-                                                         &output, &outputlen)) == SASL_OK) {
+                                 if ((retn = sasl_encode(client->sasl_conn, (const char *) asock->buf, (unsigned int) cnt,
+                                                            &output, &outputlen)) == SASL_OK) {
 #ifdef ARGUSDEBUG
-                                 ArgusDebug (7, "ArgusHandleClientData: sasl_encode returned %d bytes\n", outputlen);
+                                    ArgusDebug (7, "ArgusHandleClientData: sasl_encode returned %d bytes\n", outputlen);
 #endif
-                                 if (outputlen < ARGUS_MAXRECORD) {
-                                    bcopy(output, asock->buf, outputlen);
-                                    cnt = outputlen;
+                                    if (outputlen < ARGUS_MAXRECORD) {
+                                       bcopy(output, asock->buf, outputlen);
+                                       cnt = outputlen;
+
+                                    } else
+                                       ArgusLog (LOG_ERR, "sasl_encode: returned too many bytes %d\n", outputlen);
 
                                  } else
-                                    ArgusLog (LOG_ERR, "sasl_encode: returned too many bytes %d\n", outputlen);
-
-                              } else
-                                 ArgusLog (LOG_ERR, "sasl_encode: failed returned %d\n", retn);
-                           }
+                                    ArgusLog (LOG_ERR, "sasl_encode: failed returned %d\n", retn);
+                              }
 #endif
-                           asock->length = cnt;
-                           asock->rec = rec;
+                              asock->length = cnt;
+                              asock->rec = rec;
 
-                        } else {
+                           } else {
 #ifdef ARGUSDEBUG
-                           ArgusDebug (1, "ArgusHandleClientData: ArgusGenerateRecord error deleting record");
+                              ArgusDebug (1, "ArgusHandleClientData: ArgusGenerateRecord error deleting record");
 #endif
-                           ArgusDeleteRecordStruct(ArgusParser, rec);
+                              ArgusDeleteRecordStruct(ArgusParser, rec);
+                           }
+                           break;
                         }
 
-                     } else
-                        ArgusGenerateCiscoRecord(rec, 0, (char *)&asock->buf);
+                        case ARGUS_CISCO_V5_DATA: {
+                           if (ArgusGenerateCiscoRecord(rec, 0, (char *)&asock->buf)) {
+                              asock->length = sizeof(CiscoFlowHeaderV5_t) + sizeof(CiscoFlowEntryV5_t);
+                              asock->rec = rec;
+                           }
+                        }
+                     }
                   }
                }
             }
@@ -1880,15 +2716,17 @@ ArgusWriteOutSocket (struct ArgusOutputStruct *output, struct ArgusClientData *c
                         }
 
                         if ((stat (asock->filename, &statbuf)) == 0) {
-                           if ((statbuf.st_size == 0) && (output->format == ARGUS_DATA)) {
-                              if (output->ArgusInitMar != NULL)
+                           if (statbuf.st_size == 0) {
+                              if (output->format == ARGUS_DATA) {
+                                 if (output->ArgusInitMar != NULL)
+                                    ArgusFree(output->ArgusInitMar);
+                                 output->ArgusInitMar = ArgusGenerateInitialMar(output);
+                                 ocnt = sizeof(struct ArgusRecord);
+                                 if (((retn = write (asock->fd, output->ArgusInitMar, ocnt))) < ocnt)
+                                    ArgusLog (LOG_ERR, "ArgusWriteSocket: write %s failed %s\n", asock->filename, strerror(errno));
                                  ArgusFree(output->ArgusInitMar);
-                              output->ArgusInitMar = ArgusGenerateInitialMar(output);
-                              ocnt = sizeof(struct ArgusRecord);
-                              if (((retn = write (asock->fd, output->ArgusInitMar, ocnt))) < ocnt)
-                                 ArgusLog (LOG_ERR, "ArgusWriteSocket: write %s failed %s\n", asock->filename, strerror(errno));
-                              ArgusFree(output->ArgusInitMar);
-                              output->ArgusInitMar = NULL;
+                                 output->ArgusInitMar = NULL;
+                              }
                            }
                            bcopy (&statbuf, &asock->statbuf, sizeof(statbuf));
                         }
@@ -2014,8 +2852,10 @@ ArgusWriteOutSocket (struct ArgusOutputStruct *output, struct ArgusClientData *c
             retn = -1;
          }
 
-         if ((count = ArgusGetListCount(list)) > ArgusMaxListLength) 
+         if ((count = ArgusGetListCount(list)) > ArgusMaxListLength) {
             ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x) max queue exceeded %d\n", asock, count);
+            retn = -1;
+         }
 
 #ifdef ARGUSDEBUG
          if (list) {
@@ -2039,7 +2879,7 @@ ArgusSendFile (struct ArgusOutputStruct *output, struct ArgusClientData *client,
 {
    int retn = 0, pid = 0, cnt, fd = client->fd, flags, error = 0;
    unsigned int filesize;
-   char sbuf[0x10000];
+   char sbuf[MAXBUFFERLEN];
    struct stat statbuf;
    FILE *ffd = NULL;
 
@@ -2088,7 +2928,7 @@ ArgusSendFile (struct ArgusOutputStruct *output, struct ArgusClientData *client,
 #endif
          }
 
-         if ((cnt = recv (fd, sbuf, 0x10000, 0)) <= 0) {
+         if ((cnt = recv (fd, sbuf, MAXBUFFERLEN, 0)) <= 0) {
             if (cnt < 0) {
                ArgusLog (LOG_ERR, "ArgusSendFile (0x%x, %d) recv() returned error %s\n", client, fd, strerror(errno));
 
@@ -2103,9 +2943,9 @@ ArgusSendFile (struct ArgusOutputStruct *output, struct ArgusClientData *client,
 #endif
             client->ArgusClientStart++;
             if ((ffd = fopen (file, "r")) != NULL) {
-               char sbuf[0x10000];
+               char sbuf[MAXBUFFERLEN];
                int cnt = 0, bytes = 0;
-               while ((cnt = fread (sbuf, 1, 0x10000, ffd)) > 0) {
+               while ((cnt = fread (sbuf, 1, MAXBUFFERLEN, ffd)) > 0) {
                   if (write (fd, sbuf, cnt) < cnt) {
                      ArgusLog (LOG_ERR, "remote file transfer write error", strerror(errno));
                   }

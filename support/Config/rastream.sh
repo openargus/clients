@@ -1,4 +1,5 @@
 #!/bin/sh
+#
 #  Argus Client Software.  Tools to read, analyze and manage Argus data.
 #  Copyright (C) 2000-2022 QoSient, LLC.
 #  All Rights Reserved

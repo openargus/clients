@@ -41,23 +41,30 @@
 
 #
 # You can specify the source port that will be used on all remote TCP
-# connections, using this variable. When you specify the 
-# remote server using the -S option, when you don't specify a port number,
-# this is the port number it will use.  
+# connections, using this variable.
 #
-# The default port number is 561.
-#
-#RA_SOURCE_PORT=561
-
+#RA_SOURCE_PORT=13564
 
 #
-# For some ra* programs and analytics, it is important to import data
-# to initialize its function.  This directive will cause all ra* programs
-# to open and import the argus data in this file, with every run.
-# 
-# This is not designed for common use.
+# You can specify the default port used by Argus servers that we would
+# connect to.  The default is 561, and can be overriden within the
+# RA_ARGUS_SERVER directive..
 #
-#RA_INPUT_FILE="/full/path/to/a/argus.data.file"
+#RA_ARGUS_SERVERPORT=561
+
+#
+# You can specify the input file for reading argus data.
+# All ra* programs using this rarc file will attempt to read from
+# this file, and is usually reserved as a script specific rarc
+# directive.
+#
+#RA_INPUT_FILE=/tmp/argus.data.out
+
+#
+# You can specify this instance of a ra* program will not generate output.
+# This is the equivalent of using the -q command line option.
+#
+#RA_NO_OUTPUT=no
 
 
 # Any ra* program can generate a pid file, which can be
@@ -112,21 +119,20 @@ RA_PID_PATH="/var/run"
 #RA_MAX_SSF=128
 
 
-# All ra* clients support writing out argus data.  This directive
-# will suppress normal argus data record output.  Enable suppressing
-# output by assigning a "yes".  The default is "no".
-#
-# Commandline equivalents:
-#   -q
-#
-#RA_NO_OUTPUT="no"
-
-
 # All ra* clients can support writing its output as Argus Records into
 # a file.  Stdout can be specified using "-".  The format is:
 #    "output.file filter"
 #
 #RA_OUTPUT_FILE="/tmp/ra.out tcp"
+
+
+# When using a filter expression at the end of the command, this option
+# will cause the ra(1) program to append the records that  are  rejected 
+# by the filter into the file.
+#
+# This is the equivalent of the ' -E ' command line option.
+#
+#RA_EXCEPTION_OUTPUT_FILE="/tmp/ra.exception.out"
 
 
 # All ra* clients can support filtering its input based on a time
@@ -147,13 +153,22 @@ RA_PID_PATH="/var/run"
 RA_RUN_TIME=0
 
 
-# You can hardcode the number of output records to print, using RA_NUMBER.
-# This will print the range output records 0-N.
+# Specify the number of records that are processed by the ra* program.
+# Process the first <num> records, the inclusive range <start - end>, or process <num + 1>
+# records starting at index number <start>.  The optional 1st character indicates  whether
+# the  specification  is applied to the input or the output stream of records, the default
+# is input.  If applied to the input, these are the range of records that match the  input
+# filter.
 #
-# Commandline equivalents:
-#   -N <num>
+# Syntax:
+#      [io]<num>, [io]<start-end>, [io]<start+num>
 #
-#RA_NUMBER=
+# This is equivalent to the " -N " option.
+#
+
+#RA_NUMBER=0
+#RA_NUMBER=i34-128
+#RA_NUMBER=o50+5
 
 
 # Specify if ra* clients should print management records by default.  
@@ -187,13 +202,12 @@ RA_GENERATE_BIN_MAR_RECORDS=yes
 RA_PRINT_LABELS=0
 
 
-# Some ra* clients have a optional summary output when they have completed,
-# such as racount.1.  Use this directive to turn summary printing on.
-# 
-# Commandline equivalents:
-#   -A
+# Some ra* clients are designed to print summaries at the end of running.
+# Setting this value to "yes" will cause the summary to be printed.
 #
-#RA_PRINT_SUMMARY="no"
+# Command line equivalent is " -a ".
+#
+#RA_PRINT_SUMMARY=no
 
 
 # All ra* clients are designed to provide flexibility in what data
@@ -225,16 +239,6 @@ RA_FIELD_SPECIFIER="stime flgs proto saddr sport dir daddr dport spkts dpkts sby
 # comma separated fields.
 #
 RA_FIELD_DELIMITER=''
-
-
-# When using the RA_FIELD_DELIMITER, there are situtations where
-# fields to be printed may contain the delimiter character, such as
-# the label, or user data fields.
-# 
-# Use this directive to quote fields, so that you can discriminate
-# the field delimiter from the contents of fields.
-#
-#RA_FIELD_QUOTED=["single" | "double"]
 
 
 # To provide consistent printing behavior with tcpdump(), ra* programs
@@ -279,18 +283,6 @@ RA_FIELD_DELIMITER=''
 # invalid value will default to 'port', silently.
 #
 RA_PRINT_NAMES=port
-
-
-
-# When printing FQDN (fully qualified domain names) for network addresses
-# use this directive to specify what part of the name to print.  FQDNs
-# have a local part and a domain part.  By default, ra* programs print
-# the complete FQDN returned from gethostbyaddr(), but you can print
-# the local name, which is the ascii string upto the first '.', or the
-# domainname, which is the ascii string after the first '.'.
-
-#RA_PRINT_LOCALONLY="no"
-#RA_PRINT_DOMAINONLY="no"
 
 
 # Ra() clients when printing numeric IP addresses, print them
@@ -431,30 +423,6 @@ RA_USERDATA_ENCODE=Ascii
 # not filter.
 #
 #RA_FILTER=""
-
-
-# Clients normally throw away records that do no match the filter.
-# With this directive you can specify the file where the exceptions
-# can be stored.  This file should only be created when there is
-# output.
-#
-#RA_EXCEPTION_OUTPUT_FILE=""
-
-
-# The filter is compiled in a separate process, and all ra* programs
-# need to wait a reasonable time for the filter compiler to finish,
-# or time out and return an error, in the case of a fatal error in
-# compiling.  Many systems are very busy, and could benefit from a
-# prolonged wait period, however, this timeout value could generate
-# a significant startup wait state for programs that have poor filter
-# specifications, if the timer is too long.
-#
-# The current default is 1.5 seconds, but you can set this to any
-# amount of time.
-#
-# No Commandline equivalent
-#
-#RA_FILTER_TIMEOUT=1.5
 
 
 # Many ra* programs sort records as a part of their function.

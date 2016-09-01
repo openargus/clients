@@ -3,23 +3,234 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  *  
- *  raevent - non flow data printing
+ *  raevent - argus event and flow data correlation.
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+raevent is currently a ratop like demonstration of how argus
+event data, end system generated non-flow data, can be correlated
+with argus flow data.
+
+The strategy is to label flows with the attributes from argus_event
+report datum.  The principal example is argus-lsof, where each
+event data element provides flow tuple information, as well as
+system attributes, such as process using the flow, user and
+application name.
+
+argus-events have " srcid " attributes, and the contents of the
+label are only mapped to flows that are also from the same
+source (observation domain).
+
+The label is an argus meta-data label, of the form:
+   attribute[=value[,value...]][:attribute....]
+
+In this case, flow can be labels with:
+   pid=xxxx:usr=user:app=program
+
+label additions.  There are opportunities for multiple processes
+to have a single socket open, and so multiple values are permited.
+However, it has been noted that the process list can change on each
+call to argus-lsof.  As a result, the ArgusMergeLabel strategy
+is ARGUS_REPLACE, rather than ARGUS_UNION, or ARGUS_INTERSECT.
+
+The argus-lsof script runs " lsof -i -n -P " on the remote system.
+The information provides a report of the instantaneous open network
+sockets, and the network flows that are mapped.  This does not
+provide a complete accounting, snapshots. While this is an expensive
+apprach, it suffices to run it every 30-60 seconds, to get the
+owners of persistent flows on the system.  Transients, however will
+get by, unreported, using this approach.
+
+
+argus-lsof also provides task and user information for system
+services (LISTEN).  These can be used to predict service offerings,
+and mappings when remote connects arrive on a system.
+
+
+
+An actual argus-event is included below.
+
+<ArgusEvent>
+  <ArgusEventData Type = "Program: /usr/sbin/lsof -i -n -P">
+    COMMAND     PID           USER   FD   TYPE             DEVICE SIZE/OFF   NODE NAME
+    launchd       1           root   12u  IPv4 0xffffff8021d6fae8      0t0    UDP *:137
+    launchd       1           root   13u  IPv4 0xffffff8021d6f970      0t0    UDP *:138
+    launchd       1           root   20u  IPv6 0xffffff8021f10d80      0t0    TCP *:515 (LISTEN)
+    launchd       1           root   21u  IPv4 0xffffff8021f15c20      0t0    TCP *:515 (LISTEN)
+    launchd       1           root   22u  IPv6 0xffffff8021f109c0      0t0    TCP [::1]:631 (LISTEN)
+    launchd       1           root   23u  IPv4 0xffffff8021f15500      0t0    TCP 127.0.0.1:631 (LISTEN)
+    launchd       1           root   96u  IPv6 0xffffff8021f10600      0t0    TCP *:548 (LISTEN)
+    launchd       1           root   98u  IPv4 0xffffff8021f14de0      0t0    TCP *:548 (LISTEN)
+    launchd       1           root  101u  IPv6 0xffffff8021f10240      0t0    TCP *:3031 (LISTEN)
+    launchd       1           root  102u  IPv4 0xffffff8021f146c0      0t0    TCP *:3031 (LISTEN)
+    launchd       1           root  112u  IPv6 0xffffff8021f0fe80      0t0    TCP *:5900 (LISTEN)
+    launchd       1           root  113u  IPv4 0xffffff8021f13fa0      0t0    TCP *:5900 (LISTEN)
+    launchd       1           root  115u  IPv6 0xffffff8021f0fac0      0t0    TCP *:445 (LISTEN)
+    launchd       1           root  116u  IPv4 0xffffff8021f13880      0t0    TCP *:445 (LISTEN)
+    launchd       1           root  118u  IPv6 0xffffff8021f0f700      0t0    TCP *:22 (LISTEN)
+    launchd       1           root  119u  IPv4 0xffffff8021f13160      0t0    TCP *:22 (LISTEN)
+    mDNSRespo    12 _mdnsresponder    8u  IPv4 0xffffff8021d6f390      0t0    UDP *:5353
+    mDNSRespo    12 _mdnsresponder    9u  IPv6 0xffffff8021d6f218      0t0    UDP *:5353
+    mDNSRespo    12 _mdnsresponder   29u  IPv4 0xffffff8021d6cbe8      0t0    UDP 224.0.0.1:5350
+    mDNSRespo    12 _mdnsresponder   30u  IPv6 0xffffff8021d6ca70      0t0    UDP *:*
+    mDNSRespo    12 _mdnsresponder   31u  IPv4 0xffffff8021d6c8f8      0t0    UDP *:52865
+    mDNSRespo    12 _mdnsresponder   32u  IPv6 0xffffff8021d6c780      0t0    UDP *:52865
+    mDNSRespo    12 _mdnsresponder   33u  IPv4 0xffffff8021d6c608      0t0    UDP *:49894
+    mDNSRespo    12 _mdnsresponder   34u  IPv6 0xffffff8021d6c490      0t0    UDP *:49894
+    mDNSRespo    12 _mdnsresponder   35u  IPv4 0xffffff8021d6c318      0t0    UDP *:60854
+    mDNSRespo    12 _mdnsresponder   36u  IPv6 0xffffff8021d6c1a0      0t0    UDP *:60854
+    mDNSRespo    12 _mdnsresponder   37u  IPv4 0xffffff8021d6c028      0t0    UDP *:50273
+    mDNSRespo    12 _mdnsresponder   38u  IPv6 0xffffff8021d6beb0      0t0    UDP *:50273
+    mDNSRespo    12 _mdnsresponder   39u  IPv4 0xffffff8021d6bd38      0t0    UDP *:53201
+    mDNSRespo    12 _mdnsresponder   40u  IPv6 0xffffff8021d6bbc0      0t0    UDP *:53201
+    mDNSRespo    12 _mdnsresponder   41u  IPv4 0xffffff8021d6ba48      0t0    UDP *:56793
+    mDNSRespo    12 _mdnsresponder   42u  IPv6 0xffffff8021d6b8d0      0t0    UDP *:56793
+    mDNSRespo    12 _mdnsresponder   43u  IPv4 0xffffff8021d6b758      0t0    UDP *:50558
+    mDNSRespo    12 _mdnsresponder   44u  IPv6 0xffffff8021d6b5e0      0t0    UDP *:50558
+    mDNSRespo    12 _mdnsresponder   45u  IPv4 0xffffff8021d6b468      0t0    UDP *:49198
+    mDNSRespo    12 _mdnsresponder   46u  IPv6 0xffffff8021d6b2f0      0t0    UDP *:49198
+    mDNSRespo    12 _mdnsresponder   47u  IPv4 0xffffff8021d6b178      0t0    UDP *:60606
+    mDNSRespo    12 _mdnsresponder   48u  IPv6 0xffffff8021d6b000      0t0    UDP *:60606
+    mDNSRespo    12 _mdnsresponder   49u  IPv4 0xffffff802299add8      0t0    UDP *:57637
+    mDNSRespo    12 _mdnsresponder   50u  IPv6 0xffffff802299ac60      0t0    UDP *:57637
+    mDNSRespo    12 _mdnsresponder   51u  IPv4 0xffffff802299aae8      0t0    UDP *:60374
+    mDNSRespo    12 _mdnsresponder   52u  IPv6 0xffffff802299a970      0t0    UDP *:60374
+    configd      16           root   10u  IPv6 0xffffff8021d6fdd8      0t0    UDP *:*
+    configd      16           root   16u  IPv4 0xffffff8021d6f7f8      0t0    UDP *:*
+    configd      16           root   18u  IPv6 0xffffff8022900dd8      0t0 ICMPV6 *:*
+    blued        22           root    4u  IPv4 0xffffff8021d6e368      0t0    UDP *:*
+    racoon       61           root    7u  IPv6 0xffffff8021d6d920      0t0    UDP [fe80:4::223:32ff:fe2f:ac9c]:500
+    racoon       61           root    8u  IPv6 0xffffff8021d6da98      0t0    UDP [fe80:4::223:32ff:fe2f:ac9c]:4500
+    racoon       61           root    9u  IPv6 0xffffff803d56b178      0t0    UDP [fd95:4050:87a8:c7df:223:32ff:fe2f:ac9c]:500
+    racoon       61           root   10u  IPv6 0xffffff802504ded8      0t0    UDP [fd95:4050:87a8:c7df:223:32ff:fe2f:ac9c]:4500
+    racoon       61           root   12u  IPv4 0xffffff8022996eb0      0t0    UDP 192.168.0.68:500
+    racoon       61           root   13u  IPv4 0xffffff8022996d38      0t0    UDP 192.168.0.68:4500
+    racoon       61           root   17u  IPv6 0xffffff803d56fc60      0t0    UDP [::1]:500
+    racoon       61           root   18u  IPv6 0xffffff802299a390      0t0    UDP [::1]:4500
+    racoon       61           root   19u  IPv6 0xffffff802504c178      0t0    UDP [fe80:1::1]:500
+    racoon       61           root   20u  IPv6 0xffffff8022999ac0      0t0    UDP [fe80:1::1]:4500
+    racoon       61           root   21u  IPv6 0xffffff8022999078      0t0    UDP [fd00:6587:52d7:845:223:32ff:fe2f:ac9c]:500
+    racoon       61           root   22u  IPv6 0xffffff8022998f00      0t0    UDP [fd00:6587:52d7:845:223:32ff:fe2f:ac9c]:4500
+    racoon       61           root   23u  IPv4 0xffffff80229962f0      0t0    UDP 127.0.0.1:500
+    racoon       61           root   24u  IPv4 0xffffff8022996178      0t0    UDP 127.0.0.1:4500
+    racoon       61           root   25u  IPv6 0xffffff802504e4b8      0t0    UDP [fe80:8::223:32ff:fe2f:ac9c]:500
+    racoon       61           root   26u  IPv6 0xffffff8025050680      0t0    UDP [fe80:8::223:32ff:fe2f:ac9c]:4500
+    ntpd         67           root   20u  IPv4 0xffffff8022998340      0t0    UDP *:123
+    ntpd         67           root   21u  IPv6 0xffffff80229981c8      0t0    UDP *:123
+    ntpd         67           root   22u  IPv6 0xffffff8022997ed8      0t0    UDP [fe80:1::1]:123
+    ntpd         67           root   23u  IPv4 0xffffff8022997d60      0t0    UDP 127.0.0.1:123
+    ntpd         67           root   24u  IPv6 0xffffff8022997be8      0t0    UDP [::1]:123
+    ntpd         67           root   25u  IPv6 0xffffff8022997a70      0t0    UDP [fd95:4050:87a8:c7df:223:32ff:fe2f:ac9c]:123
+    ntpd         67           root   26u  IPv4 0xffffff8022997780      0t0    UDP 192.168.0.68:123
+    ntpd         67           root   28u  IPv6 0xffffff8021d6f508      0t0    UDP [fe80:4::223:32ff:fe2f:ac9c]:123
+    ntpd         67           root   29u  IPv6 0xffffff80229968d0      0t0    UDP [fe80:8::223:32ff:fe2f:ac9c]:123
+    ntpd         67           root   30u  IPv6 0xffffff80229971a0      0t0    UDP [fd00:6587:52d7:845:223:32ff:fe2f:ac9c]:123
+    httpd        68           root    4u  IPv6 0xffffff8021f0ef80      0t0    TCP *:80 (LISTEN)
+    httpd        68           root    5u  IPv4 0xffffff8021f12a40      0t0    TCP *:* (CLOSED)
+    ODSAgent     82           root    3u  IPv6 0xffffff8021f0f340      0t0    TCP *:49152 (LISTEN)
+    netbiosd     84       _netbios    3u  IPv4 0xffffff8021d6f970      0t0    UDP *:138
+    netbiosd     84       _netbios    4u  IPv4 0xffffff8021d6fae8      0t0    UDP *:137
+    kdc          90           root    5u  IPv6 0xffffff8021d6d340      0t0    UDP *:88
+    kdc          90           root    6u  IPv6 0xffffff8021f0e440      0t0    TCP *:88 (LISTEN)
+    kdc          90           root    7u  IPv4 0xffffff8021d6d050      0t0    UDP *:88
+    kdc          90           root    8u  IPv4 0xffffff8021f11c00      0t0    TCP *:88 (LISTEN)
+    applepush   102           root    7u  IPv4 0xffffff802399b6c0      0t0    TCP 192.168.0.68:49190->17.172.232.191:5223 (ESTABLISHED)
+    p4d         106           root    3u  IPv4 0xffffff8021f12320      0t0    TCP *:1666 (LISTEN)
+    TiVoDeskt   115           root   35u  IPv6 0xffffff8021f0d540      0t0    TCP *:8101 (LISTEN)
+    TiVoDeskt   115           root   36u  IPv6 0xffffff8021f0dcc0      0t0    TCP [::1]:49171->[::1]:49170 (TIME_WAIT)
+    TiVoDeskt   115           root   46u  IPv6 0xffffff8021d6d630      0t0    UDP *:2190
+    mysqld      200         _mysql   10u  IPv4 0xffffff8021f114e0      0t0    TCP *:3306 (LISTEN)
+    httpd       212           _www    4u  IPv6 0xffffff8021f0ef80      0t0    TCP *:80 (LISTEN)
+    httpd       212           _www    5u  IPv4 0xffffff8021f12a40      0t0    TCP *:* (CLOSED)
+    rasqlinse   213           root    6u  IPv4 0xffffff80235bf4e0      0t0    TCP 127.0.0.1:50947->127.0.0.1:562 (ESTABLISHED)
+    rasqlinse   216           root    6u  IPv4 0xffffff803f1cd320      0t0    TCP 127.0.0.1:50954->127.0.0.1:562 (ESTABLISHED)
+    rasqlinse   218           root    6u  IPv4 0xffffff80235c1880      0t0    TCP 127.0.0.1:50949->127.0.0.1:562 (ESTABLISHED)
+    rasqlinse   220           root    6u  IPv4 0xffffff803eee8880      0t0    TCP 127.0.0.1:50952->127.0.0.1:562 (ESTABLISHED)
+    rasqlinse   223           root    6u  IPv4 0xffffff80248756c0      0t0    TCP 127.0.0.1:50958->127.0.0.1:562 (ESTABLISHED)
+    iChat       260         carter    7u  IPv4 0xffffff8024903c00      0t0    TCP *:* (CLOSED)
+    iChat       260         carter    9u  IPv4 0xffffff8025050218      0t0    UDP 192.168.0.68:16402
+    iCal        261         carter   14u  IPv4 0xffffff8023998c00      0t0    TCP 192.168.0.68:49205->17.172.116.48:443 (CLOSED)
+    iCal        261         carter   20u  IPv4 0xffffff8024873320      0t0    TCP 192.168.0.68:49207->17.172.116.48:443 (CLOSED)
+    SystemUIS   266         carter    7u  IPv4 0xffffff8021d6f0a0      0t0    UDP *:*
+    imagent     286         carter   10u  IPv4 0xffffff803efc8db0      0t0    UDP 127.0.0.1:64023->127.0.0.1:64023
+    imagent     286         carter   12u  IPv4 0xffffff80266a9c20      0t0    TCP 192.168.0.68:64251->205.188.1.95:443 (ESTABLISHED)
+    Image\x20   288         carter    7u  IPv4 0xffffff8024875de0      0t0    TCP *:49201 (LISTEN)
+    RosettaSt   333         carter    3u  IPv4 0xffffff8025d4ffa0      0t0    TCP 127.0.0.1:55568 (LISTEN)
+    RosettaSt   333         carter    4u  IPv6 0xffffff8021f0e080      0t0    TCP [::1]:55568 (LISTEN)
+    RosettaSt   333         carter    5u  IPv4 0xffffff8024876c20      0t0    TCP 127.0.0.1:55569 (LISTEN)
+    RosettaSt   333         carter    6u  IPv6 0xffffff8021f0ebc0      0t0    TCP [::1]:55569 (LISTEN)
+    awacsd    11339           root    6u  IPv4 0xffffff80235bfc00      0t0    TCP 192.168.0.68:60726->17.172.62.41:443 (CLOSED)
+    awacsd    11339           root    8u  IPv4 0xffffff8026772880      0t0    TCP 192.168.0.68:55655->17.172.62.34:443 (ESTABLISHED)
+    awacsd    11339           root   11u  IPv6 0xffffff8023f0cd80      0t0    TCP *:4488 (LISTEN)
+    awacsd    11339           root   13u  IPv6 0xffffff8022900ae8      0t0 ICMPV6 *:*
+    awacsd    11339           root   15u  IPv4 0xffffff802203f160      0t0    TCP 192.168.0.68:55651->17.172.208.42:443 (CLOSED)
+    awacsd    11339           root   17u  IPv6 0xffffff8022900970      0t0 ICMPV6 *:*
+    rastream  34621           root    7u  IPv4 0xffffff8023999a40      0t0    TCP 127.0.0.1:50950->127.0.0.1:562 (ESTABLISHED)
+    radium    36654           root    8u  IPv4 0xffffff803f048160      0t0    TCP *:562 (LISTEN)
+    radium    36654           root    9u  IPv4 0xffffff802700f4e0      0t0    TCP 192.168.0.68:50942->192.168.0.70:561 (ESTABLISHED)
+    radium    36654           root   10u  IPv4 0xffffff80266a6a40      0t0    TCP 192.168.0.68:50943->192.168.0.68:561 (ESTABLISHED)
+    radium    36654           root   11u  IPv4 0xffffff802399a880      0t0    TCP 192.168.0.68:50944->192.168.0.164:561 (ESTABLISHED)
+    radium    36654           root   12u  IPv4 0xffffff802399afa0      0t0    TCP 192.168.0.68:60925->192.168.0.66:561 (ESTABLISHED)
+    radium    36654           root   13u  IPv4 0xffffff80235c26c0      0t0    TCP 127.0.0.1:562->127.0.0.1:50947 (ESTABLISHED)
+    radium    36654           root   14u  IPv4 0xffffff8026790320      0t0    TCP 127.0.0.1:562->127.0.0.1:50949 (ESTABLISHED)
+    radium    36654           root   15u  IPv4 0xffffff80235c0320      0t0    TCP 127.0.0.1:562->127.0.0.1:50950 (ESTABLISHED)
+    radium    36654           root   16u  IPv4 0xffffff802700fc00      0t0    TCP 127.0.0.1:562->127.0.0.1:50952 (ESTABLISHED)
+    radium    36654           root   17u  IPv4 0xffffff802678f4e0      0t0    TCP 127.0.0.1:562->127.0.0.1:50954 (ESTABLISHED)
+    radium    36654           root   18u  IPv4 0xffffff80235c1160      0t0    TCP 127.0.0.1:562->127.0.0.1:50979 (ESTABLISHED)
+    radium    36654           root   19u  IPv4 0xffffff80235c1fa0      0t0    TCP 127.0.0.1:562->127.0.0.1:50958 (ESTABLISHED)
+    radium    36654           root   20u  IPv4 0xffffff8026ea5de0      0t0    TCP 127.0.0.1:562->127.0.0.1:51361 (ESTABLISHED)
+    rampcd    38762         carter    5u  IPv4 0xffffff80235c0a40      0t0    TCP *:23456 (LISTEN)
+    rampcd    38762         carter    6u  IPv4 0xffffff803f08c6c0      0t0    TCP 127.0.0.1:50979->127.0.0.1:562 (ESTABLISHED)
+    Finder    39473         carter    6u  IPv4 0xffffff8021d6e4e0      0t0    UDP *:*
+    Pandora   44169         carter   19u  IPv4 0xffffff8026ea6500      0t0    TCP 192.168.0.68:60927->174.129.224.43:80 (CLOSE_WAIT)
+    raevent   74061         carter    5u  IPv4 0xffffff8031519fa0      0t0    TCP 127.0.0.1:51361->127.0.0.1:562 (ESTABLISHED)
+    raevent   74268         carter    5u  IPv4 0xffffff8026deaa40      0t0    TCP 127.0.0.1:51404->127.0.0.1:561 (ESTABLISHED)
+    perl5.12  74269           root    3u  IPv4 0xffffff8025d51500      0t0    TCP *:561 (LISTEN)
+    perl5.12  74269           root    6u  IPv4 0xffffff802504c5e0      0t0    UDP *:*
+    perl5.12  74269           root    8u  IPv4 0xffffff803eeebc00      0t0    TCP 192.168.0.68:561->192.168.0.68:50943 (ESTABLISHED)
+    perl5.12  74269           root    9u  IPv4 0xffffff8026e9c160      0t0    TCP 127.0.0.1:561->127.0.0.1:51404 (ESTABLISHED)
+    Mail      79337         carter   15u  IPv4 0xffffff80266a5c00      0t0    TCP 192.168.0.68:50921->17.172.208.83:443 (CLOSED)
+    Mail      79337         carter   31u  IPv4 0xffffff8026e9a4e0      0t0    TCP 192.168.0.68:65070->66.129.99.100:80 (CLOSE_WAIT)
+    Mail      79337         carter   37u  IPv4 0xffffff803166bfa0      0t0    TCP 192.168.0.68:50737->66.39.3.162:993 (ESTABLISHED)
+    Mail      79337         carter   42u  IPv4 0xffffff8024874160      0t0    TCP 192.168.0.68:50736->66.39.3.162:993 (ESTABLISHED)
+    Mail      79337         carter   44u  IPv4 0xffffff803eedd500      0t0    TCP 192.168.0.68:50933->17.172.36.72:993 (ESTABLISHED)
+    Mail      79337         carter   45u  IPv4 0xffffff8024874880      0t0    TCP 192.168.0.68:50927->17.164.0.48:443 (CLOSED)
+    Mail      79337         carter   46u  IPv4 0xffffff803f06ac20      0t0    TCP 192.168.0.68:50928->17.164.0.48:443 (CLOSED)
+    Mail      79337         carter   48u  IPv4 0xffffff803f1cfde0      0t0    TCP 192.168.0.68:50738->66.39.3.162:993 (ESTABLISHED)
+    Mail      79337         carter   49u  IPv4 0xffffff8026dec6c0      0t0    TCP 192.168.0.68:50739->66.39.3.162:993 (ESTABLISHED)
+    Mail      79337         carter   50u  IPv4 0xffffff803eee7a40      0t0    TCP 192.168.0.68:50930->17.172.36.73:993 (ESTABLISHED)
+    Mail      79337         carter   53u  IPv4 0xffffff803eeddc20      0t0    TCP 192.168.0.68:51368->96.7.173.206:443 (CLOSE_WAIT)
+    Mail      79337         carter   71u  IPv4 0xffffff8026ea56c0      0t0    TCP 192.168.0.68:49995->17.172.34.94:993 (ESTABLISHED)
+    Mail      79337         carter   73u  IPv4 0xffffff8026774500      0t0    TCP 192.168.0.68:65060->208.81.248.1:80 (CLOSED)
+    Mail      79337         carter   74u  IPv4 0xffffff8026ea9880      0t0    TCP 192.168.0.68:50268->17.172.36.69:993 (ESTABLISHED)
+    Mail      79337         carter   90u  IPv4 0xffffff8026c4c880      0t0    TCP 192.168.0.68:65071->66.129.99.100:80 (CLOSE_WAIT)
+    Mail      79337         carter   91u  IPv4 0xffffff8026ea4fa0      0t0    TCP 192.168.0.68:65072->66.129.99.100:80 (CLOSE_WAIT)
+    argus     81333           root    3u  IPv4 0xffffff8025d51500      0t0    TCP *:561 (LISTEN)
+    argus     81333           root    6u  IPv4 0xffffff802504c5e0      0t0    UDP *:*
+    argus     81333           root    8u  IPv4 0xffffff803eeebc00      0t0    TCP 192.168.0.68:561->192.168.0.68:50943 (ESTABLISHED)
+    argus     81333           root    9u  IPv4 0xffffff8026e9c160      0t0    TCP 127.0.0.1:561->127.0.0.1:51404 (ESTABLISHED)
+    Safari    81438         carter   28u  IPv4 0xffffff802399a160      0t0    TCP 192.168.0.68:51260->173.194.43.46:80 (CLOSE_WAIT)
+    Safari    81438         carter   32u  IPv4 0xffffff8026ddca40      0t0    TCP 192.168.0.68:59098->173.194.43.37:80 (CLOSE_WAIT)
+    Safari    81438         carter   34u  IPv4 0xffffff8031518320      0t0    TCP 192.168.0.68:62637->173.194.43.34:80 (CLOSE_WAIT)
+    Safari    81438         carter   35u  IPv4 0xffffff8025d51c20      0t0    TCP 192.168.0.68:57555->173.194.43.35:80 (CLOSE_WAIT)
+    Safari    81438         carter   36u  IPv4 0xffffff8026ddfc20      0t0    TCP 192.168.0.68:62467->173.194.43.36:80 (CLOSE_WAIT)
+    Safari    81438         carter   37u  IPv4 0xffffff8026c74fa0      0t0    TCP 192.168.0.68:63292->173.194.43.33:80 (CLOSE_WAIT)
+    Safari    81438         carter   41u  IPv4 0xffffff80315df880      0t0    TCP 192.168.0.68:64039->173.194.43.39:80 (CLOSE_WAIT)
+    Safari    81438         carter   44u  IPv4 0xffffff8026c4a4e0      0t0    TCP 192.168.0.68:63799->173.194.43.38:80 (CLOSE_WAIT)
+  </ArgusEventData>
+</ArgusEvent>

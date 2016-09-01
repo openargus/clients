@@ -20,7 +20,7 @@
 \fBracluster\fP \- aggregate \fBargus(8)\fP data files.
 .SH SYNOPSIS
 .B racluster
-[\fB\-f\fP \fIconf\fP] [\fB\-m\fP \fIagr(s)\fP] [\fB\-M\fP \fImode(s)\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+[\fB\-f\fP \fIconf\fP] [\fB\-m\fP \fIagr(s)\fP] [\fB\-M\fP \fImode(s)\fP] [\fB\-P\fP \fIprocnum\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
 .SH DESCRIPTION
 .IX  "racluster command"  ""  "\fLracluster\fP \(em argus data"
 .LP
@@ -180,6 +180,10 @@ each inputfile, racluster flushes its output.
 .B replace
 Replace each inputfile contents, with the aggregated output. The initial file compression status is maintained
 .PD
+.RE
+.TP 4 4
+.BI \-P <procnum>
+Specify the number of processors to use for aggregation.  Default is 1.
 .RE
 .TP 4 4
 .BI \-V 

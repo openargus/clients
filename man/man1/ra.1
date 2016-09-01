@@ -665,7 +665,7 @@ Examles are:
 .nf
    -s saddr      print only the source address.
    -s -bytes     removes the bytes field from list.
-   -s +2srcid    adds the source identifier as the 2nd field.
+   -s +2srcid    adds the source identifier after the 2nd field.
    -s spkts:18   prints src pkt count with a column width of 18.
    -s smpls      print the local mpls label in the flow.
 .fi
@@ -940,9 +940,8 @@ True if the encapsulation used by the flow in the Argus record includes
 the \fItype\fP.  The list of valid encapsulation types is:
 .nf
 .sp .5
-   eth, mpls, 802q, llc, pppoe, isl, gre, erspan, ah, ipnip, ipnip6, hdlc, chdlc,
-   atm, sll, fddi, slip, arc, wlan, prism, avs, lrh, grh, teredo, udt, ipsec, juniper
 
+ mpls, eth, 802q, llc, pppoe, isl, gre, ah, ipnip, ipnip6, chdlc
 .IP "\fBdst host \fIhost\fR"
 True if the IP destination field in the Argus record is \fIhost\fP,
 which may be either an address or a name.
@@ -1105,9 +1104,25 @@ Primitives specific to TCP options are supported.
 
 Primitives specific to ICMP flows are supported.
 \fIecho\fP,
-\fIunreach\fP,
-\fIredirect\fP and
-\fItimexed\fP
+\fIredirect\fP,
+\fItimexed\fP and
+\fIunreach\fP, which can be further specified using the keywords
+\fIunrnet\fP,
+\fIunrhost\fP,
+\fIunrproto\fP,
+\fIunrport\fP,
+\fIunrfrag\fP,
+\fIunrsrcfail\fP,
+\fIunrnetunk\fP,
+\fIunrhostunk\fP,
+\fIunriso\fP,
+\fIunrnetpro\fP,
+\fIunrhostpro\fP,
+\fIunrnettos\fP,
+\fIunrhosttos\fP,
+\fIunrfilter\fP,
+\fIunrhostpre\fP, and
+\fIunrprecut\fP, that each correspond to the unreachable icmp codes.
 
 .LP
 For some primitives, a direction qualifier is appropriate.
@@ -1255,7 +1270,6 @@ The format is:
  N        -  Netflow Originated Data
   *       -  Multiple sub-IP encapsulations
   e       -  Ethernet encapsulated flow
-  E       -  ERSPAN encapsulation
   M       -  Multiple mac addresses seen
   m       -  MPLS encapsulated flow
   l       -  LLC encapsulated flow

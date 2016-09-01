@@ -3,24 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- * 
- * $Id: //depot/argus/clients/clients/rasplit.c#70 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */
+
+/*
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#15 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -168,20 +169,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "rtime", 5)) ||
-               (!(strncasecmp (mode->mode, "realtime", 8)))) {
-               char *ptr = NULL;
-               RaRealTime++;
-               if ((ptr = strchr(mode->mode, ':')) != NULL) {
-                  double value = 0.0;
-                  char *endptr = NULL;
-                  ptr++;
-                  value = strtod(ptr, &endptr);
-                  if (ptr != endptr) {
-                     RaUpdateRate = value;
-                  }
-               }
-            } else
             if (!(strncasecmp (mode->mode, "poll", 4)))
                parser->RaPollMode++;
             else
@@ -693,58 +680,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
-         struct ArgusTimeObject *time = (void *)ns->dsrs[ARGUS_TIME_INDEX];
          struct ArgusRecordStruct *tns = NULL;
-
-         if (time == NULL)
-            return;
-
-         ArgusThisTime.tv_sec  = time->src.start.tv_sec;
-         ArgusThisTime.tv_usec = time->src.start.tv_usec;
-
-         if (RaRealTime) {
-            if (ArgusLastTime.tv_sec == 0)
-               ArgusLastTime = ArgusThisTime;
-
-            if (!((ArgusLastTime.tv_sec  > ArgusThisTime.tv_sec) ||
-                 ((ArgusLastTime.tv_sec == ArgusThisTime.tv_sec) &&
-                 (ArgusLastTime.tv_usec > ArgusThisTime.tv_usec)))) {
-
-               while ((ArgusThisTime.tv_sec  > ArgusLastTime.tv_sec) ||
-                     ((ArgusThisTime.tv_sec == ArgusLastTime.tv_sec) &&
-                      (ArgusThisTime.tv_usec > ArgusLastTime.tv_usec))) {
-                  struct timespec ts = {0, 0};
-                  int thisRate;
-
-                  RaDiffTime(&ArgusThisTime, &ArgusLastTime, &dThisTime);
-                  thisRate = ((dThisTime.tv_sec * 1000000) + dThisTime.tv_usec)/RaUpdateRate;
-                  thisRate = (thisRate > 100000) ? 100000 : thisRate;
-
-                  ts.tv_nsec =  thisRate * 1000;
-                  nanosleep (&ts, NULL);
-
-                  ArgusClientTimeout ();
-
-                  gettimeofday(&parser->ArgusRealTime, 0);
-
-                  if (ArgusLastRealTime.tv_sec > 0) {
-                     RaDiffTime(&parser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-                     thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-                     dRealTime.tv_sec  = thisUsec / 1000000;
-                     dRealTime.tv_usec = thisUsec % 1000000;
-
-                     ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-                     ArgusLastTime.tv_usec += dRealTime.tv_usec;
-                     if (ArgusLastTime.tv_usec > 1000000) {
-                        ArgusLastTime.tv_sec++;
-                        ArgusLastTime.tv_usec -= 1000000;
-                     }
-                  }
-                  ArgusLastRealTime = parser->ArgusRealTime;
-               }
-            }
-         } else
-            ArgusLastTime = parser->ArgusRealTime;
 
          switch (ArgusNadp->mode) {
             case ARGUSSPLITTIME: {
@@ -846,7 +782,9 @@ extern int RaDaysInAMonth[12];
 
 time_t ArgusFileStartSecs = 0;
 time_t ArgusFileEndSecs = 0;
+
 char ArgusCurrentFileName[MAXSTRLEN];
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 int
 RaSendArgusRecord(struct ArgusRecordStruct *argus)
@@ -1010,7 +948,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
          sprintf (ArgusCurrentFileName, "%s", ArgusNadp->filename);
          RaProcessSplitOptions(ArgusParser, ArgusCurrentFileName, MAXSTRLEN, argus);
 
-         if (strcmp(wfile->filename, ArgusCurrentFileName)) {
+         if ((wfile->filename == NULL) || strcmp(wfile->filename, ArgusCurrentFileName)) {
             filename = ArgusCurrentFileName;
             newfilename++;
          }
@@ -1081,8 +1019,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
       if (pass != 0) {
          if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
             struct ArgusRecord *argusrec = NULL;
-            char buf[0x10000];
-            if ((argusrec = ArgusGenerateRecord (argus, 0L, buf)) != NULL) {
+            if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                ArgusHtoN(argusrec);
 #endif

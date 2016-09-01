@@ -3,29 +3,34 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- *     ratop - curses (color) based argus GUI modeled after the top program.
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  *  racurses.c - this routine handles the argus data processing.
  *
  *  Author: Carter Bullard carter@qosient.com
  */
 
+/*
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#28 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
+ */
+
+
 #define ARGUS_HISTORY
 #define ARGUS_READLINE
+#define ARGUS_OUTPUT
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
@@ -35,6 +40,8 @@
 #define USE_IPV6
 #endif
 
+#include <argus_output.h>
+#include <radium.h>
 #include <racurses.h>
 #include <rabins.h>
 
@@ -55,7 +62,50 @@ int ArgusProcessQueue (struct ArgusQueueStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
+char **ArgusHandleControllerCommand (char *);
+char **ArgusHandleHighlightCommand (char *);
+char **ArgusHandleDisplayCommand (char *);
+char **ArgusHandleFilterCommand (char *);
+char **ArgusHandleSearchCommand (char *);
+
+struct ArgusWirelessStruct ArgusWirelessBuf, *ArgusWireless = &ArgusWirelessBuf;
  
+#define MAX_AIRPORT_PARSE_TOKENS	15
+ 
+char *ArgusParseAirportTokens[MAX_AIRPORT_PARSE_TOKENS] = {
+#define ARGUSWSAGRCTLRSSI	0
+   "agrCtlRSSI",
+#define ARGUSWSAGREXTRSSI	1
+   "agrExtRSSI",
+#define ARGUSWSAGRCTLNOISE	2
+   "agrCtlNoise",
+#define ARGUSWSAGREXTNOISE	3
+   "agrExtNoise",
+#define ARGUSWSSTATE		4
+   "state",
+#define ARGUSWSOPSTATE		5
+   "opMode",
+#define ARGUSWSLASTTXRATE	6
+   "lastTxRate",
+#define ARGUSWSMAXRATE		7
+   "maxRate",
+#define ARGUSWSLASTASSOC	8
+   "lastAssocStatus",
+#define ARGUSWSAUTH		9
+   "802.11.auth",
+#define ARGUSWSLINKAUTH		10
+   "linkAuth",
+#define ARGUSWSBSSID		11
+   "BSSID",
+#define ARGUSWSSSID		12
+   "SSID",
+#define ARGUSWSMCS		13
+   "MCS",
+#define ARGUSWSCHANNEL		14
+   "channel"
+};
+ 
+
 void
 ArgusThreadsInit(pthread_attr_t *attr)
 {
@@ -111,7 +161,7 @@ ArgusThreadsInit(pthread_attr_t *attr)
 
    if (stacksize < ARGUS_MIN_STACKSIZE) {
 #ifdef ARGUSDEBUG
-      ArgusDebug (1, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
+      ArgusDebug (3, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
 #endif
       if (pthread_attr_setstacksize(attr, ARGUS_MIN_STACKSIZE))
          ArgusLog (LOG_ERR, "pthreads set stacksize error");
@@ -233,7 +283,7 @@ ArgusProcessData (void *arg)
                if (parser->ArgusReliableConnection) {
                   if (parser->ArgusRemoteHosts && (hosts = parser->ArgusRemoteHosts->count)) {
                      if ((pthread_create(&parser->remote, NULL, ArgusConnectRemotes, parser->ArgusRemoteHosts)) != 0)
-                        ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+                        ArgusLog (LOG_ERR, "ArgusConnectRemotes() pthread_create error %s\n", strerror(errno));
                   }
 
                } else {
@@ -256,7 +306,7 @@ ArgusProcessData (void *arg)
                               ArgusHandleRecord (parser, input, &input->ArgusInitCon, &parser->ArgusFilterCode);
 
                            ArgusAddToQueue(parser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
-                           parser->RaTasksToDo++;
+                           parser->RaTasksToDo = RA_ACTIVE;
                         } else
                            ArgusAddToQueue(tqueue, &input->qhdr, ARGUS_LOCK);
                      } else
@@ -287,7 +337,7 @@ ArgusProcessData (void *arg)
             if (parser->ArgusActiveHosts->count)
                ArgusReadStream(parser, parser->ArgusActiveHosts);
 
-         parser->RaTasksToDo = 0;
+         parser->RaTasksToDo = RA_IDLE;
 
       } else {
          struct timespec ts = {0, 150000000};
@@ -295,7 +345,7 @@ ArgusProcessData (void *arg)
          nanosleep (&ts, NULL);
 
          if (parser->ArgusActiveHosts && parser->ArgusActiveHosts->count)
-            parser->RaTasksToDo = 1;
+            parser->RaTasksToDo = RA_ACTIVE;
       }
 
       ArgusClientTimeout ();
@@ -310,6 +360,66 @@ ArgusProcessData (void *arg)
 
 
 extern pthread_mutex_t RaCursesLock;
+
+char **
+ArgusHandleControllerCommand (char *command)
+{
+   char **retn = NULL;
+
+#if defined(ARGUS_CURSES)
+   
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusHandleControllerCommand(%s)", command);
+#endif
+   return retn;
+}
+
+char **
+ArgusHandleHighlightCommand (char *command)
+{
+   extern int RaHighlightDisplay (struct ArgusParserStruct *, struct ArgusQueueStruct *, char *);
+   char *string = &command[11], *sptr;
+   int slen = strlen(string);
+   char **retn = NULL;
+
+   sptr = &string[slen - 1];
+   while (isspace(*sptr)) {*sptr-- = '\0';}
+
+#if defined(ARGUS_CURSES)
+   ArgusParser->ArgusSearchString = strdup(string);
+   RaHighlightDisplay(ArgusParser, RaCursesProcess->queue, ArgusParser->ArgusSearchString);
+#endif
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusHandleHighlight(%s)", command);
+#endif
+   return retn;
+}
+
+
+char **
+ArgusHandleDisplayCommand (char *command)
+{
+   char *string = &command[10], *sptr;
+   struct nff_program lfilter;
+   char *result = NULL;
+   int fretn, slen = strlen(string);
+   char **retn = NULL;
+
+   sptr = &string[slen - 1];
+   while (isspace(*sptr)) {*sptr-- = '\0';}
+
+   if ((fretn = ArgusFilterCompile (&lfilter, string, 1)) < 0) {
+      result = "syntax error";
+   } else {
+      result = "accepted";
+   }
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusHandleDisplay(%s) filter %s", string, result);
+#endif
+   return retn;
+}
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -370,7 +480,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
 
          if (parser->ArgusInputFileList != NULL) {
-            parser->RaTasksToDo = 1;
+            parser->RaTasksToDo = RA_ACTIVE;
             if (parser->ArgusRemoteHosts) {
                if ((input = (void *)parser->ArgusRemoteHosts->start) == NULL) {
                   parser->timeout.tv_sec  = 0;
@@ -379,9 +489,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
          }
 
-         if (parser->ArgusFlowModelFile) {
+         if (parser->ArgusFlowModelFile)
             parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
-         } else
+         else
             parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
 
          if (parser->ArgusAggregator != NULL) {
@@ -418,7 +528,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          if (parser->ArgusRemoteHosts)
             if ((input = (void *)parser->ArgusRemoteHosts->start) != NULL)
-               parser->RaTasksToDo = 1;
+               parser->RaTasksToDo = RA_ACTIVE;
 
          if ((ArgusEventAggregator = ArgusNewAggregator(parser, "srcid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
@@ -692,6 +802,18 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                         parser->ArgusAggregator->correct = NULL;
                      }
                   } else
+                  if (!(strncasecmp (mode->mode, "control:", 8))) {
+                     char *ptr = &mode->mode[8];
+                     double value = 0.0;
+                     char *endptr = NULL;
+                     value = strtod(ptr, &endptr);
+                     if (ptr != endptr) {
+                        parser->ArgusControlPort = value;
+                     }
+                  } else
+                  if (!(strncasecmp (mode->mode, "nocontrol", 9))) {
+                     parser->ArgusControlPort = 0;
+                  } else
                   if (!(strncasecmp (mode->mode, "nomerge", 7))) {
                      parser->RaCumulativeMerge = 0;
                   } else
@@ -749,7 +871,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                if (parser->RaPrintAlgorithmList[i]->print == ArgusPrintIdleTime)
                   ArgusAlwaysUpdate++;
 
-         if (parser->RaTasksToDo == 0) {
+         if (parser->RaTasksToDo == RA_IDLE) {
             RaCursesUpdateInterval.tv_sec  = 1;
             RaCursesUpdateInterval.tv_usec = 0;
 
@@ -782,6 +904,24 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (parser->ArgusLocalLabeler && (parser->ArgusLocalLabeler->status & ARGUS_TREE_DEBUG)) {
             RaPrintLabelTree (parser->ArgusLocalLabeler, parser->ArgusLocalLabeler->ArgusAddrTree[AF_INET], 0, 0);
             exit(0);
+         }
+
+         if (parser->ArgusControlPort != 0) {
+            if (ArgusEstablishListen (parser, parser->ArgusControlPort, "127.0.0.1") < 0)
+               ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
+
+            if ((parser->ArgusControlChannel = ArgusNewControlChannel (parser)) == NULL)
+               ArgusLog (LOG_ERR, "could not create control channel: %s\n", strerror(errno));
+
+            tvp = getArgusMarReportInterval(ArgusParser);
+            if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
+               setArgusMarReportInterval (ArgusParser, "60s");
+            }
+
+            ArgusControlCommands[CONTROL_DISPLAY].handler = ArgusHandleDisplayCommand;
+            ArgusControlCommands[CONTROL_HIGHLIGHT].handler = ArgusHandleHighlightCommand;
+            ArgusControlCommands[CONTROL_SEARCH].handler = ArgusHandleControllerCommand;
+            ArgusControlCommands[CONTROL_FILTER].handler = ArgusHandleControllerCommand;
          }
 
          parser->ArgusReliableConnection = 1;
@@ -967,7 +1107,8 @@ usage ()
 
 */
 
-void RaProcessThisEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+void RaProcessThisLsOfEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+void RaProcessThisAirportEventRecord (struct ArgusParserStruct *, struct ArgusWirelessStruct *);
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
@@ -1118,8 +1259,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
    ArgusProcessDirection(parser, ns);
 
-
-   if (agg != NULL) {
+   if ((agg != NULL) && (parser->RaCumulativeMerge)) {
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
@@ -1387,6 +1527,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               }
                            }
                         }
+                        break;
+                     }
+                     case ARGUS_TYPE_IPV6: {
+                        switch (flow->ipv6_flow.ip_p) {
+                           case IPPROTO_ESP:
+                              tryreverse = 0;
+                              break;
+                        }
+                        break;
                      }
                   }
 
@@ -1518,17 +1667,20 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
                   }
                }
-         
-//          for (i = 0; i < ArgusTotalAnalytics; i++) {
-                     if (pns->status & ARGUS_RECORD_NEW)
-                        ArgusCorrelateRecord(pns);
-//          }
-         
-               pns->status &= ~ARGUS_RECORD_NEW;
-               RaWindowModified = RA_MODIFIED;
             }
 
             ArgusDeleteRecordStruct(ArgusParser, cns);
+         }
+
+         if (pns) {
+//          for (i = 0; i < ArgusTotalAnalytics; i++) {
+               if (pns->status & ARGUS_RECORD_NEW) {
+                  if (parser->ArgusCorrelateEvents)
+                     ArgusCorrelateRecord(pns);
+
+                  pns->status &= ~ARGUS_RECORD_NEW;
+               }
+//          }
          }
       }
 
@@ -1551,7 +1703,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
 
 void
-RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
+RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
    struct ArgusRecordStruct *tns = NULL, *pns = NULL, *cns = NULL;
    struct ArgusAggregatorStruct *agg = ArgusEventAggregator;
@@ -1585,7 +1737,14 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
                ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
             if ((pns = ArgusFindRecord(RaEventProcess->htable, hstruct)) == NULL) {
-               int tryreverse = 1;
+               struct ArgusFlow *cflow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
+               int tryreverse = 0;
+
+               if (cflow->hdr.subtype & ARGUS_FLOW_KEY_ATTRIBUTE)
+                  tryreverse = 1;
+
+               if (agg->correct == NULL)
+                  tryreverse = 0;
 
                switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                   case ARGUS_TYPE_IPV4: {
@@ -1594,6 +1753,15 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
                            tryreverse = 0;
                            break;
                      }
+                     break;
+                  }
+                  case ARGUS_TYPE_IPV6: {
+                     switch (flow->ipv6_flow.ip_p) {
+                        case IPPROTO_ESP:
+                           tryreverse = 0;
+                           break;
+                     }
+                     break;
                   }
                }
 
@@ -1680,10 +1848,47 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (6, "ArgusProcessThisEventRecord () returning\n"); 
+   ArgusDebug (6, "RaProcessThisLsOfEventRecord () returning\n"); 
 #endif
 }
 
+void
+RaProcessThisAirportEventRecord (struct ArgusParserStruct *parser, struct ArgusWirelessStruct *ws)
+{
+   ArgusWireless->agrCtlRSSI  = ws->agrCtlRSSI;
+   ArgusWireless->agrExtNoise = ws->agrExtRSSI;
+   ArgusWireless->agrCtlNoise = ws->agrCtlNoise;
+   ArgusWireless->agrExtNoise = ws->agrExtNoise;
+
+   if (ArgusWireless->state != NULL) free(ArgusWireless->state);
+   ArgusWireless->state = strdup(ws->state);
+
+   if (ArgusWireless->opMode != NULL) free(ArgusWireless->opMode);
+   ArgusWireless->opMode = strdup(ws->opMode);
+
+   ArgusWireless->lastTxRate = ws->lastTxRate;
+   ArgusWireless->maxRate = ws->maxRate;
+   ArgusWireless->lastAssocStatus = ws->lastAssocStatus;
+
+   if (ArgusWireless->auth != NULL) free(ArgusWireless->auth);
+   ArgusWireless->auth = strdup(ws->auth);
+
+   if (ArgusWireless->linkAuth != NULL) free(ArgusWireless->linkAuth);
+   ArgusWireless->linkAuth = strdup(ws->linkAuth);
+
+   if (ArgusWireless->bssid != NULL) free(ArgusWireless->bssid);
+   ArgusWireless->bssid = strdup(ws->bssid);
+
+   if (ArgusWireless->ssid != NULL) free(ArgusWireless->ssid);
+   ArgusWireless->ssid = strdup(ws->ssid);
+
+   ArgusWireless->mcs = ws->mcs;
+   ArgusWireless->channel = ws->channel;
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaProcessThisAirportEventRecord () returning\n"); 
+#endif
+}
 
 void
 RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
@@ -1694,19 +1899,47 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
 #endif
 }
 
+void RaParseAirportEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void RaParseLsOfEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void RaParseStumblerEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void RaParseExtIPEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void RaParseNetstatEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void RaParseSnmpEventRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
+struct ArgusParseEventFieldStruct {
+   char *field;
+   int index, type, value;
+   void (*parse)(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+};
+
+#define MAX_PARSE_ALG_TYPES		6
+
+struct ArgusParseEventFieldStruct 
+RaParseEventAlgorithmTable[MAX_PARSE_ALG_TYPES] = {
+#define ARGUSPARSEAIRPORT		0
+   { "argus-airport", 1, 0, ARGUSPARSEAIRPORT, RaParseAirportEventRecord},
+#define ARGUSPARSELSOF			1
+   { "argus-lsof", 1, 0, ARGUSPARSELSOF, RaParseLsOfEventRecord},
+#define ARGUSPARSESTUMBLER		2
+   { "argus-stumble", 1, 0, ARGUSPARSESTUMBLER, RaParseStumblerEventRecord},
+#define ARGUSPARSEEXTIP			3
+   { "argus-extip", 1, 0, ARGUSPARSEEXTIP, RaParseExtIPEventRecord},
+#define ARGUSPARSENETSTAT		4
+   { "argus-netstat", 1, 0, ARGUSPARSESTUMBLER, RaParseNetstatEventRecord},
+#define ARGUSPARSESNMP			5
+   { "argus-snmp", 1, 0, ARGUSPARSESTUMBLER, RaParseSnmpEventRecord}
+};
+
 
 void
 RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    if (parser->ArgusCorrelateEvents) {
-      struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
       struct ArgusDataStruct *data = NULL;
-      struct timeval tvpbuf, *tvp = &tvpbuf;
       char buf[0x10000], *ptr = buf;
-      char tbuf[129], sbuf[129], *sptr = sbuf;
-      char *dptr, *str;
       unsigned long len = 0x10000;
-      int title = 0;;
+      char *dptr = NULL;
+      int i;
 
       if ((data = (void *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX]) == NULL)
          return;
@@ -1726,212 +1959,344 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          dptr = data->array;
       }
 
-      if (strstr(dptr, "argus-lsof")) {
-         bzero (tbuf, sizeof(tbuf));
-         bzero (sptr, sizeof(sbuf));
-         tvp->tv_sec  = time->src.start.tv_sec;
-         tvp->tv_usec = time->src.start.tv_usec;
-
-         ArgusPrintTime(parser, tbuf, tvp);
-         ArgusPrintSourceID(parser, sptr, argus, 24);
-
-         while (isspace((int)sbuf[strlen(sbuf) - 1]))
-            sbuf[strlen(sbuf) - 1] = '\0';
-
-         while (isspace((int)*sptr)) sptr++;
-
-// COMMAND     PID           USER   FD   TYPE     DEVICE SIZE/OFF   NODE NAME
-
-         while ((str = strsep(&dptr, "\n")) != NULL) {
-            if (title) {
-               char *tok, *app = NULL, *pid = NULL, *user = NULL;
-               char *node = NULL, *name = NULL, *state = NULL;
-               int field = 0;
-               while ((tok = strsep(&str, " ")) != NULL) {
-                  if (*tok != '\0') {
-                     switch (field++) {
-                        case 0: app  = tok; break;
-                        case 1: pid  = tok; break;
-                        case 2: user = tok; break;
-                        case 7: node = tok; break;
-                        case 8: name = tok; break;
-                        case 9: state = tok; break;
-                     }
-                  }
-               }
-               if (name != NULL) {
-                  short proto = 0;
-
-                  if (!(strcmp("TCP", node))) proto = IPPROTO_TCP;
-                  else if (!(strcmp("UDP", node))) proto = IPPROTO_UDP;
-
-                  if ((proto == IPPROTO_TCP) || (proto == IPPROTO_UDP)) {
-                     struct ArgusFlow flowbuf, *flow = &flowbuf;
-                     char *saddr = NULL, *daddr = NULL;
-                     char *sport = NULL, *dport = NULL;
-                     field = 0;
-
-                     if (strstr(name, "->") != NULL) {
-                        struct ArgusCIDRAddr *cidr = NULL, scidr, dcidr;
-                        int sPort, dPort;
-
-                        if (strchr(name, '[')) {
-                           while ((tok = strsep(&name, "[]->")) != NULL) {
-                              if (*tok != '\0') {
-                                 switch (field++) {
-                                    case 0: saddr  = tok; break;
-                                    case 1: sport  = tok+1; break;
-                                    case 2: daddr = tok; break;
-                                    case 3: dport = tok+1; break;
-                                 }
-                              }
-                           }
-                        } else {
-                           while ((tok = strsep(&name, ":->")) != NULL) {
-                              if (*tok != '\0') {
-                                 switch (field++) {
-                                    case 0: saddr  = tok; break;
-                                    case 1: sport  = tok; break;
-                                    case 2: daddr = tok; break;
-                                    case 3: dport = tok; break;
-                                 }
-                              }
-                           }
-                        }
-
-                        if (daddr && ((cidr = RaParseCIDRAddr (parser, saddr)) != NULL))
-                           bcopy ((char *)cidr, (char *)&scidr, sizeof (*cidr));
-
-                        if (daddr && ((cidr = RaParseCIDRAddr (parser, daddr)) != NULL))
-                           bcopy ((char *)cidr, (char *)&dcidr, sizeof (*cidr));
-    
-                        sPort = strtol(sport, NULL, 10);
-                        dPort = strtol(dport, NULL, 10);
-
-                        if ((sPort != 0) && (dPort != 0)) {
-
-                           switch (scidr.type) {
-                              case AF_INET: {
-                                 bzero((char *)flow, sizeof(*flow));
-                                 flow->hdr.type              = ARGUS_FLOW_DSR;
-                                 flow->hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
-                                 flow->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV4;
-                                 flow->hdr.argus_dsrvl8.len    = 5;
-
-                                 bcopy(&scidr.addr, &flow->ip_flow.ip_src, scidr.len);
-                                 bcopy(&dcidr.addr, &flow->ip_flow.ip_dst, dcidr.len);
-                                 flow->ip_flow.ip_p  = proto;
-                                 flow->ip_flow.sport = sPort;
-                                 flow->ip_flow.dport = dPort;
-                                 flow->ip_flow.smask = 32;
-                                 flow->ip_flow.dmask = 32;
-                                 break;
-                              }
-
-                              case AF_INET6: {
-                                 bzero((char *)flow, sizeof(*flow));
-                                 flow->hdr.type              = ARGUS_FLOW_DSR;
-                                 flow->hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
-                                 flow->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV6;
-                                 flow->hdr.argus_dsrvl8.len    = 12;
-
-                                 bcopy(&scidr.addr, &flow->ipv6_flow.ip_src, scidr.len);
-                                 bcopy(&dcidr.addr, &flow->ipv6_flow.ip_dst, dcidr.len);
-                                 flow->ipv6_flow.ip_p  = proto;
-                                 flow->ipv6_flow.sport = sPort;
-                                 flow->ipv6_flow.dport = dPort;
-                                 break;
-                              }
-                           }
-
-                           {
-                              struct ArgusRecordStruct *ns = NULL;
-                              struct ArgusTransportStruct *atrans, *btrans;
-                              struct ArgusLabelStruct *label;
-                              struct ArgusTimeObject *btime;
-                              struct ArgusFlow *bflow;
-                              extern char ArgusCanonLabelBuffer[];
-                              char *lptr = ArgusCanonLabelBuffer;
-
-#if defined(ARGUSDEBUG)
-                           ArgusDebug (1, "RaProcessEventRecord: %s:srcid=%s:%s: %s %s.%s -> %s.%s %s\n", tbuf, sptr, app, node, 
-                                               saddr, sport, daddr, dport, state);
-#endif
-                              if ((ns = ArgusGenerateRecordStruct(NULL, NULL, NULL)) != NULL) {
-                                 extern struct ArgusCanonRecord ArgusGenerateCanonBuffer;
-                                 struct ArgusCanonRecord  *canon = &ArgusGenerateCanonBuffer;
-
-                                 ns->status = argus->status;
-
-                                 if ((atrans = (struct ArgusTransportStruct *)argus->dsrs[ARGUS_TRANSPORT_INDEX]) != NULL)
-                                    if ((btrans = (struct ArgusTransportStruct *)ns->dsrs[ARGUS_TRANSPORT_INDEX]) != NULL)
-                                       bcopy ((char *)atrans, (char *)btrans, sizeof(*atrans));
-                                 ns->dsrindex |= (0x1 << ARGUS_TRANSPORT_INDEX);
-
-                                 if ((btime = (struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX]) != NULL)
-                                    bcopy ((char *)time, (char *)btime, sizeof(*btime));
-                                 ns->dsrindex |= (0x1 << ARGUS_TIME_INDEX);
-
-                                 if ((bflow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX]) == NULL) {
-                                    ns->dsrs[ARGUS_FLOW_INDEX] = (struct ArgusDSRHeader*) &canon->flow;
-                                    bflow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
-                                 }
-                                 bcopy ((char *)flow, (char *)bflow, sizeof(*flow));
-                                 ns->dsrindex |= (0x1 << ARGUS_FLOW_INDEX);
-
-                                 if (state && (proto == IPPROTO_TCP)) {
-                                    struct ArgusNetworkStruct *bnet;
-                                    struct ArgusTCPObject *tcp;
-
-                                    if ((bnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX]) == NULL) {
-                                       ns->dsrs[ARGUS_NETWORK_INDEX] = (struct ArgusDSRHeader*) &canon->net;
-                                       bnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
-                                    }
-
-                                    bnet->hdr.type    = ARGUS_NETWORK_DSR;
-                                    bnet->hdr.subtype = ARGUS_TCP_STATUS;
-                                    bnet->hdr.argus_dsrvl8.len  = 3;
-                                    tcp = (struct ArgusTCPObject *)&bnet->net_union.tcp;
-
-                                    if (!(strcmp(state, "(ESTABLISHED)")))     tcp->status = ARGUS_CON_ESTABLISHED;
-                                    else if (!(strcmp(state, "(CLOSED)")))     tcp->status = ARGUS_NORMAL_CLOSE;
-                                    else if (!(strcmp(state, "(CLOSE_WAIT)"))) tcp->status = ARGUS_CLOSE_WAITING;
-                                    else if (!(strcmp(state, "(TIME_WAIT)")))  tcp->status = ARGUS_CLOSE_WAITING;
-
-                                    ns->dsrindex |= (0x01 << ARGUS_NETWORK_INDEX);
-                                 }
-
-                                 if ((label = (struct ArgusLabelStruct *)ns->dsrs[ARGUS_LABEL_INDEX]) == NULL) {
-                                    ns->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
-                                    label = (struct ArgusLabelStruct *)ns->dsrs[ARGUS_LABEL_INDEX];
-                                 }
-
-                                 bzero(lptr, MAXBUFFERLEN);
-                                 sprintf (lptr, "pid=%s:usr=%s:app=%s", pid, user, app);
-
-                                 label->hdr.type    = ARGUS_LABEL_DSR;
-                                 label->hdr.subtype = ARGUS_PROC_LABEL;
-                                 label->hdr.argus_dsrvl8.len  = 1 + ((strlen(lptr) + 3)/4);
-                                 label->l_un.label = lptr;
-                                 ns->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
-
-                                 RaProcessThisEventRecord (parser, ns);
-
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-
-            } else
-            if (strstr (str, "COMMAND"))
-               title++;
-         }
+      for (i = 0; i < MAX_PARSE_ALG_TYPES; i++) {
+         if (strstr(dptr, RaParseEventAlgorithmTable[i].field))
+            if (RaParseEventAlgorithmTable[i].parse != NULL)
+               RaParseEventAlgorithmTable[i].parse(parser, dptr, argus, 0);
       }
 
       ArgusCorrelateQueue (RaCursesProcess->queue);
    }
+#if defined(ARGUSDEBUG)
+   ArgusDebug (6, "RaProcessEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+
+void
+RaParseAirportEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+   struct ArgusWirelessStruct wsbuf, *ws = &wsbuf;
+
+   struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
+   struct timeval tvpbuf, *tvp = &tvpbuf;
+   char tbuf[129], sbuf[129], *sptr = sbuf;
+   char *str;
+   int i;
+
+   bzero (tbuf, sizeof(tbuf));
+   bzero (sptr, sizeof(sbuf));
+   tvp->tv_sec  = time->src.start.tv_sec;
+   tvp->tv_usec = time->src.start.tv_usec;
+
+   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintSourceID(parser, sptr, argus, 24);
+
+   while (isspace((int)sbuf[strlen(sbuf) - 1]))
+      sbuf[strlen(sbuf) - 1] = '\0';
+
+   while (isspace((int)*sptr)) sptr++;
+
+   while ((str = strsep(&dptr, "\n")) != NULL) {
+      for (i = 0; i < MAX_AIRPORT_PARSE_TOKENS; i++) {
+         if (strstr(str, ArgusParseAirportTokens[i])) {
+            char *ptr, *sptr;
+            if ((ptr = strchr(str, '\"')) != NULL) {
+               ptr++;
+               if ((sptr = strchr(ptr, '\"')) != NULL) {
+                  *sptr = '\0';
+               }
+
+               switch (i) {
+                  case ARGUSWSAGRCTLRSSI:     ws->agrCtlRSSI = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSAGREXTRSSI:     ws->agrExtRSSI = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSAGRCTLNOISE:   ws->agrCtlNoise = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSAGREXTNOISE:   ws->agrExtNoise = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSSTATE:               ws->state = strdup(ptr); break;
+                  case ARGUSWSOPSTATE:            ws->opMode = strdup(ptr); break;
+                  case ARGUSWSLASTTXRATE:     ws->lastTxRate = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSMAXRATE:           ws->maxRate = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSLASTASSOC: ws->lastAssocStatus = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSAUTH:                 ws->auth = strdup(ptr); break;
+                  case ARGUSWSLINKAUTH:         ws->linkAuth = strdup(ptr); break;
+                  case ARGUSWSBSSID:               ws->bssid = strdup(ptr); break;
+                  case ARGUSWSSSID:                 ws->ssid = strdup(ptr); break;
+                  case ARGUSWSMCS:                   ws->mcs = strtol(ptr, NULL, 10); break;
+                  case ARGUSWSCHANNEL:           ws->channel = strtol(ptr, NULL, 10); break;
+               }
+            }
+            break;
+         }
+      }
+   }
+
+   RaProcessThisAirportEventRecord (parser, ws);
+
+   if (ws->state != NULL) free (ws->state);
+   if (ws->opMode != NULL) free (ws->opMode);
+   if (ws->auth != NULL) free (ws->auth);
+   if (ws->linkAuth != NULL) free (ws->linkAuth);
+   if (ws->bssid != NULL) free (ws->bssid);
+   if (ws->ssid != NULL) free (ws->ssid);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseAirportEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+
+void
+RaParseStumblerEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+ 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseStumblerEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+void
+RaParseExtIPEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+ 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseExtIPEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+void
+RaParseNetstatEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+ 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseNetstatEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+void
+RaParseSnmpEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+ 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseSnmpEventRecord (%p, %p)\n", parser, argus);
+#endif
+}
+
+
+void
+RaParseLsOfEventRecord (struct ArgusParserStruct *parser, char *dptr, struct ArgusRecordStruct *argus, int status)
+{
+   struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
+   struct timeval tvpbuf, *tvp = &tvpbuf;
+   char tbuf[129], sbuf[129], *sptr = sbuf;
+   char *str;
+   int title = 0;
+
+   bzero (tbuf, sizeof(tbuf));
+   bzero (sptr, sizeof(sbuf));
+   tvp->tv_sec  = time->src.start.tv_sec;
+   tvp->tv_usec = time->src.start.tv_usec;
+ 
+   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintSourceID(parser, sptr, argus, 24);
+
+   while (isspace((int)sbuf[strlen(sbuf) - 1]))
+      sbuf[strlen(sbuf) - 1] = '\0';
+
+   while (isspace((int)*sptr)) sptr++;
+
+// COMMAND     PID           USER   FD   TYPE     DEVICE SIZE/OFF   NODE NAME
+
+   while ((str = strsep(&dptr, "\n")) != NULL) {
+      if (title) {
+         char *tok, *app = NULL, *pid = NULL, *user = NULL;
+         char *node = NULL, *name = NULL, *state = NULL;
+         int field = 0;
+         while ((tok = strsep(&str, " ")) != NULL) {
+            if (*tok != '\0') {
+               switch (field++) {
+                  case 0: app  = tok; break;
+                  case 1: pid  = tok; break;
+                  case 2: user = tok; break;
+                  case 7: node = tok; break;
+                  case 8: name = tok; break;
+                  case 9: state = tok; break;
+               }
+            }
+         }
+         if (name != NULL) {
+            short proto = 0;
+
+            if (!(strcmp("TCP", node))) proto = IPPROTO_TCP;
+            else if (!(strcmp("UDP", node))) proto = IPPROTO_UDP;
+
+            if ((proto == IPPROTO_TCP) || (proto == IPPROTO_UDP)) {
+               struct ArgusFlow flowbuf, *flow = &flowbuf;
+               char *saddr = NULL, *daddr = NULL;
+               char *sport = NULL, *dport = NULL;
+               field = 0;
+
+               if (strstr(name, "->") != NULL) {
+                  struct ArgusCIDRAddr *cidr = NULL, scidr, dcidr;
+                  int sPort, dPort;
+
+                  if (strchr(name, '[')) {
+                     while ((tok = strsep(&name, "[]->")) != NULL) {
+                        if (*tok != '\0') {
+                           switch (field++) {
+                              case 0: saddr  = tok; break;
+                              case 1: sport  = tok+1; break;
+                              case 2: daddr = tok; break;
+                              case 3: dport = tok+1; break;
+                           }
+                        }
+                     }
+                  } else {
+                     while ((tok = strsep(&name, ":->")) != NULL) {
+                        if (*tok != '\0') {
+                           switch (field++) {
+                              case 0: saddr  = tok; break;
+                              case 1: sport  = tok; break;
+                              case 2: daddr = tok; break;
+                              case 3: dport = tok; break;
+                           }
+                        }
+                     }
+                  }
+
+                  if (daddr && ((cidr = RaParseCIDRAddr (parser, saddr)) != NULL))
+                     bcopy ((char *)cidr, (char *)&scidr, sizeof (*cidr));
+
+                  if (daddr && ((cidr = RaParseCIDRAddr (parser, daddr)) != NULL))
+                     bcopy ((char *)cidr, (char *)&dcidr, sizeof (*cidr));
+ 
+                  sPort = strtol(sport, NULL, 10);
+                  dPort = strtol(dport, NULL, 10);
+
+                  if ((sPort != 0) && (dPort != 0)) {
+
+                     switch (scidr.type) {
+                        case AF_INET: {
+                           bzero((char *)flow, sizeof(*flow));
+                           flow->hdr.type              = ARGUS_FLOW_DSR;
+                           flow->hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
+                           flow->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV4;
+                           flow->hdr.argus_dsrvl8.len    = 5;
+
+                           bcopy(&scidr.addr, &flow->ip_flow.ip_src, scidr.len);
+                           bcopy(&dcidr.addr, &flow->ip_flow.ip_dst, dcidr.len);
+                           flow->ip_flow.ip_p  = proto;
+                           flow->ip_flow.sport = sPort;
+                           flow->ip_flow.dport = dPort;
+                           flow->ip_flow.smask = 32;
+                           flow->ip_flow.dmask = 32;
+                           break;
+                        }
+
+                        case AF_INET6: {
+                           bzero((char *)flow, sizeof(*flow));
+                           flow->hdr.type              = ARGUS_FLOW_DSR;
+                           flow->hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
+                           flow->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV6;
+                           flow->hdr.argus_dsrvl8.len    = 12;
+
+                           bcopy(&scidr.addr, &flow->ipv6_flow.ip_src, scidr.len);
+                           bcopy(&dcidr.addr, &flow->ipv6_flow.ip_dst, dcidr.len);
+                           flow->ipv6_flow.ip_p  = proto;
+                           flow->ipv6_flow.sport = sPort;
+                           flow->ipv6_flow.dport = dPort;
+                           flow->ipv6_flow.smask = 128;
+                           flow->ipv6_flow.dmask = 128;
+                           break;
+                        }
+                     }
+
+                     {
+                        struct ArgusRecordStruct *ns = NULL;
+                        struct ArgusTransportStruct *atrans, *btrans;
+                        struct ArgusLabelStruct *label;
+                        struct ArgusTimeObject *btime;
+                        struct ArgusFlow *bflow;
+                        extern char ArgusCanonLabelBuffer[];
+                        char *lptr = ArgusCanonLabelBuffer;
+
+#if defined(ARGUSDEBUG)
+                     ArgusDebug (3, "RaProcessEventRecord: %s:srcid=%s:%s: %s %s.%s -> %s.%s %s\n", tbuf, sptr, app, node, 
+                                         saddr, sport, daddr, dport, state);
+#endif
+                        if ((ns = ArgusGenerateRecordStruct(NULL, NULL, NULL)) != NULL) {
+                           extern struct ArgusCanonRecord ArgusGenerateCanonBuffer;
+                           struct ArgusCanonRecord  *canon = &ArgusGenerateCanonBuffer;
+
+                           ns->status = argus->status;
+
+                           if ((atrans = (struct ArgusTransportStruct *)argus->dsrs[ARGUS_TRANSPORT_INDEX]) != NULL)
+                              if ((btrans = (struct ArgusTransportStruct *)ns->dsrs[ARGUS_TRANSPORT_INDEX]) != NULL)
+                                 bcopy ((char *)atrans, (char *)btrans, sizeof(*atrans));
+                           ns->dsrindex |= (0x1 << ARGUS_TRANSPORT_INDEX);
+
+                           if ((btime = (struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX]) != NULL)
+                              bcopy ((char *)time, (char *)btime, sizeof(*btime));
+                           ns->dsrindex |= (0x1 << ARGUS_TIME_INDEX);
+
+                           if ((bflow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX]) == NULL) {
+                              ns->dsrs[ARGUS_FLOW_INDEX] = (struct ArgusDSRHeader*) &canon->flow;
+                              bflow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
+                           }
+                           bcopy ((char *)flow, (char *)bflow, sizeof(*flow));
+                           ns->dsrindex |= (0x1 << ARGUS_FLOW_INDEX);
+
+                           if (state && (proto == IPPROTO_TCP)) {
+                              struct ArgusNetworkStruct *bnet;
+                              struct ArgusTCPObject *tcp;
+
+                              if ((bnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX]) == NULL) {
+                                 ns->dsrs[ARGUS_NETWORK_INDEX] = (struct ArgusDSRHeader*) &canon->net;
+                                 bnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
+                              }
+
+                              bnet->hdr.type    = ARGUS_NETWORK_DSR;
+                              bnet->hdr.subtype = ARGUS_TCP_STATUS;
+                              bnet->hdr.argus_dsrvl8.len  = 3;
+                              tcp = (struct ArgusTCPObject *)&bnet->net_union.tcp;
+
+                              if (!(strcmp(state, "(ESTABLISHED)")))     tcp->status = ARGUS_CON_ESTABLISHED;
+                              else if (!(strcmp(state, "(CLOSED)")))     tcp->status = ARGUS_NORMAL_CLOSE;
+                              else if (!(strcmp(state, "(CLOSE_WAIT)"))) tcp->status = ARGUS_CLOSE_WAITING;
+                              else if (!(strcmp(state, "(TIME_WAIT)")))  tcp->status = ARGUS_CLOSE_WAITING;
+
+                              ns->dsrindex |= (0x01 << ARGUS_NETWORK_INDEX);
+                           }
+
+                           if ((label = (struct ArgusLabelStruct *)ns->dsrs[ARGUS_LABEL_INDEX]) == NULL) {
+                              ns->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
+                              label = (struct ArgusLabelStruct *)ns->dsrs[ARGUS_LABEL_INDEX];
+                           }
+
+                           bzero(lptr, MAXBUFFERLEN);
+                           sprintf (lptr, "pid=%s:usr=%s:app=%s", pid, user, app);
+
+                           label->hdr.type    = ARGUS_LABEL_DSR;
+                           label->hdr.subtype = ARGUS_PROC_LABEL;
+                           label->hdr.argus_dsrvl8.len  = 1 + ((strlen(lptr) + 3)/4);
+                           label->l_un.label = lptr;
+                           ns->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
+
+                           RaProcessThisLsOfEventRecord (parser, ns);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+
+      } else
+      if (strstr (str, "COMMAND"))
+         title++;
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (1, "RaParseLsOfEventRecord (%p, %p)\n", parser, argus);
+#endif
 }
 
 
@@ -2132,7 +2497,7 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
 #endif
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (1, "ArgusCorrelateQueue (0x%x) returning %d", queue, retn); 
+   ArgusDebug (3, "ArgusCorrelateQueue (0x%x) returning %d", queue, retn); 
 #endif
 
    return (retn);
@@ -2171,6 +2536,13 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                      case ARGUS_TYPE_IPV4: {
+                        switch (flow->ip_flow.ip_p) {
+                           case IPPROTO_ESP:
+                              tryreverse = 0;
+                              break;
+                        }
+                     }
+                     case ARGUS_TYPE_IPV6: {
                         switch (flow->ip_flow.ip_p) {
                            case IPPROTO_ESP:
                               tryreverse = 0;
@@ -2232,7 +2604,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                }
             }
 #if defined(ARGUSDEBUG)
-            ArgusDebug (1, "ArgusCorrelateRecord (0x%x) merged label", pns); 
+            ArgusDebug (3, "ArgusCorrelateRecord (0x%x) merged label", pns); 
 #endif
 
          } else {
@@ -2247,7 +2619,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 
                ns->dsrindex |= (0x1 << ARGUS_LABEL_INDEX);
 #if defined(ARGUSDEBUG)
-               ArgusDebug (1, "ArgusCorrelateRecord (0x%x) added label", pns); 
+               ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label", pns); 
 #endif
             }
          }
@@ -2259,7 +2631,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (2, "ArgusCorrelateRecord (0x%x) returning %d", ns, retn); 
+   ArgusDebug (5, "ArgusCorrelateRecord (0x%x) returning %d", ns, retn); 
 #endif
 
    return (retn);
@@ -2298,6 +2670,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
    struct nff_insn *fcode = NULL;
    int cnt, x = 0;
 
+   ArgusParser->RaTasksToDo |= RA_SORTING;
 #if defined(ARGUS_THREADS)
    if (type == ARGUS_LOCK)
       pthread_mutex_lock(&queue->lock);
@@ -2354,6 +2727,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
    if (type == ARGUS_LOCK)
       pthread_mutex_unlock(&queue->lock);
 #endif
+   ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
 #ifdef ARGUSDEBUG 
    ArgusDebug (5, "RaClientSortQueue(0x%x, 0x%x, %d) returned\n", sorter, queue, type);

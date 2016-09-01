@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- */
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */ 
 
 /* 
- * $Id: //depot/argus/clients/include/argus_client.h#72 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_client.h#17 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
 
 
@@ -45,8 +44,11 @@ extern "C" {
 #include <sys/time.h>
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <string.h>
 #include <sys/stat.h>
+
+#include <netdb.h>
 
 #include <argus_compat.h>
 
@@ -103,10 +105,10 @@ extern "C" {
 #define RA_CON			1
 #define RA_DONE			2
 
-#define RA_HASHTABLESIZE	0x10000
-#define RA_SVCPASSED		0x010000
-#define RA_SVCFAILED		0x020000
-#define RA_SVCINCOMPLETE        0x040000
+#define RA_HASHTABLESIZE	0x40000
+#define RA_SVCPASSED		0x0100000
+#define RA_SVCFAILED		0x0200000
+#define RA_SVCINCOMPLETE        0x0400000
 #define RA_SVCTEST		(RA_SVCFAILED|RA_SVCPASSED|RA_SVCINCOMPLETE)
 #define RA_SVCDISCOVERY		0x080000
 #define RA_SVCMULTICAST		0x100000
@@ -130,8 +132,8 @@ extern "C" {
 #define ARGUS_READINGDATAGRAM	8
 
 
-#define TSEQ_HASHSIZE		9029
-#define HASHNAMESIZE		8192
+#define TSEQ_HASHSIZE		0x10000
+#define HASHNAMESIZE		0x10000
 
 #define RASIGLENGTH		32
    
@@ -146,6 +148,15 @@ extern "C" {
 #define RA_SVC_WILDCARD		4
 
 
+struct ArgusWirelessStruct {
+   int agrCtlRSSI, agrExtRSSI, agrCtlNoise, agrExtNoise;
+   char *state, *opMode;
+   int lastTxRate, maxRate, lastAssocStatus;
+   char *auth, *linkAuth;
+   char *bssid, *ssid;
+   int mcs, channel;
+};
+ 
 
 typedef struct ArgusRecord * (*ArgusNetFlowHandler)(struct ArgusParserStruct *, struct ArgusInput *, uint8_t **, int *);
 
@@ -177,6 +188,7 @@ struct ArgusInput {
    char *user, *pass;
 
    FILE *file, *pipe;
+
    unsigned int ArgusLocalNet, ArgusNetMask;
    unsigned int ArgusID, ArgusIDType;
    struct timeval ArgusStartTime, ArgusLastTime;
@@ -537,7 +549,6 @@ enum Aggregation
   NetflowRouterPrefix
 };
 #endif
-
 
 typedef struct {
     uint16_t format;             /* Header format, it is 2 in this round */

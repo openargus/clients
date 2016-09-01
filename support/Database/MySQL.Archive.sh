@@ -1,4 +1,5 @@
 #!/bin/bash
+#
 #  Argus Client Support Software.  Tools to support tools for Argus data.
 #  Copyright (c) 2000-2022 QoSient, LLC
 #  All rights reserved.

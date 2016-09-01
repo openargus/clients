@@ -3,19 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
@@ -30,9 +29,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_parser.c#53 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_parser.c#14 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
 
 
@@ -74,6 +73,16 @@ struct ArgusParserStruct *
 ArgusNewParser(char *progname)
 {
    struct ArgusParserStruct *retn = NULL;
+   char progbuf[1024], *ptr;
+
+   if (progname != NULL) {
+      strncpy (progbuf, progname, 1024);
+      if ((ptr = strrchr (progbuf, '/')) != NULL) {
+         *ptr++ = '\0';
+         progname = ptr;
+      }
+   } else 
+      ArgusLog (LOG_ERR, "ArgusNewParser(%s) no program name");
 
    if ((retn  = (struct ArgusParserStruct *) ArgusCalloc(1, sizeof(*retn))) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewParser(%s) ArgusCalloc error %s", progname, strerror(errno));
@@ -82,6 +91,8 @@ ArgusNewParser(char *progname)
    retn->ArgusCIDRPtr = &retn->ArgusCIDRBuffer;
    retn->RaTimeFormat = strdup("%T.%f");
    retn->ArgusFractionalDate = 1;
+
+   retn->RaFilterTimeout = 1.5;
 
    retn->RaClientTimeout.tv_sec = 1;
    retn->RaCloseInputFd = 1;
@@ -92,9 +103,11 @@ ArgusNewParser(char *progname)
    retn->Lflag = -1;
    retn->pflag  = 6;
    retn->ArgusReverse = 1;
+   retn->ArgusPrintWarnings = 1;
    retn->ArgusPerformCorrection = 1;
    retn->ArgusTimeMultiplier = 1.0;
    retn->RaSeparateAddrPortWithPeriod = 1;
+
 
    retn->timeout.tv_sec  = -1;
    retn->timeout.tv_usec =  0;
@@ -102,9 +115,35 @@ ArgusNewParser(char *progname)
    retn->ArgusPassNum = 1;
 
    ArgusInitializeParser(retn);
-   ArgusParser = retn;
    return (retn);
 }
+
+struct ArgusParserStruct *
+ArgusCopyParser(struct ArgusParserStruct *parser)
+{
+   struct ArgusParserStruct *retn = NULL;
+
+   if (parser != NULL) {
+      if ((retn  = (struct ArgusParserStruct *) ArgusCalloc(1, sizeof(*retn))) == NULL)
+         ArgusLog (LOG_ERR, "ArgusNewParser(%s) ArgusCalloc error %s", parser->ArgusProgramName, strerror(errno));
+
+      bcopy(parser, retn, sizeof(*parser));
+
+      retn->ArgusProgramName = strdup(parser->ArgusProgramName);
+      retn->ArgusCIDRPtr = &retn->ArgusCIDRBuffer;
+
+      retn->ArgusInputFileList = NULL;
+      retn->ArgusInputList = NULL;
+      retn->ArgusOutputList = NULL;
+      retn->ArgusRemoteHosts = NULL;
+      retn->ArgusActiveHosts = NULL;
+      retn->MySQLDBEngine = NULL;
+
+      ArgusInitializeParser(retn);
+   }
+   return (retn);
+}
+
 
 void
 ArgusInitializeParser(struct ArgusParserStruct *parser)
@@ -129,18 +168,18 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
    parser->ArgusTotalSrcBytes   = 0;
    parser->ArgusTotalDstBytes   = 0;
 
-   parser->RaLabelCounter       = 0;
-   parser->RaFilterTimeout      = 1.5;
-
-   if (parser->ArgusListens) {
-      for (i = 0; i < parser->ArgusListens; i++)
-         close(parser->ArgusLfd[i]);
-   }
+   parser->RaLabelCounter      = 0;
 
    parser->RaFieldWidth = RA_FIXED_WIDTH;
    parser->ArgusListens = 0;
 
-   parser->ArgusGenerateManRecords = 1;
+   parser->ArgusGenerateManRecords = 0;
+
+   if (parser->ArgusListens) {
+      for (i = 0; i < parser->ArgusListens; i++)
+         if (parser->ArgusLfd[i] != -1)
+            close(parser->ArgusLfd[i]);
+   }
 
    for (i = 0; i < ARGUS_MAXLISTEN; i++)
       parser->ArgusLfd[i] = -1;
@@ -207,13 +246,6 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
         addr = (struct ArgusInput *)addr->qhdr.nxt;
       }
    }
-/*
-   for (i = 0; i < parser->tcount; i++) {
-      if (parser->remote[i].input->hostname != NULL) {
-         ArgusIntStr[x++] = strdup(parser->remote[i].input->hostname);
-      }
-   }
-*/
 #endif
 
 #if defined(ARGUS_THREADS)
@@ -273,18 +305,6 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
 #endif
       ArgusDeleteAggregator(parser, parser->ArgusAggregator);
    }
-
-/*
-   if ((tcount = parser->tcount) > 0) {
-      struct ArgusInput *input = NULL;
-      for (i = 0; i < tcount; i++) {
-         if ((input = parser->remote[i].input) != NULL) {
-            ArgusCloseInput(parser, input);
-            parser->remote[i].input = NULL;
-         }
-      }
-   }
-*/
 
    if (parser->RaSortOptionIndex > 0) {
       int i;

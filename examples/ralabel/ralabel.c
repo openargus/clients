@@ -3,20 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /*
@@ -27,9 +25,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/argus/clients/examples/ralabel/ralabel.c#14 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/ralabel/ralabel.c#15 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -74,10 +72,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
-      if (parser->ArgusFlowModelFile) {
-         RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
-         parser->ArgusFlowModelFile = NULL;
-      }
+      if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
 
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
@@ -85,7 +82,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
             if (!(strncasecmp (mode->mode, "noprune", 7))) {
-               parser->ArgusLabeler->prune = 0;
+               if (parser->ArgusLabeler) parser->ArgusLabeler->prune = 0;
+               if (parser->ArgusLocalLabeler) parser->ArgusLocalLabeler->prune = 0;
             } else
             if (!(strncasecmp (mode->mode, "addr", 4))) {
                if (parser->ArgusFlowModelFile) {
@@ -93,20 +91,49 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig error");
                }
             } else
+            if (!(strncasecmp (mode->mode, "debug.local", 10))) {
+               if (parser->ArgusLocalLabeler != NULL) {
+                  parser->ArgusLocalLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+                  if (!(strncasecmp (mode->mode, "debug.localnode", 14))) {
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_NODE;
+                  } else
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_LOCAL;
+               }
+            } else
             if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                 (!(strncasecmp (mode->mode, "debug", 5)))) {
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
-               if (parser->ArgusLabeler &&  parser->ArgusLabeler->ArgusAddrTree) {
-                  if (parser->Lflag > 0) {
-                     RaPrintLabelTreeLevel = parser->Lflag;
-                  }
-                  RaPrintLabelTree (parser->ArgusLabeler, parser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
-               }
-               exit(0);
+               parser->ArgusLabeler->status |= ARGUS_LABELER_DEBUG;
             }
 
             mode = mode->nxt;
          }
+      }
+
+      if (parser->ArgusFlowModelFile) {
+         RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
+         parser->ArgusFlowModelFile = NULL;
+      }
+
+      if (parser->ArgusLabeler &&  parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG) {
+         if (parser->ArgusLabeler && parser->ArgusLabeler->ArgusAddrTree) {
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLabeler, parser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
+      }
+
+      if (parser->ArgusLocalLabeler && ((parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_LOCAL) ||
+                                        (parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_NODE))) {
+         if (parser->ArgusLocalLabeler &&  parser->ArgusLocalLabeler->ArgusAddrTree) {
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLocalLabeler, parser->ArgusLocalLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
       }
 
       parser->RaInitialized++;
@@ -149,6 +176,15 @@ RaParseComplete (int sig)
 void
 ArgusClientTimeout ()
 {
+   struct timeval tvbuf, *tvp = &tvbuf;
+
+   if (!(ArgusParser->Pauseflag)) {
+      gettimeofday(&ArgusParser->ArgusRealTime, 0);
+      ArgusAdjustGlobalTime (ArgusParser, NULL);
+   }
+
+   *tvp = ArgusParser->ArgusGlobalTime;
+   ArgusGetInterfaceAddresses(ArgusParser);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (4, "ArgusClientTimeout: returning\n");
@@ -245,6 +281,8 @@ RaLabelProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 */
 
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -267,8 +305,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, sbuf)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

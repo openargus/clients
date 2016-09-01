@@ -3,20 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /*
@@ -25,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/raevent/raevent.c#8 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/raevent/raevent.c#17 $
+ * $DateTime: 2016/04/01 14:29:19 $
+ * $Change: 3133 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -118,6 +116,7 @@ usage ()
 #if defined (ARGUSDEBUG)
    fprintf (stdout, "         -D <level>         specify debug level\n");
 #endif
+   fprintf (stdout, "         -e <regex>         match regex in the event header.\n");
    fprintf (stdout, "         -F <conffile>      read configuration from <conffile>.\n");
    fprintf (stdout, "         -h                 print help.\n");
    fprintf (stdout, "         -n                 don't convert numbers to names.\n");
@@ -145,6 +144,9 @@ usage ()
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
+
+
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
@@ -177,8 +179,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if (retn != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
-                           static char sbuf[0x10000];
-                           if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
 #endif
@@ -202,10 +203,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                if (!parser->qflag) {
                   struct timeval tvpbuf, *tvp = &tvpbuf;
-                  char buf[0x10000], *ptr = buf;
                   char tbuf[129], sbuf[129], *sptr = sbuf;
                   char *dptr = data->array;
-                  unsigned long len = 0x10000;
+                  char *ptr = ArgusRecordBuffer;
+                  unsigned long len = sizeof(ArgusRecordBuffer);
                   int cnt = 0;
 
                   if (parser->Lflag && !(parser->ArgusPrintXml)) {
@@ -213,7 +214,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
 #if defined(HAVE_ZLIB_H)
                   if (data->hdr.subtype & ARGUS_DATA_COMPRESS) {
-                     bzero (ptr, sizeof(buf));
+                     bzero (ptr, sizeof(ArgusRecordBuffer));
                      uncompress((Bytef *)ptr, (uLongf *)&len, (Bytef *)&data->array, data->count);
                      dptr = ptr;
                      cnt = data->size;
@@ -265,8 +266,6 @@ void ArgusWindowClose(void) {
 void
 RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-   static char buf[MAXSTRLEN];
-
    if (parser->ArgusWfileList != NULL) {
       struct ArgusWfileStruct *wfile = NULL;
       struct ArgusListObjectStruct *lobj = NULL;
@@ -284,8 +283,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                if (retn != 0) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
@@ -300,6 +298,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
       }
 
    } else {
+      static char buf[MAXSTRLEN];
 
       if ((parser->ArgusPrintMan) && (!parser->qflag)) {
          if (parser->Lflag && !(parser->ArgusPrintXml)) {

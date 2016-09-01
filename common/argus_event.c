@@ -3,19 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
  
@@ -28,9 +27,9 @@
  */
  
 /*
- * $Id: //depot/argus/clients/common/argus_event.c#22 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_event.c#6 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
  
 
@@ -253,15 +252,18 @@ ArgusProcessEvent (struct ArgusParserStruct *parser, struct ArgusEventObject *ev
 }
 
 
+char ArgusSQLStatementBuffer[MAXBUFFERLEN];
+char ArgusSQLConversionBuffer[MAXBUFFERLEN];
+char ArgusSQLMessageBuffer[ARGUS_MAXRECORDSIZE];
+
 int
 ArgusProcessSQLEvent (struct ArgusParserStruct *parser, struct ArgusEventObject *event, struct ArgusRecordStruct *ns)
 {
    char *RaDatabase = NULL, *RaHost = NULL, *RaUser = NULL;
    char *RaPass = NULL, *RaTable = NULL;
    char *ArgusEventTableName = NULL;
-   char sbuf[MAXBUFFERLEN], mbuf[MAXBUFFERLEN];
+   char sbuf[MAXSTRLEN];
    char username[256], userbuf[256]; 
-   char rbuf[ARGUS_MAXRECORDSIZE];
    char *ptr, *aname, *accounts = NULL;
    char *sptr, *hptr; 
    struct ArgusRecord *argus = NULL;
@@ -521,33 +523,33 @@ ArgusProcessSQLEvent (struct ArgusParserStruct *parser, struct ArgusEventObject 
    ArgusPrintTime (parser, etim, &etvp);
 
    if (ns != NULL) {
-      if ((argus = ArgusGenerateRecord (ns, 0L, rbuf)) == NULL)
+      if ((argus = ArgusGenerateRecord (ns, 0L, ArgusSQLMessageBuffer)) == NULL)
          ArgusLog(LOG_ERR, "RaProcessSQLEvent: ArgusGenerateRecord error %s", strerror(errno));
 
 #ifdef _LITTLE_ENDIAN
       ArgusHtoN(argus);
 #endif
-      if ((len = mysql_real_escape_string(&mysql, mbuf, (char *)argus, ntohs(argus->hdr.len) * 4)) <= 0)
+      if ((len = mysql_real_escape_string(&mysql, ArgusSQLConversionBuffer, (char *)argus, ntohs(argus->hdr.len) * 4)) <= 0)
          ArgusLog(LOG_ERR, "RaProcessSQLEvent: mysql_real_escape_string error %s", mysql_error(&mysql));
    }
    
    if (argus != NULL) {
-      sprintf (sbuf, "INSERT %s (project, start, end, type, cause, facility, severity, version, message, metadata, status, record) VALUES ", ArgusEventTableName);
-      sprintf (&sbuf[strlen(sbuf)], "(\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, \"%s\", \"%s\", \"%s\", %d, \"%s\")",
+      sprintf (ArgusSQLStatementBuffer, "INSERT %s (project, start, end, type, cause, facility, severity, version, message, metadata, status, record) VALUES ", ArgusEventTableName);
+      sprintf (&ArgusSQLStatementBuffer[strlen(ArgusSQLStatementBuffer)], "(\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, \"%s\", \"%s\", \"%s\", %d, \"%s\")",
                RaDatabase, stim, etim, event->type, event->cause, event->facility, 
-               event->severity, version, event->message, event->metadata, 0, mbuf);
+               event->severity, version, event->message, event->metadata, 0, ArgusSQLConversionBuffer);
    } else {
-      sprintf (sbuf, "INSERT %s (project, start, end, type, cause, facility, severity, version, message, metadata, status) VALUES ", ArgusEventTableName);
-      sprintf (&sbuf[strlen(sbuf)], "(\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, \"%s\", \"%s\", \"%s\", %d)",
+      sprintf (ArgusSQLStatementBuffer, "INSERT %s (project, start, end, type, cause, facility, severity, version, message, metadata, status) VALUES ", ArgusEventTableName);
+      sprintf (&ArgusSQLStatementBuffer[strlen(ArgusSQLStatementBuffer)], "(\"%s\", \"%s\", \"%s\", %d, %d, %d, %d, \"%s\", \"%s\", \"%s\", %d)",
                RaDatabase, stim, etim, event->type, event->cause, event->facility, 
                event->severity, version, event->message, event->metadata, 0);
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaProcessSQLEvent: mysql_real_query() %s\n", sbuf);
+   ArgusDebug (1, "RaProcessSQLEvent: mysql_real_query() %s\n", ArgusSQLStatementBuffer);
 #endif
 
-   if ((retn = mysql_real_query(&mysql, sbuf, strlen(sbuf))) != 0)
+   if ((retn = mysql_real_query(&mysql, ArgusSQLStatementBuffer, strlen(ArgusSQLStatementBuffer))) != 0)
       ArgusLog(LOG_ERR, "RaProcessSQLEvent: mysql_real_query error %s", mysql_error(&mysql));
 
    mysql_close(&mysql);

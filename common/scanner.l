@@ -3,23 +3,22 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- * $Id: //depot/argus/clients/common/scanner.l#66 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ * $Id: //depot/gargoyle/clients/common/scanner.l#16 $
+ * $DateTime: 2015/08/26 18:37:14 $
+ * $Change: 3057 $
  */
 
 /*
@@ -44,6 +43,7 @@
  */
 
 #define YY_NO_INPUT
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -120,6 +120,9 @@ index    return INDEX;
 dst      return DST;
 src      return SRC;
 
+rmt      return REMOTE;
+lcl      return LOCAL;
+
 seq      return SEQ;
 
 auth     return AUTH;
@@ -162,6 +165,10 @@ srcid    return SRCID;
 inode    return INODE;
 net      return NET;
 mask     return AMASK;
+
+masklen  return MASKLEN;
+mlen     return MASKLEN;
+
 port     return PORT;
 proto    return PROTO;
 encaps   return ENCAPS;
@@ -230,12 +237,13 @@ delltime   return DELTALAST;
 loss       return LOSS;
 ploss      return PLOSS;
 gap        return GAP;
-dup        return DUP;
 
 gateway  return GATEWAY;
 
 eq       return EQUAL;
 equal    return EQUAL;
+neq      return NOTEQUAL;
+notequal return NOTEQUAL;
 lt       return LESS;
 lte      return LEQ;
 less     return LESS;
@@ -279,6 +287,7 @@ avail        return CONNECTED;
 cor          return CORRELATED;
 corolated    return CORRELATED;
 
+dup          return DUP;
 ecn          return ECN;
 drop         return RETRANS;
 retrans      return RETRANS;
@@ -292,9 +301,30 @@ fragonly     return FRAG_ONLY;
 
 icmpmap      return ICMPMAP;
 echo         return ICMPECHO;
-unreach      return UNREACH;
 redirect     return REDIRECT;
 timexed      return TIMEXED;
+
+unreach      return UNREACH;
+unr          return UNREACH;
+unrnet       return UNREACHNET;
+unrhost      return UNREACHHOST;
+unrproto     return UNREACHPROTO;
+unrport      return UNREACHPORT;
+unrfrag      return UNREACHFRAG;
+unrsrcfail   return UNREACHSRCFAIL;
+unrnetunk    return UNREACHNETUNKNOWN;
+unrhostunk   return UNREACHHOSTUNKNOWN;
+unriso       return UNREACHHOSTISOLATED;
+unrnetpro    return UNREACHNETPROHIBITED;
+unrhostpro   return UNREACHHOSTPROHIBITED;
+unrnettos    return UNREACHNETTOS;
+unrhosttos   return UNREACHHOSTTOS;
+unrfilter    return UNREACHFILTER;
+unrhostpre   return UNREACHHOSTPRECEDENCE;
+unrnetpre    return UNREACHPRECUTOFF;
+
+lat          return LAT;
+lon          return LON;
 
 [ \n\t]         ;
 [+\-*/:\[\]!<>()&|=]   return yytext[0];
@@ -313,7 +343,6 @@ timexed      return TIMEXED;
 \+?({N}\.{N}) { yylval.f  = stof((char *)yytext); if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return FLOAT; }
 
 ({N}\.{N}\.{N}\.{N})   { yylval.s = Argussdup((char *)yytext); return HIDV4; }
-(\.{N}\.{N}\.{N}\.{N})   { yylval.s = Argussdup((char *)yytext); return STRING; }
 {B}:{B}:{B}:{B}:{B}:{B} { yylval.e = argus_ether_aton((char *)yytext); return EID; }
 {V6}	{ yylval.s = Argussdup((char *)yytext); return HIDV6; }
 

@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_parser.h#112 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_parser.h#33 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
 
 
@@ -37,6 +36,10 @@ extern "C" {
 #include "pcreposix.h"
 #else
 #include <regex.h>
+#endif
+
+#if defined(HAVE_DNS_SD_H)
+#include <dns_sd.h>
 #endif
 
 #include <argus_def.h>
@@ -179,6 +182,7 @@ struct RaBinStruct {
    long long value, size;
    struct timeval stime, etime, timeout;
    struct ArgusAggregatorStruct *agg;
+   char *table, *file;
 
    unsigned char ArgusSrcDataMask[16],ArgusDstDataMask[16];
 };
@@ -206,7 +210,7 @@ struct ArgusDisplayStruct {
    char *str;
 };
 
-#define ARGUS_NSR_STICKY		0x00100000
+#define ARGUS_NSR_STICKY		0x01000000
 #define ARGUS_RECORD_MODIFIED		0x0100
 #define ARGUS_RECORD_NEW		0x0200
 
@@ -245,7 +249,6 @@ struct ArgusCIDRAddr {
    char *str;
 };
 
-
 #define ARGUS_MAXTHREADS	128
 #define ARGUS_MAXLISTEN		32
 
@@ -275,13 +278,15 @@ struct ArgusCIDRAddr {
 
 
 struct ArgusParserStruct {
-   int status, RaParseCompleting, RaParseDone;
-   int RaDonePending, RaShutDown, RaSortedInput;
-   int RaTasksToDo, ArgusReliableConnection;
-   int ArgusCorrelateEvents, ArgusPerformCorrection;
-   int ArgusDirectionFunction;
-   int ArgusExitStatus, ArgusPassNum;
-   int ArgusFractionalDate;
+   int status;
+
+   char RaParseCompleting, RaParseDone;
+   char RaDonePending, RaShutDown, RaSortedInput;
+   char RaTasksToDo, ArgusReliableConnection, ArgusPrintWarnings;
+   char ArgusCorrelateEvents, ArgusPerformCorrection;
+   char ArgusExitStatus, ArgusPassNum;
+   char ArgusLoadingData, ArgusFractionalDate;
+   char ArgusPruneTree;
 
    char *ArgusProgramName, *RaTimeFormat, *RaTimeZone;
    char *ArgusProgramArgs, *ArgusProgramOptions;
@@ -299,12 +304,17 @@ struct ArgusParserStruct {
    struct timeval ArgusTimeDelta;
    struct timeval ArgusTimeOffset;
 
+   int ArgusDirectionFunction, ArgusZeroConf;
+
    double ArgusLastRecordTime, ArgusTimeMultiplier;
 
    struct tm RaStartFilter, RaLastFilter;
    struct tm RaTmStruct;
 
+   float RaFilterTimeout;
+
    struct ArgusAggregatorStruct *ArgusAggregator;
+   struct ArgusAggregatorStruct *ArgusPathAggregator;
    struct ArgusLabelerStruct *ArgusLocalLabeler;
    struct ArgusLabelerStruct *ArgusColorLabeler;
    struct ArgusLabelerStruct *ArgusLabeler;
@@ -318,9 +328,11 @@ struct ArgusParserStruct {
 
    void *ArgusClientContext;
 
-   int ArgusTimeoutThread, ArgusSessionId, NonBlockingDNS, RaDNSNameCacheTimeout;
-   int ArgusDSCodePoints;
-   int ArgusColorSupport, RaSeparateAddrPortWithPeriod;
+   pid_t ArgusSessionId;
+
+   char ArgusTimeoutThread, NonBlockingDNS;
+   char RaDNSNameCacheTimeout, ArgusDSCodePoints;
+   char ArgusColorSupport, RaSeparateAddrPortWithPeriod;
 
    char *ArgusPidFile, *ArgusPidPath;
    char *ArgusColorConfig;
@@ -328,8 +340,9 @@ struct ArgusParserStruct {
    struct ArgusRecordStruct *ns;
 
    struct ArgusOutputStruct *ArgusOutput;
+   struct ArgusOutputStruct *ArgusControlChannel;
    struct ArgusListStruct *ArgusOutputList, *ArgusInputList;
-   struct ArgusListStruct *ArgusNameList;
+   struct ArgusListStruct *ArgusNameList, *ArgusProcessList;
 
    struct ArgusQueueStruct *ArgusRemoteHosts, *ArgusActiveHosts;
    struct ArgusQueueStruct *ArgusRemoteList;
@@ -339,10 +352,6 @@ struct ArgusParserStruct {
    regex_t dpreg;
 
    int ArgusRegExItems;
-   int ArgusRemotes;
-   int ArgusReplaceMode;
-   int ArgusHostsActive;
-   int ArgusLfd[ARGUS_MAXLISTEN];
    int ArgusListens;
    int ArgusAdjustTime;
    int ArgusConnectTime;
@@ -393,25 +402,21 @@ struct ArgusParserStruct {
    signed char notNetflag, Oflag, pflag, Pflag, qflag, Qflag;
    signed char Netflag, nflag, Normflag, Pctflag, pidflag;
 
-   signed char tflag, uflag, Wflag, vflag, Vflag, iflag;
-   signed char Iflag, rflag, Rflag, Sflag, sflag, xflag;
-   signed char Xflag, XMLflag, yflag, zflag, Zflag, domainonly;
+   char tflag, uflag, Wflag, vflag, Vflag, iflag;
+   char Iflag, rflag, Rflag, Sflag, sflag, Tflag, xflag;
+   char Xflag, XMLflag, yflag, zflag, Zflag, domainonly;
+   char Uflag, noflag;
 
    char *estr, *Hstr, *Mflag;
-
-   int  Tflag, debugflag, RaInitialized;
    double Bflag;
 
-   char RaFieldDelimiter, RaFieldQuoted; 
    signed int RaFieldWidth, RaWriteOut;
+   signed int pflag, sNflag, eNflag, sNoflag, eNoflag;
 
-   int Uflag, sNflag,   eNflag;
-   int        sNoflag, eNoflag;
    struct timeval startime_t, lasttime_t;
 
    float Pauseflag;
    float ProcessRealTime;
-   float RaFilterTimeout;
 
    char RaLabelStr[0x10000], *RaLabel;
    char RaDBString[0x10000], *RaDBStr;
@@ -427,16 +432,32 @@ struct ArgusParserStruct {
    int ArgusFilterFiledes[2];
    int ArgusControlFiledes[2];
 
-   int RaCumulativeMerge;
-   int RaFlowMajorModified;
-   int RaAllocHashTableHeaders;
-   int RaAllocArgusRecord;
-   int RaThisActiveIndex;
-   int RaThisFlowNum;
-   int RaThisModelNum;
-   int RaParseError;
-   int ArgusMinuteUpdate;
-   int ArgusHourlyUpdate;
+   char RaCumulativeMerge;
+   char RaFlowMajorModified;
+   char RaAllocHashTableHeaders;
+   char RaAllocArgusRecord;
+   char RaThisActiveIndex;
+   char RaThisFlowNum;
+   char RaThisModelNum;
+   char RaParseError;
+   char ArgusMinuteUpdate;
+   char ArgusHourlyUpdate;
+
+   char RaMpcProbeMode;
+   char RaMpcNetMode;
+   char RaCorrelate;
+   char RaPollMode;
+   char RaAgMode;
+   char RaMonMode;
+   char RaUniMode;
+   char RaZeroMode;
+   char RaPrintMode;
+   char RaCursesMode;
+   char RaExplicitDate;
+   char RaWildCardDate;
+   char RaDebugStatus;
+
+   char ArgusPrintEthernetVendors;
 
    int RaPolicyStatus;
 
@@ -451,22 +472,10 @@ struct ArgusParserStruct {
    struct ArgusRecordStruct **RaHistoRecords;
 
    unsigned short ArgusSourcePort, ArgusPortNum;
+   unsigned short ArgusControlPort;
 
    int RaHistoBins, RaCloseInputFd;
-
-   int RaMpcProbeMode;
-   int RaMpcNetMode;
-   int RaCorrelate;
-   int RaPollMode;
-   int RaAgMode;
-   int RaMonMode;
-   int RaUniMode;
-   int RaZeroMode;
-   int RaPrintMode;
-   int RaCursesMode;
    int RaPrintIndex;
-   int RaExplicitDate;
-   int RaWildCardDate;
 
    char *RaFlowModelFile, *exceptfile;
    char *writeDbstr, *readDbstr;
@@ -483,7 +492,6 @@ struct ArgusParserStruct {
 
    char *ArgusBindAddr;
    char *ArgusEthernetVendorFile;
-   int ArgusPrintEthernetVendors;
 
    struct nff_program ArgusFilterCode;
    struct nff_program ArgusDisplayCode;
@@ -494,6 +502,7 @@ struct ArgusParserStruct {
 
    struct ArgusModeStruct *ArgusModeList;
    struct ArgusModeStruct *ArgusMaskList;
+
    struct ArgusInput *ArgusInputFileList;
    struct ArgusInput *ArgusRemoteHostList;
 
@@ -505,8 +514,11 @@ struct ArgusParserStruct {
    struct ArgusPrintFieldStruct *RaPrintAlgorithm;
    struct ArgusPrintFieldStruct *RaPrintAlgorithmList[ARGUS_MAX_PRINT_ALG];
 
+#if defined(HAVE_DNS_SD_H)
+   DNSServiceRef dnsSrvRef;
+#endif
+
    char RaDebugString[MAXSTRLEN];
-   int  RaDebugStatus;
 
    struct ArgusRecordStruct argus;
    struct ArgusCanonRecord canon;
@@ -524,11 +536,13 @@ struct ArgusParserStruct {
 
 #ifdef ArgusParse
 struct ArgusParserStruct *ArgusNewParser(char *);
+struct ArgusParserStruct *ArgusCopyParser(struct ArgusParserStruct *);
 void ArgusInitializeParser(struct ArgusParserStruct *);
 void ArgusCloseParser(struct ArgusParserStruct *);
 
 #else
 extern struct ArgusParserStruct *ArgusNewParser(char *);
+extern struct ArgusParserStruct *ArgusCopyParser(struct ArgusParserStruct *);
 extern void ArgusInitializeParser(struct ArgusParserStruct *);
 extern void ArgusCloseParser(struct ArgusParserStruct *);
 #endif

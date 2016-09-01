@@ -3,32 +3,28 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- */
-
-/*
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
  * rauserdata - formulate the service signature file.
  *
  * written by Carter Bullard
  * QoSient, LLC
  *
  * 
- * $Id: //depot/argus/clients/examples/raservices/rauserdata.c#12 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/raservices/rauserdata.c#6 $
+ * $DateTime: 2015/10/14 12:27:46 $
+ * $Change: 3075 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -175,7 +171,7 @@ RaParseComplete (int sig)
             if (ArgusParser->Lflag > 2) printf ("Total Clients  %d  ", RaTotals[ARGUS_CLIENT]);
             printf ("\n");
 
-            ArgusSortQueue (ArgusSorter, ArgusParser->ArgusAggregator->queue);
+            ArgusSortQueue (ArgusSorter, ArgusParser->ArgusAggregator->queue, ARGUS_LOCK);
             RaPrintOutQueue (NULL, ArgusParser->ArgusAggregator->queue, 0);
          }
 
@@ -830,7 +826,7 @@ RaPrintOutQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int le
                   struct ArgusQueueStruct *q = bin->agg->queue;
 
                   if (q->count > 0) {
-                     ArgusSortQueue (ArgusSorter, bin->agg->queue);
+                     ArgusSortQueue (ArgusSorter, bin->agg->queue, ARGUS_LOCK);
                      RaPrintOutQueue (bin, bin->agg->queue, level);
                      print = 1;
                   }

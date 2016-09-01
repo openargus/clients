@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_output.h#6 $ 
- * $DateTime: 2016/06/01 15:17:28 $ 
- * $Change: 3148 $ 
+ * $Id: //depot/gargoyle/clients/include/argus_output.h#11 $ 
+ * $DateTime: 2016/05/11 14:20:33 $ 
+ * $Change: 3141 $ 
  */
 
 
@@ -71,13 +70,16 @@ extern "C" {
 #include <sasl/sasl.h>
 #endif
 
-#define ARGUS_READINGPREHDR     1
-#define ARGUS_READINGHDR        2
-#define ARGUS_READINGBLOCK      4
+// Type transport type
+#define ARGUS_NAMED_PIPE_OUTPUT		0x200
+
+#define ARGUS_READINGPREHDR     	1
+#define ARGUS_READINGHDR        	2
+#define ARGUS_READINGBLOCK      	4
 
 #define ARGUS_WAS_FUNCTIONAL            0x10
 #define ARGUS_SOCKET_COMPLETE           0x20
-#define ARGUS_MAXRECORD                 0x10000
+#define ARGUS_MAXRECORD                 0x40000
 
 #define ARGUS_CLIENT_STARTUP_TIMEOUT	5
 
@@ -139,7 +141,8 @@ struct ArgusOutputStruct {
 
    long long ArgusTotalRecords, ArgusLastRecords;
    int ArgusWriteStdOut, ArgusOutputSequence;
-   int ArgusPortNum, nflag;
+   unsigned short ArgusPortNum, ArgusControlPort;
+   int ArgusUseWrapper, nflag;
    int ArgusLfd[ARGUS_MAXLISTEN];
    int ArgusListens;
  
@@ -154,6 +157,21 @@ struct ArgusOutputStruct {
    unsigned int ArgusLocalNet, ArgusNetMask;
 };
 
+typedef char ** (*ArgusControlHandler)(char *str);
+
+struct ArgusControlHandlerStruct {
+  char *command;
+  ArgusControlHandler handler;
+};
+
+#define ARGUSMAXCONTROLCOMMANDS         7
+#define CONTROL_START                   0
+#define CONTROL_DONE                    1
+#define CONTROL_DISPLAY                 2
+#define CONTROL_HIGHLIGHT               3
+#define CONTROL_SEARCH                  4
+#define CONTROL_FILTER                  5
+#define CONTROL_TREE                    6
 
 
 #if defined(ArgusOutput)
@@ -171,13 +189,11 @@ void ArgusInitClientProcess(struct ArgusClientData *, struct ArgusWfileStruct *)
 
 #else
 
-
-
 #define ARGUS_MAXPROCESS		0x10000
 
 extern void clearArgusWfile(struct ArgusParserStruct *);
 
-int  ArgusTcpWrapper (int, struct sockaddr *, char *);
+int  ArgusTcpWrapper (struct ArgusOutputStruct *, int, struct sockaddr *, char *);
 
 int RadiumParseResourceFile (struct ArgusParserStruct *, char *);
 int ArgusEstablishListen (struct ArgusParserStruct *, int, char *);
@@ -201,9 +217,16 @@ void *ArgusOutputProcess(void *);
 void ArgusInitOutput (struct ArgusOutputStruct *);
 struct ArgusOutputStruct *ArgusNewOutput (struct ArgusParserStruct *);
 void ArgusDeleteOutput (struct ArgusParserStruct *, struct ArgusOutputStruct *);
+void ArgusCloseOutput(struct ArgusOutputStruct *);
+
+void *ArgusControlChannelProcess(void *);
+void ArgusInitControlChannel (struct ArgusOutputStruct *);
+struct ArgusOutputStruct *ArgusNewControlChannel (struct ArgusParserStruct *);
+void ArgusDeleteControlChannel (struct ArgusParserStruct *, struct ArgusOutputStruct *);
+void ArgusCloseControlChannel (struct ArgusOutputStruct *);
+
 struct ArgusSocketStruct *ArgusNewSocket (int);
 void ArgusDeleteSocket (struct ArgusOutputStruct *, struct ArgusClientData *);
-void ArgusCloseOutput(struct ArgusOutputStruct *);
 
 int ArgusWriteSocket (struct ArgusOutputStruct *, struct ArgusClientData *, struct ArgusRecordStruct *);
 int ArgusWriteOutSocket (struct ArgusOutputStruct *, struct ArgusClientData *);
@@ -222,6 +245,7 @@ extern void ArgusUsr2Sig (int);
 extern void ArgusClientError(void);
 extern void ArgusInitClientProcess(struct ArgusClientData *, struct ArgusWfileStruct *);
 
+extern struct ArgusControlHandlerStruct ArgusControlCommands[];
 #endif
 #ifdef __cplusplus
 }

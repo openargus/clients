@@ -3,19 +3,21 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ * rasqltimeindex  - Read Argus data and build a time index suitable for
+ *                   inserting into a database schema.
  *
  */
 
@@ -34,9 +36,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/argus/clients/examples/rapath/rapath.c#15 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/rapath/rapath.c#10 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -116,6 +118,12 @@ unsigned int RaMapCalcHash (void *, int, int);
 struct ArgusAggregatorStruct *ArgusMatrixAggregator = NULL;
 struct ArgusAggregatorStruct *ArgusFlowAggregator = NULL;
         
+char *RaLabelConfiguration[] = {
+   "RALABEL_GEOIP_ASN=yes",
+   "RALABEL_GEOIP_ASN_FILE=\"/usr/local/share/GeoIP/GeoIPASNum.dat\"",
+   "RALABEL_GEOIP_V6_ASN_FILE=\"/usr/local/share/GeoIP/GeoIPASNumv6.dat\"",
+   NULL,
+};
 
 char *RaMatrixAggregationConfig[] = {
    "RACLUSTER_PRESERVE_FIELDS=yes",
@@ -171,6 +179,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                RaPrintASNum++;
                RaPrintNode++;
             }
+            if (!(strcasecmp (mode->mode, "asaddr"))) {
+               RaPrintASNum++;
+               RaPrintAddr++;
+            }
             if (!(strcasecmp (mode->mode, "dist")))
                RaPrintDistance = 1;
             mode = mode->nxt;
@@ -213,23 +225,23 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseAggregator error");
 
       if (parser->ArgusMaskList != NULL) {
-         if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
+         if ((parser->ArgusPathAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
 // have to see if we need to modify the model definition in our RaPathAggregation Config
 
-         if (ArgusFlowAggregator->saddrlen != parser->ArgusAggregator->saddrlen) {
-            ArgusFlowAggregator->saddrlen = parser->ArgusAggregator->saddrlen;
-            bcopy(&parser->ArgusAggregator->smask, &ArgusFlowAggregator->smask, sizeof(parser->ArgusAggregator->smask));
+         if (ArgusFlowAggregator->saddrlen != parser->ArgusPathAggregator->saddrlen) {
+            ArgusFlowAggregator->saddrlen = parser->ArgusPathAggregator->saddrlen;
+            bcopy(&parser->ArgusPathAggregator->smask, &ArgusFlowAggregator->smask, sizeof(parser->ArgusPathAggregator->smask));
          }
 
-         if (ArgusFlowAggregator->daddrlen != parser->ArgusAggregator->daddrlen) {
-            ArgusFlowAggregator->daddrlen = parser->ArgusAggregator->daddrlen;
-            bcopy(&parser->ArgusAggregator->dmask, &ArgusFlowAggregator->dmask, sizeof(parser->ArgusAggregator->dmask));
+         if (ArgusFlowAggregator->daddrlen != parser->ArgusPathAggregator->daddrlen) {
+            ArgusFlowAggregator->daddrlen = parser->ArgusPathAggregator->daddrlen;
+            bcopy(&parser->ArgusPathAggregator->dmask, &ArgusFlowAggregator->dmask, sizeof(parser->ArgusPathAggregator->dmask));
          }
 
       } else {
-         if ((parser->ArgusAggregator = ArgusParseAggregator(parser, NULL, RaMatrixAggregationConfig)) == NULL)
+         if ((parser->ArgusPathAggregator = ArgusParseAggregator(parser, NULL, RaMatrixAggregationConfig)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseAggregator error");
       }
 
@@ -261,7 +273,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->RaCumulativeMerge = 1;
 
       if (parser->Hflag) {
-         if (!(ArgusHistoMetricParse (parser, parser->ArgusAggregator)))
+         if (!(ArgusHistoMetricParse (parser, parser->ArgusPathAggregator)))
             usage();
       }
 
@@ -404,6 +416,7 @@ RaPathInsertTree (struct RaPathTree *tree, struct RaPathNode *path)
 // "node"     A -> B -> {C, D} -> F
 // "node"     [A -> B] -> [{C, D} -> F] -> [G -> H]
 // "asnode"   AS30496:[A -> B] -> AS6079:[C -> {D,E}] -> AS1257:[F] -> AS11164:[G -> H] -> AS5050:[I] -> AS9:[J -> {K,L}]
+// "asaddr"   AS30496:[A -> B] -> AS6079:[C -> {D,E}] -> AS1257:[F] -> AS11164:[G -> H] -> AS5050:[I] -> AS9:[J -> {K,L}]
 
 void
 RaPrintPathNodes (struct RaPathNode *tree, int level, char *buf, int len)
@@ -572,7 +585,7 @@ RaParseComplete (int sig)
 
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
-         struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+         struct ArgusAggregatorStruct *agg = ArgusParser->ArgusPathAggregator;
 
          ArgusParser->RaParseCompleting += sig;
  
@@ -598,7 +611,7 @@ RaParseComplete (int sig)
                   }
                }
 
-               ArgusSortQueue (ArgusSorter, agg->queue);
+               ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);
                if (nflag == 0)
                   ArgusParser->eNflag = agg->queue->count;
                else
@@ -611,7 +624,7 @@ RaParseComplete (int sig)
                      int count = tns->agg->queue->count;
                      char nodeChar = 'A';
 
-                     ArgusSortQueue (ArgusSorter, tns->agg->queue);
+                     ArgusSortQueue (ArgusSorter, tns->agg->queue, ARGUS_LOCK);
 
                      for (x = 0; x < count; x++) {
                         cns = (struct ArgusRecordStruct *) tns->agg->queue->array[x];
@@ -807,9 +820,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                   dsthost = flow->ip_flow.ip_dst;
        
                   intnode = icmp->osrcaddr;
-
+/*
                   if ((intnode == srchost) || (intnode == dsthost))
                      return;
+*/
                }
 
                switch (flow->ip_flow.ip_p) {
@@ -851,6 +865,7 @@ RaProcessAggregation(struct ArgusParserStruct *parser, struct ArgusAggregatorStr
       ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
    if ((retn = ArgusFindRecord(agg->htable, hstruct)) != NULL) {
+/*
       if (parser->Aflag) {
          if ((retn->status & RA_SVCTEST) != (ns->status & RA_SVCTEST)) {
             RaSendArgusRecord(retn);
@@ -859,6 +874,7 @@ RaProcessAggregation(struct ArgusParserStruct *parser, struct ArgusAggregatorStr
             retn->status |= (ns->status & RA_SVCTEST);
          }
       }
+*/
       ArgusMergeRecords (agg, retn, ns);
 
    } else {
@@ -916,7 +932,7 @@ RaProcessAggregation(struct ArgusParserStruct *parser, struct ArgusAggregatorStr
 void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
-   struct ArgusAggregatorStruct *agg  = parser->ArgusAggregator;
+   struct ArgusAggregatorStruct *agg  = parser->ArgusPathAggregator;
    struct ArgusRecordStruct *tns, *cns;
    int retn = 0;
 
@@ -942,11 +958,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 }
 
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 int
 RaSendArgusRecord(struct ArgusRecordStruct *argus)
 {
    struct ArgusRecord *argusrec = NULL;
-   char buf[0x10000], argusbuf[0x10000];
    int retn = 1;
 
    if (argus->status & ARGUS_RECORD_WRITTEN)
@@ -955,7 +972,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (ArgusParser->RaAgMode)
       argus->dsrs[ARGUS_AGR_INDEX] = NULL;
 
-   if ((argusrec = ArgusGenerateRecord (argus, 0L, argusbuf)) != NULL) {
+   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
       ArgusHtoN(argusrec);
 #endif
@@ -984,6 +1001,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
          }
 
       } else {
+         char buf[MAXSTRLEN];
          if (!ArgusParser->qflag) {
             if (ArgusParser->Lflag) {
                if (ArgusParser->RaLabel == NULL)

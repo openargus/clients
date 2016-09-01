@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/clients/ra.c#80 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/ra.c#12 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 /*
@@ -163,13 +162,15 @@ RaParseComplete (int sig)
       if (!ArgusParser->RaParseCompleting++) {
 
          if (ArgusParser->Aflag) {
+           long long totalrecords =  ArgusParser->ArgusTotalMarRecords + ArgusParser->ArgusTotalFarRecords + ArgusParser->ArgusTotalEventRecords;
+
 #if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__APPLE_CC__) || defined(__APPLE__) || defined(ARGUS_SOLARIS)
-            printf (" Totalrecords %-8lld  TotalMarRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
-                          ArgusParser->ArgusTotalRecords + 1, ArgusParser->ArgusTotalMarRecords, ArgusParser->ArgusTotalFarRecords,
-                          ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalBytes);
+            printf (" Totalrecords %-8lld  TotalMarRecords %-8lld  TotalFarRecords %-8lld TotalEventRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
+                          totalrecords, ArgusParser->ArgusTotalMarRecords, ArgusParser->ArgusTotalFarRecords,
+                          ArgusParser->ArgusTotalEventRecords, ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalBytes);
 #else
-            printf (" Totalrecords %-8Ld  TotalManRecords %-8Ld  TotalFarRecords %-8Ld TotalPkts %-8Ld TotalBytes %-8Ld\n",
-                          ArgusParser->ArgusTotalRecords + 1, ArgusParser->ArgusTotalMarRecords, ArgusParser->ArgusTotalFarRecords,
+            printf (" Totalrecords %-8Ld  TotalManRecords %-8Ld  TotalFarRecords %-8Ld TotalEventRecords %-8lld TotalPkts %-8Ld TotalBytes %-8Ld\n",
+                          totalrecords, ArgusParser->ArgusTotalMarRecords, ArgusParser->ArgusTotalFarRecords, ArgusParser->ArgusTotalEventRecords,
                           ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalBytes);
 #endif
          }
@@ -389,6 +390,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
 extern void ArgusUniDirectionalRecord (struct ArgusRecordStruct *argus);
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -435,12 +438,11 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank))) {
                            if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                               struct ArgusRecord *argusrec = NULL;
-                              static char sbuf[0x10000];
 
-                              if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
-      #ifdef _LITTLE_ENDIAN
+                              if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
+#ifdef _LITTLE_ENDIAN
                                  ArgusHtoN(argusrec);
-      #endif
+#endif
                                  ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                               }
                            }
@@ -558,13 +560,13 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                      if (argus->status & ARGUS_INIT_MAR) {
                         argusrec = &argus->input->ArgusInitCon;
                      } else {
-                        static char sbuf[0x10000];
-                        if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
                         }
                      }
+
                      if (argusrec != NULL)
                         ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                   }
@@ -610,7 +612,6 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
 #endif
 }
 
-
 void
 RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -633,8 +634,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
                if (retn != 0) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

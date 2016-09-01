@@ -3,20 +3,18 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /*
@@ -26,9 +24,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/argus/clients/examples/rafilter/rafilteraddr.c#12 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#11 $
+ * $DateTime: 2016/03/25 00:30:13 $
+ * $Change: 3127 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -101,6 +99,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
                if (!(strncasecmp (mode->mode, "debug.node", 10)))
                   ArgusLabelerStatus |= ARGUS_TREE_DEBUG_NODE;
+            }
+            if (!(strncasecmp (mode->mode, "level=", 6))) {
+               extern int RaPrintLabelTreeLevel;
+               int value = 0;
+               char *endptr = NULL;
+               value = strtod(&mode->mode[6], &endptr);
+               if (&mode->mode[6] != endptr) {
+                  RaPrintLabelTreeLevel = value;
+               }
             }
 
             mode = mode->nxt;
@@ -186,13 +193,14 @@ usage ()
    fprintf (stdout, "usage: %s [-v] -f address.file [raoptions] \n", ArgusParser->ArgusProgramName);
    fprintf (stdout, "options: -f          specify file containing address(es).\n");
    fprintf (stdout, "         -v          invert the logic and print flows that don't match.\n");
+   fprintf (stdout, "         -M level=x  set the level when printing out the address tree.\n");
    fflush (stdout);
    exit(1);
 }
 
 /*
 extern struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-int RaProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int);
+int RaProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int, int);
 
 int
 RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, unsigned int *addr, int type)
@@ -232,6 +240,9 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
 }
 */
 
+
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -256,15 +267,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                      case ARGUS_TYPE_IPV4:
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4);
+                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4);
+                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
                         break;
                      case ARGUS_TYPE_IPV6:
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6);
+                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6);
+                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         break;
                   }
                   break; 
@@ -284,9 +295,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                for (i = 0; i < count; i++) {
                   if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

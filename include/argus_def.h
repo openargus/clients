@@ -3,26 +3,25 @@
  * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_def.h#55 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_def.h#15 $
+ * $DateTime: 2016/03/23 21:39:41 $
+ * $Change: 3125 $
  */
 
 /* Argus_def.h */
@@ -68,7 +67,8 @@ extern "C" {
 #define MAJOR_VERSION_3    3
 #define MAJOR_VERSION_4    4
 #define MAJOR_VERSION_5    5
-#define VERSION_MAJOR      MAJOR_VERSION_3
+#define MAJOR_VERSION_6    6
+#define VERSION_MAJOR      MAJOR_VERSION_5
 #define VERSION_MINOR      MINOR_VERSION_0
 
 #ifndef MAXPATHNAMELEN
@@ -139,9 +139,8 @@ extern "C" {
 
 /* Argus  Record Type */
 
-#define ARGUS_MAR				0x80   /* Normal Argus Management Record */
- 
-#define ARGUS_FAR 				0x10   /* Normal Argus Data Record */
+#define ARGUS_MAR                               0x80   /* Normal Argus Management Record */
+#define ARGUS_FAR                               0x10   /* Normal Argus Data Record */
 
 #define ARGUS_INDEX   				0x20   /* New Argus Index Record */
 #define ARGUS_NETFLOW  				0x30   /* Argus Cisco Netflow Originated Record */
@@ -172,8 +171,11 @@ extern "C" {
 #define ARGUS_VERSION_2				0x02	/* Version 2 */
 #define ARGUS_VERSION_3				0x03	/* Version 3 */
 #define ARGUS_VERSION_4				0x04	/* Version 4 */
+#define ARGUS_VERSION_5				0x05	/* Version 5 */
+#define ARGUS_VERSION_6				0x06	/* Version 6 */
+#define ARGUS_VERSION_7				0x07	/* Version 6 */
  
-#define ARGUS_VERSION				ARGUS_VERSION_3	/* Version 3 */
+#define ARGUS_VERSION				ARGUS_VERSION_5	/* Version 5 */
 
 
 /*
@@ -199,7 +201,6 @@ extern "C" {
 #define ARGUS_FLUSH				0x50   /* System Record Flush */
 #define ARGUS_SHUTDOWN				0x60   /* Administrative Shutdown */
 #define ARGUS_CLOSED				0x70   /* Argus Initiates Shutdown */
-
 #define ARGUS_ERROR				0x80   /* Error - Major Problem */
 
 /*
@@ -238,7 +239,6 @@ extern "C" {
 /*
    Argus Error Option Messages
 */
- 
 #define ARGUS_ACCESSDENIED			0x01
 #define ARGUS_MAXLISTENEXCD			0x02
 
@@ -260,7 +260,7 @@ extern "C" {
 
 
 #define MAXARGUSRECORD           		0x40000
-#define MAXBUFFERLEN               		0x10000
+#define MAXBUFFERLEN               		0x40000
 #define MAXSTRLEN               		0x1000
 
 
@@ -284,9 +284,12 @@ extern "C" {
 
 /* Argus MAR Record Specific Defines */
  
-#define ARGUS_COOKIE				0xE5712DCB
-#define ARGUS_V3_COOKIE				ARGUS_COOKIE
-#define ARGUS_V2_COOKIE				0xE5617ACB
+#define ARGUS_V5_COOKIE                         0xE57150CB
+#define ARGUS_V3_COOKIE                         0xE5712DCB
+#define ARGUS_V2_COOKIE                         0xE5617ACB
+
+#define ARGUS_COOKIE                            ARGUS_V5_COOKIE
+
 #define ARGUS_SASL_AUTHENTICATE			0x00001000
 
 #define ARGUS_INIT_MAR				0x00100000
@@ -321,14 +324,14 @@ extern "C" {
    |0|    Type     |    SubType    |   Qualifier   |     Length    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                                                               |
-   |                         Argus DSR Data                         |
+   |                        Argus DSR Data                         |
    |                                                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |1|    Type     |    SubType    |          Argus DSR Data        |
+   |1|    Type     |    SubType    |         Argus DSR Data        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
                  Argus Data Specific Record (DSR) Field
@@ -369,13 +372,15 @@ extern "C" {
 #define ARGUS_RSVP_DSR                          0x37
 #define ARGUS_ESP_DSR                           0x38
 #define ARGUS_LCP_DSR                           0x39
+#define ARGUS_ATM_DSR                           0x3A
 
 #define ARGUS_DATA_DSR				0x50
 #define ARGUS_AGR_DSR				0x60
 #define ARGUS_COR_DSR				0x62
 #define ARGUS_COCODE_DSR			0x64
 #define ARGUS_LABEL_DSR				0x66
-
+#define ARGUS_GEO_DSR                   	0x68
+#define ARGUS_LOCAL_DSR                   	0x6A
 
 
 /*
@@ -515,7 +520,7 @@ extern "C" {
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |     0x01      |      0x01     |      0x01     |      0x02     |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Argus Source Identifier                     |
+   |                    Argus Source Identifier                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
     ARGUS_SRCID  (with IPV6ADDR as the ID)
@@ -525,10 +530,22 @@ extern "C" {
    |     0x01      |      0x01     |      0x02     |      0x05     |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                                                               |
-   |                    Argus Source Identifier                     |
+   |                    Argus Source Identifier                    |
    |                                                               |
    |                                                               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+    ARGUS_SRCID | ARGUS_TYPE_INTERFACE (with char[4] as interface)
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     0x01      |      0x03     |      0x03     |      0x03     |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |                    Argus Source Identifier                    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Interface   |      Name     |     Char      |     Array     |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 
     ARGUS_SRCID | ARGUS_SEQ (with 32-bin unsigned int as ID)
     0                   1                   2                   3
@@ -536,21 +553,23 @@ extern "C" {
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |     0x01      |      0x03     |      0x03     |      0x03     |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Argus Source Identifier                     |
+   |                    Argus Source Identifier                    |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                        Sequence Number                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-    ARGUS_SRCID | ARGUS_SEQ  (with STRING as ID)
+    ARGUS_SRCID | ARGUS_TYPE_INTERFACE | ARGUS_SEQ  (with STRING as ID)
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |     0x01      |      0x03     |      0x11     |      0x05     |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                    Argus Source Identifier                     |
+   |                    Argus Source Identifier                    |
    |                                                               |
    |                               +---+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                               |              PAD              |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |   Interface   |      Name     |     Char      |     Array     |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                        Sequence Number                        |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -1578,9 +1597,9 @@ extern "C" {
 #define ARGUS_DST_CONGESTED           	0x00008000
 
 
-#define ARGUS_PKTS_DROP                 0x30
-#define ARGUS_SRC_PKTS_DROP             0x10
-#define ARGUS_DST_PKTS_DROP             0x20
+#define ARGUS_PKTS_DROP                  0x30
+#define ARGUS_SRC_PKTS_DROP              0x10
+#define ARGUS_DST_PKTS_DROP              0x20
 
 #define ARGUS_OUTOFORDER		0x00030000
 #define ARGUS_SRC_OUTOFORDER    	0x00010000
@@ -1723,6 +1742,23 @@ extern "C" {
 /* Argus ASN DSR */
 #define ARGUS_ASN_DSR                   0x32
 #define ARGUS_ASN_INDEX                 21
+
+/* Argus GEO DSR */
+#define ARGUS_GEO_DSR                   0x68
+#define ARGUS_GEO_INDEX                 22
+
+/* Argus GEO DSR Qualifier */
+#define ARGUS_SRC_GEO			0x01
+#define ARGUS_DST_GEO			0x02
+#define ARGUS_INODE_GEO			0x04
+
+/* Argus Netspatial LOCAL DSR */
+#define ARGUS_LOCAL_DSR                 0x6A
+#define ARGUS_LOCAL_INDEX               23
+
+/* Argus Netspatial DSR Qualifier */
+#define ARGUS_SRC_LOCAL			0x01
+#define ARGUS_DST_LOCAL			0x02
 
 /* Argus ASN SubTypes */
 #define ARGUS_ASN_ORIGIN                0x01
