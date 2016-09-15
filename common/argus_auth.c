@@ -127,28 +127,7 @@ extern int ArgusMinSsf;
 int RaGetRealm(void *context, int, const char **, const char **);
 int RaSimple(void *context, int, const char **, unsigned *);
 int RaGetSecret(sasl_conn_t *, void *context, int, sasl_secret_t **);
-int ArgusSaslGetPath(void *context __attribute__((unused)), char **);
 int ArgusSaslLog (void *context __attribute__((unused)), int, const char *);
-
-#define PLUGINDIR "/usr/lib/sasl2"
-char *searchpath = NULL;
-
-int
-ArgusSaslGetPath(void *context __attribute__((unused)), char ** path)
-{
-  if (! path)
-    return SASL_BADPARAM;
-  if (searchpath)
-    *path = searchpath;
-   else
-    *path = PLUGINDIR;
-
-#ifdef ARGUSDEBUG
-  ArgusDebug(2, "SASL path %s", *path);
-#endif
-
-  return SASL_OK;
-}
 
 int
 ArgusSaslLog (void *context __attribute__((unused)), int priority, const char *message)
@@ -187,7 +166,6 @@ sasl_callback_t RaCallBacks[] = {
   { SASL_CB_USER,     (funcptr)&RaSimple,    NULL },
   { SASL_CB_AUTHNAME, (funcptr)&RaSimple,    NULL },
   { SASL_CB_PASS,     (funcptr)&RaGetSecret, NULL },
-  { SASL_CB_GETPATH,  (funcptr)&ArgusSaslGetPath, NULL },
   { SASL_CB_LIST_END, NULL, NULL }
 };
 

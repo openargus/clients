@@ -1,3 +1,6 @@
+Thu Sep 15 14:41:58 EDT 2016
+Changes to support ekinzie mods
+
 Sun Oct  4 15:23:19 EDT 2015
 Added control channel to argus_output.c for ratop remote coupling.
 Allows to send to ratop 'highlight' 'search' 'filter' etc directives,

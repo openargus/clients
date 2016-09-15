@@ -438,8 +438,6 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
       free (parser->dbportstr);
    if (parser->dbhoststr != NULL)
       free (parser->dbhoststr);
-   if (parser->dbportstr != NULL)
-      free (parser->dbportstr);
    if (parser->ais != NULL)
       free (parser->ais);
 

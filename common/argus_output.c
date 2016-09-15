@@ -469,13 +469,11 @@ int iptostring(const struct sockaddr *, socklen_t, char *, unsigned);
 #ifdef ARGUS_SASL
 
 extern int ArgusSaslLog (void *context __attribute__((unused)), int, const char *);
-extern int ArgusSaslGetPath(void *context __attribute__((unused)), char **);
 
 typedef int (*funcptr)();
 
 static const struct sasl_callback argus_cb[] = {
     { SASL_CB_LOG,     (funcptr)&ArgusSaslLog, NULL },
-    { SASL_CB_GETPATH, (funcptr)&ArgusSaslGetPath, NULL },
     { SASL_CB_LIST_END, NULL, NULL }
 };
 #endif

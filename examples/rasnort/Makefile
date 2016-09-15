@@ -54,11 +54,11 @@ srcdir = .
 # You shouldn't need to edit anything below.
 #
 
-CC = cc
-CCOPT = -g  -Wall -Wmissing-prototypes
-INCLS = -I. -I../../include -I../../common -I/opt/local/include  -I/opt/local/include 
+CC = gcc
+CCOPT = -O
+INCLS = -I. -I../../include -I../../common  
 DEFS = -DHAVE_CONFIG_H
-COMPATLIB = -lm    -lGeoIP  -lz
+COMPATLIB = -lm   -lpthread  -lGeoIP  -lz
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
