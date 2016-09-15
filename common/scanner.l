@@ -16,9 +16,9 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- * $Id: //depot/gargoyle/clients/common/scanner.l#16 $
- * $DateTime: 2015/08/26 18:37:14 $
- * $Change: 3057 $
+ * $Id: //depot/gargoyle/clients/common/scanner.l#18 $
+ * $DateTime: 2016/09/14 23:15:04 $
+ * $Change: 3185 $
  */
 
 /*
@@ -100,6 +100,7 @@ extern char *argus_yytext;
 
 N        ([0-9]+|(0X|0x)[0-9A-Fa-f]+)
 B        ([0-9A-Fa-f][0-9A-Fa-f]?)
+U	 [0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}
 ISD      [0-9A-Fa-f]{4}
 V6       ((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))
                          
@@ -344,6 +345,7 @@ lon          return LON;
 
 ({N}\.{N}\.{N}\.{N})   { yylval.s = Argussdup((char *)yytext); return HIDV4; }
 {B}:{B}:{B}:{B}:{B}:{B} { yylval.e = argus_ether_aton((char *)yytext); return EID; }
+{U}	{ yylval.s = Argussdup((char *)yytext); return UUID; }
 {V6}	{ yylval.s = Argussdup((char *)yytext); return HIDV6; }
 
 \"[^\*\n]*\"  { yylval.s = Argussdup((char *)yytext); return STRING; }
@@ -379,7 +381,7 @@ int
 xdtoi(c)
 int c;
 {
-   if (isdigit(c))
+   if (isdigit((int)c))
       return c - '0';
    else if (islower(c))
       return c - 'a' + 10;
@@ -399,7 +401,7 @@ stoi(char *s)
    int sign = 0;
 
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
 
    /* Check for sign */
    if (*s == '-') {
@@ -442,7 +444,7 @@ stof(char* s)
    int sign = 0;
      
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
      
    /* Check for sign */
    if (*s == '-') { 
@@ -454,24 +456,24 @@ stof(char* s)
    }
      
    /* Read integer part */
-   while (isdigit(*s))
+   while (isdigit((int)*s))
       retn = retn * 10 + (*(s++) - '0');
      
    /* Read fractional part */ 
    if (*s == '.') {
       float q;
       s++;
-      while (isdigit(*s)) s++; 
+      while (isdigit((int)*s)) s++; 
       s--;
       do {
          q = *s - '0';
          frac = (frac + q) / 10;
-      } while (isdigit(*(--s)));
-      while (isdigit(*(++s))) s++;
+      } while (isdigit((int)*(--s)));
+      while (isdigit((int)*(++s))) s++;
    }
      
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
      
    /* Combine integer and fractional part, and apply sign */
    retn += frac;

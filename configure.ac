@@ -16,9 +16,9 @@
 #  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 #  THIS SOFTWARE.
 # 
-#  $Id: //depot/gargoyle/clients/configure.ac#26 $
-#  $DateTime: 2016/06/07 17:28:27 $
-#  $Change: 3162 $
+#  $Id: //depot/gargoyle/clients/configure.ac#27 $
+#  $DateTime: 2016/09/13 10:40:12 $
+#  $Change: 3180 $
 #
 #
 # Process this file with autoconf to produce a configure script.
@@ -222,6 +222,30 @@ saved_LDFLAGS=$LDFLAGS
 saved_LIBS=$LIBS
 
 case "$target_os" in
+   cygwin*)
+      NCURSES_INCLS="-I/usr/include/ncurses"
+      NCURSES_LDFLAGS="-L/usr/lib"
+      CPPFLAGS="${saved_CPPFLAGS} ${NCURSES_INCLS}"
+      LDFLAGS="${saved_LDFLAGS} ${NCURSES_LDFLAGS}"
+
+      AC_CHECK_HEADERS(ncurses.h, CURSESLIB="-lncurses",
+         [AC_CHECK_HEADERS(curses.h, CURSESLIB="-lcurses")],)
+
+      if test "$CURSESLIB" = "-lncurses"; then
+         AC_CHECK_LIB(ncurses, initscr,
+           [AC_DEFINE([ARGUS_CURSES], [], [Using ncurses])
+            CURSES_INCLS="-I/usr/include/ncurses"
+            LIBS="$LIBS -L/usr/lib" ],)
+      else
+         if test "$CURSESLIB" = "-lcurses"; then
+            AC_DEFINE([ARGUS_CURSES], [], [Using curses])
+         fi
+      fi
+
+      CPPFLAGS="${saved_CPPFLAGS}"
+      LDFLAGS="${saved_LDFLAGS}"
+      ;;
+
    solaris*)
       NCURSES_INCLS="-I/usr/include/ncurses"
       NCURSES_LDFLAGS="-L/usr/gnu/lib"

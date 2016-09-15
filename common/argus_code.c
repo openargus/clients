@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_code.c#23 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/common/argus_code.c#25 $
+ * $DateTime: 2016/09/14 23:15:04 $
+ * $Change: 3185 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -143,7 +143,7 @@ static struct ablock *Argusgen_prototype(u_int, u_int);
 static struct ablock *Argusgen_hostop(u_int *, u_int *, int, int, u_int);
 static struct ablock *Argusgen_ehostop(u_char *, int);
 static struct ablock *Argusgen_host(u_int *, u_int *, int, int, int);
-static struct ablock *Argusgen_srcid(u_int, u_int, int);
+static struct ablock *Argusgen_srcid(u_int *, u_int, int);
 static struct ablock *Argusgen_inode(u_int, u_int, int);
 static struct ablock *Argusgen_gateway(u_char *, u_int *, int, int, int);
 static struct ablock *Argusgen_portatom(int, long, int);
@@ -176,11 +176,14 @@ static struct ablock *Argusgen_jitter(float, int, int, u_int);
 static struct ablock *Argusgen_dur(float, int, u_int);
 static struct ablock *Argusgen_mean(float, int, u_int);
 static struct ablock *Argusgen_encaps(int, int, u_int);
-static u_int net_mask(u_int *);
 static struct slist *xfer_to_x(struct arth *);
 static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_linktype(unsigned int);
+
+#if !defined(CYGWIN)
+static u_int net_mask(u_int *);
+#endif
 
 extern void ArgusLog (int, char *, ...);
 
@@ -1422,7 +1425,7 @@ Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
 
 
 static struct ablock *
-Argusgen_srcid(u_int addr, u_int mask, int type)
+Argusgen_srcid(u_int *addr, u_int mask, int type)
 {
    struct ablock *b2 = NULL, *b1 = NULL, *b0 = NULL, *tmp;
    struct ArgusTransportStruct trans;
@@ -1431,7 +1434,7 @@ Argusgen_srcid(u_int addr, u_int mask, int type)
    int offset = ((char *)&mar.argus_mar.argusid - (char *)&mar);
 
    tmp = Argusgen_recordtype(ARGUS_MAR);
-   b1 = Argusgen_mcmp(ARGUS_MAR_INDEX, offset, NFF_W, (u_int)addr, mask, Q_EQUAL, type);
+   b1 = Argusgen_mcmp(ARGUS_MAR_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
    Argusgen_and(tmp, b1);
 
    offset = ((char *)&trans.srcid - (char *)&trans);
@@ -1440,10 +1443,10 @@ Argusgen_srcid(u_int addr, u_int mask, int type)
    b0  = Argusgen_recordtype(ARGUS_EVENT);
    Argusgen_or(tmp, b0);
 
-   tmp = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)addr, mask, Q_EQUAL, type);
+   tmp = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
 
    offset = ((char *)&trans.srcid.inf - (char *)&trans);
-   b2  = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)addr, mask, Q_EQUAL, type);
+   b2  = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
 
    Argusgen_or(tmp, b2);
 
@@ -1452,7 +1455,7 @@ Argusgen_srcid(u_int addr, u_int mask, int type)
    Argusgen_or(b0, b1);
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_srcid (0x%x, 0x%x) returns %p\n", addr, mask, b1);
+   ArgusDebug (4, "Argusgen_srcid (0x%x, 0x%x) returns %p\n", *addr, mask, b1);
 #endif
 
    return (b1);
@@ -4049,7 +4052,7 @@ Argusgen_nstroke(int v, int dir, u_int op)
 #define TH_CWR  0x80
 #endif
 
-
+#if !defined(CYGWIN)
 static u_int
 net_mask(addr)
 u_int *addr;
@@ -4066,7 +4069,7 @@ u_int *addr;
  
    return m;
 }
-
+#endif
 
 
 struct ablock *
@@ -4368,9 +4371,7 @@ Argusgen_scode(char *name, struct qual q)
 
    switch (q.addr) {
       case Q_NET: {
-#if defined(CYGWIN)
-         ArgusLog(LOG_ERR, "cygwin does not support net");
-#else
+#if !defined(CYGWIN)
          u_int addr = 0;
          struct netent *np;
          if ((np = getnetbyname(name)) != NULL)
@@ -4508,7 +4509,7 @@ Argusgen_scode(char *name, struct qual q)
                   break;
 
                case Q_SRCID:
-                  b = Argusgen_srcid(addr, *mask, type);
+                  b = Argusgen_srcid(&addr, *mask, type);
                   break;
             }
             break;
@@ -4538,7 +4539,7 @@ Argusgen_scode(char *name, struct qual q)
                            break;
 
                         case Q_SRCID: 
-                           tmp = Argusgen_srcid(addr[0], *mask, type);
+                           tmp = Argusgen_srcid(&addr[0], *mask, type);
                            break;
                      }
 
@@ -4594,9 +4595,9 @@ Argusgen_scode(char *name, struct qual q)
                }
             }
             case Q_SRCID: {
-               b = Argusgen_srcid(**alist++, 0xffffffffL, type);
+               b = Argusgen_srcid(*alist++, 0xffffffffL, type);
                while (*alist) {
-                  tmp = Argusgen_srcid(**alist++, 0xffffffffL, type);
+                  tmp = Argusgen_srcid(*alist++, 0xffffffffL, type);
                   Argusgen_or(b, tmp);
                   b = tmp;
                }
@@ -4802,6 +4803,49 @@ Argusgen_scode(char *name, struct qual q)
 }
 
 struct ablock *
+Argusgen_ucode(char *uuid, struct qual q)
+{
+   struct ArgusTransportStruct trans;
+   int len = 16, i, offset = ((char *)&trans.srcid.a_un.value - (char *)&trans);
+   unsigned char u[len];
+   struct ablock *b0 = NULL, *b1 = NULL;
+   const char *cptr = (const char *) uuid;
+
+   bzero(u, len);
+
+   for (i = 0; i < len; i++) {
+      sscanf((const char *) cptr, "%2hhx", &u[i]);
+      cptr += 2;
+      if (*cptr == '-') cptr++;
+   }
+
+   b1 = Argusgen_recordtype(ARGUS_FAR);
+
+   for (i = 0; i < 4; i++) {
+      b0 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset + i*4, NFF_W, *(u_int *)&u[i*4], Q_EQUAL, Q_DEFAULT);
+      Argusgen_and(b0, b1);
+   }
+
+/*
+   b2 = Argusgen_recordtype(ARGUS_MAR);
+   offset = ((char *)&mar.uuid - (char *)&mar);
+
+   for (i = 0; i < 4; i++) {
+      b0 = Argusgen_cmp(ARGUS_MAR_INDEX, offset + i*4, NFF_W, *(u_int *)&u[i*4], Q_EQUAL, Q_DEFAULT);
+      Argusgen_and(b0, b2);
+   }
+
+   Argusgen_or(b2, b1);
+*/
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_ucode (%s, 0x%x) returns %p\n", uuid, q, b1);
+#endif
+
+   return b1;
+}
+
+struct ablock *
 Argusgen_mcode(char *s1, char *s2, int masklen, struct qual q)
 {
    struct ArgusCIDRAddr cidrbuf, *cidr = &cidrbuf, *cidraddr = NULL;
@@ -4914,7 +4958,7 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
       case Q_SRCID:
          *mask = 0xffffffff;
-         b = Argusgen_srcid(v, *mask, type);
+         b = Argusgen_srcid((unsigned int *)&v, *mask, type);
          break;
 
       case Q_INODE:

@@ -1262,10 +1262,9 @@ ArgusOutputProcess(void *arg)
 #endif
    RaParseComplete(1);
    pthread_exit(retn);
-
-#else
-   return (retn);
 #endif /* ARGUS_THREADS */
+
+   return (retn);
 }
 
 
@@ -1588,10 +1587,8 @@ ArgusControlChannelProcess(void *arg)
    ArgusDebug (1, "ArgusControlChannelProcess() exiting\n");
 #endif
    pthread_exit(retn);
-
-#else
-   return (retn);
 #endif /* ARGUS_THREADS */
+   return (retn);
 }
 
 int ArgusAuthenticateClient (struct ArgusClientData *);
@@ -2159,7 +2156,6 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
    retn->hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
    retn->argus_mar.argusid = htonl(ARGUS_COOKIE);
-   retn->argus_mar.status |= getArgusIDType(ArgusParser);
 
    if (output) {
       retn->argus_mar.startime.tv_sec  = htonl(output->ArgusStartTime.tv_sec);

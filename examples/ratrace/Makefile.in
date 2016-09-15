@@ -18,11 +18,6 @@
 # 
 #  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
-#  $Id: //depot/gargoyle/clients/examples/ratrace/Makefile.in#2 $
-#  $DateTime: 2014/10/07 15:35:03 $
-#  $Change: 2940 $
-#  
-
 
 # Top level hierarchy
 
@@ -41,8 +36,7 @@ LIBDEST =  @libdir@
 # Pathname of directory to install the man page
 MANDEST = @mandir@
 
-# Pathname of preferred perl to use for perl scripts
-PERL = @V_PERL@
+LDFLAGS = @LDFLAGS@
 
 # VPATH
 srcdir = @srcdir@
@@ -54,9 +48,11 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../../include -I../../common @V_INCLS@
+INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @CURSES_INCLS@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+
+CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
@@ -81,7 +77,13 @@ YACC = @V_YACC@
 	@rm -f $@
 	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
 
-LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
+# We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
+# hack the extra indirection
+ 
+OBJ =	$(SRC:.c=.o)
+
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a \
+	$(INSTALLLIB)/argus_client.a $(INSTALLLIB)/argus_output.a
 
 SRC = ratrace.c
 
@@ -89,13 +91,8 @@ PROGS = $(INSTALLBIN)/ratrace
 
 all: $(PROGS)
 
-$(INSTALLBIN)/ratrace: ratrace.o $(LIB)
-	$(CC) $(CCOPT) -o $@ ratrace.o $(LIB) $(COMPATLIB)
-
-# We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
-# hack the extra indirection
-
-OBJ =	$(SRC:.c=.o)
+$(INSTALLBIN)/ratrace: $(OBJ) $(LIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 
@@ -104,15 +101,33 @@ install: force all
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/ratrace $(DESTDIR)$(BINDIR)
 
+uninstall: force all
+	rm -f $(DESTDIR)$(BINDIR)/ratrace
+
 clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile
+	rm -f $(CLEANFILES) Makefile config.cache config.log config.status \
+	    gnuc.h os-proto.h bpf_filter.c net
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
 
+tar:	force
+	@cwd=`pwd` ; dir=`basename $$cwd` ; name=libpcap-`cat VERSION` ; \
+	    list="" ; tar="tar chFFf" ; \
+	    for i in `cat FILES` ; do list="$$list $$name/$$i" ; done; \
+	    echo \
+	    "rm -f ../$$name; ln -s $$dir ../$$name" ; \
+	     rm -f ../$$name; ln -s $$dir ../$$name ; \
+	    echo \
+	    "(cd .. ; $$tar - [lots of files]) | compress > /tmp/$$name.tar.Z" ; \
+	     (cd .. ; $$tar - $$list) | compress > /tmp/$$name.tar.Z ; \
+	    echo \
+	    "rm -f ../$$name" ; \
+	     rm -f ../$$name
+
 force:	/tmp
 depend:	$(GENSRC) force
-	../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
+	../../bin/mkdep -c $(CC) $(CFLAGS) $(SRC)

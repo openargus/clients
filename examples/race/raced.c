@@ -47,9 +47,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/race/raced.c#5 $
- * $DateTime: 2015/11/23 12:08:17 $
- * $Change: 3083 $
+ * $Id: //depot/gargoyle/clients/examples/race/raced.c#6 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -175,8 +175,8 @@ char *RaceCreateTableNames[RA_MAXTABLES] = {
   | authname    | varchar(255)  | YES  |     | NULL    |                |
   | authpass    | varchar(255)  | YES  |     | NULL    |                |
   | description | varchar(255)  | YES  |     | NULL    |                |
-  | access      | timestamp(14) | YES  |     | NULL    |                |
-  | created     | timestamp(14) | YES  |     | NULL    |                |
+  | access      | timestamp(6) | YES  |     | NULL    |                |
+  | created     | timestamp(6) | YES  |     | NULL    |                |
   +-------------+---------------+------+-----+---------+----------------+
 
 
@@ -262,7 +262,7 @@ char *RaceCreateTableNames[RA_MAXTABLES] = {
   | recipient | varchar(255)  |      |     |                     |                |
   | subject   | varchar(255)  | YES  |     | NULL                |                |
   | date      | datetime      |      |     | 0000-00-00 00:00:00 |                |
-  | access    | timestamp(14) | YES  |     | NULL                |                |
+  | access    | timestamp(6) | YES  |     | NULL                |                |
   | message   | text          | YES  |     | NULL                |                |
   | status    | int(2)        | YES  |     | NULL                |                |
   | priority  | int(2)        | YES  |     | NULL                |                |
@@ -288,17 +288,17 @@ char *RaceCreateTableNames[RA_MAXTABLES] = {
 */
 
 char *RaceTableCreationString[RA_MAXTABLES] = {
-   "CREATE TABLE Accounts (uid int not null auto_increment, name varchar(32) not null, fullname varchar(255), address varchar(255), telephone varchar(32), mobile varchar(32), fax varchar(32), email varchar(255), url varchar(255), password varchar(32) not null, filter varchar(255), status varchar(8) not null, primary key (uid)) TYPE=MyISAM",
+   "CREATE TABLE Accounts (uid int not null auto_increment, name varchar(32) not null, fullname varchar(255), address varchar(255), telephone varchar(32), mobile varchar(32), fax varchar(32), email varchar(255), url varchar(255), password varchar(32) not null, filter varchar(255), status varchar(8) not null, primary key (uid)) ENGINE=MYISAM",
 
-   "CREATE TABLE Probes (id int not null auto_increment, name varchar(32) not null, url varchar(255) not null, type varchar(255), filter varchar(255), authname varchar(255), authpass varchar(255), description varchar(255), access timestamp(14), created timestamp(14), primary key (id)) TYPE=MyISAM",
+   "CREATE TABLE Probes (id int not null auto_increment, name varchar(32) not null, url varchar(255) not null, type varchar(255), filter varchar(255), authname varchar(255), authpass varchar(255), description varchar(255), access timestamp(6), created timestamp(6), primary key (id)) ENGINE=MYISAM",
 
-   "CREATE TABLE Access (name varchar(32) not null, rmtaddr varchar(16) not null, session varchar(255) not null, nonce varchar(255) not null, access timestamp(14), created timestamp(14)) TYPE=MyISAM",
+   "CREATE TABLE Access (name varchar(32) not null, rmtaddr varchar(16) not null, session varchar(255) not null, nonce varchar(255) not null, access timestamp(6), created timestamp(6)) ENGINE=MYISAM",
 
-   "CREATE TABLE Projects (id int not null auto_increment, name varchar(255) not null, uid int(11) not null, source varchar(255), archive varchar(255), format varchar(255), period int, size bigint not null, pid int unsigned, creation int unsigned, start int unsigned, stop int unsigned, map varchar (255), spacedef varchar (255), status int (1), primary key (id)) TYPE=MyISAM",
+   "CREATE TABLE Projects (id int not null auto_increment, name varchar(255) not null, uid int(11) not null, source varchar(255), archive varchar(255), format varchar(255), period int, size bigint not null, pid int unsigned, creation int unsigned, start int unsigned, stop int unsigned, map varchar (255), spacedef varchar (255), status int (1), primary key (id)) ENGINE=MYISAM",
 
-   "CREATE TABLE Messages (id int not null auto_increment, ntaisid varchar(255) not null, uid int(11) not null, sender varchar(255) not null, recipient varchar(255) not null, subject varchar(255), date datetime not null, access timestamp(14), message text, status int (2), priority int (2), url varchar(255), primary key (id)) TYPE=MyISAM",
+   "CREATE TABLE Messages (id int not null auto_increment, ntaisid varchar(255) not null, uid int(11) not null, sender varchar(255) not null, recipient varchar(255) not null, subject varchar(255), date datetime not null, access timestamp(6), message text, status int (2), priority int (2), url varchar(255), primary key (id)) ENGINE=MYISAM",
 
-   "CREATE TABLE Tasks (id int not null auto_increment, project varchar(255) not null, task int(11) not null, type varchar(255) not null, program varchar(255) not null, params varchar(255), dir varchar(255), pid int(5), date datetime not null, status int(2), primary key (id,project)) TYPE=MyISAM",
+   "CREATE TABLE Tasks (id int not null auto_increment, project varchar(255) not null, task int(11) not null, type varchar(255) not null, program varchar(255) not null, params varchar(255), dir varchar(255), pid int(5), date datetime not null, status int(2), primary key (id,project)) ENGINE=MYISAM",
 };
 
 #define RaceEnvItems      2
@@ -611,7 +611,7 @@ main (int argc, char **argv)
          if (pid) {
             int status;
 
-            usleep(20000);
+            usleep(200000);
             waitpid(pid, &status, WNOHANG);
             if (kill(pid, 0) < 0) {
                exit (1);
@@ -1224,7 +1224,7 @@ RaceLoop(struct RaceDaemonStruct *raced)
                         exit(execv(task->program, args));
 
                      } else {
-                        sleep(3);
+                        sleep(1);
                         exit(1);
                      }
 
@@ -1252,7 +1252,7 @@ RaceLoop(struct RaceDaemonStruct *raced)
          }
       }
 
-      sleep (5);
+      usleep(1000000);
       raced->RaceCheckConfFlag++;
    }
 

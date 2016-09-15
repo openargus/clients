@@ -24,9 +24,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#10 $
- * $DateTime: 2016/06/07 23:30:24 $
- * $Change: 3164 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#11 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #define ARGUS_HISTORY
@@ -321,7 +321,10 @@ ArgusProcessData (void *arg)
 
    ArgusCloseDown = 1;
 #endif
+#if defined(ARGUS_THREADS)
    pthread_exit(NULL);
+#endif
+   return(NULL);
 }
 
 

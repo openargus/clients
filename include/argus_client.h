@@ -19,9 +19,9 @@
  */ 
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_client.h#17 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/include/argus_client.h#18 $
+ * $DateTime: 2016/09/13 16:02:42 $
+ * $Change: 3182 $
  */
 
 
@@ -190,7 +190,9 @@ struct ArgusInput {
    FILE *file, *pipe;
 
    unsigned int ArgusLocalNet, ArgusNetMask;
-   unsigned int ArgusID, ArgusIDType;
+   unsigned int ArgusIDType;
+   struct ArgusAddrStruct srcid;
+
    struct timeval ArgusStartTime, ArgusLastTime;
    long long ArgusTimeDrift;
    int ArgusMarInterval;

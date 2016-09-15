@@ -41,9 +41,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_compat.h#6 $
- * $DateTime: 2014/10/07 14:26:13 $
- * $Change: 2933 $
+ * $Id: //depot/gargoyle/clients/include/argus_compat.h#7 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #if !defined(Argus_compat_h)
@@ -78,7 +78,6 @@ extern "C" {
 #endif
 
 #if defined(CYGWIN)
-#define _LITTLE_ENDIAN
 #define USE_IPV6
 #else
 

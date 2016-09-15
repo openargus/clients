@@ -18,9 +18,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/radhcp/radhcp.c#5 $
- * $DateTime: 2016/08/22 00:32:32 $
- * $Change: 3173 $
+ * $Id: //depot/gargoyle/clients/examples/radhcp/radhcp.c#6 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 /*
@@ -144,7 +144,7 @@ ArgusHandleTreeCommand (char *command)
    char **retn = ArgusHandleResponseArray;
  
    sptr = &string[slen - 1];
-   while (isspace(*sptr)) {*sptr-- = '\0';}
+   while (isspace((int)*sptr)) {*sptr-- = '\0';}
  
    retn[0] = "OK\n";
    retn[1] = NULL;
@@ -410,7 +410,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name)
       ArgusHash.buf = (unsigned int *)lname;
 
       for (i = 0; i < ArgusHash.len; i++)
-        lname[i] = tolower(lname[i]);
+        lname[i] = tolower((int)lname[i]);
 
       if ((htbl = ArgusFindHashEntry(table, &ArgusHash)) == NULL) {
          if ((retn = ArgusCalloc(1, sizeof(struct nnamemem))) == NULL)

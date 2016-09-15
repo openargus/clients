@@ -23,9 +23,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#16 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#17 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 
@@ -5196,11 +5196,17 @@ RaUpdateHeaderWindow(WINDOW *win)
 #if defined(ARGUS_CURSES)
    struct tm *tm, tmbuf;
    char stimebuf[128];
-#endif
+   char bssid[128];
+   int bssidlen = 0;
 
    struct timeval tvpbuf, *tvp = &tvpbuf;
 
    gettimeofday (tvp, NULL);
+   bzero(bssid, 128);
+
+   if (ArgusWireless->bssid != NULL) {
+      sprintf(bssid, "bssid:%s", ArgusWireless->bssid);
+   }
 
    if (tvp->tv_sec > 0) {
       time_t tsec =  tvp->tv_sec;
@@ -5212,11 +5218,15 @@ RaUpdateHeaderWindow(WINDOW *win)
    } else
       sprintf (stimebuf, " ");
 
-
    mvwaddnstr (win, 0, 0, ArgusGenerateProgramArgs(ArgusParser), RaScreenColumns - 5);
    wclrtoeol(win);
+
+   if ((bssidlen = strlen(bssid)) > 0)
+      mvwaddnstr (win, 0, RaScreenColumns - (strlen(stimebuf) + bssidlen + 3) , bssid, bssidlen);
+
    mvwaddnstr (win, 0, RaScreenColumns - strlen(stimebuf) , stimebuf, strlen(stimebuf));
    touchwin(win);
+#endif
 }
 
 void

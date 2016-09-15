@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_out.h#13 $
- * $DateTime: 2016/03/02 22:43:28 $
- * $Change: 3101 $
+ * $Id: //depot/gargoyle/clients/include/argus_out.h#15 $
+ * $DateTime: 2016/09/13 16:02:42 $
+ * $Change: 3182 $
  */
 
 
@@ -185,7 +185,63 @@ struct ArgusInputStruct {
    struct ArgusIdStruct id;
 };
 
+
+/*
+   Argus V5 changes the ArgusMarStruct to accomodate extensions to argus data representation.
+
+   Argus V5 extends the srcid to include ethernet addresses, longer strings (16 byte), and UUID's.
+   These srcid's are ArgusAddrStructs, and to convey them in management records, we need to change
+   the ArgusMarStruct, or we need to provide additional management record types, to pass on the
+   extended ids.
+
+   The concept, for backward compatibility, is that the initial argus record is a fixed length
+   128 byte struct. It has a 4 byte ArgusRecord header, followed by a 124 byte management
+   record buffer, the format identified by the major_version number, which is an 8-bit value.
+
+   Up until the major_version, minor_version identifiers that identify the ArgusMarStruct type,
+   i.e. the first 36 bytes of the ArgusMarStruct, the structure needs to be consistent. For
+   backward compatibility, the major and minor version numbers need to be in the same place, so
+   that earlier versions can find the 8 bit values that indicate if it can read the data.
+
+   After the major_version, minor_verions identifiers, the structure can be completely different.
+*/
+
 struct ArgusMarStruct {
+   unsigned int status, argusid;
+   unsigned int localnet, netmask;
+   unsigned int nextMrSequenceNum; 
+   struct ArgusTime startime, now;
+
+   unsigned char  major_version, minor_version; 
+   unsigned char interfaceType, interfaceStatus;
+
+   unsigned short reportInterval, argusMrInterval;
+   unsigned long long pktsRcvd, bytesRcvd;
+   long long drift;
+
+   unsigned int records, flows, dropped;
+   unsigned int queue, output, clients;
+   unsigned int bufs, bytes;
+   unsigned short suserlen, duserlen;
+
+   union {
+      unsigned int value;
+      unsigned int ipv4;
+      unsigned char ethersrc[6];
+      unsigned char str[4];
+      unsigned char uuid[16];
+      unsigned int ipv6[4];
+
+      struct {
+         unsigned int pad[3];
+         unsigned int thisid;
+      };
+   };
+
+   unsigned int record_len;
+};
+
+struct ArgusV3MarStruct {
    unsigned int status, argusid;
    unsigned int localnet, netmask, nextMrSequenceNum; 
    struct ArgusTime startime, now;
@@ -689,6 +745,7 @@ struct ArgusAddrStruct {
       unsigned char str[4];
       unsigned char ethersrc[6];
       unsigned int ipv6[4];
+      unsigned char uuid[16];
    } a_un;
    unsigned char inf[4];
 };
@@ -1025,7 +1082,6 @@ struct ArgusRecord {
 #define argus_mar	ar_un.mar
 #define argus_far	ar_un.far
 #define argus_event	ar_un.event
-
 
 
 struct ArgusV2ETHERObject {

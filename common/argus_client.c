@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#67 $
- * $DateTime: 2016/08/22 00:32:32 $
- * $Change: 3173 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#70 $
+ * $DateTime: 2016/09/14 23:15:04 $
+ * $Change: 3185 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,9 +88,8 @@
 
 #define RA_HASHSIZE		256
 
-#include <rpc/types.h>
-
 #if defined(HAVE_XDR)
+#include <rpc/types.h>
 #include <rpc/xdr.h>
 #endif
 
@@ -248,7 +247,6 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                            if (input->offset > input->ostop)
                               retn = 1;
                      }
-
                      rec = NULL;
 
                   } else
@@ -384,8 +382,42 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          int length = 0;
 
          rec = NULL;
-
          switch (input->type) {
+            case ARGUS_DOMAIN_SOURCE:
+            case ARGUS_DATA_SOURCE: {
+               struct ArgusRecordHeader *recv3 = (struct ArgusRecordHeader *) input->ArgusReadPtr;
+ 
+               while ((ntohs(recv3->len) == 0) && (input->ArgusReadSocketCnt >= sizeof(*recv3))) {
+                  recv3++;
+                  input->ArgusReadSocketCnt -= sizeof(*recv3);
+                  input->ArgusReadPtr += sizeof(*recv3);
+               }
+ 
+               if (input->ArgusReadSocketCnt >= sizeof(*recv3)) {
+                  if ((length = ntohs(recv3->len) * 4) > 0) {
+                     if (input->ArgusReadSocketCnt >= length) {
+                        rec = (struct ArgusRecord *) input->ArgusReadPtr;
+                     } else {
+#ifdef ARGUSDEBUG
+                        ArgusDebug (4, "ArgusReadStreamSocket (%p) ArgusReadSocketCnt %d lt %d length\n", input, input->ArgusReadSocketCnt, length);
+#endif
+                     }
+                  } else {
+#ifdef ARGUSDEBUG
+                     ArgusDebug (4, "ArgusReadStreamSocket (%p) record length is zero\n", input);
+#endif
+                     retn = 1;
+                  }
+               } else {
+#ifdef ARGUSDEBUG
+                  if (cnt > 0) {
+                     ArgusDebug (4, "ArgusReadStreamSocket (%p) searched to the end of the buffer\n", input);
+                  }
+#endif
+               }
+               break;
+            }
+
             case ARGUS_V2_DATA_SOURCE: {
                if (input->ArgusReadSocketCnt >= sizeof(void *)) {
                   struct ArgusV2Record *recv2 = (struct ArgusV2Record *)input->ArgusReadPtr;
@@ -411,28 +443,6 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
                break;
             }
 
-            case ARGUS_DOMAIN_SOURCE:
-            case ARGUS_DATA_SOURCE: {
-               struct ArgusRecordHeader *recv3 = (struct ArgusRecordHeader *) input->ArgusReadPtr;
-
-               while ((ntohs(recv3->len) == 0) && (input->ArgusReadSocketCnt >= sizeof(*recv3))) {
-                  recv3++;
-                  input->ArgusReadSocketCnt -= sizeof(*recv3);
-                  input->ArgusReadPtr += sizeof(*recv3);
-               }
-
-               if (input->ArgusReadSocketCnt >= sizeof(*recv3)) {
-                  if ((length = ntohs(recv3->len) * 4) > 0) {
-                     if (input->ArgusReadSocketCnt >= length) {
-                        rec = (struct ArgusRecord *) input->ArgusReadPtr;
-                     }
-                  } else {
-                     ArgusLog (LOG_ALERT, "ArgusReadStreamSocket (%p) record length is zero");
-                     retn = 1;
-                  }
-               }
-               break;
-            }
          }
 
          if (rec && !done && !parser->RaParseDone) {
@@ -445,13 +455,19 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
                      input->ArgusReadPtr += length;
                      input->ArgusReadSocketCnt -= length;
 
-                     if (input->ArgusReadSocketCnt < 128) {
+                     if (input->ArgusReadSocketCnt < 4) {
+#ifdef ARGUSDEBUG
+                        ArgusDebug (4, "ArgusReadStreamSocket (%p) not enough bytes to parser header\n", input);
+#endif
                         retn = 1;
                         done = 1;
                      }
                      break;
                   }
                   case -2: {
+#ifdef ARGUSDEBUG
+                     ArgusDebug (4, "ArgusReadStreamSocket (%p) ArgusHandleRecord returned %d\n", input, len);
+#endif
                      retn = 1;
                      done = 1;
                      break;
@@ -461,21 +477,35 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
             } else {
                if (input->type == ARGUS_V2_DATA_SOURCE)
                   len = length;
-              
+
                input->offset += len;
                input->ArgusReadPtr += len;
                input->ArgusReadSocketCnt -= len;
 
+               cnt -= len;
+               if (cnt > 0) {
+#ifdef ARGUSDEBUG
+                  ArgusDebug (6, "ArgusReadStreamSocket (%p) ArgusHandleRecord returned %d left %d\n", input, len, cnt);
+#endif
+               }
+
                if (input->ostop != -1) {
                   if (input->offset >= input->ostop) {
+#ifdef ARGUSDEBUG
+                     ArgusDebug (6, "ArgusReadStreamSocket (%p) ArgusHandleRecord reached end of read offset\n", input);
+#endif
                      retn = 1;
                      done++;
                   }
                }
             }
 
-         } else
+         } else {
+#ifdef ARGUSDEBUG
+            ArgusDebug (6, "ArgusReadStreamSocket (%p) DONE rec %p flag %d signal %d\n", input, rec, done, parser->RaParseDone);
+#endif
             done = 1;
+         }
       }
 
       if (input->ArgusReadPtr != input->ArgusReadBuffer) {
@@ -603,9 +633,8 @@ ArgusConnectRemotes (void *arg)
 
 #if defined(ARGUS_THREADS)
    pthread_exit (NULL);
-#else
-   return (NULL);
 #endif
+   return (NULL);
 }
 
 
@@ -702,9 +731,8 @@ ArgusConnectRemote (void *arg)
 
 #if defined(ARGUS_THREADS)
    pthread_exit (NULL);
-#else
-   return (NULL);
 #endif
+   return (NULL);
 }
 
 
@@ -1578,6 +1606,8 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
       switch (hdr->type & 0xF0) {
          case ARGUS_MAR: {
+            struct ArgusRecord *ns = NULL;
+
             if (argus->hdr.len > 1) {
                retn->dsrs[0] = (void *) canon;
                bcopy ((char *)argus, (char *)retn->dsrs[0], (argus->hdr.len * 4));
@@ -1587,6 +1617,19 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
             if (argus == &input->ArgusInitCon) {
                retn->status |= ARGUS_INIT_MAR;
+            }
+            if ((ns = (struct ArgusRecord *)retn->dsrs[0]) != NULL) {
+               if (ns->argus_mar.status & (ARGUS_IDIS_INT | ARGUS_IDIS_IPV4)) {
+                  switch (ns->argus_mar.status) {
+                     case ARGUS_IDIS_INT:
+                     case ARGUS_IDIS_IPV4: {
+                        if (ns->argus_mar.value == 0) {
+                           ns->argus_mar.value = ns->argus_mar.thisid;
+                           ns->argus_mar.thisid = 0;
+                        }
+                     }
+                  }
+               }
             }
             break;
          }
@@ -1955,6 +1998,11 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                               case ARGUS_TYPE_STRING: {
                                  bcopy(trans->srcid.a_un.str, canon->trans.srcid.a_un.str, 4);
                                  iptr = (char *)&trans->srcid.a_un.value + 4;
+                                 break;
+                              }
+                              case ARGUS_TYPE_UUID: {
+                                 bcopy(trans->srcid.a_un.uuid, canon->trans.srcid.a_un.uuid, 16);
+                                 iptr = (char *)&trans->srcid.a_un.value + 16;
                                  break;
                               }
                            }
@@ -3000,11 +3048,11 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                         if (subtype & ARGUS_LEN_16BITS) {
                            if (user->hdr.argus_dsrvl16.len == 0)
-                              ArgusLog (LOG_ERR, "ArgusGenerateRecordStruct: post ARGUS_DATA_DSR len is zero");
+                              ArgusLog (LOG_INFO, "ArgusGenerateRecordStruct: post ARGUS_DATA_DSR len is zero");
 
                         } else {
                            if (user->hdr.argus_dsrvl8.len == 0)
-                              ArgusLog (LOG_ERR, "ArgusGenerateRecordStruct: post ARGUS_DATA_DSR len is zero");
+                              ArgusLog (LOG_INFO, "ArgusGenerateRecordStruct: post ARGUS_DATA_DSR len is zero");
                         }
                         break;
                      }
@@ -3068,8 +3116,12 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   dsr = (struct ArgusDSRHeader *)((char *)dsr + cnt); 
 
                } else {
-                  if (retn->dsrs[ARGUS_TIME_INDEX] == NULL)
+                  if (retn->dsrs[ARGUS_TIME_INDEX] == NULL) {
                      retn = NULL;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (6, "ArgusGenerateRecordStruct (%p, %p, %p) retn %p\n", parser, input, argus, retn);
+#endif 
+                  }
                   break;
                }
             }
@@ -3556,7 +3608,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
             }
    
             if (retn != NULL) {
-               if ((ArgusFetchPktsCount(retn) > 1000.0) && (ArgusFetchDuration(retn) == 0.0)) {
+               if ((ArgusFetchPktsCount(retn) > 100000000.0) && (ArgusFetchDuration(retn) == 0.0)) {
                   retn->hdr.cause            = ARGUS_ERROR;
                   canon->metric.src.pkts     = 0;
                   canon->metric.src.bytes    = 0;
@@ -3564,9 +3616,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   canon->metric.dst.pkts     = 0;
                   canon->metric.dst.bytes    = 0;
                   canon->metric.dst.appbytes = 0;
-               } else
-                  if (retn->hdr.len < 1)
+               } else {
+                  if (retn->hdr.len < 1) {
                      retn = NULL;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (6, "ArgusGenerateRecordStruct (%p, %p, %p) retn->hdr len < 1\n", parser, input, argus);
+#endif 
+                  }
+               }
             }
 
             if ((parser != NULL) && (retn != NULL)) {
@@ -3978,7 +4035,9 @@ ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *b
          case ARGUS_MAR: {
             if (rec->dsrs[0] != NULL) {
                bcopy ((char *)rec->dsrs[0], (char *) retn, rec->hdr.len * 4);
-            retn->hdr = rec->hdr;
+               retn->hdr = rec->hdr;
+               if (state)
+                  retn->hdr.cause = (state & 0xF0) | (retn->hdr.cause & 0x0F);
             }
             break;
          }
@@ -4013,8 +4072,13 @@ ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *b
                                  break;
 
                               case ARGUS_TYPE_IPV6:
-                              case ARGUS_TYPE_ETHER:
+                              case ARGUS_TYPE_UUID: {
+                                 int z;
+                                 for (z = 0; z < 4; z++) {
+                                    *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 }
                                  break;
+                              }
                            }
                            if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
                               *dsrptr++ = *(unsigned int *)&trans->srcid.inf;
@@ -4022,7 +4086,7 @@ ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *b
                            }
                         }
                         if (trans->hdr.subtype & ARGUS_SEQ) {
-                           *dsrptr++ = *(unsigned int *)&trans->seqnum;
+                           *dsrptr++ = (unsigned int)trans->seqnum;
                            x++;
                         }
                         dtrans->hdr.argus_dsrvl8.len = x;
@@ -5037,8 +5101,7 @@ ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *b
       }
          
    } else {
-      retn->hdr.type = ARGUS_MAR;
-      retn->hdr.type  |= ARGUS_VERSION;
+      retn->hdr.type = ARGUS_MAR | ARGUS_VERSION;
       retn->hdr.cause = state & 0xF0;
       retn->hdr.len = dsrlen;
    }
@@ -11884,7 +11947,7 @@ ArgusFetchSrcId (struct ArgusRecordStruct *ns)
          if (t->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
             long long value = t->srcid.a_un.value;
             value <<= 32;
-            bcopy(t->srcid.inf, &((char *)value)[4], 4);
+            bcopy(t->srcid.inf, &((char *)&value)[4], 4);
             retn = (double) value;
 
          } else

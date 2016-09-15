@@ -41,9 +41,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus/gencode.h#11 $
- * $DateTime: 2015/10/20 23:06:23 $
- * $Change: 3076 $
+ * $Id: //depot/gargoyle/clients/include/argus/gencode.h#12 $
+ * $DateTime: 2016/09/14 23:15:04 $
+ * $Change: 3185 $
  */
 
 /*
@@ -100,6 +100,7 @@
 #define Q_GAP		141
 #define Q_DUP		142
 #define Q_MASKLEN	182
+#define Q_UUID		183
 
 /* Protocol qualifiers. */
 
@@ -408,6 +409,7 @@ struct ablock *Argusgen_stat(struct ablock *, struct ablock *, unsigned int);
 
 struct ablock *Argusgen_ocode(int, struct qual);
 struct ablock *Argusgen_scode(char *, struct qual);
+struct ablock *Argusgen_ucode(char *, struct qual);
 struct ablock *Argusgen_tcode(int, struct qual);
 struct ablock *Argusgen_ascode(char *, struct qual, unsigned int);
 struct ablock *Argusgen_ecode(unsigned char *, struct qual);

@@ -50,9 +50,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rapolicy/rapolicy.c#8 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rapolicy/rapolicy.c#9 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 
@@ -973,7 +973,7 @@ setProto(struct RaPolicyPolicyStruct *policy, char *token)
    ArgusDebug (3, "setProto the word is %s\n", token);
 #endif
 
-   if (isdigit(token[0])) {
+   if (isdigit((int)token[0])) {
       policy->proto = atoi(token);
    } else {
       struct protoent *proto;
@@ -1097,7 +1097,7 @@ setIGMP(struct RaPolicyPolicyStruct *policy, char *token)
    }
 
    // The IGMP type can be expressed as a number
-   if (isdigit(token[0])) {
+   if (isdigit((int)token[0])) {
       i = atoi(token);
       if (( i > 0) && (i < 256) ) {
          policy->IGMPtype = i;
@@ -1141,7 +1141,7 @@ setICMPmsg(struct RaPolicyPolicyStruct *policy, char *token)
 
    // The ICMP type can be expressed as an integer as well
 
-   if ( isdigit (token[0])) {
+   if ( isdigit((int)token[0])) {
       i = atoi(token);
       if (( i >= 0) && (i < 256) ) {
          policy->ICMPtype = i;
@@ -1176,7 +1176,7 @@ setICMPcode(struct RaPolicyPolicyStruct *policy, char *token)
 
    // this can only be an integer value for the ICMP code
 
-   if ( isdigit (token[0])) {
+   if ( isdigit((int)token[0])) {
       i = atoi(token);
       if (( i >= 0) && (i < 256) ) {
          policy->ICMPcode = i;
@@ -1425,7 +1425,7 @@ tokenize (char * word)
    if ( word[0] == '\n')
       return E_EOL;
 
-   if (isdigit(word[0])) {
+   if (isdigit((int)word[0])) {
       if (strpbrk ( word, ".") == NULL)
          return E_INTEGER;    
 

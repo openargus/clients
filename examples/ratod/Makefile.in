@@ -15,13 +15,9 @@
 #  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
 #  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 #  THIS SOFTWARE.
-#
+# 
 #  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
-#  $Id: //depot/argus/clients/clients/Makefile.in#34 $
-#  $DateTime: 2011/06/27 16:08:26 $
-#  $Change: 2204 $
-#  
 
 # Top level hierarchy
 
@@ -40,8 +36,7 @@ LIBDEST =  @libdir@
 # Pathname of directory to install the man page
 MANDEST = @mandir@
 
-# Pathname of preferred perl to use for perl scripts
-PERL = @V_PERL@
+LDFLAGS = @LDFLAGS@
 
 # VPATH
 srcdir = @srcdir@
@@ -53,9 +48,11 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../../include -I../../common @V_INCLS@
+INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @CURSES_INCLS@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+
+CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
@@ -80,8 +77,13 @@ YACC = @V_YACC@
 	@rm -f $@
 	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
 
-LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
-OUTPUT = $(INSTALLLIB)/argus_output.a
+# We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
+# hack the extra indirection
+ 
+OBJ =	$(SRC:.c=.o)
+
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a \
+	$(INSTALLLIB)/argus_client.a $(INSTALLLIB)/argus_output.a
 
 SRC = ratod.c
 
@@ -89,13 +91,8 @@ PROGS = $(INSTALLBIN)/ratod
 
 all: $(PROGS)
 
-$(INSTALLBIN)/ratod: ratod.o $(LIB) $(OUTPUT)
-	$(CC) $(CCOPT) -o $@ ratod.o $(LIB) $(OUTPUT) $(COMPATLIB) @WRAPLIBS@
-
-# We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
-# hack the extra indirection
-
-OBJ =	$(SRC:.c=.o)
+$(INSTALLBIN)/ratod: $(OBJ) $(LIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 
@@ -103,6 +100,9 @@ install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/ratod $(DESTDIR)$(BINDIR)
+
+uninstall: force all
+	rm -f $(DESTDIR)$(BINDIR)/ratod
 
 clean:
 	rm -f $(CLEANFILES)
@@ -130,4 +130,4 @@ tar:	force
 
 force:	/tmp
 depend:	$(GENSRC) force
-	../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
+	../../bin/mkdep -c $(CC) $(CFLAGS) $(SRC)

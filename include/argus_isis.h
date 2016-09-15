@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/include/argus_isis.h#7 $
- * $DateTime: 2016/06/01 16:17:04 $
- * $Change: 3151 $
+ * $Id: //depot/gargoyle/clients/include/argus_isis.h#8 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #ifndef ArgusIsis_h
@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 #include <sys/time.h>
-#if defined(ARGUS_SOLARIS) || defined(CYGWIN)
+#if defined(ARGUS_SOLARIS)
 #if !defined(ARGUS_PLURIBUS)
 #include <net/etherdefs.h>
 #endif

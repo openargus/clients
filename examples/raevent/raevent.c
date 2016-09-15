@@ -23,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/raevent/raevent.c#17 $
- * $DateTime: 2016/04/01 14:29:19 $
- * $Change: 3133 $
+ * $Id: //depot/gargoyle/clients/examples/raevent/raevent.c#18 $
+ * $DateTime: 2016/09/14 23:15:04 $
+ * $Change: 3185 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -231,7 +231,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   tvp->tv_usec = time->src.start.tv_usec;
 
                   ArgusPrintTime(parser, tbuf, tvp);
-                  ArgusPrintSourceID(parser, sptr, argus, 24);
+                  ArgusPrintSourceID(parser, sptr, argus, 128);
 
                   while (isspace((int)sbuf[strlen(sbuf) - 1]))
                      sbuf[strlen(sbuf) - 1] = '\0';

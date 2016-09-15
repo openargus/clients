@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasplit.c#15 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#16 $
+ * $DateTime: 2016/09/13 16:02:42 $
+ * $Change: 3182 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1108,7 +1108,7 @@ RaProcessSplitOptions(struct ArgusParserStruct *parser, char *str, int len, stru
 
       for (i = 0, x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
          if (!strncmp (RaPrintAlgorithmTable[x].field, ptr, strlen(RaPrintAlgorithmTable[x].field))) {
-            RaPrintAlgorithmTable[x].print(parser, tmpbuf, ns, RaPrintAlgorithmTable[x].length);
+            RaPrintAlgorithmTable[x].print(parser, tmpbuf, ns, 128);
 
             while (isspace((int)tmpbuf[strlen(tmpbuf) - 1]))
                tmpbuf[strlen(tmpbuf) - 1] = '\0';

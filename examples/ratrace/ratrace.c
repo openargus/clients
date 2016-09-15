@@ -43,9 +43,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#12 $
- * $DateTime: 2016/06/07 23:30:24 $
- * $Change: 3164 $
+ * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#13 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -819,8 +819,7 @@ ArgusTraceProcess (void *arg)
 
 #if defined(ARGUS_THREADS)
    pthread_exit (NULL);
-#else
-   return (NULL);
 #endif
+   return (NULL);
 }
 #endif

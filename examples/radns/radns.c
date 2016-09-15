@@ -18,9 +18,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/radns/radns.c#22 $
- * $DateTime: 2016/06/08 00:59:34 $
- * $Change: 3166 $
+ * $Id: //depot/gargoyle/clients/examples/radns/radns.c#23 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 /*
@@ -140,7 +140,7 @@ ArgusHandleTreeCommand (char *command)
    char **retn = ArgusHandleResponseArray;
  
    sptr = &string[slen - 1];
-   while (isspace(*sptr)) {*sptr-- = '\0';}
+   while (isspace((int)*sptr)) {*sptr-- = '\0';}
  
    retn[0] = "OK\n";
    retn[1] = NULL;
@@ -189,6 +189,9 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
 }
 
 
+extern int ArgusGrepBuf (regex_t *, char *, char *);
+
+
 char **
 ArgusHandleSearchCommand (char *command)
 {
@@ -203,7 +206,7 @@ ArgusHandleSearchCommand (char *command)
    regex_t preg;
 
    sptr = &string[slen - 1];
-   while (isspace(*sptr)) {*sptr-- = '\0';}
+   while (isspace((int)*sptr)) {*sptr-- = '\0';}
 
    bzero(ArgusHandleResponseArray, sizeof(ArgusHandleResponseArray));
    retn = ArgusHandleResponseArray;
@@ -611,7 +614,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name)
       ArgusHash.buf = (unsigned int *)lname;
 
       for (i = 0; i < ArgusHash.len; i++)
-        lname[i] = tolower(lname[i]);
+        lname[i] = tolower((int)lname[i]);
 
       if ((htbl = ArgusFindHashEntry(table, &ArgusHash)) == NULL) {
          if ((retn = ArgusCalloc(1, sizeof(struct nnamemem))) == NULL)
