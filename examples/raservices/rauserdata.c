@@ -22,9 +22,9 @@
  * QoSient, LLC
  *
  * 
- * $Id: //depot/gargoyle/clients/examples/raservices/rauserdata.c#6 $
- * $DateTime: 2015/10/14 12:27:46 $
- * $Change: 3075 $
+ * $Id: //depot/gargoyle/clients/examples/raservices/rauserdata.c#9 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -406,6 +406,7 @@ RaProcessSrvRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, ns);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));

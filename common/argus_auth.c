@@ -65,9 +65,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_auth.c#6 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/common/argus_auth.c#9 $
+ * $DateTime: 2016/09/20 14:32:09 $
+ * $Change: 3196 $
  */
 
 
@@ -256,6 +256,8 @@ int
 ArgusAuthenticate (struct ArgusInput *input)
 {
    int retn = 0;
+
+#ifdef ARGUS_SASL
    char *user = NULL, *pass = NULL;
 
 #if defined(ARGUS_THREADS)
@@ -276,7 +278,6 @@ ArgusAuthenticate (struct ArgusInput *input)
 #endif
    
    if (ArgusInitializeAuthentication(input)) {
-#ifdef ARGUS_SASL
       int fd = input->fd;
 
       if ((input->in = fd) < 0)
@@ -289,7 +290,6 @@ ArgusAuthenticate (struct ArgusInput *input)
          retn = 1;
       else
          retn = 0;
-#endif /* ARGUS_SASL */
    }
 #if defined(ARGUS_THREADS)
    pthread_mutex_lock(&ArgusParser->lock);
@@ -302,6 +302,7 @@ ArgusAuthenticate (struct ArgusInput *input)
    pthread_mutex_unlock(&ArgusParser->lock);
 #endif
 
+#endif /* ARGUS_SASL */
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusAuthenticate (0x%x) returning %d\n", input, retn);

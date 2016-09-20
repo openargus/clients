@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#70 $
- * $DateTime: 2016/09/14 23:15:04 $
- * $Change: 3185 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#74 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -5311,8 +5311,9 @@ ArgusSelectMaskDefs(struct ArgusRecordStruct *ns)
    struct ArgusMaskStruct *mask = NULL;
 
    switch (ns->hdr.type & 0xF0) {
+      case ARGUS_MAR: 
       case ARGUS_EVENT: {
-         mask = ArgusIpV4MaskDefs;
+         mask = ArgusSrcIdMaskDefs;
          break;
       }
 
@@ -5529,6 +5530,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                   if (na->mask < (0x01LL << i)) 
                      break;
                   if (na->mask & (0x01LL << i)) {
+                     if (na->ArgusMaskDefs[i].name != NULL) {
                      char *p = (char *)ns->dsrs[na->ArgusMaskDefs[i].dsr];
 
                      if (p != NULL) {
@@ -5643,6 +5645,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
 
                         ptr  += slen;
                         tlen += slen;
+                     }
                      }
                   }
                }
@@ -7555,6 +7558,18 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                            break;
 
                         case ARGUS_TYPE_IPV6:
+                        case ARGUS_TYPE_UUID: {
+                           int x;
+                           match = 1;
+                           for (x = 0; x < 16; x++) {
+                              if (t1->srcid.a_un.uuid[x] != t2->srcid.a_un.uuid[x]) {
+                                 match = 1;
+                                 break;
+                              }
+                           }
+                           break;
+                        }
+
                         case ARGUS_TYPE_ETHER:
                            break;
                      }
@@ -11231,8 +11246,6 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
                   switch (i) {
                      case ARGUS_MASK_SRCID:
                         if (action > 0) retn->mask |= (0x01LL << ARGUS_MASK_SRCID); else retn->mask &= ~(0x01LL << ARGUS_MASK_SRCID); 
-                        break;
-
                      case ARGUS_MASK_SRCID_INF:
                         if (action > 0) retn->mask |= (0x01LL << ARGUS_MASK_SRCID_INF); else retn->mask &= ~(0x01LL << ARGUS_MASK_SRCID_INF); 
                         break;

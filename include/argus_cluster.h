@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_cluster.h#13 $
- * $DateTime: 2016/03/28 23:33:08 $
- * $Change: 3128 $
+ * $Id: //depot/gargoyle/clients/include/argus_cluster.h#16 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifndef ArgusCluster_h
@@ -217,6 +217,46 @@ struct ArgusMaskStruct {
 };
 
 #if defined(ARGUS_MAIN)
+struct ArgusMaskStruct ArgusSrcIdMaskDefs[ARGUS_MAX_MASK_LIST] = {
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL}
+};
 struct ArgusMaskStruct ArgusIpV4MaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
    {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},

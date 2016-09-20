@@ -21,9 +21,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ratree/ratree.c#9 $
- * $DateTime: 2016/06/07 23:30:24 $
- * $Change: 3164 $
+ * $Id: //depot/gargoyle/clients/examples/ratree/ratree.c#12 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -346,6 +346,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       agg->rap = agg->drap;
 
    ArgusGenerateNewFlow(agg, argus);
+   agg->ArgusMaskDefs = NULL;
 
    if (parser->ArgusWfileList != NULL) {
       struct ArgusWfileStruct *wfile = NULL;

@@ -43,9 +43,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#13 $
- * $DateTime: 2016/09/13 10:40:12 $
- * $Change: 3180 $
+ * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#16 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -495,6 +495,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       agg->rap = agg->drap;
 
    ArgusGenerateNewFlow(agg, argus);
+   agg->ArgusMaskDefs = NULL;
 
    if (parser->ArgusWfileList != NULL) {
       struct ArgusWfileStruct *wfile = NULL;

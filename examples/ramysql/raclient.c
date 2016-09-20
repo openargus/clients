@@ -1388,6 +1388,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, cns);
+               agg->ArgusMaskDefs = NULL;
 
                if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                   ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -1710,6 +1711,7 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
                agg->rap = agg->drap;
 
             ArgusGenerateNewFlow(agg, cns);
+            agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -2279,6 +2281,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, cns);
+               agg->ArgusMaskDefs = NULL;
 
                if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                   ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));

@@ -36,9 +36,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/rapath/rapath.c#10 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rapath/rapath.c#13 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -860,6 +860,7 @@ RaProcessAggregation(struct ArgusParserStruct *parser, struct ArgusAggregatorStr
       agg->rap = agg->drap;
 
    ArgusGenerateNewFlow(agg, ns);
+   agg->ArgusMaskDefs = NULL;
 
    if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
       ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));

@@ -16,9 +16,9 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- * $Id: //depot/gargoyle/clients/examples/rastream/rastream.c#9 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rastream/rastream.c#13 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -768,8 +768,11 @@ ArgusClientTimeout ()
                            wfile->fd = NULL;
                         }
                         ArgusRunFileScript(ArgusParser, wfile, ARGUS_SCHEDULE_SCRIPT);
-                     } else
+                     } else {
+                        if (wfile && (wfile->fd != NULL))
+                           fflush(wfile->fd);
                         ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
+                     }
                   }
                }
                ArgusAddToQueue (queue, &fcache->qhdr, ARGUS_NOLOCK);
@@ -1102,6 +1105,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                agg->rap = agg->drap;
 
             ArgusGenerateNewFlow(agg, ns);
+            agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
                ArgusLog (LOG_ERR, "RaSendArgusRecord: ArgusGenerateHashStruct error %s", strerror(errno));

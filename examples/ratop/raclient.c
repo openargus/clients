@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#29 $
- * $DateTime: 2016/09/13 10:40:12 $
- * $Change: 3180 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#32 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 
@@ -1735,6 +1735,7 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
                agg->rap = agg->drap;
 
             ArgusGenerateNewFlow(agg, cns);
+            agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -2539,6 +2540,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, cns);
+               agg->ArgusMaskDefs = NULL;
 
                if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                   ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));

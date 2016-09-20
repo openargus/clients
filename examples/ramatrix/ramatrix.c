@@ -978,6 +978,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusAggregatorStr
                agg->rap = agg->drap;
 
             ArgusGenerateNewFlow(agg, ns);
+            agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
                ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));

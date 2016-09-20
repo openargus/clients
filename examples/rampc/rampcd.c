@@ -30,9 +30,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/rampc/rampcd.c#14 $
- * $DateTime: 2016/09/13 10:40:12 $
- * $Change: 3180 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/rampcd.c#17 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1081,6 +1081,7 @@ RaMpcEstablishMpcStream(struct ArgusProbeStruct *mpc, struct ArgusRecordStruct *
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, ns);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaMpcEstablishMpcStream: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -1359,6 +1360,7 @@ RaFindMpcStream(struct ArgusParserStruct *parser, struct ArgusProbeStruct *mpc, 
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, argus);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaFindMpcStream: ArgusGenerateHashStruct error %s", strerror(errno));

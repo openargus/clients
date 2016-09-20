@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasplit.c#16 $
- * $DateTime: 2016/09/13 16:02:42 $
- * $Change: 3182 $
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#20 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -577,8 +577,11 @@ ArgusClientTimeout ()
                   obj->wfile.fd = NULL;
                }
                ArgusFree(obj);
-            } else
+            } else {
+               if (obj->wfile.fd) 
+                  fflush (obj->wfile.fd);
                ArgusAddToQueue (queue, &obj->qhdr, ARGUS_NOLOCK);
+            }
          }
       }
 
@@ -638,37 +641,31 @@ usage ()
 }
 
 
-int RaFirstRecord = 1;
-
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR: {
-         if (!(RaFirstRecord)) {
-            struct ArgusRecord *rec = (struct ArgusRecord *)ns->dsrs[0];
-            if (rec && parser->ArgusAdjustTime) {
-               struct timeval drift;
+         struct ArgusRecord *rec = (struct ArgusRecord *)ns->dsrs[0];
+         if (rec && parser->ArgusAdjustTime) {
+            struct timeval drift;
 
-               drift.tv_sec  = parser->ArgusRealTime.tv_sec  - ntohl(rec->argus_mar.now.tv_sec);
-               drift.tv_usec = parser->ArgusRealTime.tv_usec - ntohl(rec->argus_mar.now.tv_usec);
-               ns->input->ArgusTimeDrift  = drift.tv_sec * 1000000;
-               ns->input->ArgusTimeDrift += drift.tv_usec;
-               rec->argus_mar.drift = ns->input->ArgusTimeDrift;
+            drift.tv_sec  = parser->ArgusRealTime.tv_sec  - ntohl(rec->argus_mar.now.tv_sec);
+            drift.tv_usec = parser->ArgusRealTime.tv_usec - ntohl(rec->argus_mar.now.tv_usec);
+            ns->input->ArgusTimeDrift  = drift.tv_sec * 1000000;
+            ns->input->ArgusTimeDrift += drift.tv_usec;
+            rec->argus_mar.drift = ns->input->ArgusTimeDrift;
 #ifdef ARGUSDEBUG
 #if defined(__APPLE_CC__) || defined(__APPLE__)
-               ArgusDebug (3, "RaProcessRecord: ArgusInput 0x%x drift %lld\n",
+            ArgusDebug (3, "RaProcessRecord: ArgusInput 0x%x drift %lld\n",
                                 ns->input, ns->input->ArgusTimeDrift);
 #else
-               ArgusDebug (3, "RaProcessRecord: ArgusInput 0x%x drift %Ld\n",
+            ArgusDebug (3, "RaProcessRecord: ArgusInput 0x%x drift %Ld\n",
                                 ns->input, ns->input->ArgusTimeDrift);
 #endif
 #endif
-            }
-            RaSendArgusRecord (ns);
-
-         } else
-            RaFirstRecord = 0;
+         }
+         RaSendArgusRecord (ns);
          break;
       }
 
@@ -811,6 +808,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                agg->rap = agg->drap;
 
             ArgusGenerateNewFlow(agg, ns);
+            agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
                ArgusLog (LOG_ERR, "RaSendArgusRecord: ArgusGenerateHashStruct error %s", strerror(errno));

@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#74 $
- * $DateTime: 2016/09/14 23:15:04 $
- * $Change: 3185 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#75 $
+ * $DateTime: 2016/09/20 14:08:02 $
+ * $Change: 3194 $
  */
 
 #ifdef HAVE_CONFIG_H

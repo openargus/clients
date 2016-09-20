@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/racluster.c#17 $
- * $DateTime: 2016/06/06 10:32:11 $
- * $Change: 3152 $
+ * $Id: //depot/gargoyle/clients/clients/racluster.c#20 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -814,6 +814,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                           }
                                           break;
                                        }
+                                       break;
                                     }
                                  }
                               }
@@ -869,9 +870,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusReverseRecord (ns);
                                           break;
                                        }
+                                       break;
                                     }
-                                    break;
-                                 }
 
                                  case ARGUS_TYPE_IPV6: {
                                     switch (flow->ipv6_flow.ip_p) {
@@ -917,9 +917,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusReverseRecord (ns);
                                           break;
                                        }
+                                       break;
                                     }
-                                    break;
-                                 }
 
                                  default: {
                                     double  nstime = ArgusFetchStartTime(ns);

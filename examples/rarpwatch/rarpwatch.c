@@ -24,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/rarpwatch/rarpwatch.c#10 $
- * $DateTime: 2016/08/22 00:32:32 $
- * $Change: 3173 $
+ * $Id: //depot/gargoyle/clients/examples/rarpwatch/rarpwatch.c#13 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -489,6 +489,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, ns);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
