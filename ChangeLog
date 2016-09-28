@@ -1,3 +1,8 @@
+Tue Sep 27 20:07:59 EDT 2016
+Added rasqlcheckconf to import an argus.conf file into a database table,
+then to compare the contents with the database, replacing the contents
+if there is a difference, and its configured to "-M replace" the table
+
 Thu Sep 15 14:41:58 EDT 2016
 Changes to support ekinzie mods
 

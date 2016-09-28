@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_parser.h#35 $
- * $DateTime: 2016/09/13 16:02:42 $
- * $Change: 3182 $
+ * $Id: //depot/gargoyle/clients/include/argus_parser.h#36 $
+ * $DateTime: 2016/09/27 20:09:29 $
+ * $Change: 3203 $
  */
 
 
@@ -81,6 +81,8 @@ extern "C" {
 
 #define RA_SINGLE_QUOTED	'\''
 #define RA_DOUBLE_QUOTED	'\"'
+
+#define ARGUS_ITEM_QUOTED	0x40
 
 #define ARGUS_MAX_REMOTE	256
 #define ARGUS_MAX_REGEX		16384

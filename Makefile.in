@@ -141,6 +141,8 @@ install:  force
 		$(DESTDIR)@mandir@/man1/rasplit.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasql.1 \
 		$(DESTDIR)@mandir@/man1/rasql.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqlcheckconf.1 \
+		$(DESTDIR)@mandir@/man1/rasqlcheckconf.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqlinsert.1 \
 		$(DESTDIR)@mandir@/man1/rasqlinsert.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqltimeindex.1 \
@@ -203,6 +205,7 @@ uninstall:
 	rm -f $(DESTDIR)@mandir@/man1/rasort.1
 	rm -f $(DESTDIR)@mandir@/man1/rasplit.1
 	rm -f $(DESTDIR)@mandir@/man1/rasql.1
+	rm -f $(DESTDIR)@mandir@/man1/rasqlcheckconf.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqlinsert.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqltimeindex.1
 	rm -f $(DESTDIR)@mandir@/man1/rastream.1

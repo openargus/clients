@@ -50,6 +50,7 @@ data.  The types of functions that these examples provide include:
    storage management
       ramysql - mysql based utilities
         rasql          - read native argus data from mysql database tables.
+        rasqlcheckconf - insert and read argus configurations from/to mysql data tables.
         rasqlinsert    - insert and read argus data from/to mysql data tables.
         rasqltimeindex - generate argus data file time indexes for searching.
 

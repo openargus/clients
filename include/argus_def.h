@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_def.h#17 $
- * $DateTime: 2016/09/13 16:02:42 $
- * $Change: 3182 $
+ * $Id: //depot/gargoyle/clients/include/argus_def.h#18 $
+ * $DateTime: 2016/09/27 20:09:29 $
+ * $Change: 3203 $
  */
 
 /* Argus_def.h */
@@ -784,6 +784,15 @@ extern "C" {
 
 /* Argus Flow Descriptor DSR Types */
 #define ARGUS_FLOW_INDEX			1
+
+#define ARGUS_FLOW_KEYS                         0x0000007F
+#define ARGUS_FLOW_KEY_CLASSIC5TUPLE            0x00000001
+#define ARGUS_FLOW_KEY_LAYER_2_MATRIX           0x00000002
+#define ARGUS_FLOW_KEY_LAYER_3_MATRIX           0x00000004
+#define ARGUS_FLOW_KEY_LOCAL_MPLS               0x00000008
+#define ARGUS_FLOW_KEY_COMPLETE_MPLS            0x00000010
+#define ARGUS_FLOW_KEY_VLAN                     0x00000020
+#define ARGUS_FLOW_KEY_LAYER_2                  0x00000040
 
 
 /* Argus Flow Descriptor DSR SubTypes */

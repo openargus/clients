@@ -19,9 +19,9 @@
 #  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
 # 
-#  $Id: //depot/gargoyle/clients/examples/ramysql/Makefile.in#6 $
-#  $DateTime: 2014/10/17 09:01:31 $
-#  $Change: 2942 $
+#  $Id: //depot/gargoyle/clients/examples/ramysql/Makefile.in#8 $
+#  $DateTime: 2016/09/27 19:37:40 $
+#  $Change: 3202 $
 #
 
 # Top level hierarchy
@@ -89,9 +89,9 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 OUTPUT = $(INSTALLLIB)/argus_output.a
 
 
-SRC =	rasql.c rasqlinsert.c raclient.c rasqltimeindex.c
+SRC =	rasql.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c
 
-PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex
+PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf
 
 all: $(PROGS)
 
@@ -104,6 +104,8 @@ $(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB) $(OUTPUT)
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
+$(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(OUTPUT) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -121,11 +123,13 @@ install: force all
 	$(INSTALL) $(INSTALLBIN)/rasql $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlinsert $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqltimeindex $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rasqlcheckconf $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
 	rm -f $(DESTDIR)$(BINDIR)/rasqlinsert
 	rm -f $(DESTDIR)$(BINDIR)/rasqltimeindex
+	rm -f $(DESTDIR)$(BINDIR)/rasqlcheckconf
 
 clean:
 	rm -f $(CLEANFILES)
