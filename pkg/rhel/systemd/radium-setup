@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+typeset -r CONF=/run/argus/radium.conf
+
+# Minimal configuration
+radium_configure(){
+	echo "RA_RELIABLE_CONNECT=yes"
+	echo "RA_MAX_SSF=0"
+	echo "RA_MIN_SSF=0"
+}
+
+if (( $# == 0 )) ; then
+	exit 1
+fi
+
+if [[ "$1" == start ]] ; then
+	mkdir -p $(dirname ${CONF})
+	radium_configure > ${CONF}
+elif [[ "$1" == stop ]] ; then
+	rm -f ${CONF}
+fi
+

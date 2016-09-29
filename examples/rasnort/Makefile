@@ -56,9 +56,9 @@ srcdir = .
 
 CC = cc
 CCOPT = -g  -Wall -Wmissing-prototypes
-INCLS = -I. -I../../include -I../../common -I/opt/local/include  -I/opt/local/include 
+INCLS = -I. -I../../include -I../../common -I/usr/local/include -I/opt/local/include  -I/opt/local/include 
 DEFS = -DHAVE_CONFIG_H
-COMPATLIB = -lm    -lGeoIP  -lz
+COMPATLIB = -lm    -L/usr/local/lib -lGeoIP  -lz
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS)

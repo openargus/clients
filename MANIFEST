@@ -314,7 +314,7 @@ total 112
 
 ./examples/rasnort:
 total 1280
--rw-r--r--   1 carter  staff    3862 Sep 27 20:20 Makefile
+-rw-r--r--   1 carter  staff    3900 Sep 28 23:10 Makefile
 -rw-r--r--   1 carter  staff    3817 Oct 12  2012 Makefile.in
 -rw-r--r--   1 carter  staff    3557 Oct 12  2012 Makefile.in.orig
 -rw-r--r--   1 carter  staff    2919 Oct 12  2012 bounds.h
@@ -325,8 +325,8 @@ total 1280
 -rw-r--r--   1 carter  staff    2891 Oct 12  2012 debug.h
 -rw-r--r--   1 carter  staff   42333 Oct 12  2012 decode.h
 -rw-r--r--   1 carter  staff    3373 Oct 12  2012 detect.h
-drwxr-xr-x  87 carter  staff    2958 Sep 15 16:11 detection-plugins
-drwxr-xr-x  14 carter  staff     476 Sep 15 16:11 etc
+drwxr-xr-x  87 carter  staff    2958 Sep 28 14:28 detection-plugins
+drwxr-xr-x  14 carter  staff     476 Sep 28 14:28 etc
 -rw-r--r--   1 carter  staff    2016 Oct 12  2012 event.h
 -rw-r--r--   1 carter  staff     758 Oct 12  2012 event_wrapper.h
 -rw-r--r--   1 carter  staff    1199 Oct 12  2012 fatal.h
@@ -337,20 +337,20 @@ drwxr-xr-x  14 carter  staff     476 Sep 15 16:11 etc
 -rw-r--r--   1 carter  staff    1690 Oct 12  2012 mempool.h
 -rw-r--r--   1 carter  staff    1526 Oct 12  2012 mstring.h
 -rw-r--r--   1 carter  staff     195 Oct 12  2012 packet_time.h
-drwxr-xr-x   9 carter  staff     306 Sep 15 16:11 parser
+drwxr-xr-x   9 carter  staff     306 Sep 28 14:28 parser
 -r--r--r--   1 carter  staff  329903 Oct 12  2012 parser.c
 -rw-r--r--   1 carter  staff    3072 Oct 12  2012 parser.h
 -rw-r--r--   1 carter  staff    4679 Oct 12  2012 pcrm.h
 -rw-r--r--   1 carter  staff    5995 Oct 12  2012 plugbase.h
 -rw-r--r--   1 carter  staff     873 Oct 12  2012 plugin_enum.h
-drwxr-xr-x  62 carter  staff    2108 Sep 15 16:11 preprocessors
+drwxr-xr-x  62 carter  staff    2108 Sep 28 14:28 preprocessors
 -rw-r--r--   1 carter  staff    3024 Oct 12  2012 prototypes.h
 -r--r--r--   1 carter  staff    9606 Oct 12  2012 rasnort.c
-drwxr-xr-x  53 carter  staff    1802 Sep 15 16:11 rules
+drwxr-xr-x  53 carter  staff    1802 Sep 28 14:28 rules
 -rw-r--r--   1 carter  staff    8702 Oct 12  2012 rules.h
 -rw-r--r--   1 carter  staff    2162 Oct 12  2012 sf_sdlist.h
 -rw-r--r--   1 carter  staff     514 Oct 12  2012 sfthreshold.h
-drwxr-xr-x  49 carter  staff    1666 Sep 15 16:11 sfutil
+drwxr-xr-x  49 carter  staff    1666 Sep 28 14:28 sfutil
 -r--r--r--   1 carter  staff   10294 Oct 12  2012 signature.c
 -rw-r--r--   1 carter  staff    2770 Oct 12  2012 signature.h
 -rw-r--r--   1 carter  staff    1841 Oct 12  2012 smalloc.h
@@ -481,11 +481,11 @@ total 256
 
 ./examples/rasnort/preprocessors:
 total 5432
-drwxr-xr-x  16 carter  staff      544 Sep 15 16:11 HttpInspect
+drwxr-xr-x  16 carter  staff      544 Sep 28 14:28 HttpInspect
 -rw-r--r--   1 carter  staff    12608 Oct 12  2012 Makefile
 -rw-r--r--   1 carter  staff      717 Oct 12  2012 Makefile.am
 -rw-r--r--   1 carter  staff    11948 Oct 12  2012 Makefile.in
-drwxr-xr-x  33 carter  staff     1122 Sep 15 16:11 flow
+drwxr-xr-x  33 carter  staff     1122 Sep 28 14:28 flow
 -rw-r--r--   1 carter  staff  1036644 Oct 12  2012 libspp.a
 -rw-r--r--   1 carter  staff    27300 Oct 12  2012 perf-base.c
 -rw-r--r--   1 carter  staff     3784 Oct 12  2012 perf-base.h
@@ -547,17 +547,17 @@ total 560
 -rw-r--r--   1 carter  staff   12614 Oct 12  2012 Makefile
 -rw-r--r--   1 carter  staff     704 Oct 12  2012 Makefile.am
 -rw-r--r--   1 carter  staff   11939 Oct 12  2012 Makefile.in
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 anomaly_detection
-drwxr-xr-x  10 carter  staff     340 Sep 15 16:11 client
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 event_output
-drwxr-xr-x  24 carter  staff     816 Sep 15 16:11 include
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 anomaly_detection
+drwxr-xr-x  10 carter  staff     340 Sep 28 14:28 client
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 event_output
+drwxr-xr-x  24 carter  staff     816 Sep 28 14:28 include
 -rw-r--r--   1 carter  staff  253910 Oct 12  2012 libhttp_inspect.a
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 mode_inspection
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 normalization
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 server
-drwxr-xr-x   8 carter  staff     272 Sep 15 16:11 session_inspection
-drwxr-xr-x  10 carter  staff     340 Sep 15 16:11 user_interface
-drwxr-xr-x  12 carter  staff     408 Sep 15 14:43 utils
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 mode_inspection
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 normalization
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 server
+drwxr-xr-x   8 carter  staff     272 Sep 28 14:28 session_inspection
+drwxr-xr-x  10 carter  staff     340 Sep 28 14:28 user_interface
+drwxr-xr-x  12 carter  staff     408 Sep 28 14:28 utils
 
 ./examples/rasnort/preprocessors/HttpInspect/anomaly_detection:
 total 128

@@ -26,7 +26,9 @@ Type=simple
 Restart=always
 RestartSec=5
 EnvironmentFile=/etc/sysconfig/radium
-ExecStart=/usr/sbin/radium -X $DAEMON_ARGS
+ExecStartPre=/sbin/radium-setup start
+ExecStart=/usr/sbin/radium -X -F /run/argus/radium.conf $DAEMON_ARGS
+ExecStopPost=/sbin/radium-setup stop
 
 [Install]
 WantedBy=multi-user.target

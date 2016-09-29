@@ -19,6 +19,7 @@ BuildRequires: ncurses-devel, readline-devel, zlib-devel
 BuildRequires: pcre-devel, GeoIP-devel
 BuildRequires: mariadb-devel
 BuildRequires: cyrus-sasl-devel
+BuildRequires: libuuid-devel
 Requires: cyrus-sasl
 
 %description
@@ -48,6 +49,7 @@ install -D -m 0644 pkg/rhel/sysconfig/radium $RPM_BUILD_ROOT/etc/sysconfig/radiu
 
 install -D -m 0644 pkg/rhel/sysconfig/rasplit $RPM_BUILD_ROOT/etc/sysconfig/rasplit
 install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
+install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rasplit.service $RPM_BUILD_ROOT%{_unitdir}/rasplit.service
 install -d -m 0755 $RPM_BUILD_ROOT/%{argusdocs}/support
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
@@ -85,6 +87,7 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 %{argusbin}/rasort
 %{argusbin}/rasplit
 %{argussbin}/radium
+%{argussbin}/radium-setup
 %{_unitdir}/radium.service
 %{_unitdir}/rasplit.service
 

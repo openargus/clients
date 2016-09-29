@@ -22,9 +22,9 @@
  */
 
 /* 
- * $Id$
- * $DateTime$
- * $Change$
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlcheckconf.c#6 $
+ * $DateTime: 2016/09/29 10:09:36 $
+ * $Change: 3207 $
  */
 
 
@@ -56,6 +56,7 @@
 #include <argus_util.h>
 #include <rasqlcheckconf.h>
 
+int ArgusParseErrors = 0;
 int ArgusCloseDown = 0;
 int RaSQLArgusConfTable = 0;
 
@@ -345,6 +346,10 @@ main(int argc, char **argv)
 
                   RaMySQLWriteArgusConfiguration (RaMySQL, &RaArgusResourceFileStr[0]);
                }
+            } else {
+#ifdef ARGUSDEBUG
+               ArgusDebug (1, "Argus configurations are equal");
+#endif
             }
                
          } else {
@@ -660,7 +665,7 @@ RaMySQLInit ()
       ArgusParser->MySQLDBEngine = strdup("MyISAM");
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaMySQLInit () RaSource %s RaArchive %s RaFormat %s", RaSource, RaArchive, RaFormat);
+   ArgusDebug (6, "RaMySQLInit () RaSource %s RaArchive %s RaFormat %s", RaSource, RaArchive, RaFormat);
 #endif
 }
 
@@ -694,7 +699,7 @@ RaReadMySQLTable(MYSQL *sql, char *table, struct ArgusResourceStruct *recs)
    sprintf (buf, "SELECT * from %s", RaSQLSaveTable);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "SQL Query %s\n", buf);
+   ArgusDebug (4, "SQL Query %s\n", buf);
 #endif
 
    if (mysql_real_query(sql, buf, strlen(buf)) != 0)
@@ -769,7 +774,7 @@ RaReadMySQLTable(MYSQL *sql, char *table, struct ArgusResourceStruct *recs)
       retn = 1;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaReadMySQLTable(%p, %p, %p) read %d items\n", sql, table, recs, cnt);
+   ArgusDebug (2, "RaReadMySQLTable(%p, %p, %p) read %d items\n", sql, table, recs, cnt);
 #endif
 
    return(retn);
@@ -799,7 +804,7 @@ RaMySQLWriteArgusConfiguration (MYSQL *sql, struct ArgusResourceStruct *recs)
                sprintf (sbuf, "INSERT INTO %s (label, value) VALUES (\"%s\",\"%s\")", RaSQLSaveTable, label, value);
 
 #ifdef ARGUSDEBUG
-            ArgusDebug (1, "RaMySQLWriteArgusConfiguration: SQL statement \"%s\"\n", sbuf);
+            ArgusDebug (2, "RaMySQLWriteArgusConfiguration: SQL statement \"%s\"\n", sbuf);
 #endif
             if ((slen = strlen(sbuf)) > 0) {
                if ((retn = mysql_real_query(sql, sbuf, slen)) != 0) {
@@ -1037,7 +1042,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
 #endif
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);
+   ArgusDebug (2, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);
 #endif
    return (retn);
 }
@@ -1135,7 +1140,7 @@ ArgusInitModeler(struct ArgusModelerStruct *model)
 */
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusInitModeler(%p) done\n", model);
+   ArgusDebug (4, "ArgusInitModeler(%p) done\n", model);
 #endif 
 }
 
@@ -1296,22 +1301,21 @@ RaParseArgusResourceFile (struct ArgusResourceStruct *recs , char *file)
                 str++;
  
             if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-
                for (i = 0; i < ARGUS_RCITEMS && !done; i++) {
                   len = strlen(RaArgusResourceFileStr[i].label);
                   if (!(strncmp (str, RaArgusResourceFileStr[i].label, len))) {
-                     int quoted = 0;
-                     optarg = &str[len];
+                     struct ArgusResourceItemStruct *res = NULL;
+                     int quoted = 0, parseOk = 0;
 
+                     optarg = &str[len];
                      if (*optarg == '\"') {
                         optarg++; 
                         if ((qptr = strchr(optarg, '"')) != NULL)
                            *qptr++ = '\0';
                         else
-                           ArgusLog (LOG_ERR, "ArgusParseResourceFile(%s) string unterminated at line %d\n", file, linenum);
+                           ArgusLog (LOG_ERR, "RaParseArgusResourceFile(%s) string unterminated at line %d\n", file, linenum);
                         quoted = 1; 
                      }
-
 // deal with potential embedded comments
                      if (!quoted) {
                         if (((qptr = strstr(optarg, " //")) != NULL) ||
@@ -1325,22 +1329,137 @@ RaParseArgusResourceFile (struct ArgusResourceStruct *recs , char *file)
                      optarg = ArgusTrimString(optarg);
                      cnt++;
 
+// Perform range and type checking for configuration values.
+
+                     parseOk = 1;
                      switch (i) {
-                        default: {
-                           struct ArgusResourceItemStruct *res = NULL;
+                        case ARGUS_DAEMON:
+                        case ARGUS_SET_PID:
+                        case ARGUS_GO_PROMISCUOUS:
+                        case ARGUS_GENERATE_START_RECORDS:
+                        case ARGUS_GENERATE_RESPONSE_TIME_DATA:
+                        case ARGUS_GENERATE_JITTER_DATA:
+                        case ARGUS_GENERATE_MAC_DATA:
+                        case ARGUS_FILTER_OPTIMIZER:
+                        case ARGUS_PACKET_CAPTURE_ON_ERROR:
+                        case ARGUS_GENERATE_APPBYTE_METRIC:
+                        case ARGUS_GENERATE_TCP_PERF_METRIC:
+                        case ARGUS_GENERATE_BIDIRECTIONAL_TIMESTAMPS:
+                        case ARGUS_GENERATE_PACKET_SIZE:
+                        case ARGUS_CAPTURE_FULL_CONTROL_DATA:
+                        case ARGUS_SELF_SYNCHRONIZE:
+                        case ARGUS_TUNNEL_DISCOVERY:
+                        case ARGUS_TRACK_DUPLICATES:
+                        case ARGUS_OS_FINGERPRINTING:
+                           if (!((strcmp("yes", optarg) == 0) || (strcmp("no", optarg) == 0))) {
+                              parseOk = 0;
+                           }
+                           break;
 
-                           if (recs[i].values == NULL)
-                              recs[i].values = ArgusNewList();
+                        case ARGUS_MONITOR_ID:
+                           break;
 
-                           if ((res = (struct ArgusResourceItemStruct *) ArgusCalloc(1, sizeof(*res))) != NULL) {
-                              if (quoted) res->status |=  ARGUS_ITEM_QUOTED;
-                              res->value = strdup(optarg);
-                              ArgusPushBackList(recs[i].values, (struct ArgusListRecord *)res, ARGUS_LOCK);
+                        case ARGUS_ACCESS_PORT: 
+                        case ARGUS_CAPTURE_DATA_LEN: 
+                        case ARGUS_DEBUG_LEVEL:
+                        case ARGUS_MIN_SSF:
+                        case ARGUS_MAX_SSF:
+                        case ARGUS_IP_TIMEOUT:
+                        case ARGUS_TCP_TIMEOUT:
+                        case ARGUS_ICMP_TIMEOUT:
+                        case ARGUS_IGMP_TIMEOUT:
+                        case ARGUS_FRAG_TIMEOUT:
+                        case ARGUS_ARP_TIMEOUT:
+                        case ARGUS_OTHER_TIMEOUT: {
+                           int value, matches;
+                           if ((matches = sscanf(optarg,"%d", &value)) == 0) {
+                              parseOk = 0;
                            }
                            break;
                         }
+
+                        case ARGUS_INTERFACE:
+                        case ARGUS_OUTPUT_FILE:
+                        case ARGUS_PID_PATH:
+                           break;
+
+                        case ARGUS_FLOW_STATUS_INTERVAL: 
+                        case ARGUS_MAR_STATUS_INTERVAL: {
+                           int matches;
+                           float value;
+                           if ((matches = sscanf(optarg,"%f", &value)) == 0) {
+                              parseOk = 0;
+                           }
+                           break;
+                        }
+
+                        case ARGUS_FILTER:
+                        case ARGUS_PACKET_CAPTURE_FILE:
+                        case ARGUS_BIND_IP:
+                        case ARGUS_COLLECTOR:
+                        case ARGUS_FLOW_TYPE:
+                        case ARGUS_FLOW_KEY:
+                        case ARGUS_CHROOT_DIR:
+                           break;
+
+                        case ARGUS_SETUSER_ID: {
+#ifdef ARGUSDEBUG
+                           struct passwd *pw;
+                           if ((pw = getpwnam(optarg)) == NULL) {
+                              ArgusDebug (1, "RaParseArgusResourceFile: ARGUS_SETUSER_ID user %s unknown\n", optarg);
+                           }
+                           endpwent();
+#endif 
+                           break;
+                        }
+
+                        case ARGUS_SETGROUP_ID: {
+#ifdef ARGUSDEBUG
+                           struct group *gr;
+                           if ((gr = getgrnam(optarg)) == NULL)
+                              ArgusDebug (1, "RaParseArgusResourceFile: ARGUS_SETGROUP_ID group %s unknown\n", optarg);
+                           endgrent();
+#endif 
+                           break;
+                        }
+
+                        case ARGUS_ENV:
+                        case ARGUS_EVENT_DATA:
+                        case ARGUS_JITTER_HISTOGRAM:
+                        case ARGUS_OUTPUT_STREAM:
+                           break;
+
+                        case ARGUS_KEYSTROKE:
+                           if (!((strcmp("yes", optarg) == 0) || (strcmp("no", optarg) == 0) ||
+                                 (strcmp("ssh", optarg) == 0) || (strcmp("tcp", optarg) == 0))) {
+                              parseOk = 0;
+                           }
+                           break;
+
+                        case ARGUS_KEYSTROKE_CONF:
+                        case ARGUS_PCAP_BUF_SIZE:
+                        case ARGUS_CONTROLPLANE_PROTO:
+                           break;
                      }
 
+                     if (recs[i].values == NULL)
+                        recs[i].values = ArgusNewList();
+ 
+                     if ((res = (struct ArgusResourceItemStruct *) ArgusCalloc(1, sizeof(*res))) != NULL) {
+                        if (quoted) res->status |=  ARGUS_ITEM_QUOTED;
+                        res->value = strdup(optarg);
+                        ArgusPushBackList(recs[i].values, (struct ArgusListRecord *)res, ARGUS_LOCK);
+                     }
+
+                     if (parseOk == 0) {
+                        ArgusParseErrors++;
+#ifdef ARGUSDEBUG
+                        if (quoted)
+                           ArgusDebug (1, "RaParseArgusResourceFile: format error: entry %s\"%s\"", RaArgusResourceFileStr[i].label, optarg);
+                        else
+                           ArgusDebug (1, "RaParseArgusResourceFile: format error: entry %s%s", RaArgusResourceFileStr[i].label, optarg);
+#endif
+                     }
                      done = 1;
                      break;
                   }
@@ -1352,15 +1471,14 @@ RaParseArgusResourceFile (struct ArgusResourceStruct *recs , char *file)
 
       } else {
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "ArgusParseResourceFile: open %s %s\n", file, strerror(errno));
+         ArgusDebug (1, "RaParseArgusResourceFile: open %s %s\n", file, strerror(errno));
 #endif 
       }
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusParseResourceFile (%s) parsed %d items\n", file, cnt);
+   ArgusDebug (2, "RaParseArgusResourceFile (%s) parsed %d items\n", file, cnt);
 #endif 
-
 }
 
 void
@@ -1412,7 +1530,7 @@ clearArgusConfiguration (struct ArgusModelerStruct *model)
 */
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "clearArgusConfiguration () returning\n");
+   ArgusDebug (2, "clearArgusConfiguration () returning\n");
 #endif 
 }
 
@@ -1533,7 +1651,7 @@ ArgusNewEvents ()
 #endif
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusNewEvents() returning retn 0x%x\n", retn);
+   ArgusDebug (4, "ArgusNewEvents() returning retn 0x%x\n", retn);
 #endif
 
    return (retn);
