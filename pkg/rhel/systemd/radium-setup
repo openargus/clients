@@ -30,6 +30,31 @@ get_monitor_id() {
 	fi
 }
 
+
+generate_monitor_id() {
+	local uuid=$(dmidecode -s system-uuid)
+	if [[ -z "$uuid" ]] ; then
+		uuid=$(uuidgen -t)
+	fi
+
+	# uuid + interface name
+	echo "${uuid}"
+}
+
+get_monitor_id() {
+	local cachedir="/var/cache/argus"
+	local idcache="${cachedir}/monitor-id"
+
+	# Look for cached value.  If not found, make a new monitor
+	# id and save it.
+	if [[ -f $idcache ]] ; then
+		cat $idcache
+	else
+		mkdir -p ${cachedir}
+		generate_monitor_id | tee ${idcache}
+	fi
+}
+
 # Minimal configuration
 radium_configure(){
 	echo "RADIUM_MONITOR_ID=$(get_monitor_id)"
