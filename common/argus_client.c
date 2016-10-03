@@ -11946,8 +11946,6 @@ RaParseType (char *str)
    return(argus_nametoeproto(str));
 }
 
-
-
 double
 ArgusFetchSrcId (struct ArgusRecordStruct *ns)
 {
@@ -11977,6 +11975,40 @@ ArgusFetchSrcId (struct ArgusRecordStruct *ns)
       }
    }
 
+   return (retn);
+}
+
+double
+ArgusFetchSID (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   struct ArgusTransportStruct *t = (struct ArgusTransportStruct *)ns->dsrs[ARGUS_TRANSPORT_INDEX];
+   if (t) {
+      if (t->hdr.subtype & ARGUS_SRCID) {
+         long long value = t->srcid.a_un.value;
+         retn = (double) value;
+      }
+   }
+   return (retn);
+}
+
+double
+ArgusFetchInf (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   struct ArgusTransportStruct *t = (struct ArgusTransportStruct *)ns->dsrs[ARGUS_TRANSPORT_INDEX];
+   if (t) {
+      if (t->hdr.subtype & ARGUS_SRCID) {
+         if (t->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
+            int value = 0;
+            bcopy(t->srcid.inf, (char *)&value, 4);
+            retn = (double) value;
+         } else
+            retn = 0;
+      }
+   }
    return (retn);
 }
 
@@ -14861,7 +14893,6 @@ ArgusFetchDstGap (struct ArgusRecordStruct *ns)
    return (retn);
 }
 
-/*
 double
 ArgusFetchSrcDup (struct ArgusRecordStruct *ns)
 {
@@ -14883,8 +14914,9 @@ ArgusFetchSrcDup (struct ArgusRecordStruct *ns)
                               break;
                            
                            case ARGUS_TCP_PERF: {
-                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
-                              retn = tcp->sdups;
+//                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
+//                            retn = tcp->sdups;
+                              retn = 0;
                               break;
                            }
                         }
@@ -14905,8 +14937,9 @@ ArgusFetchSrcDup (struct ArgusRecordStruct *ns)
                               break;
                            
                            case ARGUS_TCP_PERF: {
-                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
-                              retn = tcp->sdups;
+//                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
+//                            retn = tcp->sdups;
+                              retn = 0;
                               break;
                            }
                         }
@@ -14948,8 +14981,9 @@ ArgusFetchDstDup (struct ArgusRecordStruct *ns)
                               break;
 
                            case ARGUS_TCP_PERF: {
-                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
-                              retn = tcp->ddups;
+//                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
+//                            retn = tcp->ddups;
+                              retn = 0;
                               break;
                            }
                         }
@@ -14970,8 +15004,9 @@ ArgusFetchDstDup (struct ArgusRecordStruct *ns)
                               break;
 
                            case ARGUS_TCP_PERF: {
-                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
-                              retn = tcp->ddups;
+//                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &net->net_union.tcp;
+//                            retn = tcp->ddups;
+                              retn = 0;
                               break;
                            }
                         }
@@ -14991,7 +15026,6 @@ ArgusFetchDstDup (struct ArgusRecordStruct *ns)
    }
    return (retn);
 }
-*/
 
 
 double

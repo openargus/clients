@@ -1760,9 +1760,8 @@ no_auth:
                char buf[4];
                struct ArgusRecord *argus = (struct ArgusRecord *) &buf;
 
-               argus->hdr.type   = ARGUS_MAR;
-               argus->hdr.type  |= ARGUS_VERSION;
-               argus->hdr.cause  = ARGUS_ERROR & 0xF0;
+               argus->hdr.type   = ARGUS_MAR | ARGUS_VERSION;
+               argus->hdr.cause  = (ARGUS_ERROR & 0xF0) | ARGUS_SRC_RADIUM;
                argus->hdr.cause |= ARGUS_MAXLISTENEXCD;
                argus->hdr.len    = ntohs(1); 
                len = 4;
@@ -2154,7 +2153,7 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
      ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
    
    retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-   retn->hdr.cause = ARGUS_START;
+   retn->hdr.cause = ARGUS_START | ARGUS_SRC_RADIUM;
    retn->hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
    retn->argus_mar.argusid = htonl(ARGUS_COOKIE);
@@ -2215,7 +2214,7 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
      ArgusLog (LOG_ERR, "ArgusGenerateStatusMarRecord(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
 
    retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-   retn->hdr.cause = status;
+   retn->hdr.cause = status | ARGUS_SRC_RADIUM;
    retn->hdr.len   = ((unsigned short) sizeof(struct ArgusRecord)/4);
 
    if ((rec = (struct ArgusRecord *) ArgusCalloc(1, sizeof(*rec))) == NULL)

@@ -102,6 +102,9 @@
 #define Q_MASKLEN	182
 #define Q_UUID		183
 
+#define Q_SID		184
+#define Q_INF		185
+
 /* Protocol qualifiers. */
 
 #define Q_MAN		38

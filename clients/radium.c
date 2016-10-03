@@ -49,6 +49,7 @@
 #endif
 
 #include <argus_compat.h>
+#include <argus_util.h>
 #include <argus_output.h>
 
 #include <rabins.h>
@@ -510,36 +511,38 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          23
+#define RADIUM_RCITEMS                          24
 
-#define RADIUM_DAEMON                           0
-#define RADIUM_MONITOR_ID                       1
+#define RADIUM_MONITOR_ID                       0
+#define RADIUM_MONITOR_ID_INCLUDE_INF		1
 #define RADIUM_ARGUS_SERVER                     2
-#define RADIUM_CISCONETFLOW_PORT                3
-#define RADIUM_ACCESS_PORT                      4
-#define RADIUM_INPUT_FILE                       5
-#define RADIUM_USER_AUTH                        6
-#define RADIUM_AUTH_PASS                        7
-#define RADIUM_OUTPUT_FILE                      8
-#define RADIUM_OUTPUT_STREAM                    9
-#define RADIUM_MAR_STATUS_INTERVAL              10
-#define RADIUM_DEBUG_LEVEL                      11
-#define RADIUM_FILTER_OPTIMIZER                 12
-#define RADIUM_FILTER_TAG                       13
-#define RADIUM_BIND_IP                          14
-#define RADIUM_MIN_SSF                          15
-#define RADIUM_MAX_SSF                          16
-#define RADIUM_ADJUST_TIME                      17
-#define RADIUM_CHROOT_DIR                       18
-#define RADIUM_SETUSER_ID                       19
-#define RADIUM_SETGROUP_ID                      20
-#define RADIUM_CLASSIFIER_FILE                  21
-#define RADIUM_ZEROCONF_REGISTER                22
+#define RADIUM_DAEMON                           3
+#define RADIUM_CISCONETFLOW_PORT                4
+#define RADIUM_ACCESS_PORT                      5
+#define RADIUM_INPUT_FILE                       6
+#define RADIUM_USER_AUTH                        7
+#define RADIUM_AUTH_PASS                        8
+#define RADIUM_OUTPUT_FILE                      9
+#define RADIUM_OUTPUT_STREAM                    10
+#define RADIUM_MAR_STATUS_INTERVAL              11
+#define RADIUM_DEBUG_LEVEL                      12
+#define RADIUM_FILTER_OPTIMIZER                 13
+#define RADIUM_FILTER_TAG                       14
+#define RADIUM_BIND_IP                          15
+#define RADIUM_MIN_SSF                          16
+#define RADIUM_MAX_SSF                          17
+#define RADIUM_ADJUST_TIME                      18
+#define RADIUM_CHROOT_DIR                       19
+#define RADIUM_SETUSER_ID                       20
+#define RADIUM_SETGROUP_ID                      21
+#define RADIUM_CLASSIFIER_FILE                  22
+#define RADIUM_ZEROCONF_REGISTER                23
 
 char *RadiumResourceFileStr [] = {
-   "RADIUM_DAEMON=",
    "RADIUM_MONITOR_ID=",
+   "RADIUM_MONITOR_ID_INCLUDE_INF=",
    "RADIUM_ARGUS_SERVER=",
+   "RADIUM_DAEMON=",
    "RADIUM_CISCONETFLOW_PORT=",
    "RADIUM_ACCESS_PORT=",
    "RADIUM_INPUT_FILE=",
@@ -582,52 +585,60 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                for (i = 0; i < RADIUM_RCITEMS && !done; i++) {
                   len = strlen(RadiumResourceFileStr[i]);
                   if (!(strncmp (str, RadiumResourceFileStr[i], len))) {
+                     char *qptr = NULL;
+                     int quoted = 0;
                      optarg = &str[len];
-                     if (*optarg == '\"') { optarg++; quoted = 1; }
+                     if (*optarg == '\"') { 
+                        optarg++; 
+                        if ((qptr = strchr(optarg, '"')) != NULL)
+                           *qptr++ = '\0';
+                        else
+                           ArgusLog (LOG_ERR, "RaParseResourceFile(%s) string unterminated at line %d\n", file, linenum);
+                        quoted = 1;
+                     }
+
+// deal with potential embedded comments
+                     if (!quoted) {
+                        if (((qptr = strstr(optarg, " //")) != NULL) ||
+                            ((qptr = strstr(optarg, "\t//")) != NULL))
+                           *qptr++ = '\0';
+                     }
+
                      if (optarg[strlen(optarg) - 1] == '\n')
-                        optarg[strlen(optarg) - 1] = '\0';
-                     if (optarg[strlen(optarg) - 1] == '\"')
                         optarg[strlen(optarg) - 1] = '\0';
 
                      switch (i) {
-                        case RADIUM_DAEMON: {
-                           if (!(strncasecmp(optarg, "yes", 3)))
-                              parser->dflag = 1;
-                           else
-                           if (!(strncasecmp(optarg, "no", 2)))
-                              parser->dflag = 0;
-
-                           break;
-                        }
-
-                        case RADIUM_MONITOR_ID: 
+                        case RADIUM_MONITOR_ID: {
                            if (optarg && quoted) {   // Argus ID is a string.  Limit to date is 4 characters.
                               int slen = strlen(optarg);
                               if (slen > 4) optarg[4] = '\0';
                               setParserArgusID (parser, optarg, 4, ARGUS_IDIS_STRING);
  
                            } else {
-                           if (optarg && (*optarg == '`')) {
-                              if (optarg[strlen(optarg) - 1] == '`') {
-                                 FILE *tfd;
+                              if (optarg && (*optarg == '`')) {
+                                 if (optarg[strlen(optarg) - 1] == '`') {
+                                    optarg++;
+                                    optarg[strlen(optarg) - 1] = '\0';
+                                    if (!(strcmp (optarg, "hostname"))) {
+                                       if ((fd = popen("hostname", "r")) != NULL) {
+                                          ptr = NULL;
+                                          clearerr(fd);
+                                          while ((ptr == NULL) && !(feof(fd)))
+                                             ptr = fgets(result, MAXSTRLEN, fd);
 
-                                 optarg++;
-                                 optarg[strlen(optarg) - 1] = '\0';
-                                 if (!(strcmp (optarg, "hostname"))) {
-                                    if ((tfd = popen("hostname", "r")) != NULL) {
-                                       if ((ptr = fgets(result, MAXSTRLEN, tfd)) != NULL) {
+                                          if (ptr == NULL)
+                                             ArgusLog (LOG_ERR, "ArgusParseResourceFile(%s) `hostname` failed %s.\n", file, strerror(errno));
+
                                           optarg = ptr;
                                           optarg[strlen(optarg) - 1] = '\0';
+                                          pclose(fd);
 
                                           if ((ptr = strstr(optarg, ".local")) != NULL) {
                                              if (strlen(ptr) == strlen(".local"))
                                                 *ptr = '\0';
                                           }
-
                                        } else
-                                          ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) `hostname` failed %s.\n", file, strerror(errno));
-
-                                       pclose(tfd);
+                                          ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) System error: popen() %s\n", file, strerror(errno));
                                     } else
                                        ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) System error: popen() %s\n", file, strerror(errno));
                                  } else
@@ -689,12 +700,15 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                     setParserArgusID (parser, optarg, 4, ARGUS_IDIS_INT);
                                  } else
                                     ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
+                              }
 
-#endif
-                           } else
-                              ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
+                              ArgusParseSourceID(parser, optarg);
                            }
+                           break;
+                        }
 
+                        case RADIUM_MONITOR_ID_INCLUDE_INF:
+                           setArgusManInf(parser, optarg);
                            break;
 
                         case RADIUM_ARGUS_SERVER:
@@ -714,6 +728,15 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            if (!(ArgusAddHostList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
                               ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
 
+                           break;
+                        }
+
+                        case RADIUM_DAEMON: {
+                           if (!(strncasecmp(optarg, "yes", 3)))
+                              parser->dflag = 1;
+                           else
+                           if (!(strncasecmp(optarg, "no", 2)))
+                              parser->dflag = 0;
                            break;
                         }
 

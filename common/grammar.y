@@ -111,7 +111,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 %token  START STOP STATUS SHUTDOWN ERROR
 %token  MAN FAR EVENT INDEX
 %token  REMOTE LOCAL
-%token  DST SRC HOST INODE GATEWAY IPID TTL TOS DSB SRCID TCPBASE
+%token  DST SRC HOST INODE GATEWAY IPID TTL TOS DSB SRCID SID INF TCPBASE
 %token  NET AMASK MASKLEN PORT EQUAL NOTEQUAL LESS GREATER PROTO BYTE PKT APPBYTE
 %token  TRANS ARP RARP IP IPV4 IPV6 TCP UDP ICMP IGMP 
 %token  ISIS HELLO LSP CSNP PSNP
@@ -224,6 +224,8 @@ nid:	  ID			{ $$.b = Argusgen_scode($1, $$.q = $<blk>0.q); }
 				  $$.b = Argusgen_ecode($1, $$.q); }
 	| UUID			{ $$.q = $<blk>0.q; $$.q.type = Q_STRING;
                                   $$.b = Argusgen_ucode($1, $$.q); }
+	| UUID '/' STRING	{ $$.q = $<blk>0.q; $$.q.type = Q_STRING;
+                                  $$.b = Argusgen_ucode($1, $$.q); }
 	| not id		{ Argusgen_not($2.b); $$ = $2; }
 	;
 not:	  '!'			{ $$ = $<blk>0; }
@@ -293,6 +295,8 @@ lqual:	  LOCAL			{ $$ = Q_LOCAL; }
 /* address type qualifiers */
 aqual:	  HOST			{ $$ = Q_HOST; }
 	| SRCID			{ $$ = Q_SRCID; }
+	| SID			{ $$ = Q_SID; }
+	| INF			{ $$ = Q_INF; }
 	| INODE			{ $$ = Q_INODE; }
 	| NET			{ $$ = Q_NET; }
 	;

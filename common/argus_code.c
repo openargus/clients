@@ -144,6 +144,7 @@ static struct ablock *Argusgen_hostop(u_int *, u_int *, int, int, u_int);
 static struct ablock *Argusgen_ehostop(u_char *, int);
 static struct ablock *Argusgen_host(u_int *, u_int *, int, int, int);
 static struct ablock *Argusgen_srcid(u_int *, u_int, int);
+static struct ablock *Argusgen_inf(char *);
 static struct ablock *Argusgen_inode(u_int, u_int, int);
 static struct ablock *Argusgen_gateway(u_char *, u_int *, int, int, int);
 static struct ablock *Argusgen_portatom(int, long, int);
@@ -1456,6 +1457,33 @@ Argusgen_srcid(u_int *addr, u_int mask, int type)
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_srcid (0x%x, 0x%x) returns %p\n", *addr, mask, b1);
+#endif
+
+   return (b1);
+}
+
+static struct ablock *
+Argusgen_inf(char *inf)
+{
+   struct ablock *b1 = NULL, *tmp;
+
+   if (strcmp(inf, "mar0") == 0) {
+      b1 =  Argusgen_recordtype(ARGUS_MAR);
+   } else
+   if (strcmp(inf, "evt0") == 0) {
+      b1 =  Argusgen_recordtype(ARGUS_EVENT);
+   } else {
+      struct ArgusTransportStruct trans;
+      int offset = (char *)&trans.srcid.inf - (char *)&trans;
+      u_int value = *(u_int *)inf;
+
+      tmp = Argusgen_recordtype(ARGUS_FAR);
+      b1 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, value, Q_EQUAL, Q_DEFAULT);
+      Argusgen_and(tmp, b1);
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_inf (%s) returns %p\n", inf, b1);
 #endif
 
    return (b1);
@@ -4495,6 +4523,7 @@ Argusgen_scode(char *name, struct qual q)
          break;
 
       case Q_INODE: 
+      case Q_SID:
       case Q_SRCID: {
          if (type == Q_STRING) {
             *mask = 0xffffffff;
@@ -4605,6 +4634,11 @@ Argusgen_scode(char *name, struct qual q)
          }
 #endif
          }
+         break;
+      }
+
+      case Q_INF: {
+         b = Argusgen_inf(name);
          break;
       }
 

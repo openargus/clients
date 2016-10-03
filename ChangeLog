@@ -1,3 +1,7 @@
+Sat Oct  1 20:18:54 EDT 2016
+Added support for inf in events and management records.
+Added filters for inf and sid, and cleaned up the configuration for argus
+
 Tue Sep 27 20:07:59 EDT 2016
 Added rasqlcheckconf to import an argus.conf file into a database table,
 then to compare the contents with the database, replacing the contents

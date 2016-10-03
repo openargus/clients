@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		120
-#define MAX_METRIC_ALG_TYPES		120
+#define ARGUS_MAX_METRIC_ALG		124
+#define MAX_METRIC_ALG_TYPES		124
 
 
 struct ArgusFetchValueStruct {
@@ -46,6 +46,8 @@ long long ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns);
 long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcId (struct ArgusRecordStruct *ns);
+double ArgusFetchSID (struct ArgusRecordStruct *ns);
+double ArgusFetchInf (struct ArgusRecordStruct *ns);
 double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchLastTime (struct ArgusRecordStruct *ns);
 double ArgusFetchAvgDuration (struct ArgusRecordStruct *ns);
@@ -121,10 +123,8 @@ double ArgusFetchDstTcpMax (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcGap (struct ArgusRecordStruct *ns);
 double ArgusFetchDstGap (struct ArgusRecordStruct *ns);
 
-/*
 double ArgusFetchSrcDup (struct ArgusRecordStruct *ns);
 double ArgusFetchDstDup (struct ArgusRecordStruct *ns);
-*/
 
 double ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcIntPktAct (struct ArgusRecordStruct *ns);
@@ -434,13 +434,14 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"soui", ArgusFetchSrcMacOui},
 #define ARGUSMETRICDSTMACOUI       119
    {"doui", ArgusFetchDstMacOui},
-
-/*
-#define ARGUSMETRICSRCDUP  118
+#define ARGUSMETRICSRCDUP          120
    {"sdup", ArgusFetchSrcDup},
-#define ARGUSMETRICDSTDUP  119
+#define ARGUSMETRICDSTDUP          121
    {"ddup", ArgusFetchDstDup},
-*/
+#define ARGUSMETRICSID		   122
+   {"sid", ArgusFetchSID},
+#define ARGUSMETRICINF		   123
+   {"inf", ArgusFetchInf},
 };
 
 #else
@@ -448,6 +449,8 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
 extern struct ArgusFetchValueStruct RaFetchAlgorithmTable[];
 
 extern double ArgusFetchSrcId (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSID (struct ArgusRecordStruct *ns);
+extern double ArgusFetchInf (struct ArgusRecordStruct *ns);
 extern long long ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 extern long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
