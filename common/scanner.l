@@ -16,9 +16,9 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- * $Id: //depot/gargoyle/clients/common/scanner.l#18 $
- * $DateTime: 2016/09/14 23:15:04 $
- * $Change: 3185 $
+ * $Id: //depot/gargoyle/clients/common/scanner.l#19 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 /*

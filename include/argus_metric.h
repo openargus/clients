@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_metric.h#10 $
- * $DateTime: 2016/03/07 20:28:24 $
- * $Change: 3105 $
+ * $Id: //depot/gargoyle/clients/include/argus_metric.h#11 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 #ifndef ArgusMetric_h

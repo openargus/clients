@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/radium.c#16 $
- * $DateTime: 2016/09/14 23:15:04 $
- * $Change: 3185 $
+ * $Id: //depot/gargoyle/clients/clients/radium.c#18 $
+ * $DateTime: 2016/10/05 18:13:13 $
+ * $Change: 3215 $
  */
 
 /*
@@ -202,7 +202,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
-         setArgusMarReportInterval (ArgusParser, "60s");
+         setArgusMarReportInterval (ArgusParser, "5s");
       }
 
 #if defined(ARGUS_THREADS)
@@ -327,6 +327,7 @@ void
 ArgusClientTimeout ()
 {
    gettimeofday(&ArgusParser->ArgusRealTime, 0);
+   ArgusParser->ArgusGlobalTime = ArgusParser->ArgusRealTime;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");

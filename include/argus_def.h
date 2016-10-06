@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_def.h#18 $
- * $DateTime: 2016/09/27 20:09:29 $
- * $Change: 3203 $
+ * $Id: //depot/gargoyle/clients/include/argus_def.h#19 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 /* Argus_def.h */

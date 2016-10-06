@@ -104,8 +104,13 @@ setArgusMarReportInterval (struct ArgusParserStruct *parser, char *value)
       tvp->tv_sec = iptr;
       tvp->tv_usec =  fptr * 1000000;
 
-      parser->ArgusReportTime.tv_sec  = parser->ArgusRealTime.tv_sec + tvp->tv_sec;
-      parser->ArgusReportTime.tv_usec = tvp->tv_usec;
+      parser->ArgusReportTime.tv_sec  = parser->ArgusRealTime.tv_sec  + tvp->tv_sec;
+      parser->ArgusReportTime.tv_usec = parser->ArgusRealTime.tv_usec + tvp->tv_usec;
+
+      if (parser->ArgusReportTime.tv_usec > 1000000) {
+         parser->ArgusReportTime.tv_sec++;
+         parser->ArgusReportTime.tv_usec -= 1000000;
+      }
 
    } else
       *tvp = ovalue;
@@ -348,12 +353,19 @@ ArgusNewOutput (struct ArgusParserStruct *parser)
    parser->ArgusWfileList = NULL;
 
    retn->ArgusMarReportInterval   = parser->ArgusMarReportInterval;
-   retn->ArgusReportTime.tv_sec   = parser->ArgusGlobalTime.tv_sec + parser->ArgusMarReportInterval.tv_sec;
-   retn->ArgusReportTime.tv_usec += parser->ArgusMarReportInterval.tv_usec;
-   retn->ArgusLastMarUpdateTime   = parser->ArgusGlobalTime;
 
-   gettimeofday (&retn->ArgusStartTime, 0L);
-   retn->ArgusLastMarUpdateTime = retn->ArgusStartTime;
+   gettimeofday (&retn->ArgusGlobalTime, 0L);
+   retn->ArgusStartTime = retn->ArgusGlobalTime;
+
+   retn->ArgusReportTime.tv_sec   = retn->ArgusStartTime.tv_sec  + parser->ArgusMarReportInterval.tv_sec;
+   retn->ArgusReportTime.tv_usec  = retn->ArgusStartTime.tv_usec + parser->ArgusMarReportInterval.tv_usec;
+
+   if (retn->ArgusReportTime.tv_usec  > 1000000) {
+      retn->ArgusReportTime.tv_sec++;
+      retn->ArgusReportTime.tv_usec -= 1000000;
+   }
+
+   retn->ArgusLastMarUpdateTime   = retn->ArgusGlobalTime;
 
    ArgusInitOutput(retn);
 
@@ -425,12 +437,17 @@ ArgusNewControlChannel (struct ArgusParserStruct *parser)
    parser->ArgusWfileList = NULL;
 
    retn->ArgusMarReportInterval   = parser->ArgusMarReportInterval;
-   retn->ArgusReportTime.tv_sec   = parser->ArgusGlobalTime.tv_sec + parser->ArgusMarReportInterval.tv_sec;
-   retn->ArgusReportTime.tv_usec += parser->ArgusMarReportInterval.tv_usec;
-   retn->ArgusLastMarUpdateTime   = parser->ArgusGlobalTime;
 
    gettimeofday (&retn->ArgusStartTime, 0L);
    retn->ArgusLastMarUpdateTime = retn->ArgusStartTime;
+
+   retn->ArgusReportTime.tv_sec   = retn->ArgusStartTime.tv_sec + parser->ArgusMarReportInterval.tv_sec;
+   retn->ArgusReportTime.tv_usec  = retn->ArgusStartTime.tv_usec + parser->ArgusMarReportInterval.tv_usec;
+
+   if (retn->ArgusReportTime.tv_usec > 1000000) {
+      retn->ArgusReportTime.tv_sec++;
+      retn->ArgusReportTime.tv_usec -= 1000000;
+   }
 
    ArgusInitControlChannel(retn);
 
@@ -918,10 +935,10 @@ ArgusOutputStatusTime(struct ArgusOutputStruct *output)
    gettimeofday (&output->ArgusGlobalTime, 0L);
    if ((output->ArgusReportTime.tv_sec  < output->ArgusGlobalTime.tv_sec) ||
       ((output->ArgusReportTime.tv_sec == output->ArgusGlobalTime.tv_sec) &&
-       (output->ArgusReportTime.tv_usec < output->ArgusGlobalTime.tv_usec))) {
+       (output->ArgusReportTime.tv_usec <= output->ArgusGlobalTime.tv_usec))) {
 
-      output->ArgusReportTime.tv_sec  += getArgusMarReportInterval(output->ArgusParser)->tv_sec;
-      output->ArgusReportTime.tv_usec += getArgusMarReportInterval(output->ArgusParser)->tv_usec;
+      output->ArgusReportTime.tv_sec  = output->ArgusGlobalTime.tv_sec  + getArgusMarReportInterval(output->ArgusParser)->tv_sec;
+      output->ArgusReportTime.tv_usec = output->ArgusGlobalTime.tv_usec + getArgusMarReportInterval(output->ArgusParser)->tv_usec;
 
       if (output->ArgusReportTime.tv_usec > 1000000) {
          output->ArgusReportTime.tv_sec++;
@@ -1043,8 +1060,8 @@ ArgusOutputProcess(void *arg)
 #endif
                }
 
-               ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
                ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
+               ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
 
                if (ArgusNextUpdate.tv_usec > 1000000) {
                   ArgusNextUpdate.tv_sec++;
@@ -1053,16 +1070,14 @@ ArgusOutputProcess(void *arg)
             }
          }
 
+         if (ArgusOutputStatusTime(output)) {
+            if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
+               ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
+         }
+
          while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
             int done = 0;
             ArgusLoadList(output->ArgusOutputList, output->ArgusInputList);
-
-            if (ArgusOutputStatusTime(output)) {
-               if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
-                  ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
-
-               output->ArgusLastMarUpdateTime = output->ArgusGlobalTime;
-            }
 
             while (!done && ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL)) {
                u_int seqnum = 0;
@@ -1226,9 +1241,9 @@ ArgusOutputProcess(void *arg)
 
       } else {
 #if defined(ARGUS_THREADS)
-         struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+         struct timespec tsbuf = {0, 100000000}, *ts = &tsbuf;
 #ifdef ARGUSDEBUG
-         ArgusDebug (4, "ArgusOutputProcess() waiting for ArgusOutputList 0x%x\n", output);
+         ArgusDebug (1, "ArgusOutputProcess() waiting for ArgusOutputList 0x%x\n", output);
 #endif
          nanosleep (ts, NULL);
 #endif
@@ -1368,8 +1383,8 @@ ArgusControlChannelProcess(void *arg)
 #endif
                }
 
-               ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
-               ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
+               ArgusNextUpdate.tv_sec  = (output->ArgusGlobalTime.tv_sec  +  ArgusUpDate.tv_sec);
+               ArgusNextUpdate.tv_usec = (output->ArgusGlobalTime.tv_usec +  ArgusUpDate.tv_usec);
 
                if (ArgusNextUpdate.tv_usec > 1000000) {
                   ArgusNextUpdate.tv_sec++;
@@ -1378,16 +1393,14 @@ ArgusControlChannelProcess(void *arg)
             }
          }
 
+         if (ArgusOutputStatusTime(output)) {
+            if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
+               ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
+         }
+
          while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
             int done = 0;
             ArgusLoadList(output->ArgusOutputList, output->ArgusInputList);
-
-            if (ArgusOutputStatusTime(output)) {
-               if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
-                  ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
-
-               output->ArgusLastMarUpdateTime = output->ArgusGlobalTime;
-            }
 
             while (!done && ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL)) {
                u_int seqnum = 0;
@@ -1552,7 +1565,7 @@ ArgusControlChannelProcess(void *arg)
 
       } else {
 #if defined(ARGUS_THREADS)
-         struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+         struct timespec tsbuf = {0, 100000000}, *ts = &tsbuf;
 #ifdef ARGUSDEBUG
          ArgusDebug (4, "ArgusControlChannelProcess() waiting for ArgusOutputList 0x%x\n", output);
 #endif
@@ -2174,6 +2187,8 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
    retn->argus_mar.now.tv_sec  = htonl(tptr->tv_sec);
    retn->argus_mar.now.tv_usec = htonl(tptr->tv_usec);
 
+   output->ArgusLastMarUpdateTime = *tptr;
+
    retn->argus_mar.major_version = VERSION_MAJOR;
    retn->argus_mar.minor_version = VERSION_MINOR;
    retn->argus_mar.reportInterval = 0;
@@ -2193,6 +2208,8 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
          }
    }
    retn->argus_mar.record_len = htonl(-1);
+
+   output->ArgusLastMarUpdateTime = now;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (4, "ArgusGenerateInitialMar() returning\n");
@@ -2260,32 +2277,27 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
 
    gettimeofday (&now, 0L);
 
-   rec->argus_mar.now.tv_sec  = now.tv_sec;
-   rec->argus_mar.now.tv_usec = now.tv_usec;
-
-   rec->argus_mar.major_version = VERSION_MAJOR;
-   rec->argus_mar.minor_version = VERSION_MINOR;
-   rec->argus_mar.reportInterval = 0;
-
-   rec->argus_mar.localnet = 0;
-   rec->argus_mar.netmask = 0;
- 
-   rec->argus_mar.record_len = -1;
-
    if (output) {
-      rec->argus_mar.argusMrInterval = output->ArgusMarReportInterval.tv_sec;
-
       rec->argus_mar.startime.tv_sec  = output->ArgusLastMarUpdateTime.tv_sec;
       rec->argus_mar.startime.tv_usec = output->ArgusLastMarUpdateTime.tv_usec;
 
-      rec->argus_mar.startime.tv_sec  = output->ArgusStartTime.tv_sec;
-      rec->argus_mar.startime.tv_usec = output->ArgusStartTime.tv_usec;
+      rec->argus_mar.now.tv_sec  = now.tv_sec;
+      rec->argus_mar.now.tv_usec = now.tv_usec;
+
+      output->ArgusLastMarUpdateTime = now;
+
+      rec->argus_mar.major_version = VERSION_MAJOR;
+      rec->argus_mar.minor_version = VERSION_MINOR;
+      rec->argus_mar.reportInterval = 0;
+
 
       rec->argus_mar.argusMrInterval = output->ArgusMarReportInterval.tv_sec;
+
       rec->argus_mar.localnet = output->ArgusLocalNet;
       rec->argus_mar.netmask = output->ArgusNetMask;
 
       rec->argus_mar.nextMrSequenceNum = output->ArgusOutputSequence;
+      rec->argus_mar.record_len = -1;
    }
 
 /*
@@ -2328,20 +2340,9 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
       rec->argus_mar.bytes = ArgusAllocBytes;
    }
 
-/*
-   rec->argus_mar.flows = output->ArgusModel->ArgusTotalNewFlows - output->ArgusModel->ArgusLastNewFlows;
-   output->ArgusModel->ArgusLastNewFlows = output->ArgusModel->ArgusTotalNewFlows;
-
-   if (output->ArgusModel && output->ArgusModel->ArgusStatusQueue)
-      rec->argus_mar.queue   = output->ArgusModel->ArgusStatusQueue->count;
-   else
-      rec->argus_mar.queue   = 0;
-*/
-
 #ifdef ARGUSDEBUG
    ArgusDebug (4, "ArgusGenerateStatusMarRecord(0x%x, %d) returning 0x%x", output, status, retn);
 #endif
-
    return (retn);
 }
 

@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasplit.c#20 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#21 $
+ * $DateTime: 2016/10/06 00:01:32 $
+ * $Change: 3216 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -797,6 +797,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: 
       case ARGUS_EVENT:
+      
+
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {

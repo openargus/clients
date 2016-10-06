@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#74 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#76 $
+ * $DateTime: 2016/10/06 01:39:05 $
+ * $Change: 3217 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -5466,27 +5466,54 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
             if (na->mask & ARGUS_MASK_SRCID_INDEX) {
                struct ArgusRecord *rec = (struct ArgusRecord *) ns->dsrs[0];
                int i, len, s = sizeof(unsigned short);
-               unsigned int thisid;
+               struct ArgusAddrStruct thisid;
                unsigned short *sptr;
 
-               if (rec != NULL) {
-                  switch (ns->hdr.cause & 0xF0) {
-                     case ARGUS_START:     thisid = rec->argus_mar.thisid; break;
-                     case ARGUS_STATUS:    thisid = rec->argus_mar.argusid; break;
-                     case ARGUS_STOP:      thisid = rec->argus_mar.argusid; break;
-                     case ARGUS_SHUTDOWN:  thisid = rec->argus_mar.argusid; break;
-                     case ARGUS_ERROR:     thisid = rec->argus_mar.argusid; break;
+               bzero (&thisid, sizeof(thisid));
+               len = sizeof(thisid.a_un);
+               switch (rec->argus_mar.status & (ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4)) {
+                  case ARGUS_IDIS_STRING: {
+                     bcopy (&rec->ar_un.mar.str, &thisid.a_un.str, 4);
+                     break;
+                  }
+
+                  case ARGUS_IDIS_INT: {
+                     bcopy (&rec->ar_un.mar.value, &thisid.a_un.value, 4);
+                     break;
+                  }
+
+                  case ARGUS_IDIS_IPV4: {
+                     thisid.a_un.ipv4 = rec->ar_un.mar.ipv4;
+                     break;
+                  }
+
+                  case ARGUS_IDIS_IPV6: {
+                     bcopy (&rec->ar_un.mar.ipv6, &thisid.a_un.ipv6, sizeof(thisid.a_un.ipv6));
+                     break;
+                  }
+
+                  case ARGUS_IDIS_UUID: {
+                     bcopy (&rec->ar_un.mar.uuid, &thisid.a_un.uuid, sizeof(thisid.a_un.uuid));
+                     break;
                   }
                }
 
+               if (rec->argus_mar.status & ARGUS_ID_INC_INF) {
+                  if (rec->hdr.cause & ARGUS_SRC_RADIUM) 
+                     bcopy ("rad0", &thisid.inf, sizeof(thisid.inf));
+                  else
+                     bcopy ("man0", &thisid.inf, sizeof(thisid.inf));
+                  len += sizeof(thisid.inf);
+               }
+               
                retn = &na->hstruct;
 
                retn->hash = 0; 
-               retn->len  = 4; 
+               retn->len  = len; 
 
-               bcopy(&thisid, ptr, 4);
+               bcopy(&thisid, ptr, len);
 
-               sptr = (unsigned short *)&retn->buf[0];
+               sptr = (unsigned short *)&thisid;
 
                for (i = 0, len = retn->len / s; i < len; i++)
                   retn->hash += *sptr++;

@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#75 $
- * $DateTime: 2016/09/20 14:08:02 $
- * $Change: 3194 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#78 $
+ * $DateTime: 2016/10/06 00:01:32 $
+ * $Change: 3216 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -5941,6 +5941,10 @@ RaGetFloatDuration (struct ArgusRecordStruct *argus)
          if (rec != NULL) {
             sec  = rec->argus_mar.now.tv_sec  - rec->argus_mar.startime.tv_sec;
             usec = rec->argus_mar.now.tv_usec - rec->argus_mar.startime.tv_usec;
+            if (usec < 0) {
+               sec--;
+               usec += 1000000;
+            }
          }
          break;
       }
@@ -8326,6 +8330,7 @@ ArgusPrintSrcNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
             bzero(pbuf, sizeof(pbuf));
 
          if (parser->ArgusPrintXml) {
+            sprintf (buf, " Queue = \"%s\"", pbuf);
          } else {
             if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
                len = strlen(pbuf);
@@ -8672,12 +8677,13 @@ ArgusPrintDstNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          char pbuf[32];
 
          if (rec != NULL) {
-            value = rec->argus_mar.queue;
+            value = rec->argus_mar.clients;
             sprintf (pbuf, "%u", value);
          } else
             bzero(pbuf, sizeof(pbuf));
 
          if (parser->ArgusPrintXml) {
+            sprintf (buf, " Clients = \"%s\"", pbuf);
          } else {
             if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
                len = strlen(pbuf);
@@ -28038,24 +28044,29 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
    }
 
    if (wfile->firstWrite) {
+      struct ArgusRecord *ns = (struct ArgusRecord *)&parser->ArgusInitCon;
       int len = ntohs(parser->ArgusInitCon.hdr.len) * 4;
       if (len == 0) {
-         struct ArgusRecord *argus = (struct ArgusRecord *)&parser->ArgusInitCon;
-         argus->hdr.type   = (ARGUS_MAR | ARGUS_VERSION);
-         argus->hdr.cause  = ARGUS_START;
-         argus->hdr.len    = (unsigned short) sizeof(struct ArgusRecord)/4;
+         ns->hdr.type   = (ARGUS_MAR | ARGUS_VERSION);
+         ns->hdr.cause  = ARGUS_START;
+         ns->hdr.len    = (unsigned short) sizeof(struct ArgusRecord)/4;
 
-         len = argus->hdr.len * 4;
+         len = ns->hdr.len * 4;
 
-         argus->argus_mar.thisid           = 0;
-         argus->argus_mar.argusid          = ARGUS_COOKIE;
-         argus->argus_mar.startime.tv_sec  = parser->ArgusGlobalTime.tv_sec;
-         argus->argus_mar.startime.tv_usec = parser->ArgusGlobalTime.tv_usec;
-         argus->argus_mar.now              = argus->argus_mar.startime;
-         argus->argus_mar.record_len       = -1;
+         ns->argus_mar.thisid           = 0;
+         ns->argus_mar.argusid          = ARGUS_COOKIE;
+         ns->argus_mar.startime.tv_sec  = parser->ArgusGlobalTime.tv_sec;
+         ns->argus_mar.startime.tv_usec = parser->ArgusGlobalTime.tv_usec;
+         ns->argus_mar.now              = ns->argus_mar.startime;
+         ns->argus_mar.record_len       = -1;
 
-         ArgusHtoN(argus);
+         ArgusHtoN(ns);
+
+      } else {
+         ns->argus_mar.now.tv_sec       = htonl(parser->ArgusGlobalTime.tv_sec);
+         ns->argus_mar.now.tv_usec      = htonl(parser->ArgusGlobalTime.tv_usec);
       }
+
       if (fwrite ((char *)&parser->ArgusInitCon, 1, len, wfile->fd) < 1) {
          if (ferror(wfile->fd) || feof(wfile->fd))
             RaParseComplete(SIGQUIT);
