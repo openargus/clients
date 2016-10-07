@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		77
-#define MAX_SORT_ALG_TYPES		77
+#define ARGUS_MAX_SORT_ALG		79
+#define MAX_SORT_ALG_TYPES		79
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -136,6 +136,9 @@ struct ArgusSorterStruct {
 #define ARGUSSORTSRCMASKLEN	       	74
 #define ARGUSSORTDSTMASKLEN	       	75
 
+#define ARGUSSORTSID			76
+#define ARGUSSORTINF			77
+
 #if defined(ArgusSort)
 
 struct ArgusSorterStruct *ArgusSorter = NULL;
@@ -149,6 +152,8 @@ void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int)
 int ArgusSortRoutine (const void *, const void *);
 
 int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortSID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortInf (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortIdleTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -328,6 +333,8 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortDstHops,
    ArgusSortSrcMasklen,
    ArgusSortDstMasklen,
+   ArgusSortSID,
+   ArgusSortInf,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -415,6 +422,9 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "dhops",
    "smask",
    "dmask",
+
+   "sid",
+   "inf",
 };
 
 #else
@@ -430,6 +440,8 @@ extern void ArgusSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct 
 extern int ArgusSortRoutine (const void *, const void *);
  
 extern int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortSID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortInf (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortIdleTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);

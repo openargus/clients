@@ -15858,18 +15858,26 @@ ArgusSortSrcId (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
    int retn = 0, len, i;
 
    if (t1 && t2) {
-      if (t1->hdr.subtype & ARGUS_SRCID) {
-         sid1 = &t1->srcid.a_un.ipv4;
-         switch (t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
-            case ARGUS_TYPE_IPV4: len = 1; break;
-            case ARGUS_TYPE_IPV6: len = 4; break;
-         }
-      }
-      if (t2->hdr.subtype & ARGUS_SRCID) {
-         sid2 = &t2->srcid.a_un.ipv4;
-         switch (t2->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
-            case ARGUS_TYPE_IPV4: len = 1; break;
-            case ARGUS_TYPE_IPV6: len = (len < 4) ? len : 4; break;
+      if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID)) {
+         sid1 = (unsigned int *)&t1->srcid.a_un;
+         sid2 = (unsigned int *)&t2->srcid.a_un;
+
+         if ((t1->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) || (t2->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE)) {
+            len = 5;
+         } else 
+         if ((t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) == (t2->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE)) {
+            switch (t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+               case ARGUS_TYPE_INT:
+               case ARGUS_TYPE_IPV4:
+               case ARGUS_TYPE_STRING:
+                  len = 1;
+                  break;
+
+               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_UUID:
+                  len = 4;
+                  break;
+            }
          }
       }
 
@@ -15881,6 +15889,66 @@ ArgusSortSrcId (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
             }
          }
       }
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+
+int
+ArgusSortSID (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusTransportStruct *t1 = (struct ArgusTransportStruct *)n1->dsrs[ARGUS_TRANSPORT_INDEX];
+   struct ArgusTransportStruct *t2 = (struct ArgusTransportStruct *)n2->dsrs[ARGUS_TRANSPORT_INDEX];
+   unsigned int *sid1 = NULL, *sid2 = NULL;
+   int retn = 0, len, i;
+
+   if (t1 && t2) {
+      if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID)) {
+         sid1 = (unsigned int *)&t1->srcid.a_un;
+         sid2 = (unsigned int *)&t2->srcid.a_un;
+
+         if ((t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) == (t2->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE)) {
+            switch (t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+               case ARGUS_TYPE_INT:
+               case ARGUS_TYPE_IPV4:
+               case ARGUS_TYPE_STRING:
+                  len = 1;
+                  break;
+
+               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_UUID:
+                  len = 4;
+                  break;
+            }
+         }  
+      }
+
+      if (sid1 && sid2) {
+         for (i = 0; i < len; i++, sid1++, sid2++) {
+            if (*sid2 != *sid1) {
+               retn = sid2[i] - sid1[i];
+               break;
+            }
+         }
+      }
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+
+int
+ArgusSortInf (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusTransportStruct *t1 = (struct ArgusTransportStruct *)n1->dsrs[ARGUS_TRANSPORT_INDEX];
+   struct ArgusTransportStruct *t2 = (struct ArgusTransportStruct *)n2->dsrs[ARGUS_TRANSPORT_INDEX];
+   int retn = 0;
+
+   if (t1 && t2) {
+      if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID))
+         if ((t1->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) && (t2->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE))
+            retn = strcmp((const char *)t2->srcid.inf, (const char *)t1->srcid.inf);
    }
 
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
