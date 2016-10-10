@@ -5003,7 +5003,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          snprintf(&buf[slen], dlen, "\n  xmlns:xsi = \"http://www.w3.org/2001/XMLSchema-instance\" ");
          slen = strlen(buf); dlen = len - slen;
 
-         snprintf(&buf[slen], dlen, "\n  xsi:noNamespaceSchemaLocation = \"http://qosient.com/argus/Xml/ArgusRecord.3.0.xsd\"");
+         snprintf(&buf[slen], dlen, "\n  xsi:noNamespaceSchemaLocation = \"http://qosient.com/argus/Xml/ArgusRecord.5.0.xsd\"");
          slen = strlen(buf); dlen = len - slen;
 
          snprintf(&buf[slen], dlen, "\n  BeginDate = \"%s\" CurrentDate = \"%s\"", StartDateBuf, CurrentDateBuf);
@@ -7760,7 +7760,7 @@ ArgusPrintInf (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
 
          if (rec != NULL) {
             if (rec->argus_mar.status & ARGUS_ID_INC_INF)
-               value = strdup("mar0");
+               value = strdup("man0");
          }
          break;
       }
@@ -28906,9 +28906,11 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
       }
 
 // test for dev srcid substitution
-      if ((iptr = strnstr(optarg, "//", 2)) != NULL) {
-         subsid = 1;
-         optarg++;
+      if (optarg[0] == '/') {
+         if (optarg[1] == '/') {
+            subsid = 1;
+            optarg++;
+         }
       }
 
 // process the optional inf part. 

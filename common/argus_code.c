@@ -933,6 +933,7 @@ Argusgen_causetype(unsigned int cause)
       case ARGUS_STOP:
       case ARGUS_TIMEOUT:
       case ARGUS_SHUTDOWN:
+      case ARGUS_SRC_RADIUM:
          b0 = Argusgen_mcmp(-1, offset, NFF_B, (u_int) cause, cause, Q_EQUAL, Q_DEFAULT);
          break;
    }
@@ -1467,8 +1468,17 @@ Argusgen_inf(char *inf)
 {
    struct ablock *b1 = NULL, *tmp;
 
-   if (strcmp(inf, "mar0") == 0) {
-      b1 =  Argusgen_recordtype(ARGUS_MAR);
+   if (strcmp(inf, "man0") == 0) {
+      tmp =  Argusgen_recordtype(ARGUS_MAR);
+      b1 = Argusgen_causetype(ARGUS_SRC_RADIUM);
+      Argusgen_not(b1);
+      Argusgen_and(tmp, b1);
+
+   } else
+   if (strcmp(inf, "rad0") == 0) {
+      tmp =  Argusgen_recordtype(ARGUS_MAR);
+      b1 = Argusgen_causetype(ARGUS_SRC_RADIUM);
+      Argusgen_and(tmp, b1);
    } else
    if (strcmp(inf, "evt0") == 0) {
       b1 =  Argusgen_recordtype(ARGUS_EVENT);

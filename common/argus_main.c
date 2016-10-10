@@ -319,6 +319,9 @@ extern void * ArgusTimeoutProcess (void *);
    If not we just connect to them sequentially.
 */
 
+   if (ArgusParser->tflag)
+      ArgusParser->tflag = 0;
+
    if (ArgusParser->Sflag) {
       ArgusParser->ArgusPassNum = 1;
 

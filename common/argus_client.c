@@ -1192,7 +1192,9 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                      ArgusDebug (1, "Binding %s:%s Expecting %s records", input->hostname, sbuf, ArgusRecordType); 
 #endif
                      if ((retn = bind (s, hp->ai_addr, hp->ai_addrlen)) < 0) {
-                        ArgusLog(LOG_WARNING, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#ifdef ARGUSDEBUG
+                        ArgusDebug(1, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#endif
                         hp = hp->ai_next;
                      } else {
                         retn = s;
@@ -1229,7 +1231,9 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                      ArgusDebug (1, "Trying %s port %s Expecting %s records\n", input->hostname, sbuf, ArgusRecordType); 
 #endif
                      if ((retn = ArgusConnect (s, hp->ai_addr, hp->ai_addrlen, timeout)) < 0) {
-                        ArgusLog(LOG_WARNING, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#ifdef ARGUSDEBUG
+                        ArgusDebug(1, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#endif
                         hp = hp->ai_next;
                      } else {
                         retn = s;
@@ -1325,8 +1329,10 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                   }
 
                   if ((retn = ArgusConnect (s, (struct sockaddr *)&server, sizeof(server), timeout)) < 0) {
-                     ArgusLog(LOG_WARNING, "connect to %s:%hu failed '%s'", inet_ntoa(server.sin_addr), 
+#ifdef ARGUSDEBUG
+                     ArgusDebug(1, "connect to %s:%hu failed '%s'", inet_ntoa(server.sin_addr), 
                          ntohs(server.sin_port), strerror(errno));
+#endif
                      close(s);
 
                   } else {
@@ -1411,7 +1417,9 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                   ArgusLog (1, "Binding %s:%s Expecting %s records", name, sbuf, ArgusRecordType);
 #endif
                   if ((retn = bind (s, hp->ai_addr, hp->ai_addrlen)) < 0) {
-                     ArgusLog(LOG_WARNING, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#ifdef ARGUSDEBUG
+                        ArgusDebug(1, "connect to %s:%s failed '%s'", input->hostname, sbuf, strerror(errno));
+#endif
                      hp = hp->ai_next;
                   } else {
                      retn = s;

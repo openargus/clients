@@ -234,7 +234,9 @@ ArgusClientTimeout ()
             lobj = lobj->nxt;
          }
       }
-   }
+
+   } else
+      fflush(stdout);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");

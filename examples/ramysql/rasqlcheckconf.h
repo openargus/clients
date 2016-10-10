@@ -82,7 +82,14 @@
 #include <stdio.h>
 #include <netinet/in.h>
 #include <grp.h>
+
+#if defined(HAVE_UUID_UUID_H)
 #include <uuid/uuid.h>
+#else
+#if defined(HAVE_UUID_H)
+#include <uuid.h>
+#endif
+#endif
 
 #define RA_NUMTABLES            1
 #define RA_NUMTABLES_MASK       0x0001
