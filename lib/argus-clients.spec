@@ -1,7 +1,7 @@
 %define name    argus-clients
 %define ver     5.0
 %if %{?rel:0}%{!?rel:1}
-%define rel     3
+%define rel     3.0
 %endif
 %if %{?srcext:0}%{!?srcext:1}
 %define srcext .gz

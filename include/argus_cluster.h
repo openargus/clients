@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_cluster.h#16 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/include/argus_cluster.h#17 $
+ * $DateTime: 2016/10/10 23:14:45 $
+ * $Change: 3219 $
  */
 
 #ifndef ArgusCluster_h

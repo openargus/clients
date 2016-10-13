@@ -16,9 +16,9 @@
 #  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 #  THIS SOFTWARE.
 # 
-#  $Id: //depot/gargoyle/clients/configure.ac#27 $
-#  $DateTime: 2016/09/13 10:40:12 $
-#  $Change: 3180 $
+#  $Id: //depot/gargoyle/clients/configure.ac#28 $
+#  $DateTime: 2016/10/10 23:14:45 $
+#  $Change: 3219 $
 #
 #
 # Process this file with autoconf to produce a configure script.

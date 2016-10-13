@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_parser.h#37 $
- * $DateTime: 2016/10/03 10:21:44 $
- * $Change: 3208 $
+ * $Id: //depot/gargoyle/clients/include/argus_parser.h#38 $
+ * $DateTime: 2016/10/10 23:14:45 $
+ * $Change: 3219 $
  */
 
 
@@ -215,6 +215,8 @@ struct ArgusDisplayStruct {
 #define ARGUS_NSR_STICKY		0x01000000
 #define ARGUS_RECORD_MODIFIED		0x0100
 #define ARGUS_RECORD_NEW		0x0200
+#define ARGUS_RECORD_PROCESSED		0x0400
+#define ARGUS_RECORD_DISCARD		0x0800
 
 struct ArgusRecordStruct {
    struct ArgusQueueHeader qhdr;

@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#76 $
- * $DateTime: 2016/10/06 01:39:05 $
- * $Change: 3217 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#79 $
+ * $DateTime: 2016/10/13 08:28:01 $
+ * $Change: 3223 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -7329,65 +7329,106 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
    double seconds;
    int i;
 
-   if ((ns1 && ns2) && ((ns1->hdr.type & ARGUS_FAR) && (ns2->hdr.type & ARGUS_FAR))) {
-      struct ArgusTimeObject *ns1time = (void *)ns1->dsrs[ARGUS_TIME_INDEX];
-      struct ArgusTimeObject *ns2time = (void *)ns2->dsrs[ARGUS_TIME_INDEX];
-      struct ArgusMetricStruct *ns1metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
-      struct ArgusMetricStruct *ns2metric = (void *)ns2->dsrs[ARGUS_METRIC_INDEX];
+   if (ns1 && ns2) {
+      if ((ns1->hdr.type & 0xF0) == (ns2->hdr.type & 0xF0)) {
+         switch (ns1->hdr.type & 0xF0) {
+            case ARGUS_MAR: {
+               struct ArgusMarStruct *man1 = (struct ArgusMarStruct *) &((struct ArgusRecord *) ns1->dsrs[0])->ar_un.mar;
+               struct ArgusMarStruct *man2 = (struct ArgusMarStruct *) &((struct ArgusRecord *) ns2->dsrs[0])->ar_un.mar;
 
-      double deltaTime = 0.0;
-      double deltaSrcTime = 0.0;
-      double deltaDstTime = 0.0;
+               if (ns1->hdr.cause == ARGUS_START) {
+               } else
+               if (ns1->hdr.cause == ARGUS_STATUS) {
+                  double stime1 = ArgusFetchStartuSecTime(ns1);
+                  double stime2 = ArgusFetchStartuSecTime(ns2);
+                  double ltime1 = ArgusFetchLastuSecTime(ns1);
+                  double ltime2 = ArgusFetchLastuSecTime(ns2);
 
-      if ((ns1time && ns2time) && (ns1metric && ns2metric)) {
-         long long nst1, nst2;
-         nst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
-         nst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
+                  if (stime2 < stime1) {
+                     man1->startime          = man2->startime;
+                     man1->nextMrSequenceNum = man2->nextMrSequenceNum;
+                     man1->interfaceStatus   = man2->interfaceStatus;
+                     man1->drift             = man2->drift;
+                     man1->clients           = man2->clients;
+                     man1->bufs              = man2->bytes;
+                  }
 
-         if ((deltaTime = (nst2 - nst1) * 1.00) < 0.0)
-            deltaTime = -deltaTime;
+                  if (ltime2 > ltime1)
+                     man1->now = man2->now;
 
-         if (ns1metric->src.pkts && ns2metric->src.pkts)
-            if ((deltaSrcTime = (nst2 - nst1) * 1.00) < 0.0)
-               deltaSrcTime = -deltaSrcTime;
+                  man1->pktsRcvd  += man2->pktsRcvd;
+                  man1->bytesRcvd += man2->bytesRcvd;
+                  man1->drift      = man2->drift;
+                  man1->records   += man2->records;
+                  man1->output    += man2->records;
+                  man1->flows     += man2->flows;
+                  man1->dropped   += man2->dropped;
 
-         nst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
-         nst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
+                  man1->status |= ARGUS_RECORD_MODIFIED;
+               }
+               break;
+            }
 
-         if (ns1metric->dst.pkts && ns2metric->dst.pkts)
-            if ((deltaDstTime = (nst2 - nst1) * 1.00) < 0.0)
-               deltaDstTime = -deltaDstTime;
-      }
+            case ARGUS_NETFLOW:
+            case ARGUS_FAR: {
+               struct ArgusTimeObject *ns1time = (void *)ns1->dsrs[ARGUS_TIME_INDEX];
+               struct ArgusTimeObject *ns2time = (void *)ns2->dsrs[ARGUS_TIME_INDEX];
+               struct ArgusMetricStruct *ns1metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
+               struct ArgusMetricStruct *ns2metric = (void *)ns2->dsrs[ARGUS_METRIC_INDEX];
 
-      ns1->status &= ~ARGUS_RECORD_WRITTEN; 
-  
-      if ((agr = (struct ArgusAgrStruct *) ns1->dsrs[ARGUS_AGR_INDEX]) == NULL) {
-         struct ArgusMetricStruct *metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
-         if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-            double value = na->RaMetricFetchAlgorithm(ns1);
+               double deltaTime = 0.0;
+               double deltaSrcTime = 0.0;
+               double deltaDstTime = 0.0;
 
-            if ((agr = ArgusCalloc(1, sizeof(*agr))) == NULL)
-               ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error: %s", strerror(errno));
+               if ((ns1time && ns2time) && (ns1metric && ns2metric)) {
+                  long long nst1, nst2;
+                  nst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
+                  nst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
 
-            agr->hdr.type              = ARGUS_AGR_DSR;
-            agr->hdr.subtype           = na->ArgusMetricIndex;
-            agr->hdr.argus_dsrvl8.qual = 0x01;
-            agr->hdr.argus_dsrvl8.len  = (sizeof(*agr) + 3)/4;
-            agr->count                 = 1;
-            agr->act.maxval            = value;
-            agr->act.minval            = value;
-            agr->act.meanval           = value;
-            agr->act.n                 = 1;
-            bzero ((char *)&agr->idle, sizeof(agr->idle));
-            agr->idle.minval           = 1000000000.0;
+                  if ((deltaTime = (nst2 - nst1) * 1.00) < 0.0)
+                     deltaTime = -deltaTime;
 
-            ns1->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) agr;
-            ns1->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
-         }
-      }
+                  if (ns1metric->src.pkts && ns2metric->src.pkts)
+                     if ((deltaSrcTime = (nst2 - nst1) * 1.00) < 0.0)
+                        deltaSrcTime = -deltaSrcTime;
 
-      for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-         switch (i) {
+                  nst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
+                  nst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
+
+                  if (ns1metric->dst.pkts && ns2metric->dst.pkts)
+                     if ((deltaDstTime = (nst2 - nst1) * 1.00) < 0.0)
+                        deltaDstTime = -deltaDstTime;
+               }
+
+               ns1->status &= ~ARGUS_RECORD_WRITTEN; 
+           
+               if ((agr = (struct ArgusAgrStruct *) ns1->dsrs[ARGUS_AGR_INDEX]) == NULL) {
+                  struct ArgusMetricStruct *metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
+                  if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
+                     double value = na->RaMetricFetchAlgorithm(ns1);
+
+                     if ((agr = ArgusCalloc(1, sizeof(*agr))) == NULL)
+                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error: %s", strerror(errno));
+
+                     agr->hdr.type              = ARGUS_AGR_DSR;
+                     agr->hdr.subtype           = na->ArgusMetricIndex;
+                     agr->hdr.argus_dsrvl8.qual = 0x01;
+                     agr->hdr.argus_dsrvl8.len  = (sizeof(*agr) + 3)/4;
+                     agr->count                 = 1;
+                     agr->act.maxval            = value;
+                     agr->act.minval            = value;
+                     agr->act.meanval           = value;
+                     agr->act.n                 = 1;
+                     bzero ((char *)&agr->idle, sizeof(agr->idle));
+                     agr->idle.minval           = 1000000000.0;
+
+                     ns1->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) agr;
+                     ns1->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
+                  }
+               }
+
+               for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
+                  switch (i) {
 
 // Merging Flow records is a matter of testing each field and
 // transforming values that are not equal to either run length
@@ -7399,173 +7440,173 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 // run length and'ing is an attempt to preserve CIDR addresses.
 // any other value should be either preserved or invalidated.
 
-            case ARGUS_FLOW_INDEX: {
-               struct ArgusFlow *f1 = (struct ArgusFlow *) ns1->dsrs[ARGUS_FLOW_INDEX];
-               struct ArgusFlow *f2 = (struct ArgusFlow *) ns2->dsrs[ARGUS_FLOW_INDEX];
+                     case ARGUS_FLOW_INDEX: {
+                        struct ArgusFlow *f1 = (struct ArgusFlow *) ns1->dsrs[ARGUS_FLOW_INDEX];
+                        struct ArgusFlow *f2 = (struct ArgusFlow *) ns2->dsrs[ARGUS_FLOW_INDEX];
 
-               if (f1 && f2) {
-                  unsigned char masklen = 0;
-                  if (f1->hdr.subtype == f2->hdr.subtype) {
-                     char f1qual = f1->hdr.argus_dsrvl8.qual & 0x1F;
-                     char f2qual = f2->hdr.argus_dsrvl8.qual & 0x1F;
+                        if (f1 && f2) {
+                           unsigned char masklen = 0;
+                           if (f1->hdr.subtype == f2->hdr.subtype) {
+                              char f1qual = f1->hdr.argus_dsrvl8.qual & 0x1F;
+                              char f2qual = f2->hdr.argus_dsrvl8.qual & 0x1F;
 
-                     switch (f1->hdr.subtype & 0x3F) {
-                        case ARGUS_FLOW_LAYER_3_MATRIX: {
-                           if (f1qual == f2qual) {
-                              switch (f1qual) {
-                                 case ARGUS_TYPE_IPV4: {
-                                    masklen = (f1->ip_flow.smask > f2->ip_flow.smask) ? f2->ip_flow.smask : f1->ip_flow.smask;
-                                    f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ip_flow.ip_src, &f2->ip_flow.ip_src, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
-                                    f1->ip_flow.smask = masklen;
-                                    masklen = (f1->ip_flow.dmask > f2->ip_flow.dmask) ? f2->ip_flow.dmask : f1->ip_flow.dmask;
-                                    f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ip_flow.ip_dst, &f2->ip_flow.ip_dst, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
-                                    f1->ip_flow.dmask = masklen;
-                                    f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+                              switch (f1->hdr.subtype & 0x3F) {
+                                 case ARGUS_FLOW_LAYER_3_MATRIX: {
+                                    if (f1qual == f2qual) {
+                                       switch (f1qual) {
+                                          case ARGUS_TYPE_IPV4: {
+                                             masklen = (f1->ip_flow.smask > f2->ip_flow.smask) ? f2->ip_flow.smask : f1->ip_flow.smask;
+                                             f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ip_flow.ip_src, &f2->ip_flow.ip_src, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
+                                             f1->ip_flow.smask = masklen;
+                                             masklen = (f1->ip_flow.dmask > f2->ip_flow.dmask) ? f2->ip_flow.dmask : f1->ip_flow.dmask;
+                                             f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ip_flow.ip_dst, &f2->ip_flow.ip_dst, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
+                                             f1->ip_flow.dmask = masklen;
+                                             f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+                                             break;
+
+                                          case ARGUS_TYPE_IPV6:  
+                                             masklen = (f1->ipv6_flow.smask > f2->ipv6_flow.smask) ? f2->ipv6_flow.smask : f1->ipv6_flow.smask;
+                                             f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_src[0], &f2->ipv6_flow.ip_src[0], ARGUS_TYPE_IPV6, ARGUS_SRC, &masklen);
+                                             f1->ip_flow.smask = masklen;
+                                             masklen = (f1->ipv6_flow.dmask > f2->ipv6_flow.dmask) ? f2->ipv6_flow.dmask : f1->ipv6_flow.dmask;
+                                             f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_dst[0], &f2->ipv6_flow.ip_dst[0], ARGUS_TYPE_IPV6, ARGUS_DST, &masklen);
+                                             f1->ip_flow.dmask = masklen;
+                                             f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+                                             break;
+
+                                          }
+                                       }
+                                    }
                                     break;
+                                 }
 
-                                 case ARGUS_TYPE_IPV6:  
-                                    masklen = (f1->ipv6_flow.smask > f2->ipv6_flow.smask) ? f2->ipv6_flow.smask : f1->ipv6_flow.smask;
-                                    f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_src[0], &f2->ipv6_flow.ip_src[0], ARGUS_TYPE_IPV6, ARGUS_SRC, &masklen);
-                                    f1->ip_flow.smask = masklen;
-                                    masklen = (f1->ipv6_flow.dmask > f2->ipv6_flow.dmask) ? f2->ipv6_flow.dmask : f1->ipv6_flow.dmask;
-                                    f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_dst[0], &f2->ipv6_flow.ip_dst[0], ARGUS_TYPE_IPV6, ARGUS_DST, &masklen);
-                                    f1->ip_flow.dmask = masklen;
-                                    f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+                                 case ARGUS_FLOW_CLASSIC5TUPLE: {
+                                       switch (f1qual) {
+                                          case ARGUS_TYPE_IPV4:
+                                             if (f1qual == f2qual) {
+                                                masklen = (f1->ip_flow.smask > f2->ip_flow.smask) ? f2->ip_flow.smask : f1->ip_flow.smask;
+                                                ArgusMergeAddress(&f1->ip_flow.ip_src, &f2->ip_flow.ip_src, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
+                                                f1->ip_flow.smask = masklen;
+
+                                                masklen = (f1->ip_flow.dmask > f2->ip_flow.dmask) ? f2->ip_flow.dmask : f1->ip_flow.dmask;
+                                                ArgusMergeAddress(&f1->ip_flow.ip_dst, &f2->ip_flow.ip_dst, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
+                                                f1->ip_flow.dmask = masklen;
+
+                                                f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+
+                                                if (f1->ip_flow.ip_p  != f2->ip_flow.ip_p)
+                                                   f1->ip_flow.ip_p = 0;
+                                                else {
+                                                   switch (f1->ip_flow.ip_p) {
+                                                      case IPPROTO_ESP: {
+                                                         if (f1->esp_flow.spi != f2->esp_flow.spi)
+                                                            f1->esp_flow.spi = 0;
+                                                         break;
+                                                      }
+
+                                                      default: {
+                                                         if (f1->ip_flow.sport != f2->ip_flow.sport)
+                                                            f1->ip_flow.sport = 0;
+                                                         if (f1->ip_flow.dport != f2->ip_flow.dport)
+                                                            f1->ip_flow.dport = 0;
+                                                         break;
+                                                      }
+                                                   }
+                                                }
+
+                                             } else {
+                                                f1->ip_flow.ip_src = 0;
+                                                f1->ip_flow.ip_dst = 0;
+                                             
+                                                switch (f2qual) {
+                                                   case ARGUS_TYPE_IPV6:
+                                                      if (f1->ip_flow.ip_p  != f2->ipv6_flow.ip_p)
+                                                         f1->ip_flow.ip_p = 0;
+                                                      if (f1->ip_flow.sport != f2->ipv6_flow.sport)
+                                                         f1->ip_flow.sport = 0;
+                                                      if (f1->ip_flow.dport != f2->ipv6_flow.dport)
+                                                         f1->ip_flow.dport = 0;
+                                                      break;
+                       
+                                                   default:
+                                                      f1->ip_flow.ip_p = 0;
+                                                      f1->ip_flow.sport = 0;
+                                                      f1->ip_flow.dport = 0;
+                                                      break;
+                                                }
+                                             }
+                                             break;
+
+                                          case ARGUS_TYPE_IPV6:  
+                                             if (f1qual == f2qual) {
+                                                masklen = (f1->ipv6_flow.smask > f2->ipv6_flow.smask) ? f2->ipv6_flow.smask : f1->ipv6_flow.smask;
+                                                f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_src[0], &f2->ipv6_flow.ip_src[0], ARGUS_TYPE_IPV6, ARGUS_SRC, &masklen);
+                                                f1->ipv6_flow.smask = masklen;
+                                                masklen = (f1->ipv6_flow.dmask > f2->ipv6_flow.dmask) ? f2->ipv6_flow.dmask : f1->ipv6_flow.dmask;
+                                                f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_dst[0], &f2->ipv6_flow.ip_dst[0], ARGUS_TYPE_IPV6, ARGUS_DST, &masklen);
+                                                f1->ipv6_flow.dmask = masklen;
+
+                                                f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
+
+                                                if (f1->ipv6_flow.ip_p  != f2->ipv6_flow.ip_p)  f1->ipv6_flow.ip_p = 0;
+                                                if (f1->ipv6_flow.sport != f2->ipv6_flow.sport) f1->ipv6_flow.sport = 0;
+                                                if (f1->ipv6_flow.dport != f2->ipv6_flow.dport) f1->ipv6_flow.dport = 0;
+
+                                             } else {
+                                                bzero ((char *)&f1->ipv6_flow.ip_src[0], sizeof(f1->ipv6_flow.ip_src));
+                                                bzero ((char *)&f1->ipv6_flow.ip_dst[0], sizeof(f1->ipv6_flow.ip_dst));
+                                                if (f1->ipv6_flow.ip_p  != f2->ip_flow.ip_p)  f1->ipv6_flow.ip_p = 0;
+                                                if (f1->ipv6_flow.sport != f2->ip_flow.sport) f1->ipv6_flow.sport = 0;
+                                                if (f1->ipv6_flow.dport != f2->ip_flow.dport) f1->ipv6_flow.dport = 0;
+                                             }
+                                             break;
+
+                                        case ARGUS_TYPE_RARP:
+                                           if (bcmp(&f1->rarp_flow.shaddr, &f2->rarp_flow.shaddr, 6))
+                                              bzero(&f1->rarp_flow.shaddr, 6);
+                                           if (bcmp(&f1->rarp_flow.dhaddr, &f2->rarp_flow.dhaddr, 6))
+                                              bzero(&f1->rarp_flow.dhaddr, 6);
+                                           break;
+                                        case ARGUS_TYPE_ARP:
+                                           f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->arp_flow.arp_spa, &f2->arp_flow.arp_spa, ARGUS_TYPE_ARP, ARGUS_SRC, &masklen);
+                                           f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_ARP, ARGUS_DST, &masklen);
+                                           break;
+                                    }
                                     break;
+                                 }
 
+                                 case ARGUS_FLOW_ARP: {
+                                    switch (f1qual) {
+                                        case ARGUS_TYPE_RARP: {
+                                           if (bcmp(&f1->rarp_flow.shaddr, &f2->rarp_flow.shaddr, 6))
+                                                   bzero(&f1->rarp_flow.shaddr, 6);
+                                           if (bcmp(&f1->rarp_flow.dhaddr, &f2->rarp_flow.dhaddr, 6))
+                                                   bzero(&f1->rarp_flow.dhaddr, 6);
+
+                                           if (f1->arp_flow.pln == 4) {
+                                              ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
+                                           }
+                                           break;
+                                       }
+
+                                        case ARGUS_TYPE_ARP: {
+                                           if (bcmp(&f1->arp_flow.haddr, &f2->arp_flow.haddr, 6))
+                                              bzero(&f1->arp_flow.haddr, 6);
+
+                                           if (f1->arp_flow.pln == 4) {
+                                              ArgusMergeAddress(&f1->arp_flow.arp_spa, &f2->arp_flow.arp_spa, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
+                                              ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
+                                           }
+                                           break;
+                                       }
+                                    }
+                                    break;
                                  }
                               }
                            }
-                           break;
-                        }
-
-                        case ARGUS_FLOW_CLASSIC5TUPLE: {
-                              switch (f1qual) {
-                                 case ARGUS_TYPE_IPV4:
-                                    if (f1qual == f2qual) {
-                                       masklen = (f1->ip_flow.smask > f2->ip_flow.smask) ? f2->ip_flow.smask : f1->ip_flow.smask;
-                                       ArgusMergeAddress(&f1->ip_flow.ip_src, &f2->ip_flow.ip_src, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
-                                       f1->ip_flow.smask = masklen;
-
-                                       masklen = (f1->ip_flow.dmask > f2->ip_flow.dmask) ? f2->ip_flow.dmask : f1->ip_flow.dmask;
-                                       ArgusMergeAddress(&f1->ip_flow.ip_dst, &f2->ip_flow.ip_dst, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
-                                       f1->ip_flow.dmask = masklen;
-
-                                       f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
-
-                                       if (f1->ip_flow.ip_p  != f2->ip_flow.ip_p)
-                                          f1->ip_flow.ip_p = 0;
-                                       else {
-                                          switch (f1->ip_flow.ip_p) {
-                                             case IPPROTO_ESP: {
-                                                if (f1->esp_flow.spi != f2->esp_flow.spi)
-                                                   f1->esp_flow.spi = 0;
-                                                break;
-                                             }
-
-                                             default: {
-                                                if (f1->ip_flow.sport != f2->ip_flow.sport)
-                                                   f1->ip_flow.sport = 0;
-                                                if (f1->ip_flow.dport != f2->ip_flow.dport)
-                                                   f1->ip_flow.dport = 0;
-                                                break;
-                                             }
-                                          }
-                                       }
-
-                                    } else {
-                                       f1->ip_flow.ip_src = 0;
-                                       f1->ip_flow.ip_dst = 0;
-                                    
-                                       switch (f2qual) {
-                                          case ARGUS_TYPE_IPV6:
-                                             if (f1->ip_flow.ip_p  != f2->ipv6_flow.ip_p)
-                                                f1->ip_flow.ip_p = 0;
-                                             if (f1->ip_flow.sport != f2->ipv6_flow.sport)
-                                                f1->ip_flow.sport = 0;
-                                             if (f1->ip_flow.dport != f2->ipv6_flow.dport)
-                                                f1->ip_flow.dport = 0;
-                                             break;
-              
-                                          default:
-                                             f1->ip_flow.ip_p = 0;
-                                             f1->ip_flow.sport = 0;
-                                             f1->ip_flow.dport = 0;
-                                             break;
-                                       }
-                                    }
-                                    break;
-
-                                 case ARGUS_TYPE_IPV6:  
-                                    if (f1qual == f2qual) {
-                                       masklen = (f1->ipv6_flow.smask > f2->ipv6_flow.smask) ? f2->ipv6_flow.smask : f1->ipv6_flow.smask;
-                                       f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_src[0], &f2->ipv6_flow.ip_src[0], ARGUS_TYPE_IPV6, ARGUS_SRC, &masklen);
-                                       f1->ipv6_flow.smask = masklen;
-                                       masklen = (f1->ipv6_flow.dmask > f2->ipv6_flow.dmask) ? f2->ipv6_flow.dmask : f1->ipv6_flow.dmask;
-                                       f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->ipv6_flow.ip_dst[0], &f2->ipv6_flow.ip_dst[0], ARGUS_TYPE_IPV6, ARGUS_DST, &masklen);
-                                       f1->ipv6_flow.dmask = masklen;
-
-                                       f1->hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
-
-                                       if (f1->ipv6_flow.ip_p  != f2->ipv6_flow.ip_p)  f1->ipv6_flow.ip_p = 0;
-                                       if (f1->ipv6_flow.sport != f2->ipv6_flow.sport) f1->ipv6_flow.sport = 0;
-                                       if (f1->ipv6_flow.dport != f2->ipv6_flow.dport) f1->ipv6_flow.dport = 0;
-
-                                    } else {
-                                       bzero ((char *)&f1->ipv6_flow.ip_src[0], sizeof(f1->ipv6_flow.ip_src));
-                                       bzero ((char *)&f1->ipv6_flow.ip_dst[0], sizeof(f1->ipv6_flow.ip_dst));
-                                       if (f1->ipv6_flow.ip_p  != f2->ip_flow.ip_p)  f1->ipv6_flow.ip_p = 0;
-                                       if (f1->ipv6_flow.sport != f2->ip_flow.sport) f1->ipv6_flow.sport = 0;
-                                       if (f1->ipv6_flow.dport != f2->ip_flow.dport) f1->ipv6_flow.dport = 0;
-                                    }
-                                    break;
-
-                               case ARGUS_TYPE_RARP:
-                                  if (bcmp(&f1->rarp_flow.shaddr, &f2->rarp_flow.shaddr, 6))
-                                     bzero(&f1->rarp_flow.shaddr, 6);
-                                  if (bcmp(&f1->rarp_flow.dhaddr, &f2->rarp_flow.dhaddr, 6))
-                                     bzero(&f1->rarp_flow.dhaddr, 6);
-                                  break;
-                               case ARGUS_TYPE_ARP:
-                                  f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->arp_flow.arp_spa, &f2->arp_flow.arp_spa, ARGUS_TYPE_ARP, ARGUS_SRC, &masklen);
-                                  f1->hdr.argus_dsrvl8.qual |= ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_ARP, ARGUS_DST, &masklen);
-                                  break;
-                           }
-                           break;
-                        }
-
-                        case ARGUS_FLOW_ARP: {
-                           switch (f1qual) {
-                               case ARGUS_TYPE_RARP: {
-                                  if (bcmp(&f1->rarp_flow.shaddr, &f2->rarp_flow.shaddr, 6))
-                                          bzero(&f1->rarp_flow.shaddr, 6);
-                                  if (bcmp(&f1->rarp_flow.dhaddr, &f2->rarp_flow.dhaddr, 6))
-                                          bzero(&f1->rarp_flow.dhaddr, 6);
-
-                                  if (f1->arp_flow.pln == 4) {
-                                     ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
-                                  }
-                                  break;
-                              }
-
-                               case ARGUS_TYPE_ARP: {
-                                  if (bcmp(&f1->arp_flow.haddr, &f2->arp_flow.haddr, 6))
-                                     bzero(&f1->arp_flow.haddr, 6);
-
-                                  if (f1->arp_flow.pln == 4) {
-                                     ArgusMergeAddress(&f1->arp_flow.arp_spa, &f2->arp_flow.arp_spa, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
-                                     ArgusMergeAddress(&f1->arp_flow.arp_tpa, &f2->arp_flow.arp_tpa, ARGUS_TYPE_IPV4, ARGUS_DST, &masklen);
-                                  }
-                                  break;
-                              }
-                           }
-                           break;
                         }
                      }
-                  }
-               }
-            }
-            break;
+                     break;
 
 // Merging Transport objects involves simply checking that the source
 // id and seqnum are the same, and if not, removing the fields until
@@ -7577,589 +7618,589 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 //    unsigned int seqnum;
 // };
 
-            case ARGUS_TRANSPORT_INDEX: {
-               struct ArgusTransportStruct *t1 = (struct ArgusTransportStruct *) ns1->dsrs[ARGUS_TRANSPORT_INDEX];
-               struct ArgusTransportStruct *t2 = (struct ArgusTransportStruct *) ns2->dsrs[ARGUS_TRANSPORT_INDEX];
-               int match = 0;
+                     case ARGUS_TRANSPORT_INDEX: {
+                        struct ArgusTransportStruct *t1 = (struct ArgusTransportStruct *) ns1->dsrs[ARGUS_TRANSPORT_INDEX];
+                        struct ArgusTransportStruct *t2 = (struct ArgusTransportStruct *) ns2->dsrs[ARGUS_TRANSPORT_INDEX];
+                        int match = 0;
 
-               if (t1 && t2) {
-                  if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID)) {
-                     switch (t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
-                        case ARGUS_TYPE_INT:
-                        case ARGUS_TYPE_IPV4:
-                        case ARGUS_TYPE_STRING:
-                           if (t1->srcid.a_un.ipv4 == t2->srcid.a_un.ipv4)
-                              match = 1;
-                           break;
+                        if (t1 && t2) {
+                           if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID)) {
+                              switch (t1->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+                                 case ARGUS_TYPE_INT:
+                                 case ARGUS_TYPE_IPV4:
+                                 case ARGUS_TYPE_STRING:
+                                    if (t1->srcid.a_un.ipv4 == t2->srcid.a_un.ipv4)
+                                       match = 1;
+                                    break;
 
-                        case ARGUS_TYPE_IPV6:
-                        case ARGUS_TYPE_UUID: {
-                           int x;
-                           match = 1;
-                           for (x = 0; x < 16; x++) {
-                              if (t1->srcid.a_un.uuid[x] != t2->srcid.a_un.uuid[x]) {
-                                 match = 1;
-                                 break;
+                                 case ARGUS_TYPE_IPV6:
+                                 case ARGUS_TYPE_UUID: {
+                                    int x;
+                                    match = 1;
+                                    for (x = 0; x < 16; x++) {
+                                       if (t1->srcid.a_un.uuid[x] != t2->srcid.a_un.uuid[x]) {
+                                          match = 1;
+                                          break;
+                                       }
+                                    }
+                                    break;
+                                 }
+
+                                 case ARGUS_TYPE_ETHER:
+                                    break;
+                              }
+                              if (match && (t1->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE)) {
+                                 if (bcmp(t1->srcid.inf, t2->srcid.inf, 4))
+                                    bzero(t1->srcid.inf, 4);
                               }
                            }
-                           break;
                         }
-
-                        case ARGUS_TYPE_ETHER:
-                           break;
+                        if (match == 0) {
+                           if (t1) {
+                              ArgusFree(ns1->dsrs[ARGUS_TRANSPORT_INDEX]);
+                              ns1->dsrs[ARGUS_TRANSPORT_INDEX] = NULL;
+                              ns1->dsrindex &= ~(0x1 << ARGUS_TRANSPORT_INDEX);
+                           }
+                        }
+                        break;
                      }
-                     if (match && (t1->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE)) {
-                        if (bcmp(t1->srcid.inf, t2->srcid.inf, 4))
-                           bzero(t1->srcid.inf, 4);
-                     }
-                  }
-               }
-               if (match == 0) {
-                  if (t1) {
-                     ArgusFree(ns1->dsrs[ARGUS_TRANSPORT_INDEX]);
-                     ns1->dsrs[ARGUS_TRANSPORT_INDEX] = NULL;
-                     ns1->dsrindex &= ~(0x1 << ARGUS_TRANSPORT_INDEX);
-                  }
-               }
-               break;
-            }
 
 // Merging Time objects may result in a change in the storage
 // type of the time structure, from an ABSOLUTE_TIMESTAMP
 // to an ABSOLUTE_RANGE, to hold the new ending time.
 
-            case ARGUS_TIME_INDEX: {
-               struct ArgusTimeObject *t1 = (struct ArgusTimeObject *) ns1->dsrs[ARGUS_TIME_INDEX];
-               struct ArgusTimeObject *t2 = (struct ArgusTimeObject *) ns2->dsrs[ARGUS_TIME_INDEX];
+                     case ARGUS_TIME_INDEX: {
+                        struct ArgusTimeObject *t1 = (struct ArgusTimeObject *) ns1->dsrs[ARGUS_TIME_INDEX];
+                        struct ArgusTimeObject *t2 = (struct ArgusTimeObject *) ns2->dsrs[ARGUS_TIME_INDEX];
 
-               if (t1 && t2) {
-                  unsigned int st1, st2;
+                        if (t1 && t2) {
+                           unsigned int st1, st2;
 
-                  if (t1->hdr.argus_dsrvl8.len == 0) {
-                     bcopy ((char *) t2, (char *) t1, sizeof (*t1));
-                     break;
-                  }
+                           if (t1->hdr.argus_dsrvl8.len == 0) {
+                              bcopy ((char *) t2, (char *) t1, sizeof (*t1));
+                              break;
+                           }
 
-                  st1 = t1->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
-                                           ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
+                           st1 = t1->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                                                    ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
 
-                  st2 = t2->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
-                                           ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
+                           st2 = t2->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                                                    ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
 
-                  if (st2) {
-                     if (st2 & ARGUS_TIME_SRC_START) {
-                        if (st1 & ARGUS_TIME_SRC_START) {
-                           if ((t1->src.start.tv_sec  >  t2->src.start.tv_sec) ||
-                              ((t1->src.start.tv_sec  == t2->src.start.tv_sec) &&
-                               (t1->src.start.tv_usec >  t2->src.start.tv_usec))) {
-                              t1->src.start = t2->src.start;
-                              t1->hdr.subtype |= ARGUS_TIME_SRC_START;
+                           if (st2) {
+                              if (st2 & ARGUS_TIME_SRC_START) {
+                                 if (st1 & ARGUS_TIME_SRC_START) {
+                                    if ((t1->src.start.tv_sec  >  t2->src.start.tv_sec) ||
+                                       ((t1->src.start.tv_sec  == t2->src.start.tv_sec) &&
+                                        (t1->src.start.tv_usec >  t2->src.start.tv_usec))) {
+                                       t1->src.start = t2->src.start;
+                                       t1->hdr.subtype |= ARGUS_TIME_SRC_START;
+                                    } else {
+                                       if ((t1->src.end.tv_sec  <  t2->src.start.tv_sec) ||
+                                          ((t1->src.end.tv_sec  == t2->src.start.tv_sec) &&
+                                           (t1->src.end.tv_usec >  t2->src.start.tv_usec))) {
+                                          t1->src.end = t2->src.start;
+                                          t1->hdr.subtype |= ARGUS_TIME_SRC_END;
+                                       }
+                                    }
+                                 } else {
+                                    t1->src = t2->src;
+                                    t1->hdr.subtype |= st2 & (ARGUS_TIME_SRC_START |
+                                                              ARGUS_TIME_SRC_END);
+                                 }
+                              }
+                              if (st2 & (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END)) {
+                                 if (st1 & (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END)) {
+                                    if (t2->src.end.tv_sec) {
+                                       if ((t1->src.end.tv_sec  <  t2->src.end.tv_sec) ||
+                                          ((t1->src.end.tv_sec  == t2->src.end.tv_sec) &&
+                                           (t1->src.end.tv_usec <  t2->src.end.tv_usec))) {
+                                          t1->src.end = t2->src.end;
+                                          t1->hdr.subtype |= ARGUS_TIME_SRC_END;
+                                       }
+                                    } else {
+                                       if ((t1->src.end.tv_sec  <  t2->src.start.tv_sec) ||
+                                          ((t1->src.end.tv_sec  == t2->src.start.tv_sec) &&
+                                           (t1->src.end.tv_usec <  t2->src.start.tv_usec))) {
+                                          t1->src.end = t2->src.end;
+                                          t1->hdr.subtype |= ARGUS_TIME_SRC_END;
+                                       }
+                                    }
+
+                                 } else {
+                                    t1->src.end = t2->src.end;
+                                    t1->hdr.subtype |= st2 & (ARGUS_TIME_SRC_START |
+                                                              ARGUS_TIME_SRC_END);
+                                 }
+                              }
+                              if (st2 & ARGUS_TIME_DST_START) {
+                                 if (st1 & ARGUS_TIME_DST_START) {
+                                    if ((t1->dst.start.tv_sec  >  t2->dst.start.tv_sec) ||
+                                       ((t1->dst.start.tv_sec  == t2->dst.start.tv_sec) &&
+                                        (t1->dst.start.tv_usec >  t2->dst.start.tv_usec))) {
+                                       t1->dst.start = t2->dst.start;
+                                       t1->hdr.subtype |= ARGUS_TIME_DST_START;
+                                    }
+                                 } else {
+                                    t1->dst = t2->dst;
+                                    t1->hdr.subtype |= st2 & (ARGUS_TIME_DST_START |
+                                                              ARGUS_TIME_DST_END);
+                                 }
+                              }
+                              if (st2 & (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END)) {
+                                 if (st1 & (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END)) {
+                                    if ((t1->dst.end.tv_sec  <  t2->dst.end.tv_sec) ||
+                                       ((t1->dst.end.tv_sec  == t2->dst.end.tv_sec) &&
+                                        (t1->dst.end.tv_usec <  t2->dst.end.tv_usec))) {
+                                       t1->dst.end = t2->dst.end;
+                                       t1->hdr.subtype |= ARGUS_TIME_DST_END;
+                                    }
+                                 } else {
+                                    t1->dst = t2->dst;
+                                    t1->hdr.subtype |= st2 & (ARGUS_TIME_DST_START |
+                                                              ARGUS_TIME_DST_END);
+                                 }
+                              }
+
                            } else {
-                              if ((t1->src.end.tv_sec  <  t2->src.start.tv_sec) ||
-                                 ((t1->src.end.tv_sec  == t2->src.start.tv_sec) &&
-                                  (t1->src.end.tv_usec >  t2->src.start.tv_usec))) {
-                                 t1->src.end = t2->src.start;
-                                 t1->hdr.subtype |= ARGUS_TIME_SRC_END;
+
+                              if (t1->src.start.tv_sec == 0) {
+                                 bcopy ((char *)t2, (char *)t1, sizeof (*t1));
+                              } else {
+                                 if ((t1->src.start.tv_sec  >  t2->src.start.tv_sec) ||
+                                    ((t1->src.start.tv_sec  == t2->src.start.tv_sec) &&
+                                     (t1->src.start.tv_usec >  t2->src.start.tv_usec)))
+                                    t1->src.start = t2->src.start;
+
+                                 if ((t1->src.end.tv_sec == 0) || (t1->hdr.subtype == ARGUS_TIME_ABSOLUTE_TIMESTAMP)) {
+                                    t1->src.end = t1->src.start;
+                                    t1->hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
+                                    t1->hdr.argus_dsrvl8.len = sizeof(*t1);
+                                 }
+                                 if ((t2->src.end.tv_sec == 0) || (t2->hdr.subtype == ARGUS_TIME_ABSOLUTE_TIMESTAMP)) {
+                                    t2->src.end = t2->src.start;
+                                    t2->hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
+                                    t2->hdr.argus_dsrvl8.len = sizeof(*t1);
+                                 }
+                                 if ((t1->src.end.tv_sec  <  t2->src.end.tv_sec) ||
+                                    ((t1->src.end.tv_sec  == t2->src.end.tv_sec) &&
+                                     (t1->src.end.tv_usec <  t2->src.end.tv_usec)))
+                                    t1->src.end = t2->src.end;
                               }
                            }
-                        } else {
-                           t1->src = t2->src;
-                           t1->hdr.subtype |= st2 & (ARGUS_TIME_SRC_START |
-                                                     ARGUS_TIME_SRC_END);
                         }
-                     }
-                     if (st2 & (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END)) {
-                        if (st1 & (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END)) {
-                           if (t2->src.end.tv_sec) {
-                              if ((t1->src.end.tv_sec  <  t2->src.end.tv_sec) ||
-                                 ((t1->src.end.tv_sec  == t2->src.end.tv_sec) &&
-                                  (t1->src.end.tv_usec <  t2->src.end.tv_usec))) {
-                                 t1->src.end = t2->src.end;
-                                 t1->hdr.subtype |= ARGUS_TIME_SRC_END;
-                              }
-                           } else {
-                              if ((t1->src.end.tv_sec  <  t2->src.start.tv_sec) ||
-                                 ((t1->src.end.tv_sec  == t2->src.start.tv_sec) &&
-                                  (t1->src.end.tv_usec <  t2->src.start.tv_usec))) {
-                                 t1->src.end = t2->src.end;
-                                 t1->hdr.subtype |= ARGUS_TIME_SRC_END;
-                              }
-                           }
-
-                        } else {
-                           t1->src.end = t2->src.end;
-                           t1->hdr.subtype |= st2 & (ARGUS_TIME_SRC_START |
-                                                     ARGUS_TIME_SRC_END);
-                        }
-                     }
-                     if (st2 & ARGUS_TIME_DST_START) {
-                        if (st1 & ARGUS_TIME_DST_START) {
-                           if ((t1->dst.start.tv_sec  >  t2->dst.start.tv_sec) ||
-                              ((t1->dst.start.tv_sec  == t2->dst.start.tv_sec) &&
-                               (t1->dst.start.tv_usec >  t2->dst.start.tv_usec))) {
-                              t1->dst.start = t2->dst.start;
-                              t1->hdr.subtype |= ARGUS_TIME_DST_START;
-                           }
-                        } else {
-                           t1->dst = t2->dst;
-                           t1->hdr.subtype |= st2 & (ARGUS_TIME_DST_START |
-                                                     ARGUS_TIME_DST_END);
-                        }
-                     }
-                     if (st2 & (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END)) {
-                        if (st1 & (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END)) {
-                           if ((t1->dst.end.tv_sec  <  t2->dst.end.tv_sec) ||
-                              ((t1->dst.end.tv_sec  == t2->dst.end.tv_sec) &&
-                               (t1->dst.end.tv_usec <  t2->dst.end.tv_usec))) {
-                              t1->dst.end = t2->dst.end;
-                              t1->hdr.subtype |= ARGUS_TIME_DST_END;
-                           }
-                        } else {
-                           t1->dst = t2->dst;
-                           t1->hdr.subtype |= st2 & (ARGUS_TIME_DST_START |
-                                                     ARGUS_TIME_DST_END);
-                        }
+                        break;
                      }
 
-                  } else {
-
-                     if (t1->src.start.tv_sec == 0) {
-                        bcopy ((char *)t2, (char *)t1, sizeof (*t1));
-                     } else {
-                        if ((t1->src.start.tv_sec  >  t2->src.start.tv_sec) ||
-                           ((t1->src.start.tv_sec  == t2->src.start.tv_sec) &&
-                            (t1->src.start.tv_usec >  t2->src.start.tv_usec)))
-                           t1->src.start = t2->src.start;
-
-                        if ((t1->src.end.tv_sec == 0) || (t1->hdr.subtype == ARGUS_TIME_ABSOLUTE_TIMESTAMP)) {
-                           t1->src.end = t1->src.start;
-                           t1->hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
-                           t1->hdr.argus_dsrvl8.len = sizeof(*t1);
-                        }
-                        if ((t2->src.end.tv_sec == 0) || (t2->hdr.subtype == ARGUS_TIME_ABSOLUTE_TIMESTAMP)) {
-                           t2->src.end = t2->src.start;
-                           t2->hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
-                           t2->hdr.argus_dsrvl8.len = sizeof(*t1);
-                        }
-                        if ((t1->src.end.tv_sec  <  t2->src.end.tv_sec) ||
-                           ((t1->src.end.tv_sec  == t2->src.end.tv_sec) &&
-                            (t1->src.end.tv_usec <  t2->src.end.tv_usec)))
-                           t1->src.end = t2->src.end;
+                     case ARGUS_TIME_ADJ_INDEX: {
+                        break;
                      }
-                  }
-               }
-               break;
-            }
-
-            case ARGUS_TIME_ADJ_INDEX: {
-               break;
-            }
 
 // Merging networks objects involve copying and masking
 // various protocol specific network structs together.
 // First test for the protocols, and if they are the same,
 // then merge, if not, just remove the dsrs[] pointers;
 
-            case ARGUS_NETWORK_INDEX: {
-               struct ArgusNetworkStruct *n1 = (void *)ns1->dsrs[ARGUS_NETWORK_INDEX];
-               struct ArgusNetworkStruct *n2 = (void *)ns2->dsrs[ARGUS_NETWORK_INDEX];
+                     case ARGUS_NETWORK_INDEX: {
+                        struct ArgusNetworkStruct *n1 = (void *)ns1->dsrs[ARGUS_NETWORK_INDEX];
+                        struct ArgusNetworkStruct *n2 = (void *)ns2->dsrs[ARGUS_NETWORK_INDEX];
 
-               if ((n1 != NULL) && (n2 != NULL)) {
-                  if (n1->hdr.subtype != n2->hdr.subtype) {
-                     if (!(((n1->hdr.subtype == ARGUS_TCP_INIT) || (n1->hdr.subtype == ARGUS_TCP_STATUS) || (n1->hdr.subtype == ARGUS_TCP_PERF)) &&
-                           ((n2->hdr.subtype == ARGUS_TCP_INIT) || (n2->hdr.subtype == ARGUS_TCP_STATUS) || (n2->hdr.subtype == ARGUS_TCP_PERF)))) {
-                        ArgusFree(ns1->dsrs[i]);
-                        ns1->dsrs[i] = NULL;
-                        ns1->dsrindex &= ~(0x01 << i);
-                        n1 = NULL;
-                        break;
-                     }
-                  }
-
-                  if ((n1 != NULL) && (n2 != NULL)) {
-                     switch (n1->hdr.subtype) {
-                        case ARGUS_TCP_INIT: {
-                           struct ArgusTCPObject *t1 = (struct ArgusTCPObject *)&n1->net_union.tcp;
-                           struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
-
-                           switch (n2->hdr.subtype) {
-                              case ARGUS_TCP_INIT: {
-                                 t1->status    |= t2->status;
-                                 t1->options   |= t2->options;
-                                 t1->src.flags |= t2->src.flags;
-
-                                 break;
-                              }
-                              case ARGUS_TCP_STATUS: {
-                                 n1->hdr.subtype          = ARGUS_TCP_PERF;
-                                 n1->hdr.argus_dsrvl8.len = 1 + sizeof(*t1)/4; 
-                                 t1->status             = t2->status;
-                                 t1->options            = t2->options;
-                                 t1->src.status         = t2->src.status;
-                                 t1->src.seqbase        = t2->src.seqbase;
-                                 t1->src.win            = t2->src.win;
-                                 t1->src.flags          = t2->src.flags;
-                                 t1->src.winshift       = t2->src.winshift;
-                                 t1->dst.flags          = t2->dst.flags;
-                                 break;
-                              }
-                              case ARGUS_TCP_PERF: {
-                                 struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
-                                 struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
-
-                                 bcopy(t2, tobj, sizeof(*t2));
-                                 t1->status       |= t2->status;
-                                 t1->options      |= t2->options;
-                                 t1->src.status   |= t2->src.status;
-                                 t1->src.seqbase   = t2->src.seqbase;
-                                 t1->src.win       = t2->src.win;
-                                 t1->src.flags    |= t2->src.flags;
-                                 t1->src.winshift  = t2->src.winshift;
+                        if ((n1 != NULL) && (n2 != NULL)) {
+                           if (n1->hdr.subtype != n2->hdr.subtype) {
+                              if (!(((n1->hdr.subtype == ARGUS_TCP_INIT) || (n1->hdr.subtype == ARGUS_TCP_STATUS) || (n1->hdr.subtype == ARGUS_TCP_PERF)) &&
+                                    ((n2->hdr.subtype == ARGUS_TCP_INIT) || (n2->hdr.subtype == ARGUS_TCP_STATUS) || (n2->hdr.subtype == ARGUS_TCP_PERF)))) {
+                                 ArgusFree(ns1->dsrs[i]);
+                                 ns1->dsrs[i] = NULL;
+                                 ns1->dsrindex &= ~(0x01 << i);
+                                 n1 = NULL;
                                  break;
                               }
                            }
-                           break;
-                        }
 
-                        case ARGUS_TCP_STATUS: {
-                           struct ArgusTCPStatus *t1 = (struct ArgusTCPStatus *)&n1->net_union.tcp;
-                           struct ArgusTCPStatus tcpstatusbuf, *tcps = &tcpstatusbuf;
-                           bcopy(t1, tcps, sizeof(*t1));
-                           switch (n2->hdr.subtype) {
-                              case ARGUS_TCP_INIT: {
-                                 struct ArgusTCPInitStatus *t2 = (struct ArgusTCPInitStatus *)&n2->net_union.tcp;
-                                 struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
+                           if ((n1 != NULL) && (n2 != NULL)) {
+                              switch (n1->hdr.subtype) {
+                                 case ARGUS_TCP_INIT: {
+                                    struct ArgusTCPObject *t1 = (struct ArgusTCPObject *)&n1->net_union.tcp;
+                                    struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
 
-                                 bzero(tobj, sizeof(*tobj));
-                                 n1->hdr.subtype          = ARGUS_TCP_PERF;
-                                 n1->hdr.argus_dsrvl8.len = 1 + sizeof(*tobj)/4; 
-                                 tobj->status       = tcps->status | t2->status;
-                                 tobj->options      = t2->options;
-                                 tobj->src.status   = t2->status;
-                                 tobj->src.seqbase  = t2->seqbase;
-                                 tobj->src.win      = t2->win;
-                                 tobj->src.flags    = t2->flags | tcps->src;
-                                 tobj->src.winshift = t2->winshift;
-                                 tobj->dst.flags    = tcps->dst;
+                                    switch (n2->hdr.subtype) {
+                                       case ARGUS_TCP_INIT: {
+                                          t1->status    |= t2->status;
+                                          t1->options   |= t2->options;
+                                          t1->src.flags |= t2->src.flags;
 
-                                 break;
-                              }
-                              case ARGUS_TCP_STATUS: {
-                                 struct ArgusTCPStatus *t2 = (struct ArgusTCPStatus *)&n2->net_union.tcp;
-                                 t1->status |= t2->status;
-                                 break;
-                              }
-                              case ARGUS_TCP_PERF: {
-                                 struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
-                                 struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
+                                          break;
+                                       }
+                                       case ARGUS_TCP_STATUS: {
+                                          n1->hdr.subtype          = ARGUS_TCP_PERF;
+                                          n1->hdr.argus_dsrvl8.len = 1 + sizeof(*t1)/4; 
+                                          t1->status             = t2->status;
+                                          t1->options            = t2->options;
+                                          t1->src.status         = t2->src.status;
+                                          t1->src.seqbase        = t2->src.seqbase;
+                                          t1->src.win            = t2->src.win;
+                                          t1->src.flags          = t2->src.flags;
+                                          t1->src.winshift       = t2->src.winshift;
+                                          t1->dst.flags          = t2->dst.flags;
+                                          break;
+                                       }
+                                       case ARGUS_TCP_PERF: {
+                                          struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
+                                          struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
 
-                                 bcopy(t2, tobj, sizeof(*t2));
-                                 tobj->status       |= tcps->status;
-                                 tobj->src.status   |= tcps->status;
-                                 tobj->src.flags    |= tcps->src;
-                                 tobj->dst.flags    |= tcps->dst;
-                                 break;
-                              }
-                           }
-                           break;
-                        }
-
-                        case ARGUS_TCP_PERF: {
-                           struct ArgusTCPObject *t1 = (struct ArgusTCPObject *)&n1->net_union.tcp;
-                           switch (n2->hdr.subtype) {
-                              case ARGUS_TCP_INIT: {
-                                 break;
-                              }
-                              case ARGUS_TCP_STATUS: {
-                                 break;
-                              }
-                              case ARGUS_TCP_PERF: {
-                                 struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
-
-                                 if (n1->hdr.argus_dsrvl8.len == 0) {
-                                    bcopy ((char *) n2, (char *) n1, sizeof (*n1));
-                                 } else {
-                                    t1->status  |= t2->status;
-                                    t1->state   |= t2->state;
-                                    t1->options |= t2->options;
-
-                                    if (t1->synAckuSecs == 0)
-                                       t1->synAckuSecs  = t2->synAckuSecs;
-                                    if (t1->ackDatauSecs == 0)
-                                       t1->ackDatauSecs = t2->ackDatauSecs;
-
-                                    t1->src.status   |= t2->src.status;
-                                    t1->src.ack       = t2->src.ack;
-
-                                    if (t1->src.seqbase > t2->src.seqbase) {  // potential roll over
-
-#define TCP_MAX_WINDOWSIZE	65536
-                                       if ((t1->src.seqbase - t2->src.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
-                                          t1->src.ackbytes += (t2->src.seq + (0xffffffff - t1->src.seqbase));
-                                       } else
-                                          t1->src.seqbase = t2->src.seqbase;
-                                    } else
-                                       t1->src.seq       = t2->src.seq;
-
-                                    t1->src.winnum   += t2->src.winnum;
-                                    t1->src.bytes    += t2->src.bytes;
-                                    t1->src.retrans  += t2->src.retrans;
-
-                                    t1->src.win       = t2->src.win;
-                                    t1->src.winbytes  = t2->src.winbytes;
-                                    t1->src.flags    |= t2->src.flags;
-
-                                    t1->dst.status   |= t2->dst.status;
-                                    t1->dst.ack       = t2->dst.ack;
-
-                                    if (t1->dst.seqbase > t2->dst.seqbase) {  // potential roll over
-                                       if ((t1->dst.seqbase - t2->dst.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
-                                          t1->dst.ackbytes += (t2->dst.seq + (0xffffffff - t1->dst.seqbase));
-                                       } else
-                                          t1->dst.seqbase = t2->dst.seqbase;
-                                    } else
-                                       t1->dst.seq       = t2->dst.seq;
-
-                                    t1->dst.winnum   += t2->dst.winnum;
-                                    t1->dst.bytes    += t2->dst.bytes;
-                                    t1->dst.retrans  += t2->dst.retrans;
-
-                                    t1->dst.win       = t2->dst.win;
-                                    t1->dst.winbytes  = t2->dst.winbytes;
-                                    t1->dst.flags    |= t2->dst.flags;
-
-                                    if (n1->hdr.subtype != n2->hdr.subtype) {
-                                       if (n1->hdr.subtype == ARGUS_TCP_INIT) {
-                                          n1->hdr.subtype = ARGUS_TCP_PERF;
-                                          n1->hdr.argus_dsrvl8.len = (sizeof(*t1) + 3) / 4;
+                                          bcopy(t2, tobj, sizeof(*t2));
+                                          t1->status       |= t2->status;
+                                          t1->options      |= t2->options;
+                                          t1->src.status   |= t2->src.status;
+                                          t1->src.seqbase   = t2->src.seqbase;
+                                          t1->src.win       = t2->src.win;
+                                          t1->src.flags    |= t2->src.flags;
+                                          t1->src.winshift  = t2->src.winshift;
+                                          break;
                                        }
                                     }
+                                    break;
                                  }
-                                 break;
+
+                                 case ARGUS_TCP_STATUS: {
+                                    struct ArgusTCPStatus *t1 = (struct ArgusTCPStatus *)&n1->net_union.tcp;
+                                    struct ArgusTCPStatus tcpstatusbuf, *tcps = &tcpstatusbuf;
+                                    bcopy(t1, tcps, sizeof(*t1));
+                                    switch (n2->hdr.subtype) {
+                                       case ARGUS_TCP_INIT: {
+                                          struct ArgusTCPInitStatus *t2 = (struct ArgusTCPInitStatus *)&n2->net_union.tcp;
+                                          struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
+
+                                          bzero(tobj, sizeof(*tobj));
+                                          n1->hdr.subtype          = ARGUS_TCP_PERF;
+                                          n1->hdr.argus_dsrvl8.len = 1 + sizeof(*tobj)/4; 
+                                          tobj->status       = tcps->status | t2->status;
+                                          tobj->options      = t2->options;
+                                          tobj->src.status   = t2->status;
+                                          tobj->src.seqbase  = t2->seqbase;
+                                          tobj->src.win      = t2->win;
+                                          tobj->src.flags    = t2->flags | tcps->src;
+                                          tobj->src.winshift = t2->winshift;
+                                          tobj->dst.flags    = tcps->dst;
+
+                                          break;
+                                       }
+                                       case ARGUS_TCP_STATUS: {
+                                          struct ArgusTCPStatus *t2 = (struct ArgusTCPStatus *)&n2->net_union.tcp;
+                                          t1->status |= t2->status;
+                                          break;
+                                       }
+                                       case ARGUS_TCP_PERF: {
+                                          struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
+                                          struct ArgusTCPObject *tobj = (struct ArgusTCPObject *)&n1->net_union.tcp;
+
+                                          bcopy(t2, tobj, sizeof(*t2));
+                                          tobj->status       |= tcps->status;
+                                          tobj->src.status   |= tcps->status;
+                                          tobj->src.flags    |= tcps->src;
+                                          tobj->dst.flags    |= tcps->dst;
+                                          break;
+                                       }
+                                    }
+                                    break;
+                                 }
+
+                                 case ARGUS_TCP_PERF: {
+                                    struct ArgusTCPObject *t1 = (struct ArgusTCPObject *)&n1->net_union.tcp;
+                                    switch (n2->hdr.subtype) {
+                                       case ARGUS_TCP_INIT: {
+                                          break;
+                                       }
+                                       case ARGUS_TCP_STATUS: {
+                                          break;
+                                       }
+                                       case ARGUS_TCP_PERF: {
+                                          struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
+
+                                          if (n1->hdr.argus_dsrvl8.len == 0) {
+                                             bcopy ((char *) n2, (char *) n1, sizeof (*n1));
+                                          } else {
+                                             t1->status  |= t2->status;
+                                             t1->state   |= t2->state;
+                                             t1->options |= t2->options;
+
+                                             if (t1->synAckuSecs == 0)
+                                                t1->synAckuSecs  = t2->synAckuSecs;
+                                             if (t1->ackDatauSecs == 0)
+                                                t1->ackDatauSecs = t2->ackDatauSecs;
+
+                                             t1->src.status   |= t2->src.status;
+                                             t1->src.ack       = t2->src.ack;
+
+                                             if (t1->src.seqbase > t2->src.seqbase) {  // potential roll over
+
+#define TCP_MAX_WINDOWSIZE	65536
+                                                if ((t1->src.seqbase - t2->src.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
+                                                   t1->src.ackbytes += (t2->src.seq + (0xffffffff - t1->src.seqbase));
+                                                } else
+                                                   t1->src.seqbase = t2->src.seqbase;
+                                             } else
+                                                t1->src.seq       = t2->src.seq;
+
+                                             t1->src.winnum   += t2->src.winnum;
+                                             t1->src.bytes    += t2->src.bytes;
+                                             t1->src.retrans  += t2->src.retrans;
+
+                                             t1->src.win       = t2->src.win;
+                                             t1->src.winbytes  = t2->src.winbytes;
+                                             t1->src.flags    |= t2->src.flags;
+
+                                             t1->dst.status   |= t2->dst.status;
+                                             t1->dst.ack       = t2->dst.ack;
+
+                                             if (t1->dst.seqbase > t2->dst.seqbase) {  // potential roll over
+                                                if ((t1->dst.seqbase - t2->dst.seqbase) > TCP_MAX_WINDOWSIZE) {  // roll over
+                                                   t1->dst.ackbytes += (t2->dst.seq + (0xffffffff - t1->dst.seqbase));
+                                                } else
+                                                   t1->dst.seqbase = t2->dst.seqbase;
+                                             } else
+                                                t1->dst.seq       = t2->dst.seq;
+
+                                             t1->dst.winnum   += t2->dst.winnum;
+                                             t1->dst.bytes    += t2->dst.bytes;
+                                             t1->dst.retrans  += t2->dst.retrans;
+
+                                             t1->dst.win       = t2->dst.win;
+                                             t1->dst.winbytes  = t2->dst.winbytes;
+                                             t1->dst.flags    |= t2->dst.flags;
+
+                                             if (n1->hdr.subtype != n2->hdr.subtype) {
+                                                if (n1->hdr.subtype == ARGUS_TCP_INIT) {
+                                                   n1->hdr.subtype = ARGUS_TCP_PERF;
+                                                   n1->hdr.argus_dsrvl8.len = (sizeof(*t1) + 3) / 4;
+                                                }
+                                             }
+                                          }
+                                          break;
+                                       }
+
+                                       break;
+                                    }
+                                 }
+
+                                 case ARGUS_RTP_FLOW: {
+                                    struct ArgusRTPObject *r1 = &n1->net_union.rtp;
+                                    struct ArgusRTPObject *r2 = &n2->net_union.rtp;
+                                    r1->sdrop += r2->sdrop;
+                                    r1->ddrop += r2->ddrop;
+                                    r1->src = r2->src;
+                                    r1->dst = r2->dst;
+                                    break;
+                                 }
+
+                                 case ARGUS_UDT_FLOW: {
+                                    struct ArgusUDTObject *u1 = &n1->net_union.udt;
+                                    struct ArgusUDTObject *u2 = &n2->net_union.udt;
+
+                                    if (u1->hshake.version != u2->hshake.version)
+                                       u1->hshake.version = 0;
+                                    if (u1->hshake.socktype != u2->hshake.socktype)
+                                       u1->hshake.version = 0;
+                                    if (u1->hshake.conntype != u2->hshake.conntype)
+                                       u1->hshake.conntype = 0;
+                                    if (u1->hshake.sockid != u2->hshake.sockid)
+                                       u1->hshake.sockid = 0;
+
+                                    u1->src.solo    += u2->src.solo;
+                                    u1->src.first   += u2->src.first;
+                                    u1->src.middle  += u2->src.middle;
+                                    u1->src.last    += u2->src.last;
+                                    u1->src.drops   += u2->src.drops;
+                                    u1->src.retrans += u2->src.retrans;
+                                    u1->src.nacked  += u2->src.nacked;
+                                    break;
+                                 }
+
+                                 case ARGUS_ESP_DSR: {
+                                    struct ArgusESPObject *e1 = &n1->net_union.esp;
+                                    struct ArgusESPObject *e2 = &n2->net_union.esp;
+
+                                    n1->hdr.argus_dsrvl8.qual |= n2->hdr.argus_dsrvl8.qual;
+
+                                    e1->lastseq = e2->lastseq;
+                                    e1->lostseq += e2->lostseq;
+                                    if (e1->spi != e2->spi) {
+                                       e1->spi = 0;
+                                    }
+                                 }
                               }
 
-                              break;
                            }
                         }
-
-                        case ARGUS_RTP_FLOW: {
-                           struct ArgusRTPObject *r1 = &n1->net_union.rtp;
-                           struct ArgusRTPObject *r2 = &n2->net_union.rtp;
-                           r1->sdrop += r2->sdrop;
-                           r1->ddrop += r2->ddrop;
-                           r1->src = r2->src;
-                           r1->dst = r2->dst;
-                           break;
-                        }
-
-                        case ARGUS_UDT_FLOW: {
-                           struct ArgusUDTObject *u1 = &n1->net_union.udt;
-                           struct ArgusUDTObject *u2 = &n2->net_union.udt;
-
-                           if (u1->hshake.version != u2->hshake.version)
-                              u1->hshake.version = 0;
-                           if (u1->hshake.socktype != u2->hshake.socktype)
-                              u1->hshake.version = 0;
-                           if (u1->hshake.conntype != u2->hshake.conntype)
-                              u1->hshake.conntype = 0;
-                           if (u1->hshake.sockid != u2->hshake.sockid)
-                              u1->hshake.sockid = 0;
-
-                           u1->src.solo    += u2->src.solo;
-                           u1->src.first   += u2->src.first;
-                           u1->src.middle  += u2->src.middle;
-                           u1->src.last    += u2->src.last;
-                           u1->src.drops   += u2->src.drops;
-                           u1->src.retrans += u2->src.retrans;
-                           u1->src.nacked  += u2->src.nacked;
-                           break;
-                        }
-
-                        case ARGUS_ESP_DSR: {
-                           struct ArgusESPObject *e1 = &n1->net_union.esp;
-                           struct ArgusESPObject *e2 = &n2->net_union.esp;
-
-                           n1->hdr.argus_dsrvl8.qual |= n2->hdr.argus_dsrvl8.qual;
-
-                           e1->lastseq = e2->lastseq;
-                           e1->lostseq += e2->lostseq;
-                           if (e1->spi != e2->spi) {
-                              e1->spi = 0;
-                           }
-                        }
+                        break;
                      }
-
-                  }
-               }
-               break;
-            }
 
 // Merging IP Attribute objects involves
 // of rollover any time soon, as we're working with 64 bit
 // ints with the canonical DSR.  We should test for rollover
 // but lets do that later - cb
 
-            case ARGUS_IPATTR_INDEX: {
-               struct ArgusIPAttrStruct *attr1 = (struct ArgusIPAttrStruct *)ns1->dsrs[ARGUS_IPATTR_INDEX];
-               struct ArgusIPAttrStruct *attr2 = (struct ArgusIPAttrStruct *)ns2->dsrs[ARGUS_IPATTR_INDEX]; 
+                     case ARGUS_IPATTR_INDEX: {
+                        struct ArgusIPAttrStruct *attr1 = (struct ArgusIPAttrStruct *)ns1->dsrs[ARGUS_IPATTR_INDEX];
+                        struct ArgusIPAttrStruct *attr2 = (struct ArgusIPAttrStruct *)ns2->dsrs[ARGUS_IPATTR_INDEX]; 
 
-               if (attr1 && attr2) {
-                  if (attr1->hdr.argus_dsrvl8.len == 0) {
-                     bcopy ((char *) attr2, (char *) attr1, sizeof (*attr1));
-                     break;
-                  }
+                        if (attr1 && attr2) {
+                           if (attr1->hdr.argus_dsrvl8.len == 0) {
+                              bcopy ((char *) attr2, (char *) attr1, sizeof (*attr1));
+                              break;
+                           }
 
-                  if ((attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) &&
-                      (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC)) {
-                     if (attr1->src.tos != attr2->src.tos)
-                        attr1->src.tos = 0;
+                           if ((attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) &&
+                               (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC)) {
+                              if (attr1->src.tos != attr2->src.tos)
+                                 attr1->src.tos = 0;
 
-                     if (attr1->src.ttl != attr2->src.ttl)
-                        if ((attr2->src.ttl > 0) && (attr1->src.ttl > attr2->src.ttl)) 
-                           attr1->src.ttl = attr2->src.ttl;
+                              if (attr1->src.ttl != attr2->src.ttl)
+                                 if ((attr2->src.ttl > 0) && (attr1->src.ttl > attr2->src.ttl)) 
+                                    attr1->src.ttl = attr2->src.ttl;
 
-                     attr1->src.options ^= attr2->src.options;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_FRAGMENTS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_FRAGMENTS;
+                              attr1->src.options ^= attr2->src.options;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_FRAGMENTS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_FRAGMENTS;
 
-                  } else 
-                  if (!(attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) &&
-                       (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC)) {
-                     bcopy ((char *)&attr2->src, (char *)&attr1->src, sizeof(attr1->src));
-                     attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_OPTIONS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_OPTIONS;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_FRAGMENTS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_FRAGMENTS;
-                  }
+                           } else 
+                           if (!(attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) &&
+                                (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC)) {
+                              bcopy ((char *)&attr2->src, (char *)&attr1->src, sizeof(attr1->src));
+                              attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_OPTIONS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_OPTIONS;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_FRAGMENTS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_FRAGMENTS;
+                           }
 
-                  if ((attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) &&
-                      (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST)) {
-                     if (attr1->dst.tos != attr2->dst.tos)
-                        attr1->dst.tos = 0;
+                           if ((attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) &&
+                               (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST)) {
+                              if (attr1->dst.tos != attr2->dst.tos)
+                                 attr1->dst.tos = 0;
 
-                     if (attr1->dst.ttl != attr2->dst.ttl)
-                        if ((attr2->dst.ttl > 0) && (attr1->dst.ttl > attr2->dst.ttl)) 
-                           attr1->dst.ttl = attr2->dst.ttl;
+                              if (attr1->dst.ttl != attr2->dst.ttl)
+                                 if ((attr2->dst.ttl > 0) && (attr1->dst.ttl > attr2->dst.ttl)) 
+                                    attr1->dst.ttl = attr2->dst.ttl;
 
-                     attr1->dst.options ^= attr2->dst.options;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_FRAGMENTS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_FRAGMENTS;
+                              attr1->dst.options ^= attr2->dst.options;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_FRAGMENTS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_FRAGMENTS;
 
-                  } else
-                  if (!(attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) &&
-                       (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST)) {
-                     bcopy ((char *)&attr2->dst, (char *)&attr1->dst, sizeof(attr1->dst));
-                     attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_OPTIONS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_OPTIONS;
-                     if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_FRAGMENTS)
-                        attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_FRAGMENTS;
-                  }
-               }
-               break;
-            }
+                           } else
+                           if (!(attr1->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) &&
+                                (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST)) {
+                              bcopy ((char *)&attr2->dst, (char *)&attr1->dst, sizeof(attr1->dst));
+                              attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_OPTIONS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_OPTIONS;
+                              if (attr2->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_FRAGMENTS)
+                                 attr1->hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST_FRAGMENTS;
+                           }
+                        }
+                        break;
+                     }
 
 // Merging metrics data  involves accumulating counters.
 
-            case ARGUS_METRIC_INDEX: {
-               struct ArgusMetricStruct *m1 = (struct ArgusMetricStruct *) ns1->dsrs[ARGUS_METRIC_INDEX];
-               struct ArgusMetricStruct *m2 = (struct ArgusMetricStruct *) ns2->dsrs[ARGUS_METRIC_INDEX];
-               if (m1 && m2) {
-                  if (m1->hdr.argus_dsrvl8.len == 0) {
-                     bcopy ((char *) m2, (char *) m1, sizeof (*m1));
-                     break;
-                  }
+                     case ARGUS_METRIC_INDEX: {
+                        struct ArgusMetricStruct *m1 = (struct ArgusMetricStruct *) ns1->dsrs[ARGUS_METRIC_INDEX];
+                        struct ArgusMetricStruct *m2 = (struct ArgusMetricStruct *) ns2->dsrs[ARGUS_METRIC_INDEX];
+                        if (m1 && m2) {
+                           if (m1->hdr.argus_dsrvl8.len == 0) {
+                              bcopy ((char *) m2, (char *) m1, sizeof (*m1));
+                              break;
+                           }
 
-                  m1->src.pkts     += m2->src.pkts;
-                  m1->src.bytes    += m2->src.bytes;
-                  m1->src.appbytes += m2->src.appbytes;
-                  m1->dst.pkts     += m2->dst.pkts;
-                  m1->dst.bytes    += m2->dst.bytes;
-                  m1->dst.appbytes += m2->dst.appbytes;
-               }
-               break;
-            }
+                           m1->src.pkts     += m2->src.pkts;
+                           m1->src.bytes    += m2->src.bytes;
+                           m1->src.appbytes += m2->src.appbytes;
+                           m1->dst.pkts     += m2->dst.pkts;
+                           m1->dst.bytes    += m2->dst.bytes;
+                           m1->dst.appbytes += m2->dst.appbytes;
+                        }
+                        break;
+                     }
 
 
 // Merging packet size data involves max min comparisons
 // as well as a reformulation of the histogram if being used.
 
-            case ARGUS_PSIZE_INDEX: {
-               struct ArgusPacketSizeStruct *p1 = (struct ArgusPacketSizeStruct *) ns1->dsrs[ARGUS_PSIZE_INDEX];
-               struct ArgusPacketSizeStruct *p2 = (struct ArgusPacketSizeStruct *) ns2->dsrs[ARGUS_PSIZE_INDEX];
+                     case ARGUS_PSIZE_INDEX: {
+                        struct ArgusPacketSizeStruct *p1 = (struct ArgusPacketSizeStruct *) ns1->dsrs[ARGUS_PSIZE_INDEX];
+                        struct ArgusPacketSizeStruct *p2 = (struct ArgusPacketSizeStruct *) ns2->dsrs[ARGUS_PSIZE_INDEX];
 
-               if (p1 && p2) {
-                  if (p1->hdr.argus_dsrvl8.len == 0) {
-                     bcopy ((char *) p2, (char *) p1, sizeof (*p1));
-                  } else {
-                     if ((p1->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) && 
-                         (p2->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN))  {
-                        if (p1->src.psizemax < p2->src.psizemax)
-                           p1->src.psizemax = p2->src.psizemax;
-                        if (p1->src.psizemin > p2->src.psizemin)
-                           p1->src.psizemin = p2->src.psizemin;
+                        if (p1 && p2) {
+                           if (p1->hdr.argus_dsrvl8.len == 0) {
+                              bcopy ((char *) p2, (char *) p1, sizeof (*p1));
+                           } else {
+                              if ((p1->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) && 
+                                  (p2->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN))  {
+                                 if (p1->src.psizemax < p2->src.psizemax)
+                                    p1->src.psizemax = p2->src.psizemax;
+                                 if (p1->src.psizemin > p2->src.psizemin)
+                                    p1->src.psizemin = p2->src.psizemin;
 
-                        if (p1->hdr.subtype & ARGUS_PSIZE_HISTO) {
-                           int x, max, tot, val[8];
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (p1->src.psize[x] + p2->src.psize[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
-                           }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255)
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1;
+                                 if (p1->hdr.subtype & ARGUS_PSIZE_HISTO) {
+                                    int x, max, tot, val[8];
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (p1->src.psize[x] + p2->src.psize[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255)
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1;
+                                       }
+                                       p1->src.psize[x] = val[x];
+                                    }
+                                 }
+
+                              } else {
+                                 if (p2->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
+                                    p1->hdr.subtype |= ARGUS_PSIZE_SRC_MAX_MIN;
+                                    bcopy (&p2->src, &p1->src, sizeof(p1->src));
+                                 }
                               }
-                              p1->src.psize[x] = val[x];
-                           }
-                        }
+                              if ((p1->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) && 
+                                  (p2->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN))  {
+                                 if (p1->dst.psizemax < p2->dst.psizemax)
+                                    p1->dst.psizemax = p2->dst.psizemax;
+                                 if (p1->dst.psizemin > p2->dst.psizemin)
+                                    p1->dst.psizemin = p2->dst.psizemin;
 
-                     } else {
-                        if (p2->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
-                           p1->hdr.subtype |= ARGUS_PSIZE_SRC_MAX_MIN;
-                           bcopy (&p2->src, &p1->src, sizeof(p1->src));
-                        }
-                     }
-                     if ((p1->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) && 
-                         (p2->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN))  {
-                        if (p1->dst.psizemax < p2->dst.psizemax)
-                           p1->dst.psizemax = p2->dst.psizemax;
-                        if (p1->dst.psizemin > p2->dst.psizemin)
-                           p1->dst.psizemin = p2->dst.psizemin;
-
-                        if (p1->hdr.subtype & ARGUS_PSIZE_HISTO) {
-                           int x, max, tot, val[8];
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (p1->dst.psize[x] + p2->dst.psize[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
-                           }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255) 
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1; 
-                              }  
-                              p1->dst.psize[x] = val[x];
+                                 if (p1->hdr.subtype & ARGUS_PSIZE_HISTO) {
+                                    int x, max, tot, val[8];
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (p1->dst.psize[x] + p2->dst.psize[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255) 
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1; 
+                                       }  
+                                       p1->dst.psize[x] = val[x];
+                                    }
+                                 }
+                              } else {
+                                 if (p2->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) {
+                                    p1->hdr.subtype |= ARGUS_PSIZE_DST_MAX_MIN;
+                                    bcopy (&p2->dst, &p1->dst, sizeof(p1->dst));
+                                 }
+                              }
                            }
                         }
-                     } else {
-                        if (p2->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) {
-                           p1->hdr.subtype |= ARGUS_PSIZE_DST_MAX_MIN;
-                           bcopy (&p2->dst, &p1->dst, sizeof(p1->dst));
-                        }
+                        break;
                      }
-                  }
-               }
-               break;
-            }
 
 
 // Merging the aggregation object results in ns1 having
@@ -8171,724 +8212,728 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 // for ns2's metrics.  If ns2 does exist, then just merge
 // the two agr's.
 
-            case ARGUS_AGR_INDEX: {
-               struct ArgusAgrStruct *a1 = (struct ArgusAgrStruct *) ns1->dsrs[ARGUS_AGR_INDEX];
-               struct ArgusAgrStruct *a2 = (struct ArgusAgrStruct *) ns2->dsrs[ARGUS_AGR_INDEX];
-               struct ArgusAgrStruct databuf, *data = &databuf;
-               double ss1 = 0, ss2 = 0, sum1 = 0, sum2 = 0, value = 0;
-               int x = 0, n = 0, items = 0;
+                     case ARGUS_AGR_INDEX: {
+                        struct ArgusAgrStruct *a1 = (struct ArgusAgrStruct *) ns1->dsrs[ARGUS_AGR_INDEX];
+                        struct ArgusAgrStruct *a2 = (struct ArgusAgrStruct *) ns2->dsrs[ARGUS_AGR_INDEX];
+                        struct ArgusAgrStruct databuf, *data = &databuf;
+                        double ss1 = 0, ss2 = 0, sum1 = 0, sum2 = 0, value = 0;
+                        int x = 0, n = 0, items = 0;
 
-               if (a1 && a2) {
-                  if ((a1->hdr.subtype == a2->hdr.subtype) ||
-                    (((a1->hdr.subtype == ARGUSMETRICDURATION) || (a1->hdr.subtype == 0x01)) &&
-                     ((a2->hdr.subtype == ARGUSMETRICDURATION) || (a2->hdr.subtype == 0x01)))) {
+                        if (a1 && a2) {
+                           if ((a1->hdr.subtype == a2->hdr.subtype) ||
+                             (((a1->hdr.subtype == ARGUSMETRICDURATION) || (a1->hdr.subtype == 0x01)) &&
+                              ((a2->hdr.subtype == ARGUSMETRICDURATION) || (a2->hdr.subtype == 0x01)))) {
 
-                     double tvalstd = 0, tvalmean = 0, meansqrd = 0;
+                              double tvalstd = 0, tvalmean = 0, meansqrd = 0;
 
-                     bzero(data, sizeof(*data));
+                              bzero(data, sizeof(*data));
 
-                     if (a1->hdr.argus_dsrvl8.len == 0) {
-                        bcopy ((char *) a2, (char *) a1, sizeof (*a1));
-                        break;
-                     }
+                              if (a1->hdr.argus_dsrvl8.len == 0) {
+                                 bcopy ((char *) a2, (char *) a1, sizeof (*a1));
+                                 break;
+                              }
 
-                     bcopy ((char *)&a1->hdr, (char *)&data->hdr, sizeof(data->hdr));
+                              bcopy ((char *)&a1->hdr, (char *)&data->hdr, sizeof(data->hdr));
 
-                     data->count = a1->count + a2->count;
+                              data->count = a1->count + a2->count;
 
-                     if (data->count) {
-                        data->act.maxval   = (a1->act.maxval > a2->act.maxval) ? a1->act.maxval : a2->act.maxval;
-                        data->act.minval   = (a1->act.minval < a2->act.minval) ? a1->act.minval : a2->act.minval;
-                        data->act.n        = a1->act.n + a2->act.n;
+                              if (data->count) {
+                                 data->act.maxval   = (a1->act.maxval > a2->act.maxval) ? a1->act.maxval : a2->act.maxval;
+                                 data->act.minval   = (a1->act.minval < a2->act.minval) ? a1->act.minval : a2->act.minval;
+                                 data->act.n        = a1->act.n + a2->act.n;
 
-                        sum1               = (a1->act.n > 1) ? (a1->act.meanval * a1->act.n) : a1->act.meanval;
-                        sum2               = (a2->act.n > 1) ? (a2->act.meanval * a2->act.n) : a2->act.meanval;
+                                 sum1               = (a1->act.n > 1) ? (a1->act.meanval * a1->act.n) : a1->act.meanval;
+                                 sum2               = (a2->act.n > 1) ? (a2->act.meanval * a2->act.n) : a2->act.meanval;
 
-                        if (a1->act.n > 1) {
-                           tvalstd  = pow(a1->act.stdev, 2.0);
-                           tvalmean = pow(a1->act.meanval, 2.0);
+                                 if (a1->act.n > 1) {
+                                    tvalstd  = pow(a1->act.stdev, 2.0);
+                                    tvalmean = pow(a1->act.meanval, 2.0);
 
-                           ss1 = a1->act.n * (tvalstd + tvalmean);
+                                    ss1 = a1->act.n * (tvalstd + tvalmean);
+                                 } else {
+                                    ss1 = pow(a1->act.meanval, 2.0);
+                                 }
+                                 if (a2->act.n > 1) {
+                                    tvalstd  = pow(a2->act.stdev, 2.0);
+                                    tvalmean = pow(a2->act.meanval, 2.0);
+                                    ss2 = a2->act.n * (tvalstd + tvalmean);
+
+                                 } else {
+                                    ss2 = pow(a2->act.meanval, 2.0);
+                                 }
+
+                                 if (data->act.n > 0) {
+                                    data->act.meanval  = (sum1 + sum2) / data->act.n;
+                                    meansqrd = pow(data->act.meanval, 2.0);
+                                    data->act.stdev    = sqrt(fabs(((ss1 + ss2)/(data->act.n)) - meansqrd));
+                                 }
+
+                                 value = 0.0;
+                                 ss1 = 0.0;
+
+                                 sum1  = (a1->idle.n > 1) ? (a1->idle.meanval * a1->idle.n) : a1->idle.meanval;
+                                 sum2  = (a2->idle.n > 1) ? (a2->idle.meanval * a2->idle.n) : a2->idle.meanval;
+
+                                 if (a1->idle.stdev != 0) {
+                                    tvalstd  = pow(a1->idle.stdev, 2.0);
+                                    ss1 = a1->idle.n * (tvalstd + pow(a1->idle.meanval, 2.0));
+
+                                 } else
+                                    ss1 = pow(a1->idle.meanval, 2.0);
+
+                                 ss1 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
+
+                                 if (a2->idle.stdev != 0) {
+                                    tvalstd  = pow(a2->idle.stdev, 2.0);
+                                    ss2 = a2->idle.n * (tvalstd + pow(a2->idle.meanval, 2.0));
+
+                                 } else
+                                    ss2 = pow(a2->idle.meanval, 2.0);
+
+                                 ss2 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
+
+                                 if ((items = (a1->idle.n + a2->idle.n)) > 0) {
+                                    for (n = 0; n < 8; n++) {
+                                       int value = ((a1->idle.fdist[n] * a1->idle.n) + (a2->idle.fdist[n] * a2->idle.n)) / items;
+                                       data->idle.fdist[n] = (value > 0xFF) ? 0xFF : value;
+                                       if (data->idle.fdist[n] == 0) {
+                                          if (a1->idle.fdist[n] || a2->idle.fdist[n])
+                                             data->idle.fdist[n] = 1;
+                                       }
+                                    }
+                                 }
+                              }
+
+                              if (deltaSrcTime || deltaDstTime) {
+                                 if (deltaSrcTime) {
+                                    value += deltaSrcTime;
+                                    if (deltaSrcTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcTime;
+                                    if (deltaSrcTime < a1->idle.minval)  a1->idle.minval = deltaSrcTime;
+                                    a1->idle.n++;
+                                 }
+                                 if (deltaDstTime) {
+                                    value += deltaDstTime;
+                                    if (deltaDstTime > a1->idle.maxval)  a1->idle.maxval = deltaDstTime;
+                                    if (deltaDstTime < a1->idle.minval)  a1->idle.minval = deltaDstTime;
+                                    a1->idle.n++;
+                                 }
+
+                                 sum1 += value;
+
+                                 data->idle.maxval  = (a1->idle.maxval > a2->idle.maxval) ? a1->idle.maxval : a2->idle.maxval;
+                                 data->idle.minval  = (a1->idle.minval < a2->idle.minval) ? a1->idle.minval : a2->idle.minval;
+
+                                 if ((data->idle.n = a1->idle.n + a2->idle.n) > 0) {
+                                    data->idle.meanval = (sum1 + sum2) / data->idle.n;
+
+                                    if (data->idle.n > 1)
+                                       data->idle.stdev = sqrt (fabs(((ss1 + ss2)/(data->idle.n)) - pow(data->idle.meanval, 2.0)));
+                                 }
+
+                                 for (n = 0, x = 10; (n < 8) && (deltaSrcTime || deltaDstTime); n++) {
+                                    if (deltaSrcTime && (deltaSrcTime < x)) {
+                                       if (data->idle.fdist[n] < 0xFF)
+                                          data->idle.fdist[n]++;
+                                       deltaSrcTime = 0;
+                                    } 
+                                    if (deltaDstTime && (deltaDstTime < x)) {
+                                       if (data->idle.fdist[n] < 0xFF)
+                                          data->idle.fdist[n]++;
+                                       deltaDstTime = 0;
+                                    }
+                                    x *= 10;
+                                 }
+
+                                 data->laststartime = ((a1->laststartime.tv_sec  > a2->laststartime.tv_sec) ||
+                                                      ((a1->laststartime.tv_sec == a2->laststartime.tv_sec) &&
+                                                       (a1->laststartime.tv_usec > a2->laststartime.tv_usec))) ?
+                                                        a1->laststartime : a2->laststartime;
+
+                                 data->lasttime     = ((a1->lasttime.tv_sec  > a2->lasttime.tv_sec) ||
+                                                      ((a1->lasttime.tv_sec == a2->lasttime.tv_sec) &&
+                                                       (a1->lasttime.tv_usec > a2->lasttime.tv_usec))) ?
+                                                        a1->lasttime : a2->lasttime;
+                              } else {
+// looks like we're completing the first two records, so merge into active.
+
+                              }
+
+                              bcopy ((char *)data, (char *) a1, sizeof (databuf));
+                           }
+
                         } else {
-                           ss1 = pow(a1->act.meanval, 2.0);
-                        }
-                        if (a2->act.n > 1) {
-                           tvalstd  = pow(a2->act.stdev, 2.0);
-                           tvalmean = pow(a2->act.meanval, 2.0);
-                           ss2 = a2->act.n * (tvalstd + tvalmean);
+                           if (a1 && !(a2)) {
+                              double value = na->RaMetricFetchAlgorithm(ns2);
+                              double tvalstd = 0, meansqrd = 0;
 
-                        } else {
-                           ss2 = pow(a2->act.meanval, 2.0);
-                        }
+                              a1->count++;
 
-                        if (data->act.n > 0) {
-                           data->act.meanval  = (sum1 + sum2) / data->act.n;
-                           meansqrd = pow(data->act.meanval, 2.0);
-                           data->act.stdev    = sqrt(fabs(((ss1 + ss2)/(data->act.n)) - meansqrd));
-                        }
+                              if (a1->act.maxval < value) a1->act.maxval = value;
 
-                        value = 0.0;
-                        ss1 = 0.0;
+                              if (value != 0)
+                                 if (a1->act.minval > value)
+                                    a1->act.minval = value;
 
-                        sum1  = (a1->idle.n > 1) ? (a1->idle.meanval * a1->idle.n) : a1->idle.meanval;
-                        sum2  = (a2->idle.n > 1) ? (a2->idle.meanval * a2->idle.n) : a2->idle.meanval;
+                              sum1  = a1->act.meanval * a1->act.n;
+                              sum1 += value;
 
-                        if (a1->idle.stdev != 0) {
-                           tvalstd  = pow(a1->idle.stdev, 2.0);
-                           ss1 = a1->idle.n * (tvalstd + pow(a1->idle.meanval, 2.0));
+                              if (a1->act.stdev != 0) {
+                                 tvalstd  = pow(a1->act.stdev, 2.0);
+                                 ss1 = a1->act.n * (tvalstd + pow(a1->act.meanval, 2.0));
 
-                        } else
-                           ss1 = pow(a1->idle.meanval, 2.0);
+                              } else
+                                 ss1 = pow(a1->act.meanval, 2.0);
+                             
+                              ss1 += pow(value, 2.0);
 
-                        ss1 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
+                              a1->act.n++;
+                              a1->act.meanval  = sum1 / a1->act.n;
+                              meansqrd = pow(a1->act.meanval, 2.0);
 
-                        if (a2->idle.stdev != 0) {
-                           tvalstd  = pow(a2->idle.stdev, 2.0);
-                           ss2 = a2->idle.n * (tvalstd + pow(a2->idle.meanval, 2.0));
+                              a1->act.stdev    = sqrt(fabs((ss1/(a1->act.n)) - meansqrd));
 
-                        } else
-                           ss2 = pow(a2->idle.meanval, 2.0);
-
-                        ss2 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
-
-                        if ((items = (a1->idle.n + a2->idle.n)) > 0) {
-                           for (n = 0; n < 8; n++) {
-                              int value = ((a1->idle.fdist[n] * a1->idle.n) + (a2->idle.fdist[n] * a2->idle.n)) / items;
-                              data->idle.fdist[n] = (value > 0xFF) ? 0xFF : value;
-                              if (data->idle.fdist[n] == 0) {
-                                 if (a1->idle.fdist[n] || a2->idle.fdist[n])
-                                    data->idle.fdist[n] = 1;
+                           } else {
+                              if (!(a1) && a2) {
+                                 if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
+                                    ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                                 bcopy ((char *)a2, (char *)a1, sizeof(*a2));
+                                 ns1->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) a1;
+                                 ns1->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
                               }
                            }
                         }
+                        break;
                      }
-
-                     if (deltaSrcTime || deltaDstTime) {
-                        if (deltaSrcTime) {
-                           value += deltaSrcTime;
-                           if (deltaSrcTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcTime;
-                           if (deltaSrcTime < a1->idle.minval)  a1->idle.minval = deltaSrcTime;
-                           a1->idle.n++;
-                        }
-                        if (deltaDstTime) {
-                           value += deltaDstTime;
-                           if (deltaDstTime > a1->idle.maxval)  a1->idle.maxval = deltaDstTime;
-                           if (deltaDstTime < a1->idle.minval)  a1->idle.minval = deltaDstTime;
-                           a1->idle.n++;
-                        }
-
-                        sum1 += value;
-
-                        data->idle.maxval  = (a1->idle.maxval > a2->idle.maxval) ? a1->idle.maxval : a2->idle.maxval;
-                        data->idle.minval  = (a1->idle.minval < a2->idle.minval) ? a1->idle.minval : a2->idle.minval;
-
-                        if ((data->idle.n = a1->idle.n + a2->idle.n) > 0) {
-                           data->idle.meanval = (sum1 + sum2) / data->idle.n;
-
-                           if (data->idle.n > 1)
-                              data->idle.stdev = sqrt (fabs(((ss1 + ss2)/(data->idle.n)) - pow(data->idle.meanval, 2.0)));
-                        }
-
-                        for (n = 0, x = 10; (n < 8) && (deltaSrcTime || deltaDstTime); n++) {
-                           if (deltaSrcTime && (deltaSrcTime < x)) {
-                              if (data->idle.fdist[n] < 0xFF)
-                                 data->idle.fdist[n]++;
-                              deltaSrcTime = 0;
-                           } 
-                           if (deltaDstTime && (deltaDstTime < x)) {
-                              if (data->idle.fdist[n] < 0xFF)
-                                 data->idle.fdist[n]++;
-                              deltaDstTime = 0;
-                           }
-                           x *= 10;
-                        }
-
-                        data->laststartime = ((a1->laststartime.tv_sec  > a2->laststartime.tv_sec) ||
-                                             ((a1->laststartime.tv_sec == a2->laststartime.tv_sec) &&
-                                              (a1->laststartime.tv_usec > a2->laststartime.tv_usec))) ?
-                                               a1->laststartime : a2->laststartime;
-
-                        data->lasttime     = ((a1->lasttime.tv_sec  > a2->lasttime.tv_sec) ||
-                                             ((a1->lasttime.tv_sec == a2->lasttime.tv_sec) &&
-                                              (a1->lasttime.tv_usec > a2->lasttime.tv_usec))) ?
-                                               a1->lasttime : a2->lasttime;
-                     } else {
-// looks like we're completing the first two records, so merge into active.
-
-                     }
-
-                     bcopy ((char *)data, (char *) a1, sizeof (databuf));
-                  }
-
-               } else {
-                  if (a1 && !(a2)) {
-                     double value = na->RaMetricFetchAlgorithm(ns2);
-                     double tvalstd = 0, meansqrd = 0;
-
-                     a1->count++;
-
-                     if (a1->act.maxval < value) a1->act.maxval = value;
-
-                     if (value != 0)
-                        if (a1->act.minval > value)
-                           a1->act.minval = value;
-
-                     sum1  = a1->act.meanval * a1->act.n;
-                     sum1 += value;
-
-                     if (a1->act.stdev != 0) {
-                        tvalstd  = pow(a1->act.stdev, 2.0);
-                        ss1 = a1->act.n * (tvalstd + pow(a1->act.meanval, 2.0));
-
-                     } else
-                        ss1 = pow(a1->act.meanval, 2.0);
-                    
-                     ss1 += pow(value, 2.0);
-
-                     a1->act.n++;
-                     a1->act.meanval  = sum1 / a1->act.n;
-                     meansqrd = pow(a1->act.meanval, 2.0);
-
-                     a1->act.stdev    = sqrt(fabs((ss1/(a1->act.n)) - meansqrd));
-
-                  } else {
-                     if (!(a1) && a2) {
-                        if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
-                        bcopy ((char *)a2, (char *)a1, sizeof(*a2));
-                        ns1->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) a1;
-                        ns1->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
-                     }
-                  }
-               }
-               break;
-            }
 
 // Merging the jitter object involves both records having
 // a valid jitter object.  If they don't just drop the dsr;
 
 
-            case ARGUS_JITTER_INDEX: {
-               struct ArgusJitterStruct *j1 = (struct ArgusJitterStruct *) ns1->dsrs[ARGUS_JITTER_INDEX];
-               struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
+                     case ARGUS_JITTER_INDEX: {
+                        struct ArgusJitterStruct *j1 = (struct ArgusJitterStruct *) ns1->dsrs[ARGUS_JITTER_INDEX];
+                        struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
 
-               if (j1 && j2) {
-                  if (j1->hdr.argus_dsrvl8.len == 0) {
-                     bcopy ((char *) j2, (char *) j1, sizeof (*j1));
-                     break;
-                  }
-
-                  if (j2->src.act.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->src.act.n + j2->src.act.n);
-                     meanval = (((double)j1->src.act.meanval * (double)j1->src.act.n) +
-                                ((double)j2->src.act.meanval * (double)j2->src.act.n)) / n;
-
-                     if (j1->src.act.n) {
-                        double sum = (double)j1->src.act.meanval * (double)j1->src.act.n;
-                        sumsqrd += (j1->src.act.n * ((double)j1->src.act.stdev * (double)j1->src.act.stdev)) +
-                                   (sum * sum)/j1->src.act.n;
-                     }
-
-                     if (j2->src.act.n) {
-                        double sum  =  (double)j2->src.act.meanval * (double)j2->src.act.n;
-                        sumsqrd += (j2->src.act.n * ((double)j2->src.act.stdev * (double)j2->src.act.stdev)) +
-                                   (sum * sum)/j2->src.act.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->src.act.n       = n;
-                     j1->src.act.meanval = (unsigned int) meanval;
-                     j1->src.act.stdev   = stdev;
-                     if (j1->src.act.minval > j2->src.act.minval)
-                        j1->src.act.minval = j2->src.act.minval;
-                     if (j1->src.act.maxval < j2->src.act.maxval)
-                        j1->src.act.maxval = j2->src.act.maxval;
-
-                     switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                        case ARGUS_HISTO_EXP: {
-                           int x, max, tot, val[8];
-
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (j1->src.act.dist_union.fdist[x] + j2->src.act.dist_union.fdist[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
+                        if (j1 && j2) {
+                           if (j1->hdr.argus_dsrvl8.len == 0) {
+                              bcopy ((char *) j2, (char *) j1, sizeof (*j1));
+                              break;
                            }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255)
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1;
+
+                           if (j2->src.act.n > 0) {
+                              unsigned int n, stdev = 0;
+                              double meanval, sumsqrd = 0.0;
+                              
+                              n = (j1->src.act.n + j2->src.act.n);
+                              meanval = (((double)j1->src.act.meanval * (double)j1->src.act.n) +
+                                         ((double)j2->src.act.meanval * (double)j2->src.act.n)) / n;
+
+                              if (j1->src.act.n) {
+                                 double sum = (double)j1->src.act.meanval * (double)j1->src.act.n;
+                                 sumsqrd += (j1->src.act.n * ((double)j1->src.act.stdev * (double)j1->src.act.stdev)) +
+                                            (sum * sum)/j1->src.act.n;
                               }
-                              j1->src.act.dist_union.fdist[x] = val[x];
-                           }
-                           break;
-                        }
-                        case ARGUS_HISTO_LINEAR: {
-                           break;
-                        }
-                     }
-                  }
 
-                  if (j2->src.idle.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->src.idle.n + j2->src.idle.n);
-                     meanval  = (((double) j1->src.idle.meanval * (double) j1->src.idle.n) +
-                                 ((double) j2->src.idle.meanval * (double) j2->src.idle.n)) / n;
-
-                     if (j1->src.idle.n) {
-                        double sum  =  (double) j1->src.idle.meanval * (double) j1->src.idle.n;
-                        sumsqrd += (j1->src.idle.n * ((double)j1->src.idle.stdev * (double)j1->src.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j1->src.idle.n;
-                     }
-
-                     if (j2->src.idle.n) {
-                        double sum  =  (double) j2->src.idle.meanval * (double) j2->src.idle.n;
-                        sumsqrd += (j2->src.idle.n * ((double)j2->src.idle.stdev * (double)j2->src.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j2->src.idle.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->src.idle.n       = n;
-                     j1->src.idle.meanval = (unsigned int) meanval;
-                     j1->src.idle.stdev   = stdev;
-                     if (j1->src.idle.minval > j2->src.idle.minval)
-                        j1->src.idle.minval = j2->src.idle.minval;
-                     if (j1->src.idle.maxval < j2->src.idle.maxval)
-                        j1->src.idle.maxval = j2->src.idle.maxval;
-
-                     switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                        case ARGUS_HISTO_EXP: {
-                           int x, max, tot, val[8];
-
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (j1->src.idle.dist_union.fdist[x] + j2->src.idle.dist_union.fdist[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
-                           }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255)
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1;
+                              if (j2->src.act.n) {
+                                 double sum  =  (double)j2->src.act.meanval * (double)j2->src.act.n;
+                                 sumsqrd += (j2->src.act.n * ((double)j2->src.act.stdev * (double)j2->src.act.stdev)) +
+                                            (sum * sum)/j2->src.act.n;
                               }
-                              j1->src.idle.dist_union.fdist[x] = val[x];
-                           }
-                           break;
-                        }
-                        case ARGUS_HISTO_LINEAR: {
-                           break;
-                        }
-                     }  
-                  }
+                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
 
-                  if (j2->dst.act.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->dst.act.n + j2->dst.act.n);
-                     meanval  = (((double) j1->dst.act.meanval * (double) j1->dst.act.n) +
-                                 ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
+                              j1->src.act.n       = n;
+                              j1->src.act.meanval = (unsigned int) meanval;
+                              j1->src.act.stdev   = stdev;
+                              if (j1->src.act.minval > j2->src.act.minval)
+                                 j1->src.act.minval = j2->src.act.minval;
+                              if (j1->src.act.maxval < j2->src.act.maxval)
+                                 j1->src.act.maxval = j2->src.act.maxval;
 
-                     if (j1->dst.act.n) {
-                        double sum  =  j1->dst.act.meanval * j1->dst.act.n;
-                        sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
-                                   (sum * sum)/j1->dst.act.n;
-                     }
+                              switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                                 case ARGUS_HISTO_EXP: {
+                                    int x, max, tot, val[8];
 
-                     if (j2->dst.act.n) {
-                        double sum  =  (double) j2->dst.act.meanval * (double) j2->dst.act.n;
-                        sumsqrd += (j2->dst.act.n * ((double)j2->dst.act.stdev * (double)j2->dst.act.stdev)) +
-                                   ((double)sum *(double)sum)/j2->dst.act.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->dst.act.n       = n;
-                     j1->dst.act.meanval = (unsigned int) meanval;
-                     j1->dst.act.stdev   = stdev;
-                     if (j1->dst.act.minval > j2->dst.act.minval)
-                        j1->dst.act.minval = j2->dst.act.minval;
-                     if (j1->dst.act.maxval < j2->dst.act.maxval)
-                        j1->dst.act.maxval = j2->dst.act.maxval;
-
-                     switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                        case ARGUS_HISTO_EXP: {
-                           int x, max, tot, val[8];
-
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (j1->dst.act.dist_union.fdist[x] + j2->dst.act.dist_union.fdist[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
-                           }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255)
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1;
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (j1->src.act.dist_union.fdist[x] + j2->src.act.dist_union.fdist[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255)
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1;
+                                       }
+                                       j1->src.act.dist_union.fdist[x] = val[x];
+                                    }
+                                    break;
+                                 }
+                                 case ARGUS_HISTO_LINEAR: {
+                                    break;
+                                 }
                               }
-                              j1->dst.act.dist_union.fdist[x] = val[x];
                            }
-                           break;
-                        }
-                        case ARGUS_HISTO_LINEAR: {
-                           break;
-                        }
-                     }  
-                  }
 
-                  if (j2->dst.idle.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->dst.idle.n + j2->dst.idle.n);
-                     meanval  = (((double) j1->dst.idle.meanval * (double) j1->dst.idle.n) +
-                                 ((double) j2->dst.idle.meanval * (double) j2->dst.idle.n)) / n;
+                           if (j2->src.idle.n > 0) {
+                              unsigned int n, stdev = 0;
+                              double meanval, sumsqrd = 0.0;
+                              
+                              n = (j1->src.idle.n + j2->src.idle.n);
+                              meanval  = (((double) j1->src.idle.meanval * (double) j1->src.idle.n) +
+                                          ((double) j2->src.idle.meanval * (double) j2->src.idle.n)) / n;
 
-                     if (j1->dst.idle.n) {
-                        int sum  =  (double) j1->dst.idle.meanval * (double) j1->dst.idle.n;
-                        sumsqrd += (j1->dst.idle.n * ((double)j1->dst.idle.stdev * (double)j1->dst.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j1->dst.idle.n;
-                     }
-
-                     if (j2->dst.idle.n) {
-                        double sum  =  (double) j2->dst.idle.meanval * (double) j2->dst.idle.n;
-                        sumsqrd += (j2->dst.idle.n * ((double)j2->dst.idle.stdev * (double)j2->dst.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j2->dst.idle.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->dst.idle.n       = n;
-                     j1->dst.idle.meanval = (unsigned int) meanval;
-                     j1->dst.idle.stdev   = stdev;
-                     if (j1->dst.idle.minval > j2->dst.idle.minval)
-                        j1->dst.idle.minval = j2->dst.idle.minval;
-                     if (j1->dst.idle.maxval < j2->dst.idle.maxval)
-                        j1->dst.idle.maxval = j2->dst.idle.maxval;
-
-                     switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                        case ARGUS_HISTO_EXP: {
-                           int x, max, tot, val[8];
-
-                           for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                              val[x] = (j1->dst.idle.dist_union.fdist[x] + j2->dst.idle.dist_union.fdist[x]);
-                              tot += val[x];
-                              if (max < val[x])
-                                 max = val[x];
-                           }
-                           for (x = 0; x < 8; x++) {
-                              if (val[x]) {
-                                 if (max > 255)
-                                    val[x] = (val[x] * 255)/max;
-                                 if (val[x] == 0)
-                                    val[x] = 1;
+                              if (j1->src.idle.n) {
+                                 double sum  =  (double) j1->src.idle.meanval * (double) j1->src.idle.n;
+                                 sumsqrd += (j1->src.idle.n * ((double)j1->src.idle.stdev * (double)j1->src.idle.stdev)) +
+                                            ((double)sum *(double)sum)/j1->src.idle.n;
                               }
-                              j1->dst.idle.dist_union.fdist[x] = val[x];
-                           }
-                           break;
-                        }
-                        case ARGUS_HISTO_LINEAR: {
-                           break;
-                        }
-                     }  
-                  }
 
-               } else {
-                  if (!j1 && j2) {
-                     if ((j1 = (void *) ArgusCalloc (1, sizeof(*j1))) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
-                     bcopy ((char *) j2, (char *)j1, sizeof (*j1));
-                     ns1->dsrs[i] = (struct ArgusDSRHeader *) j1;
-                     ns1->dsrindex |= (0x01 << i);
-                  }
-               }
-               break;
-            }
+                              if (j2->src.idle.n) {
+                                 double sum  =  (double) j2->src.idle.meanval * (double) j2->src.idle.n;
+                                 sumsqrd += (j2->src.idle.n * ((double)j2->src.idle.stdev * (double)j2->src.idle.stdev)) +
+                                            ((double)sum *(double)sum)/j2->src.idle.n;
+                              }
+                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
+
+                              j1->src.idle.n       = n;
+                              j1->src.idle.meanval = (unsigned int) meanval;
+                              j1->src.idle.stdev   = stdev;
+                              if (j1->src.idle.minval > j2->src.idle.minval)
+                                 j1->src.idle.minval = j2->src.idle.minval;
+                              if (j1->src.idle.maxval < j2->src.idle.maxval)
+                                 j1->src.idle.maxval = j2->src.idle.maxval;
+
+                              switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                                 case ARGUS_HISTO_EXP: {
+                                    int x, max, tot, val[8];
+
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (j1->src.idle.dist_union.fdist[x] + j2->src.idle.dist_union.fdist[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255)
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1;
+                                       }
+                                       j1->src.idle.dist_union.fdist[x] = val[x];
+                                    }
+                                    break;
+                                 }
+                                 case ARGUS_HISTO_LINEAR: {
+                                    break;
+                                 }
+                              }  
+                           }
+
+                           if (j2->dst.act.n > 0) {
+                              unsigned int n, stdev = 0;
+                              double meanval, sumsqrd = 0.0;
+                              
+                              n = (j1->dst.act.n + j2->dst.act.n);
+                              meanval  = (((double) j1->dst.act.meanval * (double) j1->dst.act.n) +
+                                          ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
+
+                              if (j1->dst.act.n) {
+                                 double sum  =  j1->dst.act.meanval * j1->dst.act.n;
+                                 sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
+                                            (sum * sum)/j1->dst.act.n;
+                              }
+
+                              if (j2->dst.act.n) {
+                                 double sum  =  (double) j2->dst.act.meanval * (double) j2->dst.act.n;
+                                 sumsqrd += (j2->dst.act.n * ((double)j2->dst.act.stdev * (double)j2->dst.act.stdev)) +
+                                            ((double)sum *(double)sum)/j2->dst.act.n;
+                              }
+                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
+
+                              j1->dst.act.n       = n;
+                              j1->dst.act.meanval = (unsigned int) meanval;
+                              j1->dst.act.stdev   = stdev;
+                              if (j1->dst.act.minval > j2->dst.act.minval)
+                                 j1->dst.act.minval = j2->dst.act.minval;
+                              if (j1->dst.act.maxval < j2->dst.act.maxval)
+                                 j1->dst.act.maxval = j2->dst.act.maxval;
+
+                              switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                                 case ARGUS_HISTO_EXP: {
+                                    int x, max, tot, val[8];
+
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (j1->dst.act.dist_union.fdist[x] + j2->dst.act.dist_union.fdist[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255)
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1;
+                                       }
+                                       j1->dst.act.dist_union.fdist[x] = val[x];
+                                    }
+                                    break;
+                                 }
+                                 case ARGUS_HISTO_LINEAR: {
+                                    break;
+                                 }
+                              }  
+                           }
+
+                           if (j2->dst.idle.n > 0) {
+                              unsigned int n, stdev = 0;
+                              double meanval, sumsqrd = 0.0;
+                              
+                              n = (j1->dst.idle.n + j2->dst.idle.n);
+                              meanval  = (((double) j1->dst.idle.meanval * (double) j1->dst.idle.n) +
+                                          ((double) j2->dst.idle.meanval * (double) j2->dst.idle.n)) / n;
+
+                              if (j1->dst.idle.n) {
+                                 int sum  =  (double) j1->dst.idle.meanval * (double) j1->dst.idle.n;
+                                 sumsqrd += (j1->dst.idle.n * ((double)j1->dst.idle.stdev * (double)j1->dst.idle.stdev)) +
+                                            ((double)sum *(double)sum)/j1->dst.idle.n;
+                              }
+
+                              if (j2->dst.idle.n) {
+                                 double sum  =  (double) j2->dst.idle.meanval * (double) j2->dst.idle.n;
+                                 sumsqrd += (j2->dst.idle.n * ((double)j2->dst.idle.stdev * (double)j2->dst.idle.stdev)) +
+                                            ((double)sum *(double)sum)/j2->dst.idle.n;
+                              }
+                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
+
+                              j1->dst.idle.n       = n;
+                              j1->dst.idle.meanval = (unsigned int) meanval;
+                              j1->dst.idle.stdev   = stdev;
+                              if (j1->dst.idle.minval > j2->dst.idle.minval)
+                                 j1->dst.idle.minval = j2->dst.idle.minval;
+                              if (j1->dst.idle.maxval < j2->dst.idle.maxval)
+                                 j1->dst.idle.maxval = j2->dst.idle.maxval;
+
+                              switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                                 case ARGUS_HISTO_EXP: {
+                                    int x, max, tot, val[8];
+
+                                    for (x = 0, max = 0, tot = 0; x < 8; x++) {
+                                       val[x] = (j1->dst.idle.dist_union.fdist[x] + j2->dst.idle.dist_union.fdist[x]);
+                                       tot += val[x];
+                                       if (max < val[x])
+                                          max = val[x];
+                                    }
+                                    for (x = 0; x < 8; x++) {
+                                       if (val[x]) {
+                                          if (max > 255)
+                                             val[x] = (val[x] * 255)/max;
+                                          if (val[x] == 0)
+                                             val[x] = 1;
+                                       }
+                                       j1->dst.idle.dist_union.fdist[x] = val[x];
+                                    }
+                                    break;
+                                 }
+                                 case ARGUS_HISTO_LINEAR: {
+                                    break;
+                                 }
+                              }  
+                           }
+
+                        } else {
+                           if (!j1 && j2) {
+                              if ((j1 = (void *) ArgusCalloc (1, sizeof(*j1))) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                              bcopy ((char *) j2, (char *)j1, sizeof (*j1));
+                              ns1->dsrs[i] = (struct ArgusDSRHeader *) j1;
+                              ns1->dsrindex |= (0x01 << i);
+                           }
+                        }
+                        break;
+                     }
 
 // Merging the user data object involves leaving the ns1 buffer,
 // or making the ns2 buffer, ns1's.  Since these are allocated
 // objects, make sure you deal with them as such.
 
 
-            case ARGUS_SRCUSERDATA_INDEX: 
-            case ARGUS_DSTUSERDATA_INDEX: {
-               struct ArgusDataStruct *d1 = (struct ArgusDataStruct *) ns1->dsrs[i];
-               struct ArgusDataStruct *d2 = (struct ArgusDataStruct *) ns2->dsrs[i];
+                     case ARGUS_SRCUSERDATA_INDEX: 
+                     case ARGUS_DSTUSERDATA_INDEX: {
+                        struct ArgusDataStruct *d1 = (struct ArgusDataStruct *) ns1->dsrs[i];
+                        struct ArgusDataStruct *d2 = (struct ArgusDataStruct *) ns2->dsrs[i];
 
-               if (d1 && d2) {
-                  int tlen = d1->size - d1->count;
-                  tlen = (tlen > d2->count) ? d2->count : tlen;
-                  if (tlen > 0) {
-                     bcopy(d2->array, &d1->array[d1->count], tlen);
-                     d1->count += tlen;
-                  }
-               } else
-               if (!d1 && d2) {
-                  struct ArgusDataStruct *t2;
-                  int len = (((d2->hdr.type & ARGUS_IMMEDIATE_DATA) ? 1 :
-                             ((d2->hdr.subtype & ARGUS_LEN_16BITS)  ? d2->hdr.argus_dsrvl16.len :
-                                                                      d2->hdr.argus_dsrvl8.len)));
-                  if ((t2 = (struct ArgusDataStruct *) ArgusCalloc((2 + len), 4)) == NULL)
-                     ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                        if (d1 && d2) {
+                           int tlen = d1->size - d1->count;
+                           tlen = (tlen > d2->count) ? d2->count : tlen;
+                           if (tlen > 0) {
+                              bcopy(d2->array, &d1->array[d1->count], tlen);
+                              d1->count += tlen;
+                           }
+                        } else
+                        if (!d1 && d2) {
+                           struct ArgusDataStruct *t2;
+                           int len = (((d2->hdr.type & ARGUS_IMMEDIATE_DATA) ? 1 :
+                                      ((d2->hdr.subtype & ARGUS_LEN_16BITS)  ? d2->hdr.argus_dsrvl16.len :
+                                                                               d2->hdr.argus_dsrvl8.len)));
+                           if ((t2 = (struct ArgusDataStruct *) ArgusCalloc((2 + len), 4)) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
 
-                  bcopy ((char *)d2, (char *)t2, len * 4);
-                  t2->size  = (len - 2) * 4;
-                  ns1->dsrs[i] = (struct ArgusDSRHeader *) t2;
-                  ns1->dsrindex |= (0x01 << i);
-               }
-               break;
-            }
+                           bcopy ((char *)d2, (char *)t2, len * 4);
+                           t2->size  = (len - 2) * 4;
+                           ns1->dsrs[i] = (struct ArgusDSRHeader *) t2;
+                           ns1->dsrindex |= (0x01 << i);
+                        }
+                        break;
+                     }
 
 
 // Merging the MAC data object involves comparing the ns1 buffer,
 // leaving them if they are equal and blowing away the value if they
 // are different.
 
-            case ARGUS_ENCAPS_INDEX: {
-               struct ArgusEncapsStruct *e1  = (struct ArgusEncapsStruct *) ns1->dsrs[ARGUS_ENCAPS_INDEX];
-               struct ArgusEncapsStruct *e2  = (struct ArgusEncapsStruct *) ns2->dsrs[ARGUS_ENCAPS_INDEX];
+                     case ARGUS_ENCAPS_INDEX: {
+                        struct ArgusEncapsStruct *e1  = (struct ArgusEncapsStruct *) ns1->dsrs[ARGUS_ENCAPS_INDEX];
+                        struct ArgusEncapsStruct *e2  = (struct ArgusEncapsStruct *) ns2->dsrs[ARGUS_ENCAPS_INDEX];
 
-               if (e1 && e2) {
-                  if (e1->src != e2->src) {
-                     e1->hdr.argus_dsrvl8.qual |= ARGUS_SRC_CHANGED;
-                     e1->src |= e2->src;
-                  }
-                  if (e1->dst != e2->dst) {
-                     e1->hdr.argus_dsrvl8.qual |= ARGUS_DST_CHANGED;
-                     e1->dst |= e2->dst;
-                  }
-               }
-               break;
-            }
-
-            case ARGUS_MAC_INDEX: {
-               struct ArgusMacStruct *m1 = (struct ArgusMacStruct *) ns1->dsrs[ARGUS_MAC_INDEX];
-               struct ArgusMacStruct *m2 = (struct ArgusMacStruct *) ns2->dsrs[ARGUS_MAC_INDEX];
-
-               if (m1 && m2) {
-                  if (m1->hdr.subtype == m2->hdr.subtype) {
-                     switch (m1->hdr.subtype) {
-                        case ARGUS_TYPE_ETHER: {
-                           struct ether_header *e1 = &m1->mac.mac_union.ether.ehdr;
-                           struct ether_header *e2 = &m2->mac.mac_union.ether.ehdr;
-
-                           if (bcmp(&e1->ether_shost, &e2->ether_shost, sizeof(e1->ether_shost)))
-                              bzero ((char *)&e1->ether_shost, sizeof(e1->ether_shost));
-                 
-                           if (bcmp(&e1->ether_dhost, &e2->ether_dhost, sizeof(e1->ether_dhost)))
-                              bzero ((char *)&e1->ether_dhost, sizeof(e1->ether_dhost));
-                           break;
+                        if (e1 && e2) {
+                           if (e1->src != e2->src) {
+                              e1->hdr.argus_dsrvl8.qual |= ARGUS_SRC_CHANGED;
+                              e1->src |= e2->src;
+                           }
+                           if (e1->dst != e2->dst) {
+                              e1->hdr.argus_dsrvl8.qual |= ARGUS_DST_CHANGED;
+                              e1->dst |= e2->dst;
+                           }
                         }
+                        break;
                      }
 
-                  } else {
-                     ArgusFree(ns1->dsrs[ARGUS_MAC_INDEX]);
-                     ns1->dsrs[ARGUS_MAC_INDEX] = NULL;
-                     ns1->dsrindex &= ~(0x01 << i);
-                  }
+                     case ARGUS_MAC_INDEX: {
+                        struct ArgusMacStruct *m1 = (struct ArgusMacStruct *) ns1->dsrs[ARGUS_MAC_INDEX];
+                        struct ArgusMacStruct *m2 = (struct ArgusMacStruct *) ns2->dsrs[ARGUS_MAC_INDEX];
 
-               } else {
-                  if (ns1->dsrs[ARGUS_MAC_INDEX] != NULL) {
-                     ArgusFree(ns1->dsrs[ARGUS_MAC_INDEX]);
-                     ns1->dsrs[ARGUS_MAC_INDEX] = NULL;
-                     ns1->dsrindex &= ~(0x01 << i);
-                  }
-               }
-               break;
-            }
+                        if (m1 && m2) {
+                           if (m1->hdr.subtype == m2->hdr.subtype) {
+                              switch (m1->hdr.subtype) {
+                                 case ARGUS_TYPE_ETHER: {
+                                    struct ether_header *e1 = &m1->mac.mac_union.ether.ehdr;
+                                    struct ether_header *e2 = &m2->mac.mac_union.ether.ehdr;
+
+                                    if (bcmp(&e1->ether_shost, &e2->ether_shost, sizeof(e1->ether_shost)))
+                                       bzero ((char *)&e1->ether_shost, sizeof(e1->ether_shost));
+                          
+                                    if (bcmp(&e1->ether_dhost, &e2->ether_dhost, sizeof(e1->ether_dhost)))
+                                       bzero ((char *)&e1->ether_dhost, sizeof(e1->ether_dhost));
+                                    break;
+                                 }
+                              }
+
+                           } else {
+                              ArgusFree(ns1->dsrs[ARGUS_MAC_INDEX]);
+                              ns1->dsrs[ARGUS_MAC_INDEX] = NULL;
+                              ns1->dsrindex &= ~(0x01 << i);
+                           }
+
+                        } else {
+                           if (ns1->dsrs[ARGUS_MAC_INDEX] != NULL) {
+                              ArgusFree(ns1->dsrs[ARGUS_MAC_INDEX]);
+                              ns1->dsrs[ARGUS_MAC_INDEX] = NULL;
+                              ns1->dsrindex &= ~(0x01 << i);
+                           }
+                        }
+                        break;
+                     }
 
 // Merging vlan and mpls tags needs a bit of work.
 
-            case ARGUS_VLAN_INDEX:
-            case ARGUS_MPLS_INDEX: {
-               break;
-            }
+                     case ARGUS_VLAN_INDEX:
+                     case ARGUS_MPLS_INDEX: {
+                        break;
+                     }
 
-            case ARGUS_ICMP_INDEX: {
-               struct ArgusIcmpStruct *i1 = (struct ArgusIcmpStruct *) ns1->dsrs[ARGUS_ICMP_INDEX];
-               struct ArgusIcmpStruct *i2 = (struct ArgusIcmpStruct *) ns2->dsrs[ARGUS_ICMP_INDEX];
+                     case ARGUS_ICMP_INDEX: {
+                        struct ArgusIcmpStruct *i1 = (struct ArgusIcmpStruct *) ns1->dsrs[ARGUS_ICMP_INDEX];
+                        struct ArgusIcmpStruct *i2 = (struct ArgusIcmpStruct *) ns2->dsrs[ARGUS_ICMP_INDEX];
 
-               if (i1 && i2) {
-                  if ((i1->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) &&
-                      (i2->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED)) {
-                     struct ArgusFlow *flow = (void *)ns1->dsrs[ARGUS_FLOW_INDEX];
-                     int type = 0;
+                        if (i1 && i2) {
+                           if ((i1->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) &&
+                               (i2->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED)) {
+                              struct ArgusFlow *flow = (void *)ns1->dsrs[ARGUS_FLOW_INDEX];
+                              int type = 0;
 
-                     if (flow != NULL) {
-                        switch (flow->hdr.subtype & 0x3F) {
-                           case ARGUS_FLOW_CLASSIC5TUPLE:
-                           case ARGUS_FLOW_LAYER_3_MATRIX: {
-                              switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-                                 case ARGUS_TYPE_IPV4: {
-                                    unsigned char masklen = 32;
-                                    ArgusMergeAddress(&i1->osrcaddr, &i2->osrcaddr, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
-                                    break;
+                              if (flow != NULL) {
+                                 switch (flow->hdr.subtype & 0x3F) {
+                                    case ARGUS_FLOW_CLASSIC5TUPLE:
+                                    case ARGUS_FLOW_LAYER_3_MATRIX: {
+                                       switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                                          case ARGUS_TYPE_IPV4: {
+                                             unsigned char masklen = 32;
+                                             ArgusMergeAddress(&i1->osrcaddr, &i2->osrcaddr, ARGUS_TYPE_IPV4, ARGUS_SRC, &masklen);
+                                             break;
+                                          }
+
+                                          case ARGUS_TYPE_IPV6:
+                                             break;
+                                       }
+                                       break;
+                                    }
                                  }
-
-                                 case ARGUS_TYPE_IPV6:
-                                    break;
                               }
-                              break;
                            }
                         }
+
+                        if (!i1 && i2) {
+                           int len = i2->hdr.argus_dsrvl8.len;
+
+                           if (len > 0) {
+                              if ((i1 = ArgusCalloc(1, len * 4)) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                              bcopy ((char *)i2, (char *)i1, len * 4);
+
+                              ns1->dsrs[ARGUS_ICMP_INDEX] = (struct ArgusDSRHeader *) i1;
+                              ns1->dsrindex |= (0x01 << ARGUS_ICMP_INDEX);
+                           }
+                        }
+                        break;
                      }
-                  }
-               }
 
-               if (!i1 && i2) {
-                  int len = i2->hdr.argus_dsrvl8.len;
+                     case ARGUS_COCODE_INDEX: {
+                        struct ArgusCountryCodeStruct *c1 = (void *) ns1->dsrs[ARGUS_COCODE_INDEX];
+                        struct ArgusCountryCodeStruct *c2 = (void *) ns2->dsrs[ARGUS_COCODE_INDEX];
+                        
+                        if (c1 && c2) {
+                           if (bcmp(c1->src, c2->src, sizeof(c1->src)))
+                              bzero(&c1->src, sizeof(c1->src));
+                           if (bcmp(c1->dst, c2->dst, sizeof(c1->dst)))
+                              bzero(&c1->dst, sizeof(c1->dst));
+                           
+                        } else
+                        if (c2) {
+                           int len = c2->hdr.argus_dsrvl8.len;
 
-                  if (len > 0) {
-                     if ((i1 = ArgusCalloc(1, len * 4)) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
-                     bcopy ((char *)i2, (char *)i1, len * 4);
+                           if (len > 0) {
+                              if ((c1 = ArgusCalloc(1, len * 4)) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                              bcopy ((char *)c2, (char *)c2, len * 4);
 
-                     ns1->dsrs[ARGUS_ICMP_INDEX] = (struct ArgusDSRHeader *) i1;
-                     ns1->dsrindex |= (0x01 << ARGUS_ICMP_INDEX);
-                  }
-               }
-               break;
-            }
+                              ns1->dsrs[ARGUS_COCODE_INDEX] = (struct ArgusDSRHeader *) c1;
+                              ns1->dsrindex |= (0x01 << ARGUS_COCODE_INDEX);
+                           }
+                        }
+                        break;
+                     }
 
-            case ARGUS_COCODE_INDEX: {
-               struct ArgusCountryCodeStruct *c1 = (void *) ns1->dsrs[ARGUS_COCODE_INDEX];
-               struct ArgusCountryCodeStruct *c2 = (void *) ns2->dsrs[ARGUS_COCODE_INDEX];
-               
-               if (c1 && c2) {
-                  if (bcmp(c1->src, c2->src, sizeof(c1->src)))
-                     bzero(&c1->src, sizeof(c1->src));
-                  if (bcmp(c1->dst, c2->dst, sizeof(c1->dst)))
-                     bzero(&c1->dst, sizeof(c1->dst));
-                  
-               } else
-               if (c2) {
-                  int len = c2->hdr.argus_dsrvl8.len;
+                     case ARGUS_LABEL_INDEX: {
+                        struct ArgusLabelStruct *l1 = (void *) ns1->dsrs[ARGUS_LABEL_INDEX];
+                        struct ArgusLabelStruct *l2 = (void *) ns2->dsrs[ARGUS_LABEL_INDEX];
 
-                  if (len > 0) {
-                     if ((c1 = ArgusCalloc(1, len * 4)) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
-                     bcopy ((char *)c2, (char *)c2, len * 4);
+                        if (l1 && l2) {
+                           if (l1->l_un.label && l2->l_un.label) {
+                              if (strcmp(l1->l_un.label, l2->l_un.label)) {
+                                 char *buf = calloc(1, MAXBUFFERLEN);
 
-                     ns1->dsrs[ARGUS_COCODE_INDEX] = (struct ArgusDSRHeader *) c1;
-                     ns1->dsrindex |= (0x01 << ARGUS_COCODE_INDEX);
-                  }
-               }
-               break;
-            }
+                                 if ((ArgusMergeLabel(l1, l2, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
+                                    free(l1->l_un.label);
+                                    l1->l_un.label = strdup(buf);
+                                 }
+                                 free(buf);
+                              }
+                           } else {
+                              if (l2->l_un.label)
+                                 l1->l_un.label = strdup(l2->l_un.label);
+                           }
 
-            case ARGUS_LABEL_INDEX: {
-               struct ArgusLabelStruct *l1 = (void *) ns1->dsrs[ARGUS_LABEL_INDEX];
-               struct ArgusLabelStruct *l2 = (void *) ns2->dsrs[ARGUS_LABEL_INDEX];
+                        } else {
+                           if (l2 && (l1 == NULL)) {
+                              ns1->dsrs[ARGUS_LABEL_INDEX] = calloc(1, sizeof(struct ArgusLabelStruct));
+                              l1 = (void *) ns1->dsrs[ARGUS_LABEL_INDEX];
 
-               if (l1 && l2) {
-                  if (l1->l_un.label && l2->l_un.label) {
-                     if (strcmp(l1->l_un.label, l2->l_un.label)) {
-                        char *buf = calloc(1, MAXBUFFERLEN);
+                              bcopy(l2, l1, sizeof(*l2));
 
                         if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
                            free(l1->l_un.label);
                            l1->l_un.label = strdup(buf);
                         }
-                        free(buf);
+                        break;
                      }
-                  } else {
-                     if (l2->l_un.label)
-                        l1->l_un.label = strdup(l2->l_un.label);
-                  }
-
-               } else {
-                  if (l2 && (l1 == NULL)) {
-                     ns1->dsrs[ARGUS_LABEL_INDEX] = calloc(1, sizeof(struct ArgusLabelStruct));
-                     l1 = (void *) ns1->dsrs[ARGUS_LABEL_INDEX];
-
-                     bcopy(l2, l1, sizeof(*l2));
-
-                     if (l2->l_un.label)
-                        l1->l_un.label = strdup(l2->l_un.label);
-                  }
-               }
-               break;
-            }
 
 // Merging the behavioral dsr's currently involve just accumulating the counters.
 
-            case ARGUS_BEHAVIOR_INDEX: {
-               struct ArgusBehaviorStruct *a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
-               struct ArgusBehaviorStruct *a2 = (void *) ns2->dsrs[ARGUS_BEHAVIOR_INDEX];
+                     case ARGUS_BEHAVIOR_INDEX: {
+                        struct ArgusBehaviorStruct *a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
+                        struct ArgusBehaviorStruct *a2 = (void *) ns2->dsrs[ARGUS_BEHAVIOR_INDEX];
 
-               if (a1 && a2) {
-                  a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
-                  a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
+                        if (a1 && a2) {
+                           a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
+                           a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
 
-               } else {
-                  if (a2 && (a1 == NULL)) {
-                     ns1->dsrs[ARGUS_BEHAVIOR_INDEX] = calloc(1, sizeof(struct ArgusBehaviorStruct));
-                     a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
+                        } else {
+                           if (a2 && (a1 == NULL)) {
+                              ns1->dsrs[ARGUS_BEHAVIOR_INDEX] = calloc(1, sizeof(struct ArgusBehaviorStruct));
+                              a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
 
-                     bcopy(a2, a1, sizeof(*a2));
+                              bcopy(a2, a1, sizeof(*a2));
+                           }
+                        }
+                        break;
+                     }
+
+                     case ARGUS_GEO_INDEX: {
+                        struct ArgusGeoLocationStruct *g1 = (void *) ns1->dsrs[ARGUS_GEO_INDEX];
+                        struct ArgusGeoLocationStruct *g2 = (void *) ns2->dsrs[ARGUS_GEO_INDEX];
+
+                        if (g1 && g2) {
+
+                        } else {
+                           if (g2 && (g1 == NULL)) {
+                              ns1->dsrs[ARGUS_GEO_INDEX] = calloc(1, sizeof(struct ArgusGeoLocationStruct));
+                              g1 = (void *) ns1->dsrs[ARGUS_GEO_INDEX];
+                              bcopy(g2, g1, sizeof(*g2));
+                           }
+                        }
+                        break;
+                     }
+
+                     case ARGUS_LOCAL_INDEX: {
+                        struct ArgusNetspatialStruct *l1 = (void *) ns1->dsrs[ARGUS_LOCAL_INDEX];
+                        struct ArgusNetspatialStruct *l2 = (void *) ns2->dsrs[ARGUS_LOCAL_INDEX];
+
+                        if (l1 && l2) {
+                           if (l1->sloc > l2->sloc) l1->sloc = l2->sloc;
+                           if (l1->dloc > l2->dloc) l1->dloc = l2->dloc;
+
+                        } else {
+                           if (l2 && (l1 == NULL)) {
+                              ns1->dsrs[ARGUS_LOCAL_INDEX] = calloc(1, sizeof(struct ArgusNetspatialStruct));
+                              l1 = (void *) ns1->dsrs[ARGUS_LOCAL_INDEX];
+                              bcopy(l2, l1, sizeof(*l2));
+                           }
+                        }
+                        break;
+                     }
                   }
                }
-               break;
-            }
 
-            case ARGUS_GEO_INDEX: {
-               struct ArgusGeoLocationStruct *g1 = (void *) ns1->dsrs[ARGUS_GEO_INDEX];
-               struct ArgusGeoLocationStruct *g2 = (void *) ns2->dsrs[ARGUS_GEO_INDEX];
-
-               if (g1 && g2) {
-
-               } else {
-                  if (g2 && (g1 == NULL)) {
-                     ns1->dsrs[ARGUS_GEO_INDEX] = calloc(1, sizeof(struct ArgusGeoLocationStruct));
-                     g1 = (void *) ns1->dsrs[ARGUS_GEO_INDEX];
-                     bcopy(g2, g1, sizeof(*g2));
+               if ((seconds = RaGetFloatDuration(ns1)) > 0) {
+                  struct ArgusMetricStruct *metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
+                  if (metric != NULL) {
+                     ns1->srate = (float) (metric->src.pkts * 1.0)/seconds;
+                     ns1->drate = (float) (metric->dst.pkts * 1.0)/seconds;
+                     ns1->sload = (float) (metric->src.bytes*8 * 1.0)/seconds;
+                     ns1->dload = (float) (metric->dst.bytes*8 * 1.0)/seconds;
+                     ns1->pcr   = (float) ArgusFetchAppByteRatio(ns1);
+                     ns1->dur   = seconds;
                   }
                }
-               break;
-            }
 
-            case ARGUS_LOCAL_INDEX: {
-               struct ArgusNetspatialStruct *l1 = (void *) ns1->dsrs[ARGUS_LOCAL_INDEX];
-               struct ArgusNetspatialStruct *l2 = (void *) ns2->dsrs[ARGUS_LOCAL_INDEX];
-
-               if (l1 && l2) {
-                  if (l1->sloc > l2->sloc) l1->sloc = l2->sloc;
-                  if (l1->dloc > l2->dloc) l1->dloc = l2->dloc;
-
-               } else {
-                  if (l2 && (l1 == NULL)) {
-                     ns1->dsrs[ARGUS_LOCAL_INDEX] = calloc(1, sizeof(struct ArgusNetspatialStruct));
-                     l1 = (void *) ns1->dsrs[ARGUS_LOCAL_INDEX];
-                     bcopy(l2, l1, sizeof(*l2));
-                  }
-               }
+               ns1->status |= ARGUS_RECORD_MODIFIED;
                break;
             }
          }
       }
-
-      if ((seconds = RaGetFloatDuration(ns1)) > 0) {
-         struct ArgusMetricStruct *metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
-         if (metric != NULL) {
-            ns1->srate = (float) (metric->src.pkts * 1.0)/seconds;
-            ns1->drate = (float) (metric->dst.pkts * 1.0)/seconds;
-            ns1->sload = (float) (metric->src.bytes*8 * 1.0)/seconds;
-            ns1->dload = (float) (metric->dst.bytes*8 * 1.0)/seconds;
-            ns1->pcr   = (float) ArgusFetchAppByteRatio(ns1);
-            ns1->dur   = seconds;
-         }
-      }
-
-      ns1->status |= ARGUS_RECORD_MODIFIED;
    }
 
    return;
@@ -9642,8 +9687,8 @@ void
 ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, struct ArgusAdjustStruct *nadp)
 {
    struct timeval *start = &nadp->start;
+   long long startusec = 0, endusec = 0;
    struct timeval *end = &nadp->end;
-   long long startusec = 0;
    time_t tsec = 0;
 
    nadp->stperiod = 0.0;
@@ -9665,6 +9710,7 @@ ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, s
          end->tv_usec   = parser->lasttime_t.tv_usec;
 
          startusec = (start->tv_sec * 1000000LL) + start->tv_usec;
+           endusec = (end->tv_sec * 1000000LL) + end->tv_usec;
 
       } else {
          start->tv_sec  = nadp->startuSecs / 1000000;
@@ -9800,7 +9846,6 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
    struct ArgusAgrStruct *agr;
    long long startusec = 0, endusec = 0;
 
-   if ((time = (void *)ns->dsrs[ARGUS_TIME_INDEX]) != NULL) {
       startusec = ArgusFetchStartuSecTime(ns);
         endusec = ArgusFetchLastuSecTime(ns);
 
@@ -9843,6 +9888,8 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
       switch (ns->hdr.type & 0xF0) {
          case ARGUS_EVENT:
          case ARGUS_MAR: {
+            ns->status |= ARGUS_RECORD_PROCESSED;
+            retn = ArgusCopyRecordStruct(ns);
             break;
          }
 
@@ -9850,6 +9897,8 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
          case ARGUS_AFLOW:
          case ARGUS_FAR: {
             agr = (void *)ns->dsrs[ARGUS_AGR_INDEX];
+
+            if ((time = (void *)ns->dsrs[ARGUS_TIME_INDEX]) != NULL) {
             if ((metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
                if ((metric->src.pkts + metric->dst.pkts) > 0) {
                   if (!(nadp->modify)) {
@@ -10296,8 +10345,8 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
             } else
                nadp->turns = 0;
          }
+         }
       }
-   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusAlignRecord () returning %p\n", retn); 
@@ -10497,6 +10546,18 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
          }
       }
 
+/*
+      if (parser->tflag) {
+         if (rbps->array[0] == NULL) {
+            int i;
+            for (i = 0; i < rbps->arraylen; i++) {
+               if ((rbps->array[i] = RaNewBin(parser, rbps, NULL, (rbps->start + (i * rbps->size)), RATOPSTARTINGINDEX)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInsertRecord: RaNewBin error %s", strerror(errno));
+            }
+         }
+      }
+*/
+
 // set the current records value and index for insertion into array.
 
       switch (rbps->nadp.mode) {
@@ -10570,9 +10631,6 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
             if ((val - rbps->start) >= 0) {
                int i = ((val - rbps->start)/rbps->size);
                ind = rbps->index + i;
-#ifdef ARGUSDEBUG
-               ArgusDebug (4, "ArgusInsertRecord (%p, %p, %p) val %lld, start %lld, size %lld, calculated ind %d\n", parser, rbps, argus, val, rbps->start, rbps->size, ind); 
-#endif
             } else
                ind = -1;
             break;
@@ -10621,9 +10679,6 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
             struct RaBinStruct **newarray;
             int i, cnt = ((ind + ARGUSMINARRAYSIZE)/ARGUSMINARRAYSIZE) * ARGUSMINARRAYSIZE;
 
-#ifdef ARGUSDEBUG
-            ArgusDebug (2, "ArgusInsertRecord (%p, %p, %p) ind %d greater than arraylen %d adjusting\n", parser, rbps, argus, ind, rbps->arraylen); 
-#endif
             if ((newarray = (void *) ArgusCalloc (sizeof(struct RaBinStruct *), cnt)) == NULL)
                ArgusLog (LOG_ERR, "ArgusInsertRecord: ArgusCalloc error %s", strerror(errno));
 
@@ -10664,7 +10719,6 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
 
                if (ArgusFilterRecord (fcode, argus) != 0) {
                   switch (argus->hdr.type & 0xF0) {
-                     case ARGUS_MAR: 
                      case ARGUS_EVENT: {
                         ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_LOCK);
                         agg->status |= ARGUS_AGGREGATOR_DIRTY;
@@ -10673,6 +10727,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                         break;
                      }
 
+                     case ARGUS_MAR: 
                      case ARGUS_NETFLOW: 
                      case ARGUS_AFLOW:
                      case ARGUS_FAR: {
@@ -10686,148 +10741,211 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
 
                         } else {
                            if (agg->mask) {
-                           if ((agg->rap = RaFlowModelOverRides(agg, argus)) == NULL)
-                              agg->rap = agg->drap;
+                              if ((agg->rap = RaFlowModelOverRides(agg, argus)) == NULL)
+                                 agg->rap = agg->drap;
 
-                           ArgusGenerateNewFlow(agg, argus);
+                              ArgusGenerateNewFlow(agg, argus);
 
-                           if ((hstruct = ArgusGenerateHashStruct(agg, argus, NULL)) == NULL)
-                              ArgusLog (LOG_ERR, "ArgusInsertRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-                           if ((tns = ArgusFindRecord(agg->htable, hstruct)) != NULL) {
-                              double dur, nsst, tnsst, nslt, tnslt;
-                              if (parser->Aflag) {
-                                 if ((tns->status & RA_SVCTEST) != (argus->status & RA_SVCTEST)) {
-                                    RaSendArgusRecord(tns);
-                                    ArgusZeroRecord(tns);
-                                    tns->status &= ~(RA_SVCTEST);
-                                    tns->status |= (argus->status & RA_SVCTEST);
-                                 }
-                              }
-
-                              nsst  = ArgusFetchStartTime(argus);
-                              tnsst = ArgusFetchStartTime(tns);
-                              nslt  = ArgusFetchLastTime(argus);
-                              tnslt = ArgusFetchLastTime(tns);
-
-                              dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst); 
-                           
-                              if (agg->statusint && (dur >= agg->statusint)) {
-                                 RaSendArgusRecord(tns);
-                                 ArgusZeroRecord(tns);
-                              } else {
-                                 dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst);
-                                 if (agg->idleint && (dur >= agg->idleint)) {
-                                    RaSendArgusRecord(tns);
-                                    ArgusZeroRecord(tns);
-                                 }
-                              }
-
-                              ArgusMergeRecords (agg, tns, argus);
-                              if (tns->qhdr.queue == agg->timeout) {
-                                 ArgusRemoveFromQueue (agg->timeout, &tns->qhdr, ARGUS_LOCK);
-                                 ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
-                              }
-                              retn = 0;
-
-                           } else {
-                              struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
-                              if (!parser->RaMonMode && parser->ArgusReverse) {
-                                 int tryreverse = 0;
-
-                                 if (flow != NULL) {
-                                    if (agg->correct != NULL)
-                                       tryreverse = 1;
-
-                                    switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                                       case ARGUS_TYPE_IPV4: {
-                                          switch (flow->ip_flow.ip_p) {
-                                             case IPPROTO_ESP:
-                                                tryreverse = 0;
-                                                break;
-                                          }
-                                          break;
-                                       }
-                                       case ARGUS_TYPE_IPV6: {
-                                          switch (flow->ipv6_flow.ip_p) {
-                                             case IPPROTO_ESP:
-                                                tryreverse = 0;
-                                                break;
-                                          }
-                                          break;
+                              if ((hstruct = ArgusGenerateHashStruct(agg, argus, NULL)) != NULL) {
+                                 if ((tns = ArgusFindRecord(agg->htable, hstruct)) != NULL) {
+                                    double dur, nsst, tnsst, nslt, tnslt;
+                                    if (parser->Aflag) {
+                                       if ((tns->status & RA_SVCTEST) != (argus->status & RA_SVCTEST)) {
+                                          RaSendArgusRecord(tns);
+                                          ArgusZeroRecord(tns);
+                                          tns->status &= ~(RA_SVCTEST);
+                                          tns->status |= (argus->status & RA_SVCTEST);
                                        }
                                     }
-                                 } else
-                                    tryreverse = 0;
 
-                                 if (tryreverse) {
-                                    if (hstruct != NULL) {
+                                    nsst  = ArgusFetchStartTime(argus);
+                                    tnsst = ArgusFetchStartTime(tns);
+                                    nslt  = ArgusFetchLastTime(argus);
+                                    tnslt = ArgusFetchLastTime(tns);
+
+                                    dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst); 
+                                 
+                                    if (agg->statusint && (dur >= agg->statusint)) {
+                                       RaSendArgusRecord(tns);
+                                       ArgusZeroRecord(tns);
+                                    } else {
+                                       dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst);
+                                       if (agg->idleint && (dur >= agg->idleint)) {
+                                          RaSendArgusRecord(tns);
+                                          ArgusZeroRecord(tns);
+                                       }
                                     }
 
-                                    if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                                       ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                                    ArgusMergeRecords (agg, tns, argus);
+                                    if (tns->qhdr.queue == agg->timeout) {
+                                       ArgusRemoveFromQueue (agg->timeout, &tns->qhdr, ARGUS_LOCK);
+                                       ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
+                                    }
+                                    retn = 0;
 
-                                    if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
-                                       switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                                          case ARGUS_TYPE_IPV4: {
-                                             switch (flow->ip_flow.ip_p) {
-                                                case IPPROTO_ICMP: {
-                                                   struct ArgusICMPFlow *icmpFlow = &flow->flow_un.icmp;
+                                 } else {
+                                    if ((argus->hdr.type & 0xF0) == ARGUS_MAR) {
+                                       argus->htblhdr = ArgusAddHashEntry (agg->htable, argus, hstruct);
+                                       ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_LOCK);
+                                       retn = 1;
 
-                                                   if (ICMP_INFOTYPE(icmpFlow->type)) {
-                                                      switch (icmpFlow->type) {
-                                                         case ICMP_ECHO:
-                                                         case ICMP_ECHOREPLY:
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
-                                                            if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                               tns = ArgusFindRecord(agg->htable, hstruct);
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
-                                                            if (tns)
+                                    } else {
+                                       struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+                                       if (!parser->RaMonMode && parser->ArgusReverse) {
+                                          int tryreverse = 0;
+
+                                          if (flow != NULL) {
+                                             if (agg->correct != NULL)
+                                                tryreverse = 1;
+
+                                             switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                                case ARGUS_TYPE_IPV4: {
+                                                   switch (flow->ip_flow.ip_p) {
+                                                      case IPPROTO_ESP:
+                                                         tryreverse = 0;
+                                                         break;
+                                                   }
+                                                   break;
+                                                }
+                                                case ARGUS_TYPE_IPV6: {
+                                                   switch (flow->ipv6_flow.ip_p) {
+                                                      case IPPROTO_ESP:
+                                                         tryreverse = 0;
+                                                         break;
+                                                   }
+                                                   break;
+                                                }
+                                             }
+                                          } else
+                                             tryreverse = 0;
+
+                                          if (tryreverse) {
+                                             if (hstruct != NULL) {
+                                             }
+
+                                             hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct);
+
+                                             if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
+                                                switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                                   case ARGUS_TYPE_IPV4: {
+                                                      switch (flow->ip_flow.ip_p) {
+                                                         case IPPROTO_ICMP: {
+                                                            struct ArgusICMPFlow *icmpFlow = &flow->flow_un.icmp;
+
+                                                            if (ICMP_INFOTYPE(icmpFlow->type)) {
+                                                               switch (icmpFlow->type) {
+                                                                  case ICMP_ECHO:
+                                                                  case ICMP_ECHOREPLY:
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
+                                                                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                                        tns = ArgusFindRecord(agg->htable, hstruct);
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
+                                                                     if (tns)
+                                                                        ArgusReverseRecord (argus);
+                                                                     break;
+
+                                                                  case ICMP_ROUTERADVERT:
+                                                                  case ICMP_ROUTERSOLICIT:
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
+                                                                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                                        tns = ArgusFindRecord(agg->htable, hstruct);
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
+                                                                     if (tns)
+                                                                        ArgusReverseRecord (argus);
+                                                                     break;
+
+                                                                  case ICMP_TSTAMP:
+                                                                  case ICMP_TSTAMPREPLY:
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
+                                                                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                                        tns = ArgusFindRecord(agg->htable, hstruct);
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
+                                                                     if (tns)
+                                                                        ArgusReverseRecord (argus);
+                                                                     break;
+
+                                                                  case ICMP_IREQ:
+                                                                  case ICMP_IREQREPLY:
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
+                                                                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                                        tns = ArgusFindRecord(agg->htable, hstruct);
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
+                                                                     if (tns)
+                                                                        ArgusReverseRecord (argus);
+                                                                     break;
+
+                                                                  case ICMP_MASKREQ:
+                                                                  case ICMP_MASKREPLY:
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
+                                                                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                                        tns = ArgusFindRecord(agg->htable, hstruct);
+                                                                     icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
+                                                                     if (tns)
+                                                                        ArgusReverseRecord (argus);
+                                                                     break;
+                                                               }
+                                                            }
+                                                            break;
+                                                         }
+                                                      }
+                                                   }
+                                                }
+                                                hstruct = ArgusGenerateHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct);
+
+                                             } else {
+                                                switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                                   case ARGUS_TYPE_IPV4: {
+                                                      switch (flow->ip_flow.ip_p) {
+                                                         case IPPROTO_TCP: {
+                                                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)argus->dsrs[ARGUS_NETWORK_INDEX];
+                                                            if (tcp != NULL) {
+                                                               struct ArgusTCPObject *ttcp = (struct ArgusTCPObject *)tns->dsrs[ARGUS_NETWORK_INDEX];
+                                                               if (ttcp != NULL) {
+                                                                  if ((tcp->status & ARGUS_SAW_SYN) && !(ttcp->status & ARGUS_SAW_SYN)) {
+                                                                     ArgusReverseRecord (tns);
+                                                                  } else
+                                                                     ArgusReverseRecord (argus);
+                                                               } else
+                                                                  ArgusReverseRecord (argus);
+                                                            } else
                                                                ArgusReverseRecord (argus);
                                                             break;
+                                                         }
 
-                                                         case ICMP_ROUTERADVERT:
-                                                         case ICMP_ROUTERSOLICIT:
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
-                                                            if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                               tns = ArgusFindRecord(agg->htable, hstruct);
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
-                                                            if (tns)
-                                                               ArgusReverseRecord (argus);
-                                                            break;
-
-                                                         case ICMP_TSTAMP:
-                                                         case ICMP_TSTAMPREPLY:
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
-                                                            if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                               tns = ArgusFindRecord(agg->htable, hstruct);
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
-                                                            if (tns)
-                                                               ArgusReverseRecord (argus);
-                                                            break;
-
-                                                         case ICMP_IREQ:
-                                                         case ICMP_IREQREPLY:
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
-                                                            if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                               tns = ArgusFindRecord(agg->htable, hstruct);
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
-                                                            if (tns)
-                                                               ArgusReverseRecord (argus);
-                                                            break;
-
-                                                         case ICMP_MASKREQ:
-                                                         case ICMP_MASKREPLY:
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
-                                                            if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                               tns = ArgusFindRecord(agg->htable, hstruct);
-                                                            icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
-                                                            if (tns)
-                                                               ArgusReverseRecord (argus);
+                                                         default:
+                                                            ArgusReverseRecord (argus);
                                                             break;
                                                       }
                                                    }
                                                    break;
+
+                                                   case ARGUS_TYPE_IPV6: {
+                                                      switch (flow->ipv6_flow.ip_p) {
+                                                         case IPPROTO_TCP: {
+                                                            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)argus->dsrs[ARGUS_NETWORK_INDEX];
+                                                            if (tcp != NULL) {
+                                                               struct ArgusTCPObject *ttcp = (struct ArgusTCPObject *)tns->dsrs[ARGUS_NETWORK_INDEX];
+                                                               if (ttcp != NULL) {
+                                                                  if ((tcp->status & ARGUS_SAW_SYN) && !(ttcp->status & ARGUS_SAW_SYN)) {
+                                                                     ArgusReverseRecord (tns);
+                                                                  } else
+                                                                     ArgusReverseRecord (argus);
+                                                               } else
+                                                                  ArgusReverseRecord (argus);
+                                                            } else
+                                                               ArgusReverseRecord (argus);
+                                                            break;
+                                                         }
+
+                                                         default:
+                                                            ArgusReverseRecord (argus);
+                                                            break;
+                                                      }
+                                                   }
+                                                   break;
+
+                                                   default:
+                                                      ArgusReverseRecord (argus);
                                                 }
                                              }
                                           }
@@ -10867,10 +10985,14 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                                                    break;
                                                 }
 
-                                                default:
-                                                   ArgusReverseRecord (argus);
-                                                   break;
+                                       if (tns != NULL) {
+                                          if (parser->Aflag) {
+                                             if ((tns->status & RA_SVCTEST) != (argus->status & RA_SVCTEST)) {
+                                                RaSendArgusRecord(tns);
+                                                ArgusZeroRecord(tns);
                                              }
+                                             tns->status &= ~(RA_SVCTEST);
+                                             tns->status |= (argus->status & RA_SVCTEST);
                                           }
                                           break;
 
@@ -10900,49 +11022,28 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                                                    }
                                                 }
 
-                                                default:
-                                                   ArgusReverseRecord (argus);
-                                                   break;
-                                             }
+                                          if (ArgusParser->RaCumulativeMerge != 0)
+                                             ArgusMergeRecords (agg, tns, argus);
+                                          else {
+                                             RaSendArgusRecord(tns);
+                                             ArgusZeroRecord(tns);
+                                             ArgusMergeRecords (agg, tns, argus);
                                           }
-                                          break;
+                                          if (tns->qhdr.queue == agg->timeout) {
+                                             ArgusRemoveFromQueue (agg->timeout, &tns->qhdr, ARGUS_LOCK);
+                                             ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
+                                          }
+                                          retn = 0;
 
-                                          default:
-                                             ArgusReverseRecord (argus);
+                                       } else {
+                                          argus->htblhdr = ArgusAddHashEntry (agg->htable, argus, hstruct);
+                                          ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_LOCK);
+                                          retn = 1;
                                        }
                                     }
                                  }
                               }
 
-                              if (tns != NULL) {
-                                 if (parser->Aflag) {
-                                    if ((tns->status & RA_SVCTEST) != (argus->status & RA_SVCTEST)) {
-                                       RaSendArgusRecord(tns);
-                                       ArgusZeroRecord(tns);
-                                    }
-                                    tns->status &= ~(RA_SVCTEST);
-                                    tns->status |= (argus->status & RA_SVCTEST);
-                                 }
-
-                                 if (ArgusParser->RaCumulativeMerge != 0)
-                                    ArgusMergeRecords (agg, tns, argus);
-                                 else {
-                                    RaSendArgusRecord(tns);
-                                    ArgusZeroRecord(tns);
-                                    ArgusMergeRecords (agg, tns, argus);
-                                 }
-                                 if (tns->qhdr.queue == agg->timeout) {
-                                    ArgusRemoveFromQueue (agg->timeout, &tns->qhdr, ARGUS_LOCK);
-                                    ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
-                                 }
-                                 retn = 0;
-
-                              } else {
-                                 argus->htblhdr = ArgusAddHashEntry (agg->htable, argus, hstruct);
-                                 ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_LOCK);
-                                 retn = 1;
-                              }
-                           }
                            } else {
                               ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_NOLOCK);
                               retn = 1;
@@ -12057,8 +12158,8 @@ ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns)
       case ARGUS_MAR: {
          struct ArgusRecord *rec = (struct ArgusRecord *) ns->dsrs[0];
          if (rec != NULL) {
-            sec  = rec->argus_mar.now.tv_sec;
-            usec = rec->argus_mar.now.tv_usec;
+            sec  = rec->argus_mar.startime.tv_sec;
+            usec = rec->argus_mar.startime.tv_usec;
          }
          break;
       }

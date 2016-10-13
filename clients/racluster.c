@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/racluster.c#20 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/clients/racluster.c#23 $
+ * $DateTime: 2016/10/13 08:28:01 $
+ * $Change: 3223 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -552,6 +552,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_MAR:
+         RaProcessThisRecord(parser, ns);
+         break;
+
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
@@ -814,7 +817,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                           }
                                           break;
                                        }
-                                       break;
                                     }
                                  }
                               }
@@ -917,8 +919,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusReverseRecord (ns);
                                           break;
                                        }
-                                       break;
-                                    }
 
                                  default: {
                                     double  nstime = ArgusFetchStartTime(ns);

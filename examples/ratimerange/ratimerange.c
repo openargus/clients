@@ -24,9 +24,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratimerange/ratimerange.c#4 $
- * $DateTime: 2014/10/07 15:35:03 $
- * $Change: 2940 $
+ * $Id: //depot/gargoyle/clients/examples/ratimerange/ratimerange.c#5 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -188,7 +188,28 @@ void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
+      case ARGUS_MAR: {
+         struct ArgusRecord *rec = (struct ArgusRecord *)argus->dsrs[0];
+         if ((rec->hdr.cause & 0xF0) == ARGUS_START) {
+            if (rec->ar_un.mar.now.tv_sec)
+               if ((RaStartTime.tv_sec  > rec->ar_un.mar.now.tv_sec) ||
+                  ((RaStartTime.tv_sec == rec->ar_un.mar.now.tv_sec) &&
+                  (RaStartTime.tv_usec > rec->ar_un.mar.now.tv_usec))) {
+                  RaStartTime.tv_sec  = rec->ar_un.mar.now.tv_sec;
+                  RaStartTime.tv_usec = rec->ar_un.mar.now.tv_usec;
+               }
+
+         } else 
+            if (rec->ar_un.mar.now.tv_sec)
+               if ((RaEndTime.tv_sec  < rec->ar_un.mar.now.tv_sec) ||
+                  ((RaEndTime.tv_sec == rec->ar_un.mar.now.tv_sec) &&
+                  (RaEndTime.tv_usec < rec->ar_un.mar.now.tv_usec))) {
+                  RaEndTime.tv_sec  = rec->ar_un.mar.now.tv_sec;
+                  RaEndTime.tv_usec = rec->ar_un.mar.now.tv_usec;
+               }
+         break;
+      }
+
       case ARGUS_EVENT: {
          break;
       }

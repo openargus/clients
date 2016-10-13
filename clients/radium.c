@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/radium.c#18 $
- * $DateTime: 2016/10/05 18:13:13 $
- * $Change: 3215 $
+ * $Id: //depot/gargoyle/clients/clients/radium.c#19 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 /*

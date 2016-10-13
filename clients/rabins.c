@@ -34,9 +34,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/rabins.c#21 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/clients/rabins.c#23 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -68,6 +68,7 @@
 #include <signal.h>
 #include <ctype.h>
 
+int RaPrintCounter = 1;
 int RaRealTime = 0;
 float RaUpdateRate = 1.0;
 
@@ -85,8 +86,12 @@ long long thisUsec = 0;
 
 struct RaBinProcessStruct *RaBinProcess = NULL;
 
+#define ARGUS_CGI_FLOW_OUTPUT		1
+
+int RaOutputFormat = 0;
 int ArgusRmonMode = 0;
 
+int ArgusPrintFormat(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int, int);
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -140,6 +145,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (isdigit((int) *mode->mode)) {
                ind = 0;
             } else {
+               if (!(strncasecmp (mode->mode, "cgi-flows", 9)))
+                  RaOutputFormat = ARGUS_CGI_FLOW_OUTPUT;
+               else
                if (!(strncasecmp (mode->mode, "nomerge", 4)))
                   parser->RaCumulativeMerge = 0;
                else
@@ -418,7 +426,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
 
       if (ArgusParser->startime_t.tv_sec && ArgusParser->lasttime_t.tv_sec) {
-         nadp->count = (((ArgusParser->lasttime_t.tv_sec - ArgusParser->startime_t.tv_sec) * 1000000LL)/nadp->size) + 1;
+         nadp->count = (((ArgusParser->lasttime_t.tv_sec - ArgusParser->startime_t.tv_sec) * 1000000LL)/nadp->size);
       } else {
          int cnt = (parser->Bflag * 1000000) / nadp->size;
          nadp->count = ((size > cnt) ? size : cnt);
@@ -819,8 +827,11 @@ void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
    switch (ns->hdr.type & 0xF0) {
-      case ARGUS_MAR:
       case ARGUS_EVENT:
+         break;
+
+      case ARGUS_MAR:
+         RaProcessThisRecord(parser, ns);
          break;
 
       case ARGUS_NETFLOW:
@@ -949,15 +960,25 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          fretn = ArgusFilterRecord (fcode, argus);
       }
 
-      if (agg->grepstr) {
-         struct ArgusLabelStruct *label;
-         if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
-            if (regexec(&agg->lpreg, label->l_un.label, 0, NULL, 0))
-               lretn = 0;
-            else
-               lretn = 1;
-         } else
-            lretn = 0;
+      switch (argus->hdr.type & 0xF0) {
+         case ARGUS_EVENT:
+         case ARGUS_MAR:
+            break;
+
+         case ARGUS_NETFLOW:
+         case ARGUS_FAR: {
+            if (agg->grepstr) {
+               struct ArgusLabelStruct *label;
+               if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+                  if (regexec(&agg->lpreg, label->l_un.label, 0, NULL, 0))
+                     lretn = 0;
+                  else
+                     lretn = 1;
+               } else
+                  lretn = 0;
+            }
+            break;
+         }
       }
 
       retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
@@ -974,15 +995,31 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
          offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
 
-         while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
+         while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
             if ((retn = ArgusCheckTime (parser, tns)) != 0) {
-               struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+               switch (ns->hdr.type & 0xF0) {
+                  case ARGUS_EVENT:
+                  case ARGUS_MAR:
+                     if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                        ArgusDeleteRecordStruct(parser, tns);
 
-               if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                  if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
-                     ArgusDeleteRecordStruct(parser, tns);
-               } else 
-                  ArgusDeleteRecordStruct(parser, tns);
+                     if (ns == tns)
+                        ns->status |= ARGUS_RECORD_PROCESSED;
+                     break;
+
+                  case ARGUS_NETFLOW:
+                  case ARGUS_FAR: {
+                     struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+
+                     if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
+                        if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                           ArgusDeleteRecordStruct(parser, tns);
+                     } else 
+                        ArgusDeleteRecordStruct(parser, tns);
+                     break;
+                  }
+               }
+
             } else
                ArgusDeleteRecordStruct(parser, tns);
          }
@@ -1002,7 +1039,58 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 }
 
 
+void ArgusPrintTCPSynAck (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
+
+int
+ArgusPrintFormat(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int format, int len)
+{
+   int retn = 0;
+
+   if (argus != NULL) {
+      switch (format) {
+         case ARGUS_CGI_FLOW_OUTPUT: {
+            double stime = ArgusFetchStartuSecTime(argus)/1000;
+            double ltime = ArgusFetchLastuSecTime(argus)/1000;
+            long long sdate = stime, ldate = ltime;
+            char *rank, *proto, *saddr, *daddr, *dport, *synack;
+            char buf[1024], str[256];
+
+            ArgusPrintRank(parser, str, argus, 32);
+            rank = strdup(ArgusTrimString(str));
+
+            ArgusPrintProto(parser, str, argus, 256);
+            proto = strdup(ArgusTrimString(str));
+
+            ArgusPrintSrcAddr(parser, str, argus, 256);
+            saddr = strdup(ArgusTrimString(str));
+
+            ArgusPrintDstAddr(parser, str, argus, 256);
+            daddr = strdup(ArgusTrimString(str));
+
+            ArgusPrintDstPort(parser, str, argus, 256);
+            dport = strdup(ArgusTrimString(str));
+
+            ArgusPrintTCPSynAck(parser, str, argus, 256);
+            synack = strdup(ArgusTrimString(str));
+
+            sprintf(buf, "{\"rank\":\"%s\",\"category\":\"ff\",\"stime\":new Date(%lld),\"ltime\":new Date(%lld),\"proto\":\"%s\",\"saddr\":\"%s\",\"daddr\":\"%s\",\"dport\":\"%s\",\"synack\":\"%s\"},", rank, sdate, ldate, proto, saddr, daddr, dport, synack);
+            fprintf(stdout, "%s", buf);
+            fflush(stdout);
+            break;
+
+         default:
+            break;
+         }
+      }
+   }
+#ifdef ARGUSDEBUG 
+   ArgusDebug (6, "ArgusPrintFormat (%p, %p, %p, %d, %d) returning\n", parser, buf, argus, format, len);
+
+#endif
+   return (retn);
+}
 
 
 int
@@ -1012,6 +1100,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
    if (argus->status & ARGUS_RECORD_WRITTEN)
       return (retn);
+
+   argus->rank = RaPrintCounter++;
 
    if (!(retn = ArgusCheckTime (ArgusParser, argus)))
       return (retn);
@@ -1091,7 +1181,13 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                }
 
                *(int *)&buf = 0;
-               ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
+
+
+               if (RaOutputFormat) 
+                  ArgusPrintFormat(ArgusParser, buf, argus, RaOutputFormat, MAXSTRLEN);
+               else
+                  ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
+
                if (fprintf (stdout, "%s\n", buf) < 0)
                   RaParseComplete (SIGQUIT);
                fflush(stdout);
@@ -1102,6 +1198,9 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    }
 
    argus->status |= ARGUS_RECORD_WRITTEN;
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusSendArgusRecord (%p) returning\n", argus); 
+#endif
    return (retn);
 }
 

@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasplit.c#21 $
- * $DateTime: 2016/10/06 00:01:32 $
- * $Change: 3216 $
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#22 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H

@@ -54,9 +54,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_main.c#11 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/common/argus_main.c#13 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -319,10 +319,11 @@ extern void * ArgusTimeoutProcess (void *);
    If not we just connect to them sequentially.
 */
 
-   if (ArgusParser->tflag)
-      ArgusParser->tflag = 0;
-
    if (ArgusParser->Sflag) {
+
+      if (ArgusParser->tflag)
+         ArgusParser->tflag = 0;
+
       ArgusParser->ArgusPassNum = 1;
 
       if (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0)) {
