@@ -8627,7 +8627,7 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             }
          } 
 
-         parser->RaPrintIndex = ARGUSPRINTSRCADDR;
+//       parser->RaPrintIndex = ARGUSPRINTSRCADDR;
          ArgusPrintAddr (parser, buf, type, addr, objlen, masklen, len, ARGUS_SRC);
          break;
       }
@@ -8905,7 +8905,7 @@ ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             }
          }
 
-         parser->RaPrintIndex = ARGUSPRINTDSTADDR;
+//       parser->RaPrintIndex = ARGUSPRINTDSTADDR;
          ArgusPrintAddr (parser, buf, type, addr, objlen, masklen, len, ARGUS_DST);
          break;
       }
