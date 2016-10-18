@@ -9889,6 +9889,11 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
          case ARGUS_EVENT:
          case ARGUS_MAR: {
             ns->status |= ARGUS_RECORD_PROCESSED;
+
+            if (nadp->hard) {
+// once we figure out how to split man records, we'll set their start and stop times to the hard boundaries.
+            }
+
             retn = ArgusCopyRecordStruct(ns);
             break;
          }

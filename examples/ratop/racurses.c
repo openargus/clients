@@ -5196,17 +5196,20 @@ RaUpdateHeaderWindow(WINDOW *win)
 #if defined(ARGUS_CURSES)
    struct tm *tm, tmbuf;
    char stimebuf[128];
-   char bssid[128];
-   int bssidlen = 0;
+   char ssid[128], bssid[128];
+   int ssidlen = 0, bssidlen = 0;
 
    struct timeval tvpbuf, *tvp = &tvpbuf;
 
    gettimeofday (tvp, NULL);
    bzero(bssid, 128);
+   bzero(ssid, 128);
 
-   if (ArgusWireless->bssid != NULL) {
+   if (ArgusWireless->bssid != NULL)
       sprintf(bssid, "bssid:%s", ArgusWireless->bssid);
-   }
+
+   if (ArgusWireless->ssid != NULL)
+      sprintf(ssid, "ssid:%s", ArgusWireless->ssid);
 
    if (tvp->tv_sec > 0) {
       time_t tsec =  tvp->tv_sec;
@@ -5221,8 +5224,12 @@ RaUpdateHeaderWindow(WINDOW *win)
    mvwaddnstr (win, 0, 0, ArgusGenerateProgramArgs(ArgusParser), RaScreenColumns - 5);
    wclrtoeol(win);
 
-   if ((bssidlen = strlen(bssid)) > 0)
+   if ((bssidlen = strlen(bssid)) > 0) {
       mvwaddnstr (win, 0, RaScreenColumns - (strlen(stimebuf) + bssidlen + 3) , bssid, bssidlen);
+      if ((ssidlen = strlen(ssid)) > 0) {
+         mvwaddnstr (win, 0, RaScreenColumns - (strlen(stimebuf) + bssidlen + ssidlen + 6) , ssid, ssidlen);
+      }
+   }
 
    mvwaddnstr (win, 0, RaScreenColumns - strlen(stimebuf) , stimebuf, strlen(stimebuf));
    touchwin(win);
