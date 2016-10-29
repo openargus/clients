@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_import.c#19 $
- * $DateTime: 2016/07/13 18:38:48 $
- * $Change: 3170 $
+ * $Id: //depot/gargoyle/clients/common/argus_import.c#20 $
+ * $DateTime: 2016/10/24 12:10:50 $
+ * $Change: 3226 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1125,7 +1125,11 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                         case k_CiscoV9InputSnmp: {
                            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
                            uint16_t input = ntohs(value.val16[0]);
+#if defined(ARGUS_SOLARIS)
+                           bcopy((char *)&input, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost.ether_addr_octet[4], 2);
+#else
                            bcopy((char *)&input, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost[4], 2);
+#endif
                            ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
                            ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
                            mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;
@@ -1153,7 +1157,11 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                         case k_CiscoV9OutputSnmp: {
                            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
                            uint16_t output = ntohs(value.val16[0]);
+#if defined(ARGUS_SOLARIS)
+                           bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost.ether_addr_octet[4], 2);
+#else
                            bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost[4], 2);
+#endif
                            ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
                            ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
                            mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;

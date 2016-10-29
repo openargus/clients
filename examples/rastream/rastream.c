@@ -16,9 +16,9 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- * $Id: //depot/gargoyle/clients/examples/rastream/rastream.c#13 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rastream/rastream.c#14 $
+ * $DateTime: 2016/10/24 19:39:51 $
+ * $Change: 3228 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -470,17 +470,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char *file = strdup(ptr);
          char *sptr = file;
 
+         parser->RaFieldWidth = RA_VARIABLE_WIDTH;
          bzero (mask, sizeof(mask));
-/*
-   ptr = l1buf;
-   while ((obj = strtok(ptr, ":")) != NULL) {
-      if (l1labsindex < 256) {
-         l1labs[l1labsindex].object = obj;
-         l1labsindex++;
-      }
-      ptr = NULL;
-   }
-*/
 
          for (ap = mask; (*ap = strtok(sptr, "$")) != NULL;) {
             sptr = NULL;

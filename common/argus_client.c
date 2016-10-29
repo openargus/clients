@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#79 $
- * $DateTime: 2016/10/13 08:28:01 $
- * $Change: 3223 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#82 $
+ * $DateTime: 2016/10/28 15:32:39 $
+ * $Change: 3234 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -6626,7 +6626,7 @@ struct timeval *
 RaGetLastTime (struct ArgusRecordStruct *argus, struct timeval *tvp)
 {
    if ((argus != NULL)  && (tvp != NULL)) {
-      double retn = ArgusFetchStartuSecTime(argus);
+      double retn = ArgusFetchLastuSecTime(argus);
       tvp->tv_sec  = retn / 1000000;
       tvp->tv_usec = retn - (tvp->tv_sec * 1000000LL);
       return (tvp);
@@ -11336,6 +11336,7 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
          
          if (!(strncasecmp (sptr, "none", 4))) {
             retn->mask  = 0;
+            ArgusParser->RaCumulativeMerge = 0;
          } else
          if (!(strncasecmp (sptr, "macmatrix", 9))) {
             retn->ArgusMatrixMode++;

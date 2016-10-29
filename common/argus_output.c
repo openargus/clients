@@ -2392,7 +2392,6 @@ int allow_severity = LOG_INFO;     /* run-time adjustable */
 int deny_severity  = LOG_WARNING;   /* ditto */
 
 
-
 int
 ArgusTcpWrapper (struct ArgusOutputStruct *output, int fd, struct sockaddr *from, char *clienthost)
 {

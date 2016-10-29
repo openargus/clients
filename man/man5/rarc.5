@@ -399,6 +399,22 @@ float in seconds.  0.5 seconds is the default.
 .fi
 
 
+.SH RA_SRC_ALIAS
+
+All ra* clients have the ability to alias the srcid to the "node" field.
+The method for finding the alias is specified using this variable,
+RA_SRCID_ALIAS.  The format for the URL provides for file and database
+access.  File access is implemented.
+.nf
+    file:/usr/local/argus/argus.srcid.alias.txt
+    mysql://[username[:password]@]hostname[:port]/database/tablename
+.fi
+
+.nf
+\fBRA_SRCID_ALIAS=\fP"file:/usr/local/argus/argus.srcid.alias.txt"
+.fi
+
+
 .SH RA_PRINT_ETHERNET_VENDORS
 
 All ra* clients have the ability to print vendor names for the

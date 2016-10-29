@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasplit.c#22 $
- * $DateTime: 2016/10/13 07:13:10 $
- * $Change: 3222 $
+ * $Id: //depot/gargoyle/clients/clients/rasplit.c#23 $
+ * $DateTime: 2016/10/24 19:39:51 $
+ * $Change: 3228 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -436,6 +436,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char *file = strdup(ptr);
          char *sptr = file;
 
+         parser->RaFieldWidth = RA_VARIABLE_WIDTH;
          bzero (mask, sizeof(mask));
 /*
    ptr = l1buf;
@@ -447,7 +448,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ptr = NULL;
    }
 */
-
          for (ap = mask; (*ap = strtok(sptr, "$")) != NULL;) {
             sptr = NULL;
             if (**ap != '\0')

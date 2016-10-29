@@ -34,9 +34,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/rabins.c#23 $
- * $DateTime: 2016/10/13 07:13:10 $
- * $Change: 3222 $
+ * $Id: //depot/gargoyle/clients/clients/rabins.c#24 $
+ * $DateTime: 2016/10/24 12:10:50 $
+ * $Change: 3226 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -86,7 +86,7 @@ long long thisUsec = 0;
 
 struct RaBinProcessStruct *RaBinProcess = NULL;
 
-#define ARGUS_CGI_FLOW_OUTPUT		1
+#define ARGUS_JSON_OUTPUT		1
 
 int RaOutputFormat = 0;
 int ArgusRmonMode = 0;
@@ -145,9 +145,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (isdigit((int) *mode->mode)) {
                ind = 0;
             } else {
-               if (!(strncasecmp (mode->mode, "cgi-flows", 9)))
-                  RaOutputFormat = ARGUS_CGI_FLOW_OUTPUT;
-               else
                if (!(strncasecmp (mode->mode, "nomerge", 4)))
                   parser->RaCumulativeMerge = 0;
                else
@@ -1050,11 +1047,11 @@ ArgusPrintFormat(struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 
    if (argus != NULL) {
       switch (format) {
-         case ARGUS_CGI_FLOW_OUTPUT: {
+         case ARGUS_JSON_OUTPUT: {
             double stime = ArgusFetchStartuSecTime(argus)/1000;
             double ltime = ArgusFetchLastuSecTime(argus)/1000;
             long long sdate = stime, ldate = ltime;
-            char *rank, *proto, *saddr, *daddr, *dport, *synack;
+            char *rank, *node, *proto, *saddr, *daddr, *dport, *synack;
             char buf[1024], str[256];
 
             ArgusPrintRank(parser, str, argus, 32);
@@ -1075,7 +1072,10 @@ ArgusPrintFormat(struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
             ArgusPrintTCPSynAck(parser, str, argus, 256);
             synack = strdup(ArgusTrimString(str));
 
-            sprintf(buf, "{\"rank\":\"%s\",\"category\":\"ff\",\"stime\":new Date(%lld),\"ltime\":new Date(%lld),\"proto\":\"%s\",\"saddr\":\"%s\",\"daddr\":\"%s\",\"dport\":\"%s\",\"synack\":\"%s\"},", rank, sdate, ldate, proto, saddr, daddr, dport, synack);
+            ArgusPrintSourceID(parser, str, argus, 256);
+            node = strdup(ArgusTrimString(str));
+
+            sprintf(buf, "{\"rank\":\"%s\",\"node\":\"%s\",\"stime\":new Date(%lld),\"ltime\":new Date(%lld),\"proto\":\"%s\",\"saddr\":\"%s\",\"daddr\":\"%s\",\"dport\":\"%s\",\"synack\":\"%s\"},", rank, node, sdate, ldate, proto, saddr, daddr, dport, synack);
             fprintf(stdout, "%s", buf);
             fflush(stdout);
             break;
@@ -1182,11 +1182,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                *(int *)&buf = 0;
 
-
-               if (RaOutputFormat) 
-                  ArgusPrintFormat(ArgusParser, buf, argus, RaOutputFormat, MAXSTRLEN);
-               else
-                  ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
+               ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
 
                if (fprintf (stdout, "%s\n", buf) < 0)
                   RaParseComplete (SIGQUIT);

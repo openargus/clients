@@ -23,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#8 $
- * $DateTime: 2016/09/27 10:38:27 $
- * $Change: 3201 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#9 $
+ * $DateTime: 2016/10/27 23:31:56 $
+ * $Change: 3233 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -418,101 +418,125 @@ parse_arg (int argc, char**argv)
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
+   struct timeval stvbuf, etvbuf, *stvp = &stvbuf, *etvp = &etvbuf;
+   struct RaTimeHashTableHeader *hdr;
+   struct ArgusHashStruct ArgusHash;
    int RaHashSize = 0x10000;
+   unsigned int secs, *key = NULL;
 
-   if (argus->hdr.type & ARGUS_MAR)
-      RaProcessManRecord (parser, argus);
+   struct RaTimeProbesStruct *probe;
+   struct ArgusHashTableHdr *htablehdr;
+   struct RaTimeStore *tstore = NULL;
+   int len, i;
 
-   else {
-      struct RaTimeHashTableHeader *hdr;
-      struct ArgusHashStruct ArgusHash;
-      struct ArgusTransportStruct *trans = (void *)argus->dsrs[ARGUS_TRANSPORT_INDEX];
-      struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
-      struct timeval stvbuf, etvbuf, *stvp = &stvbuf, *etvp = &etvbuf;
 
-      if ((time != NULL) && (trans != NULL)) {
-         struct RaTimeProbesStruct *probe;
-         unsigned int secs, key = trans->srcid.a_un.value;
-         struct ArgusHashTableHdr *htablehdr;
-         struct RaTimeStore *tstore = NULL;
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: {
+         switch (argus->hdr.cause & 0xF0) {
+            case ARGUS_START:   
+               break;
 
-         int len, i;
-
-         if (RaGetStartTime(argus, stvp) == NULL)
-            ArgusLog (LOG_ERR, "RaGetStartTime returned NULL: error\n");
-
-         if (RaGetLastTime(argus, etvp) == NULL)
-            ArgusLog (LOG_ERR, "RaGetStartTime returned NULL: error\n");
-
-         secs = stvp->tv_sec;
-             
-         if (RaStartTime > stvp->tv_sec)
-            RaStartTime = stvp->tv_sec;
-         if (RaEndTime < etvp->tv_sec)
-            RaEndTime = etvp->tv_sec;
-
-         bzero ((char *)&ArgusHash, sizeof(ArgusHash));
-         ArgusHash.len = 4;
-         ArgusHash.hash = 0;
-         ArgusHash.buf = &key;
-         for (i = 0; i < ArgusHash.len/2; i++) {
-            unsigned short value = ((unsigned short *)&key)[i];
-            ArgusHash.hash += value;
-         }
-
-         if ((htablehdr = ArgusFindHashEntry(ArgusProbes->htable, &ArgusHash)) == NULL) {
-            if ((probe = (struct RaTimeProbesStruct *) ArgusCalloc (RaHashSize, sizeof (struct RaTimeProbesStruct))) == NULL)
-               ArgusLog (LOG_ERR, "RaTimeInit: ArgusCalloc error %s\n", strerror(errno));
-
-            if ((probe->htable = ArgusNewHashTable(RaHashSize)) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusNewHashTable error %s\n", strerror(errno));
-
-            if ((probe->rtable = (struct RaTimeHashTableStruct *) ArgusCalloc (1, sizeof (*probe->rtable))) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
-
-            probe->rtable->size =  RaHashSize;
-            if ((probe->rtable->array = (struct RaTimeHashTableHeader **)
-                        ArgusCalloc (RaHashSize, sizeof (struct RaTimeHashTableHeader))) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
-
-            if ((probe->queue = ArgusNewQueue()) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusNewQueue error %s\n", strerror(errno));
-
-            if ((probe->tn = ArgusCopyRecordStruct(argus)) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct error %s\n", strerror(errno));
-
-            ArgusAddHashEntry (ArgusProbes->htable, (void *)probe, &ArgusHash);
-            ArgusAddToQueue(ArgusProbes->queue, &probe->qhdr, ARGUS_LOCK);
-
-         } else
-            probe = htablehdr->object;
-
-         if ((hdr = RaTimeFindHashObject (probe->rtable, &secs, RATIME_TIMEVAL_SEC, &len)) != NULL) {
-            if (secs < hdr->time.tv_sec) {
-               hdr->time.tv_sec  = stvp->tv_sec;
-               hdr->time.tv_usec = stvp->tv_usec;
+            default:
+            case ARGUS_STATUS:
+            case ARGUS_STOP:
+            case ARGUS_SHUTDOWN:
+            case ARGUS_ERROR: {
+               struct ArgusRecord *rec = (struct ArgusRecord *)argus->dsrs[0];
+               key = (unsigned int *)&rec->argus_mar.uuid;
+               break;
             }
-            hdr->maxoffset = argus->input->offset;
-
-         } else {
-            len = 4;
-            if (!(hdr = RaTimeAddHashEntry (probe->rtable, &secs, RATIME_TIMEVAL_SEC, &len)))
-               ArgusLog (LOG_ERR, "RaProcessRecord: RaTimeAddHashEntry error %s\n", strerror(errno));
-
-            hdr->time.tv_sec  = stvp->tv_sec;
-            hdr->time.tv_usec = stvp->tv_usec;
-
-            hdr->minoffset = argus->input->offset;
-            hdr->maxoffset = argus->input->offset;
-
-            if ((tstore = (struct RaTimeStore *) ArgusCalloc (1, sizeof(*tstore))) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
-
-            tstore->htable = probe->rtable;
-            tstore->object = hdr;
-            ArgusAddToQueue(probe->queue, &tstore->qhdr, ARGUS_LOCK);
          }
+         break;
       }
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         struct ArgusTransportStruct *trans = (void *)argus->dsrs[ARGUS_TRANSPORT_INDEX];
+
+         if (trans != NULL) {
+            key = (unsigned int *)&trans->srcid.a_un.uuid;
+         }
+         break;
+      }
+   }
+
+   if (key == NULL)
+      return;
+
+   if (RaGetStartTime(argus, stvp) == NULL)
+      ArgusLog (LOG_ERR, "RaGetStartTime returned NULL: error\n");
+
+   if (RaGetLastTime(argus, etvp) == NULL)
+      ArgusLog (LOG_ERR, "RaGetStartTime returned NULL: error\n");
+
+   secs = stvp->tv_sec;
+       
+   if (RaStartTime > stvp->tv_sec)
+      RaStartTime = stvp->tv_sec;
+   if (RaEndTime < etvp->tv_sec)
+      RaEndTime = etvp->tv_sec;
+
+   bzero ((char *)&ArgusHash, sizeof(ArgusHash));
+   ArgusHash.len = 16;
+   ArgusHash.hash = 0;
+   ArgusHash.buf = key;
+   for (i = 0; i < ArgusHash.len/2; i++) {
+      unsigned short value = ((unsigned short *)&key)[i];
+      ArgusHash.hash += value;
+   }
+
+   if ((htablehdr = ArgusFindHashEntry(ArgusProbes->htable, &ArgusHash)) == NULL) {
+      if ((probe = (struct RaTimeProbesStruct *) ArgusCalloc (RaHashSize, sizeof (struct RaTimeProbesStruct))) == NULL)
+         ArgusLog (LOG_ERR, "RaTimeInit: ArgusCalloc error %s\n", strerror(errno));
+
+      if ((probe->htable = ArgusNewHashTable(RaHashSize)) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusNewHashTable error %s\n", strerror(errno));
+
+      if ((probe->rtable = (struct RaTimeHashTableStruct *) ArgusCalloc (1, sizeof (*probe->rtable))) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
+      probe->rtable->size =  RaHashSize;
+      if ((probe->rtable->array = (struct RaTimeHashTableHeader **)
+                  ArgusCalloc (RaHashSize, sizeof (struct RaTimeHashTableHeader))) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
+      if ((probe->queue = ArgusNewQueue()) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusNewQueue error %s\n", strerror(errno));
+
+      if ((probe->tn = ArgusCopyRecordStruct(argus)) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct error %s\n", strerror(errno));
+
+      ArgusAddHashEntry (ArgusProbes->htable, (void *)probe, &ArgusHash);
+      ArgusAddToQueue(ArgusProbes->queue, &probe->qhdr, ARGUS_LOCK);
+
+   } else
+      probe = htablehdr->object;
+
+   if ((hdr = RaTimeFindHashObject (probe->rtable, &secs, RATIME_TIMEVAL_SEC, &len)) != NULL) {
+      if (secs < hdr->time.tv_sec) {
+         hdr->time.tv_sec  = stvp->tv_sec;
+         hdr->time.tv_usec = stvp->tv_usec;
+      }
+      hdr->maxoffset = argus->input->offset + (argus->hdr.len * 4);
+
+   } else {
+      len = 4;
+      if (!(hdr = RaTimeAddHashEntry (probe->rtable, &secs, RATIME_TIMEVAL_SEC, &len)))
+         ArgusLog (LOG_ERR, "RaProcessRecord: RaTimeAddHashEntry error %s\n", strerror(errno));
+
+      hdr->time.tv_sec  = stvp->tv_sec;
+      hdr->time.tv_usec = stvp->tv_usec;
+
+      hdr->minoffset = argus->input->offset;
+      hdr->maxoffset = argus->input->offset + (argus->hdr.len * 4);
+
+      if ((tstore = (struct RaTimeStore *) ArgusCalloc (1, sizeof(*tstore))) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
+      tstore->htable = probe->rtable;
+      tstore->object = hdr;
+      ArgusAddToQueue(probe->queue, &tstore->qhdr, ARGUS_LOCK);
    }
 
 #ifdef ARGUSDEBUG
@@ -531,264 +555,6 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-/*
-void
-RaMySQLInit ()
-{
-   my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
-   char *sptr = NULL, *ptr;
-   char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
-   MYSQL_RES *mysqlRes;
-   int retn = 0;
-
-   bzero((char *)RaTableExistsNames,  sizeof(RaTableExistsNames));
-   bzero((char *)RaTableCreateNames,  sizeof(RaTableCreateNames));
-   bzero((char *)RaTableCreateString, sizeof(RaTableCreateString));
-   bzero((char *)RaTableDeleteString, sizeof(RaTableDeleteString));
-
-   if ((RaUser == NULL) && (ArgusParser->dbuserstr != NULL)) {
-      bzero(userbuf, sizeof(userbuf));
-      strncpy (userbuf, ArgusParser->dbuserstr, sizeof(userbuf));
-      if ((sptr = strchr (userbuf, ':')) != NULL) {
-         *sptr++ = '\0';
-         RaPass = strdup(sptr);
-      }
-      RaUser = strdup(userbuf);
-   }
-
-   if ((RaPass == NULL) && (ArgusParser->dbpassstr != NULL))
-      RaPass = ArgusParser->dbpassstr;
-
-   if (RaDatabase == NULL) {
-      if (ArgusParser->writeDbstr != NULL)
-         RaDatabase = strdup(ArgusParser->writeDbstr);
-
-      else if (ArgusParser->readDbstr != NULL)
-         RaDatabase = strdup(ArgusParser->readDbstr);
-
-      if (!(strncmp("mysql:", RaDatabase, 6))) {
-         char *tmp = RaDatabase;
-         RaDatabase = strdup(&RaDatabase[6]);
-         free(tmp);
-      }
-   }
-
-   if (RaDatabase == NULL) {
-      ArgusLog(LOG_ERR, "must specify database"); 
-
-   } else {
-      sprintf(db, "%s", RaDatabase);
-      dbptr = db;
-
-//    //[[username[:password]@]hostname[:port]]/database/tablename
-
-      if (!(strncmp ("//", dbptr, 2))) {
-         char *rhost = NULL, *ruser = NULL, *rpass = NULL;
-         if ((strncmp ("///", dbptr, 3))) {
-            dbptr = &dbptr[2];
-            rhost = dbptr;
-            if ((ptr = strchr (dbptr, '/')) != NULL) {
-               *ptr++ = '\0';
-               dbptr = ptr;
-
-               if ((ptr = strchr (rhost, '@')) != NULL) {
-                  ruser = rhost;
-                  *ptr++ = '\0';
-                  rhost = ptr;
-                  if ((ptr = strchr (ruser, ':')) != NULL) {
-                     *ptr++ = '\0';
-                     rpass = ptr;
-                  } else {
-                     rpass = NULL;
-                  }
-               }
-
-               if ((ptr = strchr (rhost, ':')) != NULL) {
-                  *ptr++ = '\0';
-                  RaPort = atoi(ptr);
-               }
-            } else
-               dbptr = NULL;
-
-         } else {
-            dbptr = &dbptr[3];
-         }
-
-         if (ruser != NULL) {
-            if (RaUser != NULL) free(RaUser);
-            RaUser = strdup(ruser);
-         }
-         if (rpass != NULL) {
-            if (RaPass != NULL) free(RaPass);
-            RaPass = strdup(rpass);
-         }
-         if (rhost != NULL) {
-            if (RaHost != NULL) free(RaHost);
-            RaHost = strdup(rhost);
-         }
-         free(RaDatabase);
-         RaDatabase = strdup(dbptr);
-      }
-   }
- 
-   if ((ptr = strchr (RaDatabase, '/')) != NULL) {
-      *ptr++ = '\0';
-      RaTable = ptr;
-
-      if (ArgusParser->writeDbstr != NULL)
-         RaSQLSaveTable = strdup(RaTable);
-   }
-
-   if (!(ArgusParser->status & ARGUS_REAL_TIME_PROCESS))
-      ArgusLastTime = ArgusParser->ArgusRealTime;
-
-   if (RaMySQL == NULL)
-      if ((RaMySQL = (void *) ArgusCalloc(1, sizeof(*RaMySQL))) == NULL)
-         ArgusLog(LOG_ERR, "RaMySQLInit: ArgusCalloc error %s", strerror(errno));
- 
-   if ((mysql_init(RaMySQL)) == NULL)
-      ArgusLog(LOG_ERR, "mysql_init error %s");
-
-   if (!mysql_thread_safe())
-      ArgusLog(LOG_INFO, "mysql not thread-safe");
-
-   mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
-   mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
-
-   if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
-      ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
-
-   bzero(sbuf, sizeof(sbuf));
-   sprintf (sbuf, "SHOW VARIABLES LIKE 'version'");
-
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-   if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            int matches = 0;
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
-
-           ArgusSQLVersion = strdup(sbuf);
-           if ((matches = sscanf(ArgusSQLVersion,"%d.%d.%d", &MySQLVersionMajor, &MySQLVersionMinor, &MySQLVersionSub)) > 0) {
-            }
-         }
-      }
-      mysql_free_result(mysqlRes);
-   }
-
-   bzero(sbuf, sizeof(sbuf));
-   sprintf (sbuf, "SHOW VARIABLES LIKE 'bulk_insert_buffer_size'");
-
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-   if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
-
-           ArgusSQLBulkBufferSize = (int)strtol(sbuf, (char **)NULL, 10);
-         }
-      }
-      mysql_free_result(mysqlRes);
-   }
-
-   bzero(sbuf, sizeof(sbuf));
-   sprintf (sbuf, "SHOW VARIABLES LIKE 'max_allowed_packet'");
-
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-   if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
-            
-           ArgusSQLMaxPacketSize = (int)strtol(sbuf, (char **)NULL, 10);
-         }
-      }
-      mysql_free_result(mysqlRes);
-   }
-
-   ArgusSQLBulkInsertSize = (ArgusSQLMaxPacketSize < ArgusSQLBulkBufferSize) ? ArgusSQLMaxPacketSize : ArgusSQLBulkBufferSize;
-
-   if ((ArgusSQLBulkBuffer = calloc(1, ArgusSQLBulkInsertSize)) == NULL)
-      ArgusLog(LOG_WARNING, "ArgusMySQLInit: cannot alloc bulk buffer size %d\n", ArgusSQLBulkInsertSize);
-
-   bzero(sbuf, sizeof(sbuf));
-   sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaDatabase);
-
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)  
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-   sprintf (sbuf, "USE %s", RaDatabase);
-
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-   if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
-      char sbuf[MAXSTRLEN];
-
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         int x, thisIndex = 0;
-
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            bzero(sbuf, sizeof(sbuf));
-            for (x = 0; x < retn; x++)
-               sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
-
-            RaTableExistsNames[thisIndex++] = strdup (sbuf);
-         }
-
-      } else {
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "mysql_num_fields() returned zero.\n");
-#endif
-      }
-      mysql_free_result(mysqlRes);
-   }
-
-   if (ArgusParser->writeDbstr != NULL) {
-      char *ptr;
-      sprintf (ArgusParser->RaDBString, "-w %s", ArgusParser->writeDbstr);
-      if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL)
-         *ptr = '\0';
-
-   } else 
-   if (ArgusParser->readDbstr != NULL) {
-      char *ptr;
-      sprintf (ArgusParser->RaDBString, "-r %s", ArgusParser->readDbstr);
-      if ((ptr = strrchr(ArgusParser->readDbstr, '/')) != NULL)
-         *ptr = '\0';
-   } else  {
-      sprintf (ArgusParser->RaDBString, "db %s", RaDatabase);
-
-      if (RaHost)
-         sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], "@%s", RaHost);
-
-      sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], " user %s", RaUser);
-   }
-
-   if (ArgusParser->MySQLDBEngine == NULL)
-      ArgusParser->MySQLDBEngine = strdup("MyISAM");
-
-      RaCheckedTables = 1;
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaMySQLInit ()");
-#endif
-}
-*/
 
 void
 RaMySQLInit ()
@@ -1026,7 +792,7 @@ RaMySQLInit ()
                      sprintf (sbuf, "%s", RaCreateTableNames[i]);
                      if (!(strcmp(RaExistsTableNames[x], sbuf))) {
 #ifdef ARGUSDEBUG
-                        ArgusDebug (4, "ArgusClientInit: table %s matches %s.\n", RaExistsTableNames[x], sbuf);
+                        ArgusDebug (4, "RaMySQLInit: table %s matches %s.\n", RaExistsTableNames[x], sbuf);
 #endif
                         RaTableFlags |= (0x01 << i);
                         break;
@@ -1171,8 +937,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog (LOG_ERR, "RaTimeInit: ArgusCalloc error %s\n", strerror(errno));
 
       ArgusProbes->rtable->size =  RaHashSize;
-      if ((ArgusProbes->rtable->array = (struct RaTimeHashTableHeader **)
-                  ArgusCalloc (RaHashSize, sizeof (struct RaTimeHashTableHeader))) == NULL)
+      if ((ArgusProbes->rtable->array = (struct RaTimeHashTableHeader **) ArgusCalloc (RaHashSize, sizeof (struct RaTimeHashTableHeader))) == NULL)
          ArgusLog (LOG_ERR, "RaTimeInit: ArgusCalloc error %s\n", strerror(errno));
 
       if ((ArgusProbes->queue = ArgusNewQueue()) == NULL)

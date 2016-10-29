@@ -24,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#10 $
- * $DateTime: 2016/09/27 10:38:27 $
- * $Change: 3201 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#12 $
+ * $DateTime: 2016/10/28 15:32:39 $
+ * $Change: 3234 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -246,11 +246,11 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 {
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
-         RaProcessManRecord (parser, argus);
+         RaProcessThisRecord (parser, argus);
          break;
 
       case ARGUS_EVENT:
-         RaProcessEventRecord (parser, argus);
+         RaProcessThisRecord (parser, argus);
          break;
 
       case ARGUS_NETFLOW:
@@ -391,8 +391,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 }
 
 
-void RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns) {};
-void RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns) {};
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) {return 0;}
 
 void ArgusWindowClose(void);
@@ -777,18 +775,15 @@ RaSQLQueryTable (char **tables)
 
                      ArgusParser->ArgusAutoId = autoid;
                      bcopy (row[x], sbuf, (int) lengths[x]);
-
-                     if (((struct ArgusRecord *)sbuf)->hdr.type & ARGUS_MAR) {
-                        bcopy ((char *) &sbuf, (char *)&ArgusInput->ArgusInitCon, sizeof (struct ArgusRecord));
-                     } else {
-                        ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, &ArgusParser->ArgusFilterCode);
-                     }
+                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, &ArgusParser->ArgusFilterCode);
                   }
                }
 
                mysql_free_result(mysqlRes);
             }
-         }
+
+         } else
+            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
       }
    }
 }

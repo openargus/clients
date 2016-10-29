@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_main.h#8 $
- * $DateTime: 2016/02/16 16:19:04 $
- * $Change: 3094 $
+ * $Id: //depot/gargoyle/clients/include/argus_main.h#9 $
+ * $DateTime: 2016/10/24 12:28:54 $
+ * $Change: 3227 $
  */
 
 #ifndef ArgusMain_h
@@ -210,6 +210,7 @@ int ArgusAddMaskList (struct ArgusParserStruct *, char *);
 void ArgusDeleteMaskList (struct ArgusParserStruct *);
 
 extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
+extern int ArgusParseAliasFile (char *);
 
 int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *, struct ArgusWfileStruct *, struct ArgusRecord *);
 
@@ -307,6 +308,7 @@ extern void ArgusReadRemote (int, struct nff_program *);
 extern int read_file (int fd, struct nff_program *);
 
 extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
+extern int ArgusParseAliasFile (char *);
 
 extern int ArgusGetServerSocket (struct ArgusInput *, int);
 extern int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);

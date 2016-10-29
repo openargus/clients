@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#32 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#34 $
+ * $DateTime: 2016/10/25 17:16:23 $
+ * $Change: 3229 $
  */
 
 
@@ -492,7 +492,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (parser->ArgusFlowModelFile)
             parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
          else {
-            parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
+
+            if (parser->ArgusMaskList != NULL)
+               parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
+            else
+               parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
          }
 
          if (parser->ArgusAggregator != NULL) {

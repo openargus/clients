@@ -1140,9 +1140,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_MAR:
-         RaProcessManRecord(parser, ns);
-         break;
-
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
@@ -1587,12 +1584,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
          ArgusAlignInit(parser, cns, &RaBinProcess->nadp);
 
-         while ((tns = ArgusAlignRecord(parser, cns, &RaBinProcess->nadp)) != NULL) {
+         while (!(cns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, cns, &RaBinProcess->nadp)) != NULL)) {
             int offset = 0;
 
             if (pns) {
                if (pns->bins) {
-//             offset = (parser->Bflag * 1000000LL) / pns->bins->size;
+//                offset = (parser->Bflag * 1000000LL) / pns->bins->size;
                   pns->bins->nadp.RaStartTmStruct = RaBinProcess->nadp.RaStartTmStruct;
                   pns->bins->nadp.RaEndTmStruct   = RaBinProcess->nadp.RaEndTmStruct;
 
