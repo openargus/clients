@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/ra.c#15 $
- * $DateTime: 2016/10/13 07:13:10 $
- * $Change: 3222 $
+ * $Id: //depot/gargoyle/clients/clients/ra.c#18 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 /*
@@ -65,7 +65,7 @@ extern int ArgusTotalFarRecords;
 
 extern struct ArgusParserStruct *ArgusParser;
 
-int RaPrintCounter = 1;
+int RaPrintCounter = 0;
 
 
 void
@@ -160,6 +160,8 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
 
          if (ArgusParser->Aflag) {
            long long totalrecords =  ArgusParser->ArgusTotalMarRecords + ArgusParser->ArgusTotalFarRecords + ArgusParser->ArgusTotalEventRecords;
@@ -341,7 +343,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 {
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
-         RaProcessManRecord (parser, argus);
+         if (parser->ArgusTotalRecords != 1)
+            RaProcessManRecord (parser, argus);
          break;
 
       case ARGUS_EVENT:
@@ -599,6 +602,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          bzero (buf, sizeof(buf));
          if (argus->dsrs[0] != NULL) {
             ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
+
             if (fprintf (stdout, "%s\n", buf) < 0)
                RaParseComplete (SIGQUIT);
          }

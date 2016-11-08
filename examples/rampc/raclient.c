@@ -24,9 +24,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#14 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#17 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 #define ARGUS_HISTORY
@@ -794,6 +794,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          ArgusGetInterfaceAddresses(parser);
          parser->ArgusReliableConnection = 1;
+         parser->ArgusPrintJson = 0;
       }
    }
 }
@@ -2171,7 +2172,7 @@ RaCursesSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
    if (cnt > 0) {
       fcode = sorter->filter.bf_insns;
-      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
          struct ArgusQueueHeader *qhdr = queue->start;
          int i = 0;
 
@@ -2192,8 +2193,8 @@ RaCursesSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
          for (i = 0; i < x; i++) {
             struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) queue->array[i];
-            if (ns->rank != (i + 1)) {
-               ns->rank = i + 1;
+            if (ns->rank != i) {
+               ns->rank = i;
                ns->status |= ARGUS_RECORD_MODIFIED;
             }
          }
@@ -2361,8 +2362,8 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
          for (i = 0; i < x; i++) {
             struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) queue->array[i];
-            if (ns->rank != (i + 1)) {
-               ns->rank = i + 1;
+            if (ns->rank != i) {
+               ns->rank = i;
                ns->status |= ARGUS_RECORD_MODIFIED;
             }
          }

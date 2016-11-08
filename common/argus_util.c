@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#85 $
- * $DateTime: 2016/10/27 23:31:56 $
- * $Change: 3233 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#91 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -3877,103 +3877,173 @@ ArgusZeroRecordWithFlag (struct ArgusRecordStruct *argus, int flag)
 
    argus->status &= ~ARGUS_RECORD_WRITTEN;
 
-   for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-      switch (i) {
-         case ARGUS_FLOW_INDEX:
-         case ARGUS_MAC_INDEX: 
-         case ARGUS_TRANSPORT_INDEX:
-         case ARGUS_ENCAPS_INDEX:
-         case ARGUS_LABEL_INDEX:
-         case ARGUS_VLAN_INDEX:
-         case ARGUS_MPLS_INDEX:
-         case ARGUS_IPATTR_INDEX:
-         case ARGUS_COCODE_INDEX:
-         case ARGUS_ASN_INDEX:
-            break;
 
-         case ARGUS_NETWORK_INDEX: {
-            struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
-            if (net != NULL) {
-               switch (net->hdr.subtype) {
-                  case ARGUS_TCP_INIT:
-                  case ARGUS_TCP_STATUS:
-                  case ARGUS_TCP_PERF: {
-                     struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                     bzero ((char *)tcp, sizeof(*tcp));
-                     break;
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_INDEX:
+      case ARGUS_DATASUP:
+      case ARGUS_ARCHIVAL:
+      case ARGUS_EVENT:
+      default:
+         break;
+
+      case ARGUS_MAR: {
+         struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
+         struct ArgusMarStruct *mar = &rec->argus_mar;
+         bzero(&mar->startime, sizeof(mar->startime));
+         bzero(&mar->now, sizeof(mar->now));
+         mar->pktsRcvd = 0;
+         mar->bytesRcvd = 0;
+         mar->drift = 0;
+         mar->records = 0;
+         mar->flows = 0;
+         mar->dropped = 0;
+         mar->queue = 0;
+         mar->output = 0;
+         mar->clients = 0;
+         mar->bufs = 0;
+         mar->bytes = 0;
+/*
+
+struct ArgusMarStruct {
+   unsigned int status, argusid;
+   unsigned int localnet, netmask;
+   unsigned int nextMrSequenceNum; 
+   struct ArgusTime startime, now;
+
+   unsigned char  major_version, minor_version; 
+   unsigned char interfaceType, interfaceStatus;
+
+   unsigned short reportInterval, argusMrInterval;
+   unsigned long long pktsRcvd, bytesRcvd;
+   long long drift;
+
+   unsigned int records, flows, dropped;
+   unsigned int queue, output, clients;
+   unsigned int bufs, bytes;
+   unsigned short suserlen, duserlen;
+
+   union {
+      unsigned int value;
+      unsigned int ipv4;
+      unsigned char ethersrc[6];
+      unsigned char str[4];
+      unsigned char uuid[16];
+      unsigned int ipv6[4];
+
+      struct {
+         unsigned int pad[3];
+         unsigned int thisid;
+      };
+   };
+
+   unsigned int record_len;
+};
+*/
+
+         break;
+      }
+
+      case ARGUS_FAR:
+      case ARGUS_NETFLOW: {
+         for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
+            switch (i) {
+               case ARGUS_FLOW_INDEX:
+               case ARGUS_MAC_INDEX: 
+               case ARGUS_TRANSPORT_INDEX:
+               case ARGUS_ENCAPS_INDEX:
+               case ARGUS_LABEL_INDEX:
+               case ARGUS_VLAN_INDEX:
+               case ARGUS_MPLS_INDEX:
+               case ARGUS_IPATTR_INDEX:
+               case ARGUS_COCODE_INDEX:
+               case ARGUS_ASN_INDEX:
+                  break;
+
+               case ARGUS_NETWORK_INDEX: {
+                  struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
+                  if (net != NULL) {
+                     switch (net->hdr.subtype) {
+                        case ARGUS_TCP_INIT:
+                        case ARGUS_TCP_STATUS:
+                        case ARGUS_TCP_PERF: {
+                           struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                           bzero ((char *)tcp, sizeof(*tcp));
+                           break;
+                        }
+                        case ARGUS_RTP_FLOW: {
+                           break;
+                        }
+                        case ARGUS_ESP_DSR: {
+                           break;
+                        }
+                     }
                   }
-                  case ARGUS_RTP_FLOW: {
-                     break;
+                  break;
+               }
+
+               case ARGUS_TIME_INDEX: {
+                  struct ArgusTimeObject *dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX];
+                  if (dtime != NULL) {
+                     dtime->hdr.subtype &= ~( ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END |
+                                              ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+                     bzero ((char *)&dtime->src, sizeof(*dtime) - sizeof(dtime->hdr));
+                     dtime->hdr.argus_dsrvl8.qual = 0;
                   }
-                  case ARGUS_ESP_DSR: {
+                  break;
+               }
+
+               case ARGUS_METRIC_INDEX: {
+                  struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
+                  if (metric != NULL) 
+                     bzero ((char *)metric, sizeof(*metric));
+                  break;
+               }
+
+               case ARGUS_PSIZE_INDEX: {
+                  struct ArgusPacketSizeStruct *psize = (void *)argus->dsrs[ARGUS_PSIZE_INDEX];
+                  if (psize != NULL)
+                     bzero ((char *)psize, sizeof(*psize));
+                  break;
+               }
+
+               case ARGUS_JITTER_INDEX: {
+                  struct ArgusJitterStruct *jitter = (void *)argus->dsrs[ARGUS_JITTER_INDEX];
+                  if (jitter != NULL)
+                     bzero ((char *)jitter, sizeof(*jitter));
+                  break;
+               }
+
+               case ARGUS_AGR_INDEX: {
+                  struct ArgusAgrStruct *agr = (void *)argus->dsrs[ARGUS_AGR_INDEX];
+// need to preserve the header for subsequent operations.
+                  if (agr != NULL) {
+                     u_char *cptr = (u_char *)agr + 4;
+                     bzero (cptr, sizeof(*agr) - 4);
+                  }
+                  break;
+               }
+               case ARGUS_SRCUSERDATA_INDEX:
+               case ARGUS_DSTUSERDATA_INDEX: {
+                  if (flag != 0) {     /* if have flag, preserve user data */
+                                       /* but mark as not used, so won't write out*/
+                     argus->dsrindex &= ~(0x01 << i); 
                      break;
                   }
                }
+
+               case ARGUS_ICMP_INDEX: {
+                  struct ArgusIcmpStruct *icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
+                  if (icmp != NULL)
+                     bzero ((char *)icmp, sizeof(*icmp));
+                  break;
+               }
+               case ARGUS_COR_INDEX: {
+                  struct ArgusCorStruct *cor = (void *)argus->dsrs[ARGUS_COR_INDEX];
+                  if (cor != NULL)
+                     bzero ((char *)cor, sizeof(*cor));
+                  break;
+               }
             }
-            break;
-         }
-
-         case ARGUS_TIME_INDEX: {
-            struct ArgusTimeObject *dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX];
-            if (dtime != NULL) {
-               dtime->hdr.subtype &= ~( ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END |
-                                        ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
-               bzero ((char *)&dtime->src, sizeof(*dtime) - sizeof(dtime->hdr));
-               dtime->hdr.argus_dsrvl8.qual = 0;
-            }
-            break;
-         }
-
-         case ARGUS_METRIC_INDEX: {
-            struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
-            if (metric != NULL) 
-               bzero ((char *)metric, sizeof(*metric));
-            break;
-         }
-
-         case ARGUS_PSIZE_INDEX: {
-            struct ArgusPacketSizeStruct *psize = (void *)argus->dsrs[ARGUS_PSIZE_INDEX];
-            if (psize != NULL)
-               bzero ((char *)psize, sizeof(*psize));
-            break;
-         }
-
-         case ARGUS_JITTER_INDEX: {
-            struct ArgusJitterStruct *jitter = (void *)argus->dsrs[ARGUS_JITTER_INDEX];
-            if (jitter != NULL)
-               bzero ((char *)jitter, sizeof(*jitter));
-            break;
-         }
-
-         case ARGUS_AGR_INDEX: {
-            struct ArgusAgrStruct *agr = (void *)argus->dsrs[ARGUS_AGR_INDEX];
-// need to preserve the header for subsequent operations.
-            if (agr != NULL) {
-               u_char *cptr = (u_char *)agr + 4;
-               bzero (cptr, sizeof(*agr) - 4);
-            }
-            break;
-         }
-         case ARGUS_SRCUSERDATA_INDEX:
-         case ARGUS_DSTUSERDATA_INDEX: {
-            if (flag != 0) {     /* if have flag, preserve user data */
-                                 /* but mark as not used, so won't write out*/
-               argus->dsrindex &= ~(0x01 << i); 
-               break;
-            }
-         }
-
-         case ARGUS_ICMP_INDEX: {
-            struct ArgusIcmpStruct *icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
-            if (icmp != NULL)
-               bzero ((char *)icmp, sizeof(*icmp));
-            break;
-         }
-         case ARGUS_COR_INDEX: {
-            struct ArgusCorStruct *cor = (void *)argus->dsrs[ARGUS_COR_INDEX];
-            if (cor != NULL)
-               bzero ((char *)cor, sizeof(*cor));
-            break;
          }
       }
    }
@@ -7993,8 +8063,12 @@ ArgusPrintInf (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
 
          if (rec != NULL) {
-            if (rec->argus_mar.status & ARGUS_ID_INC_INF)
-               value = strdup("man0");
+            if (rec->argus_mar.status & ARGUS_ID_INC_INF) {
+               if (rec->hdr.cause & ARGUS_SRC_RADIUM)
+                  value = strdup("rad0");
+               else
+                  value = strdup("man0");
+            }
          }
          break;
       }
@@ -8076,6 +8150,7 @@ ArgusPrintStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
+         sprintf(status, "up");
          break;
       }
    }
@@ -8109,9 +8184,7 @@ ArgusPrintRank (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
    char rank[32];
 
    bzero (rank, sizeof(rank));
-   if (argus->rank > 0) {
-      sprintf (rank, "%d", argus->rank);
-   }
+   sprintf (rank, "%d", argus->rank + 1);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " Rank = \"%s\"", rank);
@@ -24456,7 +24529,13 @@ int ArgusAllocBytes = 0;
 int ArgusAllocTotal = 0;
 int ArgusFreeTotal  = 0;
 
-struct ArgusMemoryList memory = {NULL, 0};
+struct ArgusMemoryList memory = {
+	.start = NULL,
+	.end = NULL,
+#if defined(ARGUS_THREADS)
+	.lock = PTHREAD_MUTEX_INITIALIZER,
+#endif
+};
 
 #define ARGUS_ALLOC	0x45672381
 /*
@@ -24470,11 +24549,10 @@ ArgusMalloc (int bytes)
    int offset;
  
    if (bytes) {
-      if (ArgusAllocTotal++ == 0) {
 #if defined(ARGUS_THREADS)
-         pthread_mutex_init(&memory.lock, NULL);
+      pthread_mutex_lock(&memory.lock);
 #endif
-      }
+      ArgusAllocTotal++;
       ArgusAllocBytes += bytes;
       if (ArgusAllocMax < ArgusAllocBytes)
          ArgusAllocMax = ArgusAllocBytes;
@@ -24498,9 +24576,6 @@ ArgusMalloc (int bytes)
          mem->frame[1] = __builtin_return_address(1);
          mem->frame[2] = __builtin_return_address(2);
 #endif
-#if defined(ARGUS_THREADS)
-         pthread_mutex_lock(&memory.lock);
-#endif
          if (memory.start) {
             mem->nxt = memory.start;
             mem->prv = memory.end;
@@ -24515,9 +24590,6 @@ ArgusMalloc (int bytes)
          }
          memory.count++;
          memory.total++;
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&memory.lock);
-#endif
          retn = (void *)(mem + 1);
       }
 #endif
@@ -24530,6 +24602,9 @@ ArgusMalloc (int bytes)
          retn = (void *)((char *)retn + toff);
          ((unsigned short *)retn)[-1] = toff;
       }
+#endif
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&memory.lock);
 #endif
    }
 #ifdef ARGUSDEBUG
@@ -24545,11 +24620,10 @@ ArgusCalloc (int nitems, int bytes)
    void *retn = NULL;
 
    if (total) {
-      if (ArgusAllocTotal++ == 0) {
 #if defined(ARGUS_THREADS)
-         pthread_mutex_init(&memory.lock, NULL);
+      pthread_mutex_lock(&memory.lock);
 #endif
-      }
+      ArgusAllocTotal++;
       ArgusAllocBytes += total;
       if (ArgusAllocMax < ArgusAllocBytes)
          ArgusAllocMax = ArgusAllocBytes;
@@ -24576,9 +24650,6 @@ ArgusCalloc (int nitems, int bytes)
          mem->frame[2] = __builtin_return_address(2);
 #endif
 
-#if defined(ARGUS_THREADS)
-         pthread_mutex_lock(&memory.lock);
-#endif
          if (memory.start) {
             mem->nxt = memory.start;
             mem->prv = memory.start->prv;
@@ -24593,9 +24664,6 @@ ArgusCalloc (int nitems, int bytes)
          }
          memory.total++;
          memory.count++;
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&memory.lock);
-#endif
          retn = (void *)(mem + 1);
       }
 #endif
@@ -24608,6 +24676,9 @@ ArgusCalloc (int nitems, int bytes)
          retn = (void *)((char *)retn + toff);
          ((unsigned short *)retn)[-1] = toff;
       }
+#endif
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&memory.lock);
 #endif
    }
 
@@ -24624,6 +24695,9 @@ ArgusFree (void *buf)
    void *ptr = buf;
 
    if (ptr) {
+#if defined(ARGUS_THREADS)
+      pthread_mutex_lock(&memory.lock);
+#endif
       ArgusFreeTotal++;
 #if defined(ARGUSMEMDEBUG)
       {
@@ -24636,9 +24710,6 @@ ArgusFree (void *buf)
          if (mem->tag != ARGUS_ALLOC)
             ArgusLog (LOG_ERR, "ArgusFree: buffer error 0x%x", ptr);
 
-#if defined(ARGUS_THREADS)
-         pthread_mutex_lock(&memory.lock);
-#endif
          if (memory.count == 1) {
             memory.start = NULL;
             memory.end = NULL;
@@ -24653,9 +24724,6 @@ ArgusFree (void *buf)
          }
          ArgusAllocBytes -= mem->len;
          memory.count--;
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&memory.lock);
-#endif
          ptr = mem;
       }
 #else
@@ -24666,6 +24734,9 @@ ArgusFree (void *buf)
             ptr = (void *)((char *)ptr - offset);
       }
 #endif
+#endif
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&memory.lock);
 #endif
       free (ptr);
    }

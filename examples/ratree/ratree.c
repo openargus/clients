@@ -21,9 +21,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ratree/ratree.c#12 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/ratree/ratree.c#13 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -142,6 +142,9 @@ RaParseComplete (int sig)
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
          struct RaAddressStruct **ArgusAddrTree;
+
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
 
          if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
             struct ArgusWfileStruct *wfile = NULL, *start = NULL;
@@ -430,7 +433,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    }
 
    if ((parser->ArgusWfileList == NULL) && !parser->qflag)
-      fprintf (stdout, "\n");
+      if (!(parser->ArgusPrintJson))
+         fprintf (stdout, "\n");
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "RaProcessRecord (0x%x) returning\n", argus);

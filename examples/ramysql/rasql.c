@@ -24,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#12 $
- * $DateTime: 2016/10/28 15:32:39 $
- * $Change: 3234 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#14 $
+ * $DateTime: 2016/11/03 09:47:16 $
+ * $Change: 3238 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -212,6 +212,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (!(ArgusParser->ArgusPrintJson))
+            fprintf (stdout, "\n");
+
          ArgusShutDown(sig);
          if ((sig >= 0) && ArgusParser->aflag) {
             printf (" Totalrecords %-8lld  TotalManRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
@@ -384,7 +387,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             }
          }
 
-         fprintf (stdout, "\n");
+         if (!(parser->ArgusPrintJson))
+            fprintf (stdout, "\n");
          fflush (stdout);
       }
    }
@@ -635,6 +639,9 @@ RaMySQLInit ()
 #endif
       }
       mysql_free_result(mysqlRes);
+   }
+
+   if (RaTable != NULL) {
    }
 
    if (ArgusParser->writeDbstr != NULL) {
@@ -1669,10 +1676,10 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
             }
 
             retn[retnIndex++] = strdup(fileStr);
-         }
 
-         if (ArgusSQLSecondsTable)
-            retn[retnIndex++] = strdup("Seconds");
+         } else
+            if (ArgusSQLSecondsTable)
+               retn[retnIndex++] = strdup("Seconds");
       }
 
    return (retn);

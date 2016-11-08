@@ -492,6 +492,9 @@ RaParseComplete (int sig)
             RaBinProcess = NULL;
          }
 
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
          if (ArgusSorter != NULL)
             ArgusDeleteSorter(ArgusSorter);
 
@@ -621,7 +624,7 @@ ArgusClientTimeout ()
 
                      for (i = 0; i < cnt; i++) {
                         if (agg->queue->array[i] != NULL)
-                           ((struct ArgusRecordStruct *)agg->queue->array[i])->rank = i + 1;
+                           ((struct ArgusRecordStruct *)agg->queue->array[i])->rank = i;
                         RaSendArgusRecord ((struct ArgusRecordStruct *) agg->queue->array[i]);
                      }
                      ArgusDeleteRecordStruct(ArgusParser, ArgusParser->ns);
@@ -1080,8 +1083,14 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                *(int *)&buf = 0;
                ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-               if (fprintf (stdout, "%s\n", buf) < 0)
-                  RaParseComplete (SIGQUIT);
+
+               if (ArgusParser->ArgusPrintJson) {
+                  if (fprintf (stdout, "%s", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               } else {
+                  if (fprintf (stdout, "%s\n", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               }
                fflush(stdout);
                break;
             }
@@ -1286,11 +1295,11 @@ RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *
          }
 
          while (agg) {
-            int rank = 1;
+            int rank = 0;
             ArgusSortQueue(ArgusSorter, agg->queue, ARGUS_LOCK);
             while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(agg->queue, ARGUS_NOLOCK)) != NULL) {
                ns->rank = rank++;
-               if ((parser->eNoflag == 0 ) || ((parser->eNoflag >= ns->rank) && (parser->sNoflag <= ns->rank)))
+               if ((parser->eNoflag == 0 ) || ((parser->eNoflag >= (ns->rank + 1)) && (parser->sNoflag <= (ns->rank + 1))))
                   RaSendArgusRecord (ns);
                ArgusDeleteRecordStruct(parser, ns);
             }

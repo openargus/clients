@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/clients/rasort.c#16 $
- * $DateTime: 2016/10/13 07:13:10 $
- * $Change: 3222 $
+ * $Id: //depot/gargoyle/clients/clients/rasort.c#18 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 /*
@@ -170,7 +170,10 @@ RaParseComplete (int sig)
 
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
-         int rank = 1;
+         int rank = 0;
+
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
 
          ArgusParser->RaParseCompleting += sig;
 
@@ -212,10 +215,10 @@ RaParseComplete (int sig)
                struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) ArgusSorter->ArgusRecordQueue->array[i];
                ns->rank = rank++;
 
-               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= ns->rank) && (ArgusParser->sNoflag <= ns->rank)))
+               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (ns->rank + 1)) && (ArgusParser->sNoflag <= (ns->rank + 1))))
                   RaSendArgusRecord (ns);
                else
-                  if (ArgusParser->eNoflag < ns->rank) 
+                  if (ArgusParser->eNoflag < (ns->rank + 1)) 
                      break;
             }
          }
@@ -429,8 +432,14 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
 
          *(int *)&buf = 0;
          ArgusPrintRecord(ArgusParser, buf, ns, MAXSTRLEN);
-         if (fprintf (stdout, "%s\n", buf) < 0)
-           RaParseComplete(SIGQUIT);
+
+         if (ArgusParser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
 
          if (ArgusParser->eflag == ARGUS_HEXDUMP) {
             int i;

@@ -19,9 +19,9 @@
 #  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
 # 
-#  $Id: //depot/gargoyle/clients/examples/ramysql/Makefile.in#8 $
-#  $DateTime: 2016/09/27 19:37:40 $
-#  $Change: 3202 $
+#  $Id: //depot/gargoyle/clients/examples/ramysql/Makefile.in#9 $
+#  $DateTime: 2016/11/03 09:47:16 $
+#  $Change: 3238 $
 #
 
 # Top level hierarchy
@@ -63,7 +63,7 @@ CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@

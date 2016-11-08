@@ -62,6 +62,8 @@
 #include <zlib.h>
 #endif
 
+void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+
 #if defined(ARGUS_MYSQL)
 #include <argus_mysql.h>
 
@@ -1019,7 +1021,8 @@ ArgusClientTimeout ()
    if (RaProcessDebugTimer.tv_sec != 0) {
       if (RaProcessDebugTimer.tv_sec == tvp->tv_sec) {
 #if defined(ARGUSDEBUG)
-         ArgusDebug (2, "ArgusClientTimeout RaCursesQueue %d ArgusTotalSearches %lld ArgusTotalSQLUpdates %lld written %lld bytes\n", queue->count, ArgusTotalSQLSearches, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
+         ArgusDebug (2, "%s: RaOutputProcess->queue %d ArgusTotalSearches %lld ArgusTotalSQLUpdates %lld written %lld bytes\n",
+                     __func__, queue->count, ArgusTotalSQLSearches, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
 #endif
          RaProcessDebugTimer.tv_sec++;
       } else
@@ -2427,7 +2430,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
    if (cnt > 0) {
       fcode = sorter->filter.bf_insns;
-      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
          struct ArgusQueueHeader *qhdr = queue->start;
          int i = 0;
 

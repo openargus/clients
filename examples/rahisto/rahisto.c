@@ -23,9 +23,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  * 
- * $Id: //depot/gargoyle/clients/examples/rahisto/rahisto.c#8 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rahisto/rahisto.c#9 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -134,6 +134,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if (parser->vflag)
          ArgusReverseSortDir++;
  
+      parser->ArgusPrintJson = 0;
       parser->RaInitialized++;
    }
 }

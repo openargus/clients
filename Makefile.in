@@ -40,7 +40,7 @@ DEFS = @DEFS@
 LIBS = @LIBS@
 WRAPLIBS = @WRAPLIBS@
 
-CFLAGS = -g
+CFLAGS = -g $(EXTRA_CFLAGS)
 LDFLAGS = -g
 
 prefix = @prefix@

@@ -17,9 +17,9 @@
  * THIS SOFTWARE.
  *
  *
- * $Id: //depot/gargoyle/clients/clients/ranonymize.c#9 $
- * $DateTime: 2016/10/13 07:13:10 $
- * $Change: 3222 $
+ * $Id: //depot/gargoyle/clients/clients/ranonymize.c#10 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -533,6 +533,10 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
+
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -773,8 +777,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                *(int *)&buf = 0;
                ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-               if (fprintf (stdout, "%s\n", buf) < 0)
-                  RaParseComplete(SIGQUIT);
+
+               if (parser->ArgusPrintJson) {
+                  if (fprintf (stdout, "%s", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               } else {
+                  if (fprintf (stdout, "%s\n", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               }
             }
          }
          break;

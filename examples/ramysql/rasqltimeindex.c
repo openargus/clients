@@ -23,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#9 $
- * $DateTime: 2016/10/27 23:31:56 $
- * $Change: 3233 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#10 $
+ * $DateTime: 2016/10/31 23:30:40 $
+ * $Change: 3237 $
  */
 
 #ifdef HAVE_CONFIG_H

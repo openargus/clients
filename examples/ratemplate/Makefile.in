@@ -18,9 +18,9 @@
 # 
 #  Various configurable termplates (remember to edit Makefile.in, not Makefile)
 #
-#  $Id: //depot/gargoyle/clients/examples/ratemplate/Makefile.in#6 $
-#  $DateTime: 2014/10/07 15:35:03 $
-#  $Change: 2940 $
+#  $Id: //depot/gargoyle/clients/examples/ratemplate/Makefile.in#7 $
+#  $DateTime: 2016/10/31 23:30:40 $
+#  $Change: 3237 $
 #  
 
 
@@ -59,7 +59,7 @@ DEFS = @DEFS@
 COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@

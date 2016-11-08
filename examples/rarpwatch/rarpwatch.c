@@ -24,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/rarpwatch/rarpwatch.c#13 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rarpwatch/rarpwatch.c#14 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -160,6 +160,9 @@ RaParseComplete (int sig)
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
 
          ArgusParser->RaParseCompleting += sig;
 
@@ -776,8 +779,14 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
             *(int *)&buf = 0;
             ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete(SIGQUIT);
+            if (ArgusParser->ArgusPrintJson) {
+               if (fprintf (stdout, "%s", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            } else {
+               if (fprintf (stdout, "%s\n", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            }
+
             fflush(stdout);
          }
       }

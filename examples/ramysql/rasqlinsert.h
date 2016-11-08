@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.h#8 $
- * $DateTime: 2016/02/22 10:32:26 $
- * $Change: 3097 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.h#9 $
+ * $DateTime: 2016/10/31 23:30:40 $
+ * $Change: 3237 $
  */
 
 
@@ -235,7 +235,6 @@ int (*RaColorAlgorithms[ARGUS_MAX_COLOR_ALG]) (struct ArgusParserStruct *, struc
 
 char RaOutputBuffer[MAXSTRLEN];
 struct RaOutputProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 void ArgusUpdateScreen(void);
 void ArgusTouchScreen(void);
 
@@ -281,7 +280,6 @@ struct ArgusListStruct *ArgusSQLSelectQueryList = NULL;
 struct ArgusListStruct *ArgusSQLUpdateQueryList = NULL;
 
 void RaResizeHandler (int);
-void * ArgusOutputProcess (void *);
 void * ArgusProcessData (void *);
 void * ArgusProcessCursesInput (void *);
 
@@ -475,7 +473,6 @@ int RaScreenStartY    = 0;
 
 extern char RaOutputBuffer[MAXSTRLEN];
 extern struct RaOutputProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-extern void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 extern void ArgusSetDebugString (char *, int, int);
 extern void ArgusUpdateScreen(void);
 extern void ArgusResetSearch (void);

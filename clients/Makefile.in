@@ -19,9 +19,9 @@
 #
 # Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
-#  $Id: //depot/gargoyle/clients/clients/Makefile.in#9 $
-#  $DateTime: 2014/10/07 14:26:13 $
-#  $Change: 2933 $
+#  $Id: //depot/gargoyle/clients/clients/Makefile.in#10 $
+#  $DateTime: 2016/10/31 23:30:40 $
+#  $Change: 3237 $
 #  
 
 
@@ -60,7 +60,7 @@ DEFS = @DEFS@
 COMPATLIB = @V_PCRE@ @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL = @INSTALL@
 RANLIB = @V_RANLIB@

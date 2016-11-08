@@ -61,7 +61,7 @@ DEFS = -DHAVE_CONFIG_H
 COMPATLIB = -lm    -lGeoIP  -lz
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL    = /usr/bin/install -c
 INSTALLBIN = ../../bin

@@ -24,9 +24,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#11 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#12 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -142,6 +142,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
          if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
             struct ArgusWfileStruct *wfile = NULL, *start = NULL;
     
@@ -334,12 +337,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                   *(int *)&buf = 0;
                   ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-                  if (fprintf (stdout, "%s ", buf) < 0)
+                  if (fprintf (stdout, "%s", buf) < 0)
                      RaParseComplete(SIGQUIT);
                }
                if (parser->ArgusWfileList == NULL)
-                  if (fprintf (stdout, "\n") < 0)
-                     RaParseComplete(SIGQUIT);
+                  if (!(parser->ArgusPrintJson)) 
+                     if (fprintf (stdout, "\n") < 0)
+                        RaParseComplete(SIGQUIT);
             }
          }
 

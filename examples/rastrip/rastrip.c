@@ -24,9 +24,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rastrip/rastrip.c#7 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rastrip/rastrip.c#8 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -196,6 +196,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -358,8 +361,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          *(int *)&buf = 0;
          ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-         if (fprintf (stdout, "%s\n", buf) < 0)
-            RaParseComplete(SIGQUIT);
+
+         if (parser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
       }
    }
 }

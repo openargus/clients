@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/rap/rap.c#11 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rap/rap.c#13 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -227,6 +227,10 @@ RaParseComplete (int sig)
          struct ArgusAggregatorStruct *agg;
          int i;
 
+
+         if (!(ArgusParser->ArgusPrintJson))
+            fprintf (stdout, "\n");
+
          for (i = 0; i < RA_MAXSESSIONS; i++) {
             if ((agg = sessions[i]) != NULL) {
                ArgusParser->RaParseCompleting += sig;
@@ -262,7 +266,7 @@ RaParseComplete (int sig)
                while (agg != NULL) {
                   if (agg->queue->count) {
                      struct ArgusRecordStruct *argus;
-                     int rank = 1;
+                     int rank = 0;
 
                      if (!(ArgusSorter))
                         if ((ArgusSorter = ArgusNewSorter(ArgusParser)) == NULL)
@@ -299,7 +303,7 @@ RaParseComplete (int sig)
                         argus = (struct ArgusRecordStruct *) agg->queue->array[i];
                         argus->rank = rank++;
 
-                        if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank)))
+                        if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (argus->rank + 1)) && (ArgusParser->sNoflag <= (argus->rank + 1))))
                            RaSendArgusRecord (argus);
 
                         agg->queue->array[i] = NULL;
@@ -1005,7 +1009,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
             *(int *)&buf = 0;
             ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
+
+            if (fprintf (stdout, "%s", buf) < 0)
                RaParseComplete(SIGQUIT);
 
             if (ArgusParser->eflag == ARGUS_HEXDUMP) {
@@ -1047,6 +1052,9 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                      break;
                }
             }
+
+            if (!(ArgusParser->ArgusPrintJson)) 
+               fprintf (stdout, "\n");
             fflush(stdout);
          }
       }

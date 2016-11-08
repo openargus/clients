@@ -22,9 +22,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/radns/rasql.c#7 $
- * $DateTime: 2016/06/08 00:59:34 $
- * $Change: 3166 $
+ * $Id: //depot/gargoyle/clients/examples/radns/rasql.c#9 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 
@@ -2046,7 +2046,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
    if (cnt > 0) {
       fcode = sorter->filter.bf_insns;
-      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
          struct ArgusQueueHeader *qhdr = queue->start;
          int i = 0;
 
@@ -2069,8 +2069,8 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
             for (i = 0; i < x; i++) {
                struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) queue->array[i];
-               if (ns->rank != (i + 1)) {
-                  ns->rank = i + 1;
+               if (ns->rank != i) {
+                  ns->rank = i;
                   ns->status |= ARGUS_RECORD_MODIFIED;
                }
             }

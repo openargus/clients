@@ -19,9 +19,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/raqsort/raqsort.c#4 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/raqsort/raqsort.c#6 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 /*
@@ -89,8 +89,7 @@ double *RaLastInputValue = NULL;
 int RaRunNumber = 0;
 int ArgusSecondPass = 0;
 
-int RaPrintCounter = 1;
-
+int RaPrintCounter = 0;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -318,6 +317,9 @@ RaParseComplete (int sig)
       if (!(ArgusParser->RaParseCompleting++)) {
          ArgusParser->RaParseCompleting += sig;
 
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
          if (ArgusSorter->ArgusReplaceMode && file) {
             if (!(ArgusParser->ArgusRandomSeed))
                srandom(ArgusParser->ArgusRandomSeed);
@@ -332,33 +334,33 @@ RaParseComplete (int sig)
          }
 
          if (ArgusSorter->ArgusRecordQueue->count > 0) {
-         ArgusQsortQueue(ArgusSorter, ArgusSorter->ArgusRecordQueue);
-         ArgusSecondPass = 1;
+            ArgusQsortQueue(ArgusSorter, ArgusSorter->ArgusRecordQueue);
+            ArgusSecondPass = 1;
 
-         if (file != NULL) {
-            if (file->file == NULL) {        
-               struct ArgusQsortStruct *qs;
+            if (file != NULL) {
+               if (file->file == NULL) {        
+                  struct ArgusQsortStruct *qs;
 
-               ArgusParseInit(ArgusParser, file);
+                  ArgusParseInit(ArgusParser, file);
 
-               if ((file->file = fopen (file->filename, "r")) == NULL)
-                  ArgusLog (LOG_ERR, "ArgusQsortQueue: fopen %s\n", strerror(errno));
+                  if ((file->file = fopen (file->filename, "r")) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusQsortQueue: fopen %s\n", strerror(errno));
 
-               while ((qs = (struct ArgusQsortStruct *)ArgusPopQueue(ArgusSorter->ArgusRecordQueue, ARGUS_NOLOCK)) != NULL) {
-                  file->offset = qs->offset;
-                  file->ostart = qs->offset;
-                  file->ostop  = qs->offset + qs->len;
-                  if (fseek(file->file, file->offset, SEEK_SET) >= 0) {
-                     int done = 0;
-   	             while (!done) {
-   	               done = ArgusReadStreamSocket (ArgusParser, file);
+                  while ((qs = (struct ArgusQsortStruct *)ArgusPopQueue(ArgusSorter->ArgusRecordQueue, ARGUS_NOLOCK)) != NULL) {
+                     file->offset = qs->offset;
+                     file->ostart = qs->offset;
+                     file->ostop  = qs->offset + qs->len;
+                     if (fseek(file->file, file->offset, SEEK_SET) >= 0) {
+                        int done = 0;
+      	             while (!done) {
+      	               done = ArgusReadStreamSocket (ArgusParser, file);
+                        }
                      }
+                     file->ArgusReadSocketCnt = 0;
+                     file->ArgusReadSocketSize = 0;
                   }
-                  file->ArgusReadSocketCnt = 0;
-                  file->ArgusReadSocketSize = 0;
                }
             }
-         }
          }
       }
 
@@ -583,7 +585,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                bzero (buf, sizeof(buf));
                ns->rank = RaPrintCounter++;
 
-               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= ns->rank) && (ArgusParser->sNoflag <= ns->rank))) {
+               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (ns->rank + 1)) && (ArgusParser->sNoflag <= (ns->rank + 1)))) {
                   ArgusPrintRecord(parser, buf, ns, MAXSTRLEN);
       
                   if ((retn = fprintf (stdout, "%s", buf)) < 0)
@@ -629,11 +631,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                      }
                   }
          
-                  fprintf (stdout, "\n");
+
+                  if (!(ArgusParser->ArgusPrintJson))
+                     fprintf (stdout, "\n");
                   fflush (stdout);
 
                } else {
-                  if ((ArgusParser->eNoflag != 0 ) && (ArgusParser->eNoflag < ns->rank))
+                  if ((ArgusParser->eNoflag != 0 ) && (ArgusParser->eNoflag < (ns->rank + 1)))
                      RaParseComplete (SIGQUIT);
                }
             }

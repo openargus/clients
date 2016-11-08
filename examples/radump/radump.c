@@ -18,9 +18,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/radump/radump.c#7 $
- * $DateTime: 2016/06/08 00:19:40 $
- * $Change: 3165 $
+ * $Id: //depot/gargoyle/clients/examples/radump/radump.c#8 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -276,7 +276,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          }
       }
 
-      fprintf (stdout, "\n");
+
+      if (!(parser->ArgusPrintJson))
+         fprintf (stdout, "\n");
       fflush(stdout);
    }
 }

@@ -36,9 +36,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/rapath/rapath.c#13 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rapath/rapath.c#14 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -278,6 +278,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
       parser->RaInitialized++;
+      parser->ArgusPrintJson = 0;
    }
 }
 

@@ -16,9 +16,9 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  * 
- * $Id: //depot/gargoyle/clients/examples/ragrep/ragrep.c#6 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/ragrep/ragrep.c#7 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -200,6 +200,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -409,7 +412,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       
                bzero (buf, sizeof(buf));
                ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-      
 
                if (argus->input->filename != NULL)
                   if (((ArgusTotalFiles > 1) || parser->Hflag) && !(parser->hflag))
@@ -461,7 +463,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   }
                }
       
-               fprintf (stdout, "\n");
+               if (!(ArgusParser->ArgusPrintJson))
+                  fprintf (stdout, "\n");
                fflush (stdout);
             }
          }
@@ -522,8 +525,14 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          bzero (buf, sizeof(buf));
          if (argus->dsrs[0] != NULL) {
             ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete(SIGQUIT);
+
+            if (parser->ArgusPrintJson) {
+               if (fprintf (stdout, "%s", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            } else {
+               if (fprintf (stdout, "%s\n", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            }
          }
          fflush (stdout);
       }
@@ -594,8 +603,13 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          bzero (buf, sizeof(buf));
          ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
 
-         if (fprintf (stdout, "%s\n", buf) < 0)
-            RaParseComplete(SIGQUIT);
+         if (parser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
          fflush (stdout);
       }
    }

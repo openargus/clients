@@ -55,6 +55,7 @@ install -d -m 0755 $RPM_BUILD_ROOT/%{argusdocs}/support
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
 %post
+mkdir -p /home/argus
 
 %preun
 
@@ -95,6 +96,7 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rasplit
 
+%ghost /home/argus
 
 %package examples
 Summary: Argus Client Example Programs

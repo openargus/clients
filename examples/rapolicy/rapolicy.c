@@ -50,9 +50,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rapolicy/rapolicy.c#9 $
- * $DateTime: 2016/09/13 10:40:12 $
- * $Change: 3180 $
+ * $Id: //depot/gargoyle/clients/examples/rapolicy/rapolicy.c#10 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 
@@ -126,6 +126,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -332,8 +335,14 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
 
          *(int *)&buf = 0;
          ArgusPrintRecord(ArgusParser, buf, ns, MAXSTRLEN);
-         if (fprintf (stdout, "%s\n", buf) < 0)
-            RaParseComplete(SIGQUIT);
+
+         if (ArgusParser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
          fflush(stdout);
       }
    }

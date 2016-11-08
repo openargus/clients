@@ -389,7 +389,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
       agg = ArgusParser->ArgusAggregator;
       if (agg->queue->count) {
          struct ArgusRecordStruct *argus;
-         int rank = 1;
+         int rank = 0;
 
          ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);
 
@@ -402,7 +402,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
             argus = (struct ArgusRecordStruct *) agg->queue->array[i];
             argus->rank = rank++;
 
-            if (!((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank)))) {
+            if (!((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (argus->rank + 1)) && (ArgusParser->sNoflag <= (argus->rank + 1))))) {
                agg->queue->array[i] = NULL;
                ArgusDeleteRecordStruct(ArgusParser, argus);
             }
@@ -519,6 +519,9 @@ RaParseComplete (int sig)
 
       if (!(ArgusParser->RaParseCompleting++)) {
          ArgusParser->RaParseCompleting += sig;
+
+         if (!(ArgusParser->ArgusPrintJson))
+            fprintf (stdout, "\n");
 
          if (!(ArgusSorter))
             if ((ArgusSorter = ArgusNewSorter(ArgusParser)) == NULL)
@@ -1305,8 +1308,13 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
             *(int *)&buf = 0;
             ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete(SIGQUIT);
+            if (ArgusParser->ArgusPrintJson) {
+               if (fprintf (stdout, "%s", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            } else {
+               if (fprintf (stdout, "%s\n", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            }
 
             if (ArgusParser->eflag == ARGUS_HEXDUMP) {
                int i;

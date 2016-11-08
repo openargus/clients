@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#34 $
- * $DateTime: 2016/10/25 17:16:23 $
- * $Change: 3229 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#36 $
+ * $DateTime: 2016/10/31 23:30:40 $
+ * $Change: 3237 $
  */
 
 
@@ -930,6 +930,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
 
          parser->ArgusReliableConnection = 1;
+         parser->ArgusPrintJson = 0;
 
          if (ArgusWireless != NULL)
             bzero(ArgusWireless, sizeof(*ArgusWireless));
@@ -2703,7 +2704,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
    if (cnt > 0) {
       fcode = sorter->filter.bf_insns;
-      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
          struct ArgusQueueHeader *qhdr = queue->start;
          int i = 0;
 
