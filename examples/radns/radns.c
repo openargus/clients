@@ -276,8 +276,8 @@ ArgusHandleSearchCommand (char *command)
                results[resultnum++] = strdup(name->n_name);
                         
                if (name->cnames != NULL) {
-                           do {
 #if defined(ARGUS_THREADS)
+                           do {
                               if (name->cnames == NULL) {
                                  done = 1;
                               } else {
