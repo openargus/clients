@@ -685,9 +685,9 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
 
       if ((pthread_create(&output->thread, attr, ArgusOutputProcess, (void *) output)) != 0)
          ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
-   }
 
 #endif /* ARGUS_THREADS */
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusInitOutput() done\n");
@@ -880,9 +880,9 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 
       if ((pthread_create(&output->thread, attr, ArgusControlChannelProcess, (void *) output)) != 0)
          ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
-   }
 
 #endif /* ARGUS_THREADS */
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusInitControlChannel() done\n");
