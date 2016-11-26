@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#36 $
- * $DateTime: 2016/10/31 23:30:40 $
- * $Change: 3237 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#37 $
+ * $DateTime: 2016/11/09 23:17:55 $
+ * $Change: 3242 $
  */
 
 
@@ -2682,7 +2682,7 @@ RaCursesNewProcess(struct ArgusParserStruct *parser)
 
 
  
-void
+int
 RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queue, int type)
 {
    struct nff_insn *fcode = NULL;
@@ -2704,7 +2704,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
 
    if (cnt > 0) {
       fcode = sorter->filter.bf_insns;
-      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
          struct ArgusQueueHeader *qhdr = queue->start;
          int i = 0;
 
@@ -2736,9 +2736,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
          ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), cnt, strerror(errno));
    }
 
-   RaSortItems = x;
    bzero (&ArgusParser->ArgusStartTimeVal, sizeof(ArgusParser->ArgusStartTimeVal));
-
    queue->status &= ~RA_MODIFIED;
 
 #if defined(ARGUS_THREADS)
@@ -2748,7 +2746,9 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
    ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
 #ifdef ARGUSDEBUG 
-   ArgusDebug (5, "RaClientSortQueue(0x%x, 0x%x, %d) returned\n", sorter, queue, type);
+   ArgusDebug (5, "RaClientSortQueue(0x%x, 0x%x, %d) returns %d\n", sorter, queue, type, x);
 #endif
+
+   return(x);
 }
 

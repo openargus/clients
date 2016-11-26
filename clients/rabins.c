@@ -34,9 +34,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/rabins.c#28 $
- * $DateTime: 2016/11/07 12:39:19 $
- * $Change: 3240 $
+ * $Id: //depot/gargoyle/clients/clients/rabins.c#29 $
+ * $DateTime: 2016/11/14 01:30:37 $
+ * $Change: 3244 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1159,6 +1159,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
             default: {
                char buf[MAXSTRLEN];
                if (ArgusParser->Lflag) {
+                  int printReturn = 0;
+
                   if (ArgusParser->RaLabel == NULL)
                      ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, argus);
 
@@ -1167,6 +1169,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                         printf ("Columns=%s\n", ArgusParser->RaLabel);
                      } else
                         printf ("%s", ArgusParser->RaLabel);
+                     printReturn = 1;
                   }
 
                   if (ArgusParser->Lflag < 0)
@@ -1188,8 +1191,11 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                            break;
                         }
                      }
+                     printReturn = 1;
                   }
-                  printf ("\n");
+
+                  if (printReturn)
+                     printf ("\n");
                }
 
                *(int *)&buf = 0;

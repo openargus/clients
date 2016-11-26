@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.h#10 $
- * $DateTime: 2016/02/22 10:32:26 $
- * $Change: 3097 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.h#11 $
+ * $DateTime: 2016/11/09 23:17:55 $
+ * $Change: 3242 $
  */
 
 
@@ -252,7 +252,7 @@ int (*RaColorAlgorithms[ARGUS_MAX_COLOR_ALG]) (struct ArgusParserStruct *, struc
 
 char RaOutputBuffer[MAXBUFFERLEN];
 struct RaCursesProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+int RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 void ArgusUpdateScreen(void);
 void ArgusTouchScreen(void);
 
@@ -487,7 +487,7 @@ int RaScreenStartY    = 0;
 
 extern char RaOutputBuffer[MAXBUFFERLEN];
 extern struct RaCursesProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-extern void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+extern int RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 extern void ArgusSetDebugString (char *, int, int);
 extern void ArgusUpdateScreen(void);
 extern void ArgusResetSearch (void);

@@ -212,9 +212,6 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
-         if (!(ArgusParser->ArgusPrintJson))
-            fprintf (stdout, "\n");
-
          ArgusShutDown(sig);
          if ((sig >= 0) && ArgusParser->aflag) {
             printf (" Totalrecords %-8lld  TotalManRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",

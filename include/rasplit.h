@@ -79,7 +79,7 @@ extern "C" {
 
 #if defined(ArgusClient)
 
-char *RaSplitModes[ARGUSSPLITMODENUM] = { 
+char *RaSplitModes[ARGUSSPLITMODENUM] = {
   "time",
   "count",  
   "size",    

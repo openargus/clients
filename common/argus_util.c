@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#91 $
- * $DateTime: 2016/11/07 12:39:19 $
- * $Change: 3240 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#93 $
+ * $DateTime: 2016/11/14 01:30:37 $
+ * $Change: 3244 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1188,6 +1188,11 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
                      }
                   } else
                      parser->ProcessRealTime = 1.0;
+                  ArgusAddMode = 0;
+               } else
+               if (!(strcmp (optarg, "pzero"))) {
+                  parser->ArgusPrintPortZero = 1;
+                  ArgusAddMode = 0;
                } else
                if (!(strcmp (optarg, "disa"))) {
                   parser->ArgusDSCodePoints = ARGUS_DISA_DSCODES;
@@ -2852,25 +2857,41 @@ struct ArgusCanonRecord RaThisCanonBuf, *RaThisCanon = &RaThisCanonBuf;
 int
 RaScheduleRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
+   double stime, itime, ftime;
+   long long thisUsec = 0;
+   long long lastUsec = 0;
+   int startRecord = 0;
    int retn = 0;
 
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_EVENT:
-         break;
+         if ((ns->hdr.cause & 0xF0) == ARGUS_START) {
+            if ((stime = ArgusFetchLastTime(ns)) > 0.0) {
+               ftime = modf(stime, &itime);
+               parser->ArgusThisTime.tv_sec  = itime;
+               parser->ArgusThisTime.tv_usec = ftime * 1000000;
+
+               if (parser->ArgusLastTime.tv_sec == 0) {
+                  parser->ArgusLastTime    = parser->ArgusThisTime;
+                  parser->ArgusCurrentTime = parser->ArgusThisTime;
+               }
+            }
+            startRecord = 1;
+         }
+         // fall through
 
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct timeval dRealTime = {0, 0};
-         double stime, itime, ftime;
-         long long thisUsec = 0;
-         long long lastUsec = 0;
 
-         if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
-            ftime = modf(stime, &itime);
-            parser->ArgusThisTime.tv_sec  = itime;
-            parser->ArgusThisTime.tv_usec = ftime * 1000000;
+         if (!startRecord) {
+            if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
+               ftime = modf(stime, &itime);
+               parser->ArgusThisTime.tv_sec  = itime;
+               parser->ArgusThisTime.tv_usec = ftime * 1000000;
+            }
          }
 
          if (parser->ArgusLastTime.tv_sec == 0) {
@@ -6936,7 +6957,11 @@ ArgusPrintMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (agr->count > 0) {
-               sprintf (avg, "%.*f", parser->pflag, agr->act.meanval);
+               if (parser->Hflag) {
+                  ArgusAbbreviateMetric(parser, avg, 32, agr->act.meanval);
+               } else {
+                 sprintf (avg, "%.*f", parser->pflag, agr->act.meanval);
+               }
             } else 
                sprintf (avg, "%.*f", parser->pflag, 0.0);
          } else
@@ -7071,8 +7096,13 @@ ArgusPrintMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: 
-         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (minval, "%.*f", parser->pflag, agr->act.minval);
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, minval, 32, agr->act.minval);
+            } else {
+              sprintf (minval, "%.*f", parser->pflag, agr->act.minval);
+            }
+         }
          break;
    }
  
@@ -7111,8 +7141,13 @@ ArgusPrintMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: 
-         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (maxval, "%.*f", parser->pflag, agr->act.maxval);
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, maxval, 32, agr->act.maxval); 
+            } else { 
+                  sprintf (maxval, "%.*f", parser->pflag, agr->act.maxval);
+            }
+         }
          break;
    }
 
@@ -7151,10 +7186,14 @@ ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
-         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (stddev, "%.*f", parser->pflag, agr->act.stdev);
-         else
-            ArgusPrintDuration (parser, stddev, argus, len);
+
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, stddev, 32, agr->act.stdev);
+            } else {
+               sprintf (stddev, "%.*f", parser->pflag, agr->act.stdev);
+            } 
+         } 
          break;
       }
    }
@@ -9529,6 +9568,13 @@ ArgusPrintSrcPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                               ArgusPrintPort (parser, buf, argus, type, proto, flow->icmp_flow.type, len, ARGUS_SRC);
                               done++;
                               break;
+
+                           default:
+                              if (parser->ArgusPrintPortZero) {
+                                 ArgusPrintPort (parser, buf, argus, type, proto, 0, len, ARGUS_SRC);
+                                 done++;
+                              }
+                              break;
                         }
                         break;
 
@@ -9543,6 +9589,13 @@ ArgusPrintSrcPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                            case IPPROTO_ICMPV6:
                               ArgusPrintPort (parser, buf, argus, type, proto, flow->icmpv6_flow.type, len, ARGUS_SRC);
                               done++;
+                              break;
+
+                           default:
+                              if (parser->ArgusPrintPortZero) {
+                                 ArgusPrintPort (parser, buf, argus, type, proto, 0, len, ARGUS_SRC);
+                                 done++;
+                              }
                               break;
                         }
                         break;
@@ -9645,6 +9698,14 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                               ArgusPrintEspSpi (parser, buf, argus, type, flow->esp_flow.spi, len);
                               done++; 
                               break; 
+
+
+                           default:
+                              if (parser->ArgusPrintPortZero) {
+                                 ArgusPrintPort (parser, buf, argus, type, proto, 0, len, ARGUS_SRC);
+                                 done++;
+                              }
+                              break;
                         }
                         break; 
 
@@ -9667,6 +9728,14 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                               ArgusPrintEspSpi (parser, buf, argus, type, flow->esp_flow.spi, len);
                               done++; 
                               break; 
+
+
+                           default:
+                              if (parser->ArgusPrintPortZero) {
+                                 ArgusPrintPort (parser, buf, argus, type, proto, 0, len, ARGUS_SRC);
+                                 done++;
+                              }
+                              break;
                         }
                         break; 
                                
@@ -9722,8 +9791,9 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          if (!done) {
             if (parser->ArgusPrintXml) {
                sprintf (buf, " DstPort = \"\"");
-            } else
+            } else {
                sprintf (buf, "%*.*s ", len, len, " ");
+            }
          }
          break;            
       }
@@ -9762,7 +9832,7 @@ ArgusPrintPort (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
             default: format = "%d"; break;
          }
       }
-      if (port != 0)
+      if ((port != 0) || parser->ArgusPrintPortZero)
          snprintf (upbuf, sizeof(upbuf), format, port);
       else
          snprintf (upbuf, sizeof(upbuf), "%s", " ");

@@ -23,9 +23,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#18 $
- * $DateTime: 2016/10/24 12:10:50 $
- * $Change: 3226 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#19 $
+ * $DateTime: 2016/11/09 23:17:55 $
+ * $Change: 3242 $
  */
 
 
@@ -585,7 +585,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 #endif
             ArgusParser->RaTasksToDo |= RA_SORTING;
             RaUpdateDebugWindow(RaDebugWindow);
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
             ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
             if (parser->ArgusAggregator != NULL) {
@@ -1214,7 +1214,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 #endif
             ArgusParser->RaTasksToDo |= RA_SORTING;
             RaUpdateDebugWindow(RaDebugWindow);
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
             ArgusParser->RaTasksToDo &= ~RA_SORTING;
 /*
             if (ArgusParser->ns) {
@@ -2025,7 +2025,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   }
                   ArgusParser->RaTasksToDo |= RA_SORTING;
                   RaUpdateDebugWindow(RaDebugWindow);
-                  RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                  RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
                   ArgusParser->RaTasksToDo &= ~RA_SORTING;
                   break;
 
@@ -2738,7 +2738,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
 
                      ArgusParser->RaTasksToDo |= RA_SORTING;
                      RaUpdateDebugWindow(RaDebugWindow);
-                     RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                     RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
                      ArgusParser->RaTasksToDo &= ~RA_SORTING;
                      break;
 
@@ -2868,7 +2868,7 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
 #endif
                   ArgusParser->RaTasksToDo |= RA_SORTING;
                   RaUpdateDebugWindow(RaDebugWindow);
-                  RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
+                  RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
                   ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
                   if (queue->count) {
@@ -3897,7 +3897,7 @@ argus_command_string(void)
 #endif
                ArgusParser->RaTasksToDo |= RA_SORTING;
                RaUpdateDebugWindow(RaDebugWindow);
-               RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+               RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
                ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
                if (RaSortItems) {
@@ -4448,7 +4448,7 @@ argus_command_string(void)
 #if defined(ARGUS_THREADS)
             pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
             ArgusParser->RaTasksToDo &= ~RA_SORTING;
             RaCursesProcess->queue->status |= RA_MODIFIED;
 /*
@@ -4992,7 +4992,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
 
              ArgusParser->RaTasksToDo |= RA_SORTING;
              RaUpdateDebugWindow(RaDebugWindow);
-             RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_LOCK);
+             RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_LOCK);
              ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
 #if defined(HAVE_DECL_RL_DONE) && HAVE_DECL_RL_DONE

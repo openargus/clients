@@ -6193,8 +6193,8 @@ ArgusMySQLInsertProcess (void *arg)
             struct timeval tvp;
 
             gettimeofday (&tvp, 0L);
-            ts->tv_sec   = parser->RaClientTimeout.tv_sec  + tvp.tv_sec;
-            ts->tv_nsec  = (parser->RaClientTimeout.tv_usec + tvp.tv_usec) * 1000;
+            ts->tv_sec   = 1 + tvp.tv_sec;
+            ts->tv_nsec  = tvp.tv_usec * 1000;
             if (ts->tv_nsec > 1000000000) {
                ts->tv_sec++;
                ts->tv_nsec -= 1000000000;

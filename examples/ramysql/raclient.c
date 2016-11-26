@@ -1379,10 +1379,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
          if (retn != 0) {
+            if (agg->mask) {
             cns = ArgusCopyRecordStruct(ns);
             flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
 
-            if (agg->mask) {
             if (flow != NULL) {
                if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
                   agg->rap = agg->drap;

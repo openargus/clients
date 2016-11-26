@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#84 $
- * $DateTime: 2016/11/07 12:39:19 $
- * $Change: 3240 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#85 $
+ * $DateTime: 2016/11/14 01:30:37 $
+ * $Change: 3244 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -3162,7 +3162,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                }
             }
 
-
             if (retn != NULL) {
                struct ArgusFlow *flow = (struct ArgusFlow *) retn->dsrs[ARGUS_FLOW_INDEX];
 
@@ -3173,38 +3172,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   canon->metric.dst.pkts     = 0;
                   canon->metric.dst.bytes    = 0;
                   canon->metric.dst.appbytes = 0;
-               }
-
-               if (!retn->dsrs[ARGUS_AGR_INDEX]) {
-                  if ((canon->metric.src.pkts + canon->metric.dst.pkts) > 0) {
-                     struct ArgusAgrStruct *agr = &canon->agr;
-                     double value;
-
-//                   bzero(agr, sizeof(*agr));
-                     agr->hdr.type               = ARGUS_AGR_DSR;
-                     agr->hdr.argus_dsrvl8.qual  = 0x01;
-                     agr->hdr.argus_dsrvl8.len   = (sizeof(*agr) + 3)/4;
-                     agr->count                  = 1;
-                     agr->act.minval             = 10000000000.0;
-                     agr->idle.minval            = 10000000000.0;
-
-                     if ((parser->ArgusAggregator != NULL) && (parser->ArgusAggregator->RaMetricFetchAlgorithm != NULL)) {
-                        value = parser->ArgusAggregator->RaMetricFetchAlgorithm(retn);
-                        agr->hdr.subtype         = parser->ArgusAggregator->ArgusMetricIndex;
-                     } else {
-                        value = ArgusFetchDuration(retn);
-                        agr->hdr.subtype         = ARGUSMETRICDURATION;
-                     }
-
-                     agr->act.maxval          = value;
-                     agr->act.minval          = value;
-                     agr->act.meanval         = value;
-                     agr->act.n               = 1;
-//                   bzero ((char *)&agr->idle, sizeof(agr->idle));
-
-                     retn->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) agr;
-                     retn->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
-                  }
                }
 
 // correct for time problems.
@@ -3660,9 +3627,41 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   ArgusReverseRecord (retn);
 
                retn->pcr = ArgusFetchAppByteRatio(retn);
-
             }
 
+            if ((parser != NULL) && (retn != NULL)) {
+               if (!retn->dsrs[ARGUS_AGR_INDEX]) {
+                  if ((canon->metric.src.pkts + canon->metric.dst.pkts) > 0) {
+                     struct ArgusAgrStruct *agr = &canon->agr;
+                     double value;
+
+//                   bzero(agr, sizeof(*agr));
+                     agr->hdr.type               = ARGUS_AGR_DSR;
+                     agr->hdr.argus_dsrvl8.qual  = 0x01;
+                     agr->hdr.argus_dsrvl8.len   = (sizeof(*agr) + 3)/4;
+                     agr->count                  = 1;
+                     agr->act.minval             = 10000000000.0;
+                     agr->idle.minval            = 10000000000.0;
+
+                     if ((parser->ArgusAggregator != NULL) && (parser->ArgusAggregator->RaMetricFetchAlgorithm != NULL)) {
+                        value = parser->ArgusAggregator->RaMetricFetchAlgorithm(retn);
+                        agr->hdr.subtype         = parser->ArgusAggregator->ArgusMetricIndex;
+                     } else {
+                        value = ArgusFetchDuration(retn);
+                        agr->hdr.subtype         = ARGUSMETRICDURATION;
+                     }
+
+                     agr->act.maxval          = value;
+                     agr->act.minval          = value;
+                     agr->act.meanval         = value;
+                     agr->act.n               = 1;
+//                   bzero ((char *)&agr->idle, sizeof(agr->idle));
+
+                     retn->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader *) agr;
+                     retn->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
+                  }
+               }
+            }
             break;
          }
          
@@ -9894,13 +9893,85 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
       }
 
       switch (ns->hdr.type & 0xF0) {
-         case ARGUS_EVENT:
          case ARGUS_MAR: {
-            ns->status |= ARGUS_RECORD_PROCESSED;
+            struct ArgusRecord *ar1 = (struct ArgusRecord *) ns->dsrs[0];
 
-            if (nadp->hard) {
-// once we figure out how to split man records, we'll set their start and stop times to the hard boundaries.
+            if (!(nadp->modify)) {
+               ns->status |= ARGUS_RECORD_PROCESSED;
+               retn = ArgusCopyRecordStruct (ns);
+
+            } else {
+               if (nadp->size) {
+                  struct ArgusRecord *ar2 = NULL;
+                  struct ArgusTime  sSecs, eSecs;
+                  long long ssecs = 0, esecs = 0;
+                  int count = 0, bytes = 0, records = 0, flows = 0, dropped = 0;
+
+                  long long value = (startusec - nadp->startuSecs) / nadp->size;
+
+                  ssecs = (nadp->startuSecs + (value * nadp->size));
+                  sSecs.tv_sec  = ssecs / 1000000;
+                  sSecs.tv_usec = ssecs % 1000000;
+
+                  esecs = (nadp->startuSecs + ((value + 1) * nadp->size));
+                  eSecs.tv_sec  = esecs / 1000000;
+                  eSecs.tv_usec = esecs % 1000000;
+
+                  nadp->turns++;
+
+                  if ((retn = ArgusCopyRecordStruct (ns)) == NULL)
+                     return(retn);
+
+                  ar2 = (struct ArgusRecord *) retn->dsrs[0];
+
+// if this record doesn't extend beyound the boundary, then we're done.
+                  if (endusec > esecs) {
+                     long long tduration;
+                     double ratio;
+
+                     bytes   = ar2->argus_mar.bytesRcvd;
+                     records = ar2->argus_mar.records;
+                     flows   = ar2->argus_mar.flows;
+                     dropped = ar2->argus_mar.dropped;
+
+// OK, so we simply split to align the records in time, regardless of the metrics. We'll want to
+// distribute some stats between all the resulting records.  Here its all based on the timestamps
+                     if ((tduration = (endusec - startusec)) > nadp->size)
+                        tduration = nadp->size;
+
+                     ratio = ((tduration * 1.0) / (endusec - startusec) * 1.0);
+
+                     ar2->argus_mar.pktsRcvd  *= ratio;
+                     ar2->argus_mar.bytesRcvd *= ratio;
+                     ar2->argus_mar.records   *= ratio;
+                     ar2->argus_mar.flows     *= ratio;
+                     ar2->argus_mar.dropped   *= ratio;
+
+                     ar1->argus_mar.pktsRcvd  -= ar2->argus_mar.pktsRcvd;
+                     ar1->argus_mar.bytesRcvd -= ar2->argus_mar.bytesRcvd;
+                     ar1->argus_mar.records   -= ar2->argus_mar.records;
+                     ar1->argus_mar.flows     -= ar2->argus_mar.flows;
+                     ar1->argus_mar.dropped   -= ar2->argus_mar.dropped;
+
+                     ar2->argus_mar.now        = eSecs;
+                     ar1->argus_mar.startime   = eSecs;
+
+                  } else {
+                     ns->status |= ARGUS_RECORD_PROCESSED;
+                  }
+
+                  if (nadp->hard) {
+                     ar2->argus_mar.startime  = sSecs;
+                     ar2->argus_mar.now       = eSecs;
+                  }
+               }
             }
+
+            break;
+         }
+
+         case ARGUS_EVENT: {
+            ns->status |= ARGUS_RECORD_PROCESSED;
 
             retn = ArgusCopyRecordStruct(ns);
             break;
@@ -11263,10 +11334,6 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
    if ((retn = (struct ArgusAggregatorStruct *) ArgusCalloc (1, sizeof(*retn))) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewAggregator: ArgusCalloc error %s", strerror(errno));
 
-   ArgusInitAggregatorStructs(retn);
-
-   retn->status = type;
-
    if (masklist != NULL) {
       mptr = strdup(masklist);
       ptr = mptr;
@@ -11296,6 +11363,7 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
               ArgusSetDefaultMask = 1;
       }
       if (ArgusSetDefaultMask) {
+         retn->correct = strdup("yes");
          if (parser->RaMonMode) {
             retn->mask  = ( ARGUS_MASK_SRCID_INDEX | ARGUS_MASK_PROTO_INDEX |
                             ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_SPORT_INDEX );
@@ -11306,7 +11374,6 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
          }
       }
 
-      retn->correct = strdup("yes");
       modelist = parser->ArgusMaskList;
    }
 
@@ -11369,6 +11436,8 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
          if (!(strncasecmp (sptr, "none", 4))) {
             retn->mask  = 0;
             ArgusParser->RaCumulativeMerge = 0;
+            if (retn->correct) free(retn->correct);
+            retn->correct = NULL;
          } else
          if (!(strncasecmp (sptr, "macmatrix", 9))) {
             retn->ArgusMatrixMode++;
@@ -11502,6 +11571,8 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
       retn->ArgusModeList = modelist;
    }
 
+   retn->status = type;
+
    if (retn->mask == 0) {
       if ((retn->queue = ArgusNewQueue()) == NULL)
          ArgusLog (LOG_ERR, "ArgusNewAggregator: ArgusNewQueue error %s", strerror(errno));
@@ -11512,6 +11583,9 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
       parser->ArgusPerformCorrection = 0;
 
    } else {
+
+      ArgusInitAggregatorStructs(retn);
+
       if ((retn->drap = (struct RaPolicyStruct *) ArgusCalloc(1, sizeof(*retn->drap))) == NULL)
          ArgusLog (LOG_ERR, "ArgusNewAggregator: ArgusCalloc error %s", strerror(errno));
 
