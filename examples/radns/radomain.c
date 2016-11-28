@@ -1007,6 +1007,8 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
 
    case T_OPT:
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," UDPsize=%u", class);
+      if (opt_flags & 0x8000)
+         sprintf(&ArgusBuf[strlen(ArgusBuf)]," OK");
       break;
 
    case T_UNSPECA:      /* One long string */

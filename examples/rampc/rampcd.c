@@ -215,6 +215,27 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
+      if (parser->ArgusAggregator != NULL) {
+            if (correct >= 0) {
+               if (correct == 0) {
+                  if (parser->ArgusAggregator->correct != NULL)
+                     free(parser->ArgusAggregator->correct);
+                  parser->ArgusAggregator->correct = NULL;
+               } else {
+                  if (parser->ArgusAggregator->correct != NULL)
+                     free(parser->ArgusAggregator->correct);
+                  parser->ArgusAggregator->correct = strdup("yes");
+                  parser->ArgusPerformCorrection = 1;
+               }
+            }
+
+         } else {
+            parser->RaCumulativeMerge = 0;
+            bzero(parser->RaSortOptionStrings, sizeof(parser->RaSortOptionStrings));
+            parser->RaSortOptionIndex = 0;
+//          parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "stime";
+      }
+
       if ((ArgusBinProcess = RaNewBinProcess(parser, size)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
@@ -1633,7 +1654,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
    int retn = 0, x, z;
 
    if (ArgusParser->RaParseDone || ((ArgusParser->timeout.tv_sec > 0) || (ArgusParser->timeout.tv_usec > 0))) {
-      struct ArgusRecordStruct *ns, *nxt = NULL;
+      struct ArgusRecordStruct *ns;
       struct timeval lasttime;
       int count, deleted = 0;
 
@@ -1651,8 +1672,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
                tvp->tv_sec++;
                tvp->tv_usec -= 1000000;
             }
-
-            nxt = (struct ArgusRecordStruct *) ns->qhdr.nxt;
 
             if (ArgusParser->RaParseDone ||
                ((tvp->tv_sec  < ArgusParser->ArgusRealTime.tv_sec) ||

@@ -78,6 +78,7 @@ int ArgusDebugTree = 0;
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
+   extern int RaPrintLabelTreeLevel;
    struct RaAddressStruct **ArgusAddrTree;
    struct ArgusModeStruct *mode = NULL;
    parser->RaWriteOut = 0;
@@ -95,6 +96,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
       parser->ArgusLabeler = ArgusLabeler;
 
+      if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
@@ -109,11 +113,26 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                RaPrintLabelMol (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0, 0, 0);
                exit(0);
             } else
+            if (!(strncasecmp (mode->mode, "addr", 4))) {
+               if (parser->ArgusFlowModelFile) {
+                  if (!(RaReadAddressConfig (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile) > 0))
+                     ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig error");
+               }
+            } else
             if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                 (!(strncasecmp (mode->mode, "debug", 5)))) {
                ArgusDebugTree = 1;
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
                RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
+            } else
+            if (!(strncasecmp (mode->mode, "debug.local", 10))) {
+               if (parser->ArgusLocalLabeler != NULL) {
+                  parser->ArgusLocalLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+                  if (!(strncasecmp (mode->mode, "debug.localnode", 14))) {
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_NODE;
+                  } else
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_LOCAL;
+               }
             } else
             if (!(strncasecmp (mode->mode, "graph", 5))) {
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_GRAPH;
@@ -125,10 +144,32 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if (parser->Lflag > 0) {
-         extern int RaPrintLabelTreeLevel;
-         RaPrintLabelTreeLevel = parser->Lflag - 1;
+      if (parser->ArgusFlowModelFile) {
+         RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
+         parser->ArgusFlowModelFile = NULL;
       }
+
+      if (parser->ArgusLabeler &&  parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG) {
+         if (parser->ArgusLabeler && parser->ArgusLabeler->ArgusAddrTree) {
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLabeler, parser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
+      }
+
+      if (parser->ArgusLocalLabeler && ((parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_LOCAL) ||
+                                        (parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_NODE))) {
+         if (parser->ArgusLocalLabeler &&  parser->ArgusLocalLabeler->ArgusAddrTree) {
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLocalLabeler, parser->ArgusLocalLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
+      }
+
       parser->RaInitialized++;
    }
 }
@@ -343,8 +384,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
    struct ArgusLabelerStruct *labeler = ArgusLabeler;
 
-   int retn = 0;
-
    if ((agg->rap = RaFlowModelOverRides(agg, argus)) == NULL)
       agg->rap = agg->drap;
 
@@ -412,16 +451,16 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                      case ARGUS_TYPE_IPV4:
-                        if (!retn && (agg->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, smask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
-                        if (!retn && (agg->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, dmask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                        if (agg->mask & ARGUS_MASK_SADDR_INDEX)
+                           RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, smask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                        if (agg->mask & ARGUS_MASK_DADDR_INDEX)
+                           RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, dmask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
                         break;
                      case ARGUS_TYPE_IPV6:
-                        if (!retn && (agg->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, smask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
-                        if (!retn && (agg->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, dmask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                        if (agg->mask & ARGUS_MASK_SADDR_INDEX)
+                           RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, smask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                        if (agg->mask & ARGUS_MASK_DADDR_INDEX)
+                           RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, dmask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         break;
                   }
                   break; 

@@ -171,7 +171,6 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
    parser->RaLabelCounter      = 0;
 
    parser->RaFieldWidth = RA_FIXED_WIDTH;
-   parser->ArgusListens = 0;
 
    parser->ArgusGenerateManRecords = 0;
 
@@ -183,6 +182,8 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
 
    for (i = 0; i < ARGUS_MAXLISTEN; i++)
       parser->ArgusLfd[i] = -1;
+
+   parser->ArgusListens = 0;
 
    if (parser->ArgusInputList == NULL)
       parser->ArgusInputList = ArgusNewList();

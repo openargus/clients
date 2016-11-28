@@ -443,12 +443,12 @@ void RaProcessManRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *)
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-   char buf[MAXSTRLEN], tbuf[64], *tptr;
+   char buf[MAXSTRLEN], tbuf[64];
 
    bzero (buf, MAXSTRLEN);
    bzero (tbuf, 64);
    ArgusPrintStartDate(parser, tbuf, argus, 32);
-   tptr = ArgusTrimString(tbuf);
+   ArgusTrimString(tbuf);
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_EVENT:
@@ -466,15 +466,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          unsigned short proto = 0, sport = 0, dport = 0;
          int type, process = 0, dhcpTransaction = 0;
-         void *saddr = NULL, *daddr = NULL;
 
          if (flow != NULL) {
             switch (flow->hdr.subtype & 0x3F) {
                case ARGUS_FLOW_CLASSIC5TUPLE: {
                   switch ((type = flow->hdr.argus_dsrvl8.qual & 0x1F)) {
                      case ARGUS_TYPE_IPV4: {
-                        saddr = &flow->ip_flow.ip_src;
-                        daddr = &flow->ip_flow.ip_dst;
                         proto = flow->ip_flow.ip_p;
                         process++;
 
@@ -504,8 +501,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         switch (flow->ipv6_flow.ip_p) {
                            case IPPROTO_TCP:
                            case IPPROTO_UDP: {
-                              saddr = &flow->ipv6_flow.ip_src;
-                              daddr = &flow->ipv6_flow.ip_dst;
                               proto = flow->ipv6_flow.ip_p;
                               sport = flow->ipv6_flow.sport;
                               dport = flow->ipv6_flow.dport;
@@ -793,7 +788,7 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
          if (flow != NULL) {
-            unsigned int addr, *saddr = NULL, *daddr = NULL;
+            unsigned int addr, *daddr = NULL;
 
             switch (flow->hdr.subtype & 0x3F) {
                case ARGUS_FLOW_CLASSIC5TUPLE: {
@@ -801,7 +796,6 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
                      case ARGUS_TYPE_IPV4: {
                         switch (flow->ip_flow.ip_p) {
                            case IPPROTO_TCP: {
-                              saddr = &flow->ip_flow.ip_src;
                               daddr = &flow->ip_flow.ip_dst;
                               break;
                            }

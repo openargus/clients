@@ -9694,7 +9694,7 @@ void
 ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, struct ArgusAdjustStruct *nadp)
 {
    struct timeval *start = &nadp->start;
-   long long startusec = 0, endusec = 0;
+   long long startusec = 0;
    struct timeval *end = &nadp->end;
    time_t tsec = 0;
 
@@ -9717,7 +9717,6 @@ ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, s
          end->tv_usec   = parser->lasttime_t.tv_usec;
 
          startusec = (start->tv_sec * 1000000LL) + start->tv_usec;
-           endusec = (end->tv_sec * 1000000LL) + end->tv_usec;
 
       } else {
          start->tv_sec  = nadp->startuSecs / 1000000;
@@ -9905,7 +9904,6 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                   struct ArgusRecord *ar2 = NULL;
                   struct ArgusTime  sSecs, eSecs;
                   long long ssecs = 0, esecs = 0;
-                  int count = 0, bytes = 0, records = 0, flows = 0, dropped = 0;
 
                   long long value = (startusec - nadp->startuSecs) / nadp->size;
 
@@ -9928,11 +9926,6 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                   if (endusec > esecs) {
                      long long tduration;
                      double ratio;
-
-                     bytes   = ar2->argus_mar.bytesRcvd;
-                     records = ar2->argus_mar.records;
-                     flows   = ar2->argus_mar.flows;
-                     dropped = ar2->argus_mar.dropped;
 
 // OK, so we simply split to align the records in time, regardless of the metrics. We'll want to
 // distribute some stats between all the resulting records.  Here its all based on the timestamps
@@ -11362,8 +11355,8 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
            if ((*mode->mode == '-') || (*mode->mode == '+'))
               ArgusSetDefaultMask = 1;
       }
+
       if (ArgusSetDefaultMask) {
-         retn->correct = strdup("yes");
          if (parser->RaMonMode) {
             retn->mask  = ( ARGUS_MASK_SRCID_INDEX | ARGUS_MASK_PROTO_INDEX |
                             ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_SPORT_INDEX );
@@ -11571,7 +11564,9 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
       retn->ArgusModeList = modelist;
    }
 
-   retn->status = type;
+   retn->status   = type;
+   retn->correct  = strdup("yes");
+   retn->pres     = strdup("yes");
 
    if (retn->mask == 0) {
       if ((retn->queue = ArgusNewQueue()) == NULL)

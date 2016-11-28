@@ -3315,9 +3315,46 @@ ArgusHandleRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *in
    return (retn);
 }
 
-
 int
 RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   int retn = 0;
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct *node = ArgusCalloc(1, sizeof(*node));;
+
+            if (node != NULL) {
+               node->addr.type = AF_INET;
+               node->addr.len = 4;
+               node->addr.addr[0] = *addr;
+               node->addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+               node->addr.masklen = mask;
+
+               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], node, mode)) == NULL)
+                  RaInsertAddress (parser, labeler, NULL, node, ARGUS_VISITED);
+               else
+                  ArgusFree(node);
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaProcessAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+int
+RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
 {
    struct RaAddressStruct *raddr;
    int retn = 0;
@@ -3331,6 +3368,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
             node.addr.type = AF_INET;
             node.addr.len = 4;
             node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
             node.addr.masklen = mask;
 
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
@@ -3347,7 +3385,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
 #endif
    }
 
@@ -3807,14 +3845,16 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                      }
 
                      if (!tested && (parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK)) {
+                        int dirs = parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK;
+
                         switch (flow->hdr.subtype & 0x3F) {
                            case ARGUS_FLOW_CLASSIC5TUPLE:
                            case ARGUS_FLOW_LAYER_3_MATRIX: {
                               switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                                  case ARGUS_TYPE_IPV4: {
                                     if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                                       dst = RaProcessAddress (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                                       src = RaProcessAddress (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                       dst = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                       src = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                                        break;
                                     }
                                  }
@@ -3822,7 +3862,7 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                            }
                         }
     
-                        switch (parser->ArgusDirectionFunction) {
+                        switch (dirs) {
                            case ARGUS_SUGGEST_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
                            case ARGUS_SUGGEST_LOCAL_DST: if ((dst > 0) && (src == 0)) reverse++; break;
                            case ARGUS_FORCE_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
@@ -4531,17 +4571,12 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                struct ArgusMacStruct mbuf, *tmac = &mbuf;
                tmac->hdr   = mac->hdr;
 
-               switch (mac->hdr.subtype & 0x3F) {
-                  default:
-                  case ARGUS_TYPE_ETHER:
-                     bcopy ((char *)&mac->mac.mac_union.ether.ehdr.ether_shost, (char *)&tmac->mac.mac_union.ether.ehdr.ether_dhost, 6);
-                     bcopy ((char *)&mac->mac.mac_union.ether.ehdr.ether_dhost, (char *)&tmac->mac.mac_union.ether.ehdr.ether_shost, 6);
+               bcopy ((char *)&mac->mac.mac_union.ether.ehdr.ether_shost, (char *)&tmac->mac.mac_union.ether.ehdr.ether_dhost, 6);
+               bcopy ((char *)&mac->mac.mac_union.ether.ehdr.ether_dhost, (char *)&tmac->mac.mac_union.ether.ehdr.ether_shost, 6);
 
-                     tmac->mac.mac_union.ether.ehdr.ether_type = mac->mac.mac_union.ether.ehdr.ether_type;
-                     tmac->mac.mac_union.ether.dsap            = mac->mac.mac_union.ether.ssap;
-                     tmac->mac.mac_union.ether.ssap            = mac->mac.mac_union.ether.dsap;
-                     break;
-               }
+               tmac->mac.mac_union.ether.ehdr.ether_type = mac->mac.mac_union.ether.ehdr.ether_type;
+               tmac->mac.mac_union.ether.dsap            = mac->mac.mac_union.ether.ssap;
+               tmac->mac.mac_union.ether.ssap            = mac->mac.mac_union.ether.dsap;
 
                bcopy ((char *) tmac, (char *) mac, sizeof(*mac));
                break;
@@ -7798,15 +7833,15 @@ ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
 
          if (rec != NULL) {
-            void *pid;
-
             switch (argus->hdr.cause & 0xF0) {
                case ARGUS_STATUS:
-               case ARGUS_START:     pid = &rec->argus_mar.value; break;
+               case ARGUS_START:
+                  break;
                default:
                case ARGUS_STOP:
                case ARGUS_SHUTDOWN:
-               case ARGUS_ERROR:     pid = &rec->argus_mar.argusid; break;
+               case ARGUS_ERROR:
+                  break;
             }
 
             switch (rec->argus_mar.status & (ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4)) {
@@ -7912,15 +7947,15 @@ ArgusPrintSID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
 
          if (rec != NULL) {
-            void *pid;
-
             switch (argus->hdr.cause & 0xF0) {
                case ARGUS_STATUS:
-               case ARGUS_START:     pid = &rec->argus_mar.value; break;
+               case ARGUS_START:
+                  break;
                default:
                case ARGUS_STOP:
                case ARGUS_SHUTDOWN:
-               case ARGUS_ERROR:     pid = &rec->argus_mar.argusid; break;
+               case ARGUS_ERROR:
+                  break;
             }
 
             switch (rec->argus_mar.status & (ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4)) {
@@ -8004,15 +8039,15 @@ ArgusPrintNode (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
 
          if (rec != NULL) {
-            void *pid;
-
             switch (argus->hdr.cause & 0xF0) {
                case ARGUS_STATUS:
-               case ARGUS_START:     pid = &rec->argus_mar.value; break;
+               case ARGUS_START:
+                  break;
                default:
                case ARGUS_STOP:
                case ARGUS_SHUTDOWN:
-               case ARGUS_ERROR:     pid = &rec->argus_mar.argusid; break;
+               case ARGUS_ERROR:
+                  break;
             }
 
             switch (rec->argus_mar.status & (ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4)) {
@@ -10374,8 +10409,12 @@ ArgusPrintSrcHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
       case ARGUS_AFLOW:
       case ARGUS_FAR: 
          if ((attr != NULL) && (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC)) {
-            while (esthops < attr->src.ttl)
-               esthops = esthops * 2;
+            if (attr->src.ttl == 255)
+               esthops = attr->src.ttl;
+            else {
+               while (esthops < attr->src.ttl)
+                  esthops = esthops * 2;
+            }
             sprintf (obuf, "%d", (esthops - attr->src.ttl));
          }
          break;
@@ -10418,8 +10457,12 @@ ArgusPrintDstHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
       case ARGUS_AFLOW:
       case ARGUS_FAR: 
          if ((attr != NULL) && (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST)) {
-            while (esthops < attr->dst.ttl)
-               esthops = esthops * 2;
+            if (attr->dst.ttl == 255)
+               esthops = attr->dst.ttl;
+            else {
+               while (esthops < attr->dst.ttl)
+                  esthops = esthops * 2;
+            }
             sprintf (obuf, "%d", (esthops - attr->dst.ttl));
          }
          break;
@@ -29340,7 +29383,7 @@ void
 ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
 {
    struct ArgusTransportStruct *trans = &src->trans;
-   int retn = 0, type = 0, quoted = 0, slen = 0, subsid = 0;
+   int retn = 0, type = 0, slen = 0, subsid = 0;
    char *ptr = NULL, *sptr = NULL, *iptr = NULL;
    unsigned char buf[32];
    char *prefix = NULL;
@@ -29435,7 +29478,6 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
       } else
       if (*optarg == '"') {
          optarg++;
-         quoted = 1;
          if (optarg[strlen(optarg) - 1] == '\n')
             optarg[strlen(optarg) - 1] = '\0';
          if (optarg[strlen(optarg) - 1] == '\"')

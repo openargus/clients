@@ -16,7 +16,7 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- *  racurses.c - this routine handles the argus data processing.
+ *  raclient.c - this routine handles the argus data processing.
  *
  *  Author: Carter Bullard carter@qosient.com
  */
@@ -430,6 +430,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    struct ArgusModeStruct *mode;
    int correct = 1, preserve = 1;
    int i = 0, size = 1;
+   struct timeval *tvp;
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&RaCursesLock, NULL);
@@ -565,12 +566,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusSorter = ArgusNewSorter(parser)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewSorter error %s", strerror(errno));
 
-         if (parser->ArgusAggregator != NULL)
-            if (ArgusSorter->ArgusSortAlgorithms[0] == NULL)
-               ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
+         ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
 
          if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+
 
          if ((mode = parser->ArgusModeList) != NULL) {
             int i, x, ind;
@@ -802,10 +802,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   } else
                   if (!(strncasecmp (mode->mode, "rmon", 4))) {
                      parser->RaMonMode++;
-                     if (parser->ArgusAggregator->correct != NULL) {
-                        free(parser->ArgusAggregator->correct);
-                        parser->ArgusAggregator->correct = NULL;
-                     }
+                     correct = 0;
                   } else
                   if (!(strncasecmp (mode->mode, "control:", 8))) {
                      char *ptr = &mode->mode[8];
@@ -854,10 +851,81 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      }
                   }
                }
-
                mode = mode->nxt;
             }
          }
+
+         if (parser->ArgusFlowModelFile)
+            parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
+         else {
+            if (parser->ArgusMaskList != NULL)
+               parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
+            else
+               parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
+         }
+
+         if (parser->ArgusAggregator != NULL) {
+            if (correct >= 0) {
+               if (correct == 0) {
+                  if (parser->ArgusAggregator->correct != NULL)
+                     free(parser->ArgusAggregator->correct);
+                  parser->ArgusAggregator->correct = NULL;
+               } else {
+                  if (parser->ArgusAggregator->correct != NULL)
+                     free(parser->ArgusAggregator->correct);
+                  parser->ArgusAggregator->correct = strdup("yes");
+                  parser->ArgusPerformCorrection = 1;
+               }
+            }
+
+            if (preserve == 0) {
+               if (parser->ArgusAggregator->pres != NULL)
+                  free(parser->ArgusAggregator->pres);
+               parser->ArgusAggregator->pres = NULL;
+            } else {
+               if (parser->ArgusAggregator->pres != NULL)
+                  free(parser->ArgusAggregator->pres);
+               parser->ArgusAggregator->pres = strdup("yes");
+            }
+
+         } else {
+            parser->RaCumulativeMerge = 0;
+            bzero(parser->RaSortOptionStrings, sizeof(parser->RaSortOptionStrings));
+            parser->RaSortOptionIndex = 0;
+//          parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "stime";
+         }
+
+         if (parser->ArgusRemoteHosts)
+            if ((input = (void *)parser->ArgusRemoteHosts->start) != NULL)
+               parser->RaTasksToDo = RA_ACTIVE;
+
+         if ((ArgusEventAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+
+         if (parser->Hstr != NULL)
+            ArgusHistoMetricParse(parser, parser->ArgusAggregator);
+
+         if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
+            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
+
+         if ((ArgusProbeQueue = ArgusNewQueue()) == NULL)
+            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
+
+         if ((ArgusFileQueue = ArgusNewQueue()) == NULL)
+            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
+
+         if ((RaCursesProcess = RaCursesNewProcess(parser)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+
+         if ((RaEventProcess = RaCursesNewProcess(parser)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+
+         if ((RaHistoryProcess = RaCursesNewProcess(parser)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+
+         if (parser->ArgusAggregator != NULL)
+            if (ArgusSorter->ArgusSortAlgorithms[0] == NULL)
+               ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
 
          /* if content substitution, either time or any field, is used,
             size and count modes will not work properly.  If using
@@ -1248,7 +1316,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusAggregatorStruct *tagg, *agg = parser->ArgusAggregator;
    struct RaBinProcessStruct *RaBinProcess = parser->RaBinProcess;
    struct ArgusHashStruct *hstruct = NULL;
-   struct ArgusFlow *flow = NULL;
    int found = 0;
 
    while (ArgusParser->Pauseflag) {
@@ -1266,9 +1333,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
    gettimeofday (&RaCursesStopTime, 0L);
 
-   ArgusProcessDirection(parser, ns);
-
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
+      struct ArgusFlow *flow = NULL;
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
@@ -1296,7 +1362,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
          if (retn != 0) {
             cns = ArgusCopyRecordStruct(ns);
-            flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
 
             if (agg->mask) {
                if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
@@ -1536,17 +1601,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               }
                            }
                         }
-                        break;
-                     }
-                     case ARGUS_TYPE_IPV6: {
-                        switch (flow->ipv6_flow.ip_p) {
-                           case IPPROTO_ESP:
-                              tryreverse = 0;
-                              break;
+                        case ARGUS_TYPE_IPV6: {
+                           switch (flow->ipv6_flow.ip_p) {
+                              case IPPROTO_ESP:
+                                 tryreverse = 0;
+                                 break;
+                           }
+                           break;
                         }
-                        break;
                      }
-                  }
 
                   if (pns) {
                      if (pns->qhdr.queue) {

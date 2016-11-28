@@ -1485,7 +1485,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
       char tbuf[129], sbuf[129], *sptr = sbuf;
       char *dptr = data->array, *str;
       unsigned long len = 0x10000;
-      int cnt = 0, title = 0;;
+      int title = 0;;
 
       data = (void *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
 
@@ -1493,21 +1493,17 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          bzero (ptr, sizeof(buf));
  #if defined(HAVE_ZLIB_H)
          uncompress((Bytef *)ptr, (uLongf *)&len, (Bytef *)&data->array, data->count);
-         cnt = data->size;
 #else
  #if defined(ARGUSDEBUG)
          ArgusDebug (3, "RaProcessEventRecord: unable to decompress payload\n");
  #endif
 #endif
          dptr = ptr;
-
-      } else {
-         cnt = data->count;
       }
 
       if (strstr(dptr, "argus-lsof")) {
-         bzero (tbuf, sizeof(tbuf));
-         bzero (sptr, sizeof(sptr));
+         bzero (tbuf, 129);
+         bzero (sptr, 129);
          tvp->tv_sec  = time->src.start.tv_sec;
          tvp->tv_usec = time->src.start.tv_usec;
 

@@ -570,7 +570,7 @@ int
 RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 {
    int retn = 0;
-   int i, len, done = 0, linenum = 0, Soption = 0, roption = 0, quoted = 0;
+   int i, len, done = 0, linenum = 0, Soption = 0, roption = 0;
    char strbuf[MAXSTRLEN], *str = strbuf, *optarg;
    char result[MAXSTRLEN], *ptr;
    FILE *fd;
@@ -578,7 +578,7 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
          while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-            done = 0; quoted = 0; linenum++;
+            done = 0; linenum++;
             while (*str && isspace((int)*str))
                 str++;
 

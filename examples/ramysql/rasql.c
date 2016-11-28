@@ -1148,6 +1148,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
+      parser->ArgusDirectionFunction = 0;
+      if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
+
       if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
          ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
 

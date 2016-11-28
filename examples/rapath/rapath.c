@@ -815,16 +815,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                if ((icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMPUNREACH_MAPPED) ||
                    (icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMPTIMXCED_MAPPED)) {
 
-                  unsigned int srchost, dsthost, intnode;
-       
-                  srchost = flow->ip_flow.ip_src;
-                  dsthost = flow->ip_flow.ip_dst;
-       
-                  intnode = icmp->osrcaddr;
-/*
-                  if ((intnode == srchost) || (intnode == dsthost))
-                     return;
-*/
                }
 
                switch (flow->ip_flow.ip_p) {

@@ -75,7 +75,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
-
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 

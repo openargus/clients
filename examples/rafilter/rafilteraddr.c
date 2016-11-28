@@ -201,49 +201,6 @@ usage ()
    exit(1);
 }
 
-/*
-extern struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-int RaProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int, int);
-
-int
-RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, unsigned int *addr, int type)
-{
-   struct ArgusLabelerStruct *labeler = NULL;
-   struct RaAddressStruct *raddr;
-   int retn = 0;
-
-   if ((labeler = parser->ArgusLabeler) == NULL)
-      ArgusLog (LOG_ERR, "RaProcessAddress: No labeler\n");
-
-   switch (type) {
-      case ARGUS_TYPE_IPV4: {
-         struct RaAddressStruct node;
-         bzero ((char *)&node, sizeof(node));
-
-         node.addr.type = AF_INET;
-         node.addr.len = 4;
-         node.addr.addr[0] = *addr;
-         node.addr.masklen = 32;
-
-         if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH)) != NULL) {
-            retn++;
-         }
-         break;
-      }
-
-      case ARGUS_TYPE_IPV6:
-         break;
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d) returning %d\n", parser, argus, addr, type, retn);
-#endif
-
-   return (retn);
-}
-*/
-
-
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 void
@@ -270,15 +227,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                      case ARGUS_TYPE_IPV4:
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
                         break;
                      case ARGUS_TYPE_IPV6:
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         break;
                   }
                   break; 
