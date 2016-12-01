@@ -24,9 +24,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#17 $
- * $DateTime: 2016/11/07 12:39:19 $
- * $Change: 3240 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/raclient.c#19 $
+ * $DateTime: 2016/11/30 12:38:04 $
+ * $Change: 3249 $
  */
 
 #define ARGUS_HISTORY
@@ -2353,7 +2353,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
             qhdr = qhdr->nxt;
          }
 
-         queue->array[i] = NULL;
+         queue->array[x] = NULL;
          qsort ((char *) queue->array, x, sizeof (struct ArgusQueueHeader *), ArgusSortRoutine);
 
          for (i = 0; i < x; i++) {

@@ -29,9 +29,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_parser.c#16 $
- * $DateTime: 2016/09/20 14:08:02 $
- * $Change: 3194 $
+ * $Id: //depot/gargoyle/clients/common/argus_parser.c#18 $
+ * $DateTime: 2016/11/30 12:35:01 $
+ * $Change: 3247 $
  */
 
 
@@ -68,6 +68,8 @@ struct ArgusParserStruct *ArgusParser = NULL;
 */
 
 extern void ArgusLog (int, char *, ...);
+
+static void ArgusInitializeParser(struct ArgusParserStruct *);
 
 struct ArgusParserStruct *
 ArgusNewParser(char *progname)
@@ -118,34 +120,7 @@ ArgusNewParser(char *progname)
    return (retn);
 }
 
-struct ArgusParserStruct *
-ArgusCopyParser(struct ArgusParserStruct *parser)
-{
-   struct ArgusParserStruct *retn = NULL;
-
-   if (parser != NULL) {
-      if ((retn  = (struct ArgusParserStruct *) ArgusCalloc(1, sizeof(*retn))) == NULL)
-         ArgusLog (LOG_ERR, "ArgusNewParser(%s) ArgusCalloc error %s", parser->ArgusProgramName, strerror(errno));
-
-      bcopy(parser, retn, sizeof(*parser));
-
-      retn->ArgusProgramName = strdup(parser->ArgusProgramName);
-      retn->ArgusCIDRPtr = &retn->ArgusCIDRBuffer;
-
-      retn->ArgusInputFileList = NULL;
-      retn->ArgusInputList = NULL;
-      retn->ArgusOutputList = NULL;
-      retn->ArgusRemoteHosts = NULL;
-      retn->ArgusActiveHosts = NULL;
-      retn->MySQLDBEngine = NULL;
-
-      ArgusInitializeParser(retn);
-   }
-   return (retn);
-}
-
-
-void
+static void
 ArgusInitializeParser(struct ArgusParserStruct *parser)
 {
    int i;
@@ -174,33 +149,15 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
 
    parser->ArgusGenerateManRecords = 0;
 
-   if (parser->ArgusListens) {
-      for (i = 0; i < parser->ArgusListens; i++)
-         if (parser->ArgusLfd[i] != -1)
-            close(parser->ArgusLfd[i]);
-   }
-
    for (i = 0; i < ARGUS_MAXLISTEN; i++)
       parser->ArgusLfd[i] = -1;
 
    parser->ArgusListens = 0;
 
-   if (parser->ArgusInputList == NULL)
-      parser->ArgusInputList = ArgusNewList();
-
-   if (parser->ArgusOutputList == NULL)
-      parser->ArgusOutputList = ArgusNewList();
-
-   if (parser->ArgusRemoteHosts == NULL)
-      parser->ArgusRemoteHosts = ArgusNewQueue();
-
-   if (parser->ArgusActiveHosts == NULL)
-      parser->ArgusActiveHosts = ArgusNewQueue();
-
-   if (parser->MySQLDBEngine != NULL) {
-      free(parser->MySQLDBEngine);
-      parser->MySQLDBEngine = NULL;
-   }
+   parser->ArgusInputList = ArgusNewList();
+   parser->ArgusOutputList = ArgusNewList();
+   parser->ArgusRemoteHosts = ArgusNewQueue();
+   parser->ArgusActiveHosts = ArgusNewQueue();
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&parser->lock, NULL);

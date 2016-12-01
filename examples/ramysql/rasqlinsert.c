@@ -23,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.c#34 $
- * $DateTime: 2016/11/07 12:40:30 $
- * $Change: 3241 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.c#37 $
+ * $DateTime: 2016/11/30 12:36:40 $
+ * $Change: 3248 $
  */
 
 
@@ -33,6 +33,7 @@
 #include "argus_config.h"
 #endif
 
+#include <argus_threads.h>
 #include <time.h>
 
 #define ARGUS_RECORD_MODIFIED   0x0100
@@ -380,7 +381,6 @@ RaCursesClose(struct ArgusParserStruct *parser, pthread_attr_t *attr)
 
 
 int RaInitCurses (void);
-void RaRefreshDisplay (void);
 void RaOutputModifyScreen (void);
 void RaOutputHelpScreen (void);
 void RaResizeScreen(void);
@@ -408,9 +408,8 @@ ArgusOutputProcess (void *arg)
       int cnt = 0;
       gettimeofday(tvp, NULL);
 
-#if defined(ARGUS_THREADS)
-      if (pthread_mutex_lock(&RaCursesLock) == 0) {
-#endif
+      if (MUTEX_LOCK(&RaCursesLock) == 0) {
+
          if ((cnt = ArgusWindowQueue->count) > 0) {
             int i, retn;
 
@@ -422,8 +421,11 @@ ArgusOutputProcess (void *arg)
 
                      struct ArgusQueueStruct *queue = RaOutputProcess->queue;
 
-                     if (queue->status & RA_MODIFIED)
-                        ArgusTouchScreen();
+//                   if (MUTEX_LOCK(&queue->lock) == 0) {
+                        if (queue->status & RA_MODIFIED)
+                           ArgusTouchScreen();
+//                      MUTEX_UNLOCK(&queue->lock);
+//                   }
 
                      if (RaWindowImmediate || ((tvp->tv_sec > ntvp->tv_sec) || ((tvp->tv_sec  == ntvp->tv_sec) &&
                                                                                 (tvp->tv_usec >  ntvp->tv_usec)))) {
@@ -444,10 +446,8 @@ ArgusOutputProcess (void *arg)
             }
          }
 
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&RaCursesLock);
+         MUTEX_UNLOCK(&RaCursesLock);
       }
-#endif
       nanosleep (&ts, NULL);
    }
 
@@ -471,9 +471,7 @@ ArgusProcessSqlData(struct ArgusWindowStruct *ws)
 
       if ((RaWindowModified == RA_MODIFIED) || ArgusAlwaysUpdate) {
          if (RaWindowStatus) {
-#if defined(ARGUS_THREADS)
-            if (pthread_mutex_lock(&queue->lock) == 0) {
-#endif
+            if (MUTEX_LOCK(&queue->lock) == 0) {
 #if defined(ARGUS_MYSQL)
                 struct ArgusQueueHeader *qhdr = queue->start;
                 int i = 0;
@@ -489,10 +487,8 @@ ArgusProcessSqlData(struct ArgusWindowStruct *ws)
                         }
                 }
 #endif
-#if defined(ARGUS_THREADS)
-               pthread_mutex_unlock(&queue->lock);
+               MUTEX_UNLOCK(&queue->lock);
             }
-#endif
          }
 
          RaWindowModified = 0;
@@ -538,11 +534,7 @@ ArgusOutputProcessInit()
    ws->window = RaHeaderWindow;
    ws->desc = strdup("RaHeaderWindow");
    ws->data = ArgusFetchWindowData;
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&ws->lock, NULL);
-#endif
-
+   MUTEX_INIT(&ws->lock, NULL);
    ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
 
    if ((ws = (struct ArgusWindowStruct *)ArgusCalloc(1, sizeof(*ws))) == NULL)
@@ -553,11 +545,7 @@ ArgusOutputProcessInit()
    ws->window = RaStatusWindow;
    ws->desc = strdup("RaStatusWindow");
    ws->data = ArgusFetchWindowData;
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&ws->lock, NULL);
-#endif
-
+   MUTEX_INIT(&ws->lock, NULL);
    ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
 
    if ((ws = (struct ArgusWindowStruct *)ArgusCalloc(1, sizeof(*ws))) == NULL)
@@ -567,11 +555,7 @@ ArgusOutputProcessInit()
    ws->window = RaDebugWindow;
    ws->desc = strdup("RaDebugWindow");
    ws->data = ArgusFetchWindowData;
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&ws->lock, NULL);
-#endif
-
+   MUTEX_INIT(&ws->lock, NULL);
    ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
 
    if ((ws = (struct ArgusWindowStruct *)ArgusCalloc(1, sizeof(*ws))) == NULL)
@@ -581,11 +565,7 @@ ArgusOutputProcessInit()
    ws->window = RaDisplayWindow;
    ws->desc = strdup("RaDisplayWindow");
    ws->data = ArgusFetchWindowData;
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&ws->lock, NULL);
-#endif
-
+   MUTEX_INIT(&ws->lock, NULL);
    ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
 
    if ((dom = (struct ArgusDomainStruct *) ArgusCalloc(1, sizeof(*dom))) == NULL)
@@ -5854,9 +5834,7 @@ RaSQLQueryTable (char *table)
       ArgusDebug (3, "RaSQLQueryProbes: SQL Query %s\n", buf);
 #endif
 
-#if defined(ARGUS_THREADS)
-      if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+      if (MUTEX_LOCK(&RaMySQLlock) == 0) {
 
       if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
          ArgusLog(LOG_INFO, "RaSQLQueryTable: mysql_real_query error %s", mysql_error(RaMySQL));
@@ -5886,10 +5864,8 @@ RaSQLQueryTable (char *table)
             mysql_free_result(mysqlRes);
          }
       }
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
       }
-#endif
       free(sbuf);
    }
 }
@@ -5909,9 +5885,7 @@ RaSQLQueryProbes ()
    ArgusDebug (2, "RaSQLQueryProbes: SQL Query %s\n", buf);
 #endif
 
-#if defined(ARGUS_THREADS)
-   if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
    if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
       ArgusLog(LOG_INFO, "RaSQLQueryProbes: mysql_real_query error %s", mysql_error(RaMySQL));
 
@@ -5947,10 +5921,8 @@ RaSQLQueryProbes ()
          mysql_free_result(mysqlRes);
       }
    }
-#if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&RaMySQLlock);
+   MUTEX_UNLOCK(&RaMySQLlock);
    }
-#endif
 }
 
 void
@@ -5975,9 +5947,7 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
    ArgusDebug (2, "RaSQLQuerySecondsTable: SQL Query %s\n", buf);
 #endif
 
-#if defined(ARGUS_THREADS)
-   if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
       if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
          ArgusLog(LOG_INFO, "RaSQLQuerySecondsTable: mysql_real_query error %s", mysql_error(RaMySQL));
 
@@ -6039,10 +6009,8 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
             mysql_free_result(mysqlRes);
          }
       }
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
    }
-#endif
 }
 
 
@@ -6081,21 +6049,15 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
    if (!ArgusSQLQueryList)
        return retn;
 
-#if defined(ARGUS_THREADS)
-   if (pthread_mutex_lock(&ArgusSQLQueryList->lock) == 0) {
-#endif
+   if (MUTEX_LOCK(&ArgusSQLQueryList->lock) == 0) {
       sqry = (void *) ArgusPopFrontList(ArgusSQLQueryList, ARGUS_NOLOCK);
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&ArgusSQLQueryList->lock);
+      MUTEX_UNLOCK(&ArgusSQLQueryList->lock);
    }
-#endif
 
    if (!sqry)
       return retn;
 
-#if defined(ARGUS_THREADS)
-   if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
 
       trans_retn = retn = mysql_real_query(RaMySQL, "START TRANSACTION", 17);
       if (retn)
@@ -6121,7 +6083,7 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
 
                   case 'U':  {
                         if ((retn = mysql_real_query(RaMySQL, sptr, slen)) != 0) {
-                           ArgusLog(LOG_INFO, "ArgusProcessSQLQueryList(Update): %s mysql_real_query error %s", sptr, mysql_error(RaMySQL));
+                           ArgusLog(LOG_INFO, "ArgusProcessSQLQueryList(Update): %s mysql_real_query error %s", sqry->dptr, mysql_error(RaMySQL));
                         } else {
                            ArgusTotalSQLWrites += slen;
                            ArgusTotalSQLUpdates++;
@@ -6133,7 +6095,7 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
 
                   case 'I':  {
                         if ((retn = mysql_real_query(RaMySQL, sptr, slen)) != 0) {
-                           ArgusLog(LOG_INFO, "ArgusProcessSQLQueryList(Insert): mysql_real_query error %s", mysql_error(RaMySQL));
+                           ArgusLog(LOG_INFO, "ArgusProcessSQLQueryList(Insert): %s mysql_real_query error %s", sqry->dptr, mysql_error(RaMySQL));
                         } else {
                            ArgusTotalSQLWrites += slen;
                            ArgusTotalSQLUpdates++;
@@ -6153,14 +6115,10 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
                ArgusFree(sqry);
             }
 
-#if defined(ARGUS_THREADS)
-         if (pthread_mutex_lock(&ArgusSQLQueryList->lock) == 0) {
-#endif
+         if (MUTEX_LOCK(&ArgusSQLQueryList->lock) == 0) {
             sqry = (void *) ArgusPopFrontList(ArgusSQLQueryList, ARGUS_NOLOCK);
-#if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&ArgusSQLQueryList->lock);
+            MUTEX_UNLOCK(&ArgusSQLQueryList->lock);
          }
-#endif
       }
 
       if (!trans_retn) {
@@ -6170,10 +6128,8 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
             ArgusLog(LOG_INFO, "%s: failed to commit sql transaction", __func__);
       }
 
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
       }
-#endif
 
    return (retn);
 }
@@ -6209,9 +6165,9 @@ ArgusMySQLInsertProcess (void *arg)
                ts->tv_sec++;
                ts->tv_nsec -= 1000000000;
             }
-            pthread_mutex_lock(&ArgusSQLInsertQueryList->lock);
+            MUTEX_LOCK(&ArgusSQLInsertQueryList->lock);
             pthread_cond_timedwait(&ArgusSQLInsertQueryList->cond, &ArgusSQLInsertQueryList->lock, ts);
-            pthread_mutex_unlock(&ArgusSQLInsertQueryList->lock);
+            MUTEX_UNLOCK(&ArgusSQLInsertQueryList->lock);
 
          } else {
             ts->tv_sec  = parser->RaClientTimeout.tv_sec;
@@ -6226,9 +6182,7 @@ ArgusMySQLInsertProcess (void *arg)
 #ifdef ARGUSDEBUG
          ArgusDebug (3, "ArgusMySQLInsertProcess: residual buffer Count %d SQL Query len %d\n", ArgusSQLBulkBufferCount, ArgusSQLBulkBufferIndex);
 #endif
-#if defined(ARGUS_THREADS)
-         if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+         if (MUTEX_LOCK(&RaMySQLlock) == 0) {
             if ((retn = mysql_real_query(RaMySQL, ArgusSQLBulkBuffer, ArgusSQLBulkBufferIndex)) != 0) {
                ArgusLog(LOG_INFO, "ArgusMySQLInsertProcess: mysql_real_query error %s", mysql_error(RaMySQL));
             } else {
@@ -6237,10 +6191,8 @@ ArgusMySQLInsertProcess (void *arg)
 
             ArgusSQLBulkBufferIndex = 0;
             ArgusSQLBulkBufferCount = 0;
-#if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&RaMySQLlock);
+            MUTEX_UNLOCK(&RaMySQLlock);
          }
-#endif
       }
    }
 
@@ -6256,9 +6208,7 @@ ArgusMySQLInsertProcess (void *arg)
 #ifdef ARGUSDEBUG
          ArgusDebug (3, "ArgusMySQLInsertProcess: residual buffer Count %d SQL Query len %d\n", ArgusSQLBulkBufferCount, ArgusSQLBulkBufferIndex);
 #endif
-#if defined(ARGUS_THREADS)
-         if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+         if (MUTEX_LOCK(&RaMySQLlock) == 0) {
             if ((retn = mysql_real_query(RaMySQL, ArgusSQLBulkBuffer, ArgusSQLBulkBufferIndex)) != 0) {
                ArgusLog(LOG_INFO, "ArgusMySQLInsertProcess(Residual): mysql_real_query error %s", mysql_error(RaMySQL));
             } else {
@@ -6267,10 +6217,8 @@ ArgusMySQLInsertProcess (void *arg)
 
             ArgusSQLBulkBufferIndex = 0;
             ArgusSQLBulkBufferCount = 0;
-#if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&RaMySQLlock);
+            MUTEX_UNLOCK(&RaMySQLlock);
          }
-#endif
       }
    }
 
@@ -6284,15 +6232,11 @@ ArgusMySQLInsertProcess (void *arg)
 #ifdef ARGUSDEBUG
                ArgusDebug (2, "deleting table %s\n", str);
 #endif
-#if defined(ARGUS_THREADS)
-               if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+               if (MUTEX_LOCK(&RaMySQLlock) == 0) {
                   if ((retn = mysql_real_query(RaMySQL, str, strlen(str))) != 0)
                      ArgusLog(LOG_INFO, "ArgusMySQLInsertProcess(Update): mysql_real_query error %s", mysql_error(RaMySQL));
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_unlock(&RaMySQLlock);
+                  MUTEX_UNLOCK(&RaMySQLlock);
                }
-#endif
             }
          }
       }
@@ -6344,9 +6288,9 @@ ArgusMySQLSelectProcess (void *arg)
                ts->tv_sec++;
                ts->tv_nsec -= 1000000000;
             }
-            pthread_mutex_lock(&ArgusSQLSelectQueryList->lock);
+            MUTEX_LOCK(&ArgusSQLSelectQueryList->lock);
             pthread_cond_timedwait(&ArgusSQLSelectQueryList->cond, &ArgusSQLSelectQueryList->lock, ts);
-            pthread_mutex_unlock(&ArgusSQLSelectQueryList->lock);
+            MUTEX_UNLOCK(&ArgusSQLSelectQueryList->lock);
 
          } else {
             ts->tv_sec  = parser->RaClientTimeout.tv_sec;
@@ -6371,15 +6315,11 @@ ArgusMySQLSelectProcess (void *arg)
 #ifdef ARGUSDEBUG
                ArgusDebug (2, "deleting table %s\n", str);
 #endif
-#if defined(ARGUS_THREADS)
-               if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+               if (MUTEX_LOCK(&RaMySQLlock) == 0) {
                   if ((retn = mysql_real_query(RaMySQL, str, strlen(str))) != 0)
                      ArgusLog(LOG_INFO, "ArgusMySQLSelectProcess: mysql_real_query error %s", mysql_error(RaMySQL));
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_unlock(&RaMySQLlock);
+                  MUTEX_UNLOCK(&RaMySQLlock);
                }
-#endif
             }
          }
       }
@@ -6431,9 +6371,9 @@ ArgusMySQLUpdateProcess (void *arg)
                ts->tv_sec++;
                ts->tv_nsec -= 1000000000;
             }
-            pthread_mutex_lock(&ArgusSQLUpdateQueryList->lock);
+            MUTEX_LOCK(&ArgusSQLUpdateQueryList->lock);
             pthread_cond_timedwait(&ArgusSQLUpdateQueryList->cond, &ArgusSQLUpdateQueryList->lock, ts);
-            pthread_mutex_unlock(&ArgusSQLUpdateQueryList->lock);
+            MUTEX_UNLOCK(&ArgusSQLUpdateQueryList->lock);
 
          } else {
             ts->tv_sec  = parser->RaClientTimeout.tv_sec;
@@ -6458,15 +6398,11 @@ ArgusMySQLUpdateProcess (void *arg)
 #ifdef ARGUSDEBUG
                ArgusDebug (2, "deleting table %s\n", str);
 #endif
-#if defined(ARGUS_THREADS)
-               if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+               if (MUTEX_LOCK(&RaMySQLlock) == 0) {
                   if ((retn = mysql_real_query(RaMySQL, str, strlen(str))) != 0)
                      ArgusLog(LOG_INFO, "ArgusMySQLUpdateProcess: mysql_real_query error %s", mysql_error(RaMySQL));
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_unlock(&RaMySQLlock);
+                  MUTEX_UNLOCK(&RaMySQLlock);
                }
-#endif
             }
          }
       }
@@ -6601,10 +6537,8 @@ RaMySQLInit ()
    if (!(ArgusParser->status & ARGUS_REAL_TIME_PROCESS))
       ArgusLastTime = ArgusParser->ArgusRealTime;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&RaMySQLlock, NULL);
-   if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+   MUTEX_INIT(&RaMySQLlock, NULL);
+   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
 
       if (RaMySQL == NULL)
          if ((RaMySQL = (void *) ArgusCalloc(1, sizeof(*RaMySQL))) == NULL)
@@ -6746,10 +6680,8 @@ RaMySQLInit ()
 
          sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], " user %s", RaUser);
       }
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
    }
-#endif
 
    if ((ArgusParser->ArgusInputFileList != NULL)  ||
         (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0))) {
@@ -6913,16 +6845,12 @@ ArgusGetSQLSaveTable()
 {
    char *retn = NULL;
 
-#if defined(ARGUS_THREADS)
-   if (pthread_mutex_lock(&RaMySQLlock) == 0) {
-#endif
+   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
       if (RaSQLCurrentTable && (strlen(RaSQLCurrentTable) > 0))
          retn = strdup(RaSQLCurrentTable);
 
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
    }
-#endif
 
    return retn;
 }
@@ -6935,9 +6863,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    char stable[1024], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN - 32];
    MYSQL_RES *mysqlRes;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_lock(&RaMySQLlock);
-#endif
+   MUTEX_LOCK(&RaMySQLlock);
 
    if ((db != NULL) && (table != NULL)) {
       sprintf (stable, "%s.%s", db, table);
@@ -7088,9 +7014,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
       free(tbl);
    }
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&RaMySQLlock);
-#endif
+   MUTEX_UNLOCK(&RaMySQLlock);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);
@@ -7146,13 +7070,13 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
          return retn;
 
    if (tbl != NULL) {
-      char *sbuf = malloc(MAXSTRLEN);
+      char *sbuf = ArgusMalloc(MAXBUFFERLEN);
       char tbuf[1024], fbuf[1024], ubuf[1024], *ptr, *tptr;
       char vbuf[1024], ibuf[1024];
       char *rbuf = NULL;
 
-      char   *mbuf = calloc(1, (ARGUS_MAXRECORDSIZE * 2) + 1);
-      char *tmpbuf = calloc(1, MAXBUFFERLEN);
+      char   *mbuf = ArgusMalloc((ARGUS_MAXRECORDSIZE * 2) + 1);
+      char *tmpbuf = ArgusMalloc(MAXBUFFERLEN);
 
 #ifdef ARGUSDEBUG
       char dbuf[MAXSTRLEN];
@@ -7175,11 +7099,9 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
       ibuf[0] = '\0';
 
       if (ArgusSOptionRecord)
-        rbuf = calloc(1, ARGUS_MAXRECORDSIZE);
+        rbuf = ArgusCalloc(1, ARGUS_MAXRECORDSIZE);
 
-#if defined(ARGUS_THREADS)
-      pthread_mutex_lock(&parser->lock);
-#endif
+      MUTEX_LOCK(&parser->lock);
 
       for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
          if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL) {
@@ -7242,9 +7164,7 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
          }
       }
 
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&parser->lock);
-#endif
+      MUTEX_UNLOCK(&parser->lock);
 
       parser->nflag   = nflag;
 
@@ -7260,8 +7180,11 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
 #endif
 
             if ((tlen = ntohs(argus->hdr.len) * 4) < ARGUS_MAXRECORDSIZE) {
-               if ((len = mysql_real_escape_string(RaMySQL, mbuf, (char *)argus, tlen)) <= 0)
-                  ArgusLog(LOG_ERR, "mysql_real_escape_string error %s", mysql_error(RaMySQL));
+               if (MUTEX_LOCK(&RaMySQLlock) == 0) {
+                  if ((len = mysql_real_escape_string(RaMySQL, mbuf, (char *)argus, tlen)) <= 0)
+                     ArgusLog(LOG_ERR, "mysql_real_escape_string error %s", mysql_error(RaMySQL));
+                  MUTEX_UNLOCK(&RaMySQLlock);
+               }
             }
          }
 
@@ -7269,18 +7192,18 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
             if (!(ns->status & ARGUS_SQL_INSERT)) {
                if (ArgusSOptionRecord) {
                   if (strlen(ibuf)) {
-                     snprintf (sbuf, MAXSTRLEN, "UPDATE %s SET %s,record=\"%s\" WHERE %s", tbl, ibuf, mbuf, ubuf);
+                     snprintf (sbuf, MAXBUFFERLEN, "UPDATE %s SET %s,record=\"%s\" WHERE %s", tbl, ibuf, mbuf, ubuf);
 #ifdef ARGUSDEBUG
                      snprintf (dbuf, MAXSTRLEN, "UPDATE %s SET %s,record=\"...\" WHERE %s", tbl, ibuf, ubuf);
 #endif
                   } else {
-                     snprintf (sbuf, MAXSTRLEN, "UPDATE %s SET record=\"%s\" WHERE %s", tbl, mbuf, ubuf);
+                     snprintf (sbuf, MAXBUFFERLEN, "UPDATE %s SET record=\"%s\" WHERE %s", tbl, mbuf, ubuf);
 #ifdef ARGUSDEBUG
                      snprintf (dbuf, MAXSTRLEN, "UPDATE %s SET record=\"...\" WHERE %s", tbl, ubuf);
 #endif
                   }
                } else {
-                  snprintf (sbuf, MAXSTRLEN, "UPDATE %s SET %s WHERE %s", tbl, ibuf, ubuf);
+                  snprintf (sbuf, MAXBUFFERLEN, "UPDATE %s SET %s WHERE %s", tbl, ibuf, ubuf);
 #ifdef ARGUSDEBUG
                   snprintf (dbuf, MAXSTRLEN, "%s", sbuf);
 #endif
@@ -7289,18 +7212,21 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
 
             } else {
                if (ArgusSOptionRecord) {
-                  int tlen;
-                  snprintf (sbuf, MAXSTRLEN, "INSERT INTO %s (%s,record) VALUES (%s,\"", tbl, vbuf, fbuf);
-                  tlen = strlen(sbuf);
-                  bcopy(mbuf, &sbuf[tlen], len + 1);
-                  tlen = strlen(sbuf);
-                  snprintf (&sbuf[tlen], MAXSTRLEN - tlen, "\")");
+                  int slen, tlen;
+
+                  snprintf (sbuf, MAXBUFFERLEN, "INSERT INTO %s (%s,record) VALUES (%s,\"", tbl, vbuf, fbuf);
+                  slen = strlen(sbuf);
+
+                  bcopy(mbuf, &sbuf[slen], len + 1);
+
+                  slen = strlen(sbuf);
+                  snprintf (&sbuf[slen], MAXBUFFERLEN - slen, "\")");
 #ifdef ARGUSDEBUG
                   snprintf (dbuf, MAXSTRLEN, "INSERT INTO %s (%s,record) VALUES (%s,...)", tbl, vbuf, fbuf);
 #endif
 
                } else {
-                  snprintf (sbuf, MAXSTRLEN, "INSERT INTO %s (%s) VALUES (%s)", tbl, vbuf, fbuf);
+                  snprintf (sbuf, MAXBUFFERLEN, "INSERT INTO %s (%s) VALUES (%s)", tbl, vbuf, fbuf);
 #ifdef ARGUSDEBUG
                   snprintf (dbuf, MAXSTRLEN, "%s", sbuf);
 #endif
@@ -7320,7 +7246,7 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
          ns->status &= ~(ARGUS_SQL_STATUS);
          ns->status |= ARGUS_SQL_DELETE;
 
-         snprintf (sbuf, MAXSTRLEN, "DELETE FROM %s WHERE %s", tbl, ubuf);
+         snprintf (sbuf, MAXBUFFERLEN, "DELETE FROM %s WHERE %s", tbl, ubuf);
 #ifdef ARGUSDEBUG
          snprintf (dbuf, MAXSTRLEN, "%s", sbuf);
          ArgusDebug (3, "ArgusScheduleSQLQuery (0x%x, 0x%x, 0x%x, %s, %s, %d) done\n", parser, agg, ns, tbl, dbuf, state);
@@ -7341,25 +7267,24 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
       switch (ns->status & ARGUS_SQL_STATUS) {
          case ARGUS_SQL_INSERT:  
             ArgusPushBackList (ArgusSQLInsertQueryList, (struct ArgusListRecord *)&sqry->nxt, ARGUS_LOCK);
-            pthread_cond_signal(&ArgusSQLInsertQueryList->cond);
+            COND_SIGNAL(&ArgusSQLInsertQueryList->cond);
             break;
 
          case ARGUS_SQL_UPDATE:  
             ArgusPushBackList (ArgusSQLUpdateQueryList, (struct ArgusListRecord *)&sqry->nxt, ARGUS_LOCK);
-            pthread_cond_signal(&ArgusSQLUpdateQueryList->cond);
+            COND_SIGNAL(&ArgusSQLUpdateQueryList->cond);
             break;
          case ARGUS_SQL_DELETE:  
             ArgusPushBackList (ArgusSQLSelectQueryList, (struct ArgusListRecord *)&sqry->nxt, ARGUS_LOCK);
-            pthread_cond_signal(&ArgusSQLSelectQueryList->cond);
+            COND_SIGNAL(&ArgusSQLSelectQueryList->cond);
             break;
       }
       ns->status &= ~(ARGUS_SQL_STATUS);
 
-      free(tmpbuf);
-      free(mbuf);
-
-      if (rbuf != NULL) free(rbuf);
-      if (sbuf != NULL) free(sbuf);
+      if (tmpbuf) ArgusFree(tmpbuf);
+      if (  mbuf) ArgusFree(mbuf);
+      if (  sbuf) ArgusFree(sbuf);
+      if (  rbuf) ArgusFree(rbuf);
    }
    return (retn);
 }

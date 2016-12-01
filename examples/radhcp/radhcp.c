@@ -18,9 +18,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/radhcp/radhcp.c#6 $
- * $DateTime: 2016/09/13 10:40:12 $
- * $Change: 3180 $
+ * $Id: //depot/gargoyle/clients/examples/radhcp/radhcp.c#7 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 /*

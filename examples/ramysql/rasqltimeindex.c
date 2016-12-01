@@ -23,15 +23,16 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#10 $
- * $DateTime: 2016/10/31 23:30:40 $
- * $Change: 3237 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#11 $
+ * $DateTime: 2016/11/30 12:35:01 $
+ * $Change: 3247 $
  */
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
 
+#include <argus_threads.h>
 #include <unistd.h>
 #include <stdlib.h>
 
@@ -337,9 +338,7 @@ void RaArgusInputComplete (struct ArgusInput *input) {
 RaArgusInputCompleteDone:
 
    if (ArgusProbes) {
-#if defined(ARGUS_THREADS)
-      pthread_mutex_lock(&ArgusProbes->queue->lock);
-#endif
+      MUTEX_LOCK(&ArgusProbes->queue->lock);
       while ((probe = (struct RaTimeProbesStruct *) ArgusPopQueue(ArgusProbes->queue, ARGUS_NOLOCK))) {
          ArgusDeleteHashTable (probe->htable);
          if (probe->rtable) {
@@ -353,9 +352,7 @@ RaArgusInputCompleteDone:
          ArgusFree(probe);
       }
 
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&ArgusProbes->queue->lock);
-#endif
+      MUTEX_UNLOCK(&ArgusProbes->queue->lock);
       ArgusDeleteQueue(ArgusProbes->queue);
       if ((ArgusProbes->queue = ArgusNewQueue()) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewQueue error %s\n", strerror(errno));

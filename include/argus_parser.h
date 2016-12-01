@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_parser.h#40 $
- * $DateTime: 2016/11/14 01:30:37 $
- * $Change: 3244 $
+ * $Id: //depot/gargoyle/clients/include/argus_parser.h#41 $
+ * $DateTime: 2016/11/30 12:38:04 $
+ * $Change: 3249 $
  */
 
 
@@ -541,13 +541,11 @@ struct ArgusParserStruct {
 #ifdef ArgusParse
 struct ArgusParserStruct *ArgusNewParser(char *);
 struct ArgusParserStruct *ArgusCopyParser(struct ArgusParserStruct *);
-void ArgusInitializeParser(struct ArgusParserStruct *);
 void ArgusCloseParser(struct ArgusParserStruct *);
 
 #else
 extern struct ArgusParserStruct *ArgusNewParser(char *);
 extern struct ArgusParserStruct *ArgusCopyParser(struct ArgusParserStruct *);
-extern void ArgusInitializeParser(struct ArgusParserStruct *);
 extern void ArgusCloseParser(struct ArgusParserStruct *);
 #endif
 

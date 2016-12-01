@@ -25,9 +25,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ralabel/ralabel.c#16 $
- * $DateTime: 2016/10/28 18:37:18 $
- * $Change: 3235 $
+ * $Id: //depot/gargoyle/clients/examples/ralabel/ralabel.c#17 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H

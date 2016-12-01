@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_client.c#85 $
- * $DateTime: 2016/11/14 01:30:37 $
- * $Change: 3244 $
+ * $Id: //depot/gargoyle/clients/common/argus_client.c#86 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H

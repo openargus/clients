@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#93 $
- * $DateTime: 2016/11/14 01:30:37 $
- * $Change: 3244 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#94 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -4325,15 +4325,15 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                bzero ((char *)tflow, sizeof(*tflow));
                tflow->hdr = flow->hdr;
 
-               if (flags || flow->hdr.subtype & ARGUS_REVERSE)
+               if (flags || (flow->hdr.subtype & ARGUS_REVERSE))
                   flow->hdr.subtype &= ~ARGUS_REVERSE;
-               else
-                  flow->hdr.subtype |= ARGUS_REVERSE;
+//             else
+//                flow->hdr.subtype |= ARGUS_REVERSE;
 
                if (flow->hdr.argus_dsrvl8.qual & ARGUS_DIRECTION)
                   flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
-                else
-                  flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
+//              else
+//                flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
 
                switch (flow->hdr.subtype & 0x3F) {
                   case ARGUS_FLOW_CLASSIC5TUPLE: {

@@ -22,9 +22,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlcheckconf.c#6 $
- * $DateTime: 2016/09/29 10:09:36 $
- * $Change: 3207 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlcheckconf.c#7 $
+ * $DateTime: 2016/11/30 12:35:01 $
+ * $Change: 3247 $
  */
 
 
@@ -34,6 +34,7 @@
 #include "argus_config.h"
 #endif
 
+#include <argus_threads.h>
 #include <time.h>
 
 #define ARGUS_RECORD_MODIFIED   0x0100
@@ -886,9 +887,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    char stable[1024], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN];
    MYSQL_RES *mysqlRes;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_lock(&RaMySQLlock);
-#endif
+   MUTEX_LOCK(&RaMySQLlock);
 
    if ((db != NULL) && (table != NULL)) {
       sprintf (stable, "%s.%s", db, table);
@@ -1037,9 +1036,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
       free(tbl);
    }
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&RaMySQLlock);
-#endif
+   MUTEX_UNLOCK(&RaMySQLlock);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);

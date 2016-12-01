@@ -18,9 +18,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/radns/radomain.c#10 $
- * $DateTime: 2016/06/08 00:19:40 $
- * $Change: 3165 $
+ * $Id: //depot/gargoyle/clients/examples/radns/radomain.c#11 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 /*

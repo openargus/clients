@@ -23,9 +23,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#19 $
- * $DateTime: 2016/11/09 23:17:55 $
- * $Change: 3242 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#21 $
+ * $DateTime: 2016/11/30 12:38:04 $
+ * $Change: 3249 $
  */
 
 
@@ -2858,10 +2858,10 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
          parser->RaLabel = NULL;
 
          if (RaWindowStatus) {
-#if defined(ARGUS_THREADS)
-            pthread_mutex_lock(&queue->lock);
-#endif
             if (parser->status & ARGUS_FILE_LIST_PROCESSED) {
+#if defined(ARGUS_THREADS)
+               pthread_mutex_lock(&queue->lock);
+#endif
                if (queue->status & RA_MODIFIED) {
 #ifdef ARGUSDEBUG
                   ArgusDebug (3, "ArgusDrawWindow(%p) processing queue\n", ws);
@@ -3051,11 +3051,11 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
 
                   RaHighlightDisplay(ArgusParser, RaCursesProcess->queue, parser->ArgusSearchString);
                }
-            }
 
 #if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&queue->lock);
+               pthread_mutex_unlock(&queue->lock);
 #endif
+            }
          }
          wmove(RaCurrentWindow->window, RaWindowCursorY, RaWindowCursorX);
       }

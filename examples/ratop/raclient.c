@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#37 $
- * $DateTime: 2016/11/09 23:17:55 $
- * $Change: 3242 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#39 $
+ * $DateTime: 2016/11/30 12:38:04 $
+ * $Change: 3249 $
  */
 
 
@@ -1607,9 +1607,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                  tryreverse = 0;
                                  break;
                            }
-                           break;
                         }
-                     }
 
                   if (pns) {
                      if (pns->qhdr.queue) {
@@ -2784,7 +2782,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
             qhdr = qhdr->nxt;
          }
 
-         queue->array[i] = NULL;
+         queue->array[x] = NULL;
          qsort ((char *) queue->array, x, sizeof (struct ArgusQueueHeader *), ArgusSortRoutine);
 
          for (i = 0; i < x; i++) {

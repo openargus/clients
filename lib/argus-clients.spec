@@ -38,12 +38,13 @@ Copyright: 2000-2022 QoSient, LLC
 %setup -n %{name}-%{ver}.%{rel}
 %build
 ./configure --prefix=/usr --with-sasl
-make
+make EXTRA_CFLAGS="-ggdb"
 
 %install
 rm -rf $RPM_BUILD_ROOT
 make DESTDIR="$RPM_BUILD_ROOT" install
 
+install -D -m 0644 pkg/ra.conf $RPM_BUILD_ROOT/etc/ra.conf
 install -D -m 0600 pkg/radium.conf $RPM_BUILD_ROOT/etc/radium.conf
 install -D -m 0644 pkg/rhel/sysconfig/radium $RPM_BUILD_ROOT/etc/sysconfig/radium
 
@@ -92,6 +93,7 @@ mkdir -p /home/argus
 %{_unitdir}/radium.service
 %{_unitdir}/rasplit.service
 
+%config /etc/ra.conf
 %config /etc/radium.conf
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rasplit

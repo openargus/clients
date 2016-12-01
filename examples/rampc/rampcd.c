@@ -30,9 +30,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/rampc/rampcd.c#17 $
- * $DateTime: 2016/09/20 14:24:49 $
- * $Change: 3195 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/rampcd.c#18 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H

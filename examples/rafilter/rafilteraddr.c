@@ -24,9 +24,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#12 $
- * $DateTime: 2016/10/28 18:37:18 $
- * $Change: 3235 $
+ * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#13 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H

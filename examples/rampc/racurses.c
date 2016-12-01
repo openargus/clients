@@ -23,9 +23,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/rampc/racurses.c#8 $
- * $DateTime: 2016/03/25 00:30:13 $
- * $Change: 3127 $
+ * $Id: //depot/gargoyle/clients/examples/rampc/racurses.c#9 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 
