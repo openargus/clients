@@ -125,6 +125,29 @@ struct RaOutputProcessStruct {
 #define RA_DIRTYBINS            0x20
 
 
+struct ArgusWindowStruct {
+   struct ArgusQueueHeader qhdr;
+   struct ArgusQueueStruct *queue;
+ 
+   WINDOW *window;
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_t lock;
+#endif
+   char *desc;
+   int (*data)(struct ArgusWindowStruct *);
+   void *values[2048];
+};
+
+
+struct ArgusDomainStruct {
+   struct ArgusQueueHeader qhdr;
+   struct ArgusQueueStruct *queue;
+  
+   struct ArgusAddrStruct srcid;
+   struct ArgusWindowStruct *ws;
+};
+
 #if defined(RA_CURSES_MAIN)
 
 #if defined(HAVE_ZLIB_H)
@@ -158,30 +181,8 @@ int ArgusProcessQueue (struct ArgusQueueStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
-
-struct ArgusWindowStruct {
-   struct ArgusQueueHeader qhdr;
-   struct ArgusQueueStruct *queue;
-
-   WINDOW *window;
-#if defined(ARGUS_THREADS)
-   pthread_mutex_t lock;
-#endif
-   char *desc;
-   int (*data)(struct ArgusWindowStruct *);
-   void *values[2048];
-};
-
 struct ArgusWindowStruct *RaCurrentWindow = NULL;
 struct ArgusQueueStruct *ArgusDomainQueue = NULL;
-
-struct ArgusDomainStruct {
-   struct ArgusQueueHeader qhdr;
-   struct ArgusQueueStruct *queue;
-
-   struct ArgusAddrStruct srcid;
-   struct ArgusWindowStruct *ws;
-};
 
 struct ArgusWindowStruct *RaHeaderWindowStruct = NULL;
 struct ArgusWindowStruct *RaDebugWindowStruct  = NULL;
@@ -476,6 +477,10 @@ extern struct RaOutputProcessStruct *RaCursesNewProcess(struct ArgusParserStruct
 extern void ArgusSetDebugString (char *, int, int);
 extern void ArgusUpdateScreen(void);
 extern void ArgusResetSearch (void);
+
+extern struct ArgusWindowStruct *RaCurrentWindow;
+
+extern void ArgusProcessSqlData(struct ArgusWindowStruct *);
 
 extern char * ArgusTrimString (char *);
 

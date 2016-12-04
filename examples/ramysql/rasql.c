@@ -24,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#15 $
- * $DateTime: 2016/11/30 00:54:11 $
- * $Change: 3245 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasql.c#16 $
+ * $DateTime: 2016/12/01 12:19:10 $
+ * $Change: 3252 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -1562,6 +1562,9 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
             start = parser->startime_t.tv_sec * 1000000LL;
          } else
             start = parser->ArgusRealTime.tv_sec * 1000000LL + parser->ArgusRealTime.tv_usec;
+
+         if (parser->lasttime_t.tv_sec > parser->ArgusRealTime.tv_sec)
+            parser->lasttime_t = parser->ArgusRealTime;
 
          ArgusTableEndSecs = start / 1000000;
 

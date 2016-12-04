@@ -40,9 +40,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/common/argus_util.c#94 $
- * $DateTime: 2016/11/30 00:54:11 $
- * $Change: 3245 $
+ * $Id: //depot/gargoyle/clients/common/argus_util.c#95 $
+ * $DateTime: 2016/12/01 00:15:16 $
+ * $Change: 3250 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -8258,7 +8258,7 @@ ArgusPrintRank (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
    char rank[32];
 
    bzero (rank, sizeof(rank));
-   sprintf (rank, "%d", argus->rank + 1);
+   sprintf (rank, "%d", argus->rank);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " Rank = \"%s\"", rank);

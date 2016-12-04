@@ -10709,22 +10709,26 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
          case ARGUSSPLITRATE:
          case ARGUSSPLITTIME:
          case ARGUSSPLITSIZE: {
-            if ((val - rbps->start) >= 0) {
-               int i = ((val - rbps->start)/rbps->size);
-               ind = rbps->index + i;
-            } else
-               ind = -1;
+            if (rbps->size > 0) {
+               if ((rbps->size > 0) && ((val - rbps->start) >= 0)) {
+                  int i = ((val - rbps->start)/rbps->size);
+                  ind = rbps->index + i;
+               } else
+                  ind = -1;
+            }
             break;
          }
          case ARGUSSPLITCOUNT: {
-            double frac, iptr, val = ((rbps->count + 1) / rbps->size);
+            if (rbps->size > 0) {
+               double frac, iptr, val = ((rbps->count + 1) / rbps->size);
 
-            frac = modf(val, &iptr);
+               frac = modf(val, &iptr);
 
-            if (!(frac))
-               rbps->index++;
+               if (!(frac))
+                  rbps->index++;
 
-            ind = rbps->index + ((val - rbps->start) / rbps->size);
+               ind = rbps->index + ((val - rbps->start) / rbps->size);
+            }
             break;
          }
       }

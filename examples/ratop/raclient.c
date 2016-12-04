@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#39 $
- * $DateTime: 2016/11/30 12:38:04 $
- * $Change: 3249 $
+ * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#40 $
+ * $DateTime: 2016/12/02 00:09:45 $
+ * $Change: 3254 $
  */
 
 
@@ -179,7 +179,14 @@ ArgusProcessData (void *arg)
 #if defined(ARGUS_THREADS)
    int done = 0;
 #endif
+
    struct ArgusParserStruct *parser = ArgusParser;
+
+   while (parser == NULL) {
+      struct timespec ts = {0, 250000000};
+      nanosleep (&ts, NULL);
+      parser = ArgusParser;
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusProcessData() starting");
@@ -207,11 +214,8 @@ ArgusProcessData (void *arg)
 // Process the input files first
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
-
             while (file && parser->eNflag) {
-
                parser->ArgusCurrentInput = file;
-
                if (strcmp (file->filename, "-")) {
                   if (file->fd < 0) {
                      if ((file->file = fopen(file->filename, "r")) == NULL) {
@@ -467,7 +471,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          parser->timeout.tv_usec = 0;
 
          parser->RaClientTimeout.tv_sec  = 0;
-         parser->RaClientTimeout.tv_usec = 250000;
+         parser->RaClientTimeout.tv_usec = 500000;
 
          parser->RaInitialized++;
          parser->ArgusPrintXml = 0;
@@ -954,7 +958,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                RaCursesUpdateInterval.tv_sec  = parser->ArgusUpdateInterval.tv_sec;
                RaCursesUpdateInterval.tv_usec = parser->ArgusUpdateInterval.tv_usec;
             } else {
-               RaCursesUpdateInterval.tv_sec  = 0;
+               RaCursesUpdateInterval.tv_sec  = 1;
                RaCursesUpdateInterval.tv_usec = 153613;
             }
          }
@@ -1689,8 +1693,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      pns->bins->nadp.RaStartTmStruct = RaBinProcess->nadp.RaStartTmStruct;
                      pns->bins->nadp.RaEndTmStruct   = RaBinProcess->nadp.RaEndTmStruct;
          
-                     if (!(ArgusInsertRecord (parser, pns->bins, tns, offset)))
+                     if (!(ArgusInsertRecord (parser, pns->bins, tns, offset))) {
                         ArgusDeleteRecordStruct(ArgusParser, tns);
+                        tns = NULL;
+                     }
          
                      pns->bins->status |= RA_DIRTYBINS;
          
