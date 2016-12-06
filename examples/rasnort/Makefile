@@ -28,7 +28,7 @@
 
 # Top level hierarchy
 
-prefix = /usr
+prefix = /usr/local
 exec_prefix = ${prefix}
 datarootdir = ${prefix}/share
 
@@ -54,16 +54,16 @@ srcdir = .
 # You shouldn't need to edit anything below.
 #
 
-CC = gcc
+CC = cc
 CCOPT = -g  -Wall -Wmissing-prototypes
-INCLS = -I. -I../../include -I../../common  
+INCLS = -I. -I../../include -I../../common -I/opt/local/include  -I/opt/local/include 
 DEFS = -DHAVE_CONFIG_H
-COMPATLIB = -lm   -lpthread    -lz
+COMPATLIB = -lm    -lGeoIP  -lz
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
-INSTALL    = /bin/install -c
+INSTALL    = /usr/bin/install -c
 INSTALLBIN = ../../bin
 INSTALLLIB = ../../lib
 RANLIB     = ranlib

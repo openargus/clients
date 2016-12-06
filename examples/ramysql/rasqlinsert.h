@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.h#9 $
- * $DateTime: 2016/10/31 23:30:40 $
- * $Change: 3237 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.h#10 $
+ * $DateTime: 2016/12/05 10:32:59 $
+ * $Change: 3255 $
  */
 
 

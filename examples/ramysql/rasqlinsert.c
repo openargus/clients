@@ -23,9 +23,9 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.c#39 $
- * $DateTime: 2016/12/01 11:58:56 $
- * $Change: 3251 $
+ * $Id: //depot/gargoyle/clients/examples/ramysql/rasqlinsert.c#40 $
+ * $DateTime: 2016/12/05 10:32:59 $
+ * $Change: 3255 $
  */
 
 
