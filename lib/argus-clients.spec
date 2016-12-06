@@ -9,7 +9,7 @@
 Summary: Gargoyle Client Software
 Name: argus-clients
 Version: %ver
-Release: %rel
+Release: %rel%{dist}.1
 License: Proprietary
 Group: Applications/Internet
 Source: %{name}-%{version}.%{rel}.tar%{srcext}
