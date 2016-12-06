@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 RestartSec=5
 ExecStartPre=/sbin/rasqlinsert-setup start %i
-ExecStart=/usr/bin/xargs -a /run/argus/rasqlinsert.%i /usr/bin/rasqlinsert -S localhost:561 -X
+ExecStart=/usr/bin/xargs -a /run/argus/rasqlinsert.%i /usr/bin/rasqlinsert -X -S localhost:561
 ExecStopPost=/sbin/rasqlinsert-setup stop %i
 
 [Install]
