@@ -49,6 +49,10 @@ install -D -m 0600 pkg/radium.conf $RPM_BUILD_ROOT/etc/radium.conf
 install -D -m 0644 pkg/rhel/sysconfig/radium $RPM_BUILD_ROOT/etc/sysconfig/radium
 
 install -D -m 0644 pkg/rhel/sysconfig/rasplit $RPM_BUILD_ROOT/etc/sysconfig/rasplit
+install -D -m 0644 pkg/rhel/systemd/rasqlinsert@.service $RPM_BUILD_ROOT%{_unitdir}/rasqlinsert@.service
+install -D -m 0755 pkg/rhel/systemd/rasqlinsert-setup $RPM_BUILD_ROOT%{argussbin}/rasqlinsert-setup
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.l2_l3 $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.l2_l3
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ipv4matrix $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ipv4matrix
 install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rasplit.service $RPM_BUILD_ROOT%{_unitdir}/rasplit.service
@@ -179,7 +183,10 @@ Copyright 2000-2016 QoSient, LLC
 
 %files sql
 %defattr(-,root,root)
+%{argussbin}/rasqlinsert-setup
 %{argusbin}/rasql*
 %{argusman}/man1/rasql*
+%{_unitdir}/rasqlinsert@.service
+%{_datarootdir}/argus-clients/rasql*
 
 %changelog
