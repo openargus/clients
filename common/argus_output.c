@@ -2076,7 +2076,7 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
 #endif
 
    for (i = 0, found = 0; i < ARGUSMAXCONTROLCOMMANDS; i++) {
-      if (!(strncmp (ptr, ArgusControlCommands[i].command, strlen(ArgusClientCommands[i])))) {
+      if (!(strncmp (ptr, ArgusControlCommands[i].command, strlen(ArgusControlCommands[i].command)))) {
          if (ArgusControlCommands[i].handler != NULL) {
             char **result;
             if ((result = ArgusControlCommands[i].handler(ptr)) != NULL) {
