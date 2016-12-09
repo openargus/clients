@@ -1652,20 +1652,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
          if (!(RaBinProcess && (RaBinProcess->nadp.mode == ARGUSSPLITRATE))) {
             if (pns) {
-               if (parser->RaCumulativeMerge)
-                  ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
-               else {
-                  int i;
-                  for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-                     if (tns->dsrs[i] != NULL) {
-                        if (pns->dsrs[i] != NULL)
-                           ArgusFree(pns->dsrs[i]);
-                        pns->dsrs[i] = cns->dsrs[i];
-                        cns->dsrs[i] = NULL;
-                     }
-                  }
-               }
-    
+               ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
                ArgusDeleteRecordStruct(ArgusParser, cns);
                pns->status |= ARGUS_RECORD_MODIFIED;
             } else {
@@ -1701,20 +1688,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      pns->bins->status |= RA_DIRTYBINS;
          
                   } else {
-                     if (parser->RaCumulativeMerge)
-                        ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, tns);
-                     else {
-                        int i;
-                        for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-                           if (tns->dsrs[i] != NULL) {
-                              if (pns->dsrs[i] != NULL)
-                                 ArgusFree(pns->dsrs[i]);
-                              pns->dsrs[i] = tns->dsrs[i];
-                              tns->dsrs[i] = NULL;
-                           }
-                        }
-                     }
-         
+                     ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, tns);
                      ArgusDeleteRecordStruct(ArgusParser, tns);
                      pns->status |= ARGUS_RECORD_MODIFIED;
                   }
