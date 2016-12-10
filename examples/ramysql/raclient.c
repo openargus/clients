@@ -1528,7 +1528,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             agg = tagg;
 
          if (cns) {
-         if (!(RaBinProcess && (RaBinProcess->nadp.mode == ARGUSSPLITRATE))) {
+         if (!(RaBinProcess && (RaBinProcess->nadp.mode == ARGUSSPLITTIME))) {
             if (pns) {
                ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
                ArgusDeleteRecordStruct(ArgusParser, cns);
