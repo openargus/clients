@@ -1401,12 +1401,14 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             struct ArgusRecordStruct *argus;
             int x, z, count;
 
+            MUTEX_LOCK(&queue->lock);
             count = queue->count;
 
             for (x = 0, z = count; x < z; x++) {
                if ((argus = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL)
                   ArgusDeleteRecordStruct(ArgusParser, argus);
             }
+            MUTEX_UNLOCK(&queue->lock);
             ArgusCreateSQLSaveTable(RaDatabase, table);
          } else
             free(tbl);
