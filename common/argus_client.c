@@ -695,8 +695,14 @@ ArgusConnectRemote (void *arg)
                } else
                   ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
 
+#if defined(ARGUS_THREADS)
+               pthread_mutex_lock(&ArgusParser->lock);
+#endif
                ArgusParser->ArgusTotalMarRecords++;
                ArgusParser->ArgusTotalRecords++;
+#if defined(ARGUS_THREADS)
+               pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                done++;
             } else {
 #ifdef ARGUSDEBUG
@@ -742,6 +748,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    struct ArgusInput *input = NULL;
    struct timeval wait, timeoutValue;
    int retn = 0, started = 0;
+   struct timeval rtime;
 
 #if defined(ARGUS_THREADS)
    struct timespec tsbuf = {0, 50000000};
@@ -760,6 +767,9 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 
       FD_ZERO (&readmask);
 
+#if defined(ARGUS_THREADS)
+      pthread_mutex_lock(&queue->lock);
+#endif
       if ((input = (struct ArgusInput *) queue->start) != NULL) {
          for (i = 0; i < queue->count; i++) {
             if (input->fd >= 0) {
@@ -769,7 +779,9 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             input = (void *)input->qhdr.nxt;
          }
       }
-
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&queue->lock);
+#endif
       if (width >= 0) {
          width++;
          wait.tv_sec = 0;
@@ -781,8 +793,15 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             gettimeofday (&input->ArgusStartTime, 0L);
 
          if ((retn = select (width, &readmask, NULL, NULL, &wait)) >= 0) {
+#if defined(ARGUS_THREADS)
+            pthread_mutex_lock(&parser->lock);
+#endif
             gettimeofday (&parser->ArgusRealTime, NULL);
             ArgusAdjustGlobalTime(ArgusParser, &ArgusParser->ArgusRealTime);
+            rtime = parser->ArgusRealTime;
+#if defined(ARGUS_THREADS)
+            pthread_mutex_unlock(&parser->lock);
+#endif
 
             for (input = (struct ArgusInput *) queue->start, i = 0; i < queue->count; i++) {
                if ((input->fd >= 0) && FD_ISSET (input->fd, &readmask)) {
@@ -828,7 +847,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                   if (input->fd >= 0) {
                      if (input->hostname && input->ArgusMarInterval) {
                         if (input->ArgusLastTime.tv_sec) {
-                           if ((parser->ArgusRealTime.tv_sec - input->ArgusLastTime.tv_sec) > (input->ArgusMarInterval * 2)) {
+                           if ((rtime.tv_sec - input->ArgusLastTime.tv_sec) > (input->ArgusMarInterval * 2)) {
                               ArgusLog (LOG_WARNING, "ArgusReadStream %s: idle stream: closing", input->hostname);
                               ArgusCloseInput(parser, input);
                            }
@@ -839,8 +858,15 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                input = (void *)input->qhdr.nxt;
             }
          } else {
+#if defined(ARGUS_THREADS)
+            pthread_mutex_lock(&parser->lock);
+#endif
             gettimeofday (&parser->ArgusRealTime, NULL);
             ArgusAdjustGlobalTime(ArgusParser, &ArgusParser->ArgusRealTime);
+            rtime = parser->ArgusRealTime;
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&parser->lock);
+#endif
          }
 
       } else {
@@ -855,13 +881,28 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             if (parser->ArgusReliableConnection)
                nanosleep(ts, NULL);
 #endif
+
+#if defined(ARGUS_THREADS)
+         pthread_mutex_lock(&parser->lock);
+#endif
          gettimeofday (&parser->ArgusRealTime, NULL);
          ArgusAdjustGlobalTime(ArgusParser, &ArgusParser->ArgusRealTime);
+         rtime = parser->ArgusRealTime;
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&parser->lock);
+#endif
       }
 
       if (timeoutValue.tv_sec == 0) {
+#if defined(ARGUS_THREADS)
+         pthread_mutex_lock(&parser->lock);
+#endif
          gettimeofday (&ArgusParser->ArgusRealTime, NULL);
-         timeoutValue = parser->ArgusRealTime;
+         rtime = parser->ArgusRealTime;
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&parser->lock);
+#endif
+         timeoutValue = rtime;
          timeoutValue.tv_sec  += parser->RaClientTimeout.tv_sec;
          timeoutValue.tv_usec += parser->RaClientTimeout.tv_usec;
          while (timeoutValue.tv_usec >= 1000000) {
@@ -870,15 +911,15 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
          }
       }
 
-      if ((parser->ArgusRealTime.tv_sec  > timeoutValue.tv_sec) ||
-         ((parser->ArgusRealTime.tv_sec == timeoutValue.tv_sec) &&
-          (parser->ArgusRealTime.tv_usec > timeoutValue.tv_usec))) {
+      if ((rtime.tv_sec  > timeoutValue.tv_sec) ||
+         ((rtime.tv_sec == timeoutValue.tv_sec) &&
+          (rtime.tv_usec > timeoutValue.tv_usec))) {
 
          ArgusClientTimeout ();
 
          if (parser->Tflag) {
             struct timeval diff;
-            RaDiffTime (&parser->ArgusRealTime, &input->ArgusStartTime, &diff);
+            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
             if (diff.tv_sec >= parser->Tflag)
                ArgusShutDown(0);
          }
@@ -892,8 +933,14 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                if (addr->fd != -1) close(addr->fd);
                if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) { 
                   if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusTotalMarRecords++;
                      ArgusParser->ArgusTotalRecords++;
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
       
                      if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)  
                         ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
@@ -905,7 +952,13 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                         ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, &ArgusParser->ArgusFilterCode);
       
                      ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusHostsActive++;
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
        
                   } else {
                      close(addr->fd);
@@ -937,8 +990,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    ArgusDebug (3, "ArgusReadStream(%p, %p) returning", parser, queue);
 #endif
 }
-
-int ArgusTotalRecords = 0;
 
 
 #include <netdb.h>

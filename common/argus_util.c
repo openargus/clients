@@ -19291,7 +19291,7 @@ ArgusAddToQueue(struct ArgusQueueStruct *queue, struct ArgusQueueHeader *obj, in
       if (obj->queue == NULL) {
 #if defined(ARGUS_THREADS)
          if (type == ARGUS_LOCK)
-            pthread_mutex_lock(&queue->lock); 
+            retn = pthread_mutex_lock(&queue->lock); 
 #endif
          if (queue->start != NULL) {
             obj->prv = queue->start->prv;
@@ -19308,7 +19308,8 @@ ArgusAddToQueue(struct ArgusQueueStruct *queue, struct ArgusQueueHeader *obj, in
          queue->status |= RA_MODIFIED;
 #if defined(ARGUS_THREADS)
          if (type == ARGUS_LOCK)
-            pthread_mutex_unlock(&queue->lock); 
+            if (retn == 0)
+               pthread_mutex_unlock(&queue->lock); 
 #endif
          obj->queue = queue;
 
@@ -30270,7 +30271,16 @@ ArgusParseInit (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
       bcopy((char *)&input->ArgusInitCon, (char *)&parser->ArgusInitCon, sizeof(input->ArgusInitCon));
 
+#if defined(ARGUS_THREADS)
+      pthread_mutex_lock(&parser->lock);
+#endif
+
       input->ArgusLastTime = parser->ArgusRealTime;
+
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&parser->lock);
+#endif
+
       input->ArgusMarInterval = ntohs(input->ArgusInitCon.argus_mar.argusMrInterval);
 
       if (input->ArgusReadBuffer != NULL) {

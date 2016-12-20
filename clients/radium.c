@@ -197,13 +197,13 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 */
       parser->ArgusReliableConnection++;
 
-      if ((parser->ArgusOutput = ArgusNewOutput (parser)) == NULL)
-         ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
-
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
          setArgusMarReportInterval (ArgusParser, "5s");
       }
+
+      if ((parser->ArgusOutput = ArgusNewOutput (parser)) == NULL)
+         ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
 
 #if defined(ARGUS_THREADS)
       sigemptyset(&blocked_signals);
@@ -486,11 +486,18 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    }
 
 #if defined(ARGUS_THREADS)
-   pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond); 
+   if (parser->ArgusOutput && parser->ArgusOutput->ArgusOutputList) {
+      int cnt = 0;
+      pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond); 
 
-   if (parser->ArgusOutput->ArgusOutputList->count > 10000) {
-      struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
-      nanosleep (ts, NULL);
+      pthread_mutex_lock(&parser->ArgusOutput->ArgusOutputList->lock);
+      cnt = parser->ArgusOutput->ArgusOutputList->count;
+      pthread_mutex_unlock(&parser->ArgusOutput->ArgusOutputList->lock);
+
+      if (cnt > 10000) {
+         struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+         nanosleep (ts, NULL);
+      }
    }
 
 #else

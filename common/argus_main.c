@@ -236,9 +236,14 @@ extern void * ArgusTimeoutProcess (void *);
                   }
 
                   if ((file->file != NULL) && ((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusTotalMarRecords++;
                      ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                      if (ArgusParser->RaPollMode) {
                          ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, &ArgusParser->ArgusFilterCode);
                          ArgusCloseInput(ArgusParser, file);  
@@ -268,9 +273,14 @@ extern void * ArgusTimeoutProcess (void *);
                file->ostop = -1;
 
                if (((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_lock(&ArgusParser->lock);
+#endif
                   ArgusParser->ArgusTotalMarRecords++;
                   ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                   if ((flags = fcntl(fileno(stdin), F_GETFL, 0L)) < 0)
                      ArgusLog (LOG_ERR, "ArgusReadFile: fcntl error %s", strerror(errno));
 
@@ -346,9 +356,14 @@ extern void * ArgusTimeoutProcess (void *);
             while ((addr = (void *)ArgusPopQueue(ArgusParser->ArgusRemoteHosts, ARGUS_LOCK)) != NULL) {
                if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) {
                   if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusTotalMarRecords++;
                      ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                      if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 
@@ -365,9 +380,9 @@ extern void * ArgusTimeoutProcess (void *);
                         ArgusParser->ArgusHostsActive++;
                      }
                   } else
-                     ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_LOCK);
+                     ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_NOLOCK);
                } else
-                  ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_LOCK);
+                  ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_NOLOCK);
 
 #if !defined(ARGUS_THREADS)
             }
@@ -376,7 +391,7 @@ extern void * ArgusTimeoutProcess (void *);
 #endif
          }
 
-         while ((addr = (void *)ArgusPopQueue(tqueue, ARGUS_LOCK)) != NULL)
+         while ((addr = (void *)ArgusPopQueue(tqueue, ARGUS_NOLOCK)) != NULL)
             ArgusAddToQueue(ArgusParser->ArgusRemoteHosts, &addr->qhdr, ARGUS_LOCK);
 
          ArgusDeleteQueue(tqueue);
