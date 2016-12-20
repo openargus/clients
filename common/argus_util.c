@@ -1069,6 +1069,12 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
             if (!(strncmp(parser->ArgusProgramName, "ragrep", 6)))
                parser->Lflag = 1;
             else {
+               char *ptr;
+               if ((ptr = strchr(optarg, '-')) !=  NULL) {
+                  parser->iLflag = atoi(optarg);
+                  optarg = ptr + 1;;
+               }
+
                parser->Lflag = atoi(optarg);
                switch (parser->Lflag) {
                   case  0: parser->Lflag = -1; break;
@@ -3315,11 +3321,10 @@ ArgusHandleRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *in
    return (retn);
 }
 
-int
+struct RaAddressStruct *
 RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
 {
-   struct RaAddressStruct *raddr;
-   int retn = 0;
+   struct RaAddressStruct *retn = NULL;
 
    if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
       switch (type) {
@@ -3333,9 +3338,9 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
                node->addr.mask[0] = 0xFFFFFFFF << (32 - mask);
                node->addr.masklen = mask;
 
-               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], node, mode)) == NULL)
-                  RaInsertAddress (parser, labeler, NULL, node, ARGUS_VISITED);
-               else
+               if ((retn = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], node, mode)) == NULL) {
+                  retn = RaInsertAddress (parser, labeler, NULL, node, ARGUS_VISITED);
+               } else
                   ArgusFree(node);
             }
             break;
@@ -3346,7 +3351,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d, %d) returning %p\n", parser, addr, type, mode, retn);
 #endif
    }
 

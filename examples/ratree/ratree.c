@@ -78,7 +78,7 @@ int ArgusDebugTree = 0;
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
-   extern int RaPrintLabelTreeLevel;
+   extern int RaPrintLabelStartTreeLevel, RaPrintLabelTreeLevel;
    struct RaAddressStruct **ArgusAddrTree;
    struct ArgusModeStruct *mode = NULL;
    parser->RaWriteOut = 0;
@@ -137,12 +137,19 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (!(strncasecmp (mode->mode, "graph", 5))) {
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_GRAPH;
             } else
+            if (!(strncasecmp (mode->mode, "json", 4))) {
+               parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_JSON;
+            } else
             if (!(strncasecmp (mode->mode, "rmon", 4)))
                parser->RaMonMode++;
 
             mode = mode->nxt;
          }
       }
+
+      if (parser->ArgusPrintJson)
+         if (parser->ArgusLabeler)
+            parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_JSON;
 
       if (parser->ArgusFlowModelFile) {
          RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
@@ -169,7 +176,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
          exit(0);
       }
-
       parser->RaInitialized++;
    }
 }
@@ -180,6 +186,8 @@ void RaArgusInputComplete (struct ArgusInput *input) { return; }
 void
 RaParseComplete (int sig)
 {
+   extern int RaPrintLabelStartTreeLevel, RaPrintLabelTreeLevel;
+
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
          struct RaAddressStruct **ArgusAddrTree;
@@ -201,6 +209,15 @@ RaParseComplete (int sig)
 
          if (ArgusLabeler) {
             ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
+
+            if (ArgusParser->iLflag > 0) {
+               RaPrintLabelStartTreeLevel = ArgusParser->iLflag;
+            }
+
+            if (ArgusParser->Lflag > 0) {
+               RaPrintLabelTreeLevel = ArgusParser->Lflag;
+            }
+
             if (ArgusAddrTree && (ArgusAddrTree[AF_INET] != NULL)) {
                RaPruneAddressTree(ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
                RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
@@ -435,6 +452,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             switch (flow->hdr.subtype & 0x3F) {
                case ARGUS_FLOW_CLASSIC5TUPLE:
                case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  struct RaAddressStruct *src = NULL, *dst = NULL;
                   int smask = flow->ip_flow.smask;
                   int dmask = flow->ip_flow.dmask;
 
@@ -450,18 +468,26 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   }
 
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4:
-                        if (agg->mask & ARGUS_MASK_SADDR_INDEX)
-                           RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, smask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
-                        if (agg->mask & ARGUS_MASK_DADDR_INDEX)
-                           RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, dmask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                     case ARGUS_TYPE_IPV4: {
+                        if (agg->mask & ARGUS_MASK_SADDR_INDEX) {
+                           src = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, smask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                           if (src->ns == NULL) 
+                              src->ns = ArgusCopyRecordStruct(argus);
+                        }
+                        if (agg->mask & ARGUS_MASK_DADDR_INDEX) {
+                           dst = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, dmask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                           if (dst->ns == NULL) 
+                              dst->ns = ArgusCopyRecordStruct(argus);
+                        }
                         break;
-                     case ARGUS_TYPE_IPV6:
+                     }
+                     case ARGUS_TYPE_IPV6: {
                         if (agg->mask & ARGUS_MASK_SADDR_INDEX)
-                           RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, smask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                           src = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, smask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         if (agg->mask & ARGUS_MASK_DADDR_INDEX)
-                           RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, dmask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                           dst = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, dmask, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
                         break;
+                     }
                   }
                   break; 
                }

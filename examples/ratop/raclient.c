@@ -1914,27 +1914,58 @@ RaProcessThisAirportEventRecord (struct ArgusParserStruct *parser, struct ArgusW
    ArgusWireless->agrCtlNoise = ws->agrCtlNoise;
    ArgusWireless->agrExtNoise = ws->agrExtNoise;
 
-   if (ArgusWireless->state != NULL) free(ArgusWireless->state);
-   ArgusWireless->state = strdup(ws->state);
+   if (ArgusWireless->state != NULL) {
+      free(ArgusWireless->state);
+      ArgusWireless->state = NULL;
+   }
 
-   if (ArgusWireless->opMode != NULL) free(ArgusWireless->opMode);
-   ArgusWireless->opMode = strdup(ws->opMode);
+   if (ws->state)
+      ArgusWireless->state = strdup(ws->state);
+
+   if (ArgusWireless->opMode != NULL) {
+      free(ArgusWireless->opMode);
+      ArgusWireless->opMode = NULL;
+   }
+
+   if (ws->opMode)
+      ArgusWireless->opMode = strdup(ws->opMode);
 
    ArgusWireless->lastTxRate = ws->lastTxRate;
    ArgusWireless->maxRate = ws->maxRate;
    ArgusWireless->lastAssocStatus = ws->lastAssocStatus;
 
-   if (ArgusWireless->auth != NULL) free(ArgusWireless->auth);
-   ArgusWireless->auth = strdup(ws->auth);
+   if (ArgusWireless->auth != NULL) {
+      free(ArgusWireless->auth);
+      ArgusWireless->auth = NULL;
+   }
 
-   if (ArgusWireless->linkAuth != NULL) free(ArgusWireless->linkAuth);
-   ArgusWireless->linkAuth = strdup(ws->linkAuth);
+   if (ws->auth)
+      ArgusWireless->auth = strdup(ws->auth);
 
-   if (ArgusWireless->bssid != NULL) free(ArgusWireless->bssid);
-   ArgusWireless->bssid = strdup(ws->bssid);
+   if (ArgusWireless->linkAuth != NULL) {
+      free(ArgusWireless->linkAuth);
+      ArgusWireless->linkAuth = NULL;
+   }
+      
+   if (ws->linkAuth)
+      ArgusWireless->linkAuth = strdup(ws->linkAuth);
 
-   if (ArgusWireless->ssid != NULL) free(ArgusWireless->ssid);
-   ArgusWireless->ssid = strdup(ws->ssid);
+   if (ArgusWireless->bssid != NULL) {
+      free(ArgusWireless->bssid);
+      ArgusWireless->bssid = NULL;
+   }
+
+   if (ws->bssid)
+      if (strcmp(ws->bssid, "0:0:0:0:0:0"))
+         ArgusWireless->bssid = strdup(ws->bssid);
+
+   if (ArgusWireless->ssid != NULL) {
+      free(ArgusWireless->ssid);
+      ArgusWireless->ssid = NULL;
+   }
+
+   if (ws->ssid)
+      ArgusWireless->ssid = strdup(ws->ssid);
 
    ArgusWireless->mcs = ws->mcs;
    ArgusWireless->channel = ws->channel;
