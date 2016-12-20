@@ -11468,7 +11468,7 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
                   x = 0;
                   while (tlen) {
                      if (tlen > 32) {
-                        mask.addr_un.ipv6[x] = 0xFFFFFFFF;;
+                        mask.addr_un.ipv6[x] = 0xFFFFFFFF;
                         tlen -= 32;
                      } else {
                         mask.addr_un.ipv6[x] = htonl(0xFFFFFFFF << (32 - tlen));

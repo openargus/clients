@@ -1072,7 +1072,7 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
                char *ptr;
                if ((ptr = strchr(optarg, '-')) !=  NULL) {
                   parser->iLflag = atoi(optarg);
-                  optarg = ptr + 1;;
+                  optarg = ptr + 1;
                }
 
                parser->Lflag = atoi(optarg);
@@ -3329,7 +3329,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
    if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
       switch (type) {
          case ARGUS_TYPE_IPV4: {
-            struct RaAddressStruct *node = ArgusCalloc(1, sizeof(*node));;
+            struct RaAddressStruct *node = ArgusCalloc(1, sizeof(*node));
 
             if (node != NULL) {
                node->addr.type = AF_INET;
