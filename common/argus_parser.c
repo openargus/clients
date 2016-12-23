@@ -109,7 +109,7 @@ ArgusNewParser(char *progname)
    retn->ArgusPerformCorrection = 1;
    retn->ArgusTimeMultiplier = 1.0;
    retn->RaSeparateAddrPortWithPeriod = 1;
-
+   retn->RaPruneMode = 1;
 
    retn->timeout.tv_sec  = -1;
    retn->timeout.tv_usec =  0;

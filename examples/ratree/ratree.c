@@ -140,8 +140,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (!(strncasecmp (mode->mode, "json", 4))) {
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_JSON;
             } else
-            if (!(strncasecmp (mode->mode, "rmon", 4)))
+            if (!(strncasecmp (mode->mode, "rmon", 4))) {
                parser->RaMonMode++;
+            } else
+            if (!(strncasecmp (mode->mode, "noprune", 7))) {
+               parser->RaPruneMode = 0;
+            } else
+            if (!(strncasecmp (mode->mode, "prune", 5))) {
+               parser->RaPruneMode = 1;
+            }
 
             mode = mode->nxt;
          }
@@ -471,13 +478,24 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      case ARGUS_TYPE_IPV4: {
                         if (agg->mask & ARGUS_MASK_SADDR_INDEX) {
                            src = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, smask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
-                           if (src->ns == NULL) 
-                              src->ns = ArgusCopyRecordStruct(argus);
+
+                           while (src) {
+                              if (src->ns == NULL) 
+                                 src->ns = ArgusCopyRecordStruct(argus);
+                              else
+                                 ArgusMergeRecords (parser->ArgusAggregator, src->ns, argus);
+                              src = src->p;
+                           }
                         }
                         if (agg->mask & ARGUS_MASK_DADDR_INDEX) {
                            dst = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, dmask, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
-                           if (dst->ns == NULL) 
-                              dst->ns = ArgusCopyRecordStruct(argus);
+                           while (dst) {
+                              if (dst->ns == NULL) 
+                                 dst->ns = ArgusCopyRecordStruct(argus);
+                              else
+                                 ArgusMergeRecords (parser->ArgusAggregator, dst->ns, argus);
+                              dst = dst->p;
+                           }
                         }
                         break;
                      }
