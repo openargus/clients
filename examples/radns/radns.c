@@ -428,7 +428,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             } else
             if (!(strncasecmp (mode->mode, "prune", 5))) {
                char *ptr, *str;
-               parser->ArgusPruneTree++;
+               parser->RaPruneMode++;
                if ((str = strchr(mode->mode, '/')) != NULL) {
                   RaPruneLevel = strtod(++str, (char **)&ptr);
                   if (ptr == str)
@@ -487,7 +487,7 @@ RaParseComplete (int sig)
             if (RaTreePrinted++ == 0) {
                struct ArgusLabelerStruct *labeler = ArgusParser->ArgusLabeler;
                if (labeler && labeler->ArgusAddrTree) {
-                  if (ArgusParser->ArgusPruneTree)
+                  if (ArgusParser->RaPruneMode)
                      RaPruneAddressTree(labeler, labeler->ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_LABEL | ARGUS_TREE_DNS_SLD, RaPruneLevel);
                   RaPrintLabelTree (ArgusParser->ArgusLabeler, ArgusParser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
                   printf("\n");
