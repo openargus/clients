@@ -151,6 +151,7 @@ RaParseComplete (int sig)
    int i, freq, class = 1, start = 999999999, end = 0;
    double bs = 0.0, be = 0.0, bf = 0.0;
    float rel, relcum = 0.0;
+   int i, printed = 0;
 
    if (sig >= 0) {
       if (!parser->RaParseCompleting++) {
@@ -244,18 +245,19 @@ RaParseComplete (int sig)
 
                      if (ArgusParser->ArgusPrintJson) {
                         printf ("{\n");
-                        printf (" \"N\":\"%d\", \"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\"",
-                                     tagr->act.n, meanStr, stdStr, maxValStr, minValStr);
+                        printf (" \"N\":\"%d\", \"bins\":\"%d\", \"size\": \"%.*f\", \n \"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\"",
+                                     tagr->act.n, parser->RaHistoBins, pflag, parser->RaHistoBinSize, meanStr, stdStr, maxValStr, minValStr);
                         printf (", \"median\": \"%s\", \"95%%\": \"%s\",\n", medianStr, percentStr);
-                     } else
-                     if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
-                        printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
-                                     tagr->act.n, c, meanStr, c, stdStr, c, maxValStr, c, minValStr, c);
-                        printf ("median=%s%c95%%=%s", medianStr, c, percentStr);
                      } else {
-                        printf (" N = %-6d  mean = %*s  stddev = %*s  max = %s  min = %s\n",
-                                     tagr->act.n, len, meanStr, len, stdStr, maxValStr, minValStr);
-                        printf ("           median = %*s     95%% = %s\n", len, medianStr, percentStr);
+                        if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
+                           printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
+                                        tagr->act.n, c, meanStr, c, stdStr, c, maxValStr, c, minValStr, c);
+                           printf ("median=%s%c95%%=%s", medianStr, c, percentStr);
+                        } else {
+                           printf (" N = %-6d  mean = %*s  stddev = %*s  max = %s  min = %s\n",
+                                        tagr->act.n, len, meanStr, len, stdStr, maxValStr, minValStr);
+                           printf ("           median = %*s     95%% = %s\n", len, medianStr, percentStr);
+                        }
                      }
 
                      if (numModes > 0) {
@@ -265,15 +267,16 @@ RaParseComplete (int sig)
 
                         if (ArgusParser->ArgusPrintJson) {
                            printf(" \"mode\": [ \"%s\" ],\n", modeStr);
-                        } else
-                        if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
-                           printf ("%cmode=%s", c, modeStr);
-                        } else
-                           printf ("             mode = %*s\n", len, modeStr);
-                     }
+                        } else {
+                           if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
+                              printf ("%cmode=%s", c, modeStr);
+                           } else
+                              printf ("             mode = %*s\n", len, modeStr);
 
-                     if ((c = ArgusParser->RaFieldDelimiter) != '\0')
-                        printf ("\n");
+                           if ((c = ArgusParser->RaFieldDelimiter) != '\0')
+                              printf ("\n");
+                        }
+                     }
                         
                      if (stdStr)     free(stdStr);
                      if (meanStr)    free(meanStr);
@@ -326,6 +329,7 @@ RaParseComplete (int sig)
                }
                bsize = parser->RaHistoBinSize;
 
+               printf (" \"values\": [\n");
                for (i = 0; i < parser->RaHistoBins + 2; i++) {
                   struct ArgusRecordStruct *argus = parser->RaHistoRecords[i];
 
@@ -404,6 +408,9 @@ RaParseComplete (int sig)
 
                            if (argus != NULL) {
                               struct ArgusAgrStruct *agr = (void *)argus->dsrs[ARGUS_AGR_INDEX];
+                              char *sptr;
+                              int slen;
+
                               if (agr != NULL) {
                                  freq =  agr->count;
                                  rel  = (agr->count * 1.0)/(tagr->act.n * 1.0);
@@ -413,6 +420,15 @@ RaParseComplete (int sig)
                               }
 
                               ArgusPrintRecord (parser, buf, argus, MAXSTRLEN);
+                              slen = strlen(buf);
+
+                              if ((sptr = strchr(buf, '{')) != NULL) {
+                                 char *tptr = strchr(sptr, '}');
+                                 *sptr++ = '\0';
+                                 if (tptr != NULL) *tptr = '\0';
+                                 
+                                 memmove(buf, sptr, slen);
+                              }
 
                               relcum += rel;
 
@@ -449,32 +465,46 @@ RaParseComplete (int sig)
                            }
 
                            if (printThis) {
-                              char c;
-                              if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
-                                 if (ArgusPrintInterval) {
-                                    printf ("%d%c%e-%e%c%d%c%f%%%c%f%%",
-                                          class++, c, bs, be, c, freq, c, rel * 100.0, c, relcum * 100.0);
-                                 } else {
-                                    printf ("%d%c%e%c%d%c%f%%%c%f%%",
-                                          class++, c, bs, c, freq, c, rel * 100.0, c, relcum * 100.0);
-                                 }
-                                 if (strlen(buf)) {
-                                    printf ("%c%s\n", c, buf);
-                                 } else
-                                    printf ("\n");
+                              if (ArgusParser->ArgusPrintJson) {
+                                 if (printed++ > 0)
+                                    printf (",\n");
+                                 if (strlen(buf))
+                                    printf ("   {\"Class\": \"%d\", \"Interval\": \"%*.*e\", \"Freq\": \"%d\", \"Rel.Freq\": \"%8.4f\", \"Cum.Freq\": \"%8.4f\", %s }",
+                                                   class++, size, size, bs, freq, rel * 100.0, relcum * 100.0, buf);
+                                 else
+                                    printf ("   {\"Class\": \"%d\", \"Interval\": \"%*.*e\", \"Freq\": \"%d\", \"Rel.Freq\": \"%8.4f\", \"Cum.Freq\": \"%8.4f\" }",
+                                                   class++, size, size, bs, freq, rel * 100.0, relcum * 100.0);
                               } else {
-                                 if (ArgusPrintInterval) {
-                                    printf ("%6d   % *.*e-%*.*e %10d   %8.4f%%    %8.4f%%    %s\n",
-                                          class++, size, size, bs, size, size, be, freq, rel * 100.0, relcum * 100.0, buf);
+                                 char c;
+                                 if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
+                                    if (ArgusPrintInterval) {
+                                       printf ("%d%c%e-%e%c%d%c%f%%%c%f%%",
+                                             class++, c, bs, be, c, freq, c, rel * 100.0, c, relcum * 100.0);
+                                    } else {
+                                       printf ("%d%c%e%c%d%c%f%%%c%f%%",
+                                             class++, c, bs, c, freq, c, rel * 100.0, c, relcum * 100.0);
+                                    }
+                                    if (strlen(buf)) {
+                                       printf ("%c%s\n", c, buf);
+                                    } else
+                                       printf ("\n");
                                  } else {
-                                    printf ("%6d   % *.*e %10d   %8.4f%%    %8.4f%%    %s\n",
-                                          class++, size, size, bs, freq, rel * 100.0, relcum * 100.0, buf);
+                                    if (ArgusPrintInterval) {
+                                       printf ("%6d   % *.*e-%*.*e %10d   %8.4f%%    %8.4f%%    %s\n",
+                                             class++, size, size, bs, size, size, be, freq, rel * 100.0, relcum * 100.0, buf);
+                                    } else {
+                                       printf ("%6d   % *.*e %10d   %8.4f%%    %8.4f%%    %s\n",
+                                             class++, size, size, bs, freq, rel * 100.0, relcum * 100.0, buf);
+                                    }
                                  }
                               }
                            }
                         }
                      }
                   }
+               }
+               if (ArgusParser->ArgusPrintJson) {
+                  printf ("\n  ]\n}\n");
                }
             }
          }
