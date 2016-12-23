@@ -134,7 +134,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if (parser->vflag)
          ArgusReverseSortDir++;
  
-      parser->ArgusPrintJson = 0;
       parser->RaInitialized++;
    }
 }
@@ -243,6 +242,12 @@ RaParseComplete (int sig)
                      if (percentStr && (len < (tlen = strlen(percentStr)))) len = tlen;
                      if (stdStr && (len < (tlen = strlen(stdStr))))         len = tlen;
 
+                     if (ArgusParser->ArgusPrintJson) {
+                        printf ("{\n");
+                        printf (" \"N\":\"%d\", \"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\"",
+                                     tagr->act.n, meanStr, stdStr, maxValStr, minValStr);
+                        printf (", \"median\": \"%s\", \"95%%\": \"%s\",\n", medianStr, percentStr);
+                     } else
                      if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
                         printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
                                      tagr->act.n, c, meanStr, c, stdStr, c, maxValStr, c, minValStr, c);
@@ -258,9 +263,12 @@ RaParseComplete (int sig)
                         if (tlen > len)
                            len = tlen;
 
-                        if ((c = ArgusParser->RaFieldDelimiter) != '\0')
+                        if (ArgusParser->ArgusPrintJson) {
+                           printf(" \"mode\": [ \"%s\" ],\n", modeStr);
+                        } else
+                        if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
                            printf ("%cmode=%s", c, modeStr);
-                        else
+                        } else
                            printf ("             mode = %*s\n", len, modeStr);
                      }
 
@@ -277,7 +285,7 @@ RaParseComplete (int sig)
                   }
                }
 
-               if (parser->ArgusWfileList == NULL) {
+               if (!ArgusParser->ArgusPrintJson && (parser->ArgusWfileList == NULL)) {
                   if (ArgusParser->RaLabel == NULL) {
                      char rangeval[32], rangebuf[128], c;
                      int size = 0, rblen = 0;
@@ -403,6 +411,7 @@ RaParseComplete (int sig)
                                  freq = 1;
                                  rel  = 1.0/(tagr->act.n * 1.0);
                               }
+
                               ArgusPrintRecord (parser, buf, argus, MAXSTRLEN);
 
                               relcum += rel;
