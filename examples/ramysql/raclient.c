@@ -2220,9 +2220,10 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
    int retn = 0, count = 0;
    int cnt   = (rbps->arraylen - rbps->index);
    int dtime = cnt * rbps->size;
-   int rtime = ((((ArgusParser->ArgusGlobalTime.tv_sec * 1000000LL) /rbps->size)) * rbps->size)/1000000LL;;
+   int rtime = 0;
 
    if (rbps && (rbps->size != 0)) {
+      rtime = ((((ArgusParser->ArgusGlobalTime.tv_sec * 1000000LL) /rbps->size)) * rbps->size)/1000000LL;;
       count = (rbps->end - rbps->start)/rbps->size;
 
       if ((rbps->startpt.tv_sec + dtime) < rtime) {

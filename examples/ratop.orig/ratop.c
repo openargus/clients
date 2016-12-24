@@ -1489,14 +1489,18 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
    int retn = 0;
    int cnt   = (rbps->arraylen - rbps->index);
    int dtime = cnt * rbps->size;
-   int rtime = (((ArgusParser->ArgusGlobalTime.tv_sec/rbps->size)) * rbps->size);
+   int rtime = 0;
 
-   if ((rbps->startpt.tv_sec + dtime) < rtime) {
-      ArgusShiftArray(ArgusParser, rbps);
-      ArgusUpdateScreen();
+   if (rbps && (rbps->size != 0)) {
+      rtime = (((ArgusParser->ArgusGlobalTime.tv_sec/rbps->size)) * rbps->size);
 
-      rbps->status |= RA_DIRTYBINS;
-      retn = 1;
+      if ((rbps->startpt.tv_sec + dtime) < rtime) {
+         ArgusShiftArray(ArgusParser, rbps);
+         ArgusUpdateScreen();
+
+         rbps->status |= RA_DIRTYBINS;
+         retn = 1;
+      }
    }
 
 #if defined(ARGUSDEBUG)
