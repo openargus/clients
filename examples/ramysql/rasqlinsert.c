@@ -117,7 +117,6 @@ int ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStr
 
 void RaMySQLDeleteRecords(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
-void RaSQLQueryTable (char *);
 void RaSQLQueryNetworksTable (unsigned int, unsigned int, unsigned int);
 void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
@@ -5797,79 +5796,6 @@ RaProcessSplitOptions(struct ArgusParserStruct *parser, char *str, int len, stru
 
 
 #if defined(ARGUS_MYSQL)
-
-void
-RaSQLQueryTable (char *table)
-{
-   MYSQL_RES *mysqlRes;
-   struct timeval now;
-   int retn, x;
-
-   char  buf[1024];
-   char *sbuf = calloc(1, ARGUS_MAXRECORDSIZE);
-
-   if (sbuf != NULL) {
-      if ((ArgusInput = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) == NULL)
-         ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
-
-      ArgusInput->ArgusInitCon.hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-      ArgusInput->ArgusInitCon.hdr.cause = ARGUS_START;
-      ArgusInput->ArgusInitCon.hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
-
-      ArgusInput->ArgusInitCon.argus_mar.argusid = htonl(ARGUS_COOKIE);
-
-      gettimeofday (&now, 0L);
-
-      ArgusInput->ArgusInitCon.argus_mar.now.tv_sec  = now.tv_sec;
-      ArgusInput->ArgusInitCon.argus_mar.now.tv_usec = now.tv_usec;
-
-      ArgusInput->ArgusInitCon.argus_mar.major_version = VERSION_MAJOR;
-      ArgusInput->ArgusInitCon.argus_mar.minor_version = VERSION_MINOR;
-
-      bcopy((char *)&ArgusInput->ArgusInitCon, (char *)&ArgusParser->ArgusInitCon, sizeof (ArgusParser->ArgusInitCon));
-
-      sprintf (buf, "SELECT record from %s", table);
-
-#ifdef ARGUSDEBUG
-      ArgusDebug (3, "RaSQLQueryProbes: SQL Query %s\n", buf);
-#endif
-
-      if (MUTEX_LOCK(&RaMySQLlock) == 0) {
-
-      if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
-         ArgusLog(LOG_INFO, "RaSQLQueryTable: mysql_real_query error %s", mysql_error(RaMySQL));
-      else {
-
-         ArgusTotalSQLSearches++;
-
-         if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-            if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-               while ((row = mysql_fetch_row(mysqlRes))) {
-                  unsigned long *lengths;
-
-                  lengths = mysql_fetch_lengths(mysqlRes);
-                  bzero(sbuf, ARGUS_MAXRECORDSIZE);
-    
-                  for (x = 0; x < retn; x++) {
-                     bcopy (row[x], sbuf, (int) lengths[x]);
-
-                     if (((struct ArgusRecord *)sbuf)->hdr.type & ARGUS_MAR) {
-                        bcopy ((char *) &sbuf, (char *)&ArgusInput->ArgusInitCon, sizeof (struct ArgusRecord));
-                     } else 
-                        ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, &ArgusParser->ArgusFilterCode);
-                  }
-               }
-            }
-
-            mysql_free_result(mysqlRes);
-         }
-      }
-      MUTEX_UNLOCK(&RaMySQLlock);
-      }
-      free(sbuf);
-   }
-}
-
 
 void
 RaSQLQueryProbes ()

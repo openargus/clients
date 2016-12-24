@@ -135,7 +135,6 @@ char *ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorS
 
 void RaMySQLDeleteRecords(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
-void RaSQLQueryTable (char *);
 void RaSQLQueryNetworksTable (unsigned int, unsigned int, unsigned int);
 void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
