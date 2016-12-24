@@ -797,8 +797,15 @@ RaSQLQueryTable (char **tables)
                mysql_free_result(mysqlRes);
             }
 
-         } else
-            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+         } else {
+            if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+#ifdef ARGUSDEBUG
+            } else {
+               ArgusDebug (4, "%s: skip missing table %s", __func__, table);
+#endif
+            }
+         }
       }
    }
 }
