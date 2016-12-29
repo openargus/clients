@@ -12162,6 +12162,7 @@ ArgusPrintLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 #endif
 }
 
+
 void
 ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -12233,6 +12234,108 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 }
 
 
+void
+ArgusPrintSrcGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusLabelerStruct *labeler;
+   struct ArgusLabelStruct *label;
+   char *labelbuf = NULL, *lbuf = NULL;
+
+   if (argus->hdr.type & ARGUS_MAR) {
+      if (parser->ArgusPrintXml) {
+      } else 
+         sprintf (buf, "%*.*s ", len, len, " ");
+ 
+   } else {
+      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+         if ((lbuf= label->l_un.label) != NULL) {
+            char *ptr;
+            if ((ptr = strstr(lbuf, "sloc=")) != NULL) {
+               labelbuf = &lbuf[5];
+            }
+         }
+      }
+
+      if (labelbuf == NULL) {
+         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      if (labelbuf == NULL)
+         labelbuf = "";
+
+      if (labelbuf) {
+         if (parser->ArgusPrintXml) {
+            sprintf (buf, " Label = \"%s\"", labelbuf);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH)
+               len = strlen(labelbuf);
+
+            if (len != 0) {
+               if (len < strlen(labelbuf))
+                  sprintf (buf, "%*.*s* ", len-1, len-1, labelbuf);
+               else
+                  sprintf (buf, "%*.*s ", len, len, labelbuf);
+            } else
+               sprintf (buf, "%s ", labelbuf);
+         }
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcGroup (%p, %p)", buf, argus);
+#endif
+}
+
+
+void
+ArgusPrintDstGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusLabelStruct *label;
+   char *labelbuf = "";
+
+   if (argus->hdr.type & ARGUS_MAR) {
+      if (parser->ArgusPrintXml) {
+      } else 
+         sprintf (buf, "%*.*s ", len, len, " ");
+ 
+   } else {
+      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL))
+         labelbuf = label->l_un.label;
+
+      if (parser->ArgusPrintXml) {
+         sprintf (buf, " Label = \"%s\"", labelbuf);
+      } else {
+         if (parser->RaFieldWidth != RA_FIXED_WIDTH)
+            len = strlen(labelbuf);
+
+         if (len != 0) {
+            if (len < strlen(labelbuf))
+               sprintf (buf, "%*.*s* ", len-1, len-1, labelbuf);
+            else
+               sprintf (buf, "%*.*s ", len, len, labelbuf);
+         } else
+            sprintf (buf, "%s ", labelbuf);
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcGroup (%p, %p)", buf, argus);
+#endif
+}
 
 void
 ArgusPrintSrcPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -17473,6 +17576,16 @@ ArgusPrintSrcAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintSrcGroupLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->RaMonMode) {
+      sprintf (buf, "%*.*s ", len, len, "Grp");
+   } else {
+      sprintf (buf, "%*.*s ", len, len, "SrcGrp");
+   }
+}
+
+void
 ArgusPrintDstNetLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "DstNet");
@@ -17486,6 +17599,12 @@ ArgusPrintDstAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
    } else {
       sprintf (buf, "%*.*s ", len, len, "DstAddr");
    }
+}
+
+void
+ArgusPrintDstGroupLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "DstGrp");
 }
 
 void

@@ -158,10 +158,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (parser->ArgusLabeler)
             parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_JSON;
 
+/*
       if (parser->ArgusFlowModelFile) {
          RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
          parser->ArgusFlowModelFile = NULL;
       }
+*/
 
       if (parser->ArgusLabeler &&  parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG) {
          if (parser->ArgusLabeler && parser->ArgusLabeler->ArgusAddrTree) {
