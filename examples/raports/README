@@ -20,3 +20,31 @@
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+Mon Jan  2 15:51:36 EST 2017
+
+raports.1 is a perl script that is designed to tally the ports used by an IP address.
+This program supports a small number of command line options.
+
+The "-M [src,dst]" option provides an opportunity for you to specify the ports offered or used by a specific IP address.
+
+   raports -M dst - src host x.y.z.w
+
+will present all the destination addresses and ports used (referenced) by host x.y.z.w.  You do not expect to see x.y.z.w in the report.
+
+   raports -M src - src host x.y.z.w
+
+will present the src host x.y.z.w and list the tcp and udp ports used by host x.y.z.w.  You should not expect to see any other host than x.y.z.w in the report.
+
+If raports.1 is provided a "-w uri" option, whose scheme is 'mysql', raports.1 will write its data into a database table.
+
+The scheme will be:
+  +-------+-------------+------+-----+---------+-------+
+  | Field | Type        | Null | Key | Default | Extra |
+  +-------+-------------+------+-----+---------+-------+
+  | addr  | varchar(64) | NO   | PRI | NULL    |       |
+  | tcp   | int(11)     | YES  |     | NULL    |       |
+  | udp   | int(11)     | YES  |     | NULL    |       |
+  +-------+-------------+------+-----+---------+-------+
+
+

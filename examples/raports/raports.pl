@@ -34,19 +34,32 @@ use strict;
 
 # Used modules
 use POSIX;
+use URI::URL;
+use DBI;
 
 # Global variables
 
 my $Program = `which racluster`;
 my $Options = " -nc , ";   # Default Options
-my $VERSION = "4.0.0";                
-my $format  = 'dst';
-my $fields  = '-s daddr proto dport';
-my $model   = '-m daddr proto dport';
+my $VERSION = "5.0";                
+my $format  = 'addr';
+my $fields  = '-M rmon -s saddr proto sport';
+my $model   = '-m saddr proto sport';
+my $uri     = 0;
+my $quiet   = 0;
+my $scheme;
+my $netloc;
+my $path;
+
 my @arglist = ();
 
 ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
+      s/^-q//             && do { $quiet++; next ARG; };
+      s/^-w//             && do {
+         $uri = shift (@ARGV); 
+         next ARG; 
+      };
       /^-M/               && do {
          for ($ARGV[0]) {
             /src/  && do {
@@ -71,12 +84,11 @@ ARG: while (my $arg = shift(@ARGV)) {
    $arglist[@arglist + 0] = $arg;
 }
 
+
 # Start the program
 chomp $Program;
 my @args = ($Program, $Options, $model, $fields, @arglist);
 my (%items, %addrs, $addr, $proto, $port);
-
-print " @args ";
 
 open(SESAME, "@args |");
 while (my $data = <SESAME>) {
@@ -100,50 +112,108 @@ close(SESAME);
 
 my $startseries = 0;
 my $lastseries = 0;
+my ($user, $pass, $host, $port, $space, $db, $table);
+my $dbh;
+my $tcpports;
+my $udpports;
 
-for $addr ( keys %items ) {
-   for $proto ( keys %{ $items{$addr} } ) {
-      if ($proto == 6) {
-         printf "$addr tcp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
-      } else {
-         printf "$addr udp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
+if ($uri) {
+   my $url = URI::URL->new($uri);
+
+   $scheme = $url->scheme;
+   $netloc = $url->netloc;
+   $path   = $url->path;
+
+   if ($netloc ne "") {
+      ($user, $host) = split /@/, $netloc;
+      if ($user =~ m/:/) {
+         ($user , $pass) = split/:/, $user;
       }
+      if ($host =~ m/:/) {
+         ($host , $port) = split/:/, $host;
+      }
+   }
+   if ($path ne "") {
+      ($space, $db, $table)  = split /\//, $path;
+   }
 
-      $startseries = 0;
-      $lastseries = 0;
+   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
 
-      if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
-         for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
-            if ($startseries > 0) {
-               if ($port == ($lastseries + 1)) {
-                  $lastseries = $port;
-               } else {
-                  if ($startseries != $lastseries) {
-                     print "$startseries - $lastseries, ";
-                     $startseries = $port;
-                     $lastseries = $port;
+   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
+   # Thus we put an eval around it.
+
+   {
+      local $dbh->{RaiseError} = 0;
+      local $dbh->{PrintError} = 0;
+
+      eval { $dbh->do("DROP TABLE $table") };
+   }
+
+   # Create a new table 'foo'. This must not fail, thus we don't
+   # catch errors.
+   $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, PRIMARY KEY ( addr ))");
+ 
+   for $addr ( keys %items ) {
+      $tcpports = 0;
+      $udpports = 0;
+      for $proto ( keys %{ $items{$addr} } ) {
+         if ($proto == 6) {
+            $tcpports = scalar(keys(%{$items{$addr}{$proto} }));
+         } else {
+            $udpports = scalar(keys(%{$items{$addr}{$proto} }));
+         }
+      }
+      $dbh->do("INSERT INTO $table VALUES(?, ?, ?)", undef, $addr, $tcpports, $udpports);
+   }
+
+   $dbh->disconnect();
+
+} else {
+   for $addr ( keys %items ) {
+      for $proto ( keys %{ $items{$addr} } ) {
+         if ($proto == 6) {
+            printf "$addr tcp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
+         } else {
+            printf "$addr udp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
+         }
+   
+         if ($quiet == 0) {
+            $startseries = 0;
+            $lastseries = 0;
+   
+            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
+               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
+                  if ($startseries > 0) {
+                     if ($port == ($lastseries + 1)) {
+                        $lastseries = $port;
+                     } else {
+                        if ($startseries != $lastseries) {
+                           print "$startseries - $lastseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        } else {
+                           print "$startseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        }
+                     }
                   } else {
-                     print "$startseries, ";
                      $startseries = $port;
                      $lastseries = $port;
                   }
                }
-            } else {
-               $startseries = $port;
-               $lastseries = $port;
+   
+               if ($startseries > 0) {
+                  if ($startseries != $lastseries) {
+                     print "$startseries - $lastseries";
+                  } else {
+                     print "$startseries";
+                  }
+               }
             }
          }
-
-         if ($startseries > 0) {
-            if ($startseries != $lastseries) {
-               print "$startseries - $lastseries";
-            } else {
-               print "$startseries";
-            }
-         }
+         print "\n";
       }
-
-      print "\n";
    }
 }
 
