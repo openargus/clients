@@ -44,22 +44,49 @@ my @arglist = ();
 
 chomp $Program;
 
-my @args = ($Program, $Options, @ARGV);
 our ($mode, %items, %addrs, $saddr, $daddr, $taddr, $baddr, $proto);
-my ($x, $y, $z, $w);
+
+my $quiet = 0;
+my $done = 0;
+my @arglist;
+my @args;
+
+my ($sx, $sy, $sz, $sw);
+my ($dx, $dy, $dz, $dw);
+
+ARG: while (my $arg = shift(@ARGV)) {
+   if (!$done) {
+      for ($arg) {
+         s/^-q//    && do { $quiet++; next ARG; };
+      }
+
+   } else {
+      for ($arg) {
+         s/\(/\\\(/            && do { ; };
+         s/\)/\\\)/            && do { ; };
+      }
+   }
+
+   $args[@args + 0] = $arg;
+}
+
+@arglist = ($Program, $Options, @args);
 
 # Start the program
 
-open(SESAME, "@args |");
+open(SESAME, "@arglist |");
 while (my $data = <SESAME>) {
    chomp $data;
    ($saddr, $daddr, $proto) = split (/,/, $data);
 
    if (!($proto eq "man")) {
       if ((!($saddr eq "0.0.0.0")) && (!($daddr eq "0.0.0.0"))) {
-         ($x, $y, $z, $w) = split(/\./, $daddr);
+         ($sx, $sy, $sz, $sw) = split(/\./, $saddr);
+         ($dx, $dy, $dz, $dw) = split(/\./, $daddr);
          $addrs{$saddr}++; 
-         $items{$saddr}{$x}{$y}{$z}{$w}++; 
+         $items{$saddr}{$dx}{$dy}{$dz}{$dw}++; 
+         $addrs{$daddr}++; 
+         $items{$daddr}{$sx}{$sy}{$sz}{$sw}++; 
       }
    }
 }
@@ -75,14 +102,15 @@ for $saddr ( sort internet keys(%items) ) {
          my $count = RaGetAddressCount($saddr);
          print "$saddr: ($count) ";
 
-         for $x ( sort numerically keys(%{$items{$saddr} })) {
-            if ( scalar(keys(%{$items{$saddr}{$x} })) > 0 ) {
-               for $y ( sort numerically keys(%{$items{$saddr}{$x}})) {
-                  if ( scalar(keys(%{$items{$saddr}{$x}{$y}})) > 0 ) {
-                     for $z ( sort numerically keys(%{$items{$saddr}{$x}{$y}})) {
-                        if ( scalar(keys(%{$items{$saddr}{$x}{$y}{$z}})) > 0 ) {
-                           for $w ( sort numerically keys(%{$items{$saddr}{$x}{$y}{$z}})) {
-                              my $addr = "$x.$y.$z.$w";
+         if ( $quiet == 0 ) {
+         for $sx ( sort numerically keys(%{$items{$saddr} })) {
+            if ( scalar(keys(%{$items{$saddr}{$sx} })) > 0 ) {
+               for $sy ( sort numerically keys(%{$items{$saddr}{$sx}})) {
+                  if ( scalar(keys(%{$items{$saddr}{$sx}{$sy}})) > 0 ) {
+                     for $sz ( sort numerically keys(%{$items{$saddr}{$sx}{$sy}})) {
+                        if ( scalar(keys(%{$items{$saddr}{$sx}{$sy}{$sz}})) > 0 ) {
+                           for $sw ( sort numerically keys(%{$items{$saddr}{$sx}{$sy}{$sz}})) {
+                              my $addr = "$sx.$sy.$sz.$sw";
                               my $ipaddr = inet_aton($addr);
                               my $naddr = unpack "N", $ipaddr;
 
@@ -91,7 +119,7 @@ for $saddr ( sort internet keys(%items) ) {
                                     $lastseries = $naddr;  
                                  } else {
                                     my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
-                                    if ((($a4 == 254) && ($w == 0)) && (($a3 + 1) == $z)) {
+                                    if ((($a4 == 254) && ($sw == 0)) && (($a3 + 1) == $sz)) {
                                        $lastseries = $naddr;
                                     } else {
                                        my $startaddr = inet_ntoa(pack "N", $startseries);
@@ -131,6 +159,7 @@ for $saddr ( sort internet keys(%items) ) {
          } else {
             print "$startaddr";
          }
+      }
       }
       print "\n";
    }
