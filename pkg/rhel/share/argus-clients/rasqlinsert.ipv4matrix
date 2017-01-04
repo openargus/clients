@@ -1,1 +1,1 @@
--m sid inf saddr daddr -s sid inf saddr daddr spkts dpkts sbytes dbytes pcr -w mysql://root@localhost/matrix/ipMatrix_%Y_%m_%d -M cache time 1d - ipv4
+-m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr -w mysql://root@localhost/matrix/ipMatrix_%Y_%m_%d -M cache time 1d - ipv4
