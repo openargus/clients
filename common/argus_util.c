@@ -12243,9 +12243,9 @@ ArgusPrintSrcGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
    if (argus->hdr.type & ARGUS_MAR) {
       if (parser->ArgusPrintXml) {
-      } else 
+      } else
          sprintf (buf, "%*.*s ", len, len, " ");
- 
+
    } else {
       if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
          if ((lbuf= label->l_un.label) != NULL) {
@@ -12309,9 +12309,9 @@ ArgusPrintDstGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
    if (argus->hdr.type & ARGUS_MAR) {
       if (parser->ArgusPrintXml) {
-      } else 
+      } else
          sprintf (buf, "%*.*s ", len, len, " ");
- 
+
    } else {
       if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL))
          labelbuf = label->l_un.label;
