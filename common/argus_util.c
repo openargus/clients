@@ -3376,11 +3376,11 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
             node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
             node.addr.masklen = mask;
 
+            /* always try exact match first? */
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
                retn = ARGUS_MY_ADDRESS;
-            else
-               if (mode == ARGUS_NODE_MATCH)
-                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH)) != NULL)
+            else if (mode != ARGUS_EXACT_MATCH)
+                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL)
                      retn = ARGUS_MY_NETWORK;
             break;
          }
