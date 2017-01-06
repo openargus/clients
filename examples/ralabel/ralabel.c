@@ -217,7 +217,6 @@ usage ()
 
 /*
 char *RaLabelProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int);
-extern struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
 
 
 char *
