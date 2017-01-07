@@ -15,6 +15,8 @@ Group: Applications/Internet
 Source: %{name}-%{version}.%{rel}.tar%{srcext}
 URL: http://qosient.com/argus
 Buildroot: %{_tmppath}/%{name}-%{ver}-root
+%{?systemd_requires}
+BuildRequires: systemd
 BuildRequires: ncurses-devel, readline-devel, zlib-devel
 BuildRequires: pcre-devel, GeoIP-devel
 BuildRequires: mariadb-devel
@@ -61,10 +63,16 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
 %post
 mkdir -p /home/argus
+%systemd_post radium.service
+%systemd_post rastream.service
 
 %preun
+%systemd_preun radium.service
+%systemd_preun rastream.service
 
 %postun
+%systemd_postun_with_restart radium.service
+%systemd_postun_with_restart rastream.service
 
 %files
 %defattr(-,root,root)
