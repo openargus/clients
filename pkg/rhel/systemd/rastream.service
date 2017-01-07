@@ -18,15 +18,15 @@
 #  CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [Unit]
-Description=Argus rasplit
+Description=Argus rastream
 After=syslog.target network.target radium.service
 
 [Service]
 Type=forking
 Restart=always
 RestartSec=5
-EnvironmentFile=/etc/sysconfig/rasplit
-ExecStart=/usr/bin/rasplit -X -d $DAEMON_ARGS
+EnvironmentFile=/etc/sysconfig/rastream
+ExecStart=/usr/bin/rastream -X -d $DAEMON_ARGS
 
 [Install]
 WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 #
-# Local configuration sample options for rasplit daemons 
+# Local configuration sample options for rastream daemons
 #
-# This file is sourced by /etc/init.d/rasplit
+# This file is sourced by /etc/init.d/rastream
 #
 # Sample values
 # Default option - just be a daemon and read config from /etc/radium.conf
@@ -11,5 +11,5 @@
 # Add the archive parameters - default is 5m intervals named by argus source, date and time
 #
   DAEMON_ARGS="-S localhost -M time 5m -w /home/argus/\$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S"
-#  Where rasplit  is installed (override for testing)
+#  Where rastream  is installed (override for testing)
   ARGUSDIR=/usr/bin
