@@ -59,6 +59,8 @@ install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/ra
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service
 install -d -m 0755 $RPM_BUILD_ROOT/%{argusdocs}/support
+install -D -m 0755 pkg/rhel/rastream.d/00rasqltimeindex $RPM_BUILD_ROOT%{_sysconfdir}/rastream.d/00rasqltimeindex
+install -D -m 0755 pkg/rhel/systemd/rastream-process $RPM_BUILD_ROOT%{argussbin}/rastream-process
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
 %post
@@ -145,6 +147,8 @@ distribution.
 %exclude %{argusman}/man1/rasplit.1.gz
 %exclude %{argusman}/man1/ragraph.1.gz
 %exclude %{argusman}/man1/rasql.1.gz
+%{argussbin}/rastream-process
+%dir %{_sysconfdir}/rastream.d
 
 
 %package devel
@@ -196,5 +200,6 @@ Copyright 2000-2016 QoSient, LLC
 %{argusman}/man1/rasql*
 %{_unitdir}/rasqlinsert@.service
 %{_datarootdir}/argus-clients/rasql*
+%{_sysconfdir}/rastream.d/00rasqltimeindex
 
 %changelog
