@@ -106,13 +106,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "debug.mol", 9))) {
-               parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_MOL;
-
-               RaMapLabelMol (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0, 0, 0);
-               RaPrintLabelMol (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0, 0, 0);
-               exit(0);
-            } else
             if (!(strncasecmp (mode->mode, "addr", 4))) {
                if (parser->ArgusFlowModelFile) {
                   if (!(RaReadAddressConfig (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile) > 0))
@@ -157,6 +150,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if (parser->ArgusPrintJson)
          if (parser->ArgusLabeler)
             parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_JSON;
+
+      if (parser->ArgusPrintNewick)
+         if (parser->ArgusLabeler)
+            parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_NEWICK;
 
 /*
       if (parser->ArgusFlowModelFile) {
@@ -233,6 +230,9 @@ RaParseComplete (int sig)
             }
          }
       }
+
+      if (ArgusParser->ArgusPrintJson)
+         fprintf (stdout, "\n");
 
       ArgusShutDown(sig);
 

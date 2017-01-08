@@ -205,13 +205,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "debug.mol", 9))) {
-               parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_MOL;
-
-               RaMapLabelMol (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0, 0, 0);
-               RaPrintLabelMol (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0, 0, 0);
-               exit(0);
-            } else
             if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                 (!(strncasecmp (mode->mode, "debug", 5)))) {
                ArgusDebugTree = 1;
