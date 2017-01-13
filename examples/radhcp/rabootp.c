@@ -72,7 +72,6 @@ ArgusParseDhcpRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
    if (argus != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
       struct ArgusDataStruct *duser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
-//    struct ArgusDomainQueryStruct *query = NULL;
 
       if (suser != NULL) {
       }

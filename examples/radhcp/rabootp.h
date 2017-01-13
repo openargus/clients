@@ -33,13 +33,6 @@
 
 #include <sys/types.h>
 
-struct ArgusDomainResourceRecord {
-   unsigned short type, class;
-   unsigned short rdlen, opt_flags;
-   unsigned int ttl;
-   char *name, *data;
-   struct ArgusCIDRAddr cidr;
-};
 
 struct ArgusDhcpQueryStruct {
    unsigned char opcode, rcode, status, pad;

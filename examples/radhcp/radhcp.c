@@ -280,19 +280,6 @@ RaParseComplete (int sig)
       if (!(ArgusParser->RaParseCompleting++)) {
          int ArgusExitStatus = 0;
          ArgusShutDown(sig);
-
-         if (ArgusDebugTree) {
-            if (RaTreePrinted++ == 0) {
-               struct ArgusLabelerStruct *labeler = ArgusParser->ArgusLabeler;
-               if (labeler && labeler->ArgusAddrTree) {
-                  if (ArgusParser->RaPruneMode)
-                     RaPruneAddressTree(labeler, labeler->ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_LABEL, RaPruneLevel);
-                  RaPrintLabelTree (ArgusParser->ArgusLabeler, ArgusParser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
-                  printf("\n");
-               }
-            }
-         }
-
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
 
 #if defined(ARGUS_MYSQL)
@@ -304,56 +291,11 @@ RaParseComplete (int sig)
    }
 }
 
-
 void
 ArgusClientTimeout ()
 {
-   struct ArgusHashTable *table = NULL;
-
-   if (table && (table->array != NULL)) {
-
-#if defined(ARGUS_THREADS)
-      if (pthread_mutex_lock(&table->lock) == 0) {
-#endif
-/*
-         int i, size = table->size;
-
-         for (i = 0; i < size; i++) {
-            struct ArgusHashTableHdr *hptr;
-            if ((hptr = table->array[i]) != NULL) {
-               struct nnamemem *name = (struct nnamemem *)hptr->object;
-               if ((name->secs + 86400) < ArgusParser->ArgusCurrentTime.tv_sec) {
 #ifdef ARGUSDEBUG
-                  ArgusDebug (2, "ArgusClientTimeout() pruning name hash ... remove %s\n", name->n_name);
-#endif
-                  if ((hptr->nxt = hptr) != NULL) {
-                     hptr->nxt = NULL;
-                     hptr->prv = NULL;
-                     if (hptr == table->array[i])
-                        table->array[i] = NULL;
-                  } else {
-                     hptr->prv->nxt = hptr->nxt;
-                     hptr->nxt->prv = hptr->prv;
-                     if (hptr == table->array[i])
-                        table->array[i] = hptr->nxt;
-                  }
-                  if (name->n_name) free(name->n_name);
-                  if (name->h_name) free(name->h_name);
-                  if (name->c_name) free(name->c_name);
-                  ArgusFree(name);
-                  ArgusFree(hptr);
-               }
-            }
-         }
-*/
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&table->lock);
-      }
-#endif
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusClientTimeout()\n");
+   ArgusDebug (6, "%s()\n", __func__);
 #endif
 }
 
@@ -375,58 +317,6 @@ usage ()
    fprintf (stdout, "            +duser   dump the destination user buffer.\n");
    fflush (stdout);
    exit(1);
-}
-
-int RaProcessARecord (struct ArgusParserStruct *, struct ArgusDomainResourceRecord *, time_t);
-int RaProcessCRecord (struct ArgusParserStruct *, struct ArgusDomainResourceRecord *, time_t);
-extern int RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
-
-
-// ArgusNameEntry will take a FQDN and insert it into a hash table, as well as insert the
-// name into a namespace tree.
-
-
-struct nnamemem *ArgusNameEntry (struct ArgusHashTable *, char *);
-
-struct nnamemem *
-ArgusNameEntry (struct ArgusHashTable *table, char *name)
-{
-   struct nnamemem *retn = NULL;
-
-   if (name && strlen(name)) {
-      struct ArgusHashTableHdr *htbl = NULL;
-      struct ArgusHashStruct ArgusHash;
-      char *lname = strdup(name);
-      int i;
-
-      bzero(&ArgusHash, sizeof(ArgusHash));
-      ArgusHash.len = strlen(name);
-      ArgusHash.hash = getnamehash((const u_char *)lname);
-      ArgusHash.buf = (unsigned int *)lname;
-
-      for (i = 0; i < ArgusHash.len; i++)
-        lname[i] = tolower((int)lname[i]);
-
-      if ((htbl = ArgusFindHashEntry(table, &ArgusHash)) == NULL) {
-         if ((retn = ArgusCalloc(1, sizeof(struct nnamemem))) == NULL)
-            ArgusLog (LOG_ERR, "ArgusNameEntry: ArgusCalloc error %s\n", strerror(errno));
-
-         retn->hashval = ArgusHash.hash;
-         retn->n_name = lname;
-         retn->d_name = strchr(retn->n_name, '.') + 1;
-         ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
-
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "ArgusNameEntry() adding name %s[%d] total %d\n", retn->n_name, (retn->hashval % table->size), table->count);
-#endif
-
-      } else {
-         retn = (struct nnamemem *) htbl->object;
-         free(lname);
-      }
-   }
-
-   return retn;
 }
 
 #define ISPORT(p) (dport == (p) || sport == (p))
@@ -861,93 +751,6 @@ RaNewProcess(struct ArgusParserStruct *parser)
    ArgusDebug (3, "RaNewProcess(0x%x) returns 0x%x\n", parser, retn);
 #endif
    return (retn);
-}
-
-
-char *RaDhcpUserBuffer (struct ArgusParserStruct *, struct ArgusRecordStruct *, int, int);
-
-char *
-RaDhcpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, int ind, int len) 
-{
-   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
-   unsigned short sport = 0, dport = 0;
-   int type, proto, process = 0;
-   struct ArgusDataStruct *user = NULL;
-   u_char buf[MAXSTRLEN], *bp = NULL;
-   int slen = 0;
-
-   if ((user = (struct ArgusDataStruct *)argus->dsrs[ind]) == NULL)
-      return (ArgusBuf);
-
-/*
-   switch (ind) {
-      case ARGUS_SRCUSERDATA_INDEX:
-         dchr = 's';
-         break;
-      case ARGUS_DSTUSERDATA_INDEX:
-         dchr = 'd';
-         break;
-   }
-*/
-
-   bp = (u_char *) &user->array;
-   slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-   slen = (user->count < slen) ? user->count : slen;
-   slen = (slen > len) ? len : slen;
-   snapend = bp + slen;
-
-   if (flow != NULL) {
-      switch (flow->hdr.subtype & 0x3F) {
-         case ARGUS_FLOW_CLASSIC5TUPLE: {
-            switch ((type = flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-               case ARGUS_TYPE_IPV4:
-                  switch (flow->ip_flow.ip_p) {
-                     case IPPROTO_TCP:
-                     case IPPROTO_UDP: {
-                        proto = flow->ip_flow.ip_p;
-                        sport = flow->ip_flow.sport;
-                        dport = flow->ip_flow.dport;
-                        process++;
-                        break;
-                     }
-                  }
-                  break; 
-               case ARGUS_TYPE_IPV6: {
-                  switch (flow->ipv6_flow.ip_p) {
-                     case IPPROTO_TCP:
-                     case IPPROTO_UDP: {
-                        proto = flow->ipv6_flow.ip_p;
-                        sport = flow->ipv6_flow.sport;
-                        dport = flow->ipv6_flow.dport;
-                        process++;
-                        break;
-                     }
-                  }
-                  break;
-               }
-            }
-            break;
-         }
-      }
-   }
-
-   if (process && bp) {
-      *(int *)&buf = 0;
-
-#define ISPORT(p) (dport == (p) || sport == (p))
-
-      switch (proto) {
-         case IPPROTO_UDP: 
-         case IPPROTO_TCP: {
-            if (ISPORT(IPPORT_BOOTPS) || ISPORT(IPPORT_BOOTPC)) { 
-                bootp_print(bp, slen);
-            }
-            break;
-         }
-      }
-   }
-
-   return (ArgusBuf);
 }
 
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) {return 0;}

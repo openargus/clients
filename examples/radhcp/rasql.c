@@ -547,60 +547,6 @@ RaSQLQueryTable (char *table)
 
 
 void
-RaSQLQueryProbes ()
-{
-   struct RaMySQLProbeTable *sqry = NULL;
-   char buf[2048], sbuf[2048];
-   MYSQL_RES *mysqlRes;
-   char *endptr;
-   int retn, x;
-
-   sprintf (buf, "%s", RaTableQueryString[0]);
-#ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaSQLQueryProbes: SQL Query %s\n", buf);
-#endif
-
-   if (MUTEX_LOCK(&RaMySQLlock) == 0) {
-   if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
-      ArgusLog(LOG_INFO, "RaSQLQueryProbes: mysql_real_query error %s", mysql_error(RaMySQL));
-
-   else {
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-    
-               lengths = mysql_fetch_lengths(mysqlRes);
-               bzero(sbuf, sizeof(sbuf));
-
-               if ((sqry = (void *) ArgusCalloc (1, sizeof(*sqry))) == NULL)
-                  ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
-
-               for (x = 0; x < retn; x++) {
-                  snprintf(sbuf, 2048, "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
-                  switch (x) {
-                     case RAMYSQL_PROBETABLE_PROBE:
-                        sqry->probe = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
-
-                     case RAMYSQL_PROBETABLE_NAME:
-                        sqry->name = strdup(sbuf);
-                        break;
-                  }
-               }
-               ArgusAddToQueue (ArgusProbeQueue, &sqry->qhdr, ARGUS_LOCK);
-            }
-         }
-         mysql_free_result(mysqlRes);
-      }
-   }
-   MUTEX_UNLOCK(&RaMySQLlock);
-   }
-}
-
-void
 RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
 {
    struct RaMySQLSecondsTable *sqry = NULL;
@@ -1709,38 +1655,6 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    ArgusDebug (1, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);
 #endif
    return (retn);
-}
-
-
-void
-RaMySQLDeleteRecords(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
-{
-
-   if (RaSQLUpdateDB && strlen(RaSQLSaveTable)) {
-      char *sbuf = calloc(1, MAXBUFFERLEN);
-
-      if (ns->htblhdr != NULL) {
-         ArgusRemoveHashEntry(&ns->htblhdr);
-         ns->htblhdr = NULL;
-      }
-
-      if (ns->hinthdr != NULL) {
-         ArgusRemoveHashEntry(&ns->hinthdr);
-         ns->hinthdr = NULL;
-      }
-
-      if (RaSQLDBDeletes)
-         if (ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, ns, RaSQLSaveTable, sbuf, MAXBUFFERLEN, ARGUS_STOP) == NULL)
-            ArgusLog(LOG_ERR, "RaMySQLDeleteRecords: ArgusScheduleSQLQuery error %s", strerror(errno));
-
-      free(sbuf);
-   }
-
-   ArgusDeleteRecordStruct (parser, ns);
-
-#ifdef ARGUSDEBUG
-      ArgusDebug (4, "RaMySQLDeleteRecords (0x%x, 0x%x) done", parser, ns);
-#endif
 }
 
 
