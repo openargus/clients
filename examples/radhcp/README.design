@@ -1,0 +1,107 @@
+Mon Jan 16 20:10:30 EST 2017
+
+1. Overview
+
+radhcp performs one basic function: track dhcp transactions for the
+purpose of answering queries about the lease of a particular client
+at a particular moment in time.  That is to say, a historical record
+of observed DHCP transactions is made.  Queries as to the current state
+of a lease are made to the radhcp daemon process directly.  Historical
+queries are made through the transaction journal.
+
+2. Current Observed Leases
+
+The set of all known DHCP leases in the network is maintained in
+memory by radhcp.  Additionally, all active transactions are also
+stored.  Two things determine if a transaction is still considered
+active.  (1) If a DHCPNACK is received from the server from which
+a lease was last accepted, there is no more lease.  (2) T2 expires
+and no DHCPACK was received (within whatever specified time).  These
+roughy correspond to the client finding itself in the "INIT" state.
+
+2.1 Timers
+
+To support the items described below that are sensitive to time, a
+"hashed" timer wheel will provide the means by which timers are
+tracked.  The wheel is indexed by seconds (sufficient for tracking
+dhcp) and is one day in circumference.  Each index points to a list
+of timers sorted by expiry.
+
+There are two situations in which radhcp can be run: (1) with a
+live data stream and (2) with previously captured data in a file.
+In the first case, timers are set and internal state is updated on
+timer expiration based on a periodic checking of the timer wheel.
+In the second case, timestamps in the flow records are used to drive
+the timers -- the slot in the wheel that corresponds to the time
+recorded in the flow record ("now") is checked every time a record
+is processed (if the seconds value in the record timestamp is
+different than that of the previous record).
+
+2.2 Transaction Expiry Timers
+
+If a client is in any state but "BOUND" for a certain length of
+time, the client state will be removed.
+
+Once a client is in the "BOUND" state, a timer will be started for
+the lease expiry.  If the lease is not renewed (or rebound) before
+it expires, the timer will be converted into a "holddown" timer to
+keep the lease info around for a short while to compensate for possible
+processing or transport delays.  After the holddown timer expires the
+structure is removed from the client transaction tree.
+
+2.3 Interval Tree Timers
+
+When a lease enters the "BOUND" state, lease information is also added
+to an interval tree for convenient searching by time.  This data is kept
+for one day after the lease expires.
+
+2.4 Transaction Certainty
+
+There may be cases in which a partial transaction is observed.  Some
+possible causes: (1) through some asymmetry (LAG, asymm. routing +
+dhcp relay, etc.) only traffic in one direction is visible (2)
+statistical sampling of traffic (3) the beginning or end of the
+transaction was not observed because the sensor was not running for
+the entire transaction, etc.  An indication of how sure the software
+is of the current state will be recorded.
+
+3. Historical Transaction Journal
+
+A journal of events will be recorded so that the state of a particular
+host at a particular time can be determined.
+
+3.1 Recorded Events
+
+Lease acquisition, disposal and timeouts will be recorded.
+
+3.2 Relational Database and Indexing
+
+The journal are ordered by time and indexed by addresses.  Journals
+are split by day.
+
+4. Lease Queries
+
+Lease queries are made against the Interval Tree.
+
+5. IP address queries
+
+A patricia tree stores IP addresses leased by the DHCP servers.
+Each /32 node in this tree points to a list of layer-2 (generally
+Ethernet) addresses.  For each L2 address in the list another Interval
+Tree is maintained.  Leases for a particular (L2,IPv4) address pair are
+grouped together this way so that consecutive leases (different XIDs,
+not a single lease renewed) can be easily found and correlated.
+
+A sample /32 node from the patricia tree is shown below:
+
+
+                                 /--> IntervalTreeNode (or stime+xid for searching)
+(yiaddr)       (chaddr)          |
+ L3 addr --+--> L2 addr --+--> IntervalTreeNode (or stime+xid for searching)
+ IPv4/32   |                     |
+           |                     \--> IntervalTreeNode (or stime+xid for searching)
+           |                            |
+           |                            \--> IntervalTreeNode (or stime+xid for searching)
+           |
+           \--> L2 addr -----> IntervalTreeNode (or stime+xid for searching)
+
