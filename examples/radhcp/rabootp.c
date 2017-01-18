@@ -40,6 +40,7 @@ extern u_char *snapend;
 
 #include "interface.h"
 #include "rabootp.h"
+#include "dhcp.h"
 
 extern char ArgusBuf[];
 
@@ -54,8 +55,8 @@ static const struct tok bootp_flag_values[] = {
 };
 
 static const struct tok bootp_op_values[] = {
-    { BOOTPREQUEST, "Request" },
-    { BOOTPREPLY,   "Reply" },
+    { BOOTREQUEST, "Request" },
+    { BOOTREPLY,   "Reply" },
     { 0, NULL}
 };
 
@@ -92,21 +93,20 @@ ArgusParseDhcpRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
 char *
 bootp_print(register const u_char *cp, u_int length)
 {
-   register const struct bootp *bp;
-   static const u_char vm_cmu[4] = VM_CMU;
+   register const struct dhcp_packet *bp;
    static const u_char vm_rfc1048[4] = VM_RFC1048;
 
    unsigned int iaddr;
 
-   bp = (struct bootp *)cp;
-   TCHECK(bp->bp_op);
+   bp = (struct dhcp_packet *)cp;
+   TCHECK(bp->op);
 
    sprintf(&ArgusBuf[strlen(ArgusBuf)],"BOOTP/DHCP, %s",
-          tok2str(bootp_op_values, "unknown (0x%02x)", bp->bp_op));
+          tok2str(bootp_op_values, "unknown (0x%02x)", bp->op));
 
-   if (bp->bp_htype == 1 && bp->bp_hlen == 6 && bp->bp_op == BOOTPREQUEST) {
-      TCHECK2(bp->bp_chaddr[0], 6);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," from %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
+   if (bp->htype == HTYPE_ETHER && bp->hlen == 6 && bp->op == BOOTREQUEST) {
+      TCHECK2(bp->chaddr[0], 6);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," from %s", etheraddr_string(ArgusParser, (u_char *)bp->chaddr));
    }
 
    sprintf(&ArgusBuf[strlen(ArgusBuf)],", length: %u", length);
@@ -114,77 +114,77 @@ bootp_print(register const u_char *cp, u_int length)
    if (!ArgusParser->vflag)
       return ArgusBuf;
 
-   TCHECK(bp->bp_secs);
+   TCHECK(bp->secs);
 
    /* The usual hardware address type is 1 (10Mb Ethernet) */
-   if (bp->bp_htype != 1)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", htype-#%d", bp->bp_htype);
+   if (bp->htype != HTYPE_ETHER)
+      sprintf(&ArgusBuf[strlen(ArgusBuf)],", htype-#%d", bp->htype);
 
    /* The usual length for 10Mb Ethernet address is 6 bytes */
-   if (bp->bp_htype != 1 || bp->bp_hlen != 6)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hlen:%d", bp->bp_hlen);
+   if (bp->htype != HTYPE_ETHER || bp->hlen != 6)
+      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hlen:%d", bp->hlen);
 
    /* Only print interesting fields */
-   if (bp->bp_hops)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hops:%d", bp->bp_hops);
-   if (bp->bp_xid)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", xid:0x%x", EXTRACT_32BITS(&bp->bp_xid));
-   if (bp->bp_secs)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", secs:%d", EXTRACT_16BITS(&bp->bp_secs));
+   if (bp->hops)
+      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hops:%d", bp->hops);
+   if (bp->xid)
+      sprintf(&ArgusBuf[strlen(ArgusBuf)],", xid:0x%x", EXTRACT_32BITS(&bp->xid));
+   if (bp->secs)
+      sprintf(&ArgusBuf[strlen(ArgusBuf)],", secs:%d", EXTRACT_16BITS(&bp->secs));
 
    sprintf(&ArgusBuf[strlen(ArgusBuf)],", flags: [%s]",
-          bittok2str(bootp_flag_values, "none", EXTRACT_16BITS(&bp->bp_flags)));
+          bittok2str(bootp_flag_values, "none", EXTRACT_16BITS(&bp->flags)));
    if (ArgusParser->vflag>1)
-     sprintf(&ArgusBuf[strlen(ArgusBuf)], " (0x%04x)", EXTRACT_16BITS(&bp->bp_flags));
+     sprintf(&ArgusBuf[strlen(ArgusBuf)], " (0x%04x)", EXTRACT_16BITS(&bp->flags));
 
    /* Client's ip address */
-   TCHECK(bp->bp_ciaddr);
-   if (bp->bp_ciaddr.s_addr) {
-      iaddr = ntohl(bp->bp_ciaddr.s_addr);
+   TCHECK(bp->ciaddr);
+   if (bp->ciaddr.s_addr) {
+      iaddr = ntohl(bp->ciaddr.s_addr);
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client IP: %s", ipaddr_string(&iaddr));
    }
 
    /* 'your' ip address (bootp client) */
-   TCHECK(bp->bp_yiaddr);
-   if (bp->bp_yiaddr.s_addr) {
-      iaddr = ntohl(bp->bp_yiaddr.s_addr);
+   TCHECK(bp->yiaddr);
+   if (bp->yiaddr.s_addr) {
+      iaddr = ntohl(bp->yiaddr.s_addr);
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Your IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Server's ip address */
-   TCHECK(bp->bp_siaddr);
-   if (bp->bp_siaddr.s_addr) {
-      iaddr = ntohl(bp->bp_siaddr.s_addr);
+   TCHECK(bp->siaddr);
+   if (bp->siaddr.s_addr) {
+      iaddr = ntohl(bp->siaddr.s_addr);
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Server IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Gateway's ip address */
-   TCHECK(bp->bp_giaddr);
-   if (bp->bp_giaddr.s_addr) {
-      iaddr = ntohl(bp->bp_giaddr.s_addr);
+   TCHECK(bp->giaddr);
+   if (bp->giaddr.s_addr) {
+      iaddr = ntohl(bp->giaddr.s_addr);
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Gateway IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Client's Ethernet address */
-   if (bp->bp_htype == 1 && bp->bp_hlen == 6) {
-      TCHECK2(bp->bp_chaddr[0], 6);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client Ethernet Address: %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
+   if (bp->htype == HTYPE_ETHER && bp->hlen == 6) {
+      TCHECK2(bp->chaddr[0], 6);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client Ethernet Address: %s", etheraddr_string(ArgusParser, (u_char *)bp->chaddr));
    }
 
-   TCHECK2(bp->bp_sname[0], 1);      /* check first char only */
-   if (*bp->bp_sname) {
+   TCHECK2(bp->sname[0], 1);      /* check first char only */
+   if (bp->sname[0]) {
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," sname \"");
-      if (fn_print(bp->bp_sname, snapend, ArgusBuf)) {
+      if (fn_print(bp->sname, snapend, ArgusBuf)) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
          return ArgusBuf;
       }
       sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
    }
-   TCHECK2(bp->bp_file[0], 1);      /* check first char only */
-   if (*bp->bp_file) {
+   TCHECK2(bp->file[0], 1);      /* check first char only */
+   if (bp->file[0]) {
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," file \"");
-      if (fn_print(bp->bp_file, snapend, ArgusBuf)) {
+      if (fn_print(bp->file, snapend, ArgusBuf)) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
          return ArgusBuf;
@@ -193,17 +193,14 @@ bootp_print(register const u_char *cp, u_int length)
    }
 
    /* Decode the vendor buffer */
-   TCHECK(bp->bp_vend[0]);
-   if (memcmp((const char *)bp->bp_vend, vm_rfc1048,
+   TCHECK(bp->options[0]);
+   if (memcmp((const char *)&bp->options[0], vm_rfc1048,
        sizeof(u_int32_t)) == 0)
-      rfc1048_print(bp->bp_vend);
-   else if (memcmp((const char *)bp->bp_vend, vm_cmu,
-            sizeof(u_int32_t)) == 0)
-      cmu_print(bp->bp_vend);
+      rfc1048_print(bp->options);
    else {
       u_int32_t ul;
 
-      ul = EXTRACT_32BITS(&bp->bp_vend);
+      ul = EXTRACT_32BITS(&bp->options[0]);
       if (ul != 0)
          sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-#0x%x", ul);
    }
@@ -229,129 +226,82 @@ trunc:
  *     $ - special (explicit code to handle)
  */
 static struct tok tag2str[] = {
-/* RFC1048 tags */
-   { TAG_PAD,                "PAD" },
-   { TAG_SUBNET_MASK,        "iSM" },   /* subnet mask (RFC950) */
-   { TAG_TIME_OFFSET,        "LTZ" },   /* seconds from UTC */
-   { TAG_GATEWAY,            "iDG" },   /* default gateway */
-   { TAG_TIME_SERVER,        "iTS" },   /* time servers (RFC868) */
-   { TAG_NAME_SERVER,        "iIEN" },  /* IEN name servers (IEN116) */
-   { TAG_DOMAIN_SERVER,      "iNS" },   /* domain name (RFC1035) */
-   { TAG_LOG_SERVER,         "iLOG" },  /* MIT log servers */
-   { TAG_COOKIE_SERVER,      "iCS" },   /* cookie servers (RFC865) */
-   { TAG_LPR_SERVER,         "iLPR" },  /* lpr server (RFC1179) */
-   { TAG_IMPRESS_SERVER,     "iIM" },   /* impress servers (Imagen) */
-   { TAG_RLP_SERVER,         "iRL" },   /* resource location (RFC887) */
-   { TAG_HOSTNAME,           "aHN" },   /* ascii hostname */
-   { TAG_BOOTSIZE,           "sBS" },   /* 512 byte blocks */
-   { TAG_END,                "END" },
-
-/* RFC1497 tags */
-   { TAG_DUMPPATH,           "aDP" },
-   { TAG_DOMAINNAME,         "aDN" },
-   { TAG_SWAP_SERVER,        "iSS" },
-   { TAG_ROOTPATH,           "aRP" },
-   { TAG_EXTPATH,            "aEP" },
-
-/* RFC2132 tags */
-   { TAG_IP_FORWARD,         "BIPF" },
-   { TAG_NL_SRCRT,           "BSRT" },
-   { TAG_PFILTERS,           "pPF" },
-   { TAG_REASS_SIZE,         "sRSZ" },
-   { TAG_DEF_TTL,            "bTTL" },
-   { TAG_MTU_TIMEOUT,        "lMA" },
-   { TAG_MTU_TABLE,          "sMT" },
-   { TAG_INT_MTU,            "sMTU" },
-   { TAG_LOCAL_SUBNETS,      "BLSN" },
-   { TAG_BROAD_ADDR,         "iBR" },
-   { TAG_DO_MASK_DISC,       "BMD" },
-   { TAG_SUPPLY_MASK,        "BMS" },
-   { TAG_DO_RDISC,           "BRD" },
-   { TAG_RTR_SOL_ADDR,       "iRSA" },
-   { TAG_STATIC_ROUTE,       "pSR" },
-   { TAG_USE_TRAILERS,       "BUT" },
-   { TAG_ARP_TIMEOUT,        "lAT" },
-   { TAG_ETH_ENCAP,          "BIE" },
-   { TAG_TCP_TTL,            "bTT" },
-   { TAG_TCP_KEEPALIVE,      "lKI" },
-   { TAG_KEEPALIVE_GO,       "BKG" },
-   { TAG_NIS_DOMAIN,         "aYD" },
-   { TAG_NIS_SERVERS,        "iYS" },
-   { TAG_NTP_SERVERS,        "iNTP" },
-   { TAG_VENDOR_OPTS,        "bVO" },
-   { TAG_NETBIOS_NS,         "iWNS" },
-   { TAG_NETBIOS_DDS,        "iWDD" },
-   { TAG_NETBIOS_NODE,       "$WNT" },
-   { TAG_NETBIOS_SCOPE,      "aWSC" },
-   { TAG_XWIN_FS,            "iXFS" },
-   { TAG_XWIN_DM,            "iXDM" },
-   { TAG_NIS_P_DOMAIN,       "sN+D" },
-   { TAG_NIS_P_SERVERS,      "iN+S" },
-   { TAG_MOBILE_HOME,        "iMH" },
-   { TAG_SMPT_SERVER,        "iSMTP" },
-   { TAG_POP3_SERVER,        "iPOP3" },
-   { TAG_NNTP_SERVER,        "iNNTP" },
-   { TAG_WWW_SERVER,         "iWWW" },
-   { TAG_FINGER_SERVER,      "iFG" },
-   { TAG_IRC_SERVER,         "iIRC" },
-   { TAG_STREETTALK_SRVR,    "iSTS" },
-   { TAG_STREETTALK_STDA,    "iSTDA" },
-   { TAG_REQUESTED_IP,       "iRQ" },
-   { TAG_IP_LEASE,           "lLT" },
-   { TAG_OPT_OVERLOAD,       "$OO" },
-   { TAG_TFTP_SERVER,        "aTFTP" },
-   { TAG_BOOTFILENAME,       "aBF" },
-   { TAG_DHCP_MESSAGE,       "DHCP" },
-   { TAG_SERVER_ID,          "iSID" },
-   { TAG_PARM_REQUEST,       "bPR" },
-   { TAG_MESSAGE,            "aMSG" },
-   { TAG_MAX_MSG_SIZE,       "sMSZ" },
-   { TAG_RENEWAL_TIME,       "lRN" },
-   { TAG_REBIND_TIME,        "lRB" },
-   { TAG_VENDOR_CLASS,       "aVC" },
-   { TAG_CLIENT_ID,          "$CID" },
-
-/* RFC 2485 */
-   { TAG_OPEN_GROUP_UAP,     "aUAP" },
-
-/* RFC 2563 */
-   { TAG_DISABLE_AUTOCONF,   "BNOAUTO" },
-
-/* RFC 2610 */
-   { TAG_SLP_DA,             "bSLP-DA" },   
-   { TAG_SLP_SCOPE,          "bSLP-SCOPE" },
-
-/* RFC 2937 */
-   { TAG_NS_SEARCH,          "sNSSEARCH" },
-
-/* RFC 3011 */
-   { TAG_IP4_SUBNET_SELECT,  "iSUBNET" },
-
-/* http://www.iana.org/assignments/bootp-dhcp-extensions/index.htm */
-   { TAG_USER_CLASS,         "aCLASS" },
-   { TAG_SLP_NAMING_AUTH,    "aSLP-NA" },
-   { TAG_CLIENT_FQDN,        "$FQDN" },
-   { TAG_AGENT_CIRCUIT,      "bACKT" },
-   { TAG_AGENT_REMOTE,       "bARMT" },
-   { TAG_AGENT_MASK,         "bAMSK" },
-   { TAG_TZ_STRING,          "aTZSTR" },
-   { TAG_FQDN_OPTION,        "bFQDNS" },
-   { TAG_AUTH,               "bAUTH" },
-   { TAG_VINES_SERVERS,      "iVINES" },
-   { TAG_SERVER_RANK,        "sRANK" },
-   { TAG_CLIENT_ARCH,        "sARCH" },
-   { TAG_CLIENT_NDI,         "bNDI" },
-   { TAG_CLIENT_GUID,        "bGUID" },
-   { TAG_LDAP_URL,           "aLDAP" },
-   { TAG_6OVER4,             "i6o4" },
-   { TAG_PRINTER_NAME,       "aPRTR" },
-   { TAG_MDHCP_SERVER,       "bMDHCP" },
-   { TAG_IPX_COMPAT,         "bIPX" },
-   { TAG_NETINFO_PARENT,     "iNI" },
-   { TAG_NETINFO_PARENT_TAG, "aNITAG" },
-   { TAG_URL,                "aURL" },
-   { TAG_FAILOVER,           "bFAIL" },
-   { 0, NULL }
+	{ DHO_PAD, "pad" },
+	{ DHO_SUBNET_MASK, "isubnet_mask" },
+	{ DHO_TIME_OFFSET, "Ltime_offset" },
+	{ DHO_ROUTERS, "irouters" },
+	{ DHO_TIME_SERVERS, "itime_servers" },
+	{ DHO_NAME_SERVERS, "iname_servers" },
+	{ DHO_DOMAIN_NAME_SERVERS, "idomain_name_servers" },
+	{ DHO_LOG_SERVERS, "ilog_servers" },
+	{ DHO_COOKIE_SERVERS, "icookie_servers" },
+	{ DHO_LPR_SERVERS, "ilpr_servers" },
+	{ DHO_IMPRESS_SERVERS, "iimpress_servers" },
+	{ DHO_RESOURCE_LOCATION_SERVERS, "iresource_location_servers" },
+	{ DHO_HOST_NAME, "ahost_name" },
+	{ DHO_BOOT_SIZE, "sboot_size" },
+	{ DHO_MERIT_DUMP, "amerit_dump" },
+	{ DHO_DOMAIN_NAME, "adomain_name" },
+	{ DHO_SWAP_SERVER, "iswap_server" },
+	{ DHO_ROOT_PATH, "aroot_path" },
+	{ DHO_EXTENSIONS_PATH, "aextensions_path" },
+	{ DHO_IP_FORWARDING, "Bip_forwarding" },
+	{ DHO_NON_LOCAL_SOURCE_ROUTING, "Bnon_local_source_routing" },
+	{ DHO_POLICY_FILTER, "ppolicy_filter" },
+	{ DHO_MAX_DGRAM_REASSEMBLY, "smax_dgram_reassembly" },
+	{ DHO_DEFAULT_IP_TTL, "bdefault_ip_ttl" },
+	{ DHO_PATH_MTU_AGING_TIMEOUT, "lpath_mtu_aging_timeout" },
+	{ DHO_PATH_MTU_PLATEAU_TABLE, "spath_mtu_plateau_table" },
+	{ DHO_INTERFACE_MTU, "sinterface_mtu" },
+	{ DHO_ALL_SUBNETS_LOCAL, "Ball_subnets_local" },
+	{ DHO_BROADCAST_ADDRESS, "ibroadcast_address" },
+	{ DHO_PERFORM_MASK_DISCOVERY, "Bperform_mask_discovery" },
+	{ DHO_MASK_SUPPLIER, "Bmask_supplier" },
+	{ DHO_ROUTER_DISCOVERY, "Brouter_discovery" },
+	{ DHO_ROUTER_SOLICITATION_ADDRESS, "irouter_solicitation_address" },
+	{ DHO_STATIC_ROUTES, "pstatic_routes" },
+	{ DHO_TRAILER_ENCAPSULATION, "Btrailer_encapsulation" },
+	{ DHO_ARP_CACHE_TIMEOUT, "larp_cache_timeout" },
+	{ DHO_IEEE802_3_ENCAPSULATION, "Bieee802_3_encapsulation" },
+	{ DHO_DEFAULT_TCP_TTL, "bdefault_tcp_ttl" },
+	{ DHO_TCP_KEEPALIVE_INTERVAL, "ltcp_keepalive_interval" },
+	{ DHO_TCP_KEEPALIVE_GARBAGE, "Btcp_keepalive_garbage" },
+	{ DHO_NIS_DOMAIN, "anis_domain" },
+	{ DHO_NIS_SERVERS, "inis_servers" },
+	{ DHO_NTP_SERVERS, "intp_servers" },
+	{ DHO_VENDOR_ENCAPSULATED_OPTIONS, "bvendor_encapsulated_options" },
+	{ DHO_NETBIOS_NAME_SERVERS, "inetbios_name_servers" },
+	{ DHO_NETBIOS_DD_SERVER, "inetbios_dd_server" },
+	{ DHO_NETBIOS_NODE_TYPE, "$netbios_node_type" },
+	{ DHO_NETBIOS_SCOPE, "anetbios_scope" },
+	{ DHO_FONT_SERVERS, "ifont_servers" },
+	{ DHO_X_DISPLAY_MANAGER, "ix_display_manager" },
+	{ DHO_DHCP_REQUESTED_ADDRESS, "idhcp_requested_address" },
+	{ DHO_DHCP_LEASE_TIME, "ldhcp_lease_time" },
+	{ DHO_DHCP_OPTION_OVERLOAD, "$dhcp_option_overload" },
+	{ DHO_DHCP_MESSAGE_TYPE, "Ddhcp_message_type" },
+	{ DHO_DHCP_SERVER_IDENTIFIER, "idhcp_server_identifier" },
+	{ DHO_DHCP_PARAMETER_REQUEST_LIST, "bdhcp_parameter_request_list" },
+	{ DHO_DHCP_MESSAGE, "adhcp_message" },
+	{ DHO_DHCP_MAX_MESSAGE_SIZE, "sdhcp_max_message_size" },
+	{ DHO_DHCP_RENEWAL_TIME, "ldhcp_renewal_time" },
+	{ DHO_DHCP_REBINDING_TIME, "ldhcp_rebinding_time" },
+	{ DHO_VENDOR_CLASS_IDENTIFIER, "avendor_class_identifier" },
+	{ DHO_DHCP_CLIENT_IDENTIFIER, "$dhcp_client_identifier" },
+/*	{ DHO_NWIP_DOMAIN_NAME, "nwip_domain_name" }, */
+/*	{ DHO_NWIP_SUBOPTIONS, "nwip_suboptions" }, */
+	{ DHO_USER_CLASS, "auser_class" },
+	{ DHO_FQDN, "$fqdn" },
+/*	{ DHO_DHCP_AGENT_OPTIONS, "dhcp_agent_options" }, */
+	{ DHO_AUTHENTICATE, "bauthenticate" },
+/*	{ DHO_CLIENT_LAST_TRANSACTION_TIME, "client_last_transaction_time" }, */
+	{ DHO_ASSOCIATED_IP, "associated_ip" },
+	{ DHO_SUBNET_SELECTION, "subnet_selection" },
+	{ DHO_DOMAIN_SEARCH, "sdomain_search" }, /* RFC 3397 */
+	{ DHO_VIVCO_SUBOPTIONS, "Lvivco_suboptions" }, /* RFC 3925 - first four bytes are Vendor ID */
+	{ DHO_VIVSO_SUBOPTIONS, "svivso_suboptions" }, /* RFC 3925 - first 2 bytes are sub-option code */
+	{ DHO_END, "end" },
+	{ 0, NULL },
 };
 
 /* 2-byte extended tags */
@@ -408,19 +358,11 @@ rfc1048_print(register const u_char *bp)
    /* Loop while we there is a tag left in the buffer */
    while (bp + 1 < snapend) {
       tag = *bp++;
-      if (tag == TAG_PAD)
+      if (tag == DHO_PAD)
          continue;
-      if (tag == TAG_END)
+      if (tag == DHO_END)
          return;
-      if (tag == TAG_EXTENDED_OPTION) {
-         TCHECK2(*(bp + 1), 2);
-         tag = EXTRACT_16BITS(bp + 1);
-         /* XXX we don't know yet if the IANA will
-          * preclude overlap of 1-byte and 2-byte spaces.
-          * If not, we need to offset tag after this step.
-          */
-         cp = tok2str(xtag2str, "?xT%u", tag);
-      } else
+
          cp = tok2str(tag2str, "?T%u", tag);
       c = *cp++;
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:", cp);
@@ -436,7 +378,7 @@ rfc1048_print(register const u_char *bp)
          return;
       }
 
-      if (tag == TAG_DHCP_MESSAGE && len == 1) {
+      if (tag == DHO_DHCP_MESSAGE && len == 1) {
          uc = *bp++;
          switch (uc) {
          case DHCPDISCOVER:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"DISCOVER");   break;
@@ -452,25 +394,11 @@ rfc1048_print(register const u_char *bp)
          continue;
       }
 
-      if (tag == TAG_PARM_REQUEST) {
+      if (tag == DHO_DHCP_PARAMETER_REQUEST_LIST) {
          first = 1;
          while (len-- > 0) {
             uc = *bp++;
             cp = tok2str(tag2str, "?T%u", uc);
-            if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '+');
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", cp + 1);
-            first = 0;
-         }
-         continue;
-      }
-      if (tag == TAG_EXTENDED_REQUEST) {
-         first = 1;
-         while (len > 1) {
-            len -= 2;
-            us = EXTRACT_16BITS(bp);
-            bp += 2;
-            cp = tok2str(xtag2str, "?xT%u", us);
             if (!first)
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '+');
             sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", cp + 1);
@@ -598,19 +526,19 @@ rfc1048_print(register const u_char *bp)
          /* Guys we can't handle with one of the usual cases */
          switch (tag) {
 
-         case TAG_NETBIOS_NODE:
+         case DHO_NETBIOS_NODE_TYPE:
             tag = *bp++;
             --size;
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tok2str(nbo2str, NULL, tag));
             break;
 
-         case TAG_OPT_OVERLOAD:
+         case DHO_DHCP_OPTION_OVERLOAD:
             tag = *bp++;
             --size;
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tok2str(oo2str, NULL, tag));
             break;
 
-         case TAG_CLIENT_FQDN:
+         case DHO_FQDN:
             /* option 81 should be at least 4 bytes long */
             if (len < 4)  {
                                         sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: options 81 len %u < 4 bytes", len);
@@ -631,7 +559,7 @@ rfc1048_print(register const u_char *bp)
             size = 0;
             break;
 
-         case TAG_CLIENT_ID:
+         case DHO_DHCP_CLIENT_IDENTIFIER:
              {   int type = *bp++;
             size--;
             if (type == 0) {
@@ -679,33 +607,3 @@ trunc:
    return;
 }
 
-static void
-cmu_print(register const u_char *bp)
-{
-   register const struct cmu_vend *cmu;
-
-#define PRINTCMUADDR(m, s) { TCHECK(cmu->m); \
-    if (cmu->m.s_addr != 0) \
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:%s", s, ipaddr_string(&cmu->m.s_addr)); }
-
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," vend-cmu");
-   cmu = (const struct cmu_vend *)bp;
-
-   /* Only print if there are unknown bits */
-   TCHECK(cmu->v_flags);
-   if ((cmu->v_flags & ~(VF_SMASK)) != 0)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," F:0x%x", cmu->v_flags);
-   PRINTCMUADDR(v_dgate, "DG");
-   PRINTCMUADDR(v_smask, cmu->v_flags & VF_SMASK ? "SM" : "SM*");
-   PRINTCMUADDR(v_dns1, "NS1");
-   PRINTCMUADDR(v_dns2, "NS2");
-   PRINTCMUADDR(v_ins1, "IEN1");
-   PRINTCMUADDR(v_ins2, "IEN2");
-   PRINTCMUADDR(v_ts1, "TS1");
-   PRINTCMUADDR(v_ts2, "TS2");
-   return;
-
-trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
-#undef PRINTCMUADDR
-}
