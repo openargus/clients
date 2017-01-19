@@ -81,6 +81,12 @@
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
 
+/* Have clock_gettime */
+#undef HAVE_CLOCK_GETTIME
+
+/* Have clock_nanosleep */
+#undef HAVE_CLOCK_NANOSLEEP
+
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 

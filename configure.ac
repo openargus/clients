@@ -164,6 +164,13 @@ AC_CHECK_FUNCS([memchr memmove memset mkdir modf pow putenv realpath regcomp sel
 AC_CHECK_FUNCS([strdup strerror strlcat strncasecmp strpbrk strerror strrchr strstr strtol strtof srandomdev tzset])
 AC_CHECK_FUNCS([gethostuuid])
 
+AC_SEARCH_LIBS([clock_gettime], [rt], [
+    AC_DEFINE(HAVE_CLOCK_GETTIME, 1,[Have clock_gettime])
+])
+AC_SEARCH_LIBS([clock_nanosleep], [rt], [
+    AC_DEFINE(HAVE_CLOCK_NANOSLEEP, 1,[Have clock_nanosleep])
+])
+
 case "$target_os" in
    *) COMPATLIB="-lm"
 esac

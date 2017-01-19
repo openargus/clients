@@ -79,7 +79,7 @@ TAGHDR = bpf/net/bpf.h
 
 TAGFILES = $(SRC) $(HDR) $(TAGHDR)
 
-LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_output.a
+LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_output.a @INSTALL_LIB@/argus_timer.a
 
 OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
@@ -100,8 +100,10 @@ OUTPUTOBJ = argus_output.o
 EVENTSRC  = argus_event.c
 EVENTOBJ  = argus_event.o
 
+TIMERSRC  = argus_timer.c
+TIMEROBJ  = argus_timer.o
 
-SRC = $(COMMONSRC) $(PARSESRC) $(CLIENTSRC) $(OUTPUTSRC) $(EVENTSRC)
+SRC = $(COMMONSRC) $(PARSESRC) $(CLIENTSRC) $(OUTPUTSRC) $(EVENTSRC) $(TIMERSRC)
 
 all: $(LIBS)
 
@@ -123,6 +125,10 @@ all: $(LIBS)
 
 @INSTALL_LIB@/argus_event.a: $(EVENTOBJ)
 	rm -f $@; ar qc $@ $(EVENTOBJ)
+	-$(RANLIB) $@
+
+@INSTALL_LIB@/argus_timer.a: $(TIMEROBJ)
+	rm -f $@; ar qc $@ $(TIMEROBJ)
 	-$(RANLIB) $@
 
 scanner.c: scanner.l
