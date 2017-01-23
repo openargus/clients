@@ -54,6 +54,14 @@
 
 #include <rabins.h>
 
+#if defined(HAVE_UUID_UUID_H)
+#include <uuid/uuid.h>
+#else
+#if defined(HAVE_UUID_H)
+#include <uuid.h>
+#endif
+#endif
+
 
 #define RADIUM_MAX_ANALYTICS    128
 struct ArgusRecordStruct *(*RadiumAnalyticAlgorithmTable[RADIUM_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
