@@ -1,0 +1,15 @@
+Notes on building packages for MacOS X
+
+1. The Argus clients should be built with readline support.  Compile
+   readline with only static libraries.
+
+   % cd readline-7.0
+   % ./configure --prefix=/Users/ekinzie/opt/readline --enable-shared=no
+   % make
+   % make install
+
+   % cd ../argus-clients
+   % ./configure --with-readline=/Users/ekinzie/opt/readline
+   % make
+   % make osxpackage
+
