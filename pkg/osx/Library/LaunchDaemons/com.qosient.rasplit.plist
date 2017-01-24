@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.qosient.argus.rasplit</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/local/bin/rasplit</string>
+                <string>-M</string>
+                <string>time</string>
+                <string>1d</string>
+                <string>-S</string>
+                <string>localhost</string>
+                <string>-w</string>
+                <string>/Users/carter/Archive/rasplit/$srcid/%Y/%m/argus.%Y.%m.%d</string>
+        </array>
+        <key>OnDemand</key>
+        <false/>
+        <key>ServiceDescription</key>
+        <string>Rasplit</string>
+</dict>
+</plist>
