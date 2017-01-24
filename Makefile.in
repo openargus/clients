@@ -9,7 +9,7 @@
 #  any later version.
 # 
 #  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
-#  Copyright (c) 2000-2014 QoSient, LLC
+#  Copyright (c) 2000-2017 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -39,6 +39,7 @@ INSTALL_DATA = @INSTALL_DATA@
 DEFS = @DEFS@
 LIBS = @LIBS@
 WRAPLIBS = @WRAPLIBS@
+VERSION = @PACKAGE_VERSION@
 
 CFLAGS = -g $(EXTRA_CFLAGS)
 LDFLAGS = -g
@@ -232,15 +233,15 @@ osxpackage:
 	cp -f -L -R pkg/osx/Library pkg/osx/BUILDROOT/  && \
 	pkgbuild --root pkg/osx/BUILDROOT \
 	         --identifier com.qosient.argus-clients \
-	         --version 5.00 \
+	         --version $(VERSION) \
 	         --ownership recommended \
 	         --scripts pkg/osx/scripts pkg/osx/output.pkg && \
 	productbuild --distribution pkg/osx/distribution.xml \
 	             --resources pkg/osx/resources \
 	             --package-path pkg/osx \
-	             --version 5.00 \
+	             --version $(VERSION) \
 	             $(OSXSIGN) \
-	             pkg/osx/argus-clients-5.00.pkg \
+	             pkg/osx/argus-clients-$(VERSION).pkg \
 	)
 
 
