@@ -230,6 +230,9 @@ osxpackage:
 	( \
 	$(MAKE) install DESTDIR=`pwd`/pkg/osx/BUILDROOT \
 	                INSTDIRS="./clients ./examples" && \
+	( find pkg/osx/BUILDROOT -type f | xargs file \
+	   | awk -F: '/Mach-O.*executable/{print $$1}' \
+	   | xargs strip ) && \
 	cp -f -L -R pkg/osx/Library pkg/osx/BUILDROOT/  && \
 	pkgbuild --root pkg/osx/BUILDROOT \
 	         --identifier com.qosient.argus-clients \
