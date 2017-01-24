@@ -223,6 +223,27 @@ uninstall:
 installdirs:
 	${srcdir}/config/mkinstalldirs $(bindir) $(infodir)
 
+# build with OSXSIGN="--sign "Developer ID Installer" to generate
+# signed package
+osxpackage:
+	( \
+	$(MAKE) install DESTDIR=`pwd`/pkg/osx/BUILDROOT \
+	                INSTDIRS="./clients ./examples" && \
+	cp -f -L -R pkg/osx/Library pkg/osx/BUILDROOT/  && \
+	pkgbuild --root pkg/osx/BUILDROOT \
+	         --identifier com.qosient.argus-clients \
+	         --version 5.00 \
+	         --ownership recommended \
+	         --scripts pkg/osx/scripts pkg/osx/output.pkg && \
+	productbuild --distribution pkg/osx/distribution.xml \
+	             --resources pkg/osx/resources \
+	             --package-path pkg/osx \
+	             --version 5.00 \
+	             $(OSXSIGN) \
+	             pkg/osx/argus-clients-5.00.pkg \
+	)
+
+
 Makefile: Makefile.in config.status
 	$(SHELL) config.status
 
