@@ -257,6 +257,7 @@ TAGS: $(SRCS)
 
 clean: force
 	rm -f config.log
+	rm -f pkg/osx/*.pkg
 	@for i in $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) clean ); \
@@ -283,7 +284,10 @@ clobber realclean: force
 	rm -f include/argus_config.h
 	rm -f include/tm.h
 	rm -f bin/ra*
+	rm -f pkg/osx/*.pkg
+	rm -rf pkg/osx/BUILDROOT/
 	rm -rf log
+
 	@for i in $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
