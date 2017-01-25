@@ -361,17 +361,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         process++;
 
                         switch (flow->ip_flow.ip_p) {
-                           case IPPROTO_TCP: {
-                              if (net != NULL) {
-                                 struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                                 if (!(argus->hdr.cause & ARGUS_START))
-                                    process = 0;
-                                 else {
-                                    if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)))
-                                       process = 0;
-                                 }
-                              }
-                           }
                            case IPPROTO_UDP: {
                               sport = flow->ip_flow.sport;
                               dport = flow->ip_flow.dport;
@@ -384,7 +373,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                      case ARGUS_TYPE_IPV6: {
                         switch (flow->ipv6_flow.ip_p) {
-                           case IPPROTO_TCP:
                            case IPPROTO_UDP: {
                               proto = flow->ipv6_flow.ip_p;
                               sport = flow->ipv6_flow.sport;
@@ -403,11 +391,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          if (process) {
             switch (proto) {
                case IPPROTO_UDP: 
-               case IPPROTO_TCP: {
                   if (ISPORT(IPPORT_BOOTPS) || ISPORT(IPPORT_BOOTPC))
                      dhcpTransaction++;
                   break;
-               }
             }
 
             if (dhcpTransaction) {
