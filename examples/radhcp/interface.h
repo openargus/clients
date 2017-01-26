@@ -131,46 +131,4 @@ extern int mask2plen (u_int32_t);
 extern int decode_prefix4(const u_char *pptr, char *buf, u_int buflen);
 extern int print_unknown_data(const u_char *, const char *, int);
 extern void hex_print_with_offset(const char *, const u_char *, u_int, u_int);
-
-extern char * aodv_print(const u_char *, u_int, int);
-extern char * arp_src_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus);
-extern char * arp_dst_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus);
-extern char * bfd_print(const u_char *, u_int, u_int);
-extern char * bgp_print(const u_char *, int);
-extern char * beep_print(const u_char *, u_int);
-extern char * bootp_print(const u_char *, u_int);
-extern char * krb_print(const u_char *, u_int);
-extern char * l2tp_print(const u_char *, u_int);
-extern char * ldp_print(const u_char *, u_int);
-extern char * lmp_print(const u_char *, u_int);
-extern char * msdp_print(const u_char *, u_int);
-extern char * ntp_print(const u_char *, u_int);
-extern char * ns_print(const u_char *, u_int, int);
-extern char * pim_print(const u_char *, u_int);
-extern char * pptp_print(const u_char *, u_int);
-extern char * rip_print(const u_char *, u_int);
-extern char * snmp_print(const u_char *, u_int);
-extern char * syslog_print(const u_char *, u_int);
-extern char * stp_print(const u_char *, u_int);
-extern char * telnet_print(const u_char *, u_int);
-extern char * tftp_print(const u_char *, u_int);
-extern char * timed_print(const u_char *, u_int);
-extern char * radius_print(const u_int8_t *, u_int);
-extern char * nbt_tcp_print(const u_char *, int);
-extern char * nbt_udp137_print(const u_char *, int);
-extern char * nbt_udp138_print(const u_char *, int);
-extern char * isoclns_print(const u_int8_t *, u_int, u_int);
-extern char * rx_print(const u_int8_t *, int, int, int);
-extern char * isakmp_print(const u_char *, u_int);
-extern char * isakmp_rfc3948_print(const u_char *, u_int);
-extern char * dvmrp_print(const u_char *, u_int);
-extern char * igmp_print(const u_char *, u_int);
-extern char * pimv1_print(const u_char *, u_int);
-
-extern void print_data(const unsigned char *, int);
-extern const char *nt_errstr(u_int32_t);
-extern char *smb_errstr(int, int);
-extern void ipx_netbios_print(const u_char *, u_int);
-extern void netbeui_print(u_short, const u_char *, int);
-
 #endif

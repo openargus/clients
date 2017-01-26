@@ -42,6 +42,7 @@
 
 extern char ArgusBuf[];
 
+static char *bootp_print(register const u_char *, u_int);
 static void rfc1048_print(const u_char *, const u_char *);
 static void cmu_print(const u_char *);
 
@@ -88,7 +89,7 @@ ArgusParseDhcpRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
  * Print bootp requests
  */
 
-char *
+static char *
 bootp_print(register const u_char *cp, u_int length)
 {
    register const struct dhcp_packet *bp;
