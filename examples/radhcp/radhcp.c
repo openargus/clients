@@ -90,8 +90,6 @@ extern MYSQL *RaMySQL;
 #include <signal.h>
 #include <ctype.h>
 
-const u_char *snapend = NULL;
-
 char ArgusBuf[MAXSTRLEN];
 
 int ArgusThisEflag = 0;

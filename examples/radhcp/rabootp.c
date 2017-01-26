@@ -36,8 +36,6 @@
 #include <ctype.h>
 #include <argus/extract.h>
 
-extern u_char *snapend;
-
 #include "interface.h"
 #include "rabootp.h"
 #include "dhcp.h"
@@ -95,6 +93,7 @@ bootp_print(register const u_char *cp, u_int length)
 {
    register const struct dhcp_packet *bp;
    static const u_char vm_rfc1048[4] = VM_RFC1048;
+   const u_char *snapend = cp + length;
 
    unsigned int iaddr;
 
