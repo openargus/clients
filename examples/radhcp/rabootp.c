@@ -44,7 +44,7 @@ extern u_char *snapend;
 
 extern char ArgusBuf[];
 
-static void rfc1048_print(const u_char *);
+static void rfc1048_print(const u_char *, const u_char *);
 static void cmu_print(const u_char *);
 
 static char tstr[] = " [|bootp]";
@@ -196,7 +196,7 @@ bootp_print(register const u_char *cp, u_int length)
    TCHECK(bp->options[0]);
    if (memcmp((const char *)&bp->options[0], vm_rfc1048,
        sizeof(u_int32_t)) == 0)
-      rfc1048_print(bp->options);
+      rfc1048_print(bp->options, (const u_char *)cp+length);
    else {
       u_int32_t ul;
 
@@ -338,7 +338,7 @@ static struct tok arp2str[] = {
 };
 
 static void
-rfc1048_print(register const u_char *bp)
+rfc1048_print(register const u_char *bp, const u_char *endp)
 {
    register u_int16_t tag;
    register u_int len, size;
@@ -348,6 +348,7 @@ rfc1048_print(register const u_char *bp)
    u_int32_t ul;
    u_int16_t us;
    u_int8_t uc;
+   size_t off;
 
    sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-rfc1048:");
 
@@ -356,7 +357,7 @@ rfc1048_print(register const u_char *bp)
    bp += sizeof(int32_t);
 
    /* Loop while we there is a tag left in the buffer */
-   while (bp + 1 < snapend) {
+   while (bp + 1 < endp) {
       tag = *bp++;
       if (tag == DHO_PAD)
          continue;
@@ -368,12 +369,12 @@ rfc1048_print(register const u_char *bp)
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:", cp);
 
       /* Get the length; check for truncation */
-      if (bp + 1 >= snapend) {
+      if (bp + 1 >= endp) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
          return;
       }
       len = *bp++;
-      if (bp + len >= snapend) {
+      if (bp + len >= endp) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|bootp %u]", len);
          return;
       }
@@ -424,11 +425,12 @@ rfc1048_print(register const u_char *bp)
       case 'a':
          /* ascii strings */
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         off = strlen(ArgusBuf);
+         if (fn_printn(bp, size, endp, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
+            sprintf(&ArgusBuf[off], "%c", '"');
             goto trunc;
          }
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         sprintf(&ArgusBuf[off+size], "%c", '"');
          bp += size;
          size = 0;
          break;
@@ -550,7 +552,7 @@ rfc1048_print(register const u_char *bp)
                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u/%u/", *bp, *(bp+1));
             bp += 2;
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-            if (fn_printn(bp, size - 3, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
+            if (fn_printn(bp, size - 3, endp, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
                goto trunc;
             }
@@ -564,7 +566,7 @@ rfc1048_print(register const u_char *bp)
             size--;
             if (type == 0) {
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-               if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
+               if (fn_printn(bp, size, endp, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
                   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
                   goto trunc;
                }
