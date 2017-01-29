@@ -1,0 +1,12 @@
+.PHONY: top
+
+top: win7package
+
+win7package: argus-clients-@PACKAGE_VERSION@.msi
+
+argus-clients-@PACKAGE_VERSION@.msi: argus-clients.wixobj
+	light $^
+
+argus-clients.wixobj: argus-clients.wxs
+	candle $^
+

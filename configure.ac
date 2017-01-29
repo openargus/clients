@@ -448,6 +448,8 @@ AC_CONFIG_FILES([
    ./clients/Makefile 
    ./lib/argus-clients.pc
    ./pkg/rhel/systemd/rasqlinsert-setup
+   ./pkg/win7/argus-clients.wxs
+   ./pkg/win7/Makefile
 ])
 
 AS_IF([test "$with_examples" != no],

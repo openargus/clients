@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='windows-1252'?>
+<Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
+  <Product Name='argus-clients-@PACKAGE_VERSION@'
+  Id='0002f85d-6809-4708-9443-c588d98e65cb'
+  UpgradeCode='6dadd131-fcf4-4e19-bec2-fbcb78c0f0c0'
+  Language='1033' Codepage='1252' Version='1.0.0'
+  Manufacturer='QoSient LLC'>
+    <Package Id='*' Keywords='Installer'
+    Description="QoSient Argus Clients @PACKAGE_VERSION@ Installer"
+    Manufacturer='QoSient LLC' InstallerVersion='100'
+    Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+    <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes'
+    DiskPrompt="CD-ROM #1" />
+    <Property Id='DiskPrompt' Value="Argus Clients Installation [1]" />
+    <Directory Id='TARGETDIR' Name='SourceDir'>
+      <Component Id="REG_MACHINE"
+      Guid='0e2ab0a0-6c61-4ca3-bf50-6e1559061e2b'>
+        <RegistryKey Id="srvc1" Root="HKLM"
+        Key="SYSTEM\CurrentControlSet\Services\QoSient:Rasplit\Parameters"
+        Action="create">
+          <RegistryValue Type="expandable" Name="AppPath"
+          Value="/bin/rasplit.exe" />
+          <RegistryValue Type="string" Name="AppArgs"
+          Value='-S localhost:562 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S'/>
+          <RegistryValue Type="integer" Name="NeverExits"
+          Value="1" />
+        </RegistryKey>
+      </Component>
+      <Directory Id='ProgramFilesFolder' Name='PFiles'>
+        <Directory Id='ArgusClientsTopDir' Name='ArgusClients'>
+          <Directory Id='argus' Name='argus'/>
+          <Directory Id='etc' Name='etc'>
+            <Component Id='Config'
+            Guid='a87b2b03-922d-47d0-a8c4-64ec53bd8d27'>
+              <File Id='ra.conf' Name='ra.conf' DiskId='1'
+              Source="../../support/Config/rarc"
+              KeyPath='yes'></File>
+            </Component>
+          </Directory>
+          <Directory Id='INSTALLDIR' Name='bin'>
+            <Component Id='ra.exe'
+            Guid='9e258aba-871f-47e6-9cdb-60076c643088'>
+              <File Id='ra.exe' Name='ra.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/ra.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='rabins.exe'
+            Guid='9c0ccebd-8916-457a-b4f6-79fba69c1b93'>
+              <File Id='rabins.exe' Name='rabins.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/rabins.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='racluster.exe'
+            Guid='2079cc07-d864-4985-b2cc-60bc4c19fe65'>
+              <File Id='racluster.exe' Name='racluster.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/racluster.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='racount.exe'
+            Guid='aee59717-59c6-4635-a81a-702831981a29'>
+              <File Id='racount.exe' Name='racount.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/racount.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='radium.exe'
+            Guid='2cac2e38-c3b4-4401-9730-a41a54878ec3'>
+              <File Id='radium.exe' Name='radium.exe' DiskId='1'
+              Source="BUILDROOT/usr/sbin/radium.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='ranonymize.exe'
+            Guid='82ecd985-bef4-47e8-bb2a-35d7e80ead24'>
+              <File Id='ranonymize.exe' Name='ranonymize.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/ranonymize.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='rasort.exe'
+            Guid='17b06f12-b7f0-4960-acd3-3ecd249a154e'>
+              <File Id='rasort.exe' Name='rasort.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/rasort.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='rasplit.exe'
+            Guid='7a127e4b-ae86-4eb6-8b24-7dae5b2c3384'>
+              <File Id='rasplit.exe' Name='rasplit.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/rasplit.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='dash.exe'
+            Guid='d6eb2bf4-1bd8-4587-9bc1-c4353a63532d'>
+              <File Id='dash.exe' Name='sh.exe' DiskId='1'
+              Source="c:\cygwin\bin\dash.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id="cygrunsrv.exe"
+            Guid='e94150d5-875b-4f17-89e5-fe34277895e0'>
+              <File Id="cygrunsrv.exe"
+              Source="c:\cygwin\bin\cygrunsrv.exe"
+              Name="cygrunsrv.exe" KeyPath="yes" Checksum="yes" />
+              <ServiceInstall Id="cygrunsrv.exe" Type="ownProcess"
+              Vital="yes" Name="QoSient:RaSplit"
+              DisplayName="QoSient:RaSplit"
+              Description="QoSient Argus Clients Version @PACKAGE_VERSION@"
+              Start="auto" Account="LocalSystem"
+              ErrorControl="ignore" Interactive="no" />
+              <ServiceControl Id="cygrunsrv.exe" Start="install"
+              Stop="both" Remove="uninstall" Name="QoSient:RaSplit"
+              Wait="no" />
+            </Component>
+            <Component Id='LibGCC'
+            Guid='d6853c16-f1ef-4453-a066-8327441f73cc'>
+              <File Id='LibGCC' Name='cyggcc_s-1.dll' DiskId='1'
+              Source='C:\Cygwin\bin\cyggcc_s-1.dll' KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='LibCygwin1'
+            Guid='5a4cf6a1-7b77-4f53-a519-218dbb136349'>
+              <File Id='LibCygwin1' Name='cygwin1.dll' DiskId='1'
+              Source='C:\Cygwin\bin\cygwin1.dll' KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='LibCygz'
+            Guid='fbd1537b-7a36-4354-bfb2-dad48c286d36'>
+              <File Id='LibCygz' Name='cygz.dll' DiskId='1'
+              Source='C:\Cygwin\bin\cygz.dll' KeyPath='yes'></File>
+            </Component>
+            <Component Id='LibSasl2'
+            Guid='0e10c543-1561-4914-93a0-ca13fcf4b7d1'>
+              <File Id='LibSasl2' Name='cygsasl2-3.dll' DiskId='1'
+              Source='C:\Cygwin\bin\cygsasl2-3.dll' KeyPath='yes'></File>
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder" Name="Programs">
+        <Directory Id="ProgramMenuDir"
+        Name="Argus @PACKAGE_VERSION@">
+          <Component Id="ProgramMenuDir"
+          Guid='47600135-a9d6-4d4f-89e1-6217f2670efe'>
+            <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
+            <RegistryValue Root='HKCU'
+            Key='Software\[Manufacturer]\[ProductName]'
+            Type='string' Value='' KeyPath='yes' />
+          </Component>
+        </Directory>
+      </Directory>
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+    <Feature Id='Complete' Level='1'>
+      <ComponentRef Id='ra.exe' />
+      <ComponentRef Id='rabins.exe' />
+      <ComponentRef Id='rasplit.exe' />
+      <ComponentRef Id='racluster.exe' />
+      <ComponentRef Id='radium.exe' />
+      <ComponentRef Id='ranonymize.exe' />
+      <ComponentRef Id='rasort.exe' />
+      <ComponentRef Id='racount.exe' />
+      <ComponentRef Id='dash.exe' />
+      <ComponentRef Id='LibGCC' />
+      <ComponentRef Id='LibCygwin1' />
+      <ComponentRef Id='LibCygz' />
+      <ComponentRef Id='LibSasl2' />
+      <ComponentRef Id='ProgramMenuDir' />
+      <ComponentRef Id='Config' />
+      <ComponentRef Id='cygrunsrv.exe' />
+      <ComponentRef Id='REG_MACHINE' />
+    </Feature>
+  </Product>
+</Wix>
