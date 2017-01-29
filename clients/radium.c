@@ -581,6 +581,44 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_ZEROCONF_REGISTER=",
 };
 
+#ifdef CYGWIN
+static int
+__wmic_get_uuid(char *uuidstr, size_t len)
+{
+   FILE *fp;
+   char str[64];
+   int res = -1;
+
+   if (len < 37)
+      /* need 37 bytes, including terminating null, to hold uuid string */
+      return -1;
+
+   fp = popen("/cygdrive/c/Windows/System32/Wbem/wmic"
+              " path win32_computersystemproduct get uuid", "r");
+   if (fp == NULL)
+      return -1;
+
+   if (fgets(str, sizeof(str), fp) == NULL)
+      goto close_out;
+
+   if (strncmp(str, "UUID", 4) == 0) {
+      if (fgets(str, sizeof(str), fp) == NULL)
+         goto close_out;
+
+      if (strlen(str) >= 37) {
+         strncpy(uuidstr, str, 36);
+         uuidstr[36] = '\0';
+         res = 0;
+      }
+   }
+
+close_out:
+   fclose(fp);
+   return res;
+}
+#endif
+
+
 int
 RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 {
