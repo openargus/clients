@@ -433,13 +433,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
          *(int *)&buf = 0;
          ArgusPrintRecord(ArgusParser, buf, ns, MAXSTRLEN);
 
-         if (ArgusParser->ArgusPrintJson) {
-            if (fprintf (stdout, "%s", buf) < 0)
-               RaParseComplete (SIGQUIT);
-         } else {
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete (SIGQUIT);
-         }
+         if (fprintf (stdout, "%s\n", buf) < 0)
+            RaParseComplete (SIGQUIT);
 
          if (ArgusParser->eflag == ARGUS_HEXDUMP) {
             int i;

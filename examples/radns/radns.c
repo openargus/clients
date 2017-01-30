@@ -218,7 +218,7 @@ ArgusHandleSearchCommand (char *command)
       bzero ((char *)&node, sizeof(node));
       bcopy(cidr, &node.addr, sizeof(*cidr));
 
-      if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_MASK_MATCH)) != NULL) 
+      if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL) 
          ArgusPrintAddressResponse(string, raddr, retn, &rind);
 
    } else {
