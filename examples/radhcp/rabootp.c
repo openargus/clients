@@ -39,14 +39,20 @@
 #include "interface.h"
 #include "rabootp.h"
 #include "dhcp.h"
+#include "rabootp_client_tree.h"
+#include "rabootp_memory.h"
+#include "rabootp_fsa.h"
 
 extern char ArgusBuf[];
 
 static char *bootp_print(register const u_char *, u_int);
 static void rfc1048_print(const u_char *, const u_char *);
 static void cmu_print(const u_char *);
+static void rfc1048_parse(const u_char *, const u_char *,
+                          struct ArgusDhcpStruct *, u_char);
 
 static char tstr[] = " [|bootp]";
+static const u_char vm_rfc1048[4] = VM_RFC1048;
 
 static const struct tok bootp_flag_values[] = {
     { 0x8000, "Broadcast" },
@@ -59,13 +65,118 @@ static const struct tok bootp_op_values[] = {
     { 0, NULL}
 };
 
+static struct ArgusDhcpClientTree client_tree = {
+   .lock = PTHREAD_MUTEX_INITIALIZER,
+};
 
 
-struct ArgusDhcpStruct *ArgusParseDhcpRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDhcpStruct *);
+/* The TCHECK* macros are not safe to use since we are checking
+ * multiple buffers
+ */
+static inline int
+__tcheck(const unsigned char * const target, size_t targetsize,
+         const struct ArgusDataStruct * const data)
+{
+   if ((target + targetsize) <= ((unsigned char *)&data->array[0] + data->count))
+      return 1;
+   return 0;
+}
 
+static struct ArgusDhcpStruct *
+__parse_one_dhcp_record(const struct ArgusDataStruct * const user)
+{
+   int newads = 0;
+   uint32_t xid;
+   struct ArgusDhcpStruct *ads;
+   struct ArgusDhcpStruct parsed;
+   register const struct dhcp_packet *bp;
+
+   bp = (struct dhcp_packet *)&user->array;
+
+   /* first make sure we've got the op, htype and hlen */
+   if (!__tcheck(&bp->hlen, sizeof(bp->hlen), user))
+      goto nouser;
+
+   if (bp->hlen > sizeof(bp->chaddr)) {
+      /* malformed.  increment a counter? */
+      goto nouser;
+   }
+
+   /* Then check to see that everything thru the client address
+    * is present.
+    */
+   if (!__tcheck(&bp->chaddr[0], bp->hlen, user))
+      goto nouser;
+
+   /* make sure we have everything up to the options data */
+   if (!__tcheck(&bp->options[0], sizeof(bp->options[0]), user))
+      goto nouser;
+
+   xid = EXTRACT_32BITS(&bp->xid);
+   ads = ClientTreeFind(&client_tree, &bp->chaddr[0], bp->hlen, xid);
+   if (!ads) {
+      /* don't have a cached entry, so allocate a new one to insert. */
+      ads = ArgusDhcpStructAlloc(); /* refcount = 1 already */
+      ads->xid = xid;
+      ads->hlen = bp->hlen;
+      memcpy(&ads->chaddr[0], &bp->chaddr[0], bp->hlen);
+      if (ArgusDhcpClientTreeInsert(&client_tree, ads) < 0) {
+         ArgusDhcpStructFree(ads);
+         ads = NULL;
+         goto nouser;
+      }
+
+      newads = 1;
+      DEBUGLOG(2, "%s(): added new dhcp structure to tree\n", __func__);
+   } else {
+      DEBUGLOG(2, "%s(): found dhcp structure in tree\n", __func__);
+   }
+
+   if (bp->op == BOOTREQUEST) {
+      ads->total_requests++;
+   } else if (bp->op == BOOTREPLY) {
+      /* extract some data from the non-options portion of the packet */
+      parsed.rep.yiaddr.s_addr = EXTRACT_32BITS(&bp->yiaddr.s_addr);
+      parsed.rep.ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
+      parsed.rep.siaddr.s_addr = EXTRACT_32BITS(&bp->siaddr.s_addr);
+      ads->total_responses++;
+   } else {
+      ads->total_unknownops++;
+   }
+
+   if (memcmp((const char *)&bp->options[0], vm_rfc1048,
+       sizeof(u_int32_t)) == 0) {
+      memset(&parsed, 0, sizeof(parsed));
+      rfc1048_parse(bp->options,
+                    (const u_char *)(user->array+user->count),
+                    &parsed, bp->op);
+
+      if (newads)
+         ads->state = fsa_choose_initial_state(&parsed);
+      else
+         ads->state = fsa_advance_state(&parsed, ads);
+
+      /* TODO: merge records / update ads */
+   }
+
+   ArgusDhcpStructFreeReplies(&parsed);
+   ArgusDhcpStructFreeClientID(&parsed);
+
+   if (!newads) {
+      /* ClientTreeFind() ups the refcount.  We're done making changes,
+       * so call the "free" function to decrement the refcount.
+       */
+      ArgusDhcpStructFree(ads);
+   }
+
+nouser:
+   return ads;
+}
 
 struct ArgusDhcpStruct *
-ArgusParseDhcpRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, struct ArgusDhcpStruct *dhcp)
+ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
+                     struct ArgusRecordStruct *argus,
+                     struct ArgusDhcpStruct *dhcp)
 {
    struct ArgusDhcpStruct *retn = NULL;
 
@@ -74,12 +185,15 @@ ArgusParseDhcpRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
       struct ArgusDataStruct *duser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
 
       if (suser != NULL) {
+         retn = __parse_one_dhcp_record(suser);
+         bootp_print((u_char *)&(suser->array[0]), suser->count);
+         strncat(ArgusBuf, "\n", MAXSTRLEN);
       }
 
       if (duser != NULL) {
+         retn = __parse_one_dhcp_record(duser);
+         bootp_print((u_char *)&(duser->array[0]), duser->count);
       }
-
-      retn = dhcp;
    }
 
    return (retn);
@@ -93,7 +207,6 @@ static char *
 bootp_print(register const u_char *cp, u_int length)
 {
    register const struct dhcp_packet *bp;
-   static const u_char vm_rfc1048[4] = VM_RFC1048;
    const u_char *snapend = cp + length;
 
    unsigned int iaddr;
@@ -174,7 +287,7 @@ bootp_print(register const u_char *cp, u_int length)
    TCHECK2(bp->sname[0], 1);      /* check first char only */
    if (bp->sname[0]) {
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," sname \"");
-      if (fn_print(bp->sname, snapend, ArgusBuf)) {
+      if (fn_print((u_char *)&(bp->sname[0]), snapend, ArgusBuf)) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
          return ArgusBuf;
@@ -184,7 +297,7 @@ bootp_print(register const u_char *cp, u_int length)
    TCHECK2(bp->file[0], 1);      /* check first char only */
    if (bp->file[0]) {
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," file \"");
-      if (fn_print(bp->file, snapend, ArgusBuf)) {
+      if (fn_print((u_char *)&(bp->file[0]), snapend, ArgusBuf)) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
          return ArgusBuf;
@@ -609,3 +722,292 @@ trunc:
    return;
 }
 
+static inline char *
+__extract_string(const u_char * const bp, u_char len)
+{
+   u_char *s;
+
+   s = malloc(len+1);
+   if (s) {
+      memcpy(s, bp, len);
+      *(s+len) = '\0';
+   }
+   return (char *)s;
+}
+
+/* __extract_ipv4array:
+ * extracts an option containing multiple ipv4 addresses into an
+ * array of struct in_addr.  The length of the array is specified
+ * in nelems.
+ *
+ * Returns the number of ipv4 addresses in the DHCP option, even if
+ * this is more than the number copied into the array.
+ */
+static u_char
+__extract_ipv4array(const u_char * const bp, u_char len,
+                    struct in_addr arr[], u_char nelems)
+{
+   u_char tmplen = len;
+   const u_char *tmpbp = bp;
+   u_char count = 0;
+
+   while (tmplen >= 4) {
+      if (count < nelems)
+         arr[count].s_addr = EXTRACT_32BITS(tmpbp);
+
+      count++;
+      tmpbp += 4;
+      tmplen -= 4;
+   }
+   return count;
+}
+
+static void
+rfc1048_parse(const u_char *bp, const u_char *endp,
+              struct ArgusDhcpStruct *ads, u_char op)
+{
+   register u_int16_t tag;
+   register u_int len, size;
+   register const char *cp;
+   register char c;
+   int first;
+   u_int32_t ul;
+   u_int16_t us;
+   u_int8_t uc;
+   size_t off;
+
+   /* Step over magic cookie */
+   bp += sizeof(int32_t);
+
+   /* Loop while we there is a tag left in the buffer */
+   while (bp + 1 < endp) {
+      tag = *bp++;
+
+      if (op == BOOTREPLY)
+          __options_mask_set(ads->rep.options, tag);
+      else if (op == BOOTREQUEST)
+          __options_mask_set(ads->req.options, tag);
+
+      if (tag == DHO_PAD)
+         continue;
+      if (tag == DHO_END)
+         return;
+
+      /* we don't need to format the option as text, but this still
+       * tells us how to extract the data -- a particular size integer,
+       * ascii, etc.
+       */
+      cp = tok2str(tag2str, "?T%u", tag);
+      c = *cp++;
+
+      /* Get the length; check for truncation */
+      if (bp + 1 >= endp)
+         return;
+
+      len = *bp++;
+      if (bp + len >= endp)
+         return;
+
+      /* 53 */
+      if (tag == DHO_DHCP_MESSAGE_TYPE && len == 1) {
+         uc = *bp++;
+         switch (uc) {
+         case DHCPDISCOVER:
+         case DHCPOFFER:
+         case DHCPREQUEST:
+         case DHCPDECLINE:
+         case DHCPACK:
+         case DHCPNAK:
+         case DHCPRELEASE:
+         case DHCPINFORM:
+         case DHCPFORCERENEW:
+         case DHCPLEASEQUERY:
+         case DHCPLEASEUNASSIGNED:
+         case DHCPLEASEUNKNOWN:
+         case DHCPLEASEACTIVE:
+
+            ads->msgtypemask |= __type2mask(uc);
+            break;
+         default:
+            break;
+         }
+         continue;
+      }
+
+      /* 1 */
+      if (tag == DHO_SUBNET_MASK && op == BOOTREPLY) {
+         if (len == 4) {
+            ads->rep.netmask.s_addr = EXTRACT_32BITS(bp);
+         }
+         bp += len;
+         continue;
+      }
+
+      /* 3 */
+      if (tag == DHO_ROUTERS && op == BOOTREPLY) {
+         u_char tmplen = len;
+         const u_char *tmpbp = bp;
+         u_char count = 0;
+
+         while (tmplen >= 4) {
+            if (count == 0)
+               ads->rep.router.s_addr = EXTRACT_32BITS(tmpbp);
+
+            count++;
+            tmpbp += 4;
+            tmplen -= 4;
+         }
+
+         ads->rep.router_count = count;
+         bp += len;
+         continue;
+      }
+
+      /* 6 */
+      if (tag == DHO_DOMAIN_NAME_SERVERS && op == BOOTREPLY) {
+         u_char nelems;
+
+         nelems = sizeof(ads->rep.nameserver)/sizeof(ads->rep.nameserver[0]);
+         ads->rep.nameserver_count =
+            __extract_ipv4array(bp, len, ads->rep.nameserver, nelems);
+         bp += len;
+         continue;
+      }
+
+      /* 12 */
+      if (tag == DHO_HOST_NAME && op == BOOTREPLY) {
+         if (len > 0) {
+            ads->rep.hostname = __extract_string(bp, (u_char)(len & 0xff));
+            bp += len;
+         }
+         continue;
+      }
+
+      /* 15 */
+      if (tag == DHO_DOMAIN_NAME && op == BOOTREPLY) {
+         if (len > 0) {
+            ads->rep.domainname = __extract_string(bp, (u_char)(len & 0xff));
+            bp += len;
+         }
+         continue;
+      }
+
+      /* 26 */
+      if (tag == DHO_INTERFACE_MTU && op == BOOTREPLY) {
+         if (len == 2)
+            ads->rep.mtu = EXTRACT_16BITS(bp);
+         bp += len;
+         continue;
+      }
+
+      /* 28 */
+      if (tag == DHO_BROADCAST_ADDRESS && op == BOOTREPLY) {
+         if (len == 4)
+            ads->rep.broadcast.s_addr = EXTRACT_32BITS(bp);
+         bp += len;
+         continue;
+      }
+
+      /* 42 */
+      if (tag == DHO_NTP_SERVERS && op == BOOTREPLY) {
+         u_char nelems;
+
+         nelems = sizeof(ads->rep.timeserver)/sizeof(ads->rep.timeserver[0]);
+         ads->rep.timeserver_count =
+            __extract_ipv4array(bp, len, ads->rep.timeserver, nelems);
+         bp += len;
+         continue;
+      }
+
+      /* 50 */
+      if (tag == DHO_DHCP_REQUESTED_ADDRESS && op == BOOTREQUEST) {
+         if (len == 4)
+            ads->req.requested_addr.s_addr = EXTRACT_32BITS(bp);
+         bp += len;
+         continue;
+      }
+
+      /* 51 */
+      if (tag == DHO_DHCP_LEASE_TIME && op == BOOTREPLY) {
+         if (len == 4)
+            ads->rep.leasetime = EXTRACT_32BITS(bp);
+         bp += len;
+         continue;
+      }
+
+      /* 54 */
+      if (tag == DHO_DHCP_SERVER_IDENTIFIER && op == BOOTREPLY) {
+         if (len == 4)
+            ads->rep.server_id.s_addr = EXTRACT_32BITS(bp);
+         bp += len;
+         continue;
+      }
+
+      /* 55 */
+      if (tag == DHO_DHCP_PARAMETER_REQUEST_LIST && op == BOOTREQUEST) {
+         if (len > 0) {
+            if (len > ads->req.requested_options_count) {
+               if (ads->req.requested_opts) {
+                  free(ads->req.requested_opts);
+                  ads->req.requested_opts = malloc(len);
+               }
+            }
+            if (ads->req.requested_opts)
+               memcpy(ads->req.requested_opts, bp, len);
+         }
+         bp += len;
+         continue;
+      }
+
+      /* 61 */
+      if (tag == DHO_DHCP_CLIENT_IDENTIFIER && op == BOOTREQUEST) {
+         if (len >= 2) {
+            if (len <= 8) {
+               ads->req.client_id.ptr = NULL;
+               memcpy(&ads->req.client_id.bytes[0], bp, len);
+            } else {
+               ads->req.client_id.ptr = malloc(len);
+               if (ads->req.client_id.ptr)
+                  memcpy(ads->req.client_id.ptr, bp, len);
+            }
+         }
+         bp += len;
+         continue;
+      }
+
+      /* Print data */
+      size = len;
+      if (c == '?') {
+         /* Base default formats for unknown tags on data size */
+         if (size & 1)
+            c = 'b';
+         else if (size & 2)
+            c = 's';
+         else
+            c = 'l';
+      }
+
+      /* If this is an option we care about, keep going and parse.
+       * Otherwise, just note that the option was present and go
+       * back to top of loop.
+       */
+
+      switch (tag) {
+      }
+
+      /* Data left over? */
+      if (size) {
+         bp += size;
+      }
+   }
+
+trunc:
+   return;
+}
+
+void
+RabootpCleanup(void)
+{
+   /* only after all processing has stopped */
+   ArgusDhcpClientTreeFree(&client_tree);
+}

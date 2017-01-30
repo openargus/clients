@@ -49,7 +49,6 @@
 #include <argus_main.h>
 #include <argus_filter.h>
 #include <argus_label.h>
-
 #include <argus_output.h>
 
 #if defined(ARGUS_MYSQL)
@@ -283,6 +282,7 @@ RaParseComplete (int sig)
 #if defined(ARGUS_MYSQL)
          mysql_close(RaMySQL);
 #endif
+         RabootpCleanup();
          ArgusCloseParser(ArgusParser);
          exit (ArgusExitStatus);
       }
@@ -398,6 +398,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                struct ArgusDhcpStruct dhcpbuf, *dhcp = &dhcpbuf;
 
                if ((dhcp = ArgusParseDhcpRecord(parser, argus, dhcp)) != NULL) {
+                  DEBUGLOG(2, "%s: %s", __func__, ArgusBuf);
+                  ArgusBuf[0] = '\0';
                }
 
             } else {
