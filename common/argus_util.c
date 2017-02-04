@@ -24831,8 +24831,10 @@ struct ArgusMemoryList memory = {
 #define ARGUS_ALIGN	128
 */
 
-void *     
-ArgusMalloc (int bytes) 
+typedef void *(*allocator_func)(size_t, void *);
+
+static void *
+__argus_malloc (int bytes, allocator_func alloc, void *aux)
 {          
    void *retn = NULL; 
    int offset;
@@ -24853,9 +24855,9 @@ ArgusMalloc (int bytes)
 #endif
 
 #if !defined(ARGUSMEMDEBUG)
-      retn = (void *) malloc (bytes + offset);
+      retn = (void *) alloc(bytes + offset, aux);
 #else
-      if ((retn = (u_int *) malloc (bytes + sizeof(struct ArgusMemoryHeader) + offset)) != NULL) {
+      if ((retn = (u_int *) alloc(bytes + sizeof(struct ArgusMemoryHeader) + offset, aux)) != NULL) {
          struct ArgusMemoryHeader *mem = (struct ArgusMemoryHeader *)retn;
          mem->tag = ARGUS_ALLOC;
          mem->len = bytes;
@@ -24897,79 +24899,34 @@ ArgusMalloc (int bytes)
 #endif
    }
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusMalloc (%d) returning %p\n", bytes, retn); 
+   ArgusDebug (6, "%s(%d) returning %p\n", __func__, bytes, retn);
 #endif
    return (retn); 
+}
+
+static void *
+__malloc(size_t bytes, void *aux __attribute__((unused)))
+{
+   return malloc(bytes);
+}
+
+void *
+ArgusMalloc(int bytes)
+{
+   return __argus_malloc(bytes, __malloc, NULL);
+}
+
+static void *
+__calloc(size_t bytes, void *aux __attribute__((unused)))
+{
+   return calloc(1, bytes);
 }
 
 void *
 ArgusCalloc (int nitems, int bytes)
 {
-   int offset, total = nitems * bytes;
-   void *retn = NULL;
-
-   if (total) {
-#if defined(ARGUS_THREADS)
-      pthread_mutex_lock(&memory.lock);
-#endif
-      ArgusAllocTotal++;
-      ArgusAllocBytes += total;
-      if (ArgusAllocMax < ArgusAllocBytes)
-         ArgusAllocMax = ArgusAllocBytes;
-
-#if defined(ARGUS_ALIGN)
-      offset = ARGUS_ALIGN;
-#else
-      offset = 0;
-#endif
-
-#if !defined(ARGUSMEMDEBUG)
-      if ((retn = calloc (1, total + offset)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusCalloc: malloc error %s", strerror(errno));
-
-#else
-      if ((retn = calloc (1, total + sizeof(struct ArgusMemoryHeader) + offset)) != NULL) {
-         struct ArgusMemoryHeader *mem = retn;
-         mem->tag = ARGUS_ALLOC;
-         mem->len = total;
-         mem->offset = offset;
-#if defined(__GNUC__)
-         mem->frame[0] = __builtin_return_address(0);
-         mem->frame[1] = __builtin_return_address(1);
-         mem->frame[2] = __builtin_return_address(2);
-#endif
-
-         if (memory.start) {
-            mem->nxt = memory.start;
-            mem->prv = memory.start->prv;
-            mem->prv->nxt = mem;
-            mem->nxt->prv = mem;
-            memory.end = mem;
-         } else {
-            memory.start = mem;
-            memory.end = mem;
-            mem->nxt = mem;
-            mem->prv = mem;
-         }
-         memory.total++;
-         memory.count++;
-         retn = (void *)(mem + 1);
-      }
-#endif
-
-#if defined(ARGUS_ALIGN)
-      if (retn != NULL) {
-         unsigned short toff;
-         toff = ((unsigned long)retn & (offset - 1));
-         toff = offset - toff;
-         retn = (void *)((char *)retn + toff);
-         ((unsigned short *)retn)[-1] = toff;
-      }
-#endif
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&memory.lock);
-#endif
-   }
+   int total = nitems * bytes;
+   void *retn = __argus_malloc(total, __calloc, NULL);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusCalloc (%d, %d) returning 0x%x\n", nitems, bytes, retn);
