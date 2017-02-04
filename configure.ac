@@ -163,6 +163,7 @@ AC_CHECK_FUNCS([alarm bzero endgrent endpwent floor gethostbyaddr gethostbyname 
 AC_CHECK_FUNCS([memchr memmove memset mkdir modf pow putenv realpath regcomp select setenv socket sqrt strcasecmp strchr])
 AC_CHECK_FUNCS([strdup strerror strlcat strncasecmp strpbrk strerror strrchr strstr strtol strtof srandomdev tzset])
 AC_CHECK_FUNCS([gethostuuid])
+AC_CHECK_FUNCS([posix_memalign memalign])
 
 AC_SEARCH_LIBS([clock_gettime], [rt], [
     AC_DEFINE(HAVE_CLOCK_GETTIME, 1,[Have clock_gettime])

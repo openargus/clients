@@ -93,6 +93,12 @@
 
 #include <time.h>
 
+#ifndef HAVE_POSIX_MEMALIGN
+# ifdef HAVE_MEMALIGN
+#  include <malloc.h>
+# endif
+#endif
+
 #include <argus_int.h>
 #include <argus_def.h>
 #include <argus_out.h>
@@ -24932,6 +24938,37 @@ ArgusCalloc (int nitems, int bytes)
    ArgusDebug (6, "ArgusCalloc (%d, %d) returning 0x%x\n", nitems, bytes, retn);
 #endif
    return (retn);
+}
+
+static void *
+__malloc_aligned(size_t bytes, void *aux)
+{
+    void *mem;
+    size_t alignment = *(size_t *)aux;
+#if defined(HAVE_POSIX_MEMALIGN)
+    int res = posix_memalign(&mem, alignment, bytes);
+#else
+    int res = -1;
+
+# if defined(HAVE_MEMALIGN)
+    mem = memalign(alignment, bytes);
+# else
+    mem = malloc(bytes);
+# endif
+    if (mem)
+       res = 0;
+#endif
+
+    if (res == 0)
+       return mem;
+
+    return NULL;
+}
+
+void *
+ArgusMallocAligned(int bytes, size_t alignment)
+{
+   return __argus_malloc(bytes, __malloc_aligned, &alignment);
 }
 
 
