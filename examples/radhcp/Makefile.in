@@ -77,7 +77,8 @@ YACC = @V_YACC@
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC =	radhcp.c rabootp.c rasql.c rabootp_memory.c rabootp_client_tree.c
+SRC =	radhcp.c rabootp.c rasql.c rabootp_memory.c rabootp_client_tree.c \
+	rabootp_fsa.c
 
 PROGS = $(INSTALLBIN)/radhcp
 
