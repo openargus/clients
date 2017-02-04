@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+   <dict>
+      <key>KeepAlive</key>
+         <true/>
+      <key>Label</key>
+         <string>com.qosient.radnstable</string>
+      <key>ProgramArguments</key>
+         <array>
+            <string>/usr/local/bin/rasqlinsert</string>
+            <string>-M</string>
+            <string>time</string>
+            <string>1d</string>
+            <string>-m</string>
+            <string>none</string>
+            <string>-s</string>
+            <string>stime</string>
+            <string>ltime</string>
+            <string>saddr</string>
+            <string>daddr</string>
+            <string>proto</string>
+            <string>sport</string>
+            <string>dport</string>
+            <string>pkts</string>
+            <string>bytes</string>
+            <string>pcr</string>
+            <string>-S</string>
+            <string>localhost</string>
+            <string>-w</string>
+            <string>mysql://root@localhost/dns/dnsFlows_%Y_%m_%d</string>
+            <string>-</string>
+            <string>udp</string>
+            <string>and</string>
+            <string>dst</string>
+            <string>port</string>
+            <string>53</string>
+         </array>
+   </dict>
+</plist>

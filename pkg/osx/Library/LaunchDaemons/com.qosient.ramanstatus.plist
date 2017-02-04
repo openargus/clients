@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.qosient.ramanstatus</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/local/bin/rasqlinsert</string>
+                <string>-m</string>
+                <string>none</string>
+                <string>-s</string>
+                <string>stime</string>
+                <string>ltime</string>
+                <string>sid</string>
+                <string>-S</string>
+                <string>localhost</string>
+                <string>-w</string>
+                <string>mysql://root@localhost/argus/manStatusTable</string>
+                <string>-</string>
+                <string>inf</string>
+                <string>man0</string>
+                <string>or</string>
+                <string>rad0</string>
+        </array>
+</dict>
+</plist>
