@@ -383,6 +383,28 @@ unsigned int RaIPv6AddressType(struct ArgusParserStruct *, struct in6_addr *);
 
 #define ipaddr_string(p) ArgusGetName(ArgusParser, (u_char *)(p))
 
+#include <stdarg.h>
+static inline int
+snprintf_append(char *str, size_t *len, size_t *remain, const char *fmt, ...)
+{
+   va_list ap;
+   int c;
+
+   va_start(ap, fmt);
+   c = vsnprintf(str+(*len), *remain, fmt, ap);
+   if (c > 0) {
+      if (c <= *remain) {
+         *remain -= c;
+         *len += c;
+      } else {
+         *len += *remain;
+         *remain = 0;
+      }
+   }
+   va_end(ap);
+   return c;
+}
+
 #ifdef ArgusUtil
 
 void ArgusHandleSig (int);
