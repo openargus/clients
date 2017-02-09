@@ -16,15 +16,19 @@
             <string>none</string>
             <string>-s</string>
             <string>stime</string>
-            <string>ltime</string>
-            <string>saddr</string>
-            <string>daddr</string>
+            <string>dur</string>
+            <string>flgs</string>
             <string>proto</string>
+            <string>saddr</string>
             <string>sport</string>
+            <string>dir</string>
+            <string>daddr</string>
             <string>dport</string>
-            <string>pkts</string>
-            <string>bytes</string>
-            <string>pcr</string>
+            <string>spkts</string>
+            <string>dpkts</string>
+            <string>sbytes</string>
+            <string>dbytes</string>
+            <string>state</string>
             <string>-S</string>
             <string>localhost</string>
             <string>-w</string>

@@ -5,7 +5,7 @@
         <key>KeepAlive</key>
         <true/>
         <key>Label</key>
-        <string>com.qosient.argus.rasplit</string>
+        <string>com.qosient.rasplit</string>
         <key>ProgramArguments</key>
         <array>
                 <string>/usr/local/bin/rasplit</string>
@@ -15,7 +15,7 @@
                 <string>-S</string>
                 <string>localhost</string>
                 <string>-w</string>
-                <string>/Users/carter/Archive/rasplit/$srcid/%Y/%m/argus.%Y.%m.%d</string>
+                <string>/usr/local/argus/archive/$srcid/%Y/%m/argus.%Y.%m.%d</string>
         </array>
         <key>OnDemand</key>
         <false/>
