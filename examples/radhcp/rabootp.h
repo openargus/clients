@@ -83,7 +83,7 @@ __options_mask_clr(uint64_t mask[], uint8_t opt)
 
 
 static inline uint8_t
-__options_mask_isset(uint64_t mask[], uint8_t opt)
+__options_mask_isset(const uint64_t mask[], uint8_t opt)
 {
    uint8_t idx = opt/64;
    uint8_t shift = opt % 64;
@@ -93,6 +93,22 @@ __options_mask_isset(uint64_t mask[], uint8_t opt)
 
    return 0;
 }
+
+/* use with qsort */
+static int
+__uchar_compar(const void *a, const void *b)
+{
+   const unsigned char *uca, *ucb;
+
+   uca = a;
+   ucb = b;
+   if (*uca < *ucb)
+      return -1;
+   if (*uca == *ucb)
+      return 0;
+   return 1;
+}
+
 
 enum ArgusDhcpState {
    __INVALID__  = 0,
@@ -104,6 +120,11 @@ enum ArgusDhcpState {
    REBINDING    = 6,
    SELECTING    = 7,
    INIT         = 8,
+};
+
+struct ArgusDhcpV6DUID {
+   uint8_t *value;
+   uint16_t len;
 };
 
 /* either accepted lease or offer */
@@ -146,9 +167,10 @@ struct ArgusDhcpV4RequstOptsStruct {
       uint8_t bytes[8];
    } client_id;                    /* option 61 */
    struct in_addr requested_addr;  /* option 50 */
+   struct in_addr requested_server_id; /* option 54 */
    uint8_t requested_options_count;
    uint8_t client_id_len;
-   /* uint8_t pad[8]; */           /* PAD */
+   /* uint8_t pad[4]; */           /* PAD */
 };
 
 /* chaddr + xid uniquely identifies host state */
@@ -157,10 +179,10 @@ struct ArgusDhcpStruct {
    /* first x86_64 cacheline */
    unsigned char chaddr[16];       /* client L2 address */
    unsigned char shaddr[16];       /* accepted server's L2 address */
-   union {                         /* accpeted server L3 address - 16 bytes */
-      struct in_addr v4;
-      struct in6_addr v6;
-   } server_addr;
+   struct ArgusDhcpV6DUID server_id_v6; /* 10 bytes */
+   uint8_t pad0[2];
+   struct in_addr server_id_v4;
+
    uint32_t xid;                   /* transaction ID from dhcp packet */
    uint16_t msgtypemask;           /* mask of option-53 message types */
    uint8_t hlen;
@@ -175,7 +197,6 @@ struct ArgusDhcpStruct {
 
    /* second cacheline */
    struct ArgusDhcpV4RequstOptsStruct req;
-   uint8_t pad0[4];
    enum ArgusDhcpState state;      /* 4 bytes on x86_64 with llvm & gcc */
 
    /* third + fourth cachelines */

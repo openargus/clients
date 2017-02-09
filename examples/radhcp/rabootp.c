@@ -42,6 +42,7 @@
 #include "rabootp_client_tree.h"
 #include "rabootp_memory.h"
 #include "rabootp_fsa.h"
+#include "rabootp_update.h"
 
 extern char ArgusBuf[];
 
@@ -83,7 +84,8 @@ __tcheck(const unsigned char * const target, size_t targetsize,
 }
 
 static struct ArgusDhcpStruct *
-__parse_one_dhcp_record(const struct ArgusDataStruct * const user)
+__parse_one_dhcp_record(const struct ether_header * const ehdr,
+                        const struct ArgusDataStruct * const user)
 {
    int newads = 0;
    uint32_t xid;
@@ -132,6 +134,8 @@ __parse_one_dhcp_record(const struct ArgusDataStruct * const user)
       DEBUGLOG(2, "%s(): found dhcp structure in tree\n", __func__);
    }
 
+   memset(&parsed, 0, sizeof(parsed));
+
    if (bp->op == BOOTREQUEST) {
       ads->total_requests++;
    } else if (bp->op == BOOTREPLY) {
@@ -139,6 +143,9 @@ __parse_one_dhcp_record(const struct ArgusDataStruct * const user)
       parsed.rep.yiaddr.s_addr = EXTRACT_32BITS(&bp->yiaddr.s_addr);
       parsed.rep.ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
       parsed.rep.siaddr.s_addr = EXTRACT_32BITS(&bp->siaddr.s_addr);
+      if (ehdr)
+         memcpy(&parsed.rep.shaddr[0], &ehdr->ether_shost[0],
+                sizeof(ehdr->ether_shost));
       ads->total_responses++;
    } else {
       ads->total_unknownops++;
@@ -146,7 +153,6 @@ __parse_one_dhcp_record(const struct ArgusDataStruct * const user)
 
    if (memcmp((const char *)&bp->options[0], vm_rfc1048,
        sizeof(u_int32_t)) == 0) {
-      memset(&parsed, 0, sizeof(parsed));
       rfc1048_parse(bp->options,
                     (const u_char *)(user->array+user->count),
                     &parsed, bp->op);
@@ -156,7 +162,8 @@ __parse_one_dhcp_record(const struct ArgusDataStruct * const user)
       else
          ads->state = fsa_advance_state(&parsed, ads);
 
-      /* TODO: merge records / update ads */
+      /* merge/update */
+      ArgusDhcpStructUpdate(&parsed, ads);
    }
 
    ArgusDhcpStructFreeReplies(&parsed);
@@ -183,15 +190,26 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
    if (argus != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
       struct ArgusDataStruct *duser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
+      struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+      struct ether_header *ehdr = NULL;
+
+      if (mac != NULL) {
+         switch (mac->hdr.subtype & 0x3F) {
+            default:
+            case ARGUS_TYPE_ETHER:
+               ehdr = &(mac->mac.mac_union.ether.ehdr);
+               break;
+         }
+      }
 
       if (suser != NULL) {
-         retn = __parse_one_dhcp_record(suser);
+         retn = __parse_one_dhcp_record(ehdr, suser);
          bootp_print((u_char *)&(suser->array[0]), suser->count);
          strncat(ArgusBuf, "\n", MAXSTRLEN);
       }
 
       if (duser != NULL) {
-         retn = __parse_one_dhcp_record(duser);
+         retn = __parse_one_dhcp_record(ehdr, duser);
          bootp_print((u_char *)&(duser->array[0]), duser->count);
       }
    }
@@ -936,9 +954,11 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
       }
 
       /* 54 */
-      if (tag == DHO_DHCP_SERVER_IDENTIFIER && op == BOOTREPLY) {
-         if (len == 4)
+      if (tag == DHO_DHCP_SERVER_IDENTIFIER && len == 4) {
+         if (op == BOOTREPLY)
             ads->rep.server_id.s_addr = EXTRACT_32BITS(bp);
+         else if (op == BOOTREQUEST)
+            ads->req.requested_server_id.s_addr = EXTRACT_32BITS(bp);
          bp += len;
          continue;
       }
@@ -952,8 +972,14 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
                   ads->req.requested_opts = malloc(len);
                }
             }
-            if (ads->req.requested_opts)
+            if (ads->req.requested_opts) {
                memcpy(ads->req.requested_opts, bp, len);
+               ads->req.requested_options_count = len;
+               qsort(ads->req.requested_opts, len,
+                     sizeof(*ads->req.requested_opts), __uchar_compar);
+            } else {
+               ads->req.requested_options_count = 0;
+            }
          }
          bp += len;
          continue;
