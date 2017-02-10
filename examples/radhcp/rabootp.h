@@ -205,6 +205,7 @@ struct ArgusDhcpStruct {
 
 struct ArgusDhcpStruct *ArgusParseDhcpRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDhcpStruct *);
 void RabootpCleanup(void);
+void RabootpDumpTree(void);
 
 /*
  * Vendor magic cookie (v_magic) for RFC1048

@@ -276,6 +276,9 @@ RaParseComplete (int sig)
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
          int ArgusExitStatus = 0;
+
+         RabootpDumpTree();
+
          ArgusShutDown(sig);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
 

@@ -1031,6 +1031,138 @@ trunc:
    return;
 }
 
+static int
+__raboot_dump_node_req(void *arg0,
+                       const struct ArgusDhcpClientNode * const node)
+{
+   struct ArgusDhcpStruct *data;
+   int i;
+   size_t len = 0;
+   char str[192];
+   size_t remain = sizeof(str)-1;
+   size_t optarrlen;
+   struct in_addr msb;
+
+   if (node == NULL)
+      return -1;
+
+   optarrlen = sizeof(node->data->req.options)/sizeof(node->data->req.options[0]);
+   data = node->data;
+
+   snprintf_append(str, &len, &remain, "options ");
+   for (i = 0; i < optarrlen; i++)
+      snprintf_append(str, &len, &remain, "%016llx ", node->data->req.options[i]);
+
+   msb.s_addr = htonl(node->data->req.requested_addr.s_addr);
+   snprintf_append(str, &len, &remain, "req-address %s ", inet_ntoa(msb));
+   msb.s_addr = htonl(node->data->req.requested_server_id.s_addr);
+   snprintf_append(str, &len, &remain, "req-server %s ", inet_ntoa(msb));
+
+   snprintf(&str[len], remain, "req-options-count %u client-id-len %u",
+            node->data->req.requested_options_count,
+            node->data->req.client_id_len);
+   ArgusLog(LOG_INFO, "%s\n", str);
+   return 0;
+}
+
+static int
+__raboot_dump_node_reps(void *arg0,
+                        const struct ArgusDhcpClientNode * const node)
+{
+   struct ArgusDhcpV4LeaseOptsStruct *rep = &(node->data->rep);
+   unsigned count;
+   char str[384];
+   size_t len = 0;
+   size_t remain = sizeof(str)-1;
+   struct in_addr in;
+   size_t optarrlen;
+
+   if (node->data->num_responders == 0)
+      return 0;
+
+   while(rep) {
+      for (count = 0; count < node->data->hlen; count++)
+         snprintf_append(str, &len, &remain, "%02x%s", rep->shaddr[count],
+                         count == node->data->hlen-1 ? " " : ":");
+
+      optarrlen = sizeof(rep->options)/sizeof(rep->options[0]);
+      snprintf_append(str, &len, &remain, "options ");
+      for (count = 0; count < optarrlen; count++)
+         snprintf_append(str, &len, &remain, "%016llx ", rep->options[count]);
+
+      snprintf_append(str, &len, &remain, "leasetime %u ", rep->leasetime);
+      in.s_addr = htonl(rep->router.s_addr);
+      snprintf_append(str, &len, &remain, "router %s ", inet_ntoa(in));
+      in.s_addr = htonl(rep->yiaddr.s_addr);
+      snprintf_append(str, &len, &remain, "yiaddr %s ", inet_ntoa(in));
+      in.s_addr = htonl(rep->ciaddr.s_addr);
+      snprintf_append(str, &len, &remain, "ciaddr %s ", inet_ntoa(in));
+
+      in.s_addr = htonl(rep->netmask.s_addr);
+      snprintf_append(str, &len, &remain, "netmask %s ", inet_ntoa(in));
+      in.s_addr = htonl(rep->broadcast.s_addr);
+      snprintf_append(str, &len, &remain, "broadcast %s ", inet_ntoa(in));
+      for (count = 0; count < rep->timeserver_count; count++) {
+         in.s_addr = htonl(rep->timeserver[count].s_addr);
+         snprintf_append(str, &len, &remain, "timeserver-%u %s ",
+                         count, inet_ntoa(in));
+      }
+      for (count = 0; count < rep->nameserver_count; count++) {
+         in.s_addr = htonl(rep->nameserver[count].s_addr);
+         snprintf_append(str, &len, &remain, "nameserver-%u %s ",
+                         count, inet_ntoa(in));
+      }
+      if (rep->hostname)
+         snprintf_append(str, &len, &remain, "hostname %s ", rep->hostname);
+      if (rep->domainname)
+         snprintf_append(str, &len, &remain, "domainname %s ", rep->domainname);
+      in.s_addr = htonl(rep->server_id.s_addr);
+      snprintf_append(str, &len, &remain, "server_id %s ", inet_ntoa(in));
+      if (rep->option_overload)
+         snprintf_append(str, &len, &remain, "option-overload ");
+      in.s_addr = htonl(rep->siaddr.s_addr);
+      snprintf_append(str, &len, &remain, "siaddr %s ", inet_ntoa(in));
+      snprintf_append(str, &len, &remain, "mtu %u", rep->mtu);
+
+      ArgusLog(LOG_INFO, "REPLY %s\n", str);
+      rep = rep->next;
+   }
+   return 0;
+}
+
+static int
+__rabootp_dump_node(void *arg0, struct ArgusDhcpClientNode *node)
+{
+   struct ArgusDhcpStruct *data;
+   int i;
+   size_t len;
+   char str[128];
+   size_t remain = sizeof(str)-1;
+
+   if (node == NULL)
+      return -1;
+
+   data = node->data;
+   for (len = 0, i = 0; i < data->hlen; i++) {
+      snprintf_append(str, &len, &remain, "%02x%c", data->chaddr[i],
+                      i == (data->hlen-1) ? ' ' : ':');
+   }
+   snprintf(&str[len], remain,
+            "XID %08x msgtypemask %04x %u/%u/%u/%u state %u\n",
+            data->xid, data->msgtypemask, data->total_responses,
+            data->num_responders, data->total_requests,
+            data->total_unknownops, (unsigned)data->state);
+   ArgusLog(LOG_INFO, "NODE mac %s", str);
+   __raboot_dump_node_req(arg0, node);
+   __raboot_dump_node_reps(arg0, node);
+   return 0;
+}
+
+void RabootpDumpTree(void)
+{
+   ClientTreeForEach(&client_tree, __rabootp_dump_node, NULL);
+}
+
 void
 RabootpCleanup(void)
 {
