@@ -1482,7 +1482,7 @@ long long ArgusDiffTime (struct ArgusTime *, struct ArgusTime *, struct timeval 
 int RaDiffTime (struct timeval *, struct timeval *, struct timeval *);
 float RaDeltaFloatTime (struct timeval *, struct timeval *);
 
-void ArgusPrintTime(struct ArgusParserStruct *, char *, struct timeval *);
+int ArgusPrintTime(struct ArgusParserStruct *, char *, size_t, struct timeval *);
 char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 void ArgusPrintRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *ptr, int);

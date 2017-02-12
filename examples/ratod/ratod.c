@@ -1267,10 +1267,9 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             if (parser->Hstr != NULL) {
 
             } else {
-
-               ArgusPrintTime(parser, stimebuf, &rbps->startpt);
-               ArgusPrintTime(parser, dtimebuf, &rbps->endpt);
-               ArgusPrintTime(parser, etimebuf, &parser->RaEndTime);
+               ArgusPrintTime(parser, stimebuf, sizeof(stimebuf), &rbps->startpt);
+               ArgusPrintTime(parser, dtimebuf, sizeof(dtimebuf), &rbps->endpt);
+               ArgusPrintTime(parser, etimebuf, sizeof(etimebuf), &parser->RaEndTime);
 
                stimebuf[strlen(stimebuf) - 1] = '\0';
                dtimebuf[strlen(dtimebuf) - 1] = '\0';

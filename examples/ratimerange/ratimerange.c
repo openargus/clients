@@ -88,8 +88,8 @@ RaParseComplete (int sig)
          bzero (ebuf, sizeof(ebuf));
 
          if (ArgusParser->ArgusTotalRecords > 0) {
-            ArgusPrintTime(ArgusParser, sbuf, &RaStartTime);
-            ArgusPrintTime(ArgusParser, ebuf, &RaEndTime);
+            ArgusPrintTime(ArgusParser, sbuf, sizeof(sbuf), &RaStartTime);
+            ArgusPrintTime(ArgusParser, ebuf, sizeof(ebuf), &RaEndTime);
 
             printf ("%s - %s\n", sbuf, ebuf);
             fflush (stdout);

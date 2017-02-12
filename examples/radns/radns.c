@@ -166,7 +166,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
       char tbuf[128], resbuf[256];
       bzero(tbuf, sizeof(tbuf));
       bzero(resbuf, sizeof(tbuf));
-      ArgusPrintTime(ArgusParser, tbuf, &raddr->atime);
+      ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
 
 #if defined(ARGUS_THREADS)
       if (pthread_mutex_lock(&raddr->dns->lock) == 0) {
@@ -1204,7 +1204,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          tvp->tv_sec  = time->src.start.tv_sec;
          tvp->tv_usec = time->src.start.tv_usec;
 
-         ArgusPrintTime(parser, tbuf, tvp);
+         ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
          ArgusPrintSourceID(parser, sptr, argus, 24);
 
          while (isspace((int)sbuf[strlen(sbuf) - 1]))

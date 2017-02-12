@@ -1873,7 +1873,7 @@ ArgusParseResourceFile(struct ArgusParserStruct *parser, char *file,
 
                               gettimeofday(tvp, 0L);
                               bzero(tbuf, sizeof(tbuf));
-                              ArgusPrintTime(parser, tbuf, tvp);
+                              ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
                               if ((len = strlen(tbuf)) > 0)
                                  if (len > 128)
@@ -5265,10 +5265,10 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          tvp->tv_sec  = rec->argus_mar.startime.tv_sec;
          tvp->tv_usec = rec->argus_mar.startime.tv_usec;
 
-         ArgusPrintTime(parser, StartDateBuf, tvp);
+         ArgusPrintTime(parser, StartDateBuf, sizeof(StartDateBuf), tvp);
 	      
          gettimeofday(tvp, 0L);
-         ArgusPrintTime(parser, CurrentDateBuf, tvp);
+         ArgusPrintTime(parser, CurrentDateBuf, sizeof(CurrentDateBuf), tvp);
 
          snprintf(buf, dlen, "<?xml version =\"1.0\" encoding=\"UTF-8\"?>\n");
          slen = strlen(buf); dlen = len - slen;
@@ -5790,7 +5790,7 @@ ArgusPrintStartDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
    }
              
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (strchr (tbuf, '.'))
       len += parser->pflag;
@@ -5845,7 +5845,7 @@ ArgusPrintLastDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
    }
 
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, "  LastTime = \"%s\"", tbuf);
@@ -5901,7 +5901,7 @@ ArgusPrintSrcStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
    }
              
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " SrcStartTime = \"%s\"", tbuf);
@@ -5955,7 +5955,7 @@ ArgusPrintSrcLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
    }
 
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " SrcLastTime = \"%s\"", tbuf);
@@ -6009,7 +6009,7 @@ ArgusPrintDstStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
    }
              
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " DstStartTime = \"%s\"", tbuf);
@@ -6064,7 +6064,7 @@ ArgusPrintDstLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
    }
 
    bzero(tbuf, sizeof(tbuf));
-   ArgusPrintTime(parser, tbuf, tvp);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " DstLastTime = \"%s\"", tbuf);
@@ -21857,36 +21857,49 @@ __argus_nametodnaddr(char *name)
 
 #include <stdarg.h>
 
-void
-ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, struct timeval *tvp)
+int
+ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
+               struct timeval *tvp)
 {
    char timeFormatBuf[128], *tstr = timeFormatBuf;
-   char timeZoneBuf[32], *ptr;
+   char *ptr;
    struct tm tmbuf, *tm = &tmbuf;
    time_t tsec = tvp->tv_sec;
+   size_t remain = buflen;
+   size_t len = 0;
+   int c;
  
-   bzero (timeZoneBuf, sizeof(timeZoneBuf));
-   bzero (timeFormatBuf, sizeof(timeFormatBuf));
+   timeFormatBuf[0] = '\0';
+
+   if (parser->RaTimeFormat == NULL)
+      return 0;
 
    if ((tm = localtime_r (&tsec, &tmbuf)) == NULL)
-      return;
+      return 0;
 
-   if (parser->uflag) {
-      sprintf (tstr, "%u", (int) tvp->tv_sec);
+   if (parser->uflag || parser->RaTimeFormat == NULL) {
+      size_t tlen = 0;
+      c = snprintf (tstr, sizeof(timeFormatBuf), "%u", (int) tvp->tv_sec);
+      if (c > 0)
+         tlen += c;
       if (parser->pflag) {
-         ptr = &tstr[strlen(tstr)];
+         ptr = &tstr[tlen];
          sprintf (ptr, ".%06u", (int) tvp->tv_usec);
          ptr[parser->pflag + 1] = '\0';
       }
-      sprintf (buf, "%s", tstr);
-      return;
+      snprintf_append(buf, &len, &remain, "%s", tstr);
+      return (int)len;
    }
 
    strncpy(timeFormatBuf, parser->RaTimeFormat, sizeof(timeFormatBuf));
 
    for (ptr=tstr; *ptr; ptr++) {
       if (*ptr != '%') {
-         buf[strlen(buf)] = *ptr;
+         if (remain) {
+            buf[len] = *ptr;
+            len++;
+            remain--;
+         }
       } else {
          switch (*++ptr) {
             case 'f': {
@@ -21894,21 +21907,35 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, struct timeval *tvp)
                   char *p;
                   int i;
 
-                  while (isspace((int)buf[strlen(buf) - 1]))
-                     buf[strlen(buf) - 1] = '\0';
-                  p = &buf[strlen(buf)];
-                  sprintf (p, "%06u", (int) tvp->tv_usec);
-                  for (i = parser->pflag; i < 6; i++)
+                  while (isspace((int)buf[len - 1])) {
+                     buf[len - 1] = '\0';
+                     len--;
+                     remain++;
+                  }
+                  p = &buf[len];
+                  snprintf_append(buf, &len, &remain, "%06u", (int) tvp->tv_usec);
+                  for (i = parser->pflag; i < 6; i++) {
                      p[i] = '\0';
+                     len--;
+                     remain++;
+                  }
                } else {
-                  if (buf[strlen(buf) - 1] == '.')
-                     buf[strlen(buf) - 1] = '\0';
+                  if (buf[len - 1] == '.') {
+                     buf[len - 1] = '\0';
+                     len--;
+                     remain++;
+                  }
                }
                break;
             }
 
             case '%': {
-               buf[strlen(buf)] = '%';
+               if (remain == 0)
+                  break;
+
+               buf[len] = '%';
+               len++;
+               remain--;
                break;
             }
 
@@ -21916,27 +21943,33 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, struct timeval *tvp)
             case 'O': {
                char sbuf[8];
                sprintf (sbuf, "%%%.2s", ptr++);
-               strftime (&buf[strlen(buf)], 64, sbuf, tm);
+               c = strftime (&buf[len], remain, sbuf, tm);
+               if (c > 0) {
+                  if (c > remain)
+                     c = remain;
+                  len += c;
+                  remain -= c;
+               }
                break;
             }
 
             case 'z': {
                if (parser->ArgusPrintXml) {
                   char sbuf[16];
-                  int len, i;
+                  int slen, i;
                   bzero (sbuf, 16);
                   if ((strftime ((char *) sbuf, 16, "%z", tm)) == 0)
                      ArgusLog (LOG_ERR, "ArgusPrintTime: strftime() error\n");
                   if (strstr(sbuf, "0000")) {
                      sprintf (sbuf, "Z");
                   } else {
-                     if ((len = strlen(sbuf)) > 0) {
+                     if ((slen = strlen(sbuf)) > 0) {
                         for (i = 0; i < 2; i++)
-                           sbuf[len - i] = sbuf[len - (i + 1)];
-                        sbuf[len - 2] = ':';
+                           sbuf[slen - i] = sbuf[slen - (i + 1)];
+                        sbuf[slen - 2] = ':';
                      }
                   }
-                  sprintf(&buf[strlen(buf)], "%s", sbuf);
+                  snprintf_append(buf, &len, &remain, "%s", sbuf);
                   break;
                }
                /* Fall through to default if %z and not parser->ArgusPrintXml */
@@ -21944,18 +21977,19 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, struct timeval *tvp)
             default: {
                char sbuf[8];
                sprintf (sbuf, "%%%c", *ptr);
-               strftime (&buf[strlen(buf)], 64, sbuf, tm);
+               c = strftime (&buf[len], remain, sbuf, tm);
+               if (c > 0) {
+                  if (c > remain)
+                     c = remain;
+                  len += c;
+                  remain -= c;
+               }
                break;
             }
          }
       }
    }
-/*
-   if (tvp->tv_sec == 0) {
-      int len = strlen(buf);
-      sprintf (buf, "%*.*s", len, len, " ");
-   }
-*/
+   return (int)len;
 }
 
 void ArgusPrintCountryCode (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, char *);
@@ -23160,6 +23194,9 @@ ArgusDebug (int d, char *fmt, ...)
    va_list ap;
    char buf[MAXSTRLEN], *ptr;
    struct timeval tvp;
+   size_t len = 0;
+   size_t remain = sizeof(buf);
+   int c;
 
    if (ArgusParser && (d <= ArgusParser->debugflag)) {
       gettimeofday (&tvp, 0L);
@@ -23179,15 +23216,19 @@ ArgusDebug (int d, char *fmt, ...)
          for (i = 0; i < sizeof(ptid); i++)
             snprintf (&pbuf[i*2], 3, "%02hhx", ((char *)&ptid)[i]);
 
-         (void) snprintf (buf, MAXSTRLEN, "%s[%d.%s]: ", ArgusParser->ArgusProgramName, (int)getpid(), pbuf);
+         (void) snprintf_append(buf, &len, &remain, "%s[%d.%s]: ",
+                                ArgusParser->ArgusProgramName, (int)getpid(),
+                                pbuf);
          free(pbuf);
       }
 #else
-      (void) snprintf (buf, MAXSTRLEN, "%s[%d]: ", ArgusParser->ArgusProgramName, (int)getpid());
+      (void) snprintf_append(buf, &len, &remain, "%s[%d]: ",
+                             ArgusParser->ArgusProgramName, (int)getpid());
 #endif
-      ArgusPrintTime(ArgusParser, &buf[strlen(buf)], &tvp);
-      ptr = &buf[strlen(buf)];
-      *ptr++ = ' ';
+      ArgusPrintTime(ArgusParser, &buf[len], remain, &tvp);
+      len = strlen(buf);
+      remain = sizeof(buf) - len;
+      snprintf_append(buf, &len, &remain, " ");
 
 #if defined(__STDC__)
       va_start(ap, fmt);
@@ -23195,13 +23236,18 @@ ArgusDebug (int d, char *fmt, ...)
       va_start(ap);
 #endif
 
-      (void) vsnprintf (ptr, (MAXSTRLEN - strlen(buf)), fmt, ap);
+      c = vsnprintf (&buf[len], remain, fmt, ap);
+      if (c > 0) {
+         len += c;
+         remain -= c;
+      }
       va_end (ap);
 
-      while (buf[strlen(buf) - 1] == '\n')
-         buf[strlen(buf) - 1] = '\0';
-
-      ptr = &buf[strlen(buf)];
+      while (buf[len - 1] == '\n') {
+         buf[len - 1] = '\0';
+         len--;
+         remain++;
+      }
 
       if (ArgusParser->RaCursesMode) {
          ArgusSetDebugString (buf, 0, ARGUS_LOCK);
@@ -25431,9 +25477,12 @@ ArgusLog (int priority, char *fmt, ...)
 #ifndef LOG_PERROR
 #define LOG_PERROR      LOG_CONS
 #endif
-   ArgusPrintTime(ArgusParser, buf, &now);
-   ptr = &buf[strlen(buf)];
-   *ptr++ = ' ';
+   c = ArgusPrintTime(ArgusParser, buf, MAXSTRLEN, &now);
+   if (c > 0) {
+      len += c;
+      remain -= c;
+   }
+   snprintf_append(buf, &len, &remain, " ");
 #else
 
 
@@ -25448,15 +25497,21 @@ ArgusLog (int priority, char *fmt, ...)
       for (i = 0; i < sizeof(ptid); i++) {
          snprintf (&pbuf[i*2], 3, "%02hhx", ((char *)&ptid)[i]);
       }
-      (void) sprintf (buf, "%s[%d.%s]: ", ArgusParser->ArgusProgramName, (int)getpid(), pbuf);
+      (void) snprintf_append(buf, &len, &remain, "%s[%d.%s]: ",
+                             ArgusParser->ArgusProgramName, (int)getpid(),
+                             pbuf);
    }
 #else
-   (void) sprintf (buf, "%s[%d]: ", ArgusParser->ArgusProgramName, (int)getpid());
+   (void) snprintf_append(buf, &len, &remain, "%s[%d]: ",
+                          ArgusParser->ArgusProgramName, (int)getpid());
 #endif
 
-   ArgusPrintTime(ArgusParser, &buf[strlen(buf)], &now);
-   ptr = &buf[strlen(buf)];
-   *ptr++ = ' ';
+   c = ArgusPrintTime(ArgusParser, &buf[len], remain, &now);
+   if (c > 0) {
+      len += c;
+      remain += c;
+   }
+   snprintf_append(buf, &len, &remain, " ");
 #endif
 
 #if defined(__STDC__)
@@ -25465,7 +25520,11 @@ ArgusLog (int priority, char *fmt, ...)
    va_start(ap);
 #endif
 
-   (void) vsnprintf (ptr, (MAXSTRLEN - strlen(buf)), fmt, ap);
+   c = vsnprintf(&buf[len], remain, fmt, ap);
+   if (c > 0) {
+      len += c;
+      remain -= c;
+   }
    va_end (ap);
 
    slen = strlen(buf);
