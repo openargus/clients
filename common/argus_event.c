@@ -501,8 +501,6 @@ ArgusProcessSQLEvent (struct ArgusParserStruct *parser, struct ArgusEventObject 
    parser->RaTimeFormat = strdup("%Y-%m-%d %H:%M:%S"); /* so can be freed */
    
    bzero(sbuf, sizeof(sbuf));
-   bzero(stim, sizeof(stim));
-   bzero(etim, sizeof(etim));
 
    if (ns == NULL) {
       if ((stvp.tv_sec = parser->startime_t.tv_sec) == 0x7FFFFFFF)
@@ -601,7 +599,6 @@ ArgusProcessFileEvent (struct ArgusParserStruct *parser, struct ArgusEventObject
  
    gettimeofday (&now, 0L);
    memset(sbuf, 0, MAXSTRLEN);
-   memset(stimebuf, 0, 128);
    ArgusPrintTime(ArgusParser, stimebuf, &now);
  
    (void) sprintf (sbuf, "%s %s[%d]: ", stimebuf, ArgusParser->ArgusProgramName, (int)getpid());
@@ -656,7 +653,6 @@ ArgusProcessTermEvent (struct ArgusParserStruct *parser, struct ArgusEventObject
 
    gettimeofday (&now, 0L);
    memset(sbuf, 0, MAXSTRLEN);
-   memset(stimebuf, 0, 128);
    ArgusPrintTime(ArgusParser, stimebuf, &now);
 
    (void) sprintf (sbuf, "%s %s[%d]: ", stimebuf, ArgusParser->ArgusProgramName, (int)getpid());

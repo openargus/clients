@@ -164,7 +164,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
    if (list != NULL) {
       int ind = *rind;
       char tbuf[128], resbuf[256];
-      bzero(tbuf, sizeof(tbuf));
+      tbuf[0] = '\0';
       bzero(resbuf, sizeof(tbuf));
       ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
 
@@ -1199,7 +1199,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
       }
 
       if (strstr(dptr, "argus-lsof")) {
-         bzero (tbuf, sizeof(tbuf));
+         tbuf[0] = '\0';
          bzero (sptr, sizeof(sbuf));
          tvp->tv_sec  = time->src.start.tv_sec;
          tvp->tv_usec = time->src.start.tv_usec;

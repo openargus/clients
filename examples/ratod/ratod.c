@@ -1267,13 +1267,15 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             if (parser->Hstr != NULL) {
 
             } else {
-               ArgusPrintTime(parser, stimebuf, sizeof(stimebuf), &rbps->startpt);
-               ArgusPrintTime(parser, dtimebuf, sizeof(dtimebuf), &rbps->endpt);
-               ArgusPrintTime(parser, etimebuf, sizeof(etimebuf), &parser->RaEndTime);
+               int slen, dlen, elen;
 
-               stimebuf[strlen(stimebuf) - 1] = '\0';
-               dtimebuf[strlen(dtimebuf) - 1] = '\0';
-               etimebuf[strlen(etimebuf) - 1] = '\0';
+               slen = ArgusPrintTime(parser, stimebuf, sizeof(stimebuf), &rbps->startpt);
+               dlen = ArgusPrintTime(parser, dtimebuf, sizeof(dtimebuf), &rbps->endpt);
+               elen = ArgusPrintTime(parser, etimebuf, sizeof(etimebuf), &parser->RaEndTime);
+
+               stimebuf[slen - 1] = '\0';
+               dtimebuf[dlen - 1] = '\0';
+               etimebuf[elen - 1] = '\0';
 
                printf ("StartTime=%s\n", stimebuf);
                printf ("StopTime=%s\n",  dtimebuf);
