@@ -17,6 +17,5 @@ RA_USERDATA_ENCODE=Ascii
 RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 RA_DELEGATED_IP="/usr/local/argus/delegated-ipv4-latest"
 RA_PORT_DIRECTION="services,wellknown"
-RA_LOCAL=/usr/local/argus/local.addrs
 RA_LOCAL_DIRECTION="force:src"
 RA_RELIABLE_CONNECT=yes
