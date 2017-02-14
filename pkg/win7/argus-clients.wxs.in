@@ -33,7 +33,7 @@
             <Component Id='Config'
             Guid='a87b2b03-922d-47d0-a8c4-64ec53bd8d27'>
               <File Id='ra.conf' Name='ra.conf' DiskId='1'
-              Source="../../support/Config/rarc"
+              Source="etc/rarc"
               KeyPath='yes'></File>
             </Component>
           </Directory>
