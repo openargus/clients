@@ -217,6 +217,7 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         mysql_close(RaMySQL);
          ArgusShutDown(sig);
          if ((sig >= 0) && ArgusParser->aflag) {
             printf (" Totalrecords %-8lld  TotalManRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
@@ -226,7 +227,6 @@ RaParseComplete (int sig)
          }
       }
       fflush(stdout);
-      mysql_close(RaMySQL);
       exit(0);
    }
 }
