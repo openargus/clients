@@ -1,0 +1,1 @@
+-m none -s stime ltime sid -S localhost -w mysql://root@localhost/argus/manStatusTable - inf man0 or rad0

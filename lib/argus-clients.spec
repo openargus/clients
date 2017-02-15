@@ -55,6 +55,8 @@ install -D -m 0644 pkg/rhel/systemd/rasqlinsert@.service $RPM_BUILD_ROOT%{_unitd
 install -D -m 0755 pkg/rhel/systemd/rasqlinsert-setup $RPM_BUILD_ROOT%{argussbin}/rasqlinsert-setup
 install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.l2_l3 $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.l2_l3
 install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ipv4matrix $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ipv4matrix
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.dns $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.dns
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.man $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.man
 install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service

@@ -1,0 +1,1 @@
+-M time 1d -m none -s stime dur flgs proto saddr sport dir daddr dport spkts dpkts sbytes dbytes state -S localhost -w mysql://root@localhost/dns/dnsFlows_%Y_%m_%d - udp and dst port 53
