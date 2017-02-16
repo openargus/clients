@@ -38,6 +38,7 @@
 #include "argus_parser.h"
 #include "argus_debug.h"
 #include "dhcp.h"
+#include "rabootp_callback.h"
 
 #ifdef ARGUSDEBUG
 # define DEBUGLOG(lvl, fmt...) ArgusDebug(lvl, fmt)
@@ -206,6 +207,20 @@ struct ArgusDhcpStruct {
 struct ArgusDhcpStruct *ArgusParseDhcpRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDhcpStruct *);
 void RabootpCleanup(void);
 void RabootpDumpTree(void);
+
+enum rabootp_callback_trigger {
+   CALLBACK_STATECHANGE = 0,
+   CALLBACK_XIDNEW,
+   CALLBACK_XIDUPDATE,
+   CALLBACK_XIDDELETE,
+};
+
+void RabootpCallbacksInit(void);
+int RabootpCallbackRegister(enum rabootp_callback_trigger trigger,
+                            rabootp_cb cb, void *arg);
+int RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
+                              rabootp_cb cb);
+void RabootpCallbacksCleanup(void);
 
 /*
  * Vendor magic cookie (v_magic) for RFC1048

@@ -43,6 +43,15 @@
 #include "rabootp_memory.h"
 #include "rabootp_fsa.h"
 #include "rabootp_update.h"
+#include "rabootp_callback.h"
+#include "argus_timer.h"
+
+static struct {
+   struct rabootp_cblist state_change; /* called when dhcp FSA state changes */
+   struct rabootp_cblist xid_new;      /* called when new transaction added */
+   struct rabootp_cblist xid_update;   /* called when transaction updated */
+   struct rabootp_cblist xid_delete;   /* called when transaction deleted */
+} callback;
 
 extern char ArgusBuf[];
 
@@ -153,17 +162,30 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 
    if (memcmp((const char *)&bp->options[0], vm_rfc1048,
        sizeof(u_int32_t)) == 0) {
+      enum ArgusDhcpState newstate;
+
       rfc1048_parse(bp->options,
                     (const u_char *)(user->array+user->count),
                     &parsed, bp->op);
 
-      if (newads)
-         ads->state = fsa_choose_initial_state(&parsed);
-      else
-         ads->state = fsa_advance_state(&parsed, ads);
+      if (newads) {
+         newstate = fsa_choose_initial_state(&parsed);
+      } else {
+         newstate = fsa_advance_state(&parsed, ads);
+         if (ads->state != newstate) {
+            parsed.state = newstate;
+            rabootp_cb_exec(&callback.state_change, &parsed, ads);
+         }
+      }
+      ads->state = newstate;
 
       /* merge/update */
       ArgusDhcpStructUpdate(&parsed, ads);
+
+      if (newads)
+         rabootp_cb_exec(&callback.xid_new, &parsed, ads);
+      else
+         rabootp_cb_exec(&callback.xid_update, &parsed, ads);
    }
 
    ArgusDhcpStructFreeReplies(&parsed);
@@ -1161,6 +1183,67 @@ __rabootp_dump_node(void *arg0, struct ArgusDhcpClientNode *node)
 void RabootpDumpTree(void)
 {
    ClientTreeForEach(&client_tree, __rabootp_dump_node, NULL);
+}
+
+void
+RabootpCallbacksInit(void)
+{
+   memset(&callback, 0, sizeof(callback));
+}
+
+int
+RabootpCallbackRegister(enum rabootp_callback_trigger trigger,
+                        rabootp_cb cb, void *arg)
+{
+   int rv;
+
+   switch (trigger) {
+      case CALLBACK_STATECHANGE:
+         rv = rabootp_cb_register(&callback.state_change, cb, arg);
+         break;
+      case CALLBACK_XIDNEW:
+         rv = rabootp_cb_register(&callback.xid_new, cb, arg);
+         break;
+      case CALLBACK_XIDUPDATE:
+         rv = rabootp_cb_register(&callback.xid_update, cb, arg);
+         break;
+      case CALLBACK_XIDDELETE:
+         rv = rabootp_cb_register(&callback.xid_delete, cb, arg);
+         break;
+   }
+   return  rv;
+}
+
+int
+RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
+                          rabootp_cb cb)
+{
+   int rv;
+
+   switch (trigger) {
+      case CALLBACK_STATECHANGE:
+         rv = rabootp_cb_unregister(&callback.state_change, cb);
+         break;
+      case CALLBACK_XIDNEW:
+         rv = rabootp_cb_unregister(&callback.xid_new, cb);
+         break;
+      case CALLBACK_XIDUPDATE:
+         rv = rabootp_cb_unregister(&callback.xid_update, cb);
+         break;
+      case CALLBACK_XIDDELETE:
+         rv = rabootp_cb_unregister(&callback.xid_delete, cb);
+         break;
+   }
+   return  rv;
+}
+
+void
+RabootpCallbacksCleanup(void)
+{
+   rabootp_cb_cleanup(&callback.state_change);
+   rabootp_cb_cleanup(&callback.xid_new);
+   rabootp_cb_cleanup(&callback.xid_update);
+   rabootp_cb_cleanup(&callback.xid_delete);
 }
 
 void

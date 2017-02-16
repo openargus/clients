@@ -266,6 +266,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #if defined(ARGUS_MYSQL)
       RaMySQLInit();
 #endif
+      RabootpCallbacksInit();
    }
 }
 
@@ -285,6 +286,7 @@ RaParseComplete (int sig)
 #if defined(ARGUS_MYSQL)
          mysql_close(RaMySQL);
 #endif
+         RabootpCallbacksCleanup();
          RabootpCleanup();
          ArgusCloseParser(ArgusParser);
          exit (ArgusExitStatus);
