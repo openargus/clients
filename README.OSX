@@ -1,3 +1,12 @@
+Fri Feb 17 18:50:13 EST 2017
+Mysql issues on MacOS X, where mysql dies with too many files open ... 
+Trying approach where we create an /etc/sysctl.conf file with these contents ...
+
+--- /etc/sysctl.conf ---
+kern.maxfiles=65536
+kern.maxfilesperproc=65536
+
+
 Notes on building packages for MacOS X
 
 1. The Argus clients should be built with readline support.  Compile

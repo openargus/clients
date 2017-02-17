@@ -58,17 +58,7 @@ SHELL = /bin/sh
 
 DIRS = @DIRS@
 INSTDIRS = ./clients ./examples ./common ./include
-OSXPACKAGE_INSTDIRS = ./clients ./examples/race ./examples/raconvert \
-                      ./examples/radecode ./examples/radump ./examples/raevent \
-                      ./examples/rafilter ./examples/ragrep ./examples/rahisto \
-                      ./examples/rahosts ./examples/ralabel ./examples/rampc \
-                      ./examples/ramatrix ./examples/rap ./examples/rapath \
-                      ./examples/rapolicy ./examples/raports ./examples/raqsort \
-                      ./examples/rarpwatch ./examples/rascanner \
-                      ./examples/raservices ./examples/rastream \
-                      ./examples/rastrip ./examples/ratop ./examples/rasdn \
-                      ./examples/ratod ./examples/ratrace ./examples/ratree \
-                      ./examples/ratimerange ./examples/ratemplate
+OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in README VERSION \
 	include lib man support aclocal.m4 acsite.m4 config configure configure.ac .threads \
@@ -256,6 +246,7 @@ osxpackage:
 	             --version $(VERSION) \
 	             $(OSXSIGN) \
 	             pkg/osx/argus-clients-$(VERSION).pkg \
+	rm -f pkg/osx/output.pkg \
 	)
 
 win7package:
