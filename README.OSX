@@ -18,7 +18,15 @@ Notes on building packages for MacOS X
    % make install
 
    % cd ../argus-clients
-   % ./configure --with-readline=/Users/ekinzie/opt/readline
+   % ./configure --with-readline=/Users/ekinzie/opt/readline --without-GeoIP --without-mysql
    % make
+
+Then depending on whether your able to sign packages or not ...
+
+   % make OSXSIGN='--sign "Developer ID Installer"' osxpackage
+
+      or
+
    % make osxpackage
+
 

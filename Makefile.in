@@ -245,7 +245,7 @@ osxpackage:
 	             --package-path pkg/osx \
 	             --version $(VERSION) \
 	             $(OSXSIGN) \
-	             pkg/osx/argus-clients-$(VERSION).pkg \
+	             pkg/osx/argus-clients-$(VERSION).pkg && \
 	rm -f pkg/osx/output.pkg \
 	)
 
