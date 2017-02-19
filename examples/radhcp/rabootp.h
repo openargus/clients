@@ -39,6 +39,7 @@
 #include "argus_debug.h"
 #include "dhcp.h"
 #include "rabootp_callback.h"
+#include "rabootp_timer.h"
 
 #ifdef ARGUSDEBUG
 # define DEBUGLOG(lvl, fmt...) ArgusDebug(lvl, fmt)
@@ -174,6 +175,11 @@ struct ArgusDhcpV4RequstOptsStruct {
    /* uint8_t pad[4]; */           /* PAD */
 };
 
+struct ArgusDhcpV4Timers {
+   void *lease;
+   void *non_lease;     /* DHCPDISCOVER, DHCPREQUEST, DHCPRENEW */
+};
+
 /* chaddr + xid uniquely identifies host state */
 /* IP addresses are in network byte order */
 struct ArgusDhcpStruct {
@@ -202,10 +208,17 @@ struct ArgusDhcpStruct {
 
    /* third + fourth cachelines */
    struct ArgusDhcpV4LeaseOptsStruct rep; /* This is a linked list of replies */
+
+   /* fifth cacheline */
+   struct ArgusDhcpV4Timers timers;
+   /* ... uint8_t pad[48] ... */
 };
 
-struct ArgusDhcpStruct *ArgusParseDhcpRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDhcpStruct *);
 void RabootpCleanup(void);
+struct ArgusDhcpStruct *
+ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
+                     struct RabootpTimerStruct *);
+
 void RabootpDumpTree(void);
 
 enum rabootp_callback_trigger {

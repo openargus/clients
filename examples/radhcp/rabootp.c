@@ -44,7 +44,7 @@
 #include "rabootp_fsa.h"
 #include "rabootp_update.h"
 #include "rabootp_callback.h"
-#include "argus_timer.h"
+#include "rabootp_timer.h"
 
 static struct {
    struct rabootp_cblist state_change; /* called when dhcp FSA state changes */
@@ -205,7 +205,7 @@ nouser:
 struct ArgusDhcpStruct *
 ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
                      struct ArgusRecordStruct *argus,
-                     struct ArgusDhcpStruct *dhcp)
+                     struct RabootpTimerStruct *timer)
 {
    struct ArgusDhcpStruct *retn = NULL;
 

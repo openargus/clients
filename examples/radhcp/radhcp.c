@@ -50,6 +50,7 @@
 #include <argus_filter.h>
 #include <argus_label.h>
 #include <argus_output.h>
+#include "rabootp_timer.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
@@ -118,6 +119,9 @@ char *ArgusHandleResponseArray[1024];
 
 char **ArgusHandleTreeCommand (char *);
 char **ArgusHandleSearchCommand (char *);
+
+static struct RabootpTimerStruct *timer = NULL;
+static pthread_t timer_thread;
 
 char **
 ArgusHandleSearchCommand (char *command)
@@ -267,6 +271,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       RaMySQLInit();
 #endif
       RabootpCallbacksInit();
+      timer = RabootpTimerInit(NULL, NULL); /* for now */
+      if (pthread_create(&timer_thread, NULL, RabootpTimer, timer) < 0)
+         ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
    }
 }
 
@@ -286,6 +293,8 @@ RaParseComplete (int sig)
 #if defined(ARGUS_MYSQL)
          mysql_close(RaMySQL);
 #endif
+         pthread_join(timer_thread, NULL);
+         RabootpTimerCleanup(timer);
          RabootpCallbacksCleanup();
          RabootpCleanup();
          ArgusCloseParser(ArgusParser);
@@ -402,7 +411,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             if (dhcpTransaction) {
                struct ArgusDhcpStruct dhcpbuf, *dhcp = &dhcpbuf;
 
-               if ((dhcp = ArgusParseDhcpRecord(parser, argus, dhcp)) != NULL) {
+               if (ArgusParseDhcpRecord(parser, argus, timer) != NULL) {
                   DEBUGLOG(2, "%s: %s", __func__, ArgusBuf);
                   ArgusBuf[0] = '\0';
                }
