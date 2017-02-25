@@ -51,6 +51,7 @@
 #include <argus_label.h>
 #include <argus_output.h>
 #include "rabootp_timer.h"
+#include "rabootp_proto_timers.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
@@ -274,6 +275,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       timer = RabootpTimerInit(NULL, NULL); /* for now */
       if (pthread_create(&timer_thread, NULL, RabootpTimer, timer) < 0)
          ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
+      RabootpProtoTimersInit(timer);
    }
 }
 
@@ -285,8 +287,8 @@ RaParseComplete (int sig)
       if (!(ArgusParser->RaParseCompleting++)) {
          int ArgusExitStatus = 0;
 
-         RabootpDumpTree();
-
+         if (ArgusDebugTree)
+            RabootpDumpTree();
          ArgusShutDown(sig);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
 
@@ -294,6 +296,7 @@ RaParseComplete (int sig)
          mysql_close(RaMySQL);
 #endif
          pthread_join(timer_thread, NULL);
+         RabootpProtoTimersCleanup();
          RabootpTimerCleanup(timer);
          RabootpCallbacksCleanup();
          RabootpCleanup();
