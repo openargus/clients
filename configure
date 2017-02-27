@@ -10587,6 +10587,7 @@ do
     "./pkg/rhel/systemd/rasqlinsert-setup") CONFIG_FILES="$CONFIG_FILES ./pkg/rhel/systemd/rasqlinsert-setup" ;;
     "./pkg/win7/argus-clients.wxs") CONFIG_FILES="$CONFIG_FILES ./pkg/win7/argus-clients.wxs" ;;
     "./pkg/win7/Makefile") CONFIG_FILES="$CONFIG_FILES ./pkg/win7/Makefile" ;;
+    "./lib/argus-clients.spec") CONFIG_FILES="$CONFIG_FILES ./lib/argus-clients.spec" ;;
     "./examples/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/Makefile" ;;
     "./examples/race/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/race/Makefile" ;;
     "./examples/raconvert/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raconvert/Makefile" ;;
