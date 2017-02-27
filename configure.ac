@@ -24,7 +24,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.61])
-AC_INIT([Gargoyle Client Programs],[5.0.3],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+AC_INIT([Gargoyle Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+PACKAGE_RELEASE='3.0'
 AC_CONFIG_SRCDIR([clients/ra.c])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADER([include/argus_config.h])
@@ -415,6 +416,7 @@ fi
 V_INCLS_EXAMPLES=`echo $V_INCLS | sed -e 's/\.\./..\/../'`
 
 AC_SUBST(PACKAGE_VERSION)
+AC_SUBST(PACKAGE_RELEASE)
 AC_SUBST(LIBS)
 AC_SUBST(DIRS)
 AC_SUBST(INCLS)

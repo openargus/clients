@@ -2,9 +2,9 @@
 
 top: win7package
 
-win7package: argus-clients-@PACKAGE_VERSION@.msi
+win7package: argus-clients-@PACKAGE_VERSION@.@PACKAGE_RELEASE@.msi
 
-argus-clients-@PACKAGE_VERSION@.msi: argus-clients.wixobj
+argus-clients-@PACKAGE_VERSION@.@PACKAGE_RELEASE@.msi: argus-clients.wixobj
 	light $^
 
 argus-clients.wixobj: argus-clients.wxs
