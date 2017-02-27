@@ -5,7 +5,7 @@ top: win7package
 win7package: argus-clients-@PACKAGE_VERSION@.@PACKAGE_RELEASE@.msi
 
 argus-clients-@PACKAGE_VERSION@.@PACKAGE_RELEASE@.msi: argus-clients.wixobj
-	light $^
+	light -o $@ $^
 
 argus-clients.wixobj: argus-clients.wxs
 	candle $^
