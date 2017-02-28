@@ -150,7 +150,6 @@ distribution.
 %exclude %{argusman}/man1/ragraph.1.gz
 %exclude %{argusman}/man1/rasql.1.gz
 %{argussbin}/rastream-process
-%dir %{_sysconfdir}/rastream.d
 
 
 %package devel
@@ -203,5 +202,6 @@ Copyright 2000-2016 QoSient, LLC
 %{_unitdir}/rasqlinsert@.service
 %{_datarootdir}/argus-clients/rasql*
 %{_sysconfdir}/rastream.d/00rasqltimeindex
+%dir %{_sysconfdir}/rastream.d
 
 %changelog
