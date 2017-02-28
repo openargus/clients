@@ -63,6 +63,9 @@ install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/ra
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service
 install -D -m 0755 pkg/rhel/systemd/rastream-process $RPM_BUILD_ROOT%{argussbin}/rastream-process
+%else
+install -D -m 0644 pkg/rhel/sysconfig/rasplit $RPM_BUILD_ROOT/etc/sysconfig/rasplit
+install -D -m 0644 pkg/rhel/systemd/rasplit.service $RPM_BUILD_ROOT%{_unitdir}/rasplit.service
 %endif
 
 install -d -m 0755 $RPM_BUILD_ROOT/%{argusdocs}/support
@@ -118,6 +121,9 @@ mkdir -p /home/argus
 %{_unitdir}/rastream.service
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rastream
+%else
+%{_unitdir}/rasplit.service
+%config /etc/sysconfig/rasplit
 %endif
 
 %ghost /home/argus

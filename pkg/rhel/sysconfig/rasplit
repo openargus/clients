@@ -1,0 +1,5 @@
+# Add the archive parameters - default is 5m intervals named by argus source, date and time
+#
+  DAEMON_ARGS="-S localhost:561 -M time 5m -w /var/log/argus/\$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S"
+#  Where rasplit  is installed (override for testing)
+  ARGUSDIR=/usr/bin
