@@ -79,6 +79,8 @@ struct timeval dTime     = {0, 0};
 long long thisUsec = 0;
                                                                                                                            
 void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
+int RadiumParseSourceID (struct ArgusAddrStruct *, char *);
+int RadiumParseSrcidConversionFile (char *);
 
 static int RadiumMinSsf = 0;
 static int RadiumMaxSsf = 0;
@@ -539,7 +541,7 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          25
+#define RADIUM_RCITEMS                          27
 
 #define RADIUM_MONITOR_ID                       0
 #define RADIUM_MONITOR_ID_INCLUDE_INF		1
@@ -565,7 +567,9 @@ void ArgusWindowClose(void) {
 #define RADIUM_SETGROUP_ID                      21
 #define RADIUM_CLASSIFIER_FILE                  22
 #define RADIUM_ZEROCONF_REGISTER                23
-#define RADIUM_AUTH_LOCALHOST                   24
+#define RADIUM_OUTPUT_VERSION                   24
+#define RADIUM_SRCID_CONVERSION_FILE            25
+#define RADIUM_AUTH_LOCALHOST                   26
 
 char *RadiumResourceFileStr [] = {
    "RADIUM_MONITOR_ID=",
@@ -592,6 +596,8 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_SETGROUP_ID=",
    "RADIUM_CLASSIFIER_FILE=",
    "RADIUM_ZEROCONF_REGISTER=",
+   "RADIUM_OUTPUT_VERSION=",
+   "RADIUM_SRCID_CONVERSION_FILE=",
    "RADIUM_AUTH_LOCALHOST=",
 };
 
@@ -846,6 +852,15 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            break;
                         }
 
+                        case RADIUM_OUTPUT_VERSION:
+                           parser->RadiumOutputVersion = strdup(optarg);
+                           break;
+
+                        case RADIUM_SRCID_CONVERSION_FILE:
+                           parser->RadiumSrcidConvertFile = strdup(optarg);
+                           RadiumParseSrcidConversionFile (parser->RadiumSrcidConvertFile);
+                           break;
+
                         case RADIUM_MAR_STATUS_INTERVAL:
                            setArgusMarReportInterval (parser, optarg);
                            break;
@@ -1037,4 +1052,301 @@ clearRadiumConfiguration (void)
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "clearRadiumConfiguration () returning\n");
 #endif 
+}
+
+
+int
+RadiumParseSourceID (struct ArgusAddrStruct *srcid, char *optarg)
+{
+   int retn = 0, type = 0, slen = 0, subsid = 0;
+   char *ptr = NULL, *sptr = NULL, *iptr = NULL;
+   unsigned char buf[32];
+   char *prefix = NULL;
+
+   if (optarg == NULL)
+      return retn;
+
+   bzero(buf, sizeof(buf));
+   if ((sptr = strdup(optarg)) != NULL) {
+      optarg = sptr;
+
+// process the optional type part.
+      if ((ptr = strstr(optarg, ":/")) != NULL) {
+         prefix = optarg;
+         *ptr++ = '\0'; *ptr++ = '\0';
+         optarg = ptr;
+
+         if (!(strcmp(prefix, "uuid"))) {
+            type = ARGUS_TYPE_UUID;
+         } else
+         if (!(strcmp(prefix, "ipv4"))) {
+            type = ARGUS_TYPE_IPV4;
+         } else
+         if (!(strcmp(prefix, "ipv6"))) {
+            type = ARGUS_TYPE_IPV6;
+         } else
+         if (!(strcmp(prefix, "int"))) {
+            type = ARGUS_TYPE_INT;
+         } else
+         if (!(strcmp(prefix, "str"))) {
+            type = ARGUS_TYPE_STRING;
+         }
+      }
+
+// test for dev srcid substitution
+      if (optarg[0] == '/') {
+         if (optarg[1] == '/') {
+            subsid = 1;
+            optarg++;
+         }
+      }
+
+// process the optional inf part. 
+      if ((iptr = strchr(optarg, '/')) != NULL) {
+         if (strlen(iptr + 1) > 4)
+            ArgusLog(LOG_ERR, "RadiumParseSourceID error: %s: interface len gt 4 char", optarg);
+         *iptr++ = '\0';
+      }
+
+// process the sid part.
+//    string
+//
+      if (subsid) {
+         switch (type & ~ARGUS_TYPE_INTERFACE) {
+            case ARGUS_TYPE_STRING: {
+               slen = strlen((const char *)&srcid->a_un.str);
+               bcopy(&srcid->a_un.str, buf, slen);
+               type = ARGUS_TYPE_STRING;
+               break;
+            }
+            case ARGUS_TYPE_INT: {
+               slen = sizeof(srcid->a_un.value);
+               bcopy(&srcid->a_un.value, buf, slen); 
+               type = ARGUS_TYPE_INT;
+               break;
+            }
+            case ARGUS_TYPE_IPV4: {
+               unsigned int saddr = ntohl(srcid->a_un.ipv4);
+               slen = sizeof(srcid->a_un.ipv4);
+               bcopy(&saddr, buf, slen); 
+               type = ARGUS_TYPE_IPV4;
+               break;
+            }
+            case ARGUS_TYPE_IPV6: {
+               slen = sizeof(srcid->a_un.ipv6);
+               bcopy(&srcid->a_un.ipv6, buf, slen); 
+               type = ARGUS_TYPE_IPV6;
+               break;
+            }
+
+            case ARGUS_TYPE_UUID  : {
+               slen = sizeof(srcid->a_un.uuid);
+               bcopy(&srcid->a_un.uuid, buf, slen); 
+               type = ARGUS_TYPE_UUID;
+               break;
+            }
+         }
+
+      } else
+      if (*optarg == '"') {
+         optarg++;
+         if (optarg[strlen(optarg) - 1] == '\n')
+            optarg[strlen(optarg) - 1] = '\0';
+         if (optarg[strlen(optarg) - 1] == '\"')
+            optarg[strlen(optarg) - 1] = '\0';
+
+         strncpy((char *) buf, optarg, sizeof(buf) - 1);
+         slen = strlen((char *) buf);
+         type = ARGUS_TYPE_STRING;
+      } else
+// 
+//    uuid
+//
+      if (strchr(optarg, '-')) {
+         if (strlen(optarg) == 36) {
+            const char *cptr = (const char *) optarg;
+            int i;
+
+            for (i = 0; i < 16; i++) {
+               sscanf((const char *) cptr, "%2hhx", &buf[i]);
+               cptr += 2;
+               if (*cptr == '-') cptr++;
+            }
+            slen = 16;
+            type = ARGUS_TYPE_UUID;
+         }
+      } else
+      if (strchr(optarg, '.')) {
+         int done = 0;
+
+#if defined(HAVE_INET_ATON)
+         struct in_addr pin;
+ 
+         if (inet_aton(optarg, &pin)) {
+            bcopy(&pin.s_addr, (char *)buf, 4);
+            slen = 4;
+            done++;
+         }
+#else 
+#if defined(HAVE_GETADDRINFO)
+         struct addrinfo *host, hints;
+
+         bzero(&hints, sizeof(hints));
+         hints.ai_family   = AF_INET;
+         hints.ai_flags    = AI_NUMERICHOST;
+
+         if ((retn = getaddrinfo(optarg, NULL, NULL, &host)) == 0) {
+            struct addrinfo *hptr = host;
+            do {
+               switch (host->ai_family) {
+                  case AF_INET:  {
+                     struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
+                     bcopy ((char *)&sa->sin_addr, (char *)buf, 4);
+                     slen = 4;
+                     type = ARGUS_TYPE_IPV4;
+                     done++;
+                     break;
+                  }
+               }
+               host = host->ai_next;
+            } while (host != NULL);
+            freeaddrinfo(hptr);
+
+         }
+
+#else  // HAVE_GETADDRINFO
+         struct hostent *host;
+         if ((host = gethostbyname(optarg)) != NULL) {
+            if ((host->h_addrtype == 2) && (host->h_length == 4)) {
+               bcopy ((char *) *host->h_addr_list, (char *)buf, host->h_length);
+               slen = 4;
+            }
+         }
+#endif
+#endif
+         type = ARGUS_TYPE_IPV4;
+
+      } else
+      if (strchr(optarg, ':')) {
+         type = ARGUS_TYPE_IPV6;
+         slen = strlen(optarg);
+      } else
+      if (isalnum((int)*optarg)) {
+         long value;
+         char *tptr;
+         if ((value = strtol(optarg, (char **)&tptr, 10)) != 0) {
+            slen = strlen(optarg);
+            if (tptr == &optarg[slen]) {
+               int num = value;
+               bcopy(&num, buf, sizeof(num));
+               slen = sizeof(num);
+               type = ARGUS_TYPE_INT;
+            }
+         }
+      }
+
+      if (iptr != NULL) {
+         int len;
+         len = strlen(iptr);
+         bcopy(iptr, &buf[slen], len);
+         slen += len;
+         type |= ARGUS_TYPE_INTERFACE;
+      }
+
+      if (type)
+         setArgusID (srcid, buf, slen, type);
+      else
+         retn = 1;
+
+      free (sptr);
+      if (retn > 0)
+         ArgusLog (LOG_ERR, "Srcid format error: %s\n", sptr);
+   }
+
+   return (type);
+}
+
+
+/*
+   RadiumParseSrcidConversionFile (char *file)
+      srcid 	conversionValue
+*/
+
+extern struct cnamemem converttable[HASHNAMESIZE];
+
+int 
+RadiumParseSrcidConversionFile (char *file)
+{
+   struct stat statbuf;
+   FILE *fd = NULL;
+   int retn = 0;
+
+   if (file != NULL) {
+      if (stat(file, &statbuf) >= 0) {
+         if ((fd = fopen(file, "r")) != NULL) {
+            char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
+            char *srcid = NULL, *convert = NULL;
+            int lines = 0;
+
+            retn = 1;
+
+            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
+               lines++;
+               str = strbuf;
+               while (*str && isspace((int)*str))
+                   str++;
+
+#define RA_READING_SRCID                0
+#define RA_READING_ALIAS                1
+
+               if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+                  int state = RA_READING_SRCID;
+                  struct cnamemem  *ap;
+                  int done = 0;
+                  u_int hash;
+
+                  while ((optarg = strtok(str, " \t\n")) != NULL) {
+                     switch (state) {
+                        case RA_READING_SRCID: {
+                           int i, len = strlen(optarg);
+                           for (i = 0; i < len; i++)
+                              optarg[i] = tolower(optarg[i]);
+                           srcid = optarg;
+                           state = RA_READING_ALIAS;
+                           break;
+                        }
+
+                        case RA_READING_ALIAS: {
+                           convert = optarg;
+                           done = 1;
+                           break;
+                        }
+                     }
+                     str = NULL;
+                    
+                     if (done)
+                        break;
+                  }
+
+                  hash = getnamehash((const u_char *)srcid);
+                  ap = &converttable[hash % (HASHNAMESIZE-1)];
+                  while (ap->n_nxt)
+                     ap = ap->n_nxt;
+     
+                  ap->hashval = hash;
+                  ap->name = strdup((char *) srcid);
+
+                  ap->type = RadiumParseSourceID(&ap->addr, convert);
+                  ap->n_nxt = (struct cnamemem *)calloc(1, sizeof(*ap));
+               }
+            }
+         }
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "RadiumParseSrcidConversionFile (%s) returning %d\n", file, retn);
+#endif
+
+   return (retn);
 }

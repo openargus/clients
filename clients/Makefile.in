@@ -81,7 +81,6 @@ YACC = @V_YACC@
 	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
 
 LIB = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a
-OUTPUT = @INSTALL_LIB@/argus_output.a
 
 SRC = ra.c radium.c racount.c rasort.c rastream.c rabins.c racluster.c ranonymize.c
 
@@ -94,11 +93,11 @@ all: $(PROGS)
 @INSTALL_BIN@/ra: ra.o $(LIB)
 	$(CC) $(CCOPT) -o $@ ra.o $(LIB) $(COMPATLIB)
 
-@INSTALL_BIN@/radium: radium.o $(LIB) $(OUTPUT)
-	$(CC) $(CCOPT) -o $@ radium.o $(LIB) $(OUTPUT) $(COMPATLIB) @WRAPLIBS@
+@INSTALL_BIN@/radium: radium.o $(LIB)
+	$(CC) $(CCOPT) -o $@ radium.o $(LIB) $(COMPATLIB) @WRAPLIBS@
 
-@INSTALL_BIN@/rabins: rabins.o $(LIB) $(OUTPUT)
-	$(CC) $(CCOPT) -o $@ rabins.o $(LIB) $(OUTPUT) $(COMPATLIB) @WRAPLIBS@
+@INSTALL_BIN@/rabins: rabins.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rabins.o $(LIB) $(COMPATLIB) @WRAPLIBS@
 
 @INSTALL_BIN@/racluster: racluster.o $(LIB)
 	$(CC) $(CCOPT) -o $@ racluster.o $(LIB) $(COMPATLIB)

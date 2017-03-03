@@ -1251,7 +1251,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
@@ -4465,7 +4465,7 @@ argus_command_string(void)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif

@@ -7211,7 +7211,7 @@ ArgusGenerateSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
                if (ArgusSOptionRecord) {
                   int tlen;
 
-                  if ((argus = ArgusGenerateRecord (ns, 0L, rbuf)) == NULL)
+                  if ((argus = ArgusGenerateRecord (ns, 0L, rbuf, ARGUS_VERSION)) == NULL)
                      ArgusLog(LOG_ERR, "ArgusGenerateSQLQuery: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(argus);

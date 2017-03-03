@@ -44,6 +44,11 @@
 #include <dns_sd.h>
 #endif
 
+#if defined(HAVE_XDR)
+#include <rpc/types.h>
+#include <rpc/xdr.h>
+#endif
+
 #if defined(HAVE_SYS_VFS_H)
 #include <sys/vfs.h>
 #else
@@ -58,6 +63,10 @@
 
 void ArgusSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
 static void *ArgusControlChannelProcess(void *);
+
+struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
+struct ArgusV3Record *ArgusGenerateV3Record (struct ArgusRecordStruct *, unsigned char, char *);
+struct ArgusRecord *ArgusGenerateV5Record (struct ArgusRecordStruct *, unsigned char, char *);
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -122,7 +131,7 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format)
       return awf;
 
    if (format == ARGUS_DATA) {
-      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0])) {
+      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0], ARGUS_VERSION)) {
          awf->len = ((struct ArgusRecord *)&awf->buf[0])->hdr.len * 4;
          ArgusHtoN((struct ArgusRecord *)&awf->buf[0]);
       }
@@ -168,6 +177,19 @@ DrainArgusSocketQueue(struct ArgusClientData *client)
       FreeArgusQueueNode(node);
       FreeArgusWireFmtBuffer(awf);
    }
+}
+
+void
+setArgusOutputVersion (struct ArgusOutputStruct *output, char *value)
+{
+   if ((output != NULL) && (value != NULL))
+      output->version = atoi(value);
+}
+
+int
+getArgusOutputVersion (struct ArgusOutputStruct *output)
+{
+   return (output->version);
 }
 
 void
@@ -459,6 +481,12 @@ ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
 
    if ((retn = (struct ArgusOutputStruct *) ArgusCalloc (1, sizeof (struct ArgusOutputStruct))) == NULL)
      ArgusLog (LOG_ERR, "ArgusNewOutput() ArgusCalloc error %s\n", strerror(errno));
+
+
+   if (parser->RadiumOutputVersion != NULL)
+      setArgusOutputVersion(retn, parser->RadiumOutputVersion);
+   else
+      retn->version     = ARGUS_VERSION;
 
    if ((retn->ArgusClients = ArgusNewQueue()) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewOutput: clients queue %s", strerror(errno));
@@ -1018,6 +1046,2237 @@ ArgusCloseListen(struct ArgusParserStruct *parser)
       pthread_join(parser->listenthread, NULL);
 #endif
 }
+
+
+void ArgusGenerateCorrelateStruct(struct ArgusRecordStruct *);
+void ArgusGenerateV3CorrelateStruct(struct ArgusRecordStruct *);
+
+struct ArgusRecord *
+ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *buf, int vers)
+{
+   struct ArgusRecord *retn = NULL;
+
+   switch (vers) {
+      case 3:  retn = (struct ArgusRecord *)ArgusGenerateV3Record (rec, state, buf); break;
+
+      default:
+      case 5:  retn = ArgusGenerateV5Record (rec, state, buf); break;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusGenerateRecord (%p, %d, %p, %d) returns %p", rec, state, buf, vers, retn);
+#endif 
+   return (retn);
+}
+
+struct ArgusV3Record *
+ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char *buf)
+{
+   struct ArgusV3Record *retn = (struct ArgusV3Record *) buf;
+   unsigned int ind, dsrlen = 1, dsrindex = 0;
+   unsigned int *dsrptr = (unsigned int *)retn + 1;
+   int x, y, len = 0, type = 0;
+   struct ArgusDSRHeader *dsr;
+   struct cnamemem *cp;
+
+   if (rec) {
+      extern struct cnamemem  converttable[HASHNAMESIZE];
+      char srcidbuf[256], *srcid = NULL;
+      bzero(srcidbuf, 256);
+
+      ArgusPrintSourceID(ArgusParser, srcidbuf, rec, 256);
+      srcid = ArgusTrimString(srcidbuf);
+
+      cp = check_cmem(converttable, (const u_char *) srcid);
+
+      if (rec->correlates != NULL)
+         ArgusGenerateV3CorrelateStruct(rec);
+      
+      switch (rec->hdr.type & 0xF0) {
+
+// Here we will need to check if the MAR is a v3 or v5 record, and if v5, move the srcid around.
+
+         case ARGUS_MAR: {
+            if (rec->dsrs[0] != NULL) {
+               struct ArgusMarStruct *man = (struct ArgusMarStruct *) &((struct ArgusRecord *) rec->dsrs[0])->ar_un.mar;
+
+               if (cp != NULL) {
+                  man->argusid = cp->addr.a_un.value;
+               } else {
+                  man->argusid = man->value;
+               }
+
+               bzero(&man->pad, sizeof(man->pad));
+               man->thisid = 0;
+
+               retn->hdr.type   = ARGUS_MAR | ARGUS_VERSION_3;
+               retn->hdr.cause &= ~ARGUS_SRC_RADIUM;
+
+               bcopy ((char *)rec->dsrs[0], (char *) retn, rec->hdr.len * 4);
+               retn->hdr = rec->hdr;
+
+               if (state) {
+                  retn->hdr.cause &= 0x0F;
+                  retn->hdr.cause |= (state & 0xF0) | (retn->hdr.cause & 0x0F);
+               }
+            }
+            break;
+         }
+
+// Events have a different structure, so we'll need to adjust the length for the legacy ArgusAddrStruct.
+// We can copy all the rest around.
+
+
+// Argus fars need their transport hdrs, Cor metric, and Correlate structs to be adjusted.
+
+         case ARGUS_EVENT:
+         case ARGUS_NETFLOW:
+         case ARGUS_FAR: {
+            retn->hdr  = rec->hdr;
+            retn->hdr.type  |= ARGUS_VERSION_3;
+
+            dsrindex = rec->dsrindex;
+            for (y = 0, ind = 1; (dsrindex && (y < ARGUSMAXDSRTYPE)); y++, ind <<= 1) {
+               if ((dsr = rec->dsrs[y]) != NULL) {
+                  len = ((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
+                        ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
+                                                              dsr->argus_dsrvl8.len));
+                  switch (y) {
+                     case ARGUS_TRANSPORT_INDEX: {
+                        struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
+                        struct ArgusV3TransportStruct *dtrans = (struct ArgusV3TransportStruct *) dsrptr;
+                        x = 0;
+
+                        if (cp != NULL) {
+                           bcopy(&cp->addr, &trans->srcid, sizeof(cp->addr));
+                           trans->hdr.argus_dsrvl8.qual = cp->type;
+                        } else {
+                           trans->hdr.argus_dsrvl8.qual &= ~ARGUS_TYPE_INTERFACE;
+
+                           switch (trans->hdr.argus_dsrvl8.qual) {
+
+// Argus V3 doesn't support IPv6 of UUID srcid types, so these need to be converted to IPV4 or INTs.
+// Assume that if it was an address, we should keep it is an address.  The values should be
+// translated using some form of translation lookup, if the records existing srcid are these
+// types.
+                              case ARGUS_TYPE_IPV6: {
+                                 trans->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV4;
+                                 break;
+                              }
+
+                              case ARGUS_TYPE_UUID: {
+                                 trans->hdr.argus_dsrvl8.qual = ARGUS_TYPE_INT;
+                                 break;
+                              }
+                        }
+                        }
+
+                        *dsrptr++ = ((unsigned int *)dsr)[x++];
+                        
+                        if (trans->hdr.subtype & ARGUS_SRCID) {
+                           switch (trans->hdr.argus_dsrvl8.qual) {
+                              case ARGUS_TYPE_INT:
+                              case ARGUS_TYPE_IPV4:
+                              case ARGUS_TYPE_STRING:
+                                 *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 break;
+                                 
+                              case ARGUS_TYPE_IPV6:
+                              case ARGUS_TYPE_UUID: {
+                                 *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 int z;
+                                 for (z = 0; z < 4; z++) {
+                                    *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 }  
+                                 break;
+                              }  
+                           }  
+                        }  
+                        if (trans->hdr.subtype & ARGUS_SEQ) {
+                           *dsrptr++ = (unsigned int)trans->seqnum;
+                           x++;
+                        }  
+                        dtrans->hdr.argus_dsrvl8.len = x;
+                        len = x;
+                        break;
+                     }
+
+                     case ARGUS_NETWORK_INDEX: {
+                        struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
+                        switch (net->hdr.subtype) {
+                           case ARGUS_TCP_INIT: {
+                              struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                              struct ArgusTCPObject *tcp = &net->net_union.tcp;
+                              struct ArgusTCPInitStatus tcpinit;
+                              tcpinit.status  = tcp->status;
+                              tcpinit.seqbase = tcp->src.seqbase;
+                              tcpinit.options = tcp->options;
+                              tcpinit.win = tcp->src.win;
+                              tcpinit.flags = tcp->src.flags;
+                              tcpinit.winshift = tcp->src.winshift;
+
+                              net->hdr.argus_dsrvl8.len = 5;
+
+                              *dsrptr++ = *(unsigned int *)&net->hdr;
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[0];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[1];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[2];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[3];
+                              len = 5;
+                              break;
+                           }
+                           case ARGUS_TCP_STATUS: {
+                              struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                              struct ArgusTCPObject *tcp = &net->net_union.tcp;
+                              struct ArgusTCPStatus tcpstatus;
+                              tcpstatus.status = tcp->status;
+                              tcpstatus.src = tcp->src.flags;
+                              tcpstatus.dst = tcp->dst.flags;
+                              tcpstatus.pad[0] = 0;
+                              tcpstatus.pad[1] = 0;
+                              net->hdr.argus_dsrvl8.len = 3;
+                              *dsrptr++ = *(unsigned int *)&net->hdr;
+                              *dsrptr++ = ((unsigned int *)&tcpstatus)[0];
+                              *dsrptr++ = ((unsigned int *)&tcpstatus)[1];
+                              len = 3;
+                              break;
+                           }
+
+                           case ARGUS_TCP_PERF:
+                           default: {
+                              for (x = 0; x < len; x++)
+                                 *dsrptr++ = ((unsigned int *)dsr)[x];
+                              break;
+                           }
+                        }
+                        break;
+                     }
+
+                     case ARGUS_AGR_INDEX: {
+                        struct ArgusAgrStruct *agr = (struct ArgusAgrStruct *) dsr;
+                        if ((ArgusParser->ArgusAggregator) != NULL)  {
+                           if (ArgusParser->ArgusAggregator->RaMetricFetchAlgorithm == ArgusFetchDuration) {
+                              if (agr->count == 1) {
+                                 len = 0;
+                                 break;
+                              }
+                           }
+                        }
+// Deliberately fall through
+                     }
+
+                     default:
+                        for (x = 0; x < len; x++)
+                           *dsrptr++ = ((unsigned int *)rec->dsrs[y])[x];
+                        break;
+
+                     case ARGUS_TIME_INDEX: {
+                        struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) rec->dsrs[ARGUS_METRIC_INDEX];
+                        struct ArgusTimeObject *dtime = (struct ArgusTimeObject *) dsr;
+                        struct ArgusTimeObject *dsrtime = (struct ArgusTimeObject *) dsrptr;
+                        unsigned char subtype = 0;
+                        long long dur = RaGetuSecDuration(rec);
+                        unsigned char tlen = 1;
+                        int cnt = 0;
+
+                        if (dtime->src.start.tv_sec > 0)
+                           subtype |= ARGUS_TIME_SRC_START;
+                        if (dtime->src.end.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_SRC_END;
+
+                        if ((subtype & ARGUS_TIME_SRC_START) && (subtype & ARGUS_TIME_SRC_END)) {
+                           if ((dtime->src.start.tv_sec  == dtime->src.end.tv_sec) &&
+                               (dtime->src.start.tv_usec == dtime->src.end.tv_usec))
+                              subtype &= ~ARGUS_TIME_SRC_END;
+                        }
+
+                        if (dtime->dst.start.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_DST_START;
+                        if (dtime->dst.end.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_DST_END;
+
+                        if ((subtype & ARGUS_TIME_DST_START) && (subtype & ARGUS_TIME_DST_END)) {
+                           if ((dtime->dst.start.tv_sec  == dtime->dst.end.tv_sec) &&
+                               (dtime->dst.start.tv_usec == dtime->dst.end.tv_usec))
+                              subtype &= ~ARGUS_TIME_DST_END;
+                        }
+
+                        if (metric && (metric->src.pkts == 0))
+                           subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+
+                        if (metric && (metric->dst.pkts == 0))
+                           subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+
+                        for (x = 0; x < 4; x++)
+                           if (subtype & (ARGUS_TIME_SRC_START << x)) 
+                              cnt++;
+
+                        if (cnt && (dtime->hdr.argus_dsrvl8.qual != ARGUS_TYPE_UTC_NANOSECONDS)) {
+                           if (cnt == 1) 
+                              subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+                           else if (dur > 0x7fffffff)
+                              subtype |= ARGUS_TIME_ABSOLUTE_RANGE;
+                           else
+                              subtype |= ARGUS_TIME_RELATIVE_RANGE;
+                        } else
+                           subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+
+                        dtime->hdr.subtype = subtype;
+
+//  We'd like to use relative uSec or nSec timestamps if there are more
+//  than one timestamp in the record. ARGUS_TIME_RELATIVE_TIMESTAMP
+//  So lets test uSec deltas, and report for time.
+
+//#define ARGUS_TIME_ABSOLUTE_TIMESTAMP           0x01    // All time indicators are 64-bit sec, usec values, implies more than 2
+//#define ARGUS_TIME_ABSOLUTE_RANGE               0x02    // All timestamp are absolute, and the second timestamp is the flow range
+//#define ARGUS_TIME_ABSOLUTE_RELATIVE_RANGE      0x03    // First timestamp is absolute, the second indicator is a range offset
+//#define ARGUS_TIME_RELATIVE_TIMESTAMP           0x04    // First timestamp is absolute, all others are relative, uSec or nSec
+//#define ARGUS_TIME_RELATIVE_RANGE               0x05    // First timestamp is absolute, only one other value is flow range, uSec or nSec
+
+                      
+                        if (subtype & ARGUS_TIME_RELATIVE_RANGE) {
+                           *dsrptr++ = *(unsigned int *)dsr;
+                                 
+                           if (subtype & ARGUS_TIME_SRC_START) {         // assume at this point that all indicators are reasonable
+                              *dsrptr++ = dtime->src.start.tv_sec;    // if there is not a src start, then there is not a src end
+                              *dsrptr++ = dtime->src.start.tv_usec;
+                              tlen += 2;
+
+                              for (x = 1; x < 4; x++) {
+                                 if (subtype & (ARGUS_TIME_SRC_START << x)) {
+                                    switch (ARGUS_TIME_SRC_START << x) {
+                                       case ARGUS_TIME_SRC_END: {
+                                          int value = ((dtime->src.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->src.end.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                       case ARGUS_TIME_DST_START: {
+                                          int value = ((dtime->dst.start.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->dst.start.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                       case ARGUS_TIME_DST_END: {
+                                          int value = ((dtime->dst.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->dst.end.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                    }
+                                 }
+                              }
+                           } else {
+                              if (subtype & ARGUS_TIME_DST_START) {         // assume its just dst start and possibly end.
+                                 *dsrptr++ = dtime->dst.start.tv_sec;
+                                 *dsrptr++ = dtime->dst.start.tv_usec;
+                                 tlen += 2;
+
+                                 if (subtype & ARGUS_TIME_DST_END) {
+                                    *dsrptr++ = dur;  // the dur at this point is the difference
+                                    tlen += 1;
+                                 }
+                              }
+                           }
+
+                        } else {
+                           *dsrptr++ = *(unsigned int *)&dtime->hdr;
+                           
+                           for (x = 0; x < 4; x++) {
+                              if (subtype & (ARGUS_TIME_SRC_START << x)) {
+                                 switch (ARGUS_TIME_SRC_START << x) {
+                                    case ARGUS_TIME_SRC_START:
+                                       *dsrptr++ = dtime->src.start.tv_sec;
+                                       *dsrptr++ = dtime->src.start.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_SRC_END:
+                                       *dsrptr++ = dtime->src.end.tv_sec;
+                                       *dsrptr++ = dtime->src.end.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_DST_START:
+                                       *dsrptr++ = dtime->dst.start.tv_sec;
+                                       *dsrptr++ = dtime->dst.start.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_DST_END:
+                                       *dsrptr++ = dtime->dst.end.tv_sec;
+                                       *dsrptr++ = dtime->dst.end.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                 }
+                              }
+                           }
+                        }
+
+                        dsrtime->hdr.argus_dsrvl8.len = tlen;
+                        len = tlen;
+                        break;
+                     }
+
+                     case ARGUS_METRIC_INDEX: {
+                        struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) dsr;
+
+                        if (((metric->src.pkts + metric->dst.pkts) > 0) ||
+                            ((metric->src.bytes + metric->dst.bytes) > 0)) {
+                           if (((metric->src.pkts) && (metric->dst.pkts)) ||
+                               ((metric->src.bytes) && (metric->dst.bytes))) {
+                              if ((0xFF >= metric->src.pkts)  && (0xFF >= metric->dst.pkts) &&
+                                  (0xFF >= metric->src.bytes) && (0xFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_BYTE;
+                              else
+                              if ((0xFFFF >= metric->src.bytes) && (0xFFFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_SHORT;
+                              else
+                              if ((0xFFFFFFFF >= metric->src.bytes) && (0xFFFFFFFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_INT;
+                              else
+                                 type = ARGUS_SRCDST_LONGLONG;
+
+                           } else {
+                              if ((metric->src.pkts) || (metric->src.bytes)) {
+                                 if (0xFFFF >= metric->src.bytes)
+                                    type = ARGUS_SRC_SHORT;
+                                 else
+                                 if (0xFFFFFFFF >= metric->src.bytes)
+                                    type = ARGUS_SRC_INT;
+                                 else
+                                    type = ARGUS_SRC_LONGLONG;
+                              } else {
+                                 if (0xFFFF >= metric->dst.bytes)
+                                    type = ARGUS_DST_SHORT;
+                                 else
+                                 if (0xFFFFFFFF >= metric->dst.bytes)
+                                    type = ARGUS_DST_INT;
+                                 else
+                                    type = ARGUS_DST_LONGLONG;
+                              }
+                           }
+                        } else {
+                           type = ARGUS_SRCDST_BYTE;
+                        }
+
+                        dsr = (struct ArgusDSRHeader *)dsrptr;
+                        dsr->type    = ARGUS_METER_DSR;
+
+                        if (metric->src.appbytes || metric->dst.appbytes) {
+                           dsr->subtype = ARGUS_METER_PKTS_BYTES_APP;
+                           switch (type) {
+                              case ARGUS_SRCDST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned char *)(dsr + 1))[0] = (unsigned char) metric->src.pkts;
+                                 ((unsigned char *)(dsr + 1))[1] = (unsigned char) metric->src.bytes;
+                                 ((unsigned char *)(dsr + 1))[2] = (unsigned char) metric->src.appbytes;
+                                 ((unsigned char *)(dsr + 1))[3] = (unsigned char) metric->dst.pkts;
+                                 ((unsigned char *)(dsr + 1))[4] = (unsigned char) metric->dst.bytes;
+                                 ((unsigned char *)(dsr + 1))[5] = (unsigned char) metric->dst.appbytes;
+                                 ((unsigned char *)(dsr + 1))[6] = 0;
+                                 ((unsigned char *)(dsr + 1))[7] = 0;
+                                 break;
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->src.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[4] = ((unsigned short) metric->dst.bytes);
+                                 ((unsigned short *)(dsr + 1))[5] = ((unsigned short) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_SRCDST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->src.appbytes);
+                                 ((unsigned int *)(dsr + 1))[3] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[4] = ((unsigned int) metric->dst.bytes);
+                                 ((unsigned int *)(dsr + 1))[5] = ((unsigned int) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_SRCDST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 13;
+                                 ((unsigned int *)(dsr + 1))[0]  = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1]  = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2]  = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3]  = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4]  = (((unsigned int *)&metric->src.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5]  = (((unsigned int *)&metric->src.appbytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[6]  = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[7]  = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[8]  = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[9]  = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[10] = (((unsigned int *)&metric->dst.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[11] = (((unsigned int *)&metric->dst.appbytes)[1]);
+                                 break;
+
+                              case ARGUS_SRC_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = ((unsigned char) metric->src.pkts);
+                                 ((unsigned char *)(dsr + 1))[1] = ((unsigned char) metric->src.bytes);
+                                 ((unsigned char *)(dsr + 1))[2] = ((unsigned char) metric->src.appbytes);
+                                 ((unsigned char *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_SRC_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->src.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_SRC_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->src.appbytes);
+                                 break;
+                              case ARGUS_SRC_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->src.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->src.appbytes)[1]);
+                                 break;
+
+                              case ARGUS_DST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = ((unsigned char) metric->dst.pkts);
+                                 ((unsigned char *)(dsr + 1))[1] = ((unsigned char) metric->dst.bytes);
+                                 ((unsigned char *)(dsr + 1))[2] = ((unsigned char) metric->dst.appbytes);
+                                 ((unsigned char *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_DST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->dst.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->dst.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_DST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->dst.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_DST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->dst.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->dst.appbytes)[1]);
+                                 break;
+                           }
+                        } else {
+                           dsr->subtype = ARGUS_METER_PKTS_BYTES;
+                           switch (type) {
+                              case ARGUS_SRCDST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = (unsigned char) metric->src.pkts;
+                                 ((unsigned char *)(dsr + 1))[1] = (unsigned char) metric->src.bytes;
+                                 ((unsigned char *)(dsr + 1))[2] = (unsigned char) metric->dst.pkts;
+                                 ((unsigned char *)(dsr + 1))[3] = (unsigned char) metric->dst.bytes;
+                                 break;
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[3] = ((unsigned short) metric->dst.bytes);
+                                 break;
+                              case ARGUS_SRCDST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[3] = ((unsigned int) metric->dst.bytes);
+                                 break;
+                              case ARGUS_SRCDST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 9;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[6] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[7] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 break;
+
+                              case ARGUS_SRC_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 break;
+                              case ARGUS_SRC_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 break;
+                              case ARGUS_SRC_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 break;
+
+                              case ARGUS_DST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->dst.bytes);
+                                 break;
+                              case ARGUS_DST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->dst.bytes);
+                                 break;
+                              case ARGUS_DST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 break;
+                           }
+                        }
+                        len     = dsr->argus_dsrvl8.len;
+                        dsrptr += len;
+                        break;
+                     }
+
+                     case ARGUS_PSIZE_INDEX: {
+                        struct ArgusPacketSizeStruct *psize  = (struct ArgusPacketSizeStruct *) dsr;
+
+                        if ((psize->src.psizemax > 0) && (psize->dst.psizemax > 0))
+                           type = ARGUS_SRCDST_SHORT;
+                        else
+                        if (psize->src.psizemax > 0)
+                           type = ARGUS_SRC_SHORT;
+                        else
+                        if (psize->dst.psizemax > 0)
+                           type = ARGUS_DST_SHORT;
+                        else
+                           type = 0;
+
+                        if (type) {
+                           unsigned char value = 0, tmp = 0, *ptr;
+                           int max, i, cnt;
+
+                           dsr = (struct ArgusDSRHeader *)dsrptr;
+                           dsr->type    = ARGUS_PSIZE_DSR;
+
+                           switch (type) {
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_SRC_MAX_MIN | ARGUS_PSIZE_DST_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->src.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->src.psizemax;
+                                 ((unsigned short *)(dsr + 1))[2] = psize->dst.psizemin;
+                                 ((unsigned short *)(dsr + 1))[3] = psize->dst.psizemax;
+                                 break;
+
+                              case ARGUS_SRC_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_SRC_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->src.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->src.psizemax;
+                                 break;
+
+                              case ARGUS_DST_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_DST_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->dst.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->dst.psizemax;
+                                 break;
+
+                              default:
+                                 break;
+                           }
+
+                           if (dsr->subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
+                              ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
+
+                              for (cnt = 0, i = 0; i < 8; i++)
+                                 cnt += psize->src.psize[i];
+
+                              dsr->subtype |= ARGUS_PSIZE_HISTO;
+
+                              dsr->argus_dsrvl8.len++;
+                              *((unsigned int *)(dsr + dsr->argus_dsrvl8.len)) = 0;
+
+                              for (i = 0, max = 0; i < 8; i++)
+                                 if (max < psize->src.psize[i])
+                                    max = psize->src.psize[i];
+
+                              for (i = 0; i < 8; i++) {
+                                 if ((tmp = psize->src.psize[i])) {
+                                    if (i & 0x01) {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value |= tmp;
+                                       *ptr++ = value;
+                                    } else {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value = (tmp << 4);
+                                    }
+                                 } else {
+                                    if (i & 0x01) {
+                                       value &= 0xF0;
+                                       *ptr++ = value;
+                                    } else {
+                                       value = 0;
+                                    }
+                                 }
+                              }
+                           }
+
+                           if (dsr->subtype & ARGUS_PSIZE_DST_MAX_MIN) {
+                              ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
+
+                              for (cnt = 0, i = 0; i < 8; i++)
+                                 cnt += psize->dst.psize[i];
+
+                              dsr->subtype |= ARGUS_PSIZE_HISTO;
+
+                              dsr->argus_dsrvl8.len++;
+                              *((unsigned int *)(dsr + dsr->argus_dsrvl8.len)) = 0;
+
+                              for (i = 0, max = 0; i < 8; i++)
+                                 if (max < psize->dst.psize[i])
+                                    max = psize->dst.psize[i];
+
+                              for (i = 0; i < 8; i++) {
+                                 if ((tmp = psize->dst.psize[i])) {
+                                    if (i & 0x01) {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value |= tmp;
+                                       *ptr++ = value;
+                                    } else {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value = (tmp << 4);
+                                    }
+                                 } else {
+                                    if (i & 0x01) {
+                                       value &= 0xF0;
+                                       *ptr++ = value;
+                                    } else {
+                                       value = 0;
+                                    }
+                                 }
+                              }
+                           }
+
+                           dsr->argus_dsrvl8.qual = type;
+                           len = dsr->argus_dsrvl8.len;
+                           dsrptr += len;
+                        } else
+                           len = 0;
+
+                        break;
+                     }
+
+                     case ARGUS_MPLS_INDEX: {
+                        struct ArgusMplsStruct *mpls  = (struct ArgusMplsStruct *) dsr;
+                        struct ArgusMplsStruct *tmpls = (struct ArgusMplsStruct *) dsrptr;
+                        unsigned char subtype = tmpls->hdr.subtype & ~(ARGUS_MPLS_SRC_LABEL | ARGUS_MPLS_DST_LABEL);
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        len = 1;
+
+                        if (((mpls->hdr.argus_dsrvl8.qual & 0xF0) >> 4) > 0) {
+                           subtype |= ARGUS_MPLS_SRC_LABEL;
+                           *dsrptr++ = mpls->slabel;
+                           len++;
+                        }
+                        if (((mpls->hdr.argus_dsrvl8.qual & 0x0F)) > 0) {
+                           subtype |= ARGUS_MPLS_DST_LABEL;
+                           *dsrptr++ = mpls->dlabel;
+                           len++;
+                        }
+                        tmpls->hdr.subtype = subtype;
+                        tmpls->hdr.argus_dsrvl8.len = len;
+                        break;
+                     }
+
+                     case ARGUS_JITTER_INDEX: {
+#if defined(HAVE_XDR)
+                        struct ArgusJitterStruct *jitter = (struct ArgusJitterStruct *) dsr;
+                        struct ArgusJitterStruct *tjit   = (struct ArgusJitterStruct *) dsrptr;
+
+                        int size = (sizeof(struct ArgusOutputStatObject) + 3) / 4;
+                        XDR xdrbuf, *xdrs = &xdrbuf;
+
+                        unsigned char value = 0, tmp = 0, *ptr;
+                        unsigned int fdist = 0;
+                        int max, i, cnt;
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        tjit->hdr.argus_dsrvl8.len = 1;
+                        
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_ACTIVE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs,   &jitter->src.act.n);
+                           xdr_float(xdrs, &jitter->src.act.minval);
+                           xdr_float(xdrs, &jitter->src.act.meanval);
+                           xdr_float(xdrs, &jitter->src.act.stdev);
+                           xdr_float(xdrs, &jitter->src.act.maxval);
+
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->src.act.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->src.act.dist_union.fdist[i])
+                                       max = jitter->src.act.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->src.act.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default: 
+                              case ARGUS_HISTO_LINEAR: 
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                           }
+                        }
+
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_IDLE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->src.idle.n);
+                           xdr_float(xdrs, &jitter->src.idle.minval);
+                           xdr_float(xdrs, &jitter->src.idle.meanval);
+                           xdr_float(xdrs, &jitter->src.idle.stdev);
+                           xdr_float(xdrs, &jitter->src.idle.maxval);
+
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->src.idle.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->src.idle.dist_union.fdist[i])
+                                       max = jitter->src.idle.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->src.idle.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default: 
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_ACTIVE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->dst.act.n);
+                           xdr_float(xdrs, &jitter->dst.act.minval);
+                           xdr_float(xdrs, &jitter->dst.act.meanval);
+                           xdr_float(xdrs, &jitter->dst.act.stdev);
+                           xdr_float(xdrs, &jitter->dst.act.maxval);
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->dst.act.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->dst.act.dist_union.fdist[i])
+                                       max = jitter->dst.act.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->dst.act.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default:
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_IDLE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->dst.idle.n);
+                           xdr_float(xdrs, &jitter->dst.idle.minval);
+                           xdr_float(xdrs, &jitter->dst.idle.meanval);
+                           xdr_float(xdrs, &jitter->dst.idle.stdev);
+                           xdr_float(xdrs, &jitter->dst.idle.maxval);
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->dst.idle.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->dst.idle.dist_union.fdist[i])
+                                       max = jitter->dst.idle.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->dst.idle.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default:
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+
+                        len = tjit->hdr.argus_dsrvl8.len;
+#endif
+                        break;
+                     }
+
+                     case ARGUS_IPATTR_INDEX: {
+                        struct ArgusIPAttrStruct *attr  = (struct ArgusIPAttrStruct *) dsr;
+                        struct ArgusIPAttrStruct *tattr = (struct ArgusIPAttrStruct *) dsrptr;
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        len = 1;
+
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) {
+                           *dsrptr++ = *(unsigned int *)&attr->src;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_OPTIONS) {
+                           *dsrptr++ = attr->src.options;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) {
+                           *dsrptr++ = *(unsigned int *)&attr->dst;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_OPTIONS) {
+                           *dsrptr++ = attr->dst.options;
+                           len++;
+                        }
+                        tattr->hdr.argus_dsrvl8.len = len;
+                        break;
+                     }
+
+                     case ARGUS_LABEL_INDEX: {
+                        struct ArgusLabelStruct *label  = (struct ArgusLabelStruct *) dsr;
+                        int labelen = 0, slen = 0;
+
+                        if (label->l_un.label != NULL)
+                           slen = strlen(label->l_un.label);
+                        
+                        if (slen > 0) {
+                           labelen = (label->hdr.argus_dsrvl8.len - 1) * 4;
+                           *dsrptr++ = *(unsigned int *)dsr;
+                           bcopy ((char *)label->l_un.label, (char *)dsrptr, slen);
+                           if (labelen > slen)
+                              bzero(&((char *)dsrptr)[slen], labelen - slen);
+                           dsrptr += (labelen + 3)/4;
+                           len = 1 + ((labelen + 3)/4);
+                        } else
+                           len = 0;
+                        break;
+                     }
+                  }
+
+                  dsrlen += len;
+                  dsrindex &= ~ind;
+               }
+            }
+
+            if (retn->hdr.len != 0) {
+               if (!(rec->status & ARGUS_RECORD_MODIFIED) && (retn->hdr.len != dsrlen)) {
+                  if (retn->hdr.len > dsrlen) {
+                     int i, cnt = retn->hdr.len - dsrlen;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (6, "ArgusGenerateRecord (%p, %d) old len %d new len %d\n", 
+                        rec, state, retn->hdr.len * 4, dsrlen * 4);
+#endif 
+                     for (i = 0; i < cnt; i++) {
+                       dsr = (void *) dsrptr++;
+                       dsr->type = 0; dsr->subtype = 0;
+                       dsr->argus_dsrvl8.qual = 0;
+                       dsr->argus_dsrvl8.len = 1;
+                       dsrlen++;
+                     }
+                  }
+               }
+            }
+
+            retn->hdr.len = dsrlen;
+
+            if (((char *)dsrptr - (char *)retn) != (dsrlen * 4))
+               ArgusLog (LOG_ERR, "ArgusGenerateRecord: parse length error %d:%d", ((char *)dsrptr - (char *)retn), dsrlen);
+
+            break;
+         }
+
+         default:
+            retn = NULL;
+            break;
+      }
+         
+   } else {
+      retn->hdr.type = ARGUS_MAR;
+      retn->hdr.type  |= ARGUS_VERSION_3;
+      retn->hdr.cause = state & 0xF0;
+      retn->hdr.len = dsrlen;
+   }
+ 
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusGenerateV3Record (%p, %d) len %d\n", rec, state, dsrlen * 4);
+#endif 
+   return (retn);
+}
+
+struct ArgusRecord *
+ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char *buf)
+{
+   struct ArgusRecord *retn = (struct ArgusRecord *) buf;
+   unsigned int ind, dsrlen = 1, dsrindex = 0;
+   unsigned int *dsrptr = (unsigned int *)retn + 1;
+   int x, y, len = 0, type = 0;
+   struct ArgusDSRHeader *dsr;
+
+   if (rec) {
+      if (rec->correlates != NULL)
+         ArgusGenerateCorrelateStruct(rec);
+      
+      switch (rec->hdr.type & 0xF0) {
+         case ARGUS_MAR: {
+            if (rec->dsrs[0] != NULL) {
+               bcopy ((char *)rec->dsrs[0], (char *) retn, rec->hdr.len * 4);
+               retn->hdr = rec->hdr;
+               if (state) {
+                  retn->hdr.cause &= 0x0F;
+                  retn->hdr.cause |= (state & 0xF0) | (retn->hdr.cause & 0x0F);
+               }
+            }
+            break;
+         }
+
+         case ARGUS_EVENT:
+         case ARGUS_NETFLOW:
+         case ARGUS_FAR: {
+            retn->hdr  = rec->hdr;
+            retn->hdr.type  |= ARGUS_VERSION;
+
+            dsrindex = rec->dsrindex;
+            for (y = 0, ind = 1; (dsrindex && (y < ARGUSMAXDSRTYPE)); y++, ind <<= 1) {
+               if ((dsr = rec->dsrs[y]) != NULL) {
+                  len = ((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
+                        ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
+                                                              dsr->argus_dsrvl8.len));
+                  switch (y) {
+                     case ARGUS_TRANSPORT_INDEX: {
+                        struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
+                        struct ArgusTransportStruct *dtrans = (struct ArgusTransportStruct *) dsrptr;
+                        x = 0;
+
+                        *dsrptr++ = ((unsigned int *)dsr)[x++];
+
+                        if (trans->hdr.subtype & ARGUS_SRCID) {
+                           switch (trans->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+                              case ARGUS_TYPE_INT:
+                              case ARGUS_TYPE_IPV4:
+                              case ARGUS_TYPE_STRING:
+                                 *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 break;
+
+                              case ARGUS_TYPE_IPV6:
+                              case ARGUS_TYPE_UUID: {
+                                 int z;
+                                 for (z = 0; z < 4; z++) {
+                                    *dsrptr++ = ((unsigned int *)dsr)[x++];
+                                 }
+                                 break;
+                              }
+                           }
+                           if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
+                              *dsrptr++ = *(unsigned int *)&trans->srcid.inf;
+                              x++;
+                           }
+                        }
+                        if (trans->hdr.subtype & ARGUS_SEQ) {
+                           *dsrptr++ = (unsigned int)trans->seqnum;
+                           x++;
+                        }
+                        dtrans->hdr.argus_dsrvl8.len = x;
+                        len = x;
+                        break;
+                     }
+
+                     case ARGUS_NETWORK_INDEX: {
+                        struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
+                        switch (net->hdr.subtype) {
+                           case ARGUS_TCP_INIT: {
+                              struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                              struct ArgusTCPObject *tcp = &net->net_union.tcp;
+                              struct ArgusTCPInitStatus tcpinit;
+                              tcpinit.status  = tcp->status;
+                              tcpinit.seqbase = tcp->src.seqbase;
+                              tcpinit.options = tcp->options;
+                              tcpinit.win = tcp->src.win;
+                              tcpinit.flags = tcp->src.flags;
+                              tcpinit.winshift = tcp->src.winshift;
+
+                              net->hdr.argus_dsrvl8.len = 5;
+
+                              *dsrptr++ = *(unsigned int *)&net->hdr;
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[0];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[1];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[2];
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[3];
+                              len = 5;
+                              break;
+                           }
+                           case ARGUS_TCP_STATUS: {
+                              struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                              struct ArgusTCPObject *tcp = &net->net_union.tcp;
+                              struct ArgusTCPStatus tcpstatus;
+                              tcpstatus.status = tcp->status;
+                              tcpstatus.src = tcp->src.flags;
+                              tcpstatus.dst = tcp->dst.flags;
+                              tcpstatus.pad[0] = 0;
+                              tcpstatus.pad[1] = 0;
+                              net->hdr.argus_dsrvl8.len = 3;
+                              *dsrptr++ = *(unsigned int *)&net->hdr;
+                              *dsrptr++ = ((unsigned int *)&tcpstatus)[0];
+                              *dsrptr++ = ((unsigned int *)&tcpstatus)[1];
+                              len = 3;
+                              break;
+                           }
+
+                           case ARGUS_TCP_PERF:
+                           default: {
+                              for (x = 0; x < len; x++)
+                                 *dsrptr++ = ((unsigned int *)dsr)[x];
+                              break;
+                           }
+                        }
+                        break;
+                     }
+
+                     case ARGUS_AGR_INDEX: {
+                        struct ArgusAgrStruct *agr = (struct ArgusAgrStruct *) dsr;
+                        if ((ArgusParser->ArgusAggregator) != NULL)  {
+                           if (ArgusParser->ArgusAggregator->RaMetricFetchAlgorithm == ArgusFetchDuration) {
+                              if (agr->count == 1) {
+                                 len = 0;
+                                 break;
+                              }
+                           }
+                        }
+// Deliberately fall through
+                     }
+
+                     default:
+                        for (x = 0; x < len; x++)
+                           *dsrptr++ = ((unsigned int *)rec->dsrs[y])[x];
+                        break;
+
+                     case ARGUS_TIME_INDEX: {
+                        struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) rec->dsrs[ARGUS_METRIC_INDEX];
+                        struct ArgusTimeObject *dtime = (struct ArgusTimeObject *) dsr;
+                        struct ArgusTimeObject *dsrtime = (struct ArgusTimeObject *) dsrptr;
+                        unsigned char subtype = 0;
+                        long long dur = RaGetuSecDuration(rec);
+                        unsigned char tlen = 1;
+                        int cnt = 0;
+
+                        if (dtime->src.start.tv_sec > 0)
+                           subtype |= ARGUS_TIME_SRC_START;
+                        if (dtime->src.end.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_SRC_END;
+
+                        if ((subtype & ARGUS_TIME_SRC_START) && (subtype & ARGUS_TIME_SRC_END)) {
+                           if ((dtime->src.start.tv_sec  == dtime->src.end.tv_sec) &&
+                               (dtime->src.start.tv_usec == dtime->src.end.tv_usec))
+                              subtype &= ~ARGUS_TIME_SRC_END;
+                        }
+
+                        if (dtime->dst.start.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_DST_START;
+                        if (dtime->dst.end.tv_sec > 0) 
+                           subtype |= ARGUS_TIME_DST_END;
+
+                        if ((subtype & ARGUS_TIME_DST_START) && (subtype & ARGUS_TIME_DST_END)) {
+                           if ((dtime->dst.start.tv_sec  == dtime->dst.end.tv_sec) &&
+                               (dtime->dst.start.tv_usec == dtime->dst.end.tv_usec))
+                              subtype &= ~ARGUS_TIME_DST_END;
+                        }
+
+                        if (metric && (metric->src.pkts == 0))
+                           subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+
+                        if (metric && (metric->dst.pkts == 0))
+                           subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+
+                        for (x = 0; x < 4; x++)
+                           if (subtype & (ARGUS_TIME_SRC_START << x)) 
+                              cnt++;
+
+                        if (cnt && (dtime->hdr.argus_dsrvl8.qual != ARGUS_TYPE_UTC_NANOSECONDS)) {
+                           if (cnt == 1) 
+                              subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+                           else if (dur > 0x7fffffff)
+                              subtype |= ARGUS_TIME_ABSOLUTE_RANGE;
+                           else
+                              subtype |= ARGUS_TIME_RELATIVE_RANGE;
+                        } else
+                           subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+
+                        dtime->hdr.subtype = subtype;
+
+//  We'd like to use relative uSec or nSec timestamps if there are more
+//  than one timestamp in the record. ARGUS_TIME_RELATIVE_TIMESTAMP
+//  So lets test uSec deltas, and report for time.
+
+//#define ARGUS_TIME_ABSOLUTE_TIMESTAMP           0x01    // All time indicators are 64-bit sec, usec values, implies more than 2
+//#define ARGUS_TIME_ABSOLUTE_RANGE               0x02    // All timestamp are absolute, and the second timestamp is the flow range
+//#define ARGUS_TIME_ABSOLUTE_RELATIVE_RANGE      0x03    // First timestamp is absolute, the second indicator is a range offset
+//#define ARGUS_TIME_RELATIVE_TIMESTAMP           0x04    // First timestamp is absolute, all others are relative, uSec or nSec
+//#define ARGUS_TIME_RELATIVE_RANGE               0x05    // First timestamp is absolute, only one other value is flow range, uSec or nSec
+
+                      
+                        if (subtype & ARGUS_TIME_RELATIVE_RANGE) {
+                           *dsrptr++ = *(unsigned int *)dsr;
+                                 
+                           if (subtype & ARGUS_TIME_SRC_START) {         // assume at this point that all indicators are reasonable
+                              *dsrptr++ = dtime->src.start.tv_sec;    // if there is not a src start, then there is not a src end
+                              *dsrptr++ = dtime->src.start.tv_usec;
+                              tlen += 2;
+
+                              for (x = 1; x < 4; x++) {
+                                 if (subtype & (ARGUS_TIME_SRC_START << x)) {
+                                    switch (ARGUS_TIME_SRC_START << x) {
+                                       case ARGUS_TIME_SRC_END: {
+                                          int value = ((dtime->src.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->src.end.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                       case ARGUS_TIME_DST_START: {
+                                          int value = ((dtime->dst.start.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->dst.start.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                       case ARGUS_TIME_DST_END: {
+                                          int value = ((dtime->dst.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
+                                                       (dtime->dst.end.tv_usec - dtime->src.start.tv_usec);
+                                          *dsrptr++ = value;
+                                          tlen += 1;
+                                          break;
+                                       }
+                                    }
+                                 }
+                              }
+                           } else {
+                              if (subtype & ARGUS_TIME_DST_START) {         // assume its just dst start and possibly end.
+                                 *dsrptr++ = dtime->dst.start.tv_sec;
+                                 *dsrptr++ = dtime->dst.start.tv_usec;
+                                 tlen += 2;
+
+                                 if (subtype & ARGUS_TIME_DST_END) {
+                                    *dsrptr++ = dur;  // the dur at this point is the difference
+                                    tlen += 1;
+                                 }
+                              }
+                           }
+
+                        } else {
+                           *dsrptr++ = *(unsigned int *)&dtime->hdr;
+                           
+                           for (x = 0; x < 4; x++) {
+                              if (subtype & (ARGUS_TIME_SRC_START << x)) {
+                                 switch (ARGUS_TIME_SRC_START << x) {
+                                    case ARGUS_TIME_SRC_START:
+                                       *dsrptr++ = dtime->src.start.tv_sec;
+                                       *dsrptr++ = dtime->src.start.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_SRC_END:
+                                       *dsrptr++ = dtime->src.end.tv_sec;
+                                       *dsrptr++ = dtime->src.end.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_DST_START:
+                                       *dsrptr++ = dtime->dst.start.tv_sec;
+                                       *dsrptr++ = dtime->dst.start.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                    case ARGUS_TIME_DST_END:
+                                       *dsrptr++ = dtime->dst.end.tv_sec;
+                                       *dsrptr++ = dtime->dst.end.tv_usec;
+                                       tlen += 2;
+                                       break;
+                                 }
+                              }
+                           }
+                        }
+
+                        dsrtime->hdr.argus_dsrvl8.len = tlen;
+                        len = tlen;
+                        break;
+                     }
+
+                     case ARGUS_METRIC_INDEX: {
+                        struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) dsr;
+
+                        if (((metric->src.pkts + metric->dst.pkts) > 0) ||
+                            ((metric->src.bytes + metric->dst.bytes) > 0)) {
+                           if (((metric->src.pkts) && (metric->dst.pkts)) ||
+                               ((metric->src.bytes) && (metric->dst.bytes))) {
+                              if ((0xFF >= metric->src.pkts)  && (0xFF >= metric->dst.pkts) &&
+                                  (0xFF >= metric->src.bytes) && (0xFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_BYTE;
+                              else
+                              if ((0xFFFF >= metric->src.bytes) && (0xFFFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_SHORT;
+                              else
+                              if ((0xFFFFFFFF >= metric->src.bytes) && (0xFFFFFFFF >= metric->dst.bytes))
+                                 type = ARGUS_SRCDST_INT;
+                              else
+                                 type = ARGUS_SRCDST_LONGLONG;
+
+                           } else {
+                              if ((metric->src.pkts) || (metric->src.bytes)) {
+                                 if (0xFFFF >= metric->src.bytes)
+                                    type = ARGUS_SRC_SHORT;
+                                 else
+                                 if (0xFFFFFFFF >= metric->src.bytes)
+                                    type = ARGUS_SRC_INT;
+                                 else
+                                    type = ARGUS_SRC_LONGLONG;
+                              } else {
+                                 if (0xFFFF >= metric->dst.bytes)
+                                    type = ARGUS_DST_SHORT;
+                                 else
+                                 if (0xFFFFFFFF >= metric->dst.bytes)
+                                    type = ARGUS_DST_INT;
+                                 else
+                                    type = ARGUS_DST_LONGLONG;
+                              }
+                           }
+                        } else {
+                           type = ARGUS_SRCDST_BYTE;
+                        }
+
+                        dsr = (struct ArgusDSRHeader *)dsrptr;
+                        dsr->type    = ARGUS_METER_DSR;
+
+                        if (metric->src.appbytes || metric->dst.appbytes) {
+                           dsr->subtype = ARGUS_METER_PKTS_BYTES_APP;
+                           switch (type) {
+                              case ARGUS_SRCDST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned char *)(dsr + 1))[0] = (unsigned char) metric->src.pkts;
+                                 ((unsigned char *)(dsr + 1))[1] = (unsigned char) metric->src.bytes;
+                                 ((unsigned char *)(dsr + 1))[2] = (unsigned char) metric->src.appbytes;
+                                 ((unsigned char *)(dsr + 1))[3] = (unsigned char) metric->dst.pkts;
+                                 ((unsigned char *)(dsr + 1))[4] = (unsigned char) metric->dst.bytes;
+                                 ((unsigned char *)(dsr + 1))[5] = (unsigned char) metric->dst.appbytes;
+                                 ((unsigned char *)(dsr + 1))[6] = 0;
+                                 ((unsigned char *)(dsr + 1))[7] = 0;
+                                 break;
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->src.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[4] = ((unsigned short) metric->dst.bytes);
+                                 ((unsigned short *)(dsr + 1))[5] = ((unsigned short) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_SRCDST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->src.appbytes);
+                                 ((unsigned int *)(dsr + 1))[3] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[4] = ((unsigned int) metric->dst.bytes);
+                                 ((unsigned int *)(dsr + 1))[5] = ((unsigned int) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_SRCDST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 13;
+                                 ((unsigned int *)(dsr + 1))[0]  = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1]  = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2]  = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3]  = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4]  = (((unsigned int *)&metric->src.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5]  = (((unsigned int *)&metric->src.appbytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[6]  = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[7]  = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[8]  = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[9]  = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[10] = (((unsigned int *)&metric->dst.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[11] = (((unsigned int *)&metric->dst.appbytes)[1]);
+                                 break;
+
+                              case ARGUS_SRC_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = ((unsigned char) metric->src.pkts);
+                                 ((unsigned char *)(dsr + 1))[1] = ((unsigned char) metric->src.bytes);
+                                 ((unsigned char *)(dsr + 1))[2] = ((unsigned char) metric->src.appbytes);
+                                 ((unsigned char *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_SRC_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->src.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_SRC_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->src.appbytes);
+                                 break;
+                              case ARGUS_SRC_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->src.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->src.appbytes)[1]);
+                                 break;
+
+                              case ARGUS_DST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = ((unsigned char) metric->dst.pkts);
+                                 ((unsigned char *)(dsr + 1))[1] = ((unsigned char) metric->dst.bytes);
+                                 ((unsigned char *)(dsr + 1))[2] = ((unsigned char) metric->dst.appbytes);
+                                 ((unsigned char *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_DST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->dst.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->dst.appbytes);
+                                 ((unsigned short *)(dsr + 1))[3] = 0;
+                                 break;
+                              case ARGUS_DST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 4;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->dst.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->dst.appbytes);
+                                 break;
+                              case ARGUS_DST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 7;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->dst.appbytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->dst.appbytes)[1]);
+                                 break;
+                           }
+                        } else {
+                           dsr->subtype = ARGUS_METER_PKTS_BYTES;
+                           switch (type) {
+                              case ARGUS_SRCDST_BYTE:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned char *)(dsr + 1))[0] = (unsigned char) metric->src.pkts;
+                                 ((unsigned char *)(dsr + 1))[1] = (unsigned char) metric->src.bytes;
+                                 ((unsigned char *)(dsr + 1))[2] = (unsigned char) metric->dst.pkts;
+                                 ((unsigned char *)(dsr + 1))[3] = (unsigned char) metric->dst.bytes;
+                                 break;
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 ((unsigned short *)(dsr + 1))[2] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[3] = ((unsigned short) metric->dst.bytes);
+                                 break;
+                              case ARGUS_SRCDST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 ((unsigned int *)(dsr + 1))[2] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[3] = ((unsigned int) metric->dst.bytes);
+                                 break;
+                              case ARGUS_SRCDST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 9;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 ((unsigned int *)(dsr + 1))[4] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[5] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[6] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[7] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 break;
+
+                              case ARGUS_SRC_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->src.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->src.bytes);
+                                 break;
+                              case ARGUS_SRC_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->src.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->src.bytes);
+                                 break;
+                              case ARGUS_SRC_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->src.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->src.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->src.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->src.bytes)[1]);
+                                 break;
+
+                              case ARGUS_DST_SHORT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = ((unsigned short) metric->dst.pkts);
+                                 ((unsigned short *)(dsr + 1))[1] = ((unsigned short) metric->dst.bytes);
+                                 break;
+                              case ARGUS_DST_INT:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned int *)(dsr + 1))[0] = ((unsigned int) metric->dst.pkts);
+                                 ((unsigned int *)(dsr + 1))[1] = ((unsigned int) metric->dst.bytes);
+                                 break;
+                              case ARGUS_DST_LONGLONG:
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 5;
+                                 ((unsigned int *)(dsr + 1))[0] = (((unsigned int *)&metric->dst.pkts)[0]);
+                                 ((unsigned int *)(dsr + 1))[1] = (((unsigned int *)&metric->dst.pkts)[1]);
+                                 ((unsigned int *)(dsr + 1))[2] = (((unsigned int *)&metric->dst.bytes)[0]);
+                                 ((unsigned int *)(dsr + 1))[3] = (((unsigned int *)&metric->dst.bytes)[1]);
+                                 break;
+                           }
+                        }
+                        len     = dsr->argus_dsrvl8.len;
+                        dsrptr += len;
+                        break;
+                     }
+
+                     case ARGUS_PSIZE_INDEX: {
+                        struct ArgusPacketSizeStruct *psize  = (struct ArgusPacketSizeStruct *) dsr;
+
+                        if ((psize->src.psizemax > 0) && (psize->dst.psizemax > 0))
+                           type = ARGUS_SRCDST_SHORT;
+                        else
+                        if (psize->src.psizemax > 0)
+                           type = ARGUS_SRC_SHORT;
+                        else
+                        if (psize->dst.psizemax > 0)
+                           type = ARGUS_DST_SHORT;
+                        else
+                           type = 0;
+
+                        if (type) {
+                           unsigned char value = 0, tmp = 0, *ptr;
+                           int max, i, cnt;
+
+                           dsr = (struct ArgusDSRHeader *)dsrptr;
+                           dsr->type    = ARGUS_PSIZE_DSR;
+
+                           switch (type) {
+                              case ARGUS_SRCDST_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_SRC_MAX_MIN | ARGUS_PSIZE_DST_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 3;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->src.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->src.psizemax;
+                                 ((unsigned short *)(dsr + 1))[2] = psize->dst.psizemin;
+                                 ((unsigned short *)(dsr + 1))[3] = psize->dst.psizemax;
+                                 break;
+
+                              case ARGUS_SRC_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_SRC_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->src.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->src.psizemax;
+                                 break;
+
+                              case ARGUS_DST_SHORT:
+                                 dsr->subtype = ARGUS_PSIZE_DST_MAX_MIN;
+                                 dsr->argus_dsrvl8.qual = type;
+                                 dsr->argus_dsrvl8.len = 2;
+                                 ((unsigned short *)(dsr + 1))[0] = psize->dst.psizemin;
+                                 ((unsigned short *)(dsr + 1))[1] = psize->dst.psizemax;
+                                 break;
+
+                              default:
+                                 break;
+                           }
+
+                           if (dsr->subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
+                              ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
+
+                              for (cnt = 0, i = 0; i < 8; i++)
+                                 cnt += psize->src.psize[i];
+
+                              dsr->subtype |= ARGUS_PSIZE_HISTO;
+
+                              dsr->argus_dsrvl8.len++;
+                              *((unsigned int *)(dsr + dsr->argus_dsrvl8.len)) = 0;
+
+                              for (i = 0, max = 0; i < 8; i++)
+                                 if (max < psize->src.psize[i])
+                                    max = psize->src.psize[i];
+
+                              for (i = 0; i < 8; i++) {
+                                 if ((tmp = psize->src.psize[i])) {
+                                    if (i & 0x01) {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value |= tmp;
+                                       *ptr++ = value;
+                                    } else {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value = (tmp << 4);
+                                    }
+                                 } else {
+                                    if (i & 0x01) {
+                                       value &= 0xF0;
+                                       *ptr++ = value;
+                                    } else {
+                                       value = 0;
+                                    }
+                                 }
+                              }
+                           }
+
+                           if (dsr->subtype & ARGUS_PSIZE_DST_MAX_MIN) {
+                              ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
+
+                              for (cnt = 0, i = 0; i < 8; i++)
+                                 cnt += psize->dst.psize[i];
+
+                              dsr->subtype |= ARGUS_PSIZE_HISTO;
+
+                              dsr->argus_dsrvl8.len++;
+                              *((unsigned int *)(dsr + dsr->argus_dsrvl8.len)) = 0;
+
+                              for (i = 0, max = 0; i < 8; i++)
+                                 if (max < psize->dst.psize[i])
+                                    max = psize->dst.psize[i];
+
+                              for (i = 0; i < 8; i++) {
+                                 if ((tmp = psize->dst.psize[i])) {
+                                    if (i & 0x01) {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value |= tmp;
+                                       *ptr++ = value;
+                                    } else {
+                                       if (max > 15)
+                                         tmp = ((tmp * 15)/max);
+                                       if (!tmp) tmp++;
+                                       value = (tmp << 4);
+                                    }
+                                 } else {
+                                    if (i & 0x01) {
+                                       value &= 0xF0;
+                                       *ptr++ = value;
+                                    } else {
+                                       value = 0;
+                                    }
+                                 }
+                              }
+                           }
+
+                           dsr->argus_dsrvl8.qual = type;
+                           len = dsr->argus_dsrvl8.len;
+                           dsrptr += len;
+                        } else
+                           len = 0;
+
+                        break;
+                     }
+
+                     case ARGUS_MPLS_INDEX: {
+                        struct ArgusMplsStruct *mpls  = (struct ArgusMplsStruct *) dsr;
+                        struct ArgusMplsStruct *tmpls = (struct ArgusMplsStruct *) dsrptr;
+                        unsigned char subtype = tmpls->hdr.subtype & ~(ARGUS_MPLS_SRC_LABEL | ARGUS_MPLS_DST_LABEL);
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        len = 1;
+
+                        if (((mpls->hdr.argus_dsrvl8.qual & 0xF0) >> 4) > 0) {
+                           subtype |= ARGUS_MPLS_SRC_LABEL;
+                           *dsrptr++ = mpls->slabel;
+                           len++;
+                        }
+                        if (((mpls->hdr.argus_dsrvl8.qual & 0x0F)) > 0) {
+                           subtype |= ARGUS_MPLS_DST_LABEL;
+                           *dsrptr++ = mpls->dlabel;
+                           len++;
+                        }
+                        tmpls->hdr.subtype = subtype;
+                        tmpls->hdr.argus_dsrvl8.len = len;
+                        break;
+                     }
+
+                     case ARGUS_JITTER_INDEX: {
+#if defined(HAVE_XDR)
+                        struct ArgusJitterStruct *jitter = (struct ArgusJitterStruct *) dsr;
+                        struct ArgusJitterStruct *tjit   = (struct ArgusJitterStruct *) dsrptr;
+
+                        int size = (sizeof(struct ArgusOutputStatObject) + 3) / 4;
+                        XDR xdrbuf, *xdrs = &xdrbuf;
+
+                        unsigned char value = 0, tmp = 0, *ptr;
+                        unsigned int fdist = 0;
+                        int max, i, cnt;
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        tjit->hdr.argus_dsrvl8.len = 1;
+                        
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_ACTIVE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs,   &jitter->src.act.n);
+                           xdr_float(xdrs, &jitter->src.act.minval);
+                           xdr_float(xdrs, &jitter->src.act.meanval);
+                           xdr_float(xdrs, &jitter->src.act.stdev);
+                           xdr_float(xdrs, &jitter->src.act.maxval);
+
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->src.act.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->src.act.dist_union.fdist[i])
+                                       max = jitter->src.act.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->src.act.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default: 
+                              case ARGUS_HISTO_LINEAR: 
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                           }
+                        }
+
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_IDLE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->src.idle.n);
+                           xdr_float(xdrs, &jitter->src.idle.minval);
+                           xdr_float(xdrs, &jitter->src.idle.meanval);
+                           xdr_float(xdrs, &jitter->src.idle.stdev);
+                           xdr_float(xdrs, &jitter->src.idle.maxval);
+
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->src.idle.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->src.idle.dist_union.fdist[i])
+                                       max = jitter->src.idle.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->src.idle.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default: 
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_ACTIVE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->dst.act.n);
+                           xdr_float(xdrs, &jitter->dst.act.minval);
+                           xdr_float(xdrs, &jitter->dst.act.meanval);
+                           xdr_float(xdrs, &jitter->dst.act.stdev);
+                           xdr_float(xdrs, &jitter->dst.act.maxval);
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->dst.act.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->dst.act.dist_union.fdist[i])
+                                       max = jitter->dst.act.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->dst.act.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default:
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+                        if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_IDLE_JITTER) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->dst.idle.n);
+                           xdr_float(xdrs, &jitter->dst.idle.minval);
+                           xdr_float(xdrs, &jitter->dst.idle.meanval);
+                           xdr_float(xdrs, &jitter->dst.idle.stdev);
+                           xdr_float(xdrs, &jitter->dst.idle.maxval);
+                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
+                              case ARGUS_HISTO_EXP: {
+                                 value = 0;
+                                 ptr = (unsigned char *)&fdist;
+                                 for (cnt = 0, i = 0; i < 8; i++)
+                                    cnt += jitter->dst.idle.dist_union.fdist[i];
+
+                                 for (i = 0, max = 0; i < 8; i++)
+                                    if (max < jitter->dst.idle.dist_union.fdist[i])
+                                       max = jitter->dst.idle.dist_union.fdist[i];
+
+                                 for (i = 0; i < 8; i++) {
+                                    if ((tmp = jitter->dst.idle.dist_union.fdist[i])) {
+                                       if (i & 0x01) {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value |= tmp;
+                                          *ptr++ = value;
+                                       } else {
+                                          if (max > 15)
+                                            tmp = ((tmp * 15)/max);
+                                          if (!tmp) tmp++;
+                                          value = (tmp << 4);
+                                       }
+                                    } else {
+                                       if (i & 0x01) {
+                                          value &= 0xF0;
+                                          *ptr++ = value;
+                                       } else {
+                                          value = 0;
+                                       }
+                                    }
+                                 }
+
+                                 xdr_u_int(xdrs, &fdist);
+                                 dsrptr += size;
+                                 tjit->hdr.argus_dsrvl8.len += size;
+                                 break;
+                              }
+
+                              default:
+                              case ARGUS_HISTO_LINEAR: {
+                                 dsrptr += 5;
+                                 tjit->hdr.argus_dsrvl8.len += 5;
+                                 break;
+                              }
+                           }
+                        }
+
+                        len = tjit->hdr.argus_dsrvl8.len;
+#endif
+                        break;
+                     }
+
+                     case ARGUS_IPATTR_INDEX: {
+                        struct ArgusIPAttrStruct *attr  = (struct ArgusIPAttrStruct *) dsr;
+                        struct ArgusIPAttrStruct *tattr = (struct ArgusIPAttrStruct *) dsrptr;
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        len = 1;
+
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC) {
+                           *dsrptr++ = *(unsigned int *)&attr->src;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_SRC_OPTIONS) {
+                           *dsrptr++ = attr->src.options;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST) {
+                           *dsrptr++ = *(unsigned int *)&attr->dst;
+                           len++;
+                        }
+                        if (attr->hdr.argus_dsrvl8.qual & ARGUS_IPATTR_DST_OPTIONS) {
+                           *dsrptr++ = attr->dst.options;
+                           len++;
+                        }
+                        tattr->hdr.argus_dsrvl8.len = len;
+                        break;
+                     }
+
+                     case ARGUS_LABEL_INDEX: {
+                        struct ArgusLabelStruct *label  = (struct ArgusLabelStruct *) dsr;
+                        int labelen = 0, slen = 0;
+
+                        if (label->l_un.label != NULL)
+                           slen = strlen(label->l_un.label);
+                        
+                        if (slen > 0) {
+                           labelen = (label->hdr.argus_dsrvl8.len - 1) * 4;
+                           *dsrptr++ = *(unsigned int *)dsr;
+                           bcopy ((char *)label->l_un.label, (char *)dsrptr, slen);
+                           if (labelen > slen)
+                              bzero(&((char *)dsrptr)[slen], labelen - slen);
+                           dsrptr += (labelen + 3)/4;
+                           len = 1 + ((labelen + 3)/4);
+                        } else
+                           len = 0;
+                        break;
+                     }
+
+
+                     case ARGUS_GEO_INDEX: {
+#if defined(HAVE_XDR)
+                        struct ArgusGeoLocationStruct *geo  = (struct ArgusGeoLocationStruct *) dsr;
+                        struct ArgusV3GeoLocationStruct *tgeo = (struct ArgusV3GeoLocationStruct *) dsrptr;
+
+                        int size = (sizeof(struct ArgusCoordinates) + 3) / 4;
+                        XDR xdrbuf, *xdrs = &xdrbuf;
+
+                        *dsrptr++ = *(unsigned int *)dsr;
+                        tgeo->hdr.argus_dsrvl8.len = 1;
+                        
+                        if (geo->hdr.argus_dsrvl8.qual & ARGUS_SRC_GEO) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusCoordinates), XDR_ENCODE);
+                           xdr_float(xdrs, &geo->src.lat);
+                           xdr_float(xdrs, &geo->src.lon);
+                           dsrptr += size;
+                           tgeo->hdr.argus_dsrvl8.len += size;
+                        }
+
+                        if (geo->hdr.argus_dsrvl8.qual & ARGUS_DST_GEO) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusCoordinates), XDR_ENCODE);
+                           xdr_float(xdrs, &geo->dst.lat);
+                           xdr_float(xdrs, &geo->dst.lon);
+                           dsrptr += size;
+                           tgeo->hdr.argus_dsrvl8.len += size;
+                        }
+/*
+                        // no inode geo data in v3 argus records.
+                        if (geo->hdr.argus_dsrvl8.qual & ARGUS_INODE_GEO) {
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusCoordinates), XDR_ENCODE);
+                           xdr_float(xdrs, &geo->inode.lat);
+                           xdr_float(xdrs, &geo->inode.lon);
+                           dsrptr += size; 
+                           tgeo->hdr.argus_dsrvl8.len += size;
+                        }
+*/
+                        len = tgeo->hdr.argus_dsrvl8.len;
+#endif
+                        break;
+                     }
+                  }
+
+                  dsrlen += len;
+                  dsrindex &= ~ind;
+               }
+            }
+
+            if (retn->hdr.len != 0) {
+               if (!(rec->status & ARGUS_RECORD_MODIFIED) && (retn->hdr.len != dsrlen)) {
+                  if (retn->hdr.len > dsrlen) {
+                     int i, cnt = retn->hdr.len - dsrlen;
+#ifdef ARGUSDEBUG
+                     ArgusDebug (6, "ArgusGenerateV5Record (%p, %d) old len %d new len %d\n", 
+                        rec, state, retn->hdr.len * 4, dsrlen * 4);
+#endif 
+                     for (i = 0; i < cnt; i++) {
+                       dsr = (void *) dsrptr++;
+                       dsr->type = 0; dsr->subtype = 0;
+                       dsr->argus_dsrvl8.qual = 0;
+                       dsr->argus_dsrvl8.len = 1;
+                       dsrlen++;
+                     }
+                  }
+               }
+            }
+
+            retn->hdr.len = dsrlen;
+
+            if (((char *)dsrptr - (char *)retn) != (dsrlen * 4))
+               ArgusLog (LOG_ERR, "ArgusGenerateV5Record: parse length error %d:%d", ((char *)dsrptr - (char *)retn), dsrlen);
+
+            break;
+         }
+
+         default:
+            retn = NULL;
+            break;
+      }
+         
+   } else {
+      retn->hdr.type = ARGUS_MAR | ARGUS_VERSION;
+      retn->hdr.cause &= 0x0F;
+      retn->hdr.cause |= state & 0xF0;
+      retn->hdr.len = dsrlen;
+   }
+ 
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusGenerateV5Record (%p, %d) len %d\n", rec, state, dsrlen * 4);
+#endif 
+   return (retn);
+}
+
+
 
 void
 ArgusCloseOutput(struct ArgusOutputStruct *output)
@@ -2329,6 +4588,19 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
    return (retn);
 }
 
+
+//  The primary difference between V3 and V5 Management records is the ArgusAddrStruct definition
+//  which is composed of an sid plus an optional 4 bytes inf struct, which is not in the management
+//  record..  The sid adds v6 and uuid types ... so it is very different, although it fits in
+//  the original 128 byte record.  All the changes are in the the V3 pad[3] field, and the
+//  actual value, is at the end of the 16 byte region rather than the beginning of the V5 struct.
+//  
+//  Argus V3 and V5 management records have different ARGUS_COOKIEs, and the mar->hdr.cause code
+//  is used to identify the source in Argus V5 records.
+//  
+//  Need to make these changes to accomodate V3 compatibility.
+
+
 struct ArgusRecord *
 ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 {
@@ -2338,12 +4610,22 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 
    if ((retn = (struct ArgusRecord *) ArgusCalloc (1, sizeof(struct ArgusRecord))) == NULL)
      ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
-   
-   retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-   retn->hdr.cause = ARGUS_START | ARGUS_SRC_RADIUM;
-   retn->hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
-   retn->argus_mar.argusid = htonl(ARGUS_COOKIE);
+   switch (output->version) {
+      case ARGUS_VERSION_3:
+         retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION_3;
+         retn->hdr.cause = ARGUS_START;
+         retn->argus_mar.argusid = htonl(ARGUS_V3_COOKIE);
+         break;
+
+      case ARGUS_VERSION_5:
+         retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION_5;
+         retn->hdr.cause = ARGUS_START | ARGUS_SRC_RADIUM;
+         retn->argus_mar.argusid = htonl(ARGUS_COOKIE);
+         break;
+   }
+   
+   retn->hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
    if (output) {
       retn->argus_mar.startime.tv_sec  = htonl(output->ArgusStartTime.tv_sec);
@@ -2363,7 +4645,7 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 
    output->ArgusLastMarUpdateTime = *tptr;
 
-   retn->argus_mar.major_version = VERSION_MAJOR;
+   retn->argus_mar.major_version = output->version;
    retn->argus_mar.minor_version = VERSION_MINOR;
    retn->argus_mar.reportInterval = 0;
 
@@ -2404,8 +4686,8 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
    if ((retn = (struct ArgusRecordStruct *) ArgusCalloc (1, sizeof(*retn))) == NULL)
      ArgusLog (LOG_ERR, "ArgusGenerateStatusMarRecord(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
 
-   retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-   retn->hdr.cause = status | ARGUS_SRC_RADIUM;
+   retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION_5;
+   retn->hdr.cause = ARGUS_STATUS | ARGUS_SRC_RADIUM;
    retn->hdr.len   = ((unsigned short) sizeof(struct ArgusRecord)/4);
 
    if ((rec = (struct ArgusRecord *) ArgusCalloc(1, sizeof(*rec))) == NULL)
@@ -2460,7 +4742,7 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
 
       output->ArgusLastMarUpdateTime = now;
 
-      rec->argus_mar.major_version = VERSION_MAJOR;
+      rec->argus_mar.major_version = output->version;
       rec->argus_mar.minor_version = VERSION_MINOR;
       rec->argus_mar.reportInterval = 0;
 
@@ -2473,31 +4755,6 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
       rec->argus_mar.nextMrSequenceNum = output->ArgusOutputSequence;
       rec->argus_mar.record_len = -1;
    }
-
-/*
-   if ((ArgusSrc = output->ArgusSrc) != NULL) {
-      int i;
-      rec->argus_mar.interfaceType = ArgusSrc->ArgusInterface[0].ArgusInterfaceType;
-      rec->argus_mar.interfaceStatus = getArgusInterfaceStatus(ArgusSrc);
-
-      rec->argus_mar.pktsRcvd  = 0;
-      rec->argus_mar.bytesRcvd = 0;
-      rec->argus_mar.dropped   = 0;
-
-      for (i = 0; i < ARGUS_MAXINTERFACE; i++) {
-         rec->argus_mar.pktsRcvd  += ArgusSrc->ArgusInterface[i].ArgusStat.ps_recv - 
-                                    ArgusSrc->ArgusInterface[i].ArgusLastPkts;
-         rec->argus_mar.bytesRcvd += ArgusSrc->ArgusInterface[i].ArgusTotalBytes -
-                                    ArgusSrc->ArgusInterface[i].ArgusLastBytes;
-         rec->argus_mar.dropped   += ArgusSrc->ArgusInterface[i].ArgusStat.ps_drop - 
-                                    ArgusSrc->ArgusInterface[i].ArgusLastDrop;
-
-         ArgusSrc->ArgusInterface[i].ArgusLastPkts  = ArgusSrc->ArgusInterface[i].ArgusStat.ps_recv;
-         ArgusSrc->ArgusInterface[i].ArgusLastDrop  = ArgusSrc->ArgusInterface[i].ArgusStat.ps_drop;
-         ArgusSrc->ArgusInterface[i].ArgusLastBytes = ArgusSrc->ArgusInterface[i].ArgusTotalBytes;
-      }
-   }
-*/
 
    if (output) {
       rec->argus_mar.records = output->ArgusTotalRecords - output->ArgusLastRecords;

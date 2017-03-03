@@ -106,6 +106,7 @@
 #include <argus_util.h>
 #include <argus_parser.h>
 #include <argus_filter.h>
+#include <argus_output.h>
 #include <argus_client.h>
 #include <argus_main.h>
 #include <argus_label.h>
@@ -3101,8 +3102,12 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
 
                                              if (argus->status & RA_MODIFIED) {
                                                 struct ArgusRecord *ns = NULL;
+                                                int version = ARGUS_VERSION;
 
-                                                if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordBuffer)) == NULL)
+                                                if (parser->ArgusOutput != NULL)
+                                                   version =  parser->ArgusOutput->version;
+
+                                                if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordBuffer, version)) == NULL)
                                                    ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
                                                 ArgusHtoN(ns);
@@ -3245,8 +3250,12 @@ ArgusHandleRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *in
 
                                        if (argus->status & RA_MODIFIED) {
                                           struct ArgusRecord *ns = NULL;
+                                          int version = ARGUS_VERSION;
 
-                                          if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordStructBuffer)) == NULL)
+                                          if (parser->ArgusOutput != NULL)
+                                             version =  parser->ArgusOutput->version;
+
+                                          if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordStructBuffer, version)) == NULL)
                                              ArgusLog(LOG_ERR, "RaProcessSQLEvent: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
                                           ArgusHtoN(ns);
@@ -8118,7 +8127,7 @@ ArgusPrintNode (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
       value = strdup(" ");
    }
 
-   if ((alias = lookup_srcid((const u_char *)value)) != NULL) {
+   if ((alias = lookup_srcid((const u_char *)value, aliastable)) != NULL) {
       free(value);
       value = strdup(alias);
    }
@@ -20560,6 +20569,26 @@ getnamehash(const u_char *np)
    return retn;
 }
 
+struct cnamemem *
+check_cmem(struct cnamemem *table, const u_char *np)
+{  
+   if (np != NULL) {
+      struct cnamemem *tp;
+      u_int hash;
+      
+      hash = getnamehash(np);
+      
+      tp = &table[hash % (HASHNAMESIZE-1)];
+      while (tp->n_nxt) {
+         if (!strcmp((char *)np, tp->name))
+            return tp;
+         else
+            tp = tp->n_nxt;
+      }
+   }
+   return NULL;
+}
+
 struct nnamemem *
 check_nmem(struct nnamemem *table, const u_char *np)
 {
@@ -21037,7 +21066,7 @@ etheraddr_oui(struct ArgusParserStruct *parser, u_char *ep)
 }
 
 char *
-lookup_srcid(const u_char *srcid)
+lookup_srcid(const u_char *srcid, struct anamemem *table)
 {
    char *retn = NULL;
 
@@ -21048,7 +21077,7 @@ lookup_srcid(const u_char *srcid)
       hash  = getnamehash(srcid);
       hash %= (HASHNAMESIZE - 1);
 
-      ap = &aliastable[hash];
+      ap = &table[hash];
       while (ap->n_nxt && (retn == NULL)) {
          if (!strcmp((char *)srcid, ap->name))
             retn = ap->alias;
@@ -29718,7 +29747,7 @@ getArgusID(struct ArgusParserStruct *parser, struct ArgusAddrStruct *addr)
       retn = 1;
    }
 #ifdef ARGUSDEBUG
-   ArgusDebug (7, "getArgusID(%p, %p) done\n", parser, addr);
+   ArgusDebug (7, "getParserArgusID(%p, %p) done\n", parser, addr);
 #endif
    return (retn);
 }
@@ -29967,7 +29996,7 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
       }
 
       if (type)
-         setArgusID (src, buf, slen, type);
+         setParserArgusID (src, buf, slen, type);
       else
          retn = 1;
 
@@ -29994,136 +30023,6 @@ getArgusManInf (struct ArgusParserStruct *src)
 {
    return (src->RaMarInfName);
 }
-
-/*
-void
-ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
-{
-   if (optarg && (*optarg == '"')) {
-      int slen;
-      optarg++;
-      if (optarg[strlen(optarg) - 1] == '\n')
-         optarg[strlen(optarg) - 1] = '\0';
-      if (optarg[strlen(optarg) - 1] == '\"')
-         optarg[strlen(optarg) - 1] = '\0';
-      slen = strlen(optarg);
-      if (slen > 4) {
-         optarg[4] = '\0';
-         slen = 4;
-      }
- 
-      setArgusID (src, optarg, slen, ARGUS_TYPE_STRING);
-      
-   } else
-   if (optarg && strchr(optarg, '-')) {
-      char *prefix;
-      if ((prefix = strstr(optarg, "uuid:")) != NULL)
-         optarg = prefix + 5;
-
-      if (strstr(optarg, ":inf")) {
-         if (strlen(optarg) == 40)
-            setArgusID (src, optarg, 20, ARGUS_TYPE_UUID | ARGUS_TYPE_INTERFACE);
-      } else {
-         if (strlen(optarg) == 36)
-            setArgusID (src, optarg, 16, ARGUS_TYPE_UUID);
-      }
-
-   } else
-   if (optarg && isalnum((int)*optarg)) {
-      char *ptr;
-      long num;
-
-      if ((num = strtol(optarg, (char **)&ptr, 10)) == 0)
-         if (errno == EINVAL)
-            ArgusLog(LOG_ERR, "ArgusParseSourceID error: %s format incorrect", optarg);
-
-      if (ptr == &optarg[strlen(optarg)]) {
-         setArgusID (src, optarg, 4, ARGUS_TYPE_INT);
-
-      } else {
-         int retn, done = 0;
-
-#if defined(HAVE_INET_ATON)
-         struct in_addr pin;
- 
-         if (inet_aton(optarg, &pin)) {
-            setArgusID (src, &pin.s_addr, 4, ARGUS_TYPE_IPV4);
-            done++;
-         }
-#endif
-
-         if (!done) {
-#if defined(HAVE_GETADDRINFO)
-            struct addrinfo *host, hints;
-
-            bzero(&hints, sizeof(hints));
-            hints.ai_family   = AF_INET;
-
-            if ((retn = getaddrinfo(optarg, NULL, NULL, &host)) == 0) {
-               struct addrinfo *hptr = host;
-               do {
-                  switch (host->ai_family) {
-                     case AF_INET:  {
-                        struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
-                        unsigned int value;
-                        bcopy ((char *)&sa->sin_addr, (char *)&value, 4);
-
-                        setArgusID (src, &value, 4, ARGUS_TYPE_IPV4);
-                        done++;
-                        break;
-                     }
-                  }
-                  host = host->ai_next;
-               } while (host != NULL);
-
-               freeaddrinfo(hptr);
-
-            } else {
-               switch (retn) {
-                  case EAI_AGAIN:
-                     ArgusLog(LOG_ERR, "dns server not available");
-                     break;
-                  case EAI_NONAME: {
-                     ArgusLog(LOG_ERR, "srcid %s unknown", optarg);
-                     break;
-                  }
-#if defined(EAI_ADDRFAMILY)
-                  case EAI_ADDRFAMILY:
-                     ArgusLog(LOG_ERR, "srcid %s has no IP address", optarg);
-                     break;
-#endif
-                  case EAI_SYSTEM:
-                     ArgusLog(LOG_ERR, "srcid %s name server error %s", optarg, strerror(errno));
-                     break;
-               }
-            }
-
-#else  // HAVE_GETADDRINFO
-            struct hostent *host;
-
-            if ((host = gethostbyname(optarg)) != NULL) {
-               if ((host->h_addrtype == 2) && (host->h_length == 4)) {
-                  unsigned int value;
-                  bcopy ((char *) *host->h_addr_list, (char *)&value, host->h_length);
-                  setArgusID (src, &value,  4, ARGUS_TYPE_IPV4);
-
-               } else
-                  ArgusLog (LOG_ERR, "Probe ID %s error %s\n", optarg, strerror(errno));
-
-            } else {
-               if (optarg && isdigit((int)*optarg)) {
-                  setArgusID (src, optarg, 4, ARGUS_TYPE_INT);
-               } else
-                  ArgusLog (LOG_ERR, "Probe ID value %s is not appropriate (%s)\n", optarg, strerror(errno));
-            }
-#endif
-         }
-      }
-
-   } else
-      ArgusLog (LOG_ERR, "Probe ID value %s is not appropriate\n", optarg);
-}
-*/
 
 void
 ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)

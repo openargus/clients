@@ -400,7 +400,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                if (pass != 0) {
                   if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

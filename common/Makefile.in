@@ -79,7 +79,7 @@ TAGHDR = bpf/net/bpf.h
 
 TAGFILES = $(SRC) $(HDR) $(TAGHDR)
 
-LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_output.a @INSTALL_LIB@/argus_timer.a
+LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_timer.a
 
 OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ) $(TIMEROBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
@@ -117,10 +117,6 @@ all: $(LIBS)
 
 @INSTALL_LIB@/argus_client.a: $(CLIENTOBJ)
 	rm -f $@; ar qc $@ $(CLIENTOBJ)
-	-$(RANLIB) $@
-
-@INSTALL_LIB@/argus_output.a: $(OUTPUTOBJ)
-	rm -f $@; ar qc $@ $(OUTPUTOBJ)
 	-$(RANLIB) $@
 
 @INSTALL_LIB@/argus_event.a: $(EVENTOBJ)

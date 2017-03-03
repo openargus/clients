@@ -1167,7 +1167,7 @@ int ArgusProcessFileIndependantly = 0;
 struct ArgusAggregatorStruct *ArgusParseAggregator (struct ArgusParserStruct *, char *, char **);
 
 struct ArgusRecordStruct *ArgusGenerateRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *);
-struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *);
+struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 int ArgusGenerateCiscoRecord (struct ArgusRecordStruct *, unsigned char, char *);
 
 void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *); 
@@ -1328,7 +1328,7 @@ extern int ArgusProcessFileIndependantly;
 
 extern struct ArgusAggregatorStruct *ArgusParseAggregator (struct ArgusParserStruct *, char *, char **);
 extern struct ArgusRecordStruct *ArgusGenerateRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *);
-extern struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *);
+extern struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 extern int ArgusGenerateCiscoRecord (struct ArgusRecordStruct *, unsigned char, char *);
 
 extern void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *); 

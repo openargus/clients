@@ -1548,7 +1548,7 @@ extern char *lookup_alias(const u_char *, struct anamemem *);
 void ArgusFileFree(struct ArgusFileInput *afi);
 void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 
-extern char *lookup_srcid(const u_char *);
+extern char *lookup_srcid(const u_char *, struct anamemem *);
 
 #else
 #define ARGUSPRINTSTARTDATE		0
@@ -1845,7 +1845,11 @@ extern struct ArgusQueueHeader *ArgusPopQueue (struct ArgusQueueStruct *queue, i
 extern int ArgusAddToQueue(struct ArgusQueueStruct *, struct ArgusQueueHeader *, int);
 extern struct ArgusQueueHeader *ArgusRemoveFromQueue(struct ArgusQueueStruct *, struct ArgusQueueHeader *, int);
 
-extern int getArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
+extern void setArgusID(struct ArgusAddrStruct *, void *, int, unsigned int);
+extern void setTransportArgusID(struct ArgusTransportStruct *, void *, int, unsigned int);
+extern void setParserArgusID(struct ArgusParserStruct *, void *, int, unsigned int);
+
+extern int getParserArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
 extern unsigned int getArgusIDType(struct ArgusParserStruct *);
 
 extern void setArgusManInf (struct ArgusParserStruct *, char *);

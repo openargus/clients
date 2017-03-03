@@ -86,7 +86,6 @@ YACC = @V_YACC@
 	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
-OUTPUT = $(INSTALLLIB)/argus_output.a
 
 
 SRC =	rasql.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c
@@ -98,14 +97,14 @@ all: $(PROGS)
 $(INSTALLBIN)/rasql: rasql.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasql.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
-$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB) $(OUTPUT)
-	$(CC) $(CCOPT) -o $@ raclient.o rasqlinsert.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(OUTPUT) $(COMPATLIB) $(CURSESLIB)
+$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB)
+	$(CC) $(CCOPT) -o $@ raclient.o rasqlinsert.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(OUTPUT) $(COMPATLIB)
+	$(CC) $(CCOPT) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

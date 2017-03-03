@@ -125,6 +125,7 @@ struct ArgusClientData {
 
 struct ArgusOutputStruct {
    int status, format;
+   int version;
 
 #if defined(ARGUS_THREADS)
    pthread_t thread;
@@ -191,6 +192,9 @@ void ArgusChildExit (int);
 void ArgusClientError(void);
 void ArgusInitClientProcess(struct ArgusClientData *, struct ArgusWfileStruct *);
 
+void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
+int getArgusOutputVersion (struct ArgusOutputStruct *);
+
 #else
 
 #define ARGUS_MAXPROCESS		0x10000
@@ -208,6 +212,8 @@ struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
 struct ArgusRecordStruct *ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *);
 struct ArgusRecordStruct *ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *, unsigned char);
 
+extern void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
+extern int getArgusOutputVersion (struct ArgusOutputStruct *);
 void setArgusMarReportInterval (struct ArgusParserStruct *, char *);
 struct timeval *getArgusMarReportInterval(struct ArgusParserStruct *);
 void setArgusPortNum (struct ArgusParserStruct *, int, char *);

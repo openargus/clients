@@ -123,7 +123,11 @@
 
 int ArgusConnect(int, const struct sockaddr *, socklen_t, int);
 
-struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *);
+extern struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
+
+void ArgusGenerateV3CorrelateStruct(struct ArgusRecordStruct *);
+void ArgusGenerateCorrelateStruct(struct ArgusRecordStruct *);
+
 struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
 void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrvSignatures (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -5245,6 +5249,59 @@ ArgusGenerateCiscoRecord (struct ArgusRecordStruct *rec, unsigned char state, ch
    return (retn);
 }
 
+
+// Generating an ArgusV3CorellateStruct from an Argus V5 ArgusRecordStruct
+// involves modification of the transport struct that is in the ArgusCorrelateStruct.
+// V3 is shorter than V5, but the appropriate values are the same.
+
+
+void
+ArgusGenerateV3CorrelateStruct(struct ArgusRecordStruct *ns)
+{
+   struct ArgusCorStruct *cor;
+   int i;
+
+   if ((cor = ns->correlates) != NULL) {
+      struct ArgusV3CorrelateStruct *scor = NULL;
+      struct ArgusV3CorMetrics *met = NULL;
+      struct ArgusRecordStruct *sns;
+      int clen = 0;
+
+      clen  = sizeof(struct ArgusDSRHeader)/4 + (cor->count * sizeof(struct ArgusV3CorMetrics)/4);
+      if ((scor = ArgusCalloc(4, clen)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusGenerateV3CorrelateStruct ArgusCalloc error %s", strerror(errno));
+
+      scor->hdr.type    = ARGUS_COR_DSR;
+      scor->hdr.subtype = 0;
+      scor->hdr.argus_dsrvl8.qual = 0;
+      scor->hdr.argus_dsrvl8.len  = clen;
+
+      ns->dsrs[ARGUS_COR_INDEX] = &scor->hdr;
+      ns->dsrindex |= 0x01 << ARGUS_COR_INDEX;
+
+      met = &scor->metrics;
+
+      for (i = 0; i < ns->correlates->count; i++) {
+         if ((sns = ns->correlates->array[i]) != NULL) {
+            struct ArgusTransportStruct *trans = (void *)sns->dsrs[ARGUS_TRANSPORT_INDEX];
+            long long stime, ltime;
+
+            if (trans != NULL)
+               met->srcid.a_un.value = trans->srcid.a_un.value;
+
+            stime = RaGetuSecDuration (sns);
+            ltime = RaGetuSecDuration (ns);
+
+            met->deltaDur     = stime - ltime;
+            met->deltaStart   = (ArgusFetchStartuSecTime(sns) - ArgusFetchStartuSecTime(ns));
+            met->deltaLast    =  (ArgusFetchLastuSecTime(sns) - ArgusFetchLastuSecTime(ns));
+            met->deltaSrcPkts =  (ArgusFetchSrcPktsCount(sns) - ArgusFetchSrcPktsCount(ns));
+            met->deltaDstPkts =  (ArgusFetchDstPktsCount(sns) - ArgusFetchDstPktsCount(ns));
+            met++;
+         }
+      }
+   }
+}
 
 void
 ArgusGenerateCorrelateStruct(struct ArgusRecordStruct *ns)

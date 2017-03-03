@@ -337,7 +337,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                struct ArgusRecord *argusrec = NULL;
 
-               if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer)) != NULL) {
+               if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(argusrec);
 #endif

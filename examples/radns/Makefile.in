@@ -76,8 +76,7 @@ YACC = @V_YACC@
 	@rm -f $@
 	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
 
-LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a \
-      $(INSTALLLIB)/argus_client.a $(INSTALLLIB)/argus_output.a
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
 SRC   =	radns.c radomain.c rasql.c
 

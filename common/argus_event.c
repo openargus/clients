@@ -521,7 +521,7 @@ ArgusProcessSQLEvent (struct ArgusParserStruct *parser, struct ArgusEventObject 
    ArgusPrintTime (parser, etim, &etvp);
 
    if (ns != NULL) {
-      if ((argus = ArgusGenerateRecord (ns, 0L, ArgusSQLMessageBuffer)) == NULL)
+      if ((argus = ArgusGenerateRecord (ns, 0L, ArgusSQLMessageBuffer, ARGUS_VERSION)) == NULL)
          ArgusLog(LOG_ERR, "RaProcessSQLEvent: ArgusGenerateRecord error %s", strerror(errno));
 
 #ifdef _LITTLE_ENDIAN

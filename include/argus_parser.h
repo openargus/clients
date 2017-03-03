@@ -383,6 +383,7 @@ struct ArgusParserStruct {
    int ArgusStripFields;
    int ArgusDSRFields[ARGUSMAXDSRTYPE];
 
+   char *RadiumOutputVersion;
    char *RadiumArchive;
    char *ArgusMatchLabel;
 
