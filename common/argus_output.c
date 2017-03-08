@@ -1092,17 +1092,25 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
             if (rec->dsrs[0] != NULL) {
                struct ArgusMarStruct *man = (struct ArgusMarStruct *) &((struct ArgusRecord *) rec->dsrs[0])->ar_un.mar;
 
-               if (cp != NULL) {
-                  man->argusid = cp->addr.a_un.value;
-               } else {
-                  man->argusid = man->value;
+               if (man->major_version > ARGUS_VERSION_3) {
+                  if (((man->status & ARGUS_IDIS_UUID) == ARGUS_IDIS_UUID)  || ((man->status & ARGUS_IDIS_IPV6) == ARGUS_IDIS_IPV6)) {
+                     if (cp != NULL) {
+                        man->status &= ~(ARGUS_ID_INC_INF | ARGUS_IDIS_UUID | ARGUS_IDIS_IPV6 | ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4);
+                        man->status |= cp->type;
+                        man->argusid = cp->addr.a_un.value;
+                     } else {
+                        man->argusid = man->value;
+                     }
+                  } else {
+                     man->status &= ~ARGUS_ID_INC_INF;
+                  }
+                  bzero(&man->pad, sizeof(man->pad));
+                  man->thisid = 0;
+                  man->major_version = ARGUS_VERSION_3;
+
+                  retn->hdr.type   = ARGUS_MAR | ARGUS_VERSION_3;
+                  retn->hdr.cause &= ~ARGUS_SRC_RADIUM;
                }
-
-               bzero(&man->pad, sizeof(man->pad));
-               man->thisid = 0;
-
-               retn->hdr.type   = ARGUS_MAR | ARGUS_VERSION_3;
-               retn->hdr.cause &= ~ARGUS_SRC_RADIUM;
 
                bcopy ((char *)rec->dsrs[0], (char *) retn, rec->hdr.len * 4);
                retn->hdr = rec->hdr;
@@ -1125,6 +1133,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
          case ARGUS_NETFLOW:
          case ARGUS_FAR: {
             retn->hdr  = rec->hdr;
+            retn->hdr.type  &= ~ARGUS_VERSION_5;
             retn->hdr.type  |= ARGUS_VERSION_3;
 
             dsrindex = rec->dsrindex;

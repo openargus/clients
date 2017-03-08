@@ -2727,7 +2727,7 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
    parser->notNetflag = 0;
    parser->Oflag = 0;
    parser->pflag = 6;
-   parser->ArgusReliableConnection = 1;
+   parser->ArgusReliableConnection = 0;
    parser->Pflag = 0;
    parser->qflag = 0;
    parser->sflag = 0;
@@ -9391,6 +9391,7 @@ ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
       }
 
       case ARGUS_EVENT: {
+         sprintf (buf, "%*.*s ", len, len, " ");
          break;
       }
 
