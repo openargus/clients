@@ -148,9 +148,7 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 
    MUTEX_LOCK(ads->lock);
 
-   if (bp->op == BOOTREQUEST) {
-      ads->total_requests++;
-   } else if (bp->op == BOOTREPLY) {
+   if (bp->op == BOOTREPLY) {
       /* extract some data from the non-options portion of the packet */
       parsed.rep.yiaddr.s_addr = EXTRACT_32BITS(&bp->yiaddr.s_addr);
       parsed.rep.ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
@@ -158,9 +156,6 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       if (ehdr)
          memcpy(&parsed.rep.shaddr[0], &ehdr->ether_shost[0],
                 sizeof(ehdr->ether_shost));
-      ads->total_responses++;
-   } else {
-      ads->total_unknownops++;
    }
 
    if (memcmp((const char *)&bp->options[0], vm_rfc1048,
@@ -190,6 +185,13 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       else
          rabootp_cb_exec(&callback.xid_update, &parsed, ads);
    }
+
+   if (bp->op == BOOTREQUEST)
+      ads->total_requests++;
+   else if (bp->op == BOOTREPLY)
+      ads->total_responses++;
+   else
+      ads->total_unknownops++;
 
    MUTEX_UNLOCK(ads->lock);
 
