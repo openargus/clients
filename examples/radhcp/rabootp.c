@@ -39,6 +39,7 @@
 #include "interface.h"
 #include "rabootp.h"
 #include "dhcp.h"
+#include "argus_threads.h"
 #include "rabootp_client_tree.h"
 #include "rabootp_memory.h"
 #include "rabootp_fsa.h"
@@ -145,6 +146,8 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 
    memset(&parsed, 0, sizeof(parsed));
 
+   MUTEX_LOCK(ads->lock);
+
    if (bp->op == BOOTREQUEST) {
       ads->total_requests++;
    } else if (bp->op == BOOTREPLY) {
@@ -187,6 +190,8 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       else
          rabootp_cb_exec(&callback.xid_update, &parsed, ads);
    }
+
+   MUTEX_UNLOCK(ads->lock);
 
    ArgusDhcpStructFreeReplies(&parsed);
    ArgusDhcpStructFreeClientID(&parsed);

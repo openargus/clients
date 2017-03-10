@@ -195,12 +195,7 @@ struct ArgusDhcpStruct {
    uint8_t hlen;
    uint8_t refcount;
 
-   unsigned short total_responses; /* how many replies received with this xid */
-   unsigned short num_responders;  /* how many unique servers replied */
-   unsigned short total_requests;  /* how many request packets with this
-                                    * chaddr+xid
-                                    */
-   unsigned short total_unknownops;/* unknown opcodes received */
+   pthread_mutex_t *lock;
 
    /* second cacheline */
    struct ArgusDhcpV4RequstOptsStruct req;
@@ -211,7 +206,11 @@ struct ArgusDhcpStruct {
 
    /* fifth cacheline */
    struct ArgusDhcpV4Timers timers;
-   /* ... uint8_t pad[48] ... */
+   unsigned short total_responses; /* how many replies received with this xid */
+   unsigned short num_responders;  /* how many unique servers replied */
+   unsigned short total_requests;  /* request packets with this chaddr+xid */
+   unsigned short total_unknownops;/* unknown opcodes received */
+   /* ... uint8_t pad[40] ... */
 };
 
 void RabootpCleanup(void);

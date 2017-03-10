@@ -16,6 +16,12 @@ ArgusDhcpStructAlloc(void)
    if (res) {
       memset(res, 0, sizeof(struct ArgusDhcpStruct));
       res->refcount = 1;
+      res->lock = ArgusMalloc(sizeof(*res->lock));
+      if (res->lock == NULL) {
+         ArgusFree(res);
+         return NULL;
+      }
+      MUTEX_INIT(res->lock, NULL);
    }
    return res;
 }
@@ -53,6 +59,8 @@ ArgusDhcpStructFree(void *v)
       if (--(a->refcount) == 0) {
          ArgusDhcpStructFreeClientID(v);
          ArgusDhcpStructFreeReplies(v);
+         MUTEX_DESTROY(a->lock);
+         ArgusFree(a->lock);
          ArgusFree(a);
       }
       MUTEX_UNLOCK(&__memlock);
