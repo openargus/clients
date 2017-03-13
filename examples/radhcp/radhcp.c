@@ -141,17 +141,35 @@ ArgusHandleSearchCommand (char *command)
 char **
 ArgusHandleTreeCommand (char *command)
 {
-   char *string = &command[10], *sptr;
+   static char buf[4096];
+
+   char *string = &command[6], *sptr;
    int slen = strlen(string);
    char **retn = ArgusHandleResponseArray;
+   char *result;
+   int verbose = 0;
  
-   sptr = &string[slen - 1];
-   while (isspace((int)*sptr)) {*sptr-- = '\0';}
+   if (*string == 'v')
+      verbose = 1;
+
+   buf[0] = '\0';
+   result = RabootpDumpTreeStr(verbose);
+   if (result) {
+      strncpy(&buf[0], result, sizeof(buf));
+      free(result);
+   }
  
-   retn[0] = "OK\n";
-   retn[1] = NULL;
+   if (result) {
+      retn[0] = "OK\n";
+      retn[1] = &buf[0];
+      retn[2] = "\n";
+      retn[3] = NULL;
+   } else {
+      retn[0] = "FAIL\n";
+      retn[1] = NULL;
+   }
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusHandleTreeCommand(%s) filter %s", string, retn);
+   ArgusDebug (1, "%s(%s) result %s", __func__, string, retn[0]);
 #endif
    return retn;
 }
