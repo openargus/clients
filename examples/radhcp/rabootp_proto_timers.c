@@ -43,6 +43,7 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
    struct ArgusDhcpStruct *ads = tim->data;
    MUTEX_LOCK(ads->lock);
    ads->flags |= ARGUS_DHCP_LEASEEXP;
+   ads->timers.lease = NULL;
    MUTEX_UNLOCK(ads->lock);
 
    /* decrement refcount -- timer tree is done with this. */
@@ -77,6 +78,8 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
 
       ArgusDhcpStructUpRef(cached);
       cached->flags &= ~ARGUS_DHCP_LEASEEXP;
+      if (cached->timers.lease)
+          RabootpTimerStop(rts, cached->timers.lease);
       cached->timers.lease = RabootpTimerStart(rts, &exp, __lease_exp_cb,
                                                cached);
    }
