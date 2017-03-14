@@ -499,16 +499,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
 
-         if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
-
-
          if ((mode = parser->ArgusModeList) != NULL) {
             int i, x, ind;
 
             while (mode) {
                for (i = 0, ind = -1; i < ARGUSSPLITMODENUM; i++) {
                   if (!(strncasecmp (mode->mode, RaSplitModes[i], strlen(RaSplitModes[i])))) {
+                     if (parser->RaBinProcess == NULL)
+                        if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
+                           ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+
 
 #if defined(ARGUS_THREADS)
                      pthread_mutex_init(&parser->RaBinProcess->lock, NULL);
@@ -1642,7 +1642,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (6, "ArgusProcessThisRecord () returning\n"); 
+   ArgusDebug (3, "ArgusProcessThisRecord () returning\n"); 
 #endif
 }
 
