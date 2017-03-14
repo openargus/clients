@@ -25,18 +25,40 @@
  * while after expiration for use by streaming analytics.
  */
 
+#include "argus_threads.h"
 #include "rabootp.h"
+#include "rabootp_memory.h"
 
 /* This function should only be called from the timer thread */
 static ArgusTimerResult
 __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
 {
-   /* TODO: add transaction to expired queue for main thread to find */
+   /* TODO: start hold-down timer and remove transaction from tree
+    * if the timer expires.
+    * TODO: Don't call mutex functions here.  Add work item to queue
+    * for a "bottom half" thread to handle so we don't block the timer
+    * thread.
+    */
+
+   struct ArgusDhcpStruct *ads = tim->data;
+   MUTEX_LOCK(ads->lock);
+   ads->flags |= ARGUS_DHCP_LEASEEXP;
+   MUTEX_UNLOCK(ads->lock);
+
+   /* decrement refcount -- timer tree is done with this. */
+   ArgusDhcpStructFree(ads);
+
    return FINISHED;
 }
 
-/* This function changes the contents of the cached transaction and shoud
+/* This function changes the contents of the cached transaction and should
  * only be called from the main/parse thread
+ *
+ * PREREQ: calling function must hold reference to v_cached
+ *         (must have incremented refcount) so that the reference
+ *         count can safely be incremented here without holding the
+ *         client tree lock!!!  Caller must hold v_cached->lock.
+ *
  */
 static int
 RabootpProtoTimersLeaseSet(const void * const v_parsed,
@@ -53,6 +75,7 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
          .tv_sec = parsed->rep.leasetime,
       };
 
+      ArgusDhcpStructUpRef(cached);
       cached->flags &= ~ARGUS_DHCP_LEASEEXP;
       cached->timers.lease = RabootpTimerStart(rts, &exp, __lease_exp_cb,
                                                cached);
