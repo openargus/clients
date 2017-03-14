@@ -1187,10 +1187,10 @@ __rabootp_dump_node(void *arg0, struct ArgusDhcpClientNode *node)
                       i == (data->hlen-1) ? ' ' : ':');
    }
    snprintf_append(s->str, &s->len, &s->remain,
-            "XID %08x msgtypemask %04x %u/%u/%u/%u state %u\n",
+            "XID %08x msgtypemask %04x %u/%u/%u/%u state %u flags %02x\n",
             data->xid, data->msgtypemask, data->total_responses,
             data->num_responders, data->total_requests,
-            data->total_unknownops, (unsigned)data->state);
+            data->total_unknownops, (unsigned)data->state, data->flags);
    MUTEX_UNLOCK(data->lock);
    return 0;
 }

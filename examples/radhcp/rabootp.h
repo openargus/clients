@@ -180,6 +180,10 @@ struct ArgusDhcpV4Timers {
    void *non_lease;     /* DHCPDISCOVER, DHCPREQUEST, DHCPRENEW */
 };
 
+enum ArgusDhcpStructFlags {
+   ARGUS_DHCP_LEASEEXP = 0x1,
+};
+
 /* chaddr + xid uniquely identifies host state */
 /* IP addresses are in network byte order */
 struct ArgusDhcpStruct {
@@ -187,7 +191,8 @@ struct ArgusDhcpStruct {
    unsigned char chaddr[16];       /* client L2 address */
    unsigned char shaddr[16];       /* accepted server's L2 address */
    struct ArgusDhcpV6DUID server_id_v6; /* 10 bytes */
-   uint8_t pad0[2];
+   uint8_t pad0;
+   uint8_t flags;
    struct in_addr server_id_v4;
 
    uint32_t xid;                   /* transaction ID from dhcp packet */

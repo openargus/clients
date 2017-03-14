@@ -53,6 +53,7 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
          .tv_sec = parsed->rep.leasetime,
       };
 
+      cached->flags &= ~ARGUS_DHCP_LEASEEXP;
       cached->timers.lease = RabootpTimerStart(rts, &exp, __lease_exp_cb,
                                                cached);
    }
