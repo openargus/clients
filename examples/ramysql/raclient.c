@@ -38,6 +38,7 @@
 #include <sys/wait.h>
 
 #include <rasqlinsert.h>
+#include <argus_output.h>
 
 #define RA_IDLE                 0
 #define RA_ACTIVE               1
@@ -66,6 +67,7 @@
 #endif
 
 void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
 
 #if defined(ARGUS_MYSQL)
 #include <argus_mysql.h>
@@ -107,6 +109,8 @@ void ArgusGetInterfaceAddresses(struct ArgusParserStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
+
+struct RaBinProcessStruct *RaBinProcess = NULL;
  
 void
 ArgusThreadsInit(pthread_attr_t *attr)
@@ -505,15 +509,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             while (mode) {
                for (i = 0, ind = -1; i < ARGUSSPLITMODENUM; i++) {
                   if (!(strncasecmp (mode->mode, RaSplitModes[i], strlen(RaSplitModes[i])))) {
-                     if (parser->RaBinProcess == NULL)
+                     if (RaBinProcess == NULL) {
                         if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
                            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
-
 #if defined(ARGUS_THREADS)
-                     pthread_mutex_init(&parser->RaBinProcess->lock, NULL);
+                        pthread_mutex_init(&parser->RaBinProcess->lock, NULL);
 #endif
-                     nadp = &parser->RaBinProcess->nadp;
+                        parser->RaBinProcess = RaBinProcess;
+                     }
+                     nadp = &RaBinProcess->nadp;
 
                      nadp->mode   = -1;
                      nadp->modify =  0;
@@ -650,7 +655,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                            ArgusParser->timeout.tv_usec = 0;
                         }
 
-                        parser->RaBinProcess->rtime.tv_sec = tsec;
+                        RaBinProcess->rtime.tv_sec = tsec;
 
                         if (RaCursesRealTime)
                            nadp->start.tv_sec = 0;
@@ -704,7 +709,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   }
 
 
-                  parser->RaBinProcess->size = nadp->size;
+                  RaBinProcess->size = nadp->size;
 
                   if (nadp->mode < 0) {
                      nadp->mode = ARGUSSPLITCOUNT;
@@ -1016,9 +1021,144 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 void RaArgusInputComplete (struct ArgusInput *input) {
 }
 
+
+int
+RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps)
+{
+   struct RaBinStruct *bin = NULL;
+   struct ArgusRecordStruct *ns = NULL;
+   int max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+   int startsecs = 0, endsecs = 0, i;
+   int retn = 0;
+
+   char stimebuf[128], dtimebuf[128], etimebuf[128];
+   int bins;
+
+   if (rbps->array != NULL) {
+      if (!(parser->tflag)) {
+         for (i = 0; i < max; i++) {
+            if ((bin = rbps->array[i]) != NULL) {
+               if (startsecs == 0)
+                  startsecs = bin->stime.tv_sec;
+               endsecs = bin->etime.tv_sec;
+            }
+         }
+
+         rbps->startpt.tv_sec = startsecs;
+         rbps->scalesecs      = (endsecs - startsecs) + (rbps->size / 1000000);
+
+         if ((parser->RaEndTime.tv_sec >  rbps->endpt.tv_sec) ||
+                  ((parser->RaEndTime.tv_sec == rbps->endpt.tv_sec) &&
+                   (parser->RaEndTime.tv_usec > rbps->endpt.tv_usec)))
+            parser->RaEndTime = rbps->endpt;
+
+      } else {
+         rbps->startpt.tv_sec  = parser->startime_t.tv_sec;
+         rbps->startpt.tv_usec = parser->startime_t.tv_usec;
+         rbps->endpt.tv_sec    = parser->lasttime_t.tv_sec;
+         rbps->endpt.tv_usec   = parser->lasttime_t.tv_usec;
+         rbps->scalesecs       = parser->lasttime_t.tv_sec - parser->startime_t.tv_sec;
+         rbps->start           = parser->startime_t.tv_sec * 1000000LL;
+      }
+
+      if ((parser->ArgusWfileList == NULL) && (parser->Gflag)) {
+         if (parser->Hstr != NULL) {
+
+         } else {
+
+            ArgusPrintTime(parser, stimebuf, &rbps->startpt);
+            ArgusPrintTime(parser, dtimebuf, &rbps->endpt);
+            ArgusPrintTime(parser, etimebuf, &parser->RaEndTime);
+
+            stimebuf[strlen(stimebuf) - 1] = '\0';
+            dtimebuf[strlen(dtimebuf) - 1] = '\0';
+            etimebuf[strlen(etimebuf) - 1] = '\0';
+
+            printf ("StartTime=%s\n", stimebuf);
+            printf ("StopTime=%s\n",  dtimebuf);
+            printf ("LastTime=%s\n",  etimebuf);
+            printf ("Seconds=%d\n", rbps->scalesecs);
+            printf ("BinSize=%1.*f\n", parser->pflag, (rbps->size * 1.0)/1000000);
+            bins = ((rbps->scalesecs + (rbps->size/1000000 - 1))/(rbps->size / 1000000));
+            printf ("Bins=%d\n", bins);
+         }
+      }
+   }
+
+   for (i = rbps->index; i < max; i++) {
+      if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+         struct ArgusAggregatorStruct *agg = bin->agg;
+
+         if (ArgusParser->ArgusGenerateManRecords) {
+            struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_START);
+            struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
+            rec->argus_mar.startime.tv_sec  = bin->stime.tv_sec;
+            rec->argus_mar.startime.tv_usec = bin->stime.tv_usec;
+            rec->argus_mar.now.tv_sec       = bin->stime.tv_sec;
+            rec->argus_mar.now.tv_usec      = bin->stime.tv_usec;
+
+            RaSendArgusRecord (man);
+            ArgusDeleteRecordStruct(ArgusParser, man);
+         }
+
+         while (agg) {
+            int rank = 0;
+            ArgusSortQueue(ArgusSorter, agg->queue, ARGUS_LOCK);
+            while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(agg->queue, ARGUS_NOLOCK)) != NULL) {
+               ns->rank = rank++;
+               if ((parser->eNoflag == 0 ) || ((parser->eNoflag >= (ns->rank + 1)) && (parser->sNoflag <= (ns->rank + 1))))
+                  RaSendArgusRecord (ns);
+               ArgusDeleteRecordStruct(parser, ns);
+            }
+            agg = agg->nxt;
+         }
+
+         if (ArgusParser->ArgusGenerateManRecords) {
+            struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP);
+            struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
+            rec->argus_mar.startime.tv_sec  = bin->etime.tv_sec;
+            rec->argus_mar.startime.tv_usec = bin->etime.tv_usec;
+            rec->argus_mar.now.tv_sec       = bin->etime.tv_sec;
+            rec->argus_mar.now.tv_usec      = bin->etime.tv_usec;
+
+            RaSendArgusRecord (man);
+            ArgusDeleteRecordStruct(ArgusParser, man);
+         }
+
+      } else {
+         if (rbps->nadp.zero && ((i >= rbps->index) && 
+                 ((((i - rbps->index) * 1.0) * rbps->size) < (rbps->scalesecs * 1000000LL)))) {
+            long long tval = rbps->start + (rbps->size * (i - rbps->index));
+
+            ns = ArgusGenerateRecordStruct(NULL, NULL, NULL);
+
+            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.start.tv_sec  = tval / 1000000;
+            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.start.tv_usec = tval % 1000000;
+
+            tval += rbps->size;
+            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec    = tval / 1000000;;
+            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.end.tv_usec   = tval % 1000000;
+
+            RaSendArgusRecord (ns);
+         }
+      }
+   }
+
+   for (i = rbps->index; i < max; i++) {
+      if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+         RaDeleteBin(parser, bin);
+      }
+   }
+
+   if (rbps->array != NULL) ArgusFree(rbps->array);
+   ArgusFree(rbps);
+   return (retn);
+}
+
 void
 RaParseComplete (int sig)
 {
+
    if (sig >= 0) {
       if (ArgusParser && !ArgusParser->RaParseCompleting++) {
 #ifdef ARGUSDEBUG
@@ -1026,6 +1166,11 @@ RaParseComplete (int sig)
 #endif
 
          ArgusProcessSqlData(RaCurrentWindow);
+
+         if (RaBinProcess != NULL) {
+            RaDeleteBinProcess(ArgusParser, RaBinProcess);
+            RaBinProcess = NULL;
+         }
 
          switch (sig) {
             case SIGHUP:
@@ -1058,6 +1203,8 @@ RaParseComplete (int sig)
                      }
                   }
                }
+
+     
                break;
             }
 
@@ -1095,10 +1242,10 @@ ArgusClientTimeout ()
          RaProcessDebugTimer.tv_sec++;
       } else
       if (RaProcessDebugTimer.tv_sec < tvp->tv_sec)
-         RaProcessDebugTimer.tv_sec = tvp->tv_sec + 1;
+         RaProcessDebugTimer.tv_sec = tvp->tv_sec + 5;
          
    } else
-      RaProcessDebugTimer.tv_sec = tvp->tv_sec + 1;
+      RaProcessDebugTimer.tv_sec = tvp->tv_sec + 5;
 
 
    if (ArgusParser->RaClientUpdate.tv_sec != 0) {
@@ -1107,7 +1254,14 @@ ArgusClientTimeout ()
           ((ArgusParser->RaClientUpdate.tv_sec == tvp->tv_sec) &&
            (ArgusParser->RaClientUpdate.tv_usec < tvp->tv_usec)))) {
 
-         ArgusProcessQueue(queue, 0);
+         if ((RaBinProcess != NULL) && (RaBinProcess->array != NULL)) {
+            struct RaBinStruct *bin = NULL;
+            if ((bin = RaBinProcess->array[RaBinProcess->index]) != NULL) {
+               struct ArgusAggregatorStruct *agg = bin->agg;
+
+               ArgusProcessQueue(agg->queue, 0);
+            }
+         }
 
          ArgusParser->RaClientUpdate.tv_sec  += RaProcessQueueTimer.tv_sec;
          ArgusParser->RaClientUpdate.tv_usec += RaProcessQueueTimer.tv_usec;
@@ -1318,14 +1472,17 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 #endif
 }
 
+
+
+
 void
-RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
+RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-   struct ArgusRecordStruct *tns = NULL, *pns = NULL, *cns = NULL;
-   struct ArgusAggregatorStruct *tagg, *agg = parser->ArgusAggregator;
-   struct RaBinProcessStruct *RaBinProcess = parser->RaBinProcess;
-   struct ArgusHashStruct *hstruct = NULL;
-   int found = 0;
+   struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
+   int found = 0, offset, tstrat;
+
+   extern int ArgusTimeRangeStrategy;
+
 
    if (ArgusParser->RaClientUpdate.tv_sec == 0) {
       ArgusParser->RaClientUpdate.tv_sec = parser->ArgusGlobalTime.tv_sec;
@@ -1343,7 +1500,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
       if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
          char stable[MAXSTRLEN];
-         if ((table = ArgusCreateSQLSaveTableName(parser, ns, RaSQLSaveTable)) == NULL)
+         if ((table = ArgusCreateSQLSaveTableName(parser, argus, RaSQLSaveTable)) == NULL)
             return;
 
          sprintf (stable, "%s.%s", RaDatabase, table);
@@ -1417,226 +1574,90 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #endif
 
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
-      struct ArgusFlow *flow = NULL;
+      while (agg && !found) {
+         int retn = 0, fretn = -1, lretn = -1;
+         if (ArgusParser->tflag) {
+            tstrat = ArgusTimeRangeStrategy;
+            ArgusTimeRangeStrategy = 1;
+         }
 
-      if (MUTEX_LOCK(&RaOutputProcess->queue->lock) == 0) {
-         while (agg && !found) {
-            int retn = 0, fretn = -1, lretn = -1;
+         if (agg->filterstr) {
+            struct nff_insn *fcode = agg->filter.bf_insns;
+            fretn = ArgusFilterRecord (fcode, argus);
+         }
 
-            if (agg->filterstr) {
-               struct nff_insn *fcode = agg->filter.bf_insns;
-               fretn = ArgusFilterRecord (fcode, ns);
-            }
-
-            if (agg->grepstr) {
-               struct ArgusLabelStruct *label;
-               if (((label = (void *)ns->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
-                  if (regexec(&agg->lpreg, label->l_un.label, 0, NULL, 0))
+         switch (argus->hdr.type & 0xF0) {
+            default:
+            case ARGUS_EVENT:
+            case ARGUS_MAR:
+            case ARGUS_NETFLOW:
+            case ARGUS_FAR: {
+               if (agg->grepstr) {
+                  struct ArgusLabelStruct *label;
+                  if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+                     if (regexec(&agg->lpreg, label->l_un.label, 0, NULL, 0))
+                        lretn = 0;
+                     else
+                        lretn = 1;
+                  } else
                      lretn = 0;
-                  else
-                     lretn = 1;
-               } else
-                  lretn = 0;
-            }
-
-            retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
-
-            if (retn != 0) {
-               cns = ArgusCopyRecordStruct(ns);
-
-               if (agg->mask) {
-                  if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
-                     agg->rap = agg->drap;
-
-                  ArgusGenerateNewFlow(agg, cns);
-                  agg->ArgusMaskDefs = NULL;
-
-                  if ((hstruct = ArgusGenerateHashStruct(agg, cns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
-                     if ((pns = ArgusFindRecord(RaOutputProcess->htable, hstruct)) == NULL) {
-                        flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
-                        int tryreverse = 0;
-
-                        if (flow != NULL) {
-                           if (agg->correct != NULL)
-                              tryreverse = 1;
-
-                           switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                              case ARGUS_TYPE_IPV4: {
-                                 switch (flow->ip_flow.ip_p) {
-                                    case IPPROTO_ESP:
-                                       tryreverse = 0;
-                                       break;
-                                 }
-                                 break;
-                              }
-                              case ARGUS_TYPE_IPV6: {
-                                 switch (flow->ipv6_flow.ip_p) {
-                                    case IPPROTO_ESP:
-                                       tryreverse = 0;
-                                       break;
-                                 }
-                                 break;
-                              }
-                           }
-
-                           if (!parser->RaMonMode && tryreverse) {
-                              struct ArgusRecordStruct *dns = ArgusCopyRecordStruct(cns);
-
-                              ArgusReverseRecord (dns);
-
-                              ArgusGenerateNewFlow(agg, dns);
-                              flow = (struct ArgusFlow *) dns->dsrs[ARGUS_FLOW_INDEX];
-
-                              if ((hstruct = ArgusGenerateHashStruct(agg, dns, flow)) == NULL)
-                                 ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-                              if ((pns = ArgusFindRecord(RaOutputProcess->htable, hstruct)) != NULL) {
-                                 ArgusDeleteRecordStruct(ArgusParser, cns);
-                                 cns = dns;
-
-                              } else {
-                                 ArgusDeleteRecordStruct(ArgusParser, dns);
-                                 flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
-                                 if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
-                                    ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-                              }
-                           }
-                        }
-                     }
-
-                     if ((pns) && pns->qhdr.queue) {
-                        if (pns->qhdr.queue != RaOutputProcess->queue)
-                           ArgusRemoveFromQueue (pns->qhdr.queue, &pns->qhdr, ARGUS_LOCK);
-                        else
-                           ArgusRemoveFromQueue (pns->qhdr.queue, &pns->qhdr, ARGUS_NOLOCK);
-
-                        ArgusAddToQueue (RaOutputProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-                        pns->status |= ARGUS_RECORD_MODIFIED;
-                     } else {
-                        tagg = agg;
-                        agg = agg->nxt;
-                     }
-                  }
                }
-               found++;
-
-            } else
-               agg = agg->nxt;
+               break;
+            }
          }
 
-         if (agg == NULL)
-            agg = tagg;
+         retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
-         if (cns) {
-         if (!(RaBinProcess && (RaBinProcess->nadp.mode == ARGUSSPLITTIME))) {
-            if (pns) {
-               ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
-               ArgusDeleteRecordStruct(ArgusParser, cns);
-               pns->status |= ARGUS_RECORD_MODIFIED;
-            } else {
-               if (!found)    // If we didn't find a pns, we'll need to setup to insert the cns
-                  if ((hstruct = ArgusGenerateHashStruct(agg, pns, flow)) == NULL)
-                     ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+         if (retn != 0) {
+            struct ArgusRecordStruct *tns = NULL, *ns = NULL;
 
-               if (RaSQLCacheDB) 
-                  pns = RaLookupDBCache (parser, agg, cns, hstruct);
+            ns = ArgusCopyRecordStruct(argus);
 
-               if (pns == NULL) {
-                  pns = cns;
+            if (agg->labelstr)
+               ArgusAddToRecordLabel(parser, ns, agg->labelstr);
 
-#if defined(ARGUS_MYSQL)
-                  pns->status |= ARGUS_SQL_INSERT;
-                  pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
-#endif
-                           
-                  pns->htblhdr = ArgusAddHashEntry (RaOutputProcess->htable, pns, hstruct);
-                  ArgusAddToQueue (RaOutputProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-                  pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
+            ArgusAlignInit(parser, ns, &RaBinProcess->nadp);
+
+            offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
+
+            while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
+               if ((retn = ArgusCheckTime (parser, tns)) != 0) {
+                  switch (ns->hdr.type & 0xF0) {
+                     case ARGUS_EVENT:
+                     case ARGUS_MAR:
+                        if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                           ArgusDeleteRecordStruct(parser, tns);
+                        break;
+
+                     case ARGUS_NETFLOW:
+                     case ARGUS_FAR: {
+                        struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+
+                        if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
+                           if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                              ArgusDeleteRecordStruct(parser, tns);
+                        } else 
+                           ArgusDeleteRecordStruct(parser, tns);
+                        break;
+                     }
+                  }
 
                } else
-                  ArgusDeleteRecordStruct(ArgusParser, cns);
-            }
-               
-         } else {
-            ArgusAlignInit(parser, cns, &RaBinProcess->nadp);
-
-            while (!(cns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, cns, &RaBinProcess->nadp)) != NULL)) {
-               int offset = 0;
-
-               if (pns) {
-                  if (pns->bins) {
-                     pns->bins->nadp.RaStartTmStruct = RaBinProcess->nadp.RaStartTmStruct;
-                     pns->bins->nadp.RaEndTmStruct   = RaBinProcess->nadp.RaEndTmStruct;
-
-                     if (!(ArgusInsertRecord (parser, pns->bins, tns, offset))) {
-                        ArgusDeleteRecordStruct(ArgusParser, tns);
-                        tns = NULL;
-                     }
-
-                     pns->bins->status |= RA_DIRTYBINS;
-
-                  } else {
-                     ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, tns);
-                     ArgusDeleteRecordStruct(ArgusParser, tns);
-                     tns = NULL;
-                     pns->status |= ARGUS_RECORD_MODIFIED;
-                  }
-
-                  ArgusRemoveFromQueue(RaOutputProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-                  ArgusAddToQueue (RaOutputProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-
-               } else {
-
-                  // didn't find a cache, so ...
-                  // go ahead and insert the record, and schedule a select to
-                  // fetch from database... First marked as insert, but the return
-                  // from the select could convert that to update.
-
-                  if (!found) 
-                     if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
-                        ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-                  if (RaSQLCacheDB) 
-                     pns = RaLookupDBCache (parser, agg, cns, hstruct);
-
-                  if (pns == NULL) {
-                     if ((pns =  ArgusCopyRecordStruct(tns)) != NULL) {                            // new record
-                        pns->htblhdr = ArgusAddHashEntry (RaOutputProcess->htable, pns, hstruct);
-                        ArgusAddToQueue (RaOutputProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-#if defined(ARGUS_MYSQL)
-                        pns->status |= ARGUS_SQL_INSERT;
-                        pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
-#endif
-                     }
-                  }
-
-                  if (pns) {
-                     if (pns->bins == NULL)
-                        if ((pns->bins = (struct RaBinProcessStruct *)ArgusNewRateBins(parser, pns)) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusProcessThisRecord: ArgusNewRateBins error %s", strerror(errno));
-
-                     if (!(ArgusInsertRecord (parser, pns->bins, tns, offset))) 
-                        ArgusDeleteRecordStruct(ArgusParser, tns);
-
-                     pns->bins->status |= RA_DIRTYBINS;
-                  }
-               }
-               RaWindowModified = RA_MODIFIED;
+                  ArgusDeleteRecordStruct(parser, tns);
             }
 
-            ArgusDeleteRecordStruct(ArgusParser, cns);
+            ArgusDeleteRecordStruct(parser, ns);
+            found++;
          }
-         }
-
-         MUTEX_UNLOCK(&RaOutputProcess->queue->lock);
+         agg = agg->nxt;
       }
 
    } else {
       char *tbl = NULL;
 // no key, so we're just inserting the record at the end of the table 
       if ((tbl = ArgusGetSQLSaveTable()) != NULL) {
-         ns->status |= ARGUS_SQL_INSERT;
-         ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, ns, tbl, ARGUS_STATUS);
+         argus->status |= ARGUS_SQL_INSERT;
+         ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, argus, tbl, ARGUS_STATUS);
          free(tbl);
       }
    }
