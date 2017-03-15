@@ -962,7 +962,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    int found = 0, offset, tstrat;
 
    while (agg && !found) {
-      int retn = 0, fretn = -1, lretn = -1;
+      int tretn = -1, fretn = -1, lretn = -1;
+
       if (ArgusParser->tflag) {
          tstrat = ArgusTimeRangeStrategy;
          ArgusTimeRangeStrategy = 1;
@@ -993,9 +994,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          }
       }
 
-      retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
+      tretn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
-      if (retn != 0) {
+      if (tretn != 0) {
          struct ArgusRecordStruct *tns = NULL, *ns = NULL;
 
          ns = ArgusCopyRecordStruct(argus);
@@ -1008,11 +1009,13 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
 
          while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
-            if ((retn = ArgusCheckTime (parser, tns)) != 0) {
+            if ((tretn = ArgusCheckTime (parser, tns)) != 0) {
+               struct ArgusRecordStruct *rec = NULL;
+
                switch (ns->hdr.type & 0xF0) {
                   case ARGUS_EVENT:
                   case ARGUS_MAR:
-                     if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                     if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
                         ArgusDeleteRecordStruct(parser, tns);
                      break;
 
@@ -1021,7 +1024,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 
                      if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                        if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                        if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
                            ArgusDeleteRecordStruct(parser, tns);
                      } else 
                         ArgusDeleteRecordStruct(parser, tns);

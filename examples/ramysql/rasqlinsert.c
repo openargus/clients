@@ -324,7 +324,7 @@ main(int argc, char **argv)
       }
 #endif
 
-      if ((pthread_create(&RaCursesThread, NULL, ArgusOutputProcess, NULL)) != 0)
+      if ((pthread_create(&RaOutputThread, NULL, ArgusOutputProcess, ArgusParser)) != 0)
          ArgusLog (LOG_ERR, "ArgusOutputProcess() pthread_create error %s\n", strerror(errno));
  
       if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
@@ -333,7 +333,6 @@ main(int argc, char **argv)
       pthread_join(RaDataThread, NULL);
       ArgusCloseDown = 1;
 
-//    pthread_join(RaCursesThread, NULL);
       pthread_join(RaMySQLInsertThread, NULL);
       pthread_join(RaMySQLUpdateThread, NULL);
       pthread_join(RaMySQLSelectThread, NULL);
@@ -387,70 +386,49 @@ void RaUpdateHeaderWindow(WINDOW *);
 void RaUpdateDebugWindow(WINDOW *);
 void RaUpdateStatusWindow(WINDOW *);
 void ArgusOutputProcessInit(void);
-void ArgusOutputProcessClose(void);
-void ArgusProcessSqlData(struct ArgusWindowStruct *);
+void ArgusOutputProcessClose(struct ArgusParserStruct *);
+void ArgusProcessSqlData(struct RaBinStruct *);
 
 int ArgusFetchWindowData(struct ArgusWindowStruct *);
 
 static void *
 ArgusOutputProcess (void *arg)
 {
+   struct ArgusParserStruct *parser = (struct ArgusParserStruct *) arg;
    const struct timespec ts = {0, 200000000};
 
    struct timeval ntvbuf, *ntvp = &ntvbuf;
    struct timeval tvbuf, *tvp = &tvbuf;
 
    gettimeofday(ntvp, NULL);
-   ArgusOutputProcessInit();
 
    while (!ArgusCloseDown) {
-      int cnt = 0;
       gettimeofday(tvp, NULL);
 
-      if (MUTEX_LOCK(&RaCursesLock) == 0) {
+      if (((tvp->tv_sec > ntvp->tv_sec) || ((tvp->tv_sec  == ntvp->tv_sec) && (tvp->tv_usec >  ntvp->tv_usec)))) {
+         struct RaBinProcessStruct *rbps = RaBinProcess;
+         struct RaBinStruct *bin = NULL;
 
-         if ((cnt = ArgusWindowQueue->count) > 0) {
-            int i, retn;
+         int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
 
-            for (i = 0; i < cnt; i++) {
-               struct ArgusWindowStruct *ws = (struct ArgusWindowStruct *)ArgusPopQueue(ArgusWindowQueue, ARGUS_LOCK);
-
-               if ((retn = ws->data(ws)) > 0) {
-                  if (ws == RaDataWindowStruct) {
-
-                     struct ArgusQueueStruct *queue = RaOutputProcess->queue;
-
-//                   if (MUTEX_LOCK(&queue->lock) == 0) {
-                        if (queue->status & RA_MODIFIED)
-                           ArgusTouchScreen();
-//                      MUTEX_UNLOCK(&queue->lock);
-//                   }
-
-                     if (RaWindowImmediate || ((tvp->tv_sec > ntvp->tv_sec) || ((tvp->tv_sec  == ntvp->tv_sec) &&
-                                                                                (tvp->tv_usec >  ntvp->tv_usec)))) {
-                        ArgusProcessSqlData(ws);
-                        ntvp->tv_sec  = tvp->tv_sec  + RaCursesUpdateInterval.tv_sec;
-                        ntvp->tv_usec = tvp->tv_usec + RaCursesUpdateInterval.tv_usec;
-                        while (ntvp->tv_usec > 1000000) {
-                           ntvp->tv_sec  += 1;
-                           ntvp->tv_usec -= 1000000;
-                        }
-                        RaWindowImmediate = FALSE;
-                     }
-
-                     ArgusProcessSqlData(ws);
-                  }
-               }
-               ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
+         for (i = rbps->index; i < max; i++) {
+            if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+               ArgusProcessSqlData(bin);
             }
          }
 
-         MUTEX_UNLOCK(&RaCursesLock);
+         ntvp->tv_sec  = tvp->tv_sec  + RaCursesUpdateInterval.tv_sec;
+         ntvp->tv_usec = tvp->tv_usec + RaCursesUpdateInterval.tv_usec;
+         while (ntvp->tv_usec > 1000000) {
+            ntvp->tv_sec  += 1;
+            ntvp->tv_usec -= 1000000;
+         }
       }
+
       nanosleep (&ts, NULL);
    }
 
-   ArgusOutputProcessClose();
+   ArgusOutputProcessClose(parser);
 
 #if defined(ARGUS_THREADS)
    pthread_exit (NULL);
@@ -461,41 +439,31 @@ ArgusOutputProcess (void *arg)
 
 
 void
-ArgusProcessSqlData(struct ArgusWindowStruct *ws)
+ArgusProcessSqlData(struct RaBinStruct *bin)
 {
-   WINDOW *win = ws->window;
+   if (bin && bin->agg) {
+      struct ArgusQueueStruct *queue = bin->agg->queue;
 
-   if (win == RaCurrentWindow->window) {
-      struct ArgusQueueStruct *queue = RaOutputProcess->queue;
-
-      if ((RaWindowModified == RA_MODIFIED) || ArgusAlwaysUpdate) {
-         if (RaWindowStatus) {
-            if (MUTEX_LOCK(&queue->lock) == 0) {
+      if (MUTEX_LOCK(&queue->lock) == 0) {
 #if defined(ARGUS_MYSQL)
-                struct ArgusQueueHeader *qhdr = queue->start;
-                int i = 0;
-                struct ArgusRecordStruct *ns;
+         struct ArgusQueueHeader *qhdr = queue->start;
+         int i = 0;
+         struct ArgusRecordStruct *ns;
 
-                for (i = 0; qhdr && (i < queue->count); i++, qhdr = qhdr->nxt) {
-                        ns = (struct ArgusRecordStruct *)qhdr;
-                        if (ns && (ns->status & ARGUS_RECORD_MODIFIED)) {
-                           ns->status &= ~ARGUS_RECORD_MODIFIED;
-                           ArgusScheduleSQLQuery (ArgusParser,
-                                                  ArgusParser->ArgusAggregator,
-                                                  ns, RaSQLCurrentTable, ARGUS_STATUS);
-                        }
-                }
-#endif
-               MUTEX_UNLOCK(&queue->lock);
+         for (i = 0; qhdr && (i < queue->count); i++, qhdr = qhdr->nxt) {
+            ns = (struct ArgusRecordStruct *)qhdr;
+            if (ns && (ns->status & ARGUS_RECORD_MODIFIED)) {
+               ns->status &= ~ARGUS_RECORD_MODIFIED;
+               ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, ns, bin->table, ARGUS_STATUS);
             }
          }
-
-         RaWindowModified = 0;
-         RaWindowImmediate = FALSE;
+#endif
+         MUTEX_UNLOCK(&queue->lock);
       }
    }
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (7, "ArgusProcessSqlData(%p)\n", ws);
+   ArgusDebug (7, "ArgusProcessSqlData(%p)\n", bin);
 #endif
 }
 
@@ -6122,7 +6090,7 @@ ArgusMySQLInsertProcess (void *arg)
       }
    }
 
-   pthread_join(RaCursesThread, NULL);
+   pthread_join(RaOutputThread, NULL);
 
    if ((ArgusSQLInsertQueryList != NULL) && (ArgusSQLInsertQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLInsertQueryList);
@@ -6226,7 +6194,7 @@ ArgusMySQLSelectProcess (void *arg)
       }
    }
 
-   pthread_join(RaCursesThread, NULL);
+   pthread_join(RaOutputThread, NULL);
 
    if ((ArgusSQLSelectQueryList != NULL) && (ArgusSQLSelectQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLSelectQueryList);
@@ -6309,7 +6277,7 @@ ArgusMySQLUpdateProcess (void *arg)
       }
    }
 
-   pthread_join(RaCursesThread, NULL);
+   pthread_join(RaOutputThread, NULL);
 
    if ((ArgusSQLUpdateQueryList != NULL) && (ArgusSQLUpdateQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLUpdateQueryList);

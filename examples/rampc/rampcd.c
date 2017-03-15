@@ -814,9 +814,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
          if ((retn = ArgusCheckTime (parser, tns)) != 0) {
             struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+            struct ArgusRecordStruct *rec = NULL;
   
             if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-               if (!(ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+               if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
                   ArgusDeleteRecordStruct(parser, tns);
             } else
                ArgusDeleteRecordStruct(parser, tns);

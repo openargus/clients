@@ -241,7 +241,7 @@ void ArgusTouchScreen(void);
 
 #if defined(ARGUS_THREADS)
 pthread_attr_t RaCursesAttr;
-pthread_t RaCursesThread      = 0;
+pthread_t RaOutputThread      = 0;
 pthread_t RaDataThread        = 0;
 pthread_t RaCursesInputThread = 0;
 #endif
@@ -486,7 +486,7 @@ extern char * ArgusTrimString (char *);
 
 #if defined(ARGUS_THREADS)
 extern pthread_attr_t RaCursesAttr;
-extern pthread_t RaCursesThread;
+extern pthread_t RaOutputThread;
 extern pthread_t RaDataThread;
 extern pthread_t RaCursesInputThread;
 #endif

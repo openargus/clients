@@ -924,7 +924,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    int found = 0, offset, tstrat;
 
    while (agg && !found) {
-      int retn = 0, fretn = -1, lretn = -1;
+      int tretn = 0, fretn = -1, lretn = -1;
+
       if (ArgusParser->tflag) {
          tstrat = ArgusTimeRangeStrategy;
          ArgusTimeRangeStrategy = 1;
@@ -946,9 +947,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             lretn = 0;
       }
 
-      retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
+      tretn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
-      if (retn != 0) {
+      if (tretn != 0) {
          struct ArgusRecordStruct *tns = NULL, *ns = NULL;
 
          ns = ArgusCopyRecordStruct(argus);
@@ -966,11 +967,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
             ArgusTimeAdjustRecord(&RaBinProcess->nadp, tns);
 
-            if ((retn = ArgusCheckTime (parser, tns)) != 0) {
+            if ((tretn = ArgusCheckTime (parser, tns)) != 0) {
                struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+               struct ArgusRecordStruct *rec = NULL;
 
                if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                  if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                  if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
                      ArgusDeleteRecordStruct(parser, tns);
                } else 
                   ArgusDeleteRecordStruct(parser, tns);

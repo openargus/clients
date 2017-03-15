@@ -203,7 +203,7 @@ ArgusProcessData (void *arg)
          int hosts = 0;
          char sbuf[1024];
 
-         sprintf (sbuf, "RaCursesLoop() Processing.");
+         sprintf (sbuf, "ArgusProcessData() Processing.");
          ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
 
          RaCursesStartTime.tv_sec  = 0;
@@ -367,47 +367,24 @@ ArgusProcessData (void *arg)
       ArgusClientTimeout ();
    }
 
+
    {
-      int flushCnt = 0, queueCnt = 0;
+      struct RaBinProcessStruct *rbps = RaBinProcess;
+
+      if (rbps != NULL) {
+         int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+         struct RaBinStruct *bin = NULL;
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessData: flushing sql queues\n");
+         ArgusDebug (1, "ArgusProcessData: flushing sql queues\n");
 #endif
-      struct ArgusQueueStruct *queue = RaOutputProcess->queue;
-      extern int   RaSQLUpdateDB;
-      char *tbl = NULL;
 
-      if (MUTEX_LOCK(&queue->lock) == 0) {
-#if defined(ARGUS_MYSQL)
-         if (ArgusParser->RaCursesMode)
-            RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
-         else
-            RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK | ARGUS_NOSORT);
-
-         if (RaSQLUpdateDB && ((tbl = ArgusGetSQLSaveTable()) != NULL)) {
-            char *sbuf = calloc(1, MAXBUFFERLEN);
-            int i;
-
-            if (queue->array != NULL) {
-               queueCnt = queue->count;
-               for (i = 0; i < queueCnt; i++) {
-                  struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *)queue->array[i];
-
-                  if (ns && (ns->status & ARGUS_RECORD_MODIFIED)) {
-                     ArgusScheduleSQLQuery (parser, parser->ArgusAggregator, ns, tbl, ARGUS_STATUS);
-                     ns->status &= ~ARGUS_RECORD_MODIFIED;
-                     flushCnt++;
-                  }
-               }
+         for (i = rbps->index; i < max; i++) {
+            if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+               ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
             }
-            free(tbl);
-            free(sbuf);
          }
-#endif
-         MUTEX_UNLOCK(&queue->lock);
       }
-#ifdef ARGUSDEBUG
-      ArgusDebug (1, "ArgusProcessData: flushed %d records\n", flushCnt);
-#endif
    }
 
    ArgusCloseDown = 1;
@@ -1483,7 +1460,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
       while (agg && !found) {
-         int retn = 0, fretn = -1, lretn = -1;
+         int tretn = 0, fretn = -1, lretn = -1;
+
          if (ArgusParser->tflag) {
             tstrat = ArgusTimeRangeStrategy;
             ArgusTimeRangeStrategy = 1;
@@ -1514,9 +1492,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             }
          }
 
-         retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
+         tretn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
-         if (retn != 0) {
+         if (tretn != 0) {
             struct ArgusRecordStruct *tns = NULL, *ns = NULL;
 
             ns = ArgusCopyRecordStruct(argus);
@@ -1529,11 +1507,13 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
 
             while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
-               if ((retn = ArgusCheckTime (parser, tns)) != 0) {
+               if ((tretn = ArgusCheckTime (parser, tns)) != 0) {
+                  struct ArgusRecordStruct *rec = NULL;
+
                   switch (ns->hdr.type & 0xF0) {
                      case ARGUS_EVENT:
                      case ARGUS_MAR:
-                        if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                        if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)       // if we updated the record or there was an error
                            ArgusDeleteRecordStruct(parser, tns);
                         break;
 
@@ -1542,8 +1522,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 
                         if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                           if (!(retn = ArgusInsertRecord(parser, RaBinProcess, tns, offset)))
+                           if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)   // update or error
                               ArgusDeleteRecordStruct(parser, tns);
+                           else {
+#if defined(ARGUS_MYSQL)
+                              if (rec != NULL)
+                                 rec->status |= ARGUS_SQL_INSERT;
+#endif
+                           }
+
                         } else 
                            ArgusDeleteRecordStruct(parser, tns);
                         break;
@@ -2131,8 +2118,6 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
 
       if ((rbps->startpt.tv_sec + dtime) < rtime) {
          ArgusShiftArray(ArgusParser, rbps, count, ARGUS_LOCK);
-         ArgusUpdateScreen();
-
          rbps->status |= RA_DIRTYBINS;
          retn = 1;
       }
@@ -2150,21 +2135,16 @@ extern struct ArgusRecordStruct *ArgusSearchHitRecord;
 int
 ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int status)
 {
-   struct timeval tbuf, *tvp = &tbuf;
    int retn = 0, x, z;
 
    if (status || ((ArgusParser->timeout.tv_sec > 0) || (ArgusParser->timeout.tv_usec > 0))) {
       struct ArgusRecordStruct *ns;
-      struct timeval lasttime;
-      int count, deleted = 0;
+      int count;
 
       if (MUTEX_LOCK(&queue->lock) == 0) {
          count = queue->count;
          for (x = 0, z = count; x < z; x++) {
             if ((ns = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
-               lasttime = ns->qhdr.lasttime;
-               *tvp = lasttime;
-
 #if defined(ARGUS_MYSQL)
                if (bin->table == NULL) {
                   char *table;
@@ -2179,8 +2159,16 @@ ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int 
                      bin->table = strdup(stable);
                   }
                }
+
+               if (ns && (ns->status & ARGUS_RECORD_MODIFIED)) {
+                  ns->status &= ~ARGUS_RECORD_MODIFIED;
+                  ArgusScheduleSQLQuery (ArgusParser, bin->agg, ns, bin->table, ARGUS_STATUS);
+               }
+
+               ArgusAddToQueue(queue, &ns->qhdr, ARGUS_NOLOCK);
 #endif
 
+/*
                tvp->tv_sec  += ArgusParser->timeout.tv_sec;
                tvp->tv_usec += ArgusParser->timeout.tv_usec;
                if (tvp->tv_usec > 1000000) {
@@ -2234,6 +2222,7 @@ ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int 
                   ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
                   ns->qhdr.lasttime = lasttime;
                }
+*/
             }
          }
 

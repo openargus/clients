@@ -1252,16 +1252,16 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    ArgusAlignInit(parser, cns, &RaBinProcess->nadp);
 
    while ((tns = ArgusAlignRecord(parser, cns, &RaBinProcess->nadp)) != NULL) {
+      struct ArgusRecordStruct *rec = NULL;
       int offset = 0;
 
       if (pns) {
          struct timeval startime = pns->qhdr.logtime;
          if (pns->bins) {
-//          offset = (parser->Bflag * 1000000LL) / pns->bins->size;
             pns->bins->nadp.RaStartTmStruct = RaBinProcess->nadp.RaStartTmStruct;
             pns->bins->nadp.RaEndTmStruct   = RaBinProcess->nadp.RaEndTmStruct;
 
-            if (!(ArgusInsertRecord (parser, pns->bins, tns, offset)))
+            if (ArgusInsertRecord (parser, pns->bins, tns, offset, &rec) <= 0)
                ArgusDeleteRecordStruct(ArgusParser, tns);
 
             pns->bins->status |= RA_DIRTYBINS;
@@ -1300,7 +1300,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
 //             offset = (parser->Bflag * 1000000LL) / pns->bins->size;
 
-               if (!(ArgusInsertRecord (parser, pns->bins, tns, offset))) 
+               if (ArgusInsertRecord (parser, pns->bins, tns, offset, &rec) <= 0)
                   ArgusDeleteRecordStruct(ArgusParser, tns);
 
                pns->bins->status |= RA_DIRTYBINS;
