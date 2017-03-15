@@ -104,7 +104,7 @@ struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddr
 
 extern int ArgusCloseDown;
 
-int ArgusProcessQueue (struct ArgusQueueStruct *, int status);
+int ArgusProcessQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int status);
 void ArgusGetInterfaceAddresses(struct ArgusParserStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
@@ -1098,17 +1098,7 @@ RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *
             ArgusDeleteRecordStruct(ArgusParser, man);
          }
 
-         while (agg) {
-            int rank = 0;
-            ArgusSortQueue(ArgusSorter, agg->queue, ARGUS_LOCK);
-            while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(agg->queue, ARGUS_NOLOCK)) != NULL) {
-               ns->rank = rank++;
-               if ((parser->eNoflag == 0 ) || ((parser->eNoflag >= (ns->rank + 1)) && (parser->sNoflag <= (ns->rank + 1))))
-                  RaSendArgusRecord (ns);
-               ArgusDeleteRecordStruct(parser, ns);
-            }
-            agg = agg->nxt;
-         }
+         ArgusProcessQueue(bin, agg->queue, ARGUS_SHUTDOWN);
 
          if (ArgusParser->ArgusGenerateManRecords) {
             struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP);
@@ -1256,7 +1246,7 @@ ArgusClientTimeout ()
             if ((bin = RaBinProcess->array[RaBinProcess->index]) != NULL) {
                struct ArgusAggregatorStruct *agg = bin->agg;
 
-               ArgusProcessQueue(agg->queue, 0);
+               ArgusProcessQueue(bin, agg->queue, ARGUS_STATUS);
             }
          }
 
@@ -1490,85 +1480,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       gettimeofday (&RaCursesStartTime, 0L);
 
    gettimeofday (&RaCursesStopTime, 0L);
-
-#if defined(ARGUS_MYSQL)
-   {
-      char *table, *tbl;
-
-      if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
-         char stable[MAXSTRLEN];
-         if ((table = ArgusCreateSQLSaveTableName(parser, argus, RaSQLSaveTable)) == NULL)
-            return;
-
-         sprintf (stable, "%s.%s", RaDatabase, table);
-
-         if ((tbl = ArgusGetSQLSaveTable()) != NULL) {
-            if (strncmp(tbl, stable, strlen(stable))) {
-               if ((ArgusLastTime.tv_sec   > ArgusThisTime.tv_sec) || 
-                  ((ArgusLastTime.tv_sec  == ArgusThisTime.tv_sec) && 
-                   (ArgusLastTime.tv_usec  > ArgusThisTime.tv_usec))) {
-
-                  int flushCnt = 0, queueCnt = 0;
-#ifdef ARGUSDEBUG
-                  ArgusDebug (1, "ArgusProcessData: flushing sql queues\n");
-#endif
-                  struct ArgusQueueStruct *queue = RaOutputProcess->queue;
-                  extern int   RaSQLUpdateDB;
-
-                  if (MUTEX_LOCK(&queue->lock) == 0) {
-#if defined(ARGUS_MYSQL)
-                     if (ArgusParser->RaCursesMode)
-                        RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
-                     else
-                        RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK | ARGUS_NOSORT);
-
-                     if (RaSQLUpdateDB) {
-                        int i;
-
-                        if (queue->array != NULL) {
-                           queueCnt = queue->count;
-                           for (i = 0; i < queueCnt; i++) {
-                              struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *)queue->array[i];
-
-                              if (ns && (ns->status & ARGUS_RECORD_MODIFIED)) {
-                                 ArgusScheduleSQLQuery (parser, parser->ArgusAggregator, ns, tbl, ARGUS_STATUS);
-                                 ns->status &= ~ARGUS_RECORD_MODIFIED;
-                                 flushCnt++;
-                              }
-                           }
-                        }
-                     }
-#endif
-                     MUTEX_UNLOCK(&queue->lock);
-                  }
-#ifdef ARGUSDEBUG
-                  ArgusDebug (1, "ArgusProcessData: flushed %d records\n", flushCnt);
-#endif
-                  ArgusCreateSQLSaveTable(NULL, NULL);
-               }
-            }
-            free(tbl);
-         }
-
-         if ((tbl = ArgusGetSQLSaveTable()) == NULL) {
-            struct ArgusQueueStruct *queue = RaOutputProcess->queue;
-            struct ArgusRecordStruct *argus;
-            int x, z, count;
-
-            MUTEX_LOCK(&queue->lock);
-            count = queue->count;
-
-            for (x = 0, z = count; x < z; x++) {
-               if ((argus = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL)
-                  ArgusDeleteRecordStruct(ArgusParser, argus);
-            }
-            MUTEX_UNLOCK(&queue->lock);
-            ArgusCreateSQLSaveTable(RaDatabase, table);
-         } else
-            free(tbl);
-      }
-   }
-#endif
 
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
       while (agg && !found) {
@@ -2237,7 +2148,7 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
 extern struct ArgusRecordStruct *ArgusSearchHitRecord;
 
 int
-ArgusProcessQueue (struct ArgusQueueStruct *queue, int status)
+ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int status)
 {
    struct timeval tbuf, *tvp = &tbuf;
    int retn = 0, x, z;
@@ -2253,6 +2164,22 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int status)
             if ((ns = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
                lasttime = ns->qhdr.lasttime;
                *tvp = lasttime;
+
+#if defined(ARGUS_MYSQL)
+               if (bin->table == NULL) {
+                  char *table;
+
+                  if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
+                     char stable[MAXSTRLEN];
+                     if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable)) == NULL)
+                        return retn;
+
+                     ArgusCreateSQLSaveTable(RaDatabase, table);
+                     sprintf (stable, "%s.%s", RaDatabase, table);
+                     bin->table = strdup(stable);
+                  }
+               }
+#endif
 
                tvp->tv_sec  += ArgusParser->timeout.tv_sec;
                tvp->tv_usec += ArgusParser->timeout.tv_usec;
@@ -2270,9 +2197,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int status)
                   if (!(ns->status & ARGUS_NSR_STICKY)) {
                      if (ns->htblhdr != NULL)
                         ArgusRemoveHashEntry(&ns->htblhdr);
-
-//                   if (ArgusSearchHitRecord == ns)
-//                      ArgusResetSearch();
 
                      ArgusDeleteRecordStruct (ArgusParser, ns);
                      deleted++;
@@ -2313,19 +2237,12 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int status)
             }
          }
 
-         if (deleted) {
-            if (ArgusParser->RaCursesMode)
-               RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
-            else
-               RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK | ARGUS_NOSORT);
-         }
-
          MUTEX_UNLOCK(&queue->lock);
       }
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (5, "ArgusProcessQueue (%p, %d) returning %d", queue, status, retn); 
+   ArgusDebug (5, "ArgusProcessQueue (%p, %p, %d) returning %d", bin, queue, status, retn); 
 #endif
 
    return (retn);

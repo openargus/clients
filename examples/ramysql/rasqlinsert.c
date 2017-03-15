@@ -6923,16 +6923,13 @@ ArgusCreateSQLSaveTable(char *db, char *table)
                      ArgusLog(LOG_INFO, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
 
                   ArgusCreateTable = 1;
-                  RaSQLCurrentTable = strdup(stable);
                }
             }
          }
 
-      } else {
-         if (RaSQLCurrentTable == NULL)
-            RaSQLCurrentTable = strdup(stable);
+      } else 
          retn = 0;
-      }
+
    } else {
       char *tbl = RaSQLCurrentTable;
       RaSQLCurrentTable = NULL;
@@ -6947,7 +6944,8 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    MUTEX_UNLOCK(&RaMySQLlock);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusCreateSQLSaveTable (%s, %s) returning", db, table, retn);
+   if (retn)
+      ArgusDebug (1, "ArgusCreateSQLSaveTable (%s, %s) created", db, table);
 #endif
    return (retn);
 }
