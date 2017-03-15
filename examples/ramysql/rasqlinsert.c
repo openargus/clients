@@ -6644,7 +6644,6 @@ time_t ArgusTableEndSecs = 0;
 char *
 ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table)
 {
-   struct RaBinProcessStruct *RaBinProcess = parser->RaBinProcess;
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    int timeLabel = 0, objectLabel = 0;
    char *retn = NULL;

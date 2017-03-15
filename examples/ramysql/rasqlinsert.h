@@ -536,6 +536,7 @@ extern int RaIter, RaDigitPtr;
 extern char RaDigitBuffer[16];
 
 extern struct RaBinProcessStruct *ArgusNewRateBins (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+extern struct RaBinProcessStruct *RaBinProcess;
 
 extern int ArgusSearchDirection;
 extern int ArgusAlwaysUpdate;

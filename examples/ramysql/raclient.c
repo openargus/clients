@@ -110,8 +110,6 @@ int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
 
-struct RaBinProcessStruct *RaBinProcess = NULL;
- 
 void
 ArgusThreadsInit(pthread_attr_t *attr)
 {
@@ -510,11 +508,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                for (i = 0, ind = -1; i < ARGUSSPLITMODENUM; i++) {
                   if (!(strncasecmp (mode->mode, RaSplitModes[i], strlen(RaSplitModes[i])))) {
                      if (RaBinProcess == NULL) {
-                        if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
+                        if ((RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
                            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
 #if defined(ARGUS_THREADS)
-                        pthread_mutex_init(&parser->RaBinProcess->lock, NULL);
+                        pthread_mutex_init(&RaBinProcess->lock, NULL);
 #endif
                         parser->RaBinProcess = RaBinProcess;
                      }
@@ -707,7 +705,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                         nadp->zero++;
                         break;
                   }
-
 
                   RaBinProcess->size = nadp->size;
 
