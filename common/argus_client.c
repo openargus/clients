@@ -5362,7 +5362,7 @@ RaDeleteBin (struct ArgusParserStruct *parser, struct RaBinStruct *bin)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "RaDeleteBin(%p)\n", bin);
+   ArgusDebug (2, "RaDeleteBin(%p)\n", bin);
 #endif
    return;
 }
@@ -11875,7 +11875,7 @@ ArgusDeleteAggregator (struct ArgusParserStruct *parser, struct ArgusAggregatorS
    ArgusFree(agg);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusDeleteAggregator(%p, %p) returned\n", parser, agg);
+   ArgusDebug (4, "ArgusDeleteAggregator(%p, %p) returned\n", parser, agg);
 #endif
 }
 

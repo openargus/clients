@@ -68,6 +68,7 @@
 
 void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
+void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #if defined(ARGUS_MYSQL)
 #include <argus_mysql.h>
@@ -372,17 +373,20 @@ ArgusProcessData (void *arg)
       struct RaBinProcessStruct *rbps = RaBinProcess;
 
       if (rbps != NULL) {
-         int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
-         struct RaBinStruct *bin = NULL;
+         if (MUTEX_LOCK(&rbps->lock) == 0) {
+            int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+            struct RaBinStruct *bin = NULL;
 
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "ArgusProcessData: flushing sql queues\n");
+            ArgusDebug (1, "ArgusProcessData: flushing sql queues\n");
 #endif
 
-         for (i = rbps->index; i < max; i++) {
-            if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
-               ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
+            for (i = rbps->index; i < max; i++) {
+               if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+                  ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
+               }
             }
+            MUTEX_LOCK(&rbps->lock);
          }
       }
    }
@@ -1218,12 +1222,35 @@ ArgusClientTimeout ()
           ((ArgusParser->RaClientUpdate.tv_sec == tvp->tv_sec) &&
            (ArgusParser->RaClientUpdate.tv_usec < tvp->tv_usec)))) {
 
+         
          if ((RaBinProcess != NULL) && (RaBinProcess->array != NULL)) {
-            struct RaBinStruct *bin = NULL;
-            if ((bin = RaBinProcess->array[RaBinProcess->index]) != NULL) {
-               struct ArgusAggregatorStruct *agg = bin->agg;
+            struct RaBinProcessStruct *rbps = RaBinProcess;
+            if (MUTEX_LOCK(&rbps->lock) == 0) {
+               int max = ((ArgusParser->tflag && ArgusParser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+               struct RaBinStruct *bin = NULL;
+               int i, deleted = 0;
 
-               ArgusProcessQueue(bin, agg->queue, ARGUS_STATUS);
+
+               for (i = RaBinProcess->index; i < max; i++) {
+                  if ((RaBinProcess->array != NULL) && ((bin = RaBinProcess->array[i]) != NULL)) {
+                     ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
+                     if (ArgusParser->Bflag > 0) {
+                        if ((bin->etime.tv_sec + ArgusParser->Bflag) < tvp->tv_sec) {
+                           RaDeleteBin(ArgusParser, bin);
+                           RaBinProcess->array[i] = NULL;
+                           deleted++;
+
+                        }
+                     }
+                  }
+               }
+
+               if (deleted) {
+                  int count = (rbps->end - rbps->start)/rbps->size;
+                  ArgusShiftArray(ArgusParser, rbps, count, ARGUS_NOLOCK);
+               }
+
+              MUTEX_UNLOCK(&RaBinProcess->lock);
             }
          }
 
@@ -2102,7 +2129,6 @@ ArgusNewRateBins (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns
    return(retn);
 }
 
-void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 int
 ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
