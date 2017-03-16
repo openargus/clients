@@ -88,6 +88,12 @@
 #if defined(ARGUS_READLINE)
 #include <readline/readline.h>
 
+struct ArgusSQLQueryStruct {
+   struct ArgusListObjectStruct *nxt;
+   char *tbl, *sptr, *dptr;
+};
+
+
 void argus_redisplay_function(void);
 int argus_readline_timeout(void);
 int argus_getch_function(FILE *);
@@ -279,6 +285,7 @@ struct ArgusListStruct *ArgusSQLQueryList = NULL;
 struct ArgusListStruct *ArgusSQLInsertQueryList = NULL;
 struct ArgusListStruct *ArgusSQLSelectQueryList = NULL;
 struct ArgusListStruct *ArgusSQLUpdateQueryList = NULL;
+struct ArgusListStruct *ArgusSQLDeleteQueryList = NULL;
 
 void RaResizeHandler (int);
 void * ArgusProcessData (void *);
@@ -502,6 +509,7 @@ extern struct ArgusListStruct *ArgusSQLQueryList;
 extern struct ArgusListStruct *ArgusSQLInsertQueryList;
 extern struct ArgusListStruct *ArgusSQLSelectQueryList;
 extern struct ArgusListStruct *ArgusSQLUpdateQueryList;
+extern struct ArgusListStruct *ArgusSQLDeleteQueryList;
 
 extern int RaWindowStatus;
 extern int RaWindowModified;

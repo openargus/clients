@@ -232,6 +232,7 @@ struct ArgusRecordStruct {
    struct ArgusHashTableHdr *hinthdr;
    struct ArgusQueueStruct *nsq;
    struct ArgusInput *input;
+   struct RaBinStruct *bin;
    struct ArgusRecordHeader hdr;
    struct ArgusDSRHeader *dsrs[ARGUSMAXDSRTYPE];
    struct ArgusCorStruct *correlates;

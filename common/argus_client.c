@@ -3972,9 +3972,6 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
       if (ns->qhdr.queue != NULL)
          ArgusRemoveFromQueue(ns->qhdr.queue, &ns->qhdr, ARGUS_LOCK);
 
-      if (ns->disp.str) 
-         free (ns->disp.str);
-
       if (ns->bins) {
          int i;
          if (ns->bins->array != NULL) {
@@ -11182,6 +11179,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
 
                            ArgusDeleteRecordStruct(parser, ns);
                            agg->status |= ARGUS_AGGREGATOR_DIRTY;
+                           tns->bin = bin;
                            *rec = tns;
                            retn = 0;
 
@@ -11191,6 +11189,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                               tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
                               ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_NOLOCK);
                               agg->status |= ARGUS_AGGREGATOR_DIRTY;
+                              tns->bin = bin;
                               *rec = tns;
                               retn = 1;
                            }
@@ -11203,6 +11202,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                      else {
                         ArgusAddToQueue (agg->queue, &ns->qhdr, ARGUS_NOLOCK);
                         agg->status |= ARGUS_AGGREGATOR_DIRTY;
+                        ns->bin = bin;
                         *rec = ns;
                         retn = 1;
                      }

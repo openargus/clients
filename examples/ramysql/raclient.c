@@ -50,10 +50,11 @@
 #define ARGUS_RECORD_CLEARED    0x0200
 
 #define ARGUS_SQL_INSERT        0x0100000
-#define ARGUS_SQL_UPDATE        0x0200000
-#define ARGUS_SQL_DELETE        0x0400000
+#define ARGUS_SQL_SELECT        0x0200000
+#define ARGUS_SQL_UPDATE        0x0400000
+#define ARGUS_SQL_DELETE        0x0800000
 
-#define ARGUS_SQL_STATUS        (ARGUS_SQL_INSERT | ARGUS_SQL_UPDATE | ARGUS_SQL_DELETE)
+#define ARGUS_SQL_STATUS        (ARGUS_SQL_INSERT | ARGUS_SQL_SELECT | ARGUS_SQL_UPDATE | ARGUS_SQL_DELETE)
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -109,6 +110,9 @@ int ArgusProcessQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int stat
 void ArgusGetInterfaceAddresses(struct ArgusParserStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
+
+
+extern struct ArgusRecordStruct *ArgusCheckSQLCache(struct ArgusParserStruct *, struct RaBinStruct *, struct ArgusRecordStruct *);
 
 
 void
@@ -450,8 +454,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          parser->timeout.tv_sec  = 60;
          parser->timeout.tv_usec = 0;
 
-         parser->RaClientTimeout.tv_sec  = 0;
-         parser->RaClientTimeout.tv_usec = 500000;
+         parser->RaClientTimeout.tv_sec  = 1;
+         parser->RaClientTimeout.tv_usec = 0;
 
          parser->RaInitialized++;
          parser->ArgusPrintXml = 0;
@@ -1185,8 +1189,8 @@ RaParseComplete (int sig)
 }
 
 
-struct timeval RaProcessQueueTimer = {0, 250000};
-struct timeval RaProcessDebugTimer = {0,      0};
+struct timeval RaProcessQueueTimer = {2, 0};
+struct timeval RaProcessDebugTimer = {0, 0};
 
 void
 ArgusClientTimeout ()
@@ -1203,7 +1207,7 @@ ArgusClientTimeout ()
    if (RaProcessDebugTimer.tv_sec != 0) {
       if (RaProcessDebugTimer.tv_sec == tvp->tv_sec) {
 #if defined(ARGUSDEBUG)
-         ArgusDebug (2, "%s: ArgusTotalSQLUpdates %lld written %lld bytes\n", __func__, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
+         ArgusDebug (4, "%s: ArgusTotalSQLUpdates %lld written %lld bytes\n", __func__, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
 #endif
          RaProcessDebugTimer.tv_sec++;
       } else
@@ -1549,8 +1553,29 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               ArgusDeleteRecordStruct(parser, tns);
                            else {
 #if defined(ARGUS_MYSQL)
-                              if (rec != NULL)
-                                 rec->status |= ARGUS_SQL_INSERT;
+                              if (rec != NULL) {
+                                 struct RaBinStruct *bin = rec->bin;
+                                 if (RaSQLCacheDB) {
+                                    struct ArgusRecordStruct *cns = NULL;
+                                    if (bin->table == NULL) {
+                                       char *table;
+                                       if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
+                                          char stable[MAXSTRLEN];
+                                          if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable)) != NULL) {
+                                             ArgusCreateSQLSaveTable(RaDatabase, table);
+                                             sprintf (stable, "%s.%s", RaDatabase, table);
+                                             bin->table = strdup(stable);
+                                          }
+                                       }
+                                    }
+                                    if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
+                                       ArgusMergeRecords (ArgusParser->ArgusAggregator, rec, cns);
+                                       rec->status &= ~ARGUS_SQL_STATUS;
+                                    } else
+                                       rec->status |= ARGUS_SQL_INSERT;
+                                 } else
+                                    rec->status |= ARGUS_SQL_INSERT;
+                              }
 #endif
                            }
 
@@ -2064,8 +2089,6 @@ RaLookupDBCache (struct ArgusParserStruct *parser, struct ArgusAggregatorStruct 
                                        gettimeofday (&pns->qhdr.logtime, 0L);
                                     }
 
-                                 } else {
-                                    ArgusLog(LOG_INFO, "mysql_real_query recieved record could not parse");
                                  }
                               }
                            }
