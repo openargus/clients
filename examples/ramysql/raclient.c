@@ -1191,7 +1191,6 @@ struct timeval RaProcessDebugTimer = {0,      0};
 void
 ArgusClientTimeout ()
 {
-   struct ArgusQueueStruct *queue = RaOutputProcess->queue;
    struct timeval tvbuf, *tvp = &tvbuf;
 
    if (!(ArgusParser->Pauseflag)) {
@@ -1204,8 +1203,7 @@ ArgusClientTimeout ()
    if (RaProcessDebugTimer.tv_sec != 0) {
       if (RaProcessDebugTimer.tv_sec == tvp->tv_sec) {
 #if defined(ARGUSDEBUG)
-         ArgusDebug (2, "%s: RaOutputProcess->queue %d ArgusTotalSearches %lld ArgusTotalSQLUpdates %lld written %lld bytes\n",
-                     __func__, queue->count, ArgusTotalSQLSearches, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
+         ArgusDebug (2, "%s: ArgusTotalSQLUpdates %lld written %lld bytes\n", __func__, ArgusTotalSQLUpdates, ArgusTotalSQLWrites);
 #endif
          RaProcessDebugTimer.tv_sec++;
       } else
@@ -1245,10 +1243,8 @@ ArgusClientTimeout ()
                   }
                }
 
-               if (deleted) {
-                  int count = (rbps->end - rbps->start)/rbps->size;
-                  ArgusShiftArray(ArgusParser, rbps, count, ARGUS_NOLOCK);
-               }
+               if (deleted)
+                  ArgusShiftArray(ArgusParser, rbps, 1, ARGUS_NOLOCK);
 
               MUTEX_UNLOCK(&RaBinProcess->lock);
             }
