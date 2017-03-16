@@ -6868,7 +6868,8 @@ ArgusGetSQLSaveTable()
    if (MUTEX_LOCK(&RaMySQLlock) == 0) {
       if (RaSQLCurrentTable && (strlen(RaSQLCurrentTable) > 0))
          retn = strdup(RaSQLCurrentTable);
-
+      else
+         retn = strdup(RaSQLSaveTable);
       MUTEX_UNLOCK(&RaMySQLlock);
    }
 
