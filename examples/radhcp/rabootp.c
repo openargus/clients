@@ -95,7 +95,8 @@ __tcheck(const unsigned char * const target, size_t targetsize,
 
 static struct ArgusDhcpStruct *
 __parse_one_dhcp_record(const struct ether_header * const ehdr,
-                        const struct ArgusDataStruct * const user)
+                        const struct ArgusDataStruct * const user,
+                        const struct ArgusTimeStruct * const time)
 {
    int newads = 0;
    uint32_t xid;
@@ -148,7 +149,12 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 
    MUTEX_LOCK(ads->lock);
 
-   if (bp->op == BOOTREPLY) {
+   if (bp->op == BOOTREQUEST) {
+      if (ads->first_req.tv_sec == 0) {
+         ads->first_req.tv_sec = time->start.tv_sec;
+         ads->first_req.tv_usec = time->start.tv_usec;
+      }
+   } else if (bp->op == BOOTREPLY) {
       /* extract some data from the non-options portion of the packet */
       parsed.rep.yiaddr.s_addr = EXTRACT_32BITS(&bp->yiaddr.s_addr);
       parsed.rep.ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
@@ -171,6 +177,10 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       } else {
          newstate = fsa_advance_state(&parsed, ads);
          if (ads->state != newstate) {
+            if (newstate == BOUND) {
+               ads->last_bind.tv_sec = time->end.tv_sec;
+               ads->last_bind.tv_usec = time->end.tv_usec;
+            }
             parsed.state = newstate;
             rabootp_cb_exec(&callback.state_change, &parsed, ads);
          }
@@ -219,6 +229,7 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
    if (argus != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
       struct ArgusDataStruct *duser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
+      struct ArgusTimeObject *time = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
       struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
       struct ether_header *ehdr = NULL;
 
@@ -232,13 +243,13 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
       }
 
       if (suser != NULL) {
-         retn = __parse_one_dhcp_record(ehdr, suser);
+         retn = __parse_one_dhcp_record(ehdr, suser, &time->src);
          bootp_print((u_char *)&(suser->array[0]), suser->count);
          strncat(ArgusBuf, "\n", MAXSTRLEN);
       }
 
       if (duser != NULL) {
-         retn = __parse_one_dhcp_record(ehdr, duser);
+         retn = __parse_one_dhcp_record(ehdr, duser, &time->dst);
          bootp_print((u_char *)&(duser->array[0]), duser->count);
       }
    }

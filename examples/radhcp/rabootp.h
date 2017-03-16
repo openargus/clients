@@ -211,11 +211,13 @@ struct ArgusDhcpStruct {
 
    /* fifth cacheline */
    struct ArgusDhcpV4Timers timers;
+   struct timeval first_req;       /* this client transaction was first seen */
+   struct timeval last_bind;       /* last time we entered the BOUND state */
    unsigned short total_responses; /* how many replies received with this xid */
    unsigned short num_responders;  /* how many unique servers replied */
    unsigned short total_requests;  /* request packets with this chaddr+xid */
    unsigned short total_unknownops;/* unknown opcodes received */
-   /* ... uint8_t pad[40] ... */
+   /* ... uint8_t pad[8] ... */
 };
 
 void RabootpCleanup(void);
