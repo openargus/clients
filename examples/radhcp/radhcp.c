@@ -168,6 +168,9 @@ ArgusHandleTreeCommand (char *command)
       retn[0] = "FAIL\n";
       retn[1] = NULL;
    }
+
+   RabootpIntvlTreeDump();
+
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "%s(%s) result %s", __func__, string, retn[0]);
 #endif

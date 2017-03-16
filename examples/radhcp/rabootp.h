@@ -227,6 +227,7 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
 
 void RabootpDumpTree(void);
 char *RabootpDumpTreeStr(int);
+void RabootpIntvlTreeDump(void);
 
 enum rabootp_callback_trigger {
    CALLBACK_STATECHANGE = 0,

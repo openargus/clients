@@ -41,6 +41,7 @@
 #include "dhcp.h"
 #include "argus_threads.h"
 #include "rabootp_client_tree.h"
+#include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
 #include "rabootp_fsa.h"
 #include "rabootp_update.h"
@@ -77,6 +78,9 @@ static const struct tok bootp_op_values[] = {
 };
 
 static struct ArgusDhcpClientTree client_tree = {
+   .lock = PTHREAD_MUTEX_INITIALIZER,
+};
+static struct ArgusDhcpIntvlTree interval_tree = {
    .lock = PTHREAD_MUTEX_INITIALIZER,
 };
 
@@ -1251,10 +1255,39 @@ void RabootpDumpTree(void)
    }
 }
 
-void
-RabootpCallbacksInit(void)
+void RabootpIntvlTreeDump(void)
 {
-   memset(&callback, 0, sizeof(callback));
+   IntvlTreeDump(&interval_tree);
+}
+
+static int
+__rabootp_update_interval_tree(const void * const v_parsed,
+                               void *v_cached,
+                               void *v_arg)
+{
+   const struct ArgusDhcpStruct * const parsed = v_parsed;
+   struct ArgusDhcpStruct *cached = v_cached;
+
+   /* did we just transition to the BOUND state? */
+   if (parsed->state == BOUND && cached->state != BOUND) {
+      if (parsed->rep.leasetime) {
+         struct ArgusDhcpIntvlTree *head = v_arg;
+         struct ArgusDhcpIntvlNode *node;
+
+         node = IntvlTreeFind(&interval_tree, &cached->last_bind);
+         if (node == NULL) {
+            ArgusDhcpIntvlTreeInsert(head,
+                               &cached->last_bind,
+                               parsed->rep.leasetime,
+                               cached);
+         } else {
+            /* need ArgusDhcpIntvlTreeUpdate() ?  . . . yes */
+            /* remove from tree and re-insert */
+            DEBUGLOG(1, "CAN'T UPDATE INTERVAL TREE YET!!!\n");
+         }
+      }
+   }
+   return 0;
 }
 
 int
@@ -1304,6 +1337,14 @@ RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
 }
 
 void
+RabootpCallbacksInit(void)
+{
+   memset(&callback, 0, sizeof(callback));
+   RabootpCallbackRegister(CALLBACK_STATECHANGE, __rabootp_update_interval_tree,
+                           &interval_tree);
+}
+
+void
 RabootpCallbacksCleanup(void)
 {
    rabootp_cb_cleanup(&callback.state_change);
@@ -1317,4 +1358,5 @@ RabootpCleanup(void)
 {
    /* only after all processing has stopped */
    ArgusDhcpClientTreeFree(&client_tree);
+   ArgusDhcpIntvlTreeFree(&interval_tree);
 }
