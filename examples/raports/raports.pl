@@ -117,6 +117,9 @@ my $dbh;
 my $tcpports;
 my $udpports;
 
+my $udpportstring;
+my $tcpportstring;
+
 if ($uri) {
    my $url = URI::URL->new($uri);
 
@@ -149,21 +152,94 @@ if ($uri) {
       eval { $dbh->do("DROP TABLE $table") };
    }
 
-   # Create a new table 'foo'. This must not fail, thus we don't
-   # catch errors.
-   $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, PRIMARY KEY ( addr ))");
+   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
+   $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr ))");
+ 
    for $addr ( keys %items ) {
       $tcpports = 0;
       $udpports = 0;
+      $tcpportstring = "";
+      $udpportstring = "";
+
       for $proto ( keys %{ $items{$addr} } ) {
          if ($proto == 6) {
             $tcpports = scalar(keys(%{$items{$addr}{$proto} }));
+
+            $startseries = 0;
+            $lastseries = 0;
+   
+            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
+               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
+                  if ($startseries > 0) {
+                     if ($port == ($lastseries + 1)) {
+                        $lastseries = $port;
+                     } else {
+                        if ($startseries != $lastseries) {
+                           $tcpportstring .= "$startseries - $lastseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        } else {
+                           $tcpportstring .= "$startseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        }
+                     }
+                  } else {
+                     $startseries = $port;
+                     $lastseries = $port;
+                  }
+               }
+   
+               if ($startseries > 0) {
+                  if ($startseries != $lastseries) {
+                     $tcpportstring .= "$startseries - $lastseries";
+                  } else {
+                     $tcpportstring .= "$startseries";
+                  }
+               }
+            }
+
          } else {
             $udpports = scalar(keys(%{$items{$addr}{$proto} }));
+
+            $startseries = 0;
+            $lastseries = 0;
+            
+            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
+               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
+                  if ($startseries > 0) {
+                     if ($port == ($lastseries + 1)) {
+                        $lastseries = $port;
+                     } else {
+                        if ($startseries != $lastseries) {
+                           $udpportstring .= "$startseries - $lastseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        } else {
+                           $udpportstring .= "$startseries, ";
+                           $startseries = $port;
+                           $lastseries = $port;
+                        }
+                     }
+                  } else {
+                     $startseries = $port;
+                     $lastseries = $port;
+                  }
+               }
+               
+               if ($startseries > 0) {
+                  if ($startseries != $lastseries) {
+                     $udpportstring .= "$startseries - $lastseries";
+                  } else {
+                     $udpportstring .= "$startseries";
+                  }
+               }
+            }
          }
       }
-      $dbh->do("INSERT INTO $table VALUES(?, ?, ?)", undef, $addr, $tcpports, $udpports);
+
+      $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?)", undef, $addr, $tcpports, $udpports, $tcpportstring, $udpportstring);
    }
 
    $dbh->disconnect();
