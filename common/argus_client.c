@@ -5307,6 +5307,68 @@ struct ArgusHashTableHdr *ArgusFindHashEntry (struct ArgusHashTable *, struct Ar
 struct ArgusHashTable *ArgusNewHashTable (size_t);
 void ArgusDeleteHashTable (struct ArgusHashTable *);
 
+
+struct RaBinProcessStruct * 
+RaNewBinProcess (struct ArgusParserStruct *parser, int size)
+{ 
+   struct RaBinProcessStruct *retn = NULL;
+   struct ArgusAdjustStruct *tnadp;
+  
+   parser->ArgusReverse = 0;
+ 
+   if ((retn = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*retn))) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_init(&retn->lock, NULL);
+#endif
+  
+   tnadp = &retn->nadp;
+   tnadp->mode    = -1;
+   tnadp->modify  =  1;
+   tnadp->slen    =  2;
+   tnadp->count   = 1;
+   tnadp->value   = 1;
+
+   if ((retn->array = (struct RaBinStruct **)ArgusCalloc(size, sizeof(struct RaBinStruct *))) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
+
+   retn->arraylen = size;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "RaNewBinProcess(%p, %d) returns %p\n", parser, size, retn);
+#endif
+   return (retn);
+}
+
+
+int
+RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps)
+{
+   int retn = 0;
+
+   if (rbps != NULL) {
+      struct RaBinStruct *bin = NULL;
+      int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+
+      for (i = rbps->index; i < max; i++) {
+         if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+            RaDeleteBin(parser, bin);
+         }
+      }
+
+      if (rbps->array != NULL) ArgusFree(rbps->array);
+
+#if defined(ARGUS_THREADS)
+      pthread_mutex_destroy(&rbps->lock);
+#endif
+
+      ArgusFree(rbps);
+   }
+   return (retn);
+}
+
+
 struct RaBinStruct *
 RaNewBin (struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps, struct ArgusRecordStruct *ns, long long startpt, int sindex)
 {

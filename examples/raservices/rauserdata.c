@@ -54,7 +54,6 @@ int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct Argu
 void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 void RaProcessSrvRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-struct RaBinProcessStruct *RaNewBinProcess (struct ArgusParserStruct *, int);
 void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 
@@ -737,36 +736,6 @@ ArgusMergeUserData(struct RaBinStruct *bin, struct ArgusRecordStruct *ns1, struc
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusMergeUserData (0x%x, 0x%x) returning\n", ns1, ns2);
 #endif
-}
-
-
-struct RaBinProcessStruct * 
-RaNewBinProcess (struct ArgusParserStruct *parser, int size)
-{ 
-   struct RaBinProcessStruct *retn = NULL;
-   struct ArgusAdjustStruct *tnadp;
-  
-   parser->ArgusReverse = 0;
- 
-   if ((retn = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*retn))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&retn->lock, NULL);
-#endif
-  
-   tnadp = &retn->nadp;
-   tnadp->mode    = -1;
-   tnadp->modify  =  1;
-   tnadp->slen    =  2;
-   tnadp->count   = 1;
-   tnadp->value   = 1;
-
-   if ((retn->array = (struct RaBinStruct **)ArgusCalloc(size, sizeof(struct RaBinStruct *))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
-
-   retn->arraylen = size;
-   return (retn);
 }
 
 

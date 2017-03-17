@@ -68,7 +68,6 @@
 #endif
 
 void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
-int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
 void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #if defined(ARGUS_MYSQL)
@@ -111,6 +110,7 @@ void ArgusGetInterfaceAddresses(struct ArgusParserStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
+int RaCloseBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
 
 extern struct ArgusRecordStruct *ArgusCheckSQLCache(struct ArgusParserStruct *, struct RaBinStruct *, struct ArgusRecordStruct *);
 
@@ -1000,132 +1000,37 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 }
 
 
-void RaArgusInputComplete (struct ArgusInput *input) {
-}
+void RaArgusInputComplete (struct ArgusInput *input) { }
+
 
 
 int
-RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps)
+RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps)
 {
-   struct RaBinStruct *bin = NULL;
-   struct ArgusRecordStruct *ns = NULL;
-   int max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
-   int startsecs = 0, endsecs = 0, i;
    int retn = 0;
 
-   char stimebuf[128], dtimebuf[128], etimebuf[128];
-   int bins;
+   if (rbps != NULL) {
+      struct RaBinStruct *bin = NULL;
+      int max = 0, i;
 
-   if (rbps->array != NULL) {
-      if (!(parser->tflag)) {
-         for (i = 0; i < max; i++) {
-            if ((bin = rbps->array[i]) != NULL) {
-               if (startsecs == 0)
-                  startsecs = bin->stime.tv_sec;
-               endsecs = bin->etime.tv_sec;
-            }
-         }
+      MUTEX_LOCK(&rbps->lock);
 
-         rbps->startpt.tv_sec = startsecs;
-         rbps->scalesecs      = (endsecs - startsecs) + (rbps->size / 1000000);
+      max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
 
-         if ((parser->RaEndTime.tv_sec >  rbps->endpt.tv_sec) ||
-                  ((parser->RaEndTime.tv_sec == rbps->endpt.tv_sec) &&
-                   (parser->RaEndTime.tv_usec > rbps->endpt.tv_usec)))
-            parser->RaEndTime = rbps->endpt;
+      for (i = rbps->index; i < max; i++) {
+         if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
+            ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STOP);
+            RaDeleteBin(parser, bin);
 
-      } else {
-         rbps->startpt.tv_sec  = parser->startime_t.tv_sec;
-         rbps->startpt.tv_usec = parser->startime_t.tv_usec;
-         rbps->endpt.tv_sec    = parser->lasttime_t.tv_sec;
-         rbps->endpt.tv_usec   = parser->lasttime_t.tv_usec;
-         rbps->scalesecs       = parser->lasttime_t.tv_sec - parser->startime_t.tv_sec;
-         rbps->start           = parser->startime_t.tv_sec * 1000000LL;
-      }
-
-      if ((parser->ArgusWfileList == NULL) && (parser->Gflag)) {
-         if (parser->Hstr != NULL) {
-
-         } else {
-
-            ArgusPrintTime(parser, stimebuf, &rbps->startpt);
-            ArgusPrintTime(parser, dtimebuf, &rbps->endpt);
-            ArgusPrintTime(parser, etimebuf, &parser->RaEndTime);
-
-            stimebuf[strlen(stimebuf) - 1] = '\0';
-            dtimebuf[strlen(dtimebuf) - 1] = '\0';
-            etimebuf[strlen(etimebuf) - 1] = '\0';
-
-            printf ("StartTime=%s\n", stimebuf);
-            printf ("StopTime=%s\n",  dtimebuf);
-            printf ("LastTime=%s\n",  etimebuf);
-            printf ("Seconds=%d\n", rbps->scalesecs);
-            printf ("BinSize=%1.*f\n", parser->pflag, (rbps->size * 1.0)/1000000);
-            bins = ((rbps->scalesecs + (rbps->size/1000000 - 1))/(rbps->size / 1000000));
-            printf ("Bins=%d\n", bins);
          }
       }
+      MUTEX_UNLOCK(&rbps->lock);
    }
 
-   for (i = rbps->index; i < max; i++) {
-      if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
-         struct ArgusAggregatorStruct *agg = bin->agg;
-
-         if (ArgusParser->ArgusGenerateManRecords) {
-            struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_START);
-            struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
-            rec->argus_mar.startime.tv_sec  = bin->stime.tv_sec;
-            rec->argus_mar.startime.tv_usec = bin->stime.tv_usec;
-            rec->argus_mar.now.tv_sec       = bin->stime.tv_sec;
-            rec->argus_mar.now.tv_usec      = bin->stime.tv_usec;
-
-            RaSendArgusRecord (man);
-            ArgusDeleteRecordStruct(ArgusParser, man);
-         }
-
-         ArgusProcessQueue(bin, agg->queue, ARGUS_SHUTDOWN);
-
-         if (ArgusParser->ArgusGenerateManRecords) {
-            struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP);
-            struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
-            rec->argus_mar.startime.tv_sec  = bin->etime.tv_sec;
-            rec->argus_mar.startime.tv_usec = bin->etime.tv_usec;
-            rec->argus_mar.now.tv_sec       = bin->etime.tv_sec;
-            rec->argus_mar.now.tv_usec      = bin->etime.tv_usec;
-
-            RaSendArgusRecord (man);
-            ArgusDeleteRecordStruct(ArgusParser, man);
-         }
-
-      } else {
-         if (rbps->nadp.zero && ((i >= rbps->index) && 
-                 ((((i - rbps->index) * 1.0) * rbps->size) < (rbps->scalesecs * 1000000LL)))) {
-            long long tval = rbps->start + (rbps->size * (i - rbps->index));
-
-            ns = ArgusGenerateRecordStruct(NULL, NULL, NULL);
-
-            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.start.tv_sec  = tval / 1000000;
-            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.start.tv_usec = tval % 1000000;
-
-            tval += rbps->size;
-            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec    = tval / 1000000;;
-            ((struct ArgusTimeObject *)ns->dsrs[ARGUS_TIME_INDEX])->src.end.tv_usec   = tval % 1000000;
-
-            RaSendArgusRecord (ns);
-         }
-      }
-   }
-
-   for (i = rbps->index; i < max; i++) {
-      if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
-         RaDeleteBin(parser, bin);
-      }
-   }
-
-   if (rbps->array != NULL) ArgusFree(rbps->array);
-   ArgusFree(rbps);
    return (retn);
 }
+
+
 
 void
 RaParseComplete (int sig)
@@ -1140,6 +1045,7 @@ RaParseComplete (int sig)
          ArgusProcessSqlData(RaCurrentWindow);
 
          if (RaBinProcess != NULL) {
+            RaCloseBinProcess(ArgusParser, RaBinProcess);
             RaDeleteBinProcess(ArgusParser, RaBinProcess);
             RaBinProcess = NULL;
          }
