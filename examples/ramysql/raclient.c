@@ -390,7 +390,7 @@ ArgusProcessData (void *arg)
                   ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
                }
             }
-            MUTEX_LOCK(&rbps->lock);
+            MUTEX_UNLOCK(&rbps->lock);
          }
       }
    }
@@ -1021,7 +1021,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
          if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
             ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STOP);
             RaDeleteBin(parser, bin);
-
+            rbps->array[i] = NULL;
          }
       }
       MUTEX_UNLOCK(&rbps->lock);
@@ -1390,6 +1390,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       gettimeofday (&RaCursesStartTime, 0L);
 
    gettimeofday (&RaCursesStopTime, 0L);
+   argus->status |= ARGUS_RECORD_MODIFIED;
 
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
       while (agg && !found) {
@@ -2108,6 +2109,8 @@ ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int 
                      ArgusCreateSQLSaveTable(RaDatabase, table);
                      sprintf (stable, "%s.%s", RaDatabase, table);
                      bin->table = strdup(stable);
+                  } else {
+                     bin->table = strdup(RaSQLSaveTable);
                   }
                }
 

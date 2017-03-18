@@ -1328,6 +1328,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             }
 
             RaDeleteBin(parser, bin);
+            rbps->array[i] = NULL;
 
          } else {
             if (rbps->nadp.zero && ((i >= rbps->index) && 
