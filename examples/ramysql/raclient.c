@@ -97,7 +97,7 @@ extern MYSQL *RaMySQL;
 #endif
 
 int ArgusCreateSQLSaveTable(char *, char *);
-char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *);
+char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, char *, int);
 
 void ArgusThreadsInit(pthread_attr_t *);
 
@@ -493,13 +493,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                for (i = 0, ind = -1; i < ARGUSSPLITMODENUM; i++) {
                   if (!(strncasecmp (mode->mode, RaSplitModes[i], strlen(RaSplitModes[i])))) {
                      if (RaBinProcess == NULL) {
-                        if ((RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
-
-#if defined(ARGUS_THREADS)
-                        pthread_mutex_init(&RaBinProcess->lock, NULL);
-#endif
-                        parser->RaBinProcess = RaBinProcess;
+                        if ((RaBinProcess = RaNewBinProcess(parser, 256)) == NULL)
+                           ArgusLog (LOG_ERR, "ArgusClientInit: RaNewBinProcess error %s", strerror(errno));
                      }
                      nadp = &RaBinProcess->nadp;
 
@@ -1467,8 +1462,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                     if (bin->table == NULL) {
                                        char *table;
                                        if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
-                                          char stable[MAXSTRLEN];
-                                          if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable)) != NULL) {
+                                          char tbuf[1024], stable[MAXSTRLEN];
+                                          if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable, tbuf, 1024)) != NULL) {
                                              ArgusCreateSQLSaveTable(RaDatabase, table);
                                              sprintf (stable, "%s.%s", RaDatabase, table);
                                              bin->table = strdup(stable);
@@ -1503,12 +1498,20 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       }
 
    } else {
-      char *tbl = NULL;
+      char tbuf[1024], *tbl = NULL;
+
 // no key, so we're just inserting the record at the end of the table 
-      if ((tbl = ArgusGetSQLSaveTable()) != NULL) {
+
+      if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
+         if ((tbl = ArgusCreateSQLSaveTableName(ArgusParser, argus, RaSQLSaveTable, tbuf, 1024)) != NULL)
+            ArgusCreateSQLSaveTable(RaDatabase, tbl);
+
+      } else 
+         tbl = RaSQLSaveTable;
+      
+      if (tbl != NULL) {
          argus->status |= ARGUS_SQL_INSERT;
          ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, argus, tbl, ARGUS_STATUS);
-         free(tbl);
       }
    }
 
@@ -1905,11 +1908,11 @@ RaLookupDBCache (struct ArgusParserStruct *parser, struct ArgusAggregatorStruct 
       char *tmpbuf = calloc(1, MAXBUFFERLEN);
 
       int uflag, nflag = parser->nflag;
-      char ubuf[1024], tbuf[1024];
       char *ptr, *tptr;
       int retn, y, mind = 0;
       MYSQL_RES *mysqlRes;
-      char *tbl;
+      char tbuf[1024], *tbl;
+      char ubuf[1024];
 
       parser->nflag = 2;
 
@@ -1917,49 +1920,53 @@ RaLookupDBCache (struct ArgusParserStruct *parser, struct ArgusAggregatorStruct 
 
       if (MUTEX_LOCK(&parser->lock) == 0) {
          int found = 0;
-            for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
+         for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
 
-               if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL) {
-                  parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex];
+            if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL) {
+               parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex];
 
-                  found = 0;
+               found = 0;
 
-                  if (agg && agg->mask) {
-                     for (y = 0; y < ARGUS_MAX_MASK_LIST; y++) {
-                        if ((agg->mask & (0x01LL << y)) && ArgusMaskDefs[y].name) {
-                           if (!strcmp(parser->RaPrintAlgorithm->field, ArgusMaskDefs[y].name)) {
-                              found++;
-                           }
+               if (agg && agg->mask) {
+                  for (y = 0; y < ARGUS_MAX_MASK_LIST; y++) {
+                     if ((agg->mask & (0x01LL << y)) && ArgusMaskDefs[y].name) {
+                        if (!strcmp(parser->RaPrintAlgorithm->field, ArgusMaskDefs[y].name)) {
+                           found++;
                         }
                      }
                   }
+               }
 
-                  if (found) {
-                     int len = parser->RaPrintAlgorithm->length;
-                     len = (len > 256) ? len : 256;
+               if (found) {
+                  int len = parser->RaPrintAlgorithm->length;
+                  len = (len > 256) ? len : 256;
 
-                     if (mind++ > 0)
-                        sprintf (&ubuf[strlen(ubuf)], " and ");
+                  if (mind++ > 0)
+                     sprintf (&ubuf[strlen(ubuf)], " and ");
 
-                     uflag = ArgusParser->uflag;
-                     ArgusParser->uflag++;
+                  uflag = ArgusParser->uflag;
+                  ArgusParser->uflag++;
 
-                     parser->RaPrintAlgorithm->print(parser, tmpbuf, cns, len);
+                  parser->RaPrintAlgorithm->print(parser, tmpbuf, cns, len);
 
-                     ArgusParser->uflag = uflag;
+                  ArgusParser->uflag = uflag;
 
-                     if ((ptr = ArgusTrimString(tmpbuf)) != NULL) {
-                        sprintf (tbuf, "%s=\"%s\"", parser->RaPrintAlgorithm->field, ptr);
-                        tptr = &ubuf[strlen(ubuf)];
-                        sprintf (tptr, "%s", tbuf);
-                     }
+                  if ((ptr = ArgusTrimString(tmpbuf)) != NULL) {
+                     sprintf (tbuf, "%s=\"%s\"", parser->RaPrintAlgorithm->field, ptr);
+                     tptr = &ubuf[strlen(ubuf)];
+                     sprintf (tptr, "%s", tbuf);
                   }
                }
             }
-            MUTEX_UNLOCK(&parser->lock);
+         }
+         MUTEX_UNLOCK(&parser->lock);
       }
-      if ((tbl = ArgusGetSQLSaveTable()) != NULL) {
-            sprintf (sbuf, "SELECT record FROM %s WHERE %s", tbl, ubuf);
+
+      if ((tbl = ArgusCreateSQLSaveTableName(ArgusParser, cns, RaSQLSaveTable, tbuf, 1024)) != NULL) {
+           char stbl[MAXSTRLEN];
+           sprintf (stbl, "%s.%s", RaDatabase, tbl);
+
+            sprintf (sbuf, "SELECT record FROM %s WHERE %s", stbl, ubuf);
             parser->nflag   = nflag;
 
 #if defined(ARGUSDEBUG)
@@ -2102,8 +2109,8 @@ ArgusProcessQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int 
                   char *table;
 
                   if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
-                     char stable[MAXSTRLEN];
-                     if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable)) == NULL)
+                     char tbuf[1024], stable[MAXSTRLEN];
+                     if ((table = ArgusCreateSQLSaveTableName(ArgusParser, ns, RaSQLSaveTable, tbuf, 1024)) == NULL)
                         return retn;
 
                      ArgusCreateSQLSaveTable(RaDatabase, table);

@@ -113,7 +113,6 @@ struct timeval ArgusLastTime         = {0, 0};
 struct timeval ArgusThisTime         = {0, 0};
 struct timeval ArgusCurrentTime      = {0, 0};
 
-char ArgusSQLSaveTableNameBuf[1024];
 struct tm ArgusSaveTableTmStruct;
 time_t ArgusSaveTableSeconds = 0;
 
@@ -130,7 +129,7 @@ void RaSQLQueryNetworksTable (unsigned int, unsigned int, unsigned int);
 void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
 
-char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *);
+char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, char *, int);
 struct RaBinProcessStruct *ArgusNewRateBins (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 int RaInitialized = 0;
@@ -147,7 +146,6 @@ char RaSQLSaveTable[MAXSTRLEN];
 unsigned int RaTableFlags = 0;
 
 char *RaTableValues[256];
-char *RaTableExistsNames[RA_MAXTABLES];
 char *RaTableCreateNames[RA_MAXTABLES];
 char *RaTableCreateString[RA_MAXTABLES];
 char *RaTableDeleteString[RA_MAXTABLES];
@@ -6450,9 +6448,8 @@ RaMySQLInit ()
    char *sptr = NULL, *ptr;
    char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
    MYSQL_RES *mysqlRes;
-   int retn = 0, x;
+   int retn = 0;
 
-   bzero((char *)RaTableExistsNames,  sizeof(RaTableExistsNames));
    bzero((char *)RaTableCreateNames,  sizeof(RaTableCreateNames));
    bzero((char *)RaTableCreateString, sizeof(RaTableCreateString));
    bzero((char *)RaTableDeleteString, sizeof(RaTableDeleteString));
@@ -6649,6 +6646,10 @@ RaMySQLInit ()
       bzero(sbuf, sizeof(sbuf));
       sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaDatabase);
 
+#ifdef ARGUSDEBUG
+      ArgusDebug (6, "RaMySQLInit () mysql_real_query: %s\n", sbuf);
+#endif
+
       if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)  
          ArgusLog(LOG_ERR, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
 
@@ -6656,30 +6657,6 @@ RaMySQLInit ()
 
       if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
          ArgusLog(LOG_ERR, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
-
-      if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
-         char sbuf[MAXSTRLEN];
-
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            int thisIndex = 0;
-
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-               lengths = mysql_fetch_lengths(mysqlRes);
-               bzero(sbuf, sizeof(sbuf));
-                  for (x = 0; x < retn; x++)
-                  sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
-
-               RaTableExistsNames[thisIndex++] = strdup (sbuf);
-            }
-
-         } else {
-#ifdef ARGUSDEBUG
-            ArgusDebug (2, "mysql_num_fields() returned zero.\n");
-#endif
-         }
-         mysql_free_result(mysqlRes);
-      }
 
       if (ArgusParser->writeDbstr != NULL) {
          char *ptr;
@@ -6735,9 +6712,8 @@ time_t ArgusTableStartSecs = 0;
 time_t ArgusTableEndSecs = 0;
 
 
-
 char *
-ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table)
+ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table, char *tbuf, int len)
 {
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    int timeLabel = 0, objectLabel = 0;
@@ -6822,10 +6798,10 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
 
          localtime_r(&tableSecs, &tmval);
 
-         if (strftime(ArgusSQLSaveTableNameBuf, MAXSTRLEN, table, &tmval) <= 0)
+         if (strftime(tbuf, len, table, &tmval) <= 0)
             ArgusLog (LOG_ERR, "ArgusCreateSQLSaveTableName () strftime %s\n", strerror(errno));
 
-         RaProcessSplitOptions(ArgusParser, ArgusSQLSaveTableNameBuf, MAXSTRLEN, ns);
+         RaProcessSplitOptions(ArgusParser, tbuf, len, ns);
 
          ArgusTableStartSecs = tableSecs;
 
@@ -6848,11 +6824,11 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
          }
       }
 
-      retn = ArgusSQLSaveTableNameBuf;
+      retn = tbuf;
 
    } else {
-      bcopy(ArgusSQLSaveTableNameBuf, table, strlen(table));
-      retn = ArgusSQLSaveTableNameBuf;
+      sprintf(tbuf, "%s", table);
+      retn = tbuf;
    }
 
    return (retn);

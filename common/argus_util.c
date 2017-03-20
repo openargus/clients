@@ -1200,6 +1200,10 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
                   parser->ArgusPrintPortZero = 1;
                   ArgusAddMode = 0;
                } else
+               if (!(strcmp (optarg, "hzero"))) {
+                  parser->ArgusPrintHashZero = 1;
+                  ArgusAddMode = 0;
+               } else
                if (!(strcmp (optarg, "disa"))) {
                   parser->ArgusDSCodePoints = ARGUS_DISA_DSCODES;
                   RaPrintAlgorithmTable[ARGUSPRINTSRCDSBYTE].length = 8;
@@ -8321,6 +8325,52 @@ ArgusPrintBins (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          }
       }
       sprintf (buf, "%*.*s ", len, len, binbuf);
+   }
+}
+
+void
+ArgusPrintHashRef (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   long long hash = 0;
+   char *format = NULL;
+   char hashbuf[32];
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_EVENT:
+      case ARGUS_MAR: {
+         break;
+      }
+
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         break;
+      }
+   }
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%lld";
+   }
+
+   if ((hash != 0) || parser->ArgusPrintHashZero)
+      snprintf (hashbuf, sizeof(hashbuf), format, hash);
+   else
+      snprintf (hashbuf, sizeof(hashbuf), "%s", " ");
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " Hash = \"%s\"", hashbuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(hashbuf);
+      } else {
+         if (strlen(hashbuf) > len) {
+            hashbuf[len - 1] = '*';
+            hashbuf[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, hashbuf);
    }
 }
 
@@ -18815,11 +18865,17 @@ ArgusPrintCorLabel (struct ArgusParserStruct *parser, char *buf, int len)
    sprintf (buf, "%*.*s ", len, len, "Cor");
 }
 
+
+void
+ArgusPrintHashRefLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "Hash");
+}
+
 void
 ArgusPrintSequenceNumberLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
-   sprintf (buf, "%*sSeq%*s ", (len - 3)/2, " ", (len - 3)/2, " ");
-   if (!(len & 0x01)) sprintf (&buf[strlen(buf)], " ");
+   sprintf (buf, "%*.*s ", len, len, "Seq");
 }
 
 void
