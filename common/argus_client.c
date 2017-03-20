@@ -3172,7 +3172,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                if (seconds > 0) {
                   long long pkts = canon->metric.src.pkts;
                   if (pkts > 1) {
-                     int bppkts = canon->metric.src.bytes / pkts;
+                     long long bppkts = canon->metric.src.bytes / pkts;
                      retn->srate = (float)((pkts - 1) * 1.0) / seconds;
                      retn->sload = (float)((canon->metric.src.bytes - bppkts) * 8.0) / seconds;
                   }
@@ -3184,7 +3184,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                if (seconds > 0) {
                   long long pkts = canon->metric.dst.pkts; 
                   if (pkts > 1) {
-                     int bppkts = canon->metric.dst.bytes / pkts;
+                     long long bppkts = canon->metric.dst.bytes / pkts;
                      retn->drate = (float)((pkts - 1) * 1.0) / seconds;
                      retn->dload = (float)((canon->metric.dst.bytes - bppkts) * 8.0) / seconds;
                   }
