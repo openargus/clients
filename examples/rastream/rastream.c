@@ -1688,16 +1688,16 @@ static
 struct ArgusWfileStruct * 
 ArgusFindTimeInFileCache(struct ArgusFileCacheStruct *fcache, time_t secs)
 {
-   struct ArgusWfileStruct *retn = NULL, *wfile = NULL;
+   struct ArgusWfileStruct *retn = NULL, *wfile;
    int i, count;
 
-   if ((count = fcache->files->count) != 0) {
-      for (i = 0; (i < count) && (retn == NULL); i++) {
-         wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
-         ArgusPushBackList(fcache->files, (void *)wfile, ARGUS_NOLOCK);
-         if ((wfile->stime.tv_sec <= secs) && (wfile->etime.tv_sec > secs))
-            retn = wfile;
-      }
+   wfile = (struct ArgusWfileStruct *)fcache->files->start;
+   count = fcache->files->count;
+
+   for (i = 0; (i < count) && (retn == NULL); i++) {
+      if ((wfile->stime.tv_sec <= secs) && (wfile->etime.tv_sec > secs))
+         retn = wfile;
+      wfile = (struct ArgusWfileStruct *)wfile->nxt;
    }
 
 #ifdef ARGUSDEBUG
