@@ -583,7 +583,7 @@ ArgusProcessScripts (void)
       }
 
       if (ArgusCurrentScript == NULL) {
-         while ((script = (struct ArgusScriptStruct *) ArgusPopFrontList(ArgusScriptList, ARGUS_LOCK)) != NULL)
+         while ((script = (struct ArgusScriptStruct *) ArgusPopFrontList(ArgusScriptList, ARGUS_NOLOCK)) != NULL)
             ArgusRunScript(ArgusParser, script, ARGUS_RUN_SCRIPT);
       }
    }
@@ -728,7 +728,7 @@ ArgusClientTimeout ()
  
       if (ArgusCurrentScript == NULL) {
          if ((script = (struct ArgusScriptStruct *) ArgusFrontList(ArgusScriptList)) != NULL) {
-            ArgusPopFrontList(ArgusScriptList, ARGUS_LOCK); 
+            ArgusPopFrontList(ArgusScriptList, ARGUS_NOLOCK);
  
             if ((script->pid = fork()) < 0)
                ArgusLog (LOG_ERR, "ArgusRunScript (%s) fork() error %s\n", script->cmd, strerror(errno));
@@ -761,7 +761,7 @@ ArgusClientTimeout ()
                int i, count;
                if ((count = fcache->files->count) != 0) {
                   for (i = 0; i < count; i++) {
-                     struct ArgusWfileStruct *wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_LOCK);
+                     struct ArgusWfileStruct *wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
                      if ((wfile->etime.tv_sec + ArgusParser->Bflag) <= ArgusParser->ArgusRealTime.tv_sec) {
                         ArgusLastFileTime = wfile->etime;
                         if (wfile->fd != NULL) {
@@ -772,7 +772,7 @@ ArgusClientTimeout ()
                      } else {
                         if (wfile && (wfile->fd != NULL))
                            fflush(wfile->fd);
-                        ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
+                        ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_NOLOCK);
                      }
                   }
                }
@@ -788,7 +788,7 @@ ArgusClientTimeout ()
             int i, count;
             if ((count = fcache->files->count) != 0) {
                for (i = 0; i < count; i++) {
-                  struct ArgusWfileStruct *wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_LOCK);
+                  struct ArgusWfileStruct *wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
                   if ((wfile->etime.tv_sec + ArgusParser->Bflag) <= ArgusParser->ArgusRealTime.tv_sec) {
                      ArgusLastFileTime = wfile->etime;
                      if (wfile->fd != NULL) {
@@ -797,7 +797,7 @@ ArgusClientTimeout ()
                      }
                      ArgusRunFileScript(ArgusParser, wfile, ARGUS_SCHEDULE_SCRIPT);
                   } else
-                     ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
+                     ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_NOLOCK);
                }
             }
          }
@@ -1480,9 +1480,6 @@ ArgusFindFileCache (struct ArgusHashTable *htable, struct ArgusHashStruct *hstru
    struct ArgusHashTableHdr *hashEntry = NULL, *target, *head;
    unsigned int ind = (hstruct->hash % htable->size), i, len;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_lock(&htable->lock);
-#endif
    if ((target = htable->array[ind]) != NULL) {
       head = target;
       do {
@@ -1513,10 +1510,6 @@ ArgusFindFileCache (struct ArgusHashTable *htable, struct ArgusHashStruct *hstru
          retn = hashEntry->object;
       }
    }
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&htable->lock);
-#endif
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusFindFileCache () returning 0x%x\n", retn);
@@ -1583,7 +1576,7 @@ ArgusAddFilename(struct ArgusParserStruct *parser, struct ArgusFileCacheStruct *
    if (hash != NULL) {
       if ((retn = (struct ArgusWfileStruct *) ArgusCalloc(1, sizeof(*retn))) != NULL) {
          if ((retn->htblhdr = ArgusAddHashEntry (&ArgusFileTable, (void *)retn, hash)) != NULL) {
-            ArgusPushBackList(fcache->files, (struct ArgusListRecord *)retn, ARGUS_LOCK);
+            ArgusPushBackList(fcache->files, (struct ArgusListRecord *)retn, ARGUS_NOLOCK);
          } else {
             ArgusFree(retn);
             retn = NULL;
@@ -1609,11 +1602,11 @@ ArgusRemoveFilename(struct ArgusFileCacheStruct *fcache, struct ArgusWfileStruct
 
       if ((count = fcache->files->count) != 0) {
          for (i = 0; (i < count) && (retn == 0); i++) {
-            struct ArgusListRecord *lrec = ArgusPopFrontList(fcache->files, ARGUS_LOCK);
+            struct ArgusListRecord *lrec = ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
             if (lrec == (void *) tfile) {
                retn = 1;
             } else
-               ArgusPushBackList(fcache->files, lrec, ARGUS_LOCK);
+               ArgusPushBackList(fcache->files, lrec, ARGUS_NOLOCK);
          }
       }
    }
@@ -1653,7 +1646,7 @@ ArgusProcessFileCache(struct ArgusFileCacheStruct *fcache)
 {
    struct ArgusWfileStruct *tfile;
 
-   while ((tfile = (struct ArgusWfileStruct *) ArgusPopFrontList(fcache->files, ARGUS_LOCK)) != NULL) {
+   while ((tfile = (struct ArgusWfileStruct *) ArgusPopFrontList(fcache->files, ARGUS_NOLOCK)) != NULL) {
 #ifdef ARGUSDEBUG
       ArgusDebug (3, "ArgusProcessFileCache: removing file %s", tfile->filename);
 #endif
@@ -1700,8 +1693,8 @@ ArgusFindTimeInFileCache(struct ArgusFileCacheStruct *fcache, time_t secs)
 
    if ((count = fcache->files->count) != 0) {
       for (i = 0; (i < count) && (retn == NULL); i++) {
-         wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_LOCK);
-         ArgusPushBackList(fcache->files, (void *)wfile, ARGUS_LOCK);
+         wfile = (struct ArgusWfileStruct *)ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
+         ArgusPushBackList(fcache->files, (void *)wfile, ARGUS_NOLOCK);
          if ((wfile->stime.tv_sec <= secs) && (wfile->etime.tv_sec > secs))
             retn = wfile;
       }
@@ -1778,7 +1771,7 @@ ArgusRunScript (struct ArgusParserStruct *parser, struct ArgusScriptStruct *scri
 #ifdef ARGUSDEBUG
          ArgusDebug (1, "ArgusRunScript(%p, %p) scheduling %s", parser, script, script->cmd);
 #endif
-         ArgusPushBackList(ArgusScriptList, (struct ArgusListRecord *) script, ARGUS_LOCK);
+         ArgusPushBackList(ArgusScriptList, (struct ArgusListRecord *) script, ARGUS_NOLOCK);
 
          break;
       }
