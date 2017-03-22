@@ -1070,12 +1070,8 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
                parser->Lflag = 1;
             else {
                char *ptr;
-               if ((ptr = strchr(optarg, '-')) !=  NULL) {
-                  parser->iLflag = atoi(optarg);
-                  optarg = ptr + 1;
-               }
 
-               parser->Lflag = atoi(optarg);
+               parser->Lflag = (char)(strtol(optarg, NULL, 10) & 0xff);
                switch (parser->Lflag) {
                   case  0: parser->Lflag = -1; break;
                   case -1: parser->Lflag =  0; break;
