@@ -1076,10 +1076,9 @@ ArgusOutputProcess(void *arg)
          }
 
          while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
-            int done = 0;
             ArgusLoadList(output->ArgusOutputList, output->ArgusInputList);
 
-            while (!done && ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL)) {
+            while ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL) {
                u_int seqnum = 0;
                output->ArgusTotalRecords++;
                switch (rec->hdr.type & 0xF0) {
