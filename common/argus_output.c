@@ -993,19 +993,19 @@ ArgusOutputProcess(void *arg)
             ((output->ArgusGlobalTime.tv_sec >  ArgusNextUpdate.tv_sec) ||
             ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
              (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
-         
+
             if (output->ArgusListens) {
-               struct timeval wait = {0, 0}; 
+               struct timeval wait = {0, 0};
                fd_set readmask;
                int i, width = 0;
- 
+
                FD_ZERO(&readmask);
 
                for (i = 0; i < output->ArgusListens; i++) {
                   if (output->ArgusLfd[i] != -1) {
                      FD_SET(output->ArgusLfd[i], &readmask);
                      width = (output->ArgusLfd[i] > width) ? output->ArgusLfd[i] : width;
-                  }  
+                  }
                }
 
                if (output->ArgusClients) {
@@ -1022,7 +1022,7 @@ ArgusOutputProcess(void *arg)
                               FD_SET(client->fd, &readmask);
                               width = (client->fd > width) ? client->fd : width;
                            }
-                        } 
+                        }
                         client = (void *) client->qhdr.nxt;
                      }
                   }
@@ -1223,13 +1223,13 @@ ArgusOutputProcess(void *arg)
          if (ArgusListEmpty(list)) {
             struct timeval tvp;
             struct timespec tsbuf, *ts = &tsbuf;
- 
+
             gettimeofday (&tvp, 0L);
             ts->tv_sec = tvp.tv_sec;
             ts->tv_nsec = tvp.tv_usec * 1000;
             ts->tv_nsec += 20000000;
             if (ts->tv_nsec > 1000000000) {
-               ts->tv_sec++; 
+               ts->tv_sec++;
                ts->tv_nsec -= 1000000000;
             }
             pthread_mutex_lock(&list->lock);
