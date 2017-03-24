@@ -987,8 +987,6 @@ ArgusOutputProcess(void *arg)
       if (output && ((list = output->ArgusOutputList) != NULL)) {
          gettimeofday (&output->ArgusGlobalTime, 0L);
 
-    /* check to see if there are any new clients */
-         
          if ((output->ArgusPortNum != 0) &&
             ((output->ArgusGlobalTime.tv_sec >  ArgusNextUpdate.tv_sec) ||
             ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
@@ -998,6 +996,8 @@ ArgusOutputProcess(void *arg)
                struct timeval wait = {0, 0};
                fd_set readmask;
                int i, width = 0;
+
+               /* Build new fd_set of listening sockets */
 
                FD_ZERO(&readmask);
 
@@ -1012,16 +1012,19 @@ ArgusOutputProcess(void *arg)
 #if defined(ARGUS_THREADS)
                   pthread_mutex_lock(&output->ArgusClients->lock);
 #endif
+
+                  /* Build new fd_set of client sockets */
+
                   if ((count = output->ArgusClients->count) > 0) {
                      struct ArgusClientData *client = (void *)output->ArgusClients->start;
                      int i;
 
                      for (i = 0; i < count && client; i++) {
-                        if (client->sock && !(client->sock->filename)) {
-                           if (client->fd != -1) {
-                              FD_SET(client->fd, &readmask);
-                              width = (client->fd > width) ? client->fd : width;
-                           }
+                        if (client->sock &&
+                            client->sock->filename == NULL &&
+                            client->fd != -1) {
+                           FD_SET(client->fd, &readmask);
+                           width = (client->fd > width) ? client->fd : width;
                         }
                         client = (void *) client->qhdr.nxt;
                      }
@@ -1041,11 +1044,10 @@ ArgusOutputProcess(void *arg)
 
                            if (client != NULL)  {
                               do {
-                                 if (client->fd != -1) {
-                                    if (FD_ISSET(client->fd, &readmask)) {
-                                       if (ArgusCheckClientMessage(output, client) < 0) {
-                                          ArgusDeleteSocket(output, client);
-                                       }
+                                 if (client->fd != -1 &&
+                                     FD_ISSET(client->fd, &readmask)) {
+                                    if (ArgusCheckClientMessage(output, client) < 0) {
+                                       ArgusDeleteSocket(output, client);
                                     }
                                  }
                                  client = (void *) client->qhdr.nxt;
@@ -1070,9 +1072,9 @@ ArgusOutputProcess(void *arg)
             }
          }
 
-         if (ArgusOutputStatusTime(output)) {
-            if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
-               ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
+         if (ArgusOutputStatusTime(output) &&
+             (rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL) {
+            ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
          }
 
          while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
