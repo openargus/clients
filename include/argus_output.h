@@ -227,9 +227,6 @@ void ArgusCloseControlChannel (struct ArgusOutputStruct *);
 struct ArgusSocketStruct *ArgusNewSocket (int);
 void ArgusDeleteSocket (struct ArgusOutputStruct *, struct ArgusClientData *);
 
-int ArgusWriteSocket (struct ArgusOutputStruct *, struct ArgusClientData *, struct ArgusRecordStruct *);
-int ArgusWriteOutSocket (struct ArgusOutputStruct *, struct ArgusClientData *);
-
 extern void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
 extern void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 

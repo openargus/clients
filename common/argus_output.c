@@ -68,6 +68,12 @@ void ArgusSetChroot(char *);
 #include <ctype.h>
 #include <math.h>
 
+static int ArgusWriteSocket(struct ArgusOutputStruct *,
+                            struct ArgusClientData *,
+                            struct ArgusRecordStruct *);
+static int ArgusWriteOutSocket(struct ArgusOutputStruct *,
+                               struct ArgusClientData *);
+
 void
 setArgusMarReportInterval (struct ArgusParserStruct *parser, char *value)
 {
@@ -2576,6 +2582,7 @@ int ArgusCloseFile = 0;
 extern struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
 
 
+static
 int
 ArgusWriteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *client, struct ArgusRecordStruct *rec)
 {
@@ -2611,7 +2618,7 @@ ArgusWriteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *clie
 }
 
 
-
+static
 int
 ArgusWriteOutSocket (struct ArgusOutputStruct *output, struct ArgusClientData *client)
 {
