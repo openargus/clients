@@ -68,9 +68,9 @@ void ArgusSetChroot(char *);
 #include <ctype.h>
 #include <math.h>
 
-static int ArgusWriteSocket(struct ArgusOutputStruct *,
-                            struct ArgusClientData *,
-                            struct ArgusRecordStruct *);
+static void ArgusWriteSocket(struct ArgusOutputStruct *,
+                             struct ArgusClientData *,
+                             struct ArgusRecordStruct *);
 static int ArgusWriteOutSocket(struct ArgusOutputStruct *,
                                struct ArgusClientData *);
 
@@ -1132,12 +1132,9 @@ ArgusOutputProcess(void *arg)
                                  ArgusWriteRecord = 0;
 
                            if (ArgusWriteRecord) {
-                              if (ArgusWriteSocket (output, client, rec) < 0) {    // post record for transmit
+                              ArgusWriteSocket (output, client, rec);           // post record for transmit
+                              if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
                                  ArgusDeleteSocket(output, client);
-                              } else {
-                                 if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
-                                    ArgusDeleteSocket(output, client);
-                                 }
                               }
 
                            } else {
@@ -1456,12 +1453,9 @@ ArgusControlChannelProcess(void *arg)
                                  ArgusWriteRecord = 0;
 
                            if (ArgusWriteRecord) {
-                              if (ArgusWriteSocket (output, client, rec) < 0) {    // post record for transmit
-                                 ArgusDeleteSocket(output, client);
-                              } else {
-                                 if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
+                              ArgusWriteSocket (output, client, rec);           // post record for transmit
+                              if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
                                     ArgusDeleteSocket(output, client);
-                                 }
                               }
 
                            } else {
@@ -2589,7 +2583,7 @@ extern struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
 
 
 static
-int
+void
 ArgusWriteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *client, struct ArgusRecordStruct *rec)
 {
    struct ArgusSocketStruct *asock = client->sock;
@@ -2620,7 +2614,6 @@ ArgusWriteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *clie
    ArgusDebug (6, "ArgusWriteSocket (0x%x, 0x%x, 0x%x) schedule record\n", output, asock, rec);
 #endif
    ArgusPushBackList (list, (struct ArgusListRecord *) ArgusCopyRecordStruct(rec), ARGUS_LOCK);
-   return (0);
 }
 
 
