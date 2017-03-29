@@ -89,7 +89,7 @@ struct ArgusSocketStruct {
    int ArgusLastRecord, ArgusReadState;
    struct timeval lastwrite;
    unsigned char *ptr;
-   struct ArgusRecordStruct *rec;
+   void *rec;
    int length, writen;
    struct sockaddr sock;
    struct stat statbuf;

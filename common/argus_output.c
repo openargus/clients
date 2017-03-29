@@ -68,13 +68,85 @@ void ArgusSetChroot(char *);
 #include <ctype.h>
 #include <math.h>
 
+struct ArgusQueueNode {
+   struct ArgusQueueHeader qhdr;
+   void *datum;
+};
+
+struct ArgusWireFmtBuffer {
+   uint32_t refcount;
+   uint32_t len;
+   unsigned char buf[ARGUS_MAXRECORD]; /* 256 KB */
+};
+
 static void ArgusWriteSocket(struct ArgusOutputStruct *,
                              struct ArgusClientData *,
-                             struct ArgusRecordStruct *,
-                             unsigned char *);
+                             struct ArgusWireFmtBuffer *);
 static int ArgusWriteOutSocket(struct ArgusOutputStruct *,
-                               struct ArgusClientData *,
-                               unsigned char *);
+                               struct ArgusClientData *);
+
+static struct ArgusQueueNode *
+NewArgusQueueNode(void *datum)
+{
+   struct ArgusQueueNode *n = ArgusMalloc(sizeof(*n));
+
+   if (n == NULL)
+      return NULL;
+
+   memset(n, 0, sizeof(struct ArgusQueueHeader));
+   n->datum = datum;
+   return n;
+}
+
+static void
+FreeArgusQueueNode(struct ArgusQueueNode *n)
+{
+   ArgusFree(n);
+}
+
+static struct ArgusWireFmtBuffer *
+NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format)
+{
+   struct ArgusWireFmtBuffer *awf;
+
+   awf = ArgusMallocAligned(sizeof(*awf), 64);
+   if (awf == NULL)
+      return NULL;
+
+   memset(awf, 0, sizeof(*awf) - ARGUS_MAXRECORD);
+   awf->refcount = 1;
+   awf->len = 0;
+   if (rec == NULL)
+      /* no record to munge, just return allocated buffer */
+      return awf;
+
+   if (format == ARGUS_DATA) {
+      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0])) {
+         awf->len = ((struct ArgusRecord *)&awf->buf[0])->hdr.len * 4;
+         ArgusHtoN((struct ArgusRecord *)&awf->buf[0]);
+      }
+   } else if (format == ARGUS_CISCO_V5_DATA) {
+      if (ArgusGenerateCiscoRecord(rec, 0, (char *)&awf->buf[0])) {
+         awf->len = sizeof(CiscoFlowHeaderV5_t) + sizeof(CiscoFlowEntryV5_t);
+      }
+   }
+
+   if (awf->len == 0) {
+      ArgusFree(awf);
+      return NULL;
+   }
+
+   return awf;
+}
+
+static void
+FreeArgusWireFmtBuffer(struct ArgusWireFmtBuffer *awf)
+{
+   awf->refcount--;
+   if (awf->refcount == 0) {
+      ArgusFree(awf);
+   }
+}
 
 void
 setArgusMarReportInterval (struct ArgusParserStruct *parser, char *value)
@@ -972,7 +1044,6 @@ ArgusOutputProcess(void *arg)
    struct timeval ArgusUpDate = {0, 50000}, ArgusNextUpdate = {0,0};
    int val, count;
    void *retn = NULL;
-   unsigned char *buf;
 
 #if defined(ARGUS_THREADS)
    sigset_t blocked_signals;
@@ -981,11 +1052,6 @@ ArgusOutputProcess(void *arg)
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusOutputProcess(0x%x) starting\n", output);
 #endif
-
-   buf = ArgusMalloc(ARGUS_MAXRECORD);
-   if (buf == NULL)
-      ArgusLog(LOG_ERR, "%s: Unable to allocate packet buffer memory\n",
-               __func__);
 
 #if defined(ARGUS_THREADS)
    sigfillset(&blocked_signals);
@@ -997,6 +1063,8 @@ ArgusOutputProcess(void *arg)
 #endif
       struct ArgusListStruct *list = NULL;
       struct ArgusRecordStruct *rec = NULL;
+      int have_argus_client = 0;
+      int have_ciscov5_client = 0;
 
       if (output && ((list = output->ArgusOutputList) != NULL)) {
          gettimeofday (&output->ArgusGlobalTime, 0L);
@@ -1033,12 +1101,19 @@ ArgusOutputProcess(void *arg)
                      struct ArgusClientData *client = (void *)output->ArgusClients->start;
                      int i;
 
+                     have_argus_client = 0;
+                     have_ciscov5_client = 0;
+
                      for (i = 0; i < count && client; i++) {
                         if (client->sock &&
                             client->sock->filename == NULL &&
                             client->fd != -1) {
                            FD_SET(client->fd, &readmask);
                            width = (client->fd > width) ? client->fd : width;
+                           if (client->format == ARGUS_DATA)
+                              have_argus_client = 1;
+                           else if (client->format == ARGUS_CISCO_V5_DATA)
+                              have_ciscov5_client = 1;
                         }
                         client = (void *) client->qhdr.nxt;
                      }
@@ -1120,6 +1195,9 @@ ArgusOutputProcess(void *arg)
                count = 0;
 
                if (output->ArgusClients) {
+                  struct ArgusWireFmtBuffer *arg;
+                  struct ArgusWireFmtBuffer *v5;
+
 #if defined(ARGUS_THREADS)
                   pthread_mutex_lock(&output->ArgusClients->lock);
 #endif
@@ -1127,8 +1205,14 @@ ArgusOutputProcess(void *arg)
                      struct ArgusClientData *client = (void *)output->ArgusClients->start;
                      int i, ArgusWriteRecord = 0;
 #ifdef ARGUSDEBUG
-                  ArgusDebug (5, "ArgusOutputProcess() %d client(s) for record 0x%x\n", output->ArgusClients->count, rec);
+                     ArgusDebug (5, "ArgusOutputProcess() %d client(s) for record 0x%x\n", output->ArgusClients->count, rec);
 #endif
+
+                     if (have_argus_client)
+                        arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA);
+                     if (have_ciscov5_client)
+                        v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA);
+
                      for (i = 0; i < output->ArgusClients->count; i++) {
                         if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
 #ifdef ARGUSDEBUG
@@ -1140,8 +1224,11 @@ ArgusOutputProcess(void *arg)
                                  ArgusWriteRecord = 0;
 
                            if (ArgusWriteRecord) {
-                              ArgusWriteSocket (output, client, rec, buf);           // post record for transmit
-                              if (ArgusWriteOutSocket (output, client, buf) < 0) {   // transmit the record
+                              /* post record for transmit */
+                              ArgusWriteSocket (output, client, have_argus_client ? arg : v5);
+
+                              /* write available records */
+                              if (ArgusWriteOutSocket (output, client) < 0) {
                                  ArgusDeleteSocket(output, client);
                               }
 
@@ -1167,6 +1254,12 @@ ArgusOutputProcess(void *arg)
                         }
                         client = (void *) client->qhdr.nxt;
                      }
+
+                     if (have_argus_client)
+                        FreeArgusWireFmtBuffer(arg);
+                     if (have_ciscov5_client)
+                        FreeArgusWireFmtBuffer(v5);
+
                   }
 #if defined(ARGUS_THREADS)
                   pthread_mutex_unlock(&output->ArgusClients->lock);
@@ -1196,10 +1289,10 @@ ArgusOutputProcess(void *arg)
 #ifdef ARGUSDEBUG
                      ArgusDebug (1, "ArgusOutputProcess() draining queue\n");
 #endif
-                     ArgusWriteOutSocket (output, client, buf);
+                     ArgusWriteOutSocket (output, client);
                      ArgusDeleteSocket(output, client);
                   } else {
-                     if (ArgusWriteOutSocket (output, client, buf) < 0) {
+                     if (ArgusWriteOutSocket (output, client) < 0) {
                         ArgusDeleteSocket(output, client);
                      } else {
                         if (client->pid > 0) {
@@ -1273,15 +1366,13 @@ ArgusOutputProcess(void *arg)
 #endif
       while ((client = (void *) output->ArgusClients->start) != NULL) {
          if ((client->fd != -1) && (client->sock != NULL)) {
-             ArgusWriteOutSocket (output, client, buf);
+             ArgusWriteOutSocket (output, client);
              ArgusDeleteSocket(output, client);
           }
           ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
           ArgusFree(client);
        }
     }
-
-    ArgusFree(buf);
 
 #if defined(ARGUS_THREADS)
 #ifdef ARGUSDEBUG
@@ -1303,7 +1394,6 @@ ArgusControlChannelProcess(void *arg)
    struct timeval ArgusUpDate = {0, 50000}, ArgusNextUpdate = {0,0};
    int val, count;
    void *retn = NULL;
-   unsigned char *buf;
 
 #if defined(ARGUS_THREADS)
    sigset_t blocked_signals;
@@ -1312,11 +1402,6 @@ ArgusControlChannelProcess(void *arg)
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusControlChannelProcess(0x%x) starting\n", output);
 #endif
-
-   buf = ArgusMalloc(ARGUS_MAXRECORD);
-   if (buf == NULL)
-      ArgusLog(LOG_ERR, "%s: Unable to allocate packet buffer memory\n",
-               __func__);
 
 #if defined(ARGUS_THREADS)
    sigfillset(&blocked_signals);
@@ -1469,8 +1554,8 @@ ArgusControlChannelProcess(void *arg)
                                  ArgusWriteRecord = 0;
 
                            if (ArgusWriteRecord) {
-                              ArgusWriteSocket (output, client, rec, buf);           // post record for transmit
-                              if (ArgusWriteOutSocket (output, client, buf) < 0) {   // transmit the record
+                              /* ArgusWriteSocket (output, client, XYZ); */           // post record for transmit
+                              if (ArgusWriteOutSocket (output, client) < 0) {   // transmit the record
                                     ArgusDeleteSocket(output, client);
                               }
 
@@ -1525,10 +1610,10 @@ ArgusControlChannelProcess(void *arg)
 #ifdef ARGUSDEBUG
                      ArgusDebug (1, "ArgusControlChannelProcess() draining queue\n");
 #endif
-                     ArgusWriteOutSocket (output, client, buf);
+                     ArgusWriteOutSocket (output, client);
                      ArgusDeleteSocket(output, client);
                   } else {
-                     if (ArgusWriteOutSocket (output, client, buf) < 0) {
+                     if (ArgusWriteOutSocket (output, client) < 0) {
                         ArgusDeleteSocket(output, client);
                      } else {
                         if (client->pid > 0) {
@@ -1602,15 +1687,13 @@ ArgusControlChannelProcess(void *arg)
 #endif
       while ((client = (void *) output->ArgusClients->start) != NULL) {
          if ((client->fd != -1) && (client->sock != NULL)) {
-             ArgusWriteOutSocket (output, client, buf);
+             ArgusWriteOutSocket (output, client);
              ArgusDeleteSocket(output, client);
           }
           ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
           ArgusFree(client);
        }
     }
-
-   ArgusFree(buf);
 
 #if defined(ARGUS_THREADS)
 #ifdef ARGUSDEBUG
@@ -2605,26 +2688,26 @@ static
 void
 ArgusWriteSocket(struct ArgusOutputStruct *output,
                  struct ArgusClientData *client,
-                 struct ArgusRecordStruct *rec,
-                 unsigned char *buf)
+                 struct ArgusWireFmtBuffer *awf)
 {
    struct ArgusSocketStruct *asock = client->sock;
    struct ArgusListStruct *list = asock->ArgusOutputList;
+   struct ArgusQueueNode *node;
 
    if (list->count >= ArgusMaxListLength) {
-      if (ArgusWriteOutSocket(output, client, buf) < 0) {
+      if (ArgusWriteOutSocket(output, client) < 0) {
 #if defined(ARGUS_THREADS)
          pthread_mutex_lock(&list->lock);
 #endif
          if (list->count >= ArgusMaxListLength) {
-            struct ArgusRecordStruct *trec;
+            struct ArgusWireFmtBuffer *tawf;
             int i;
 #define ARGUS_MAX_TOSS_RECORD	128
             ArgusLog (LOG_WARNING, "ArgusWriteSocket: tossing records to %s\n", client->hostname);
 
             for (i = 0; i < ARGUS_MAX_TOSS_RECORD; i++)
-               if ((trec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
-                  ArgusDeleteRecordStruct(ArgusParser, trec);
+               if ((tawf = (struct ArgusWireFmtBuffer *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
+                  FreeArgusWireFmtBuffer(tawf);
          }
 #if defined(ARGUS_THREADS)
          pthread_mutex_unlock(&list->lock);
@@ -2633,24 +2716,39 @@ ArgusWriteSocket(struct ArgusOutputStruct *output,
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusWriteSocket (0x%x, 0x%x, 0x%x) schedule record\n", output, asock, rec);
+   ArgusDebug (6, "ArgusWriteSocket (0x%x, 0x%x, 0x%x) schedule buffer\n", output, asock, awf);
 #endif
-   ArgusPushBackList (list, (struct ArgusListRecord *) ArgusCopyRecordStruct(rec), ARGUS_LOCK);
+
+   node = NewArgusQueueNode(awf);
+   if (node == NULL) {
+#ifdef ARGUSDEBUG
+      ArgusDebug(2, "%s: failed to allocate node for ArgusWireFmtBuffer\n",
+                 __func__);
+      return;
+#endif
+   }
+
+   if (ArgusPushBackList(list, (struct ArgusListRecord *)node, ARGUS_LOCK))
+      awf->refcount++;
+   else
+      FreeArgusQueueNode(node);
 }
 
 
 static
 int
 ArgusWriteOutSocket(struct ArgusOutputStruct *output,
-                    struct ArgusClientData *client,
-                    unsigned char *buf)
+                    struct ArgusClientData *client)
 {
    struct ArgusSocketStruct *asock = client->sock;
    struct ArgusListStruct *list = NULL;
-   struct ArgusRecordStruct *rec = NULL;
    int retn = 0, count = 0, len, ocnt;
    struct stat statbuf;
    unsigned char *ptr;
+   struct ArgusWireFmtBuffer *awf;
+   struct ArgusQueueNode *node;
+   const char *outputbuf;
+   unsigned outputlen;
 
    if ((list = asock->ArgusOutputList) != NULL) {
       if (asock->rec != NULL)
@@ -2664,67 +2762,67 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
             count = ARGUS_MAXWRITENUM;
 
          while ((asock->fd != -1 ) && count--) {
-            if ((rec = asock->rec) == NULL) {
+            if ((awf = asock->rec) == NULL) {
                asock->writen = 0;
                asock->length = 0;
 
-               if ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-
+               if ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+                     awf = node->datum;
+                     FreeArgusQueueNode(node);
                      switch (client->format) {
                         case ARGUS_DATA: {
-                           if (ArgusGenerateRecord (rec, 0, (char *)&buf[0])) {
-                              int cnt = ((struct ArgusRecord *)&buf[0])->hdr.len * 4;
-#if defined(_LITTLE_ENDIAN)
-                              ArgusHtoN((struct ArgusRecord *)&buf[0]);
-#endif
 #ifdef ARGUS_SASL
-                              if (client->sasl_conn) {
-                                 unsigned int outputlen = 0;
-                                 const char *output =  NULL;
-#ifdef ARGUSDEBUG
-                                 ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, 0x%x, %d, 0x%x, 0x%x)\n",
-                                                            client->sasl_conn, rec, cnt, &output, &outputlen);
+                              if (!client->sasl_conn) {
 #endif
-                                 if ((retn = sasl_encode(client->sasl_conn, (const char *)&buf[0], (unsigned int) cnt,
-                                                            &output, &outputlen)) == SASL_OK) {
+                                 outputlen = awf->len;
+                                 outputbuf = (const char *)&awf->buf[0];
+#ifdef ARGUS_SASL
+                              } else {
+                                 struct ArgusWireFmtBuffer *awfsasl;
+                                 outputlen = 0;
+                                 outputbuf = NULL;
+
+                                 awfsasl = NewArgusWireFmtBuffer(NULL, -1);
+                                 if (awfsasl == NULL)
+                                    /* no memory, try to keep going */
+                                    continue;
+#ifdef ARGUSDEBUG
+                                 ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, %d, 0x%x, 0x%x)\n",
+                                                            client->sasl_conn, awf->len, &outputbuf, &outputlen);
+#endif
+                                 if ((retn = sasl_encode(client->sasl_conn, (const char *)&awf->buf[0],
+                                                         awf->len, &outputbuf, &outputlen)) == SASL_OK) {
 #ifdef ARGUSDEBUG
                                     ArgusDebug (7, "ArgusHandleClientData: sasl_encode returned %d bytes\n", outputlen);
 #endif
-                                    if (outputlen < ARGUS_MAXRECORD) {
-                                       bcopy(output, &buf[0], outputlen);
-                                       cnt = outputlen;
-
-                                    } else
+                                    if (outputlen > ARGUS_MAXRECORD)
                                        ArgusLog (LOG_ERR, "sasl_encode: returned too many bytes %d\n", outputlen);
+
+                                    /* replace the original buffer with
+                                     * our sasl buffer.  It's only kept
+                                     * around if the socket can't accept
+                                     * the entire buffer this time.
+                                     */
+                                    memcpy(&awfsasl->buf[0], outputbuf, outputlen);
+                                    awf->len = outputlen;
+                                    FreeArgusWireFmtBuffer(awf);
+                                    awf = awfsasl;
 
                                  } else
                                     ArgusLog (LOG_ERR, "sasl_encode: failed returned %d\n", retn);
                               }
 #endif
-                              asock->length = cnt;
-                              asock->rec = rec;
+                              asock->length = outputlen;
+                              asock->rec = awf;
 
-                           } else {
-#ifdef ARGUSDEBUG
-                              ArgusDebug (1, "ArgusHandleClientData: ArgusGenerateRecord error deleting record");
-#endif
-                              ArgusDeleteRecordStruct(ArgusParser, rec);
-                           }
                            break;
-                        }
-
-                        case ARGUS_CISCO_V5_DATA: {
-                           if (ArgusGenerateCiscoRecord(rec, 0, (char *)&buf[0])) {
-                              asock->length = sizeof(CiscoFlowHeaderV5_t) + sizeof(CiscoFlowEntryV5_t);
-                              asock->rec = rec;
-                           }
                         }
                      }
                }
             }
 
             if (asock->rec != NULL) {
-               ptr = (unsigned char *)&buf[0];
+               ptr = (unsigned char *)&awf->buf[0];
                if ((client->host == NULL) && (!(asock->writen))) {
                   if (!(output->ArgusWriteStdOut) && (asock->filename)) {
                      if (asock->lastwrite.tv_sec < output->ArgusGlobalTime.tv_sec) {
@@ -2763,10 +2861,12 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                
                if ((len = (asock->length - asock->writen)) > 0) {
                   if (client->host != NULL) {
-                     if ((retn = sendto (asock->fd, &buf[0], len, 0, client->host->ai_addr, client->host->ai_addrlen)) < 0)
+                     if ((retn = sendto (asock->fd, outputbuf, outputlen, 0,
+                                         client->host->ai_addr, client->host->ai_addrlen)) < 0)
                         ArgusLog (LOG_ERR, "ArgusInitOutput: sendto(): retn %d %s", retn, strerror(errno));
 #ifdef ARGUSDEBUG
-                        ArgusDebug (3, "ArgusWriteSocket: sendto (%d, %x, %d, ...) %d\n", asock->fd, &buf[0], len, retn);
+                        ArgusDebug (3, "ArgusWriteSocket: sendto (%d, %x, %d, ...) %d\n",
+                                    asock->fd, outputbuf, outputlen, retn);
 #endif
                      asock->errornum = 0;
                      asock->writen += len;
@@ -2790,11 +2890,14 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                         asock->length = 0;
 
                         if (asock->rec != NULL) {
-                           ArgusDeleteRecordStruct(ArgusParser, rec);
+                           FreeArgusWireFmtBuffer(asock->rec);
                            asock->rec = NULL;
                         }
-                        while ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
-                           ArgusDeleteRecordStruct(ArgusParser, rec);
+                        while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+                           awf = node->datum;
+                           FreeArgusQueueNode(node);
+                           FreeArgusWireFmtBuffer(awf);
+                        }
 
                      } else {
                         switch (errno) {
@@ -2829,9 +2932,12 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               asock->rec = NULL;
                               asock->writen = 0;
                               asock->length = 0;
-                              ArgusDeleteRecordStruct(ArgusParser, rec);
-                              while ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
-                                 ArgusDeleteRecordStruct(ArgusParser, rec);
+                              FreeArgusWireFmtBuffer(awf);
+                              while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+                                 awf = node->datum;
+                                 FreeArgusQueueNode(node);
+                                 FreeArgusWireFmtBuffer(awf);
+                              }
 
                               count = 0;
                               retn = -1;
@@ -2844,19 +2950,19 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                
                if ((asock->writen > 0) && (asock->writen >= asock->length)) {
                   gettimeofday(&list->outputTime, 0L);
-                  ArgusDeleteRecordStruct(ArgusParser, rec);
+                  FreeArgusWireFmtBuffer(awf);
                   asock->rec = NULL;
 
                } else {
 #ifdef ARGUSDEBUG
-                  ArgusDebug (6, "ArgusWriteOutSocket: still work to be done for 0x%x, len %d writen %d turns %d", rec, asock->length, asock->writen, count);
+                  ArgusDebug (6, "ArgusWriteOutSocket: still work to be done for 0x%x, len %d writen %d turns %d", awf, asock->length, asock->writen, count);
 #endif
                }
 
             } else {
                count = 0;
 #ifdef ARGUSDEBUG
-               ArgusDebug (6, "ArgusWriteOutSocket: nothing to be done for 0x%x, len %d writen %d", rec, asock->length, asock->writen);
+               ArgusDebug (6, "ArgusWriteOutSocket: nothing to be done for 0x%x, len %d writen %d", awf, asock->length, asock->writen);
 #endif
             }
          }
@@ -2866,13 +2972,16 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
             close(asock->fd);
             asock->fd = -1;
             if (asock->rec != NULL) {
-               ArgusDeleteRecordStruct(ArgusParser, rec);
+               FreeArgusWireFmtBuffer(asock->rec);
                asock->rec = NULL;
                asock->writen = 0;
                asock->length = 0;
             }
-            while ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
-               ArgusDeleteRecordStruct(ArgusParser, rec);
+            while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+               awf = node->datum;
+               FreeArgusQueueNode(node);
+               FreeArgusWireFmtBuffer(awf);
+            }
 
             asock->errornum = 0;
             retn = -1;
