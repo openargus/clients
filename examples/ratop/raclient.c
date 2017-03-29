@@ -41,7 +41,6 @@
 #endif
 
 #include <argus_output.h>
-#include <radium.h>
 #include <racurses.h>
 #include <rabins.h>
 
