@@ -2668,8 +2668,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                asock->writen = 0;
                asock->length = 0;
 
-               while ((asock->rec == NULL) && ArgusGetListCount(list)) {
-                  if ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+               if ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
 
                      switch (client->format) {
                         case ARGUS_DATA: {
@@ -2721,7 +2720,6 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                            }
                         }
                      }
-                  }
                }
             }
 
