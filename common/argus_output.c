@@ -1050,7 +1050,7 @@ ArgusOutputProcess(void *arg)
 #endif /* ARGUS_THREADS */
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusOutputProcess(0x%x) starting\n", output);
+   ArgusDebug (2, "%s(0x%x) starting\n", __func__, output);
 #endif
 
 #if defined(ARGUS_THREADS)
@@ -1125,7 +1125,7 @@ ArgusOutputProcess(void *arg)
                            struct ArgusClientData *client = (void *)output->ArgusClients->start;
 
 #ifdef ARGUSDEBUG
-                           ArgusDebug (3, "ArgusOutputProcess() select returned with tasks\n");
+                           ArgusDebug (3, "%s() select returned with tasks\n", __func__);
 #endif
                            for (i = 0; i < output->ArgusListens; i++)
                               if (FD_ISSET(output->ArgusLfd[i], &readmask))
@@ -1189,8 +1189,10 @@ ArgusOutputProcess(void *arg)
                output->ArgusOutputSequence = seqnum;
 #ifdef ARGUSDEBUG
                if (seqnum == 0)
-                  ArgusDebug (3, "ArgusOutputProcess() received mar 0x%x totals %lld count %d remaining %d\n",
-                            rec, output->ArgusTotalRecords, output->ArgusInputList->count, output->ArgusOutputList->count);
+                  ArgusDebug(3, "%s() received mar 0x%x totals %lld count %d remaining %d\n",
+                             __func__, rec, output->ArgusTotalRecords,
+                             output->ArgusInputList->count,
+                             output->ArgusOutputList->count);
 #endif
                count = 0;
 
@@ -1205,7 +1207,8 @@ ArgusOutputProcess(void *arg)
                      struct ArgusClientData *client = (void *)output->ArgusClients->start;
                      int i, ArgusWriteRecord = 0;
 #ifdef ARGUSDEBUG
-                     ArgusDebug (5, "ArgusOutputProcess() %d client(s) for record 0x%x\n", output->ArgusClients->count, rec);
+                  ArgusDebug(5, "%s() %d client(s) for record 0x%x\n",
+                             __func__, output->ArgusClients->count, rec);
 #endif
 
                      if (have_argus_client)
@@ -1216,7 +1219,9 @@ ArgusOutputProcess(void *arg)
                      for (i = 0; i < output->ArgusClients->count; i++) {
                         if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
 #ifdef ARGUSDEBUG
-                           ArgusDebug (5, "ArgusOutputProcess() client 0x%x ready fd %d sock 0x%x start %d", client, client->fd, client->sock, client->ArgusClientStart);
+                           ArgusDebug(5, "%s() client 0x%x ready fd %d sock 0x%x start %d",
+                                      __func__, client, client->fd,
+                                      client->sock, client->ArgusClientStart);
 #endif
                            ArgusWriteRecord = 1;
                            if (client->ArgusFilterInitialized)
@@ -1234,20 +1239,28 @@ ArgusOutputProcess(void *arg)
 
                            } else {
 #ifdef ARGUSDEBUG
-                              ArgusDebug (5, "ArgusOutputProcess() client 0x%x filter blocks fd %d sock 0x%x start %d", client, client->fd, client->sock, client->ArgusClientStart);
+                              ArgusDebug(5, "%s() client 0x%x filter blocks fd %d sock 0x%x start %d",
+                                         __func__, client, client->fd,
+                                         client->sock,
+                                         client->ArgusClientStart);
 #endif
                            }
 
                         } else {
                            struct timeval tvbuf, *tvp = &tvbuf;
 #ifdef ARGUSDEBUG
-                           ArgusDebug (5, "ArgusOutputProcess() %d client(s) not ready fd %d sock 0x%x start %d", output->ArgusClients->count, client->fd, client->sock, client->ArgusClientStart);
+                           ArgusDebug(5, "%s() %d client(s) not ready fd %d sock 0x%x start %d",
+                                      __func__, output->ArgusClients->count,
+                                      client->fd, client->sock,
+                                      client->ArgusClientStart);
 #endif
                            RaDiffTime (&output->ArgusGlobalTime, &client->startime, tvp);
                            if (tvp->tv_sec >= ARGUS_CLIENT_STARTUP_TIMEOUT) {
                               if (client->sock != NULL) {
                                  ArgusDeleteSocket(output, client);
-                                 ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: client %s never started: timed out", client->hostname);
+                                 ArgusLog(LOG_WARNING,
+                                          "%s: client %s never started: timed out",
+                                          __func__, client->hostname);
                               }
                               client->ArgusClientStart = 1;
                            }
@@ -1266,7 +1279,8 @@ ArgusOutputProcess(void *arg)
 #endif
                } else {
 #ifdef ARGUSDEBUG
-                  ArgusDebug (5, "ArgusOutputProcess() no client for record 0x%x\n", rec);
+                  ArgusDebug(5, "%s() no client for record 0x%x\n",
+                             __func__, rec);
 #endif
                }
                ArgusDeleteRecordStruct(ArgusParser, rec);
@@ -1287,7 +1301,7 @@ ArgusOutputProcess(void *arg)
                if ((client->fd != -1) && (client->sock != NULL)) {
                   if ((output->status & ARGUS_STOP) || (output->status & ARGUS_SHUTDOWN)) {
 #ifdef ARGUSDEBUG
-                     ArgusDebug (1, "ArgusOutputProcess() draining queue\n");
+                     ArgusDebug(1, "%s() draining queue\n", __func__);
 #endif
                      ArgusWriteOutSocket (output, client);
                      ArgusDeleteSocket(output, client);
@@ -1311,7 +1325,8 @@ ArgusOutputProcess(void *arg)
                if ((client->fd == -1) && (client->sock == NULL) && client->ArgusClientStart) {
                   ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
 #ifdef ARGUSDEBUG
-                  ArgusDebug (1, "ArgusCheckClientMessage: client %s removed", client->hostname);
+                  ArgusDebug(1, "%s: client %s removed", client->hostname,
+                             __func__);
 #endif
                   ArgusFree(client);
                   i = 0; count = output->ArgusClients->count;
@@ -1348,7 +1363,8 @@ ArgusOutputProcess(void *arg)
 #if defined(ARGUS_THREADS)
          struct timespec tsbuf = {0, 100000000}, *ts = &tsbuf;
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "ArgusOutputProcess() waiting for ArgusOutputList 0x%x\n", output);
+         ArgusDebug(1, "%s() waiting for ArgusOutputList 0x%x\n",
+                    __func__, output);
 #endif
          nanosleep (ts, NULL);
 #endif
@@ -1362,7 +1378,7 @@ ArgusOutputProcess(void *arg)
    if (output->status & ARGUS_SHUTDOWN) {
       struct ArgusClientData *client;
 #ifdef ARGUSDEBUG
-      ArgusDebug (1, "ArgusOutputProcess() shuting down\n");
+      ArgusDebug (1, "%s() shuting down\n", __func__);
 #endif
       while ((client = (void *) output->ArgusClients->start) != NULL) {
          if ((client->fd != -1) && (client->sock != NULL)) {
@@ -1376,7 +1392,7 @@ ArgusOutputProcess(void *arg)
 
 #if defined(ARGUS_THREADS)
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusOutputProcess() exiting\n");
+   ArgusDebug (1, "%s() exiting\n", __func__);
 #endif
    RaParseComplete(1);
    pthread_exit(retn);
