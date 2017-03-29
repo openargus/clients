@@ -88,7 +88,7 @@ struct ArgusSocketStruct {
    int fd, status, cnt, expectedSize, errornum;
    int ArgusLastRecord, ArgusReadState;
    struct timeval lastwrite;
-   unsigned char buf[ARGUS_MAXRECORD], *ptr;
+   unsigned char *ptr;
    struct ArgusRecordStruct *rec;
    int length, writen;
    struct sockaddr sock;
