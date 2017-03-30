@@ -2540,7 +2540,7 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
 #include <fcntl.h>
 
 #define ARGUS_MAXERROR		500000
-#define ARGUS_MAXWRITENUM	50000
+#define ARGUS_MAXWRITENUM	64
 
 int ArgusMaxListLength = 500000;
 int ArgusCloseFile = 0;
