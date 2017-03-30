@@ -218,7 +218,6 @@ struct ArgusOutputStruct *ArgusNewOutput (struct ArgusParserStruct *);
 void ArgusDeleteOutput (struct ArgusParserStruct *, struct ArgusOutputStruct *);
 void ArgusCloseOutput(struct ArgusOutputStruct *);
 
-void *ArgusControlChannelProcess(void *);
 void ArgusInitControlChannel (struct ArgusOutputStruct *);
 struct ArgusOutputStruct *ArgusNewControlChannel (struct ArgusParserStruct *);
 void ArgusDeleteControlChannel (struct ArgusParserStruct *, struct ArgusOutputStruct *);
