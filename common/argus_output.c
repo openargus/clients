@@ -2617,7 +2617,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
 
    if ((list = asock->ArgusOutputList) != NULL) {
       if (asock->rec != NULL)
-         count++;
+         count = 1;
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&list->lock);
