@@ -882,7 +882,7 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 #ifdef ARGUS_SASL
                               ArgusMinSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusMinSsf \"%s\" \n", ArgusMinSsf);
+                           ArgusDebug (1, "RadiumParseResourceFile: ArgusMinSsf \"%d\" \n", ArgusMinSsf);
 #endif
 #endif
                            }
@@ -893,7 +893,7 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 #ifdef ARGUS_SASL
                               ArgusMaxSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                              ArgusDebug (1, "RadiumParseResourceFile: ArgusMaxSsf \"%s\" \n", ArgusMaxSsf);
+                              ArgusDebug (1, "RadiumParseResourceFile: ArgusMaxSsf \"%d\" \n", ArgusMaxSsf);
 #endif
 #endif
                            }
