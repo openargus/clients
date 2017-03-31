@@ -1848,6 +1848,12 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
       value = MAXSTRLEN;
 
    if ((cnt = recv (fd, buf, value, 0)) <= 0) {
+      if (cnt == 0) {
+#ifdef ARGUSDEBUG
+         ArgusDebug (3, "%s (0x%x, %d) recv() found no connection\n", __func__, client, fd);
+#endif
+         return -1;
+      }
       switch(errno) {
          default:
          case EBADF:
