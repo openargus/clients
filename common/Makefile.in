@@ -81,7 +81,7 @@ TAGFILES = $(SRC) $(HDR) $(TAGHDR)
 
 LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_output.a @INSTALL_LIB@/argus_timer.a
 
-OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ)
+OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ) $(TIMEROBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
 
 

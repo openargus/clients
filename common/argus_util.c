@@ -1075,8 +1075,6 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
             if (!(strncmp(parser->ArgusProgramName, "ragrep", 6)))
                parser->Lflag = 1;
             else {
-               char *ptr;
-
                parser->Lflag = (char)(strtol(optarg, NULL, 10) & 0xff);
                switch (parser->Lflag) {
                   case  0: parser->Lflag = -1; break;

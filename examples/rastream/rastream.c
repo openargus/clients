@@ -73,13 +73,13 @@ struct ArgusFileCacheStruct {
 static struct ArgusFileCacheStruct *ArgusThisFileCache = NULL;
 static struct timeval ArgusLastFileTime = {0, 0};
 
-static struct ArgusHashTable ArgusProbeTable;
-static struct ArgusQueueStruct *ArgusProbeQueue = NULL;
-static struct ArgusProbeStruct *ArgusThisProbe = NULL;
+// static struct ArgusHashTable ArgusProbeTable;
+// static struct ArgusQueueStruct *ArgusProbeQueue = NULL;
+// static struct ArgusProbeStruct *ArgusThisProbe = NULL;
 
 static struct ArgusAdjustStruct adata, *ArgusNadp = &adata;
-static int RaProcessSplitOptionSrcId = 0;
 
+// static int RaProcessSplitOptionSrcId = 0;
 
 static int ArgusInitNewFilename(struct ArgusParserStruct *,
                                 struct ArgusWfileStruct *, char *);
@@ -100,10 +100,11 @@ static struct timeval ArgusLastTime     = {0, 0};
 static struct timeval ArgusThisTime     = {0, 0};
 
 
-static struct timeval dLastTime = {0, 0};
+// static struct timeval dLastTime = {0, 0};
+// static struct timeval dTime     = {0, 0};
+
 static struct timeval dRealTime = {0, 0};
 static struct timeval dThisTime = {0, 0};
-static struct timeval dTime     = {0, 0};
 
 static long long thisUsec = 0;
 
@@ -126,8 +127,8 @@ static struct ArgusHashStruct *ArgusGenerateFileHash(struct ArgusParserStruct *,
 static struct ArgusWfileStruct *ArgusAddFilename(struct ArgusParserStruct *,
                                                  struct ArgusFileCacheStruct *,
                                                  char *);
-static int ArgusRemoveFilename(struct ArgusFileCacheStruct *,
-                               struct ArgusWfileStruct *, char *);
+
+// static int ArgusRemoveFilename(struct ArgusFileCacheStruct *, struct ArgusWfileStruct *, char *);
 
 
 void
@@ -1590,6 +1591,7 @@ ArgusAddFilename(struct ArgusParserStruct *parser, struct ArgusFileCacheStruct *
    return(retn);
 }
 
+/*
 static
 int
 ArgusRemoveFilename(struct ArgusFileCacheStruct *fcache, struct ArgusWfileStruct *tfile, char *filename)
@@ -1616,6 +1618,7 @@ ArgusRemoveFilename(struct ArgusFileCacheStruct *fcache, struct ArgusWfileStruct
 #endif
    return(retn);
 }
+*/
 
 static
 struct ArgusFileCacheStruct *
