@@ -31,28 +31,40 @@
 #include "rabootp_client_tree.h"
 
 static const time_t RABOOTP_PROTO_TIMER_NONLEASE=10;
+static const time_t RABOOTP_PROTO_TIMER_HOLDDOWN=30;
 
 /* This function should only be called from the timer thread */
 static ArgusTimerResult
 __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
 {
-   /* TODO: start hold-down timer and remove transaction from tree
-    * if the timer expires.
-    * TODO: Don't call mutex functions here.  Add work item to queue
+   int holddown_expired = 0;
+   int result = FINISHED;
+   struct timespec exp = {
+      .tv_sec = RABOOTP_PROTO_TIMER_HOLDDOWN,
+   };
+
+   /* TODO: Don't call mutex functions here.  Add work item to queue
     * for a "bottom half" thread to handle so we don't block the timer
     * thread.
     */
 
    struct ArgusDhcpStruct *ads = tim->data;
    MUTEX_LOCK(ads->lock);
-   ads->flags |= ARGUS_DHCP_LEASEEXP;
-   ads->timers.lease = NULL;
+   if (ads->flags & ARGUS_DHCP_LEASEEXP) {
+      holddown_expired = 1;
+   } else {
+      free(ads->timers.lease);
+      ads->flags |= ARGUS_DHCP_LEASEEXP;
+      ads->timers.lease = NULL;
+      *ts = exp;
+      result = RESCHEDULE_REL;
+   }
    MUTEX_UNLOCK(ads->lock);
 
-   /* decrement refcount -- timer tree is done with this. */
-   ArgusDhcpStructFree(ads);
+   if (holddown_expired)
+      ArgusDhcpStructFree(ads);
 
-   return FINISHED;
+   return result;
 }
 
 /* This function changes the contents of the cached transaction and should
