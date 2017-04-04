@@ -225,6 +225,7 @@ struct ArgusDhcpStruct *
 ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
                      struct RabootpTimerStruct *);
 
+int RabootpClientRemove(struct ArgusDhcpStruct *);
 void RabootpDumpTree(void);
 char *RabootpDumpTreeStr(int);
 void RabootpIntvlTreeDump(void);

@@ -1336,6 +1336,11 @@ RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
    return  rv;
 }
 
+int RabootpClientRemove(struct ArgusDhcpStruct *ads)
+{
+   return ArgusDhcpClientTreeRemove(&client_tree, ads);
+}
+
 void
 RabootpCallbacksInit(void)
 {
