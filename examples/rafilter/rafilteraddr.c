@@ -281,7 +281,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             if (retn) {
                char buf[MAXSTRLEN];
                if (!parser->qflag) {
-                  if (parser->Lflag) {
+                  if (parser->Lflag && !(ArgusParser->ArgusPrintJson)) {
                      if (parser->RaLabel == NULL)
                         parser->RaLabel = ArgusGenerateLabel(parser, argus);
           

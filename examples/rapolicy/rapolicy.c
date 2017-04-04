@@ -322,7 +322,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
    } else {
       char buf[MAXSTRLEN];
       if (!ArgusParser->qflag) {
-         if (ArgusParser->Lflag) {
+         if (ArgusParser->Lflag && (!(ArgusParser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (ArgusParser->RaLabel == NULL)
                ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, ns);
  

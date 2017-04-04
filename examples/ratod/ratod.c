@@ -1051,7 +1051,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                 break;
 
             default: {
-               if (ArgusParser->Lflag) {
+               if (ArgusParser->Lflag && (!(ArgusParser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
                   if (ArgusParser->RaLabel == NULL)
                      ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, argus);
 

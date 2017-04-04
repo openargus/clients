@@ -164,7 +164,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-
       if (parser->Lflag < 0)
          parser->Lflag = 0;
 
@@ -174,6 +173,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
 void RaArgusInputComplete (struct ArgusInput *input) { 
    if (input->major_version > 0) {
+
       if (ArgusParser->Lflag) {
          if (ArgusRecordMatches == 0) {
             printf ("%s\n", input->filename);
@@ -405,7 +405,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       
          } else {
             if (!(parser->qflag || parser->Lflag || parser->lflag || parser->cflag)) {
-               if (!(parser->ArgusPrintXml)) {
+               if (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson)) {
                   if (parser->RaLabel == NULL)
                      parser->RaLabel = ArgusGenerateLabel(parser, argus);
                }
@@ -511,7 +511,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
    } else {
 
       if ((parser->ArgusPrintMan) && (!parser->qflag)) {
-         if (parser->Lflag && !(parser->ArgusPrintXml)) {
+         if (parser->Lflag && (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (parser->RaLabel == NULL)
                parser->RaLabel = ArgusGenerateLabel(parser, argus);
  
@@ -589,7 +589,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
    } else {
 
       if ((parser->ArgusPrintEvent) && (!parser->qflag)) {
-         if (parser->Lflag && !(parser->ArgusPrintXml)) {
+         if (parser->Lflag && (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (parser->RaLabel == NULL)
                parser->RaLabel = ArgusGenerateLabel(parser, argus);
  

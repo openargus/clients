@@ -764,7 +764,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          } else {
             if (!parser->qflag) {
-               if (parser->Lflag) {
+
+               if (!(ArgusParser->ArgusPrintJson) && (ArgusParser->Lflag)) {
                   if (parser->RaLabel == NULL)
                      parser->RaLabel = ArgusGenerateLabel(parser, argus);
        
