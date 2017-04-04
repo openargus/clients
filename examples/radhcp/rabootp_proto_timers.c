@@ -28,6 +28,9 @@
 #include "argus_threads.h"
 #include "rabootp.h"
 #include "rabootp_memory.h"
+#include "rabootp_client_tree.h"
+
+static const time_t RABOOTP_PROTO_TIMER_NONLEASE=10;
 
 /* This function should only be called from the timer thread */
 static ArgusTimerResult
@@ -87,13 +90,91 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
    return 0;
 }
 
+/* This function should only be called from the timer thread */
+static ArgusTimerResult
+__discover_exp_cb(struct argus_timer *tim, struct timespec *ts)
+{
+   /*
+    * TODO: Don't call mutex functions here.  Add work item to queue
+    * for a "bottom half" thread to handle so we don't block the timer
+    * thread.
+    */
+
+   struct ArgusDhcpStruct *ads = tim->data;
+   MUTEX_LOCK(ads->lock);
+   ads->timers.non_lease = NULL;
+   MUTEX_UNLOCK(ads->lock);
+
+   /* decrement refcount -- timer tree is done with this. */
+   ArgusDhcpStructFree(ads);
+
+   /* remove from client tree here */
+   RabootpClientRemove(ads);
+   /* decrement refcount -- client tree is done with this. */
+   ArgusDhcpStructFree(ads);
+
+   return FINISHED;
+}
+
+/* This function changes the contents of the cached transaction and should
+ * only be called from the main/parse thread
+ *
+ * PREREQ: calling function must hold reference to v_cached
+ *         (must have incremented refcount) so that the reference
+ *         count can safely be incremented here without holding the
+ *         client tree lock!!!  Caller must hold v_cached->lock.
+ *
+ * RabootpProtoTimersNonleaseSet starts a timer when a message that
+ * does not bind or "un-bind" a lease is sent by the client.  A
+ * response to that message from a server should stop the timer.
+ *
+ */
+static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
+			      void *v_cached, void *v_arg)
+{
+   const struct ArgusDhcpStruct * const parsed = v_parsed;
+   struct ArgusDhcpStruct *cached = v_cached;
+   struct RabootpTimerStruct *rts = v_arg;
+   int have_ref = 0;
+   uint8_t type = __mask2type(parsed->msgtypemask);
+
+   /* If we send or receive any kind of message, kill the timer */
+   if (cached->timers.non_lease) {
+      RabootpTimerStop(rts, cached->timers.non_lease);
+      cached->timers.non_lease = NULL;
+      have_ref = 1;
+   }
+
+   /* did we just send a discover, request or renew? */
+   if (type == DHCPFORCERENEW || type == DHCPDISCOVER || type == DHCPREQUEST) {
+      struct timespec exp = {
+         .tv_sec = RABOOTP_PROTO_TIMER_NONLEASE,
+      };
+
+      if (have_ref == 0)
+         ArgusDhcpStructUpRef(cached);
+      if (cached->timers.non_lease)
+          RabootpTimerStop(rts, cached->timers.non_lease);
+      cached->timers.non_lease = RabootpTimerStart(rts, &exp, __discover_exp_cb,
+                                                   cached);
+   }
+
+   return 0;
+}
+
 void RabootpProtoTimersInit(struct RabootpTimerStruct *rts)
 {
    RabootpCallbackRegister(CALLBACK_STATECHANGE,
                            RabootpProtoTimersLeaseSet, rts);
+   RabootpCallbackRegister(CALLBACK_XIDUPDATE,
+                           RabootpProtoTimersNonleaseSet, rts);
+   RabootpCallbackRegister(CALLBACK_XIDNEW,
+                           RabootpProtoTimersNonleaseSet, rts);
 }
 
 void RabootpProtoTimersCleanup(void)
 {
    RabootpCallbackUnregister(CALLBACK_STATECHANGE, RabootpProtoTimersLeaseSet);
+   RabootpCallbackUnregister(CALLBACK_XIDUPDATE, RabootpProtoTimersNonleaseSet);
+   RabootpCallbackUnregister(CALLBACK_XIDNEW, RabootpProtoTimersNonleaseSet);
 }
