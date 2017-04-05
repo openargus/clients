@@ -271,8 +271,6 @@ ArgusTimerAdvanceWheel(struct argus_timer_wheel *w)
     */
 
    struct argus_timer_tree *tree = w->slots[w->current];
-// struct argus_timer *tim;
-// int done = 0;
 
    /* Look for the timers in the tree that expire soonest and see if
     * that's now.
@@ -289,7 +287,6 @@ ArgusTimerAdvanceWheel(struct argus_timer_wheel *w)
        */
        struct timespec currenttime;
        struct timespec diff;
-//     unsigned msec_per_slot;
 
        w->gettime(&currenttime);
        __timespec_sub(&w->now, &currenttime, &diff);

@@ -73,13 +73,7 @@ struct ArgusFileCacheStruct {
 static struct ArgusFileCacheStruct *ArgusThisFileCache = NULL;
 static struct timeval ArgusLastFileTime = {0, 0};
 
-// static struct ArgusHashTable ArgusProbeTable;
-// static struct ArgusQueueStruct *ArgusProbeQueue = NULL;
-// static struct ArgusProbeStruct *ArgusThisProbe = NULL;
-
 static struct ArgusAdjustStruct adata, *ArgusNadp = &adata;
-
-// static int RaProcessSplitOptionSrcId = 0;
 
 static int ArgusInitNewFilename(struct ArgusParserStruct *,
                                 struct ArgusWfileStruct *, char *);
@@ -98,11 +92,6 @@ static float RaUpdateRate = 1.0;
 static struct timeval ArgusLastRealTime = {0, 0};
 static struct timeval ArgusLastTime     = {0, 0};
 static struct timeval ArgusThisTime     = {0, 0};
-
-
-// static struct timeval dLastTime = {0, 0};
-// static struct timeval dTime     = {0, 0};
-
 static struct timeval dRealTime = {0, 0};
 static struct timeval dThisTime = {0, 0};
 
@@ -127,9 +116,6 @@ static struct ArgusHashStruct *ArgusGenerateFileHash(struct ArgusParserStruct *,
 static struct ArgusWfileStruct *ArgusAddFilename(struct ArgusParserStruct *,
                                                  struct ArgusFileCacheStruct *,
                                                  char *);
-
-// static int ArgusRemoveFilename(struct ArgusFileCacheStruct *, struct ArgusWfileStruct *, char *);
-
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -1590,35 +1576,6 @@ ArgusAddFilename(struct ArgusParserStruct *parser, struct ArgusFileCacheStruct *
 #endif
    return(retn);
 }
-
-/*
-static
-int
-ArgusRemoveFilename(struct ArgusFileCacheStruct *fcache, struct ArgusWfileStruct *tfile, char *filename)
-{
-   int retn = 0, count, i;
-
-   if (tfile != NULL) {
-      if (tfile->htblhdr != NULL)
-         ArgusRemoveHashEntry (&tfile->htblhdr);
-
-      if ((count = fcache->files->count) != 0) {
-         for (i = 0; (i < count) && (retn == 0); i++) {
-            struct ArgusListRecord *lrec = ArgusPopFrontList(fcache->files, ARGUS_NOLOCK);
-            if (lrec == (void *) tfile) {
-               retn = 1;
-            } else
-               ArgusPushBackList(fcache->files, lrec, ARGUS_NOLOCK);
-         }
-      }
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (3, "ArgusRemoveFilename (%p, %p, %s) return 0x%x", fcache, tfile, filename, retn);
-#endif
-   return(retn);
-}
-*/
 
 static
 struct ArgusFileCacheStruct *
