@@ -25,6 +25,7 @@
  * while after expiration for use by streaming analytics.
  */
 
+#include <stdlib.h>
 #include "argus_threads.h"
 #include "rabootp.h"
 #include "rabootp_memory.h"
@@ -113,18 +114,32 @@ __discover_exp_cb(struct argus_timer *tim, struct timespec *ts)
     */
 
    struct ArgusDhcpStruct *ads = tim->data;
+   int bound = 0;
+   int have_timer = 0; /* avoid race with RabootpProtoTimersNonleaseSet() */
+
    MUTEX_LOCK(ads->lock);
-   ads->timers.non_lease = NULL;
+   if (ads->timers.non_lease) {
+      have_timer = 1;
+      ads->timers.non_lease = NULL;
+      if (ads->state == BOUND)
+         bound = 1;
+   }
    MUTEX_UNLOCK(ads->lock);
+
+   if (!have_timer)
+      goto out;
 
    /* decrement refcount -- timer tree is done with this. */
    ArgusDhcpStructFree(ads);
 
-   /* remove from client tree here */
-   RabootpClientRemove(ads);
-   /* decrement refcount -- client tree is done with this. */
-   ArgusDhcpStructFree(ads);
+   if (!bound) {
+      /* remove from client tree here */
+      RabootpClientRemove(ads);
+      /* decrement refcount -- client tree is done with this. */
+      ArgusDhcpStructFree(ads);
+   }
 
+out:
    return FINISHED;
 }
 
@@ -147,26 +162,32 @@ static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
    const struct ArgusDhcpStruct * const parsed = v_parsed;
    struct ArgusDhcpStruct *cached = v_cached;
    struct RabootpTimerStruct *rts = v_arg;
-   int have_ref = 0;
-   uint8_t type = __mask2type(parsed->msgtypemask);
 
-   /* If we send or receive any kind of message, kill the timer */
-   if (cached->timers.non_lease) {
-      RabootpTimerStop(rts, cached->timers.non_lease);
-      cached->timers.non_lease = NULL;
-      have_ref = 1;
-   }
+   if (cached->state == BOUND) {
+      if (cached->timers.non_lease) {
+         RabootpTimerStop(rts, cached->timers.non_lease);
+         free(cached->timers.non_lease);
+         cached->timers.non_lease = NULL;
 
-   /* did we just send a discover, request or renew? */
-   if (type == DHCPFORCERENEW || type == DHCPDISCOVER || type == DHCPREQUEST) {
+         /* decrement refcount -- timer tree is done with this. */
+         ArgusDhcpStructFree(cached);
+
+      }
+   } else {
       struct timespec exp = {
          .tv_sec = RABOOTP_PROTO_TIMER_NONLEASE,
       };
 
-      if (have_ref == 0)
+      /* Otherwise, if we send or receive any kind of message and
+       * are still not BOUND, set/reset the timer
+       */
+
+      if (cached->timers.non_lease) {
+         RabootpTimerStop(rts, cached->timers.non_lease);
+         free(cached->timers.non_lease);
+      } else {
          ArgusDhcpStructUpRef(cached);
-      if (cached->timers.non_lease)
-          RabootpTimerStop(rts, cached->timers.non_lease);
+      }
       cached->timers.non_lease = RabootpTimerStart(rts, &exp, __discover_exp_cb,
                                                    cached);
    }
