@@ -107,6 +107,7 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    struct ArgusDhcpStruct *ads;
    struct ArgusDhcpStruct parsed;
    register const struct dhcp_packet *bp;
+   enum ArgusDhcpState newstate;
 
    bp = (struct dhcp_packet *)&user->array;
 
@@ -169,36 +170,32 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    }
 
    if (memcmp((const char *)&bp->options[0], vm_rfc1048,
-       sizeof(u_int32_t)) == 0) {
-      enum ArgusDhcpState newstate;
-
-      rfc1048_parse(bp->options,
-                    (const u_char *)(user->array+user->count),
+       sizeof(u_int32_t)) == 0)
+      rfc1048_parse(bp->options, (const u_char *)(user->array+user->count),
                     &parsed, bp->op);
 
-      if (newads) {
-         newstate = fsa_choose_initial_state(&parsed);
-      } else {
-         newstate = fsa_advance_state(&parsed, ads);
-         if (ads->state != newstate) {
-            if (newstate == BOUND) {
-               ads->last_bind.tv_sec = time->end.tv_sec;
-               ads->last_bind.tv_usec = time->end.tv_usec;
-            }
-            parsed.state = newstate;
-            rabootp_cb_exec(&callback.state_change, &parsed, ads);
+   if (newads) {
+      newstate = fsa_choose_initial_state(&parsed);
+   } else {
+      newstate = fsa_advance_state(&parsed, ads);
+      if (ads->state != newstate) {
+         if (newstate == BOUND) {
+            ads->last_bind.tv_sec = time->end.tv_sec;
+            ads->last_bind.tv_usec = time->end.tv_usec;
          }
+         parsed.state = newstate;
+         rabootp_cb_exec(&callback.state_change, &parsed, ads);
       }
-      ads->state = newstate;
-
-      /* merge/update */
-      ArgusDhcpStructUpdate(&parsed, ads);
-
-      if (newads)
-         rabootp_cb_exec(&callback.xid_new, &parsed, ads);
-      else
-         rabootp_cb_exec(&callback.xid_update, &parsed, ads);
    }
+   ads->state = newstate;
+
+   /* merge/update */
+   ArgusDhcpStructUpdate(&parsed, ads);
+
+   if (newads)
+      rabootp_cb_exec(&callback.xid_new, &parsed, ads);
+   else
+      rabootp_cb_exec(&callback.xid_update, &parsed, ads);
 
    if (bp->op == BOOTREQUEST)
       ads->total_requests++;
