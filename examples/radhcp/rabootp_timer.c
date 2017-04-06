@@ -81,22 +81,28 @@ RabootpTimerCleanup(struct RabootpTimerStruct *rts)
    ArgusFree(rts);
 }
 
+int RabootpTimerLock(struct RabootpTimerStruct *rts)
+{
+   return MUTEX_LOCK(&rts->lock);
+}
+
+int RabootpTimerUnlock(struct RabootpTimerStruct *rts)
+{
+   return MUTEX_UNLOCK(&rts->lock);
+}
+
 struct argus_timer *
 RabootpTimerStart(struct RabootpTimerStruct *rts, struct timespec *exp,
                   callback_t callback, void *arg)
 {
    struct argus_timer *tim;
 
-   MUTEX_LOCK(&rts->lock);
    tim = ArgusTimerStartRelative(rts->w, exp, callback, NULL, arg);
-   MUTEX_UNLOCK(&rts->lock);
    return tim;
 }
 
 void
 RabootpTimerStop(struct RabootpTimerStruct *rts, struct argus_timer *tim)
 {
-   MUTEX_LOCK(&rts->lock);
    ArgusTimerStop(rts->w, tim);
-   MUTEX_UNLOCK(&rts->lock);
 }

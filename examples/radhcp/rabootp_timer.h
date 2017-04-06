@@ -13,5 +13,7 @@ struct argus_timer *RabootpTimerStart(struct RabootpTimerStruct *rts,
 void RabootpTimerStop(struct RabootpTimerStruct *rts, struct argus_timer *tim);
 struct RabootpTimerStruct *RabootpTimerInit(gettimefunc, sleepfunc);
 void RabootpTimerCleanup(struct RabootpTimerStruct *);
+int RabootpTimerLock(struct RabootpTimerStruct *);
+int RabootpTimerUnlock(struct RabootpTimerStruct *);
 
 #endif
