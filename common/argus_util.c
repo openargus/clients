@@ -1638,7 +1638,7 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
       exit (0);
 }
 
-int
+static int
 ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
 {
    int retn = 0, i, len, Soption = 0, roption = 0, found = 0, lines = 0;

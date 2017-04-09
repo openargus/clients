@@ -1438,7 +1438,6 @@ void *ArgusCalloc (int, int);
 void *ArgusMallocAligned(int, size_t);
 void *ArgusMallocListRecord (struct ArgusParserStruct *, int);
 void ArgusFreeListRecord (struct ArgusParserStruct *, void *buf);
-int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
 int ArgusParserWiresharkManufFile (struct ArgusParserStruct *, char *);
 
 void ArgusAdjustGlobalTime (struct ArgusParserStruct *parser, struct timeval *now);
@@ -1805,7 +1804,6 @@ extern void *ArgusCalloc (int, int);
 extern void *ArgusMallocAligned(int, size_t);
 extern void *ArgusMallocListRecord (struct ArgusParserStruct *, int);
 extern void ArgusFreeListRecord (struct ArgusParserStruct *, void *buf);
-extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
 extern int ArgusParserWiresharkManufFile (struct ArgusParserStruct *, char *);
 
 extern char *ArgusTrimString (char *str);

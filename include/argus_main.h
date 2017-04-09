@@ -209,7 +209,6 @@ void ArgusDeleteModeList (struct ArgusParserStruct *);
 int ArgusAddMaskList (struct ArgusParserStruct *, char *);
 void ArgusDeleteMaskList (struct ArgusParserStruct *);
 
-extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
 extern int ArgusParseAliasFile (char *);
 
 int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *, struct ArgusWfileStruct *, struct ArgusRecord *);
@@ -307,7 +306,6 @@ extern void ArgusGenerateCanonicalRecord (struct ArgusRecord *, struct ArgusCano
 extern void ArgusReadRemote (int, struct nff_program *);
 extern int read_file (int fd, struct nff_program *);
 
-extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
 extern int ArgusParseAliasFile (char *);
 
 extern int ArgusGetServerSocket (struct ArgusInput *, int);
