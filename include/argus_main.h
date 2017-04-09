@@ -156,7 +156,6 @@ extern struct ArgusParserStruct *ArgusParser;
 extern void RaClearConfiguration (struct ArgusParserStruct *);
  
 void ArgusMainInit (struct ArgusParserStruct *, int, char **);
-void ArgusParseArgs (struct ArgusParserStruct *, int, char **);
 void setArgusArchive(struct ArgusParserStruct *, char *);
 void setArgusWfile(struct ArgusParserStruct *, char *, char *);
 void ArgusInitStructs (struct ArgusParserStruct *);

@@ -879,7 +879,7 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
       (void) signal (SIGPIPE, (void (*)(int)) RaParseComplete);
 }
 
-void
+static void
 ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
 {
    extern char *optarg;
