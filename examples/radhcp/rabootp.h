@@ -176,8 +176,9 @@ struct ArgusDhcpV4RequstOptsStruct {
 };
 
 struct ArgusDhcpV4Timers {
-   void *lease;
-   void *non_lease;     /* DHCPDISCOVER, DHCPREQUEST, DHCPRENEW */
+   void *lease;                    /* protocol lease expiry */
+   void *non_lease;                /* out-of-lease timer */
+   void *intvl;                    /* when to remove from interval tree */
 };
 
 enum ArgusDhcpStructFlags {
@@ -217,7 +218,6 @@ struct ArgusDhcpStruct {
    unsigned short num_responders;  /* how many unique servers replied */
    unsigned short total_requests;  /* request packets with this chaddr+xid */
    unsigned short total_unknownops;/* unknown opcodes received */
-   /* ... uint8_t pad[8] ... */
 };
 
 void RabootpCleanup(void);
@@ -226,6 +226,7 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
                      struct RabootpTimerStruct *);
 
 int RabootpClientRemove(struct ArgusDhcpStruct *);
+int RabootpIntvlRemove(const struct timeval * const intlo);
 void RabootpDumpTree(void);
 char *RabootpDumpTreeStr(int);
 void RabootpIntvlTreeDump(void);

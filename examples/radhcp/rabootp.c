@@ -1265,6 +1265,9 @@ void RabootpIntvlTreeDump(void)
    IntvlTreeDump(&interval_tree);
 }
 
+/* cached lock must be held by caller.
+ * Caller must also have a reference (incremented refcount) to cached.
+ */
 static int
 __rabootp_update_interval_tree(const void * const v_parsed,
                                void *v_cached,
@@ -1279,6 +1282,7 @@ __rabootp_update_interval_tree(const void * const v_parsed,
          struct ArgusDhcpIntvlTree *head = v_arg;
          struct ArgusDhcpIntvlNode *node;
 
+         /* IntvlTreeFind() ups the refcount on cached if found */
          node = IntvlTreeFind(&interval_tree, &cached->last_bind);
          if (node == NULL) {
             ArgusDhcpIntvlTreeInsert(head,
@@ -1344,6 +1348,11 @@ RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
 int RabootpClientRemove(struct ArgusDhcpStruct *ads)
 {
    return ArgusDhcpClientTreeRemove(&client_tree, ads);
+}
+
+int RabootpIntvlRemove(const struct timeval * const intlo)
+{
+   return ArgusDhcpIntvlTreeRemove(&interval_tree, intlo);
 }
 
 void

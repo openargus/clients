@@ -317,7 +317,7 @@ RaParseComplete (int sig)
          mysql_close(RaMySQL);
 #endif
          pthread_join(timer_thread, NULL);
-         RabootpProtoTimersCleanup();
+         RabootpProtoTimersCleanup(timer);
          RabootpTimerCleanup(timer);
          RabootpCallbacksCleanup();
          RabootpCleanup();

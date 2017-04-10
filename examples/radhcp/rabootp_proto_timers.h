@@ -22,6 +22,6 @@
 # include "rabootp.h"
 
 void RabootpProtoTimersInit(struct RabootpTimerStruct *);
-void RabootpProtoTimersCleanup(void);
+void RabootpProtoTimersCleanup(struct RabootpTimerStruct *);
 
 #endif
