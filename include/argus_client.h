@@ -1199,7 +1199,7 @@ struct ArgusListRecord *ArgusPopBackList(struct ArgusListStruct *, int);
 struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
 
 int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *, int);
@@ -1373,7 +1373,7 @@ extern struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, stru
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
 extern int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 extern int ArgusHistoMetricParse (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);

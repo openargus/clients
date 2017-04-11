@@ -73,6 +73,7 @@ struct RaBinProcessStruct *RaBinProcess = NULL;
 
 int ArgusRmonMode = 0;
 
+extern int ArgusTimeRangeStrategy;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -921,7 +922,6 @@ void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    extern struct RaBinProcessStruct *RaBinProcess;
-   extern int ArgusTimeRangeStrategy;
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
    int found = 0, offset, tstrat;
 
@@ -969,7 +969,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
             ArgusTimeAdjustRecord(&RaBinProcess->nadp, tns);
 
-            if ((tretn = ArgusCheckTime (parser, tns)) != 0) {
+            if ((tretn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
                struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
                struct ArgusRecordStruct *rec = NULL;
 
@@ -1007,7 +1007,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (argus->status & ARGUS_RECORD_WRITTEN)
       return (retn);
 
-   if (!(retn = ArgusCheckTime (ArgusParser, argus)))
+   if (!(retn = ArgusCheckTime (ArgusParser, argus, ArgusTimeRangeStrategy)))
       return (retn);
 
    if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {

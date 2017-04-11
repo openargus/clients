@@ -144,6 +144,15 @@ struct protoidmem protoidtable[HASHNAMESIZE];
 struct enamemem *check_emem(struct enamemem *table, const u_char *ep);
 struct enamemem *lookup_emem(struct enamemem *table, const u_char *ep);
 
+#include <ctype.h>
+#define ARGUS_INTERSECTS_TIME		1
+#define ARGUS_SPANS_TIME		2
+#define ARGUS_INCLUDES_TIME		2
+#define ARGUS_CONTAINS_TIME		3
+
+int ArgusTimeRangeStrategy = ARGUS_INTERSECTS_TIME;
+int ArgusTimeRangeNegation = 0;
+
 int target_flags = 0;
 extern void ArgusLog (int, char *, ...);
 extern void RaParseComplete (int);
@@ -3066,7 +3075,7 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
                if (parser->sNflag && (parser->sNflag >= parser->ArgusTotalRecords))
                   return (argus->hdr.len * 4);
 
-               if ((retn = ArgusCheckTime (parser, argus)) != 0) {
+               if ((retn = ArgusCheckTime (parser, argus, ArgusTimeRangeStrategy)) != 0) {
                   if (parser->ArgusWfileList != NULL) {
                      if (parser->RaWriteOut) {
                         if (parser->ArgusWfileList != NULL) {
@@ -3210,7 +3219,7 @@ ArgusHandleRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *in
          if (parser->sNflag && (parser->sNflag >= parser->ArgusTotalRecords))
             return (argus->hdr.len * 4);
 
-         if ((retn = ArgusCheckTime (parser, argus)) != 0) {
+         if ((retn = ArgusCheckTime (parser, argus, ArgusTimeRangeStrategy)) != 0) {
             if (parser->ArgusWfileList != NULL) {
                if (parser->RaWriteOut) {
                   if (parser->ArgusWfileList != NULL) {
@@ -25583,16 +25592,6 @@ ArgusDiffTime (struct ArgusTime *s1, struct ArgusTime *s2, struct timeval *diff)
 }
 
 
-#include <ctype.h>
-
-
-#define ARGUS_INTERSECTS_TIME		1
-#define ARGUS_SPANS_TIME		2
-#define ARGUS_INCLUDES_TIME		2
-#define ARGUS_CONTAINS_TIME		3
-
-int ArgusTimeRangeStrategy = ARGUS_INTERSECTS_TIME;
-int ArgusTimeRangeNegation = 0;
 
 static int
 ArgusParseTimeArg (char **argp, char *args[], int ind, struct tm *tm)
@@ -26216,7 +26215,8 @@ ArgusParseTime (struct ArgusParserStruct *parser, struct tm *tm, struct tm *ctm,
 
 
 int
-ArgusCheckTime (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
+ArgusCheckTime(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
+               int strategy)
 {
    struct ArgusTimeObject *dtime = NULL;
    struct timeval start, last, pstart, plast;
@@ -26424,7 +26424,7 @@ ArgusCheckTime (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 // #define ARGUS_INCLUDES_TIME             2
 // #define ARGUS_CONTAINS_TIME             3
 
-         switch (ArgusTimeRangeStrategy) {
+         switch (strategy) {
             case ARGUS_INTERSECTS_TIME:  // the record intersects the range in any way
                if ((((pstart.tv_sec  < start.tv_sec) ||
                     ((pstart.tv_sec == start.tv_sec) && (pstart.tv_usec <= start.tv_usec))) &&

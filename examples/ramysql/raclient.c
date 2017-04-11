@@ -1436,7 +1436,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
 
             while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
-               if ((tretn = ArgusCheckTime (parser, tns)) != 0) {
+               if ((tretn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
                   struct ArgusRecordStruct *rec = NULL;
 
                   switch (ns->hdr.type & 0xF0) {

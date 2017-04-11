@@ -93,6 +93,7 @@ extern gid_t new_gid;
 
 void ArgusSetChroot(char *);
 
+extern int ArgusTimeRangeStrategy;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -814,7 +815,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       RaBinProcess->nadp.dtperiod = 0.0;
   
       while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
-         if ((retn = ArgusCheckTime (parser, tns)) != 0) {
+         if ((retn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
             struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
             struct ArgusRecordStruct *rec = NULL;
   
@@ -843,7 +844,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
       if (argus->status & ARGUS_RECORD_WRITTEN)
          return (retn);
 
-      if (!(retn = ArgusCheckTime (ArgusParser, argus)))
+      if (!(retn = ArgusCheckTime (ArgusParser, argus, ArgusTimeRangeStrategy)))
          return (retn);
 
       if (ArgusParser->RaBinProcess->nadp.hard) {
