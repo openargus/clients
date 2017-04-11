@@ -236,6 +236,7 @@ struct ArgusRecordStruct {
    struct ArgusRecordHeader hdr;
    struct ArgusDSRHeader *dsrs[ARGUSMAXDSRTYPE];
    struct ArgusCorStruct *correlates;
+   int score;
    float srate, drate, sload, dload, dur, mean;
    float pcr, sploss, dploss;
    long long offset;

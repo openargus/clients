@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	217
-#define MAX_PRINT_ALG_TYPES     	217
+#define ARGUS_MAX_PRINT_ALG     	218
+#define MAX_PRINT_ALG_TYPES     	218
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -476,6 +476,7 @@ void ArgusPrintSID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct
 void ArgusPrintNode (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintInf (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintStatus (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintScore (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintFlags (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintMacAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcMacAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -715,6 +716,7 @@ void ArgusPrintSIDLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintNodeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintInfLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintStatusLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintScoreLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintFlagsLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcMacAddressLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstMacAddressLabel (struct ArgusParserStruct *, char *, int);
@@ -1897,6 +1899,7 @@ extern void ArgusPrintSID (struct ArgusParserStruct *, char *, struct ArgusRecor
 extern void ArgusPrintNode (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintInf (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintStatus (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintScore (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintFlags (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintMacAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSrcMacAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -2027,6 +2030,8 @@ extern void ArgusPrintSourceIDLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSIDLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintNodeLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintInfLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintStatusLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintScoreLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintFlagsLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcMacAddressLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintDstMacAddressLabel (struct ArgusParserStruct *, char *, int);

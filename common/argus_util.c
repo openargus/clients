@@ -8214,8 +8214,8 @@ ArgusPrintStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
          if (rec != NULL) {
             switch (argus->hdr.cause & 0xF0) {
-               case ARGUS_STATUS:
                case ARGUS_START:
+               case ARGUS_STATUS:
                   sprintf(status, "up");
                   break;
                case ARGUS_STOP:
@@ -8256,6 +8256,54 @@ ArgusPrintStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    ArgusDebug (10, "ArgusPrintStatus (%p, %p)", buf, argus);
 #endif
 }
+
+
+void
+ArgusPrintScore (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char score[32];
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+  if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+  }
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: 
+      case ARGUS_EVENT: {
+         sprintf(score, " ");
+         break;
+      }
+
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         snprintf (score, sizeof(score), format, argus->score);
+         break;
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " Score = \"%s\"", score);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(score);
+      } else {
+         if (strlen(score) > len) {
+            score[len - 1] = '*';
+            score[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, score);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintScore (%p, %p)", buf, argus);
+#endif
+}
+
 
 void ArgusPrintRank (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintBinNumber (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
@@ -17555,6 +17603,12 @@ void
 ArgusPrintStatusLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Status");
+}
+
+void
+ArgusPrintScoreLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "Score");
 }
 
 void
