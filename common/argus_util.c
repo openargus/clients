@@ -25594,7 +25594,7 @@ ArgusDiffTime (struct ArgusTime *s1, struct ArgusTime *s2, struct timeval *diff)
 int ArgusTimeRangeStrategy = ARGUS_INTERSECTS_TIME;
 int ArgusTimeRangeNegation = 0;
 
-int
+static int
 ArgusParseTimeArg (char **argp, char *args[], int ind, struct tm *tm)
 {
    char buf[64], *ptr = buf, *tmp;
