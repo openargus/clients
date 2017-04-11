@@ -1265,6 +1265,15 @@ void RabootpIntvlTreeDump(void)
    IntvlTreeDump(&interval_tree);
 }
 
+
+ssize_t
+RabootpIntvlTreeOverlapsRange(const struct timeval * const start,
+                              const struct timeval * const stop,
+                              struct ArgusDhcpIntvlNode *invec, size_t nitems)
+{
+   return IntvlTreeOverlapsRange(&interval_tree, start, stop, invec, nitems);
+}
+
 /* cached lock must be held by caller.
  * Caller must also have a reference (incremented refcount) to cached.
  */

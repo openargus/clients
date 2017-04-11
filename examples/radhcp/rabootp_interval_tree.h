@@ -58,13 +58,22 @@ int ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *,
                              uint32_t,
                              struct ArgusDhcpStruct *);
 int ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *,
-                              struct ArgusDhcpStruct *);
+                             const struct timeval * const intlo);
 struct ArgusDhcpIntvlNode *IntvlTreeFind(struct ArgusDhcpIntvlTree *head,
                                          const struct timeval * const intlo);
 struct ArgusDhcpIntvlNode *IntvlTreeFindByStruct(struct ArgusDhcpIntvlTree *,
                                                  struct ArgusDhcpStruct *);
 int IntvlTreeForEach(struct ArgusDhcpIntvlTree * const,
                       IntvlTreeCallback cb, void *);
+int IntvlTreeForEachOverlaps(struct ArgusDhcpIntvlTree * const,
+                             IntvlTreeCallback, void *,
+                             const struct timeval * const,
+                             const struct timeval * const);
 int IntvlTreeDump(struct ArgusDhcpIntvlTree *);
+ssize_t IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
+                               const struct timeval * const start,
+                               const struct timeval * const stop,
+                               struct ArgusDhcpIntvlNode *invec,
+                               size_t nitems);
 
 #endif

@@ -121,12 +121,13 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
 
 int
 ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
-                          struct ArgusDhcpStruct *ads)
+                         const struct timeval * const intlo)
 {
    struct ArgusDhcpIntvlNode *node;
    struct ArgusDhcpIntvlNode search;
 
-   search.data = ads;
+   search.intlo = *intlo;
+   search.data = NULL;
    MUTEX_LOCK(&head->lock);
    node = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
    if (node)
@@ -189,6 +190,58 @@ IntvlTreeForEach(struct ArgusDhcpIntvlTree * const head,
    }
 
 unlock:
+   MUTEX_UNLOCK(&head->lock);
+   return rv;
+}
+
+/* returns 1 if overlap, 0 if not */
+static int
+__test_overlap(struct ArgusDhcpIntvlNode *node,
+               const struct timeval * const start,
+               const struct timeval * const end)
+{
+   if ((timercmp(&node->intlo, start, <=)
+        && timercmp(&node->inthi, start, >=))
+       || (timercmp(&node->intlo, start, >=)
+           && timercmp(&node->intlo, end, <=)))
+      return 1;
+   return 0;
+}
+
+/* IntvlTreeForEachOverlaps()
+ * Run supplied callback for each node in the inteval tree with
+ * time range that overlaps in the supplied range.  Returns zero on
+ * success and passes along the return value of the callback if
+ * that function ever fails.  The refcount for each node passed
+ * to the callback is first incremented.  It is the responsibility
+ * of the caller to decrement the refcount(s) when finished with the
+ * dhcp structure(s).
+ */
+int
+IntvlTreeForEachOverlaps(struct ArgusDhcpIntvlTree * const head,
+                         IntvlTreeCallback cb, void *cp_arg0,
+                         const struct timeval * const start,
+                         const struct timeval * const end)
+{
+   struct ArgusDhcpIntvlNode *node;
+   int rv = 0;
+
+   MUTEX_LOCK(&head->lock);
+   RB_FOREACH(node, dhcp_intvl_tree, &head->inttree) {
+      if (timercmp(&node->intlo, end, >))
+         /* tree is ordered by intlo, so if the start times are now
+          * past the range end time we can quit.
+          */
+         break;
+      if (__test_overlap(node, start, end)) {
+         ArgusDhcpStructUpRef(node->data);
+         rv = cb(cp_arg0, node);
+         if (rv < 0)
+            break;
+      }
+   }
+
+out:
    MUTEX_UNLOCK(&head->lock);
    return rv;
 }
@@ -283,4 +336,46 @@ IntvlTreeDump(struct ArgusDhcpIntvlTree *it)
 
    ArgusFree(s.str);
    return 0;
+}
+
+static int
+__cb_intvl_tree_build_array(void *arg, struct ArgusDhcpIntvlNode *node)
+{
+   struct invecStruct *x = arg;
+
+   if (x->used == x->nitems)
+      return 0;
+
+   x->invec[x->used].data = node->data;
+   x->invec[x->used].intlo = node->intlo;
+   x->invec[x->used].inthi = node->inthi;
+   x->used++;
+   return 0;
+}
+
+/* RabootpIntvlTreeOverlapsRange() returns the number of elements
+ * in xvec that were set.  The refcount for every ArgusDhcpStruct
+ * returned in the array is incremented; it is necessary for the
+ * caller to decrement the refcounts when finished with the array.
+ */
+ssize_t
+IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
+                       const struct timeval * const start,
+                       const struct timeval * const stop,
+                       struct ArgusDhcpIntvlNode *invec, size_t nitems)
+{
+   struct invecStruct x = {
+      .nitems = nitems,
+      .used = 0,
+      .invec = invec,
+   };
+   int rv;
+
+   rv =  IntvlTreeForEachOverlaps(in, __cb_intvl_tree_build_array, &x,
+                                  start, stop);
+
+   if (rv < 0)
+      return rv;
+
+   return x.used;
 }

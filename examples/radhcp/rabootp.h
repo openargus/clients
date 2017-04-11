@@ -40,6 +40,7 @@
 #include "dhcp.h"
 #include "rabootp_callback.h"
 #include "rabootp_timer.h"
+#include "rabootp_interval_tree.h" /* for RabootpIntvlTreeOverlapsRange */
 
 #ifdef ARGUSDEBUG
 # define DEBUGLOG(lvl, fmt...) ArgusDebug(lvl, fmt)
@@ -230,6 +231,11 @@ int RabootpIntvlRemove(const struct timeval * const intlo);
 void RabootpDumpTree(void);
 char *RabootpDumpTreeStr(int);
 void RabootpIntvlTreeDump(void);
+
+struct ArgusDhcpIntvlNode;
+ssize_t RabootpIntvlTreeOverlapsRange(const struct timeval * const,
+                                      const struct timeval * const,
+                                      struct ArgusDhcpIntvlNode *, size_t);
 
 enum rabootp_callback_trigger {
    CALLBACK_STATECHANGE = 0,
