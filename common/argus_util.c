@@ -25847,7 +25847,7 @@ ArgusParseTime (struct ArgusParserStruct *parser, struct tm *tm, struct tm *ctm,
             } else  {
                i = strtod(str, &endptr);
                if (endptr == str)
-                  ArgusLog (LOG_ERR, "time syntax error %s", parser->timearg);
+                  ArgusLog (LOG_ERR, "time syntax error %s", buf);
             }
 
             if ((i >= 0) && (mode == ' ')) {
@@ -25865,7 +25865,7 @@ ArgusParseTime (struct ArgusParserStruct *parser, struct tm *tm, struct tm *ctm,
                   i++;
 
                if (wildcard)
-                  ArgusLog (LOG_ERR, "time syntax error %s", parser->timearg);
+                  ArgusLog (LOG_ERR, "time syntax error %s", buf);
 
                switch (mode) {
                   case '-': sign = -1; break;
