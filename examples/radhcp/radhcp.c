@@ -133,7 +133,7 @@ ArgusHandleSearchCommand (char *command)
    bzero(retn, sizeof(ArgusHandleResponseArray));
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusHandleSearchCommand(%s) search %s", string, retn);
+   ArgusDebug (1, "ArgusHandleSearchCommand(%s) search %p", string, retn);
 #endif
    return retn;
 }
