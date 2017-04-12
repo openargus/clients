@@ -52,6 +52,10 @@
 #include <argus_output.h>
 #include "rabootp_timer.h"
 #include "rabootp_proto_timers.h"
+#include "rabootp_interval_tree.h" /* for ArgusHandleSearchCommand.  maybe move this function */
+#include "rabootp_memory.h" /* for ArgusHandleSearchCommand.  maybe move this function */
+#include "rabootp_print.h"
+#include "argus_format_json.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
@@ -124,16 +128,126 @@ char **ArgusHandleSearchCommand (char *);
 static struct RabootpTimerStruct *timer = NULL;
 static pthread_t timer_thread;
 
+int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
+static char temporary[32];
+static char *invecstr;
+static const unsigned long INVECSTRLEN = 1024*1024; /* 1 MB */
+static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
+
+/* SEARCH: <argus-time-string> */
 char **
 ArgusHandleSearchCommand (char *command)
 {
+   int res = 0; /* ok */
    char *string = &command[8];
    char **retn = ArgusHandleResponseArray;
+   struct ArgusDhcpIntvlNode *invec;
+   size_t invec_nitems = 256; /* needs to be tunable? or automatic? */
+   ssize_t invec_used;
+
+   struct tm starttime = {0, };
+   struct tm endtime = {0, };
+   int frac;
+   time_t tsec = ArgusParser->ArgusGlobalTime.tv_sec;
+   struct timeval starttime_tv;
+   struct timeval endtime_tv;
+
+   /* Also remember where in the string the separator was. */
+   char *plusminusloc = NULL;
+   int off = 0;
+   char wildcarddate = 0;
+
+   /* If the date string has two parts, remember which character
+    * separates them.
+    */
+   char plusminus;
 
    bzero(retn, sizeof(ArgusHandleResponseArray));
 
+   if (string[0] == '-')
+      /* skip leading minus, if present */
+      off++;
+
+   while (!plusminusloc && string[off] != '\0') {
+      if (string[off] == '-' || string[off] == '+') {
+         plusminusloc = &string[off];
+         plusminus = string[off];
+         string[off] = '\0'; /* split the string in two */
+      }
+      off++;
+   }
+
+   localtime_r(&tsec, &endtime);
+
+   if (ArgusParseTime(&wildcarddate, &starttime, &endtime,
+                      string, ' ', &frac, 0) <= 0) {
+      retn[0] = "FAIL\n";
+      res = -1;
+      goto out;
+   }
+
+   if (plusminusloc) {
+      if (ArgusParseTime(&wildcarddate, &endtime, &starttime,
+                         plusminusloc+1, plusminus, &frac, 1) <= 0) {
+         retn[0] = "FAIL\n";
+         res = -1;
+         goto out;
+      }
+   }
+
+   invec = ArgusMalloc(invec_nitems * sizeof(struct ArgusDhcpIntvlNode));
+   if (invec == NULL)
+      goto out;
+
+   starttime_tv.tv_sec = mktime(&starttime);
+   starttime_tv.tv_usec = 0;
+   endtime_tv.tv_sec = mktime(&endtime);
+   endtime_tv.tv_usec = 0;
+
+   invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv, invec,
+                                              invec_nitems);
+   /* format string here */
+   /* TEMP: output number of transactions found */
+   snprintf(temporary, sizeof(temporary), "%zd\n", invec_used);
+   retn[0] = &temporary[0];
+
+   invecstr[0] = '\0';
+   memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
+
+   /* leave a little room at the end of the buffer because
+    * ArgusPrintTime() doesn't take a length parameter so we can't
+    * tell it when to stop!
+    */
+   RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN-64, fmtable);
+   retn[1] = invecstr;
+
+   while (invec_used > 0) {
+     invec_used--;
+     ArgusDhcpStructFree(invec[invec_used].data);
+   }
+   ArgusFree(invec);
+
+out:
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusHandleSearchCommand(%s) search %p", string, retn);
+   {
+      char t1[32], t2[32];
+      int i;
+
+      asctime_r(&starttime, t1);
+      asctime_r(&endtime, t2);
+
+      for (i = 0; i < sizeof(t1) && t1[i] != '\0'; i++) {
+         if (t1[i] == '\n')
+            t1[i] = '\0';
+      }
+      for (i = 0; i < sizeof(t2) && t2[i] != '\0'; i++) {
+         if (t2[i] == '\n')
+            t2[i] = '\0';
+      }
+      ArgusDebug (1, "ArgusHandleSearchCommand(%s) search %s 'til %s %s",
+                  string, t1, t2, res ? "FAIL" : "OK");
+   }
 #endif
    return retn;
 }
@@ -260,6 +374,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   if (ptr == str)
                      ArgusLog (LOG_ERR, "ArgusClientInit: prune syntax error");
                }
+            } else
+            if (!strncasecmp(mode->mode, "json-obj-only", 13)) {
+               fmtable = &ArgusJsonObjOnlyFormatterTable;
             }
             mode = mode->nxt;
          }
@@ -298,6 +415,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
       RabootpProtoTimersInit(timer);
    }
+
+   invecstr = ArgusMalloc(INVECSTRLEN);
+   if (invecstr == NULL)
+      ArgusLog(LOG_ERR, "could not allocate memory for query results\n");
 }
 
 
@@ -321,6 +442,8 @@ RaParseComplete (int sig)
          RabootpTimerCleanup(timer);
          RabootpCallbacksCleanup();
          RabootpCleanup();
+         ArgusFree(invecstr);
+
          ArgusCloseParser(ArgusParser);
          exit (ArgusExitStatus);
       }
