@@ -25717,8 +25717,8 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
       while (isspace((int) *ptr))
          ptr++;
       
-      if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac)) > 0)
-         ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, ptr, mode, &lastfrac);
+      if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac, 0)) > 0)
+         ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, ptr, mode, &lastfrac, 1);
 
       if (retn >= 0)
          retn = 0;
@@ -25738,7 +25738,7 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
          bcopy ((char *)tm, (char *)&ArgusParser->RaStartFilter, sizeof(struct tm));
          bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
 
-         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, &ArgusParser->RaLastFilter, buf, mode, &startfrac)) > 0) {
+         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, &ArgusParser->RaLastFilter, buf, mode, &startfrac, 0)) > 0) {
             lastfrac = startfrac;
             if (*buf != '-') {
                bcopy ((char *)&ArgusParser->RaStartFilter, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
@@ -25762,7 +25762,7 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
                }
 
             } else 
-               ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, &buf[1], '+', &lastfrac);
+               ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, &buf[1], '+', &lastfrac, 1);
 
             retn = 0;
          }
@@ -25793,9 +25793,13 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
    return (retn);
 }
 
-
+/* The "continued" parameter should be != 0 when parsing the second
+ * part (that after a +/-).  Or can we determine that just from the
+ * mode parameter???
+ */
 int
-ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf, char mode, int *frac)
+ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
+                char mode, int *frac, int continued)
 {
    char *hptr = NULL, *dptr = NULL, *mptr = NULL, *yptr = NULL, *pptr = NULL;
    char *minptr = NULL, *secptr = NULL, *ptr;
@@ -25821,7 +25825,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf, ch
          int status = 0;
 
          if (mode == ' ') {
-            if (tm != &ArgusParser->RaLastFilter)
+            if (!continued)
                bcopy ((u_char *) ctm, (u_char *) tm, sizeof (struct tm));
          } else
             bcopy ((u_char *) ctm, (u_char *) tm, sizeof (struct tm));
@@ -25861,7 +25865,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf, ch
                }
 
             } else {
-               if (tm != &ArgusParser->RaLastFilter)
+               if (!continued)
                   i++;
 
                if (wildcard)
@@ -26211,7 +26215,9 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf, ch
          case ARGUS_SEC:   rstr = "sec"; break;
       }
 
-      ArgusDebug (3, "ArgusParseTime (%p, %p, %p, \"%s\", '%c', 0.%06d) retn %s(%d)\n", wildcarddate, tm, ctm, buf, mode, *frac, rstr, thistime);
+      ArgusDebug (3, "ArgusParseTime (%p, %p, %p, \"%s\", '%c', 0.%06d, %d) retn %s(%d)\n",
+                  wildcarddate, tm, ctm, buf, mode, *frac, continued, rstr,
+                  thistime);
    }
 #endif
    return (retn);

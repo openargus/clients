@@ -214,7 +214,7 @@ int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *,
 
 int parseUserDataArg (char **, char **, int);
 int ArgusCheckTimeFormat (struct tm *tm, char *str);
-int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *);
+int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 
 char *ArgusCopyArgv(char **);
 
@@ -321,7 +321,7 @@ extern int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusI
 
 extern int parseUserDataArg (char **, char **, int);
 extern int ArgusCheckTimeFormat (struct tm *tm, char *str);
-extern int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *);
+extern int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 
 #endif
 #ifdef __cplusplus
