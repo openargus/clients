@@ -415,7 +415,7 @@ ArgusOutputProcess (void *arg)
          struct RaBinProcessStruct *rbps = RaBinProcess;
          if (rbps != NULL) {
             struct RaBinStruct *bin = NULL;
-            int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+            int i, max = ((parser->tflag && !parser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
 
             for (i = rbps->index; i < max; i++) {
                if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {

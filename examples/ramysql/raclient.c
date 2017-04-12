@@ -378,7 +378,7 @@ ArgusProcessData (void *arg)
 
       if (rbps != NULL) {
          if (MUTEX_LOCK(&rbps->lock) == 0) {
-            int i, max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+            int i, max = ((parser->tflag && !parser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
             struct RaBinStruct *bin = NULL;
 
 #ifdef ARGUSDEBUG
@@ -1010,7 +1010,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
 
       MUTEX_LOCK(&rbps->lock);
 
-      max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+      max = ((parser->tflag && !parser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
 
       for (i = rbps->index; i < max; i++) {
          if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
@@ -1129,7 +1129,7 @@ ArgusClientTimeout ()
          if ((RaBinProcess != NULL) && (RaBinProcess->array != NULL)) {
             struct RaBinProcessStruct *rbps = RaBinProcess;
             if (MUTEX_LOCK(&rbps->lock) == 0) {
-               int max = ((ArgusParser->tflag && ArgusParser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+               int max = ((ArgusParser->tflag && !ArgusParser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
                struct RaBinStruct *bin = NULL;
                int i, deleted = 0;
 

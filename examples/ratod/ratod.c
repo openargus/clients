@@ -1234,7 +1234,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
 
       MUTEX_LOCK(&rbps->lock);
 
-      max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+      max = ((parser->tflag && !parser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
 
       if (rbps->array != NULL) {
          if (!(parser->tflag)) {

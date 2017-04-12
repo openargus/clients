@@ -26197,9 +26197,6 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf, ch
          if (pptr != NULL)
             *pptr = '.';
       }
-
-      if (!(*wildcarddate))
-         ArgusParser->RaExplicitDate = 1;
    }
 
 #ifdef ARGUSDEBUG
@@ -26333,7 +26330,7 @@ ArgusCheckTime(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
       bzero((char *)&pstart, sizeof(pstart));
       bzero((char *)&plast, sizeof(plast));
 
-      if (!parser->RaExplicitDate) {
+      if (parser->RaWildCardDate) {
          char *timearg = parser->timearg;
 
          tsec = start.tv_sec;

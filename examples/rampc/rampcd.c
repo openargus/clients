@@ -1697,7 +1697,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
       struct RaBinStruct *bin = NULL;
       struct ArgusRecordStruct *ns = NULL;
 
-      int max = ((parser->tflag && parser->RaExplicitDate) ? rbps->nadp.count : rbps->max) + 1;
+      int max = ((parser->tflag && !parser->RaWildCardDate) ? rbps->nadp.count : rbps->max) + 1;
       int startsecs = 0, endsecs = 0, i;
 
       char stimebuf[128], dtimebuf[128], etimebuf[128];
