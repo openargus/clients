@@ -5232,7 +5232,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       ArgusParseInited = 1;
    }
    if (parser->ArgusPrintJson) {
-      parser->RaTimeFormat = strdup("%Y-%m-%dT%H:%M:%S.%f");
+      parser->RaTimeFormat = strdup("%H:%M:%S.%f");
       if (parser->RaOutputStarted == 0) {
          parser->RaOutputStarted++;
       }

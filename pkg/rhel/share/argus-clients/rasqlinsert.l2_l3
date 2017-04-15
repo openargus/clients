@@ -1,1 +1,1 @@
--M cache -w mysql://root@localhost/inventory/ipAddrs_%Y_%m_%d -M time 1d -M rmon -m sid inf smac svid saddr -s stime dur sid inf smac saddr spkts dpkts sbytes dbytes pcr state svid - ip
+-M cache -w mysql://root@localhost/inventory/ipAddrs_%Y_%m_%d -M time 1d -M rmon -m sid inf smac saddr -s stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state - ip
