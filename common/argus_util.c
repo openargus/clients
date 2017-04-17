@@ -9192,6 +9192,22 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 #endif
 }
 
+
+void
+ArgusPrintSrcName (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   int nflag =  parser->nflag;
+
+   parser->nflag = 0;
+   ArgusPrintSrcAddr (parser, buf, argus, len);
+   parser->nflag = nflag;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcName (%p, %p)", buf, argus);
+#endif
+}
+
+
 void
 ArgusPrintLocalAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -9471,6 +9487,20 @@ ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 }
 
 void
+ArgusPrintDstName (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   int nflag =  parser->nflag;
+
+   parser->nflag = 0;
+   ArgusPrintDstAddr (parser, buf, argus, len);
+   parser->nflag = nflag;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstName (%p, %p)", buf, argus);
+#endif
+}
+
+void
 ArgusPrintRemoteAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
@@ -9545,22 +9575,25 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
          case ARGUS_TYPE_IPV4: 
             if (parser->status & ARGUS_PRINTNET) {
                unsigned int naddr = (*(unsigned int *)addr & ipaddrtonetmask(*(unsigned int *)addr));
+               addrstr = ArgusGetName (parser, (unsigned char *)&naddr);
 
                if ((format != NULL) && (strlen(format) > 0)) {
-                  snprintf (addrbuf, sizeof(addrbuf), format, naddr);
-                  addrstr = addrbuf;
-
-               } else
-                  addrstr = ArgusGetName (parser, (unsigned char *)&naddr);
+                  if (strcmp(format, "%s")) {
+                     snprintf (addrbuf, sizeof(addrbuf), format, naddr);
+                     addrstr = addrbuf;
+                  }
+               }
 
             } else  {
-               if ((format != NULL) && (strlen(format) > 0)) {
-                  unsigned int naddr = *(unsigned int *)addr;
-                  snprintf (addrbuf, sizeof(addrbuf), format, naddr);
-                  addrstr = addrbuf;
+               addrstr = ArgusGetName (parser, (unsigned char *)addr);
 
-               } else
-                  addrstr = ArgusGetName (parser, (unsigned char *)addr);
+               if ((format != NULL) && (strlen(format) > 0)) {
+                  if (strcmp(format, "%s")) {
+                     unsigned int naddr = *(unsigned int *)addr;
+                     snprintf (addrbuf, sizeof(addrbuf), format, naddr);
+                     addrstr = addrbuf;
+                  }
+               }
 
                switch (parser->cidrflag) {
                   case RA_ENABLE_CIDR_ADDRESS_FORMAT:
@@ -17695,6 +17728,20 @@ ArgusPrintSrcAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintSrcNameLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->RaMonMode) {
+      sprintf (buf, "%*.*s ", len, len, "Name");
+   } else {
+      if (parser->domainonly && (!parser->nflag)) {
+         sprintf (buf, "%*.*s ", len, len, "SrcDomain");
+      } else {
+         sprintf (buf, "%*.*s ", len, len, "SrcName");
+      }
+   }
+}
+
+void
 ArgusPrintSrcGroupLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    if (parser->RaMonMode) {
@@ -17717,6 +17764,16 @@ ArgusPrintDstAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
       sprintf (buf, "%*.*s ", len, len, "DstDomain");
    } else {
       sprintf (buf, "%*.*s ", len, len, "DstAddr");
+   }
+}
+
+void
+ArgusPrintDstNameLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->domainonly && (!parser->nflag)) {
+      sprintf (buf, "%*.*s ", len, len, "DstDomain");
+   } else {
+      sprintf (buf, "%*.*s ", len, len, "DstName");
    }
 }
 

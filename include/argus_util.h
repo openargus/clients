@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	218
-#define MAX_PRINT_ALG_TYPES     	218
+#define ARGUS_MAX_PRINT_ALG     	220
+#define MAX_PRINT_ALG_TYPES     	220
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -483,9 +483,11 @@ void ArgusPrintProto (struct ArgusParserStruct *, char *, struct ArgusRecordStru
 void ArgusPrintAddr (struct ArgusParserStruct *, char *, int, void *, int, unsigned char, int, int);
 void ArgusPrintSrcNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintSrcName (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcGroup (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstName (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstGroup (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintLocalNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintLocalAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -723,9 +725,11 @@ void ArgusPrintProtoLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintAddrLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcNetLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcAddrLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintSrcNameLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcGroupLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstNetLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstAddrLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstNameLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstGroupLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintLocalNetLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintLocalAddrLabel (struct ArgusParserStruct *, char *, int);
@@ -1901,9 +1905,11 @@ extern void ArgusPrintProto (struct ArgusParserStruct *, char *, struct ArgusRec
 extern void ArgusPrintAddr (struct ArgusParserStruct *, char *, int, void *, int, char, int, int);
 extern void ArgusPrintSrcNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSrcAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintSrcName (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSrcGroup (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintDstNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintDstAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintDstName (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintDstGroup (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintLocalNet (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintLocalAddr (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -2030,8 +2036,10 @@ extern void ArgusPrintSrcMacAddressLabel (struct ArgusParserStruct *, char *, in
 extern void ArgusPrintDstMacAddressLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintProtoLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcAddrLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintSrcNameLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcGroupLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintDstAddrLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintDstNameLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintLocalAddrLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintRemoteAddrLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcPortLabel (struct ArgusParserStruct *, char *, int);
