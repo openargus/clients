@@ -1576,7 +1576,6 @@ static int ArgusAuthenticateClient (struct ArgusClientData *, int);
 static char clienthost[NI_MAXHOST*2+1] = "[local]";
 
 #ifdef ARGUS_SASL
-static sasl_ssf_t extprops_ssf = 0;
 static sasl_security_properties_t *mysasl_secprops(int, int);
 #endif
 
@@ -1689,9 +1688,6 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
                conn = client->sasl_conn;
 
               /* set required security properties here */
-
-               if (extprops_ssf)
-                  sasl_setprop(conn, SASL_SSF_EXTERNAL, &extprops_ssf);
 
                secprops = mysasl_secprops(output->sasl_min_ssf, output->sasl_max_ssf);
                sasl_setprop(conn, SASL_SEC_PROPS, secprops);
