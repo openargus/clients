@@ -1574,7 +1574,7 @@ static char clienthost[NI_MAXHOST*2+1] = "[local]";
 
 #ifdef ARGUS_SASL
 static sasl_ssf_t extprops_ssf = 0;
-sasl_security_properties_t *mysasl_secprops(int);
+static sasl_security_properties_t *mysasl_secprops(int);
 #endif
 
 
@@ -3002,6 +3002,7 @@ ArgusSetChroot(char *dir)
  *   security properties 
  */
 #define PROT_BUFSIZE 4096
+static
 sasl_security_properties_t *
 mysasl_secprops(int flags)
 {
