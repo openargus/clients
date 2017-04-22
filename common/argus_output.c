@@ -1000,7 +1000,7 @@ ArgusCloseOutput(struct ArgusOutputStruct *output)
 }
 
 
-void ArgusCheckClientStatus (struct ArgusOutputStruct *, int);
+static void ArgusCheckClientStatus (struct ArgusOutputStruct *, int);
 int ArgusCheckClientMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
 int ArgusCheckControlMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
 int ArgusCongested = 0;
@@ -1579,7 +1579,7 @@ sasl_security_properties_t *mysasl_secprops(int);
 
 
 
-void
+static void
 ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
 {
    struct sockaddr from;
