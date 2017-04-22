@@ -80,6 +80,9 @@ long long thisUsec = 0;
                                                                                                                            
 void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
 
+static int RadiumMinSsf = 0;
+static int RadiumMaxSsf = 0;
+
 extern char *chroot_dir;
 extern uid_t new_uid;
 extern gid_t new_gid;
@@ -210,7 +213,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          setArgusMarReportInterval (ArgusParser, "5s");
       }
 
-      if ((parser->ArgusOutput = ArgusNewOutput (parser)) == NULL)
+      if ((parser->ArgusOutput = ArgusNewOutput (parser, RadiumMinSsf, RadiumMaxSsf)) == NULL)
          ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
 
 #if defined(ARGUS_THREADS)
@@ -880,9 +883,9 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                         case RADIUM_MIN_SSF:
                            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-                              ArgusMinSsf = atoi(optarg);
+                              RadiumMinSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusMinSsf \"%d\" \n", ArgusMinSsf);
+                           ArgusDebug (1, "RadiumParseResourceFile: RadiumMinSsf \"%d\" \n", RadiumMinSsf);
 #endif
 #endif
                            }
@@ -891,9 +894,9 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                         case RADIUM_MAX_SSF:
                            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-                              ArgusMaxSsf = atoi(optarg);
+                              RadiumMaxSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                              ArgusDebug (1, "RadiumParseResourceFile: ArgusMaxSsf \"%d\" \n", ArgusMaxSsf);
+                              ArgusDebug (1, "RadiumParseResourceFile: RadiumMaxSsf \"%d\" \n", RadiumMaxSsf);
 #endif
 #endif
                            }

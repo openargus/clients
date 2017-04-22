@@ -84,8 +84,11 @@ struct timeval dThisTime = {0, 0};
 struct timeval dTime     = {0, 0};
                                                                                                                            
 long long thisUsec = 0;
-                                                                                                                           
+
 void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
+
+static int RadiumMinSsf = 0;
+static int RadiumMaxSsf = 0;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -329,7 +332,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->ArgusReliableConnection++;
       parser->RaInitialized++;
 
-      if ((parser->ArgusOutput = ArgusNewOutput (parser)) == NULL)
+      if ((parser->ArgusOutput = ArgusNewOutput (parser, RadiumMinSsf, RadiumMaxSsf)) == NULL)
          ArgusLog (LOG_ERR, "could not generate output: %s.\n", strerror(errno));
 
       tvp = getArgusMarReportInterval(ArgusParser);
@@ -2092,9 +2095,9 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                         case RADIUM_MIN_SSF:
                            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-                              ArgusMinSsf = atoi(optarg);
+                              RadiumMinSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusMinSsf \"%s\" \n", ArgusMinSsf);
+                           ArgusDebug (1, "RadiumParseResourceFile: RadiumMinSsf \"%s\" \n", RadiumMinSsf);
 #endif
 #endif
                            }
@@ -2103,9 +2106,9 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                         case RADIUM_MAX_SSF:
                            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-                              ArgusMaxSsf = atoi(optarg);
+                              RadiumMaxSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-                              ArgusDebug (1, "RadiumParseResourceFile: ArgusMaxSsf \"%s\" \n", ArgusMaxSsf);
+                              ArgusDebug (1, "RadiumParseResourceFile: RadiumMaxSsf \"%s\" \n", RadiumMaxSsf);
 #endif
 #endif
                            }
