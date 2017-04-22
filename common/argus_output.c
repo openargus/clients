@@ -1569,7 +1569,7 @@ ArgusControlChannelProcess(void *arg)
    return __ArgusOutputProcess(arg, portnum, checkmessage, __func__);
 }
 
-int ArgusAuthenticateClient (struct ArgusClientData *);
+static int ArgusAuthenticateClient (struct ArgusClientData *);
 static char clienthost[NI_MAXHOST*2+1] = "[local]";
 
 #ifdef ARGUS_SASL
@@ -3082,11 +3082,11 @@ mysasl_secprops(int flags)
 #endif
  
 
-int ArgusAuthenticateClient (struct ArgusClientData *);
+static int ArgusAuthenticateClient (struct ArgusClientData *);
 int ArgusGetSaslString(FILE *, char *, int);
 int ArgusSendSaslString(FILE *, const char *, int, int);
 
-int
+static int
 ArgusAuthenticateClient (struct ArgusClientData *client)
 {
    int retn = 1;
