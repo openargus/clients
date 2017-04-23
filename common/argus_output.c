@@ -409,7 +409,7 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
 
 struct ArgusOutputStruct *
 ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
-                int sasl_max_ssf)
+                int sasl_max_ssf, int auth_localhost)
 {
    struct ArgusOutputStruct *retn = NULL;
    int i;
@@ -450,6 +450,7 @@ ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
    retn->ArgusLastMarUpdateTime   = retn->ArgusGlobalTime;
    retn->sasl_min_ssf = sasl_min_ssf;
    retn->sasl_max_ssf = sasl_max_ssf;
+   retn->auth_localhost = auth_localhost;
 
    ArgusInitOutput(retn);
 
@@ -1579,7 +1580,34 @@ static char clienthost[NI_MAXHOST*2+1] = "[local]";
 static sasl_security_properties_t *mysasl_secprops(int, int);
 #endif
 
+#ifdef ARGUS_SASL
+/* This function is only called when SASL is available */
+static int
+ArgusLocalConnection(struct sockaddr *local, struct sockaddr *remote)
+{
+   int localaddr_lo = 0;
+   int remoteaddr_lo = 0;
 
+   if (remote->sa_family == AF_INET &&
+       ((struct sockaddr_in *)remote)->sin_addr.s_addr == INADDR_LOOPBACK)
+      remoteaddr_lo = 1;
+   else if (remote->sa_family == AF_INET6 &&
+            IN6_IS_ADDR_LOOPBACK(&((struct sockaddr_in6 *)remote)->sin6_addr))
+      remoteaddr_lo = 1;
+
+   if (local->sa_family == AF_INET &&
+       ((struct sockaddr_in *)local)->sin_addr.s_addr == INADDR_LOOPBACK)
+      localaddr_lo = 1;
+   else if (local->sa_family == AF_INET6 &&
+            IN6_IS_ADDR_LOOPBACK(&((struct sockaddr_in6 *)local)->sin6_addr))
+      localaddr_lo = 1;
+
+   if (remoteaddr_lo && localaddr_lo)
+      return 1;
+
+   return 0;
+}
+#endif
 
 static void
 ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
@@ -1598,6 +1626,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
    socklen_t salen;
    sasl_security_properties_t *secprops = NULL;
    char localip[60], remoteip[60];
+   int auth_localhost = 1;
 #endif
 
    if ((fd = accept (s, (struct sockaddr *)&from, (socklen_t *)&len)) > 0) {
@@ -1632,15 +1661,14 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
 #ifdef ARGUS_SASL
                if (output->sasl_max_ssf == 0)
                   goto no_auth;
-#ifdef ARGUSDEBUG
-               ArgusDebug (2, "ArgusCheckClientStatus: SASL enabled\n");
-#endif
     /* Find out name of client host */
                {
                   char hbuf[NI_MAXHOST];
                   int niflags;
-                  salen = sizeof(remoteaddr);
+                  int localaddr_lo = 0;  /* is loopback? */
+                  int remoteaddr_lo = 0;
 
+                  salen = sizeof(remoteaddr);
                   bzero(hbuf, sizeof(hbuf));
 
                   if (getpeername(fd, (struct sockaddr *)&remoteaddr, &salen) == 0 &&
@@ -1669,8 +1697,22 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
                              argus_have_addr = 1;
                           }
                       }
+
+                      /* If the configuration allows, skip authentication for
+                       * localhost.
+                       */
+                      if (output->auth_localhost == 0 &&
+                          ArgusLocalConnection((struct sockaddr *)&localaddr,
+                                               (struct sockaddr *)&remoteaddr)) {
+                         auth_localhost = 0;
+                         goto no_auth;
+                      }
                   }
                }
+
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "ArgusCheckClientStatus: SASL enabled\n");
+#endif
 
                gethostname(localhostname, 1024);
                if (!strchr (localhostname, '.')) {
@@ -1717,7 +1759,7 @@ no_auth:
                }
 
 #ifdef ARGUS_SASL
-               if (output->sasl_max_ssf > 0) {
+               if (auth_localhost && output->sasl_max_ssf > 0) {
                   int flags = fcntl (fd, F_GETFL, 0);
 
                   fcntl (fd, F_SETFL, flags & ~O_NONBLOCK);

@@ -326,6 +326,17 @@ probes, and merged.
 
 \fBRADIUM_CORRELATE=\fP"no"
 
+.SH RADIUM_AUTH_LOCALHOST
+
+Defaults to "yes".
+When SASL authentication is enabled and this value is "no", client
+connections to radium originating on localhost will not require
+authentication.
+Client connections originating from any other host will still be
+authenticated.
+
+ Commandline equivalent   none
+
 .SH COPYRIGHT
 Copyright (c) 2000-2022 QoSient  All rights reserved.
 

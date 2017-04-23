@@ -89,6 +89,7 @@ void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char 
 
 static int RadiumMinSsf = 0;
 static int RadiumMaxSsf = 0;
+static int RadiumAuthLocalhost = 1;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -332,7 +333,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->ArgusReliableConnection++;
       parser->RaInitialized++;
 
-      if ((parser->ArgusOutput = ArgusNewOutput (parser, RadiumMinSsf, RadiumMaxSsf)) == NULL)
+      if ((parser->ArgusOutput = ArgusNewOutput(parser, RadiumMinSsf,
+                                                RadiumMaxSsf,
+                                                RadiumAuthLocalhost)) == NULL)
          ArgusLog (LOG_ERR, "could not generate output: %s.\n", strerror(errno));
 
       tvp = getArgusMarReportInterval(ArgusParser);
@@ -1804,7 +1807,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
 
 
 
-#define RADIUM_RCITEMS                          22
+#define RADIUM_RCITEMS                          23
 
 #define RADIUM_DAEMON                           0
 #define RADIUM_MONITOR_ID                       1
@@ -1828,6 +1831,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
 #define RADIUM_SETUSER_ID                       19
 #define RADIUM_SETGROUP_ID                      20
 #define RADIUM_CLASSIFIER_FILE                  21
+#define RADIUM_AUTH_LOCALHOST                   22
 
 char *RadiumResourceFileStr [] = {
    "RADIUM_DAEMON=",
@@ -1852,6 +1856,7 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_SETUSER_ID=",
    "RADIUM_SETGROUP_ID=",
    "RADIUM_CLASSIFIER_FILE=",
+   "RADIUM_AUTH_LOCALHOST=",
 };
 
 int
@@ -2168,6 +2173,12 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 
                            break;
                         }
+
+                        case RADIUM_AUTH_LOCALHOST:
+                           if (strncasecmp(optarg, "no", 2) == 0)
+                              RadiumAuthLocalhost = 0;
+                           break;
+
                      }
 
                      done = 1;

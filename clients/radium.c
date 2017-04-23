@@ -82,6 +82,7 @@ void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char 
 
 static int RadiumMinSsf = 0;
 static int RadiumMaxSsf = 0;
+static int RadiumAuthLocalhost = 1;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -213,7 +214,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          setArgusMarReportInterval (ArgusParser, "5s");
       }
 
-      if ((parser->ArgusOutput = ArgusNewOutput (parser, RadiumMinSsf, RadiumMaxSsf)) == NULL)
+      if ((parser->ArgusOutput = ArgusNewOutput(parser, RadiumMinSsf,
+                                                RadiumMaxSsf,
+                                                RadiumAuthLocalhost)) == NULL)
          ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
 
 #if defined(ARGUS_THREADS)
@@ -530,7 +533,7 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          24
+#define RADIUM_RCITEMS                          25
 
 #define RADIUM_MONITOR_ID                       0
 #define RADIUM_MONITOR_ID_INCLUDE_INF		1
@@ -556,6 +559,7 @@ void ArgusWindowClose(void) {
 #define RADIUM_SETGROUP_ID                      21
 #define RADIUM_CLASSIFIER_FILE                  22
 #define RADIUM_ZEROCONF_REGISTER                23
+#define RADIUM_AUTH_LOCALHOST                   24
 
 char *RadiumResourceFileStr [] = {
    "RADIUM_MONITOR_ID=",
@@ -582,6 +586,7 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_SETGROUP_ID=",
    "RADIUM_CLASSIFIER_FILE=",
    "RADIUM_ZEROCONF_REGISTER=",
+   "RADIUM_AUTH_LOCALHOST=",
 };
 
 #ifdef CYGWIN
@@ -966,6 +971,11 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
 
                            break;
                         }
+
+                        case RADIUM_AUTH_LOCALHOST:
+                           if (strncasecmp(optarg, "no", 2) == 0)
+                              RadiumAuthLocalhost = 0;
+                           break;
                      }
 
                      done = 1;
