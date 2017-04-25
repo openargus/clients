@@ -1,3 +1,4 @@
 #!/bin/sh
 set -e
+ln -s /usr/local/bin/rastream /usr/local/bin/rasplit
 /bin/launchctl load "/Library/LaunchDaemons/com.qosient.radium.plist"

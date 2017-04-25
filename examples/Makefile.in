@@ -46,7 +46,7 @@ SHELL = /bin/sh
 
 DIRS = ./race ./raconvert ./radecode ./radns ./radhcp ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto \
 	./rahosts ./ralabel ./rampc ./ramatrix ./rap ./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./rascanner  \
-	./raservices ./rastream ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
+	./raservices ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
 	./ratemplate @ARGUS_MYSQL@
 
 .c.o:
@@ -89,7 +89,6 @@ raports: ../common
 rarpwatch: ../common
 raservices: ../common
 rasnort: ../common
-rastream: ../common
 rastrip: ../common
 ratrace: ../common
 ratree: ../common

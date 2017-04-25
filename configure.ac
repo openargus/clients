@@ -498,7 +498,6 @@ AS_IF([test "$with_examples" != no],
       ./examples/rarpwatch/Makefile
       ./examples/rascanner/Makefile
       ./examples/raservices/Makefile
-      ./examples/rastream/Makefile
       ./examples/rastrip/Makefile
       ./examples/ratimerange/Makefile
       ./examples/ratemplate/Makefile

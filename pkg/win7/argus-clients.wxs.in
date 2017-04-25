@@ -84,7 +84,12 @@
             </Component>
             <Component Id='rasplit.exe' Guid="*">
               <File Id='rasplit.exe' Name='rasplit.exe' DiskId='1'
-              Source="BUILDROOT/usr/bin/rasplit.exe" KeyPath='yes'>
+              Source="BUILDROOT/usr/bin/rastream.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='rastream.exe' Guid="*">
+              <File Id='rastream.exe' Name='rastream.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/rastream.exe" KeyPath='yes'>
               </File>
             </Component>
             <Component Id='dash.exe' Guid="*">
@@ -151,6 +156,7 @@
       <ComponentRef Id='ra.exe' />
       <ComponentRef Id='rabins.exe' />
       <ComponentRef Id='rasplit.exe' />
+      <ComponentRef Id='rastream.exe' />
       <ComponentRef Id='racluster.exe' />
       <ComponentRef Id='radium.exe' />
       <ComponentRef Id='ranonymize.exe' />

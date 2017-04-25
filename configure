@@ -10015,7 +10015,7 @@ if test "$with_examples" != no; then :
 
 fi
 
-   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastream/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile"
+   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile"
 
 
 fi
@@ -10746,7 +10746,6 @@ do
     "./examples/rarpwatch/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rarpwatch/Makefile" ;;
     "./examples/rascanner/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rascanner/Makefile" ;;
     "./examples/raservices/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raservices/Makefile" ;;
-    "./examples/rastream/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rastream/Makefile" ;;
     "./examples/rastrip/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rastrip/Makefile" ;;
     "./examples/ratimerange/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratimerange/Makefile" ;;
     "./examples/ratemplate/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratemplate/Makefile" ;;

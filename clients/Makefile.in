@@ -83,10 +83,10 @@ YACC = @V_YACC@
 LIB = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a
 OUTPUT = @INSTALL_LIB@/argus_output.a
 
-SRC = ra.c radium.c racount.c rasort.c rasplit.c rabins.c racluster.c ranonymize.c
+SRC = ra.c radium.c racount.c rasort.c rastream.c rabins.c racluster.c ranonymize.c
 
 PROGS = @INSTALL_BIN@/ra @INSTALL_BIN@/radium @INSTALL_BIN@/racount @INSTALL_BIN@/rasort \
-	@INSTALL_BIN@/rasplit @INSTALL_BIN@/rabins @INSTALL_BIN@/racluster \
+	@INSTALL_BIN@/rastream @INSTALL_BIN@/rabins @INSTALL_BIN@/racluster \
 	@INSTALL_BIN@/ranonymize
 
 all: $(PROGS)
@@ -112,8 +112,8 @@ all: $(PROGS)
 @INSTALL_BIN@/rasort: rasort.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasort.o $(LIB) $(COMPATLIB)
  
-@INSTALL_BIN@/rasplit: rasplit.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasplit.o $(LIB) $(COMPATLIB)
+@INSTALL_BIN@/rastream: rastream.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rastream.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -134,7 +134,7 @@ install: force all
 	$(INSTALL) @INSTALL_BIN@/radium $(DESTDIR)$(SBINDIR)/radium
 	$(INSTALL) @INSTALL_BIN@/ranonymize $(DESTDIR)$(BINDIR)/ranonymize
 	$(INSTALL) @INSTALL_BIN@/rasort $(DESTDIR)$(BINDIR)/rasort
-	$(INSTALL) @INSTALL_BIN@/rasplit $(DESTDIR)$(BINDIR)/rasplit
+	$(INSTALL) @INSTALL_BIN@/rastream $(DESTDIR)$(BINDIR)/rastream
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/ra
@@ -144,7 +144,7 @@ uninstall: force all
 	rm -f $(DESTDIR)$(SBINDIR)/radium
 	rm -f $(DESTDIR)$(BINDIR)/ranonymize
 	rm -f $(DESTDIR)$(BINDIR)/rasort
-	rm -f $(DESTDIR)$(BINDIR)/rasplit
+	rm -f $(DESTDIR)$(BINDIR)/rastream
 
 clean:
 	rm -f $(CLEANFILES)

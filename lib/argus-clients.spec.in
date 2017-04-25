@@ -76,6 +76,7 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 mkdir -p /home/argus
 %systemd_post radium.service
 %systemd_post rastream.service
+ln -s %{argusbin}/rastream %{argusbin}/rasplit
 
 %preun
 %systemd_preun radium.service
@@ -84,7 +85,14 @@ mkdir -p /home/argus
 %postun
 %systemd_postun_with_restart radium.service
 %systemd_postun_with_restart rastream.service
+rm -f %{argusbin}/rasplit
+%else
+%post
+ln -s %{argusbin}/rastream %{argusbin}/rasplit
+%postun
+rm -f %{argusbin}/rasplit
 %endif
+
 
 %files
 %defattr(-,root,root)
@@ -104,6 +112,7 @@ mkdir -p /home/argus
 %{argusman}/man1/ranonymize.1.gz
 %{argusman}/man1/rasort.1.gz
 %{argusman}/man1/rasplit.1.gz
+%{argusman}/man1/rastream.1.gz
 
 %{argusbin}/ra
 %{argusbin}/rabins
@@ -111,7 +120,8 @@ mkdir -p /home/argus
 %{argusbin}/racount
 %{argusbin}/ranonymize
 %{argusbin}/rasort
-%{argusbin}/rasplit
+%{argusbin}/rastream
+%ghost %{argusbin}/rasplit
 %{argussbin}/radium
 %config /etc/ra.conf
 %config /etc/radium.conf
@@ -121,6 +131,7 @@ mkdir -p /home/argus
 %{_unitdir}/rastream.service
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rastream
+%{argussbin}/rastream-process
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
@@ -146,7 +157,7 @@ distribution.
 %exclude %{argusbin}/racount
 %exclude %{argusbin}/ranonymize
 %exclude %{argusbin}/rasort
-%exclude %{argusbin}/rasplit
+%exclude %{argusbin}/rastream
 %exclude %{argusbin}/ragraph
 %exclude %{argusbin}/rasql*
 %{argusman}
@@ -159,11 +170,9 @@ distribution.
 %exclude %{argusman}/man1/ranonymize.1.gz
 %exclude %{argusman}/man1/rasort.1.gz
 %exclude %{argusman}/man1/rasplit.1.gz
+%exclude %{argusman}/man1/rastream.1.gz
 %exclude %{argusman}/man1/ragraph.1.gz
 %exclude %{argusman}/man1/rasql.1.gz
-%if 0%{!?_workstation:1}
-%{argussbin}/rastream-process
-%endif
 
 
 %package devel
