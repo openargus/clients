@@ -62,6 +62,8 @@ install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.man $RPM_BUILD_ROOT%
 install -D -m 0755 pkg/rhel/rastream.d/00rasqltimeindex $RPM_BUILD_ROOT%{_sysconfdir}/rastream.d/00rasqltimeindex
 install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
+install -D -m 0644 pkg/rhel/systemd/radhcp.service $RPM_BUILD_ROOT%{_unitdir}/radhcp.service
+install -D -m 0755 pkg/rhel/systemd/radhcp-setup $RPM_BUILD_ROOT%{argussbin}/radhcp-setup
 install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service
 install -D -m 0755 pkg/rhel/systemd/rastream-process $RPM_BUILD_ROOT%{argussbin}/rastream-process
 %else
@@ -156,6 +158,8 @@ distribution.
 %files examples
 %defattr(-,root,root)
 %{argusbin}/*
+%{argussbin}/radhcp-setup
+%{_unitdir}/radhcp.service
 %exclude %{argusbin}/ra
 %exclude %{argusbin}/rabins
 %exclude %{argusbin}/racluster

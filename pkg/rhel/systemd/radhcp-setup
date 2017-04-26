@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+typeset -r RADHCP_CONF=/run/argus/radhcp.conf
+
+# Minimal configuration
+radhcp_configure(){
+	echo "RA_RELIABLE_CONNECT=yes"
+	echo "RA_PRINT_UNIX_TIME=yes"
+	echo "RA_USEC_PRECISION=3"
+}
+
+if (( $# == 0 )) ; then
+	exit 1
+fi
+
+if [[ "$1" == start ]] ; then
+	mkdir -p $(dirname ${RADHCP_CONF})
+	radhcp_configure > ${RADHCP_CONF}
+elif [[ "$1" == stop ]] ; then
+	rm -f ${RADHCP_CONF}
+fi
+
