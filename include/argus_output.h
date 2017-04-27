@@ -107,6 +107,7 @@ struct ArgusClientData {
    char *filename, *hostname, *filter;
    int format;
    char readable;
+   char version;
 
 #if defined(HAVE_GETADDRINFO)
    struct addrinfo *host;
@@ -125,7 +126,6 @@ struct ArgusClientData {
 
 struct ArgusOutputStruct {
    int status, format;
-   int version;
 
 #if defined(ARGUS_THREADS)
    pthread_t thread;
@@ -145,6 +145,7 @@ struct ArgusOutputStruct {
    unsigned short ArgusPortNum, ArgusControlPort;
    int ArgusUseWrapper, nflag;
    int ArgusLfd[ARGUS_MAXLISTEN];
+   char ArgusLfdVersion[ARGUS_MAXLISTEN];
    int ArgusListens;
    int sasl_min_ssf;
    int sasl_max_ssf;
@@ -206,11 +207,10 @@ int  ArgusTcpWrapper (struct ArgusOutputStruct *, int, struct sockaddr *, char *
 int RadiumParseResourceFile (struct ArgusParserStruct *, char *);
 int ArgusEstablishListen(struct ArgusParserStruct *,
                          struct ArgusOutputStruct *,
-                         int, char *);
+                         int, char *, char);
 
-struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
-struct ArgusRecordStruct *ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *);
-struct ArgusRecordStruct *ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *, unsigned char);
+struct ArgusRecordStruct *
+ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *, unsigned char, char);
 
 extern void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
 extern int getArgusOutputVersion (struct ArgusOutputStruct *);

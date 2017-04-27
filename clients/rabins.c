@@ -657,7 +657,8 @@ ArgusClientTimeout ()
                int tcnt = 0;
 
                if (ArgusParser->ArgusGenerateManRecords) {
-                  struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_START);
+                  struct ArgusRecordStruct *man =
+                     ArgusGenerateStatusMarRecord (NULL, ARGUS_START, ARGUS_VERSION);
                   struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
                   rec->argus_mar.startime.tv_sec  = bin->stime.tv_sec;
                   rec->argus_mar.startime.tv_usec = bin->stime.tv_usec;
@@ -701,7 +702,8 @@ ArgusClientTimeout ()
                }
 
                if (ArgusParser->ArgusGenerateManRecords) {
-                  struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP);
+                  struct ArgusRecordStruct *man =
+                     ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP, ARGUS_VERSION);
                   struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
                   rec->argus_mar.startime.tv_sec  = bin->etime.tv_sec;
                   rec->argus_mar.startime.tv_usec = bin->etime.tv_usec;
@@ -1412,7 +1414,8 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             struct ArgusAggregatorStruct *agg = bin->agg;
 
             if (ArgusParser->ArgusGenerateManRecords) {
-               struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_START);
+               struct ArgusRecordStruct *man =
+                  ArgusGenerateStatusMarRecord (NULL, ARGUS_START, ARGUS_VERSION);
                struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
                rec->argus_mar.startime.tv_sec  = bin->stime.tv_sec;
                rec->argus_mar.startime.tv_usec = bin->stime.tv_usec;
@@ -1436,7 +1439,8 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             }
 
             if (ArgusParser->ArgusGenerateManRecords) {
-               struct ArgusRecordStruct *man = ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP);
+               struct ArgusRecordStruct *man =
+                  ArgusGenerateStatusMarRecord (NULL, ARGUS_STOP, ARGUS_VERSION);
                struct ArgusRecord *rec = (struct ArgusRecord *)man->dsrs[0];
                rec->argus_mar.startime.tv_sec  = bin->etime.tv_sec;
                rec->argus_mar.startime.tv_usec = bin->etime.tv_usec;

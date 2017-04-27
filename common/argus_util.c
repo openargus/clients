@@ -3104,8 +3104,10 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
                                                 struct ArgusRecord *ns = NULL;
                                                 int version = ARGUS_VERSION;
 
-                                                if (parser->ArgusOutput != NULL)
-                                                   version =  parser->ArgusOutput->version;
+                                                /* FIXME: version should be in ArgusWfileStruct */
+                                                /* if (parser->ArgusOutput != NULL)
+                                                 * version =  parser->ArgusOutput->version;
+                                                 */
 
                                                 if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordBuffer, version)) == NULL)
                                                    ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
@@ -3252,8 +3254,10 @@ ArgusHandleRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *in
                                           struct ArgusRecord *ns = NULL;
                                           int version = ARGUS_VERSION;
 
-                                          if (parser->ArgusOutput != NULL)
-                                             version =  parser->ArgusOutput->version;
+                                          /* FIXME: version should be in ArgusWfileStruct */
+                                          /* if (parser->ArgusOutput != NULL)
+                                           *    version =  parser->ArgusOutput->version;
+                                           */
 
                                           if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordStructBuffer, version)) == NULL)
                                              ArgusLog(LOG_ERR, "RaProcessSQLEvent: ArgusGenerateRecord error %s", strerror(errno));

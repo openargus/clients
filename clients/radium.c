@@ -221,7 +221,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       /* Need valid parser->ArgusOutput before starting listener */
       if (parser->ArgusPortNum != 0) {
          if (ArgusEstablishListen (parser, parser->ArgusOutput,
-                                   parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
+                                   parser->ArgusPortNum, parser->ArgusBindAddr,
+                                   ARGUS_VERSION) < 0)
             ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
       }
 
@@ -284,7 +285,7 @@ RaParseComplete (int sig)
       }
 
       if (ArgusParser->ArgusOutput) {
-         if ((rec = ArgusGenerateStatusMarRecord(ArgusParser->ArgusOutput, ARGUS_SHUTDOWN)) != NULL)
+         if ((rec = ArgusGenerateStatusMarRecord(ArgusParser->ArgusOutput, ARGUS_SHUTDOWN, ARGUS_VERSION)) != NULL)
             ArgusPushBackList(ArgusParser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *)rec, ARGUS_LOCK);
       
          ArgusCloseListen(ArgusParser);

@@ -67,6 +67,9 @@ static void *ArgusControlChannelProcess(void *);
 struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 struct ArgusV3Record *ArgusGenerateV3Record (struct ArgusRecordStruct *, unsigned char, char *);
 struct ArgusRecord *ArgusGenerateV5Record (struct ArgusRecordStruct *, unsigned char, char *);
+static struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *, char);
+static struct ArgusRecordStruct *ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *, char);
+
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -180,19 +183,6 @@ DrainArgusSocketQueue(struct ArgusClientData *client)
 }
 
 void
-setArgusOutputVersion (struct ArgusOutputStruct *output, char *value)
-{
-   if ((output != NULL) && (value != NULL))
-      output->version = atoi(value);
-}
-
-int
-getArgusOutputVersion (struct ArgusOutputStruct *output)
-{
-   return (output->version);
-}
-
-void
 setArgusMarReportInterval (struct ArgusParserStruct *parser, char *value)
 {
    struct timeval *tvp = getArgusMarReportInterval(parser);
@@ -280,9 +270,12 @@ RadiumDNSServiceCallback (DNSServiceRef sdRef, DNSServiceFlags flags, DNSService
 int
 ArgusEstablishListen (struct ArgusParserStruct *parser,
                       struct ArgusOutputStruct *output,
-                      int port, char *baddr)
+                      int port, char *baddr, char version)
 {
    int s = -1;
+
+   if (version != ARGUS_VERSION_3) /* the only possible value other than 5 */
+      version = ARGUS_VERSION;
 
    if (port) {
 #if HAVE_GETADDRINFO
@@ -335,10 +328,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
                   if (!(bind (s, host->ai_addr, host->ai_addrlen))) {
                      if ((retn = listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
                         parser->ArgusOutputs[parser->ArgusListens] = output;
+                        parser->ArgusLfdVersion[parser->ArgusListens] = version;
                         parser->ArgusLfd[parser->ArgusListens] = s;
                         parser->ArgusListens++;
 
                         output->ArgusLfd[output->ArgusListens] = s;
+                        output->ArgusLfdVersion[output->ArgusListens] = version;
                         output->ArgusListens++;
                      } else {
                         ArgusLog(LOG_ERR, "ArgusEstablishListen: listen() error %s", strerror(errno));
@@ -391,10 +386,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
             if (!(bind (s, (struct sockaddr *)&sin, sizeof(sin)))) {
                if ((listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
                   parser->ArgusOutputs[parser->ArgusListens] = output;
+                  parser->ArgusLfdVersion[parser->ArgusListens] = version;
                   parser->ArgusLfd[parser->ArgusListens] = s;
                   parser->ArgusListens++;
 
                   output->ArgusLfd[output->ArgusListens] = s;
+                  output->ArgusLfdVersion[output->ArgusListens] = version;
                   output->ArgusListens++;
                } else {
                   close (s);
@@ -482,11 +479,6 @@ ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
    if ((retn = (struct ArgusOutputStruct *) ArgusCalloc (1, sizeof (struct ArgusOutputStruct))) == NULL)
      ArgusLog (LOG_ERR, "ArgusNewOutput() ArgusCalloc error %s\n", strerror(errno));
 
-
-   if (parser->RadiumOutputVersion != NULL)
-      setArgusOutputVersion(retn, parser->RadiumOutputVersion);
-   else
-      retn->version     = ARGUS_VERSION;
 
    if ((retn->ArgusClients = ArgusNewQueue()) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewOutput: clients queue %s", strerror(errno));
@@ -662,14 +654,6 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
       if ((output->ArgusOutputList = ArgusNewList()) == NULL)
          ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusList %s", strerror(errno));
 
-      if (output->ArgusInitMar != NULL)
-         ArgusFree (output->ArgusInitMar);
-
-      if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusGenerateInitialMar error %s", strerror(errno));
-
-      len = ntohs(output->ArgusInitMar->hdr.len) * 4;
-
       if (output->ArgusWfileList != NULL) {
          int i, retn, count = output->ArgusWfileList->count;
 
@@ -682,6 +666,14 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
 
                if (client == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusCalloc %s", strerror(errno));
+
+               if (output->ArgusInitMar != NULL)
+                  ArgusFree (output->ArgusInitMar);
+
+               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, client->version)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusGenerateInitialMar error %s", strerror(errno));
+
+               len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
                if (strcmp (wfile->filename, "-")) {
                   if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
@@ -861,14 +853,6 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
       if ((output->ArgusOutputList = ArgusNewList()) == NULL)
          ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusList %s", strerror(errno));
 
-      if (output->ArgusInitMar != NULL)
-         ArgusFree (output->ArgusInitMar);
-
-      if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusGenerateInitialMar error %s", strerror(errno));
-
-      len = ntohs(output->ArgusInitMar->hdr.len) * 4;
-
       if (output->ArgusWfileList != NULL) {
          int i, retn, count = output->ArgusWfileList->count;
 
@@ -881,6 +865,14 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 
                if (client == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
+
+               if (output->ArgusInitMar != NULL)
+                  ArgusFree (output->ArgusInitMar);
+
+               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, client->version)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusGenerateInitialMar error %s", strerror(errno));
+
+               len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
                if (strcmp (wfile->filename, "-")) {
                   if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
@@ -3307,7 +3299,7 @@ ArgusCloseOutput(struct ArgusOutputStruct *output)
 }
 
 
-static void ArgusCheckClientStatus (struct ArgusOutputStruct *, int);
+static void ArgusCheckClientStatus (struct ArgusOutputStruct *, int, char);
 int ArgusCheckClientMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
 int ArgusCheckControlMessage (struct ArgusOutputStruct *, struct ArgusClientData *);
 int ArgusCongested = 0;
@@ -3357,7 +3349,8 @@ __output_is_active(const struct ArgusOutputStruct * const output)
 static int
 __build_output_array(struct ArgusParserStruct *parser,
                      struct ArgusOutputStruct *outputs[],
-                     int lfd[])
+                     int lfd[],
+                     char lfdver[])
 {
    int i;
    int count;
@@ -3367,6 +3360,7 @@ __build_output_array(struct ArgusParserStruct *parser,
       if (__output_is_active(parser->ArgusOutputs[i])) {
          outputs[count] = parser->ArgusOutputs[i];
          lfd[count] = parser->ArgusLfd[i];
+         lfdver[count] = parser->ArgusLfdVersion[i];
          count++;
       }
    }
@@ -3387,6 +3381,7 @@ void *ArgusListenProcess(void *arg)
    struct ArgusOutputStruct *output;
    struct ArgusOutputStruct *outputs[ARGUS_MAXLISTEN];
    int lfd[ARGUS_MAXLISTEN];
+   char lfdver[ARGUS_MAXLISTEN];
    int nbout;
 
 #if defined(ARGUS_THREADS)
@@ -3400,7 +3395,7 @@ void *ArgusListenProcess(void *arg)
    if (arg == NULL)
       goto out;
 
-   nbout = __build_output_array(parser, outputs, lfd);
+   nbout = __build_output_array(parser, outputs, lfd, lfdver);
 
 #if defined(ARGUS_THREADS)
    sigfillset(&blocked_signals);
@@ -3463,7 +3458,7 @@ void *ArgusListenProcess(void *arg)
                for (cur = 0; cur < nbout; cur++) {
 
                   if (FD_ISSET(lfd[cur], &readmask))
-                     ArgusCheckClientStatus(outputs[cur], lfd[cur]);
+                     ArgusCheckClientStatus(outputs[cur], lfd[cur], lfdver[cur]);
 
                   output = outputs[cur];
 
@@ -3487,7 +3482,7 @@ void *ArgusListenProcess(void *arg)
          }
 
 #if defined(ARGUS_THREADS)
-      nbout = __build_output_array(parser, outputs, lfd);
+      nbout = __build_output_array(parser, outputs, lfd, lfdver);
 #endif
    }
 
@@ -3575,8 +3570,9 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
          }
 
+         /* FIXME: Need to also generate a V3 MAR if there are any v3 clients */
          if (ArgusOutputStatusTime(output) &&
-             (rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL) {
+             (rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS, ARGUS_VERSION)) != NULL) {
             ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
          }
 
@@ -4029,7 +4025,8 @@ ArgusLocalConnection(struct sockaddr *local, struct sockaddr *remote)
 #endif
 
 static void
-ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
+ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s,
+                        char version)
 {
    struct sockaddr from;
    int len = sizeof (from);
@@ -4062,6 +4059,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
                gettimeofday (&client->startime, 0L);
                client->fd = fd;
                client->format = ARGUS_DATA;
+               client->version = version;
 
                if (strlen(clienthost) > 0)
                   client->hostname = strdup(clienthost);
@@ -4074,7 +4072,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
                if (output->ArgusInitMar != NULL)
                   ArgusFree(output->ArgusInitMar);
 
-               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output)) == NULL)
+               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, version)) == NULL)
                   ArgusLog (LOG_ERR, "ArgusCheckClientStatus: ArgusGenerateInitialMar error %s", strerror(errno));
 
 #ifdef ARGUS_SASL
@@ -4174,6 +4172,7 @@ no_auth:
 
                if (write (client->fd, (char *) output->ArgusInitMar, len) != len) {
                   close (client->fd);
+                  /* FIXME: this is not a reason for the process to exit */
                   ArgusLog (LOG_ERR, "ArgusInitOutput: write(): %s", strerror(errno));
                }
 
@@ -4600,9 +4599,9 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
 //  
 //  Need to make these changes to accomodate V3 compatibility.
 
-
+static
 struct ArgusRecord *
-ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
+ArgusGenerateInitialMar (struct ArgusOutputStruct *output, char version)
 {
    struct ArgusAddrStruct asbuf, *asptr = &asbuf;
    struct timeval tbuf, *tptr = &tbuf;
@@ -4611,7 +4610,7 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
    if ((retn = (struct ArgusRecord *) ArgusCalloc (1, sizeof(struct ArgusRecord))) == NULL)
      ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
 
-   switch (output->version) {
+   switch (version) {
       case ARGUS_VERSION_3:
          retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION_3;
          retn->hdr.cause = ARGUS_START;
@@ -4645,7 +4644,7 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 
    output->ArgusLastMarUpdateTime = *tptr;
 
-   retn->argus_mar.major_version = output->version;
+   retn->argus_mar.major_version = version;
    retn->argus_mar.minor_version = VERSION_MINOR;
    retn->argus_mar.reportInterval = 0;
 
@@ -4675,7 +4674,8 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 }
 
 struct ArgusRecordStruct *
-ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char status)
+ArgusGenerateStatusMarRecord(struct ArgusOutputStruct *output,
+                             unsigned char status, char version)
 {
    extern int ArgusAllocTotal, ArgusFreeTotal, ArgusAllocBytes;
    struct ArgusAddrStruct asbuf, *asptr = &asbuf;
@@ -4742,7 +4742,7 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
 
       output->ArgusLastMarUpdateTime = now;
 
-      rec->argus_mar.major_version = output->version;
+      rec->argus_mar.major_version = version;
       rec->argus_mar.minor_version = VERSION_MINOR;
       rec->argus_mar.reportInterval = 0;
 
@@ -5002,9 +5002,6 @@ static const int ArgusMaxListLength = 500000;
 int ArgusCloseFile = 0;
 
 
-extern struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
-
-
 static
 void
 ArgusWriteSocket(struct ArgusOutputStruct *output,
@@ -5176,7 +5173,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               if (output->format == ARGUS_DATA) {
                                  if (output->ArgusInitMar != NULL)
                                     ArgusFree(output->ArgusInitMar);
-                                 output->ArgusInitMar = ArgusGenerateInitialMar(output);
+                                 output->ArgusInitMar = ArgusGenerateInitialMar(output, client->version);
                                  ocnt = sizeof(struct ArgusRecord);
                                  if (((retn = write (asock->fd, output->ArgusInitMar, ocnt))) < ocnt)
                                     ArgusLog (LOG_ERR, "ArgusWriteSocket: write %s failed %s\n", asock->filename, strerror(errno));
