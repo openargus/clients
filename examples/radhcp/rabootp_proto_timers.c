@@ -104,16 +104,17 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
    if (ads->flags & ARGUS_DHCP_LEASEEXP) {
       holddown_expired = 1;
    } else {
-      free(ads->timers.lease);
       ads->flags |= ARGUS_DHCP_LEASEEXP;
       ads->timers.lease = NULL;
-      *ts = exp;
+      tim->expiry = exp;
       result = RESCHEDULE_REL;
    }
    MUTEX_UNLOCK(ads->lock);
 
    if (holddown_expired)
       ArgusDhcpStructFree(ads);
+
+   __gc_schedule(tim);
 
    return result;
 }
