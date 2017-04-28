@@ -244,7 +244,7 @@ enum rabootp_callback_trigger {
    CALLBACK_XIDDELETE,
 };
 
-void RabootpCallbacksInit(void);
+void RabootpCallbacksInit(struct ArgusParserStruct *);
 int RabootpCallbackRegister(enum rabootp_callback_trigger trigger,
                             rabootp_cb cb, void *arg);
 int RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,

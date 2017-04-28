@@ -40,6 +40,7 @@
 #include "rabootp.h"
 #include "dhcp.h"
 #include "argus_threads.h"
+#include "argus_label.h"
 #include "rabootp_client_tree.h"
 #include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
@@ -47,6 +48,7 @@
 #include "rabootp_update.h"
 #include "rabootp_callback.h"
 #include "rabootp_timer.h"
+#include "rabootp_patricia_tree.h"
 
 static struct {
    struct rabootp_cblist state_change; /* called when dhcp FSA state changes */
@@ -1308,6 +1310,29 @@ __rabootp_update_interval_tree(const void * const v_parsed,
    return 0;
 }
 
+/* cached lock must be held by caller.
+ * Caller must also have a reference (incremented refcount) to cached.
+ */
+static int
+__rabootp_update_patricia_tree(const void * const v_parsed,
+                               void *v_cached,
+                               void *v_arg)
+{
+   const struct ArgusDhcpStruct * const parsed = v_parsed;
+   struct ArgusDhcpStruct *cached = v_cached;
+   struct ArgusParserStruct *parser = v_arg;
+   int rv = -1;
+
+   /* did we just transition to the BOUND state? */
+   if (parsed->state == BOUND && cached->state != BOUND) {
+      MUTEX_LOCK(&parser->lock);
+      rv = RabootpPatriciaTreeUpdate(v_parsed, v_cached, v_arg);
+      MUTEX_UNLOCK(&parser->lock);
+   }
+
+   return rv;
+}
+
 int
 RabootpCallbackRegister(enum rabootp_callback_trigger trigger,
                         rabootp_cb cb, void *arg)
@@ -1365,11 +1390,13 @@ int RabootpIntvlRemove(const struct timeval * const intlo)
 }
 
 void
-RabootpCallbacksInit(void)
+RabootpCallbacksInit(struct ArgusParserStruct *parser)
 {
    memset(&callback, 0, sizeof(callback));
    RabootpCallbackRegister(CALLBACK_STATECHANGE, __rabootp_update_interval_tree,
                            &interval_tree);
+   RabootpCallbackRegister(CALLBACK_STATECHANGE, __rabootp_update_patricia_tree,
+                           parser);
 }
 
 void

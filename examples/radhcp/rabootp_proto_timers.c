@@ -30,10 +30,12 @@
 #include "argus_threads.h"
 #include "argus_util.h"    /* needed by argus_client.h */
 #include "argus_client.h"  /* ArgusLog() */
+#include "argus_threads.h"
 #include "rabootp.h"
 #include "rabootp_memory.h"
 #include "rabootp_client_tree.h"
 #include "rabootp_interval_tree.h"
+#include "rabootp_patricia_tree.h"
 
 static const time_t RABOOTP_PROTO_TIMER_NONLEASE=10;
 static const time_t RABOOTP_PROTO_TIMER_HOLDDOWN=30;
@@ -142,10 +144,15 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
       if (tim == ads->timers.intvl)
          ads->timers.intvl = NULL;
    }
+   MUTEX_LOCK(&ArgusParser->lock);
+   RabootpPatriciaTreeRemoveLease(&ads->rep.yiaddr.s_addr, ads->chaddr,
+                                  ads->hlen, &intvlnode->intlo, NULL);
+   MUTEX_UNLOCK(&ArgusParser->lock);
    MUTEX_UNLOCK(ads->lock);
 
-   /* decrement refcount -- interval tree is done with this. */
    RabootpIntvlRemove(&intvlnode->intlo);
+
+   /* decrement refcount -- interval and patricia trees are done with this. */
    ArgusDhcpStructFree(ads);
 
 cleanup:

@@ -409,7 +409,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #if defined(ARGUS_MYSQL)
       RaMySQLInit();
 #endif
-      RabootpCallbacksInit();
+      RabootpCallbacksInit(parser);
       timer = RabootpTimerInit(NULL, NULL); /* for now */
       if (pthread_create(&timer_thread, NULL, RabootpTimer, timer) < 0)
          ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
