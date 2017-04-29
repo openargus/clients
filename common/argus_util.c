@@ -23168,15 +23168,19 @@ ArgusDebug (int d, char *fmt, ...)
 #if defined(ARGUS_THREADS)
       {
          pthread_t ptid;
-         char pbuf[128];
+         char *pbuf = malloc(128);
          int i;
 
-         bzero(pbuf, sizeof(pbuf));
+         if (pbuf == NULL)
+            abort();
+
+         *pbuf = '\0';
          ptid = pthread_self();
          for (i = 0; i < sizeof(ptid); i++)
             snprintf (&pbuf[i*2], 3, "%02hhx", ((char *)&ptid)[i]);
 
          (void) snprintf (buf, MAXSTRLEN, "%s[%d.%s]: ", ArgusParser->ArgusProgramName, (int)getpid(), pbuf);
+         free(pbuf);
       }
 #else
       (void) snprintf (buf, MAXSTRLEN, "%s[%d]: ", ArgusParser->ArgusProgramName, (int)getpid());
