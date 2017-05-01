@@ -23191,7 +23191,7 @@ void
 ArgusDebug (int d, char *fmt, ...)
 {
    va_list ap;
-   char buf[MAXSTRLEN], *ptr;
+   char buf[MAXSTRLEN];
    struct timeval tvp;
    size_t len = 0;
    size_t remain = sizeof(buf);
