@@ -9,7 +9,7 @@
 Summary: Gargoyle Client Software
 Name: argus-clients%{?_workstation:-workstation}
 Version: %ver
-Release: %rel%{dist}.12
+Release: %rel%{dist}.13
 License: Proprietary
 Group: Applications/Internet
 Source: %{srcname}-%{version}.%{rel}.tar%{srcext}
@@ -230,3 +230,6 @@ Copyright 2000-2016 QoSient, LLC
 %endif
 
 %changelog
+* Tue May 02 2017 eric@qosient.com
+- rebuilt
+
