@@ -70,7 +70,7 @@ DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in READM
 .PHONY: install installdirs
 
 all: force
-	@for i in  $(DIRS) ; do \
+	@set -e ; for i in  $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
 		(cd $$i > /dev/null; $(MAKE));\

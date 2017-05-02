@@ -55,7 +55,7 @@ DIRS = ./race ./raconvert ./radecode ./radns ./radhcp ./radump ./raevent ./rafil
 .PHONY: install 
 
 all: force
-	@for i in  $(DIRS) ; do \
+	@set -e ; for i in  $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
 		(cd $$i > /dev/null; $(MAKE)); \
