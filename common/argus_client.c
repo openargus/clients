@@ -3705,6 +3705,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      agr->act.maxval          = value;
                      agr->act.minval          = value;
                      agr->act.meanval         = value;
+                     agr->act.stdev           = 0;
                      agr->act.n               = 1;
 //                   bzero ((char *)&agr->idle, sizeof(agr->idle));
 
