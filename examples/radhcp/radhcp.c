@@ -50,12 +50,16 @@
 #include <argus_filter.h>
 #include <argus_label.h>
 #include <argus_output.h>
+#include "argus_threads.h"
 #include "rabootp_timer.h"
 #include "rabootp_proto_timers.h"
 #include "rabootp_interval_tree.h" /* for ArgusHandleSearchCommand.  maybe move this function */
 #include "rabootp_memory.h" /* for ArgusHandleSearchCommand.  maybe move this function */
 #include "rabootp_print.h"
+#include "rabootp_patricia_tree.h"
+#include "rabootp_lease_pullup.h"
 #include "argus_format_json.h"
+#include "rabootp_l2addr_list.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
@@ -134,6 +138,72 @@ static char *invecstr;
 static const unsigned long INVECSTRLEN = 1024*1024; /* 1 MB */
 static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
 
+static const size_t INTVL_NODE_ARRAY_MAX = 64;
+
+struct invecTimeRangeStruct {
+   struct invecStruct *x;
+   const struct timeval * starttime;
+   const struct timeval * endtime;
+};
+
+static int
+__search_ipaddr_cb(struct rabootp_l2addr_entry *e, void *arg)
+{
+   struct invecTimeRangeStruct *itr = arg;
+   struct invecStruct *x = itr->x;
+   ssize_t count;
+
+   count = IntvlTreeOverlapsRange(e->datum,
+                                  itr->starttime,
+                                  itr->endtime,
+                                  &x->invec[x->used],
+                                  x->nitems - x->used);
+
+   if (count > 0)
+      x->used += count;
+
+   return 0;
+}
+
+static int
+__search_ipaddr(const struct in_addr * const addr,
+                const struct timeval * const starttime,
+                const struct timeval * const endtime,
+                struct ArgusDhcpIntvlNode *invec,
+                size_t invec_nitems)
+{
+   struct RaAddressStruct *ras;
+   struct invecTimeRangeStruct itr;
+   struct invecStruct x;
+   size_t i;
+   int rv = 0;
+
+   MUTEX_LOCK(&ArgusParser->lock);
+
+   ras = RabootpPatriciaTreeFind(&addr->s_addr, ArgusParser);
+   if (ras == NULL)
+     goto out;
+
+   x.nitems = invec_nitems;
+   x.used = 0;
+   x.invec = invec;
+
+   if (x.invec == NULL)
+      goto out;
+
+   itr.x = &x;
+   itr.starttime = starttime;
+   itr.endtime = endtime;
+
+   rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
+
+   rv = (int)x.used;
+
+out:
+   MUTEX_UNLOCK(&ArgusParser->lock);
+   return rv;
+}
+
 /* SEARCH: <argus-time-string> */
 char **
 ArgusHandleSearchCommand (char *command)
@@ -151,6 +221,7 @@ ArgusHandleSearchCommand (char *command)
    time_t tsec = ArgusParser->ArgusGlobalTime.tv_sec;
    struct timeval starttime_tv;
    struct timeval endtime_tv;
+   struct in_addr addr = {0, };
 
    /* Also remember where in the string the separator was. */
    char *plusminusloc = NULL;
@@ -168,13 +239,47 @@ ArgusHandleSearchCommand (char *command)
       /* skip leading minus, if present */
       off++;
 
-   while (!plusminusloc && string[off] != '\0') {
+   /* look through the time string for a plus or minus to indicate
+    * a compound time.
+    */
+   while (!plusminusloc && !isspace(string[off]) && string[off] != '\0') {
       if (string[off] == '-' || string[off] == '+') {
          plusminusloc = &string[off];
          plusminus = string[off];
          string[off] = '\0'; /* split the string in two */
       }
       off++;
+   }
+
+   /* Look for the end of the time string.  If not compound, string[off] is
+    * the end.  Otherwise, keep looking.
+    */
+   while (!isspace(string[off]) && string[off] != '\0') {
+      off++;
+   }
+
+   /* Replace the whitespace in between the time and IP address (if any) with
+    * NULL characters.
+    */
+   while (isspace(string[off]) && string[off] != '\0') {
+      string[off] = '\0';
+      off++;
+   }
+
+   if (string[off] != '\0') {
+      if (string[off] == 'i' && string[off+1] == 'p' && string[off+2] == ':') {
+         DEBUGLOG(1, "%s: Checking for IP address in command (str=%s)\n",
+                  __func__, &string[off+3]);
+         /* unsafe - no check for null term */
+         if (inet_aton(&string[off+3], &addr) != 1) {
+            retn[0] = "Invalid IP address\n";
+            retn[1] = "FAIL\n";
+            res = -1;
+            goto out;
+         }
+         addr.s_addr = ntohl(addr.s_addr);
+         DEBUGLOG(1, "%s: Searching for IP address 0x%08x\n", __func__, addr.s_addr);
+      }
    }
 
    localtime_r(&tsec, &endtime);
@@ -193,6 +298,9 @@ ArgusHandleSearchCommand (char *command)
          res = -1;
          goto out;
       }
+   } else if (string[0] != '-') {
+      /* Not a time relative to "now" AND not a time range */
+      endtime = starttime;
    }
 
    invec = ArgusMalloc(invec_nitems * sizeof(struct ArgusDhcpIntvlNode));
@@ -204,8 +312,47 @@ ArgusHandleSearchCommand (char *command)
    endtime_tv.tv_sec = mktime(&endtime);
    endtime_tv.tv_usec = 0;
 
-   invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv, invec,
-                                              invec_nitems);
+   if (addr.s_addr == 0) {
+      invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv,
+                                                 invec, invec_nitems);
+   } else {
+      int tmp_invec_used;
+      struct ArgusDhcpIntvlNode *tmp_invec;
+
+      tmp_invec = ArgusMalloc(sizeof(*tmp_invec)*invec_nitems);
+      if (tmp_invec == NULL) {
+         retn[0] = "Not enough memory\n";
+         retn[1] = "FAIL\n";
+         retn[2] = NULL;
+         res = -1;
+         goto out;
+      }
+
+      tmp_invec_used = __search_ipaddr(&addr, &starttime_tv, &endtime_tv,
+                                       tmp_invec, invec_nitems);
+      if (tmp_invec_used < 0) {
+         retn[0] = "FAIL\n";
+         retn[1] = NULL;
+         res = -1;
+         ArgusFree(tmp_invec);
+         goto out;
+      }
+
+      invec_used = RabootpLeasePullup(tmp_invec, tmp_invec_used,
+                                      invec, invec_nitems);
+      while (tmp_invec_used > 0) {
+        tmp_invec_used--;
+        ArgusDhcpStructFree(tmp_invec[tmp_invec_used].data);
+      }
+      ArgusFree(tmp_invec);
+   }
+
+   if (invec_used < 0) {
+         retn[0] = "FAIL\n";
+         res = -1;
+         goto out;
+   }
+
    /* format string here */
    /* TEMP: output number of transactions found */
    snprintf(temporary, sizeof(temporary), "%zd\n", invec_used);
