@@ -106,7 +106,9 @@ close(SESAME);
 
 
 my $startseries = 0;
+my $startcount = 0;
 my $lastseries = 0;
+my $lastcount = 0;
 my ($user, $pass, $host, $port, $space, $db, $table);
 my $dbh;
 
@@ -155,8 +157,10 @@ if ($uri) {
             my $count = RaGetAddressCount($saddr);
 
             $startseries = 0;
-            $lastseries = 0;
-            $hoststring = "";
+            $startcount  = 0;
+            $lastseries  = 0;
+            $lastcount   = 0;
+            $hoststring  = "";
 
             if ( $quiet == 0 ) {
                for $sx ( sort numerically keys(%{$items{$saddr} })) {
@@ -173,29 +177,37 @@ if ($uri) {
                                     if ($startseries > 0) {
                                        if ($naddr == ($lastseries + 1)) {
                                           $lastseries = $naddr;  
+                                          $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                        } else {
                                           my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
                                           if ((($a4 == 254) && ($sw == 0)) && (($a3 + 1) == $sz)) {
                                              $lastseries = $naddr;
+                                             $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                           } else {
                                              my $startaddr = inet_ntoa(pack "N", $startseries);
                                              my $lastaddr  = inet_ntoa(pack "N", $lastseries);
 
                                              if ($startseries != $lastseries) {
-                                                $hoststring .= "$startaddr - $lastaddr, ";
-                                                $startseries = $naddr;
+                                                $hoststring .= "$startaddr($startcount)-$lastaddr($lastcount),";
+                                                $startseries = $naddr; 
+                                                $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                                 $lastseries = $naddr;
+                                                $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                              } else {
-                                                $hoststring .= "$startaddr, ";
+                                                $hoststring .= "$startaddr($startcount),";
                                                 $startseries = $naddr;
+                                                $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                                 $lastseries = $naddr;
+                                                $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                              }
                                           }
                                        }
 
                                     } else {
                                        $startseries = $naddr;
+                                       $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                        $lastseries = $naddr;
+                                       $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                     }
                                  }
                               }
@@ -211,9 +223,9 @@ if ($uri) {
                my $lastaddr  = inet_ntoa(pack "N", $lastseries);
 
                if ($startseries != $lastseries) {
-                  $hoststring .= "$startaddr - $lastaddr";
+                  $hoststring .= "$startaddr($startcount)-$lastaddr($lastcount)";
                } else {
-                  $hoststring .= "$startaddr";
+                  $hoststring .= "$startaddr($startcount)";
                }
             }
 
@@ -249,29 +261,37 @@ if ($uri) {
                                  if ($startseries > 0) {
                                     if ($naddr == ($lastseries + 1)) {
                                        $lastseries = $naddr;  
+                                       $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                     } else {
                                        my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
                                        if ((($a4 == 254) && ($sw == 0)) && (($a3 + 1) == $sz)) {
                                           $lastseries = $naddr;
+                                          $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                        } else {
                                           my $startaddr = inet_ntoa(pack "N", $startseries);
                                           my $lastaddr  = inet_ntoa(pack "N", $lastseries);
 
                                           if ($startseries != $lastseries) {
-                                             print "$startaddr - $lastaddr, ";
+                                             print "$startaddr($startcount)-$lastaddr($lastcount),";
                                              $startseries = $naddr;
+                                             $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                              $lastseries = $naddr;
+                                             $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                           } else {
-                                             print "$startaddr, ";
+                                             print "$startaddr($startcount),";
                                              $startseries = $naddr;
+                                             $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                              $lastseries = $naddr;
+                                             $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                           }
                                        }
                                     }
 
                                  } else {
                                     $startseries = $naddr;
+                                    $startcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                     $lastseries = $naddr;
+                                    $lastcount = $items{$saddr}{$sx}{$sy}{$sz}{$sw};  
                                  }
                               }
                            }
@@ -287,9 +307,9 @@ if ($uri) {
             my $lastaddr  = inet_ntoa(pack "N", $lastseries);
 
             if ($startseries != $lastseries) {
-               print "$startaddr - $lastaddr";
+               print "$startaddr($startcount)-$lastaddr($lastcount)";
             } else {
-               print "$startaddr";
+               print "$startaddr($startcount)";
             }
          }
          }
