@@ -135,6 +135,7 @@ static pthread_t timer_thread;
 int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 static char temporary[32];
 static char *invecstr;
+static char *global_query_str;
 static const unsigned long INVECSTRLEN = 1024*1024; /* 1 MB */
 static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
 
@@ -524,6 +525,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             } else
             if (!strncasecmp(mode->mode, "json-obj-only", 13)) {
                fmtable = &ArgusJsonObjOnlyFormatterTable;
+            } else
+            if (!strncasecmp(mode->mode, "query:", 6)) {
+               global_query_str = strdup(mode->mode+6);
             }
             mode = mode->nxt;
          }
@@ -575,6 +579,17 @@ RaParseComplete (int sig)
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
          int ArgusExitStatus = 0;
+
+         if (global_query_str) {
+            int i = 0;
+
+            ArgusHandleSearchCommand(global_query_str);
+            while (ArgusHandleResponseArray[i]) {
+               printf("%s", ArgusHandleResponseArray[i]);
+               i++;
+            }
+            free(global_query_str);
+         }
 
          if (ArgusDebugTree)
             RabootpDumpTree();
