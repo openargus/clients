@@ -50,6 +50,7 @@ install -D -m 0644 pkg/ra.conf $RPM_BUILD_ROOT/etc/ra.conf
 install -D -m 0600 pkg/radium.conf $RPM_BUILD_ROOT/etc/radium.conf
 
 %if 0%{!?_workstation:1}
+install -D -m 0644 pkg/rhel/sasl2/radium.conf $RPM_BUILD_ROOT/etc/sasl2/radium.conf
 install -D -m 0644 pkg/rhel/sysconfig/radium $RPM_BUILD_ROOT/etc/sysconfig/radium
 install -D -m 0644 pkg/rhel/sysconfig/rastream $RPM_BUILD_ROOT/etc/sysconfig/rastream
 install -D -m 0644 pkg/rhel/systemd/rasqlinsert@.service $RPM_BUILD_ROOT%{_unitdir}/rasqlinsert@.service
@@ -77,6 +78,7 @@ mkdir -p /home/argus
 %systemd_post radium.service
 %systemd_post rastream.service
 ln -s %{argusbin}/rastream %{argusbin}/rasplit
+ln -s /etc/pam.d/system-auth /etc/pam.d/radium
 
 %preun
 %systemd_preun radium.service
@@ -86,6 +88,7 @@ ln -s %{argusbin}/rastream %{argusbin}/rasplit
 %systemd_postun_with_restart radium.service
 %systemd_postun_with_restart rastream.service
 rm -f %{argusbin}/rasplit
+rm -f /etc/pam.d/radium
 %else
 %post
 ln -s %{argusbin}/rastream %{argusbin}/rasplit
@@ -126,6 +129,8 @@ rm -f %{argusbin}/rasplit
 %config /etc/ra.conf
 %config /etc/radium.conf
 %if 0%{!?_workstation:1}
+%config /etc/sasl2/radium.conf
+%ghost /etc/pam.d/radium
 %{argussbin}/radium-setup
 %{_unitdir}/radium.service
 %{_unitdir}/rastream.service
