@@ -220,6 +220,7 @@ struct ArgusFileEntry {
 
 struct ArgusListObjectStruct {
    struct ArgusListObjectStruct *nxt, *prv;
+   unsigned int status;
    union {
       void *obj;
       unsigned int val;

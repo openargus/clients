@@ -585,6 +585,17 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                ArgusPushBackList(query->cname, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                break;
             }
+            case T_PTR: {
+               if (query->ptr == NULL)
+                  query->ptr = ArgusNewList();
+
+               if ((list = ArgusCalloc(1, sizeof(*list))) == NULL)
+                  ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+               list->list_obj = rr;
+               ArgusPushBackList(query->ptr, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
+               break;
+            }
          }
       }
 
