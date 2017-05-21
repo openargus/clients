@@ -181,8 +181,19 @@ struct ArgusDomainResourceRecord {
    unsigned short type, class;
    unsigned short rdlen, opt_flags;
    unsigned int ttl;
-   struct ArgusCIDRAddr cidr;
-   char *name, *data;
+
+   union {
+      struct {
+         struct ArgusCIDRAddr cidr;
+         char *name, *data;
+      };
+      struct {
+         char *mname, *rname;
+         unsigned int serial, refresh;
+         unsigned int retry, expire;
+         unsigned int minimum;
+      };
+   };
 };
 
 struct ArgusDomainQueryStruct {

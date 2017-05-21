@@ -420,27 +420,51 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
          }
 
          case T_SOA:
-            if (!ArgusParser->vflag)
-               break;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
-            if ((cp = ns_nprint(cp, bp, &ArgusBuf[strlen(ArgusBuf)])) == NULL)
+/*
+struct ArgusDomainResourceRecord {
+   unsigned short type, class;
+   unsigned short rdlen, opt_flags;
+   unsigned int ttl;
+
+   union {
+      struct {
+         struct ArgusCIDRAddr cidr;
+         char *name, *data;
+      };
+      struct {
+         char *mname, *rname;
+         unsigned int serial, refresh;
+         unsigned int retry, expire;
+         unsigned int minimum;
+      };
+   };
+};
+*/
+
+            bzero(ArgusBuf, 128);
+            if ((cp = ns_nprint(cp, bp, ArgusBuf)) == NULL)
                return(NULL);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
-            if ((cp = ns_nprint(cp, bp, &ArgusBuf[strlen(ArgusBuf)])) == NULL)
+            rr->mname = strdup(ArgusBuf);
+
+            bzero(ArgusBuf, 128);
+            if ((cp = ns_nprint(cp, bp, ArgusBuf)) == NULL)
                return(NULL);
+            rr->rname = strdup(ArgusBuf);
+
             if (!TTEST2(*cp, 5 * 4))
                return(NULL);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+
+            rr->serial = EXTRACT_32BITS(cp);
             cp += 4;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+            rr->refresh = EXTRACT_32BITS(cp);
             cp += 4;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+            rr->retry = EXTRACT_32BITS(cp);
             cp += 4;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+            rr->expire = EXTRACT_32BITS(cp);
             cp += 4;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
-            cp += 4;
+            rr->minimum = EXTRACT_32BITS(cp);
             break;
+
          case T_MX:
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
             if (!TTEST2(*cp, 2))
@@ -448,6 +472,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
             if (ns_nprint(cp + 2, bp, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
                return(NULL);
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d", EXTRACT_16BITS(cp));
+            rr->data = strdup(ArgusBuf);
             break;
 
          case T_TXT:
@@ -458,6 +483,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                   return(NULL);
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
             }
+            rr->data = strdup(ArgusBuf);
             break;
 
          case T_SRV:
@@ -468,6 +494,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                return(NULL);
             sprintf(&ArgusBuf[strlen(ArgusBuf)],":%d %d %d", EXTRACT_16BITS(cp + 4),
                EXTRACT_16BITS(cp), EXTRACT_16BITS(cp + 2));
+            rr->data = strdup(ArgusBuf);
             break;
 
 #ifdef INET6
@@ -475,6 +502,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
             if (!TTEST2(*cp, sizeof(struct in6_addr)))
                return(NULL);
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ip6addr_string(cp));
+            rr->data = strdup(ArgusBuf);
             break;
 
          case T_A6: {
@@ -500,6 +528,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                if (ns_nprint(cp + 1 + sizeof(a) - pbyte, bp, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
                   return(NULL);
             }
+            rr->data = strdup(ArgusBuf);
             break;
          }
 
@@ -507,6 +536,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
 
          case T_OPT:
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," UDPsize=%u", rr->class);
+            rr->data = strdup(ArgusBuf);
             break;
 
          case T_UNSPECA:      
@@ -514,6 +544,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                return(NULL);
             if (fn_printn(cp, len, snapend, ArgusBuf) == NULL)
                return(NULL);
+            rr->data = strdup(ArgusBuf);
             break;
 
          case T_TSIG: {
@@ -545,6 +576,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
                return(NULL);
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," otherlen=%u", EXTRACT_16BITS(cp));
             cp += 2;
+            rr->data = strdup(ArgusBuf);
          }
       }
       {
@@ -594,6 +626,17 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
 
                list->list_obj = rr;
                ArgusPushBackList(query->ptr, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
+               break;
+            }
+            case T_SOA: {
+               if (query->soa == NULL)
+                  query->soa = ArgusNewList();
+
+               if ((list = ArgusCalloc(1, sizeof(*list))) == NULL)
+                  ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+               list->list_obj = rr;
+               ArgusPushBackList(query->soa, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                break;
             }
          }
