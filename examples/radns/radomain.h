@@ -196,6 +196,7 @@ struct ArgusDomainQueryStruct {
    struct ArgusListStruct *domains;
    struct ArgusListStruct *ans;
    struct ArgusListStruct *cname;
+   struct ArgusListStruct *soa;
    struct ArgusListStruct *ns;
    struct ArgusListStruct *ptr;
 };
