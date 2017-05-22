@@ -6676,8 +6676,6 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
          int i, len = sizeof(struct in_addr);
  
          retn->len = len;
-         if (retn->masklen == 0)
-            retn->masklen = 32;
 
          for (i = 0; (i < len) && str; i++) {
             long int tval = strtol(str, (char **)&ptr, 10);
@@ -6696,6 +6694,9 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
             }
             str = ptr;
          }
+
+         if ((retn->masklen == 0) && (retn->addr[0] != 0))
+            retn->masklen = 32;
 
          if (retn->masklen > 0)
             retn->mask[0] = 0xFFFFFFFF << (32 - retn->masklen);
