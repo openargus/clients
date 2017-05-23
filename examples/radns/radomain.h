@@ -180,6 +180,7 @@
 struct ArgusDomainResourceRecord {
    unsigned short type, class;
    unsigned short rdlen, opt_flags;
+   struct timeval stime, ltime;
    unsigned int ttl;
 
    union {
@@ -202,6 +203,7 @@ struct ArgusDomainQueryStruct {
    unsigned short seqnum;
    unsigned short qdcount, ancount, nscount, arcount;
    unsigned short qtype, qclass;
+   struct timeval stime, ltime;
 
    char *name;
    struct ArgusListStruct *domains;
@@ -218,6 +220,7 @@ struct ArgusDomainStruct {
    unsigned short seqnum;
    unsigned short qdcount, ancount, nscount, arcount;
    unsigned short qtype, qclass;
+   struct timeval stime, ltime;
 
    struct RaAddressStruct *server;
    struct ArgusDomainQueryStruct *request;
