@@ -194,9 +194,10 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
          raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr));
 
       if (ArgusParser->ArgusPrintJson) {
-         sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s(%0.*f)\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string, ArgusParser->pflag, diff);
+//       sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s(%0.*f)\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string, ArgusParser->pflag, diff);
+         sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       } else {
-         sprintf (resbuf, "%s: %s(%f)", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string, diff);
+         sprintf (resbuf, "%s: %s", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       }
 
 #if defined(ARGUS_THREADS)
@@ -237,7 +238,8 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
                   if (ArgusParser->ArgusPrintJson) {
                      if (tref++ > 0)
                         sprintf (&resbuf[strlen(resbuf)], ",");
-                     sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
+//                   sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
+                     sprintf (&resbuf[strlen(resbuf)], "\"%s\"", tname->n_name);
                   } else {
                      sprintf (&resbuf[strlen(resbuf)], "%s ", tname->n_name);
                   }
@@ -273,7 +275,8 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
                   if (ArgusParser->ArgusPrintJson) {
                      if (tref++ > 0)
                         sprintf (&resbuf[strlen(resbuf)], ",");
-                     sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
+//                   sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
+                     sprintf (&resbuf[strlen(resbuf)], "\"%s\"", tname->n_name);
                   } else {
                      sprintf (&resbuf[strlen(resbuf)], "%s ", tname->n_name);
                   }
