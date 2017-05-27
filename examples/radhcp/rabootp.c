@@ -69,9 +69,10 @@ static struct {
 
 extern char ArgusBuf[];
 
+#if defined(ARGUSDEBUG)
 static char *bootp_print(register const u_char *, u_int);
+#endif
 static void rfc1048_print(const u_char *, const u_char *);
-static void cmu_print(const u_char *);
 static void rfc1048_parse(const u_char *, const u_char *,
                           struct ArgusDhcpStruct *, u_char);
 
@@ -318,6 +319,7 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
  * Print bootp requests
  */
 
+#if defined(ARGUSDEBUG)
 static char *
 bootp_print(register const u_char *cp, u_int length)
 {
@@ -442,6 +444,7 @@ trunc:
 
    return ArgusBuf;
 }
+#endif
 
 /*
  * The first character specifies the format to print:
