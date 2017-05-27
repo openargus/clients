@@ -401,7 +401,7 @@ ArgusHandleSearchCommand (char *command)
    if (__is_oneshot_query() && (ArgusParser->writeDbstr || parsed[OPT_DB])) {
 #if defined(ARGUS_MYSQL)
       ssize_t i;
-      char *writeDbstr;
+      char *writeDbstr = NULL;
       char *table = NULL;
 
       /* If a database string was provided with the query we can't use the

@@ -1395,6 +1395,8 @@ RabootpCallbackRegister(enum rabootp_callback_trigger trigger,
       case CALLBACK_XIDDELETE:
          rv = rabootp_cb_register(&callback.xid_delete, cb, arg);
          break;
+      default:
+         rv = -1;
    }
    return  rv;
 }
@@ -1418,6 +1420,8 @@ RabootpCallbackUnregister(enum rabootp_callback_trigger trigger,
       case CALLBACK_XIDDELETE:
          rv = rabootp_cb_unregister(&callback.xid_delete, cb);
          break;
+      default:
+         rv = -1;
    }
    return  rv;
 }
