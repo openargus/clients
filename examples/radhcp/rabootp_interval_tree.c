@@ -263,7 +263,6 @@ IntvlTreeForEachOverlaps(struct ArgusDhcpIntvlTree * const head,
       }
    }
 
-out:
    MUTEX_UNLOCK(&head->lock);
    return rv;
 }

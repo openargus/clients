@@ -1125,7 +1125,6 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
       }
    }
 
-trunc:
    return;
 }
 
