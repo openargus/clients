@@ -9,6 +9,11 @@
 
 typedef int (*sleepfunc)(struct argus_timer_wheel *);
 
+/* from argus_timer.c.  This is a "private" function that does not appear
+ * in the header file.
+ */
+int ArgusTimerWheelCheck(struct argus_timer_wheel *w);
+
 
 static unsigned callback_count = 0;
 static struct timespec callback_lasttime = {0, };
@@ -36,21 +41,6 @@ static void __callback_reset(void)
    callback_count = 0;
    memset(&callback_lasttime, 0, sizeof(callback_lasttime));
    memset(&callback_lastexp, 0, sizeof(callback_lastexp));
-}
-
-static int
-__wheel_consistency_check(struct argus_timer_wheel *w)
-{
-   uint64_t total = 0;
-   uint64_t u;
-   struct argus_timer *t;
-
-   for (u = 0; u < w->nslots; u++) {
-      RB_FOREACH(t, argus_timer_tree, w->slots[u]) {
-         total++;
-      }
-   }
-   return (total == w->ntimers);
 }
 
 /* time of final expiration returned in duration.  Use this to calculate the
@@ -140,7 +130,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 1);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Advance timer wheel (with timer)");
    for (i = 0; i < iter; i++) {
@@ -154,7 +144,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 0);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Callback executed 1 time");
    TestResult(callback_count == 1);
@@ -173,7 +163,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 10000);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Advance timer wheel (with many timers)");
    for (i = 0; i < iter; i++) {
@@ -189,7 +179,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 0);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Callback executed 10000 times");
    TestResult(callback_count == 10000);
@@ -208,7 +198,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 10000);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Free the timer wheel");
    TestResult(ArgusTimerFreeWheel(timerwheel) == 0);
@@ -234,7 +224,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 10000);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Advance timer wheel");
    for (i = 0; i < iter; i++) {
@@ -250,7 +240,7 @@ int runtests(unsigned slots, struct timespec *period,
    TestResult(timerwheel->ntimers == 0);
 
    TestHeading("Wheel consistency check");
-   TestResult(__wheel_consistency_check(timerwheel));
+   TestResult(ArgusTimerWheelCheck(timerwheel));
 
    TestHeading("Free the timer wheel");
    TestResult(ArgusTimerFreeWheel(timerwheel) == 0);

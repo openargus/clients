@@ -337,3 +337,21 @@ ArgusTimerAdvanceWheel(struct argus_timer_wheel *w)
 
    return 0;
 }
+
+/* consistency check - check the wheel timer count against the sum of
+ * the slot counts
+*/
+int
+ArgusTimerWheelCheck(struct argus_timer_wheel *w)
+{
+   uint64_t total = 0;
+   uint64_t u;
+   struct argus_timer *t;
+
+   for (u = 0; u < w->nslots; u++) {
+      RB_FOREACH(t, argus_timer_tree, w->slots[u]) {
+         total++;
+      }
+   }
+   return (total == w->ntimers);
+}
