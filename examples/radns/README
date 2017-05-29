@@ -32,6 +32,11 @@ This dnsNames database, can be used by the dnsq.pl to find json data for specifi
 IP addresses for any given date.
 
 
+Used this to populate the dnsNames database from an existing dnsFlows database.
+
+for i in `mysql -u root dnsFlows --skip-column-names -Be "show tables"`; do echo $i; radnsdb -t `echo $i | awk 'BEGIN{FS="_"}{print $2"/"$3"/"$4}'` -w mysql://root@localhost/dnsNames/$i; done
+
+
 This directory contains source code for radns.1, an example program that
 uses the user data found in DNS argus records to track if the addresses
 in the flows were learned from DNS.
