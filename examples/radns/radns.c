@@ -55,8 +55,6 @@
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
 
-extern void RaMySQLInit (void);
-
 char *ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, char *, char *, int, int);
 int ArgusGrepBuf (regex_t *, char *, char *);
 
@@ -191,13 +189,13 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
       diff = (tvp->tv_sec * 1.0) + (tvp->tv_usec / 1000000.0);
 
       if (raddr->addr.str == NULL) 
-         raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr));
+         raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
 
       if (ArgusParser->ArgusPrintJson) {
 //       sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s(%0.*f)\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string, ArgusParser->pflag, diff);
          sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       } else {
-         sprintf (resbuf, "%s: %s", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+         sprintf (resbuf, "%s: %s ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       }
 
 #if defined(ARGUS_THREADS)
@@ -687,10 +685,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusControlCommands[CONTROL_TREE].handler   = ArgusHandleTreeCommand;
          ArgusControlCommands[CONTROL_SEARCH].handler = ArgusHandleSearchCommand;
       }
-
-#if defined(ARGUS_MYSQL)
-      RaMySQLInit();
-#endif
    }
 }
 
@@ -730,9 +724,6 @@ RaParseComplete (int sig)
          ArgusDeleteHashTable(ArgusDNSNameTable);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
 
-#if defined(ARGUS_MYSQL)
-         mysql_close(RaMySQL);
-#endif
          ArgusCloseParser(ArgusParser);
          exit (ArgusExitStatus);
       }

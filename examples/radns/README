@@ -22,6 +22,15 @@
  *  Author: Carter Bullard carter@qosient.com
  */
 
+Mon May 29 14:51:01 EDT 2017
+
+Added radnsdb.pl as a helper application for using radns data from mysql.
+Radnsdb is passed a date, and it reads dns transactions from the appropriate
+dnsFlows/dns_%Y_%m_%d table, and writes json strings into a dnsNames database.
+
+This dnsNames database, can be used by the dnsq.pl to find json data for specific
+IP addresses for any given date.
+
 
 This directory contains source code for radns.1, an example program that
 uses the user data found in DNS argus records to track if the addresses
