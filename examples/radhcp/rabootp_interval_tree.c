@@ -126,7 +126,7 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
          /* extend this node's interval */
          exist->inthi.tv_sec = ads->last_bind.tv_sec + seconds;
          if (timercmp(&exist->subtreehi, &exist->inthi, <))
-            exist->subtreehi = exist->inthi;
+            __dhcp_intvl_node_update(exist);
 
          /* clean up the node we allocated but don't need */
          ArgusFree(node);
