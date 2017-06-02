@@ -20636,10 +20636,12 @@ ArgusGetV6Name(struct ArgusParserStruct *parser, u_char *ap)
    char ntop_buf[INET6_ADDRSTRLEN];
    struct h6namemem *p;
    const char *cp;
+   uint16_t key;
  
    memcpy(&addr, ap, sizeof(addr));
+   key = (addr.s6_addr[14] << 8) | addr.s6_addr[15];
  
-   p = &h6nametable[*(unsigned short *)&addr.s6_addr[14] & (HASHNAMESIZE-1)];
+   p = &h6nametable[key & (HASHNAMESIZE-1)];
    for (; p->nxt; p = p->nxt) {
       if (memcmp(&p->addr, &addr, sizeof(addr)) == 0)
          return (p->name);
