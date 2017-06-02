@@ -3407,7 +3407,7 @@ void *ArgusListenProcess(void *arg)
 #endif /* ARGUS_THREADS */
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "%s(0x%x) starting\n", __func__, output);
+   ArgusDebug (2, "%s(0x%x) starting\n", __func__, arg);
 #endif
 
    if (arg == NULL)
@@ -3518,7 +3518,7 @@ void *ArgusListenProcess(void *arg)
 
 out:
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "%s(0x%x) exiting\n", __func__, output);
+   ArgusDebug (2, "%s(0x%x) exiting\n", __func__, arg);
 #endif
    return NULL;
 }
@@ -3666,10 +3666,18 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
                      if (have_argus_client)
                         arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION);
+                     else
+                        arg = NULL;
+
                      if (have_argusv3_client)
                         argv3 = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION_3);
+                     else
+                        argv3 = NULL;
+
                      if (have_ciscov5_client)
                         v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA, 0);
+                     else
+                        v5 = NULL;
 
                      for (i = 0; i < output->ArgusClients->count; i++) {
                         if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
