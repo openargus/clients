@@ -68,7 +68,6 @@ struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned ch
 struct ArgusV3Record *ArgusGenerateV3Record (struct ArgusRecordStruct *, unsigned char, char *);
 struct ArgusRecord *ArgusGenerateV5Record (struct ArgusRecordStruct *, unsigned char, char *);
 static struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *, char);
-static struct ArgusRecordStruct *ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *, char);
 
 
 extern char *chroot_dir;
