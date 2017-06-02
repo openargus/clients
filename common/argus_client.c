@@ -2049,6 +2049,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  break;
                               }
                               case ARGUS_TYPE_IPV6: {
+                                 bcopy(trans->srcid.a_un.ipv6,
+                                       canon->trans.srcid.a_un.ipv6,
+                                       sizeof(trans->srcid.a_un.ipv6));
                                  iptr = (char *)&trans->srcid.a_un.value + 16;
                                  break;
                               }
