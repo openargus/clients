@@ -20644,7 +20644,7 @@ ArgusGetV6Name(struct ArgusParserStruct *parser, u_char *ap)
    p = &h6nametable[key & (HASHNAMESIZE-1)];
    for (; p->nxt; p = p->nxt) {
       if (memcmp(&p->addr, &addr, sizeof(addr)) == 0)
-         return (p->name);
+         return strdup(p->name);
    }
    p->addr = addr;
    p->nxt = (struct h6namemem *)calloc(1, sizeof (*p));
@@ -20666,15 +20666,16 @@ ArgusGetV6Name(struct ArgusParserStruct *parser, u_char *ap)
          (void)alarm(0);
          if (hp) {
             if ((p->name = strdup(hp->h_name)) != NULL)
-               return (p->name);
+               return strdup(p->name);
          }
       }
    }
  
-   if ((cp = inet_ntop(AF_INET6, (const void *) &addr, ntop_buf, sizeof(ntop_buf))) != NULL)
+   if ((cp = inet_ntop(AF_INET6, (const void *) &addr, ntop_buf, sizeof(ntop_buf))) != NULL) {
       p->name = strdup(cp);
-
-   return (p->name);
+      return strdup(p->name);
+   }
+   return NULL;
 }
 
 static char hex[] = "0123456789abcdef";
