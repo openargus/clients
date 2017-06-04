@@ -9057,6 +9057,18 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
    return;
 }
 
+void
+ArgusReplaceRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
+{
+   ns2->htblhdr = ns1->htblhdr;
+   if (ns2->htblhdr != NULL)
+      ns2->htblhdr->object = ns2;
+
+   ns1->htblhdr = NULL;
+   ns1->status |= ARGUS_RECORD_MODIFIED;
+   return;
+}
+
 
 void
 ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)

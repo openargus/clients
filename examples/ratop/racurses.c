@@ -2858,7 +2858,7 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
          parser->RaLabel = NULL;
 
          if (RaWindowStatus) {
-            if (parser->status & ARGUS_FILE_LIST_PROCESSED) {
+            if ((parser->status & ARGUS_FILE_LIST_PROCESSED) || (parser->ProcessRealTime > 0)) {
 #if defined(ARGUS_THREADS)
                pthread_mutex_lock(&queue->lock);
 #endif
