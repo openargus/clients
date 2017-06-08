@@ -3402,10 +3402,11 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                if (seconds > 0) {
                   long long pkts = canon->metric.src.pkts;
+                  long long bytes = (canon->metric.src.bytes + (pkts * parser->ArgusEtherFrameCnt));
                   if (pkts > 1) {
-                     long long bppkts = canon->metric.src.bytes / pkts;
+                     long long bppkts = bytes / pkts;
                      retn->srate = (float)((pkts - 1) * 1.0) / seconds;
-                     retn->sload = (float)((canon->metric.src.bytes - bppkts) * 8.0) / seconds;
+                     retn->sload = (float)((bytes - bppkts) * 8.0) / seconds;
                   }
                }
 
@@ -3414,10 +3415,11 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                if (seconds > 0) {
                   long long pkts = canon->metric.dst.pkts; 
+                  long long bytes = (canon->metric.dst.bytes + (pkts * parser->ArgusEtherFrameCnt));
                   if (pkts > 1) {
-                     long long bppkts = canon->metric.dst.bytes / pkts;
+                     long long bppkts = bytes / pkts;
                      retn->drate = (float)((pkts - 1) * 1.0) / seconds;
-                     retn->dload = (float)((canon->metric.dst.bytes - bppkts) * 8.0) / seconds;
+                     retn->dload = (float)((bytes - bppkts) * 8.0) / seconds;
                   }
                }
 
@@ -9038,10 +9040,11 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                if ((seconds = RaGetFloatDuration(ns1)) > 0) {
                   struct ArgusMetricStruct *metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
                   if (metric != NULL) {
+                     int eframe = ArgusParser->ArgusEtherFrameCnt;
                      ns1->srate = (float) (metric->src.pkts * 1.0)/seconds;
                      ns1->drate = (float) (metric->dst.pkts * 1.0)/seconds;
-                     ns1->sload = (float) (metric->src.bytes*8 * 1.0)/seconds;
-                     ns1->dload = (float) (metric->dst.bytes*8 * 1.0)/seconds;
+                     ns1->sload = (float) ((metric->src.bytes + (metric->src.pkts * eframe)) * 8.0)/seconds;
+                     ns1->dload = (float) ((metric->dst.bytes + (metric->dst.pkts * eframe)) * 8.0)/seconds;
                      ns1->pcr   = (float) ArgusFetchAppByteRatio(ns1);
                      ns1->dur   = seconds;
                   }
