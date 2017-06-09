@@ -10,12 +10,9 @@
 #include "rabootp.h"
 #include "rabootp_print.h"
 #include "argus_print.h"
+#include "rabootp_sql_bind.h" /* static sql-binding functions */
 
 #define RABOOTP_PRINT_FIELD_MAX 64
-
-static const struct ArgusFormatterTable ArgusNullFormatterTable = {
-   NULL,
-};
 
 static ssize_t
 RabootpPrintL2(const struct ArgusParserStruct * const parser,
@@ -88,48 +85,92 @@ RabootpPrintUint8(const struct ArgusParserStruct * const parser,
    return snprintf(str, len, "%hhu", val);
 }
 
-static struct ArgusPrinterTable ArgusDhcpReplyPrinterTablep[] = {
+static const struct ArgusPrinterTable ArgusDhcpReplyPrinterTablep[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, yiaddr, "clientaddr", \
-                           RabootpPrintL3, 1),
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, hostname, "hostname", \
-                           RabootpPrintString, 1),
+                           RabootpPrintString, "varchar(128)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
+                           RabootpSQLBindString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, netmask, "netmask", \
-                           RabootpPrintL3, 1),
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, broadcast, "broadcast", \
-                           RabootpPrintL3, 1),
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, router, "router", \
-                           RabootpPrintL3, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, router_count, "router_count", \
-                           RabootpPrintUint8, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, domainname, "domainname", \
-                           RabootpPrintString, 1),
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, router_count, \
+                           "router_count", \
+                           RabootpPrintUint8, "tinyint unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTiny),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, domainname, \
+                           "domainname", \
+                           RabootpPrintString, "varchar(128)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
+                           RabootpSQLBindString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, siaddr, "siaddr", \
-                           RabootpPrintL3, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver[0], "timeserver0", \
-                           RabootpPrintL3, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver_count, "timeserver_count", \
-                           RabootpPrintUint8, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[0], "nameserver0", \
-                           RabootpPrintL3, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[1], "nameserver1", \
-                           RabootpPrintL3, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver_count, "nameserver_count", \
-                           RabootpPrintUint8, 1),
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver[0], \
+                           "timeserver0", \
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver_count, \
+                           "timeserver_count", \
+                           RabootpPrintUint8, "tinyint unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTiny),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[0], \
+                           "nameserver0", \
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[1], \
+                           "nameserver1", \
+                           RabootpPrintL3, "varchar(16)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver_count, \
+                           "nameserver_count", \
+                           RabootpPrintUint8, "tinyint unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTiny),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, shaddr, "servermac", \
-                           RabootpPrintL2, 1),
+                           RabootpPrintL2, "varchar(18)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
 };
 
-static struct ArgusPrinterTable ArgusDhcpStructPrinterTable[] = {
+static const struct ArgusPrinterTable ArgusDhcpStructPrinterTable[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpStruct, chaddr, "clientmac", \
-                           RabootpPrintL2, 1),
-   ARGUS_PRINT_INITIALIZER(ArgusDhcpStruct, xid, "XID", RabootpPrintHex32, 1),
+                           RabootpPrintL2, "varchar(18)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpStruct, xid, "XID", \
+                           RabootpPrintHex32, "integer unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindUnsigned),
 };
 
-static struct ArgusPrinterTable ArgusDhcpIntvlPrinterTable[] = {
+static const struct ArgusPrinterTable ArgusDhcpIntvlPrinterTable[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpIntvlNode, intlo, "stime", \
-                           RabootpPrintTimeval, 1),
+                           RabootpPrintTimeval, "double(18,6) unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTimeval),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpIntvlNode, inthi, "ltime", \
-                           RabootpPrintTimeval, 1),
+                           RabootpPrintTimeval, "double(18,6) unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTimeval),
 };
 
 static inline void
@@ -351,3 +392,129 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
 
    return 0;
 }
+
+unsigned
+RabootpPrintMaxFields(void)
+{
+   unsigned tcmax, timax, trmax;
+
+   tcmax = sizeof(ArgusDhcpStructPrinterTable)/
+           sizeof(ArgusDhcpStructPrinterTable[0]);
+   timax = sizeof(ArgusDhcpIntvlPrinterTable)/
+           sizeof(ArgusDhcpIntvlPrinterTable[0]);
+   trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
+           sizeof(ArgusDhcpReplyPrinterTablep[0]);
+
+   return (tcmax + timax + trmax);
+}
+
+#if defined(ARGUS_MYSQL)
+/* Iterate through the printer table and for every field enabled for
+ * SQL bind to one of the elements in bindvec.
+ */
+int RabootpPrintSQL(const struct ArgusParserStruct * const parser,
+                    const struct ArgusDhcpIntvlNode *node,
+                    MYSQL_BIND *bindvec, size_t nitems)
+{
+   int timax, tcmax, trmax, t;
+   int res;
+   int out_idx = 0;
+
+   tcmax = sizeof(ArgusDhcpStructPrinterTable)/
+           sizeof(ArgusDhcpStructPrinterTable[0]);
+   timax = sizeof(ArgusDhcpIntvlPrinterTable)/
+           sizeof(ArgusDhcpIntvlPrinterTable[0]);
+   trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
+           sizeof(ArgusDhcpReplyPrinterTablep[0]);
+
+   for (t = 0; t < tcmax && out_idx < nitems; t++) {
+      res = ArgusPrintFieldSQL(parser, ArgusDhcpStructPrinterTable, node->data, t,
+                               &bindvec[out_idx]);
+      if (res > 0)
+         out_idx++;
+   }
+   for (t = 0; t < timax && out_idx < nitems; t++) {
+      res = ArgusPrintFieldSQL(parser, ArgusDhcpIntvlPrinterTable, node, t,
+                               &bindvec[out_idx]);
+      if (res > 0)
+         out_idx++;
+   }
+   for (t = 0; t < trmax && out_idx < nitems; t++) {
+      res = ArgusPrintFieldSQL(parser, ArgusDhcpReplyPrinterTablep,
+                               &(node->data->rep), t, &bindvec[out_idx]);
+      if (res > 0)
+         out_idx++;
+   }
+   return out_idx;
+}
+
+int RabootpPrintLabelSQL(const struct ArgusParserStruct * const parser,
+                         const char **namevec, size_t nitems)
+{
+   int timax, tcmax, trmax, t;
+   int res;
+   int out_idx = 0;
+
+   tcmax = sizeof(ArgusDhcpStructPrinterTable)/
+           sizeof(ArgusDhcpStructPrinterTable[0]);
+   timax = sizeof(ArgusDhcpIntvlPrinterTable)/
+           sizeof(ArgusDhcpIntvlPrinterTable[0]);
+   trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
+           sizeof(ArgusDhcpReplyPrinterTablep[0]);
+
+   for (t = 0; t < tcmax && out_idx < nitems; t++) {
+      if (ArgusDhcpStructPrinterTable[t].enabled > ENA_DISPLAY) {
+         namevec[out_idx] = ArgusDhcpStructPrinterTable[t].label;
+         out_idx++;
+      }
+   }
+   for (t = 0; t < timax && out_idx < nitems; t++) {
+      if (ArgusDhcpIntvlPrinterTable[t].enabled > ENA_DISPLAY) {
+         namevec[out_idx] = ArgusDhcpIntvlPrinterTable[t].label;
+         out_idx++;
+      }
+   }
+   for (t = 0; t < trmax && out_idx < nitems; t++) {
+      if (ArgusDhcpReplyPrinterTablep[t].enabled > ENA_DISPLAY) {
+         namevec[out_idx] = ArgusDhcpReplyPrinterTablep[t].label;
+         out_idx++;
+      }
+   }
+   return out_idx;
+}
+
+int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
+                        const char **typevec, size_t nitems)
+{
+   int timax, tcmax, trmax, t;
+   int res;
+   int out_idx = 0;
+
+   tcmax = sizeof(ArgusDhcpStructPrinterTable)/
+           sizeof(ArgusDhcpStructPrinterTable[0]);
+   timax = sizeof(ArgusDhcpIntvlPrinterTable)/
+           sizeof(ArgusDhcpIntvlPrinterTable[0]);
+   trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
+           sizeof(ArgusDhcpReplyPrinterTablep[0]);
+
+   for (t = 0; t < tcmax && out_idx < nitems; t++) {
+      if (ArgusDhcpStructPrinterTable[t].enabled > ENA_DISPLAY) {
+         typevec[out_idx] = ArgusDhcpStructPrinterTable[t].sqltype;
+         out_idx++;
+      }
+   }
+   for (t = 0; t < timax && out_idx < nitems; t++) {
+      if (ArgusDhcpIntvlPrinterTable[t].enabled > ENA_DISPLAY) {
+         typevec[out_idx] = ArgusDhcpIntvlPrinterTable[t].sqltype;
+         out_idx++;
+      }
+   }
+   for (t = 0; t < trmax && out_idx < nitems; t++) {
+      if (ArgusDhcpReplyPrinterTablep[t].enabled > ENA_DISPLAY) {
+         typevec[out_idx] = ArgusDhcpReplyPrinterTablep[t].sqltype;
+         out_idx++;
+      }
+   }
+   return out_idx;
+}
+#endif
