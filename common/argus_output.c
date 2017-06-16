@@ -2551,10 +2551,15 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
    if (asock != NULL) {
       struct ArgusListStruct *list = asock->ArgusOutputList;
       struct ArgusWireFmtBuffer *awf;
+      struct ArgusQueueNode *node;
 
-      while ((awf = (struct ArgusWireFmtBuffer *)
-                    ArgusPopFrontList(list, ARGUS_LOCK)) != NULL)
+      pthread_mutex_lock(&list->lock);
+      while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+         awf = node->datum;
+         FreeArgusQueueNode(node);
          FreeArgusWireFmtBuffer(awf);
+      }
+      pthread_mutex_unlock(&list->lock);
    
       ArgusDeleteList(asock->ArgusOutputList, ARGUS_OUTPUT_LIST);
 
