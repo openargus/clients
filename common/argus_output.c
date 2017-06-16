@@ -54,6 +54,7 @@
 #include <argus_compat.h>
 #include <argus_util.h>
 #include <argus_output.h>
+#include "argus_threads.h"
 
 void ArgusSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
 static void *ArgusControlChannelProcess(void *);
@@ -146,6 +147,26 @@ FreeArgusWireFmtBuffer(struct ArgusWireFmtBuffer *awf)
    if (awf->refcount == 0) {
       ArgusFree(awf);
    }
+}
+
+static void
+DrainArgusSocketQueue(struct ArgusClientData *client)
+{
+   struct ArgusSocketStruct *asock = client->sock;
+   struct ArgusListStruct *list = asock->ArgusOutputList;
+   struct ArgusWireFmtBuffer *awf;
+   struct ArgusQueueNode *node;
+
+   if (asock == NULL)
+      return;
+
+   MUTEX_LOCK(&list->lock);
+   while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
+      awf = node->datum;
+      FreeArgusQueueNode(node);
+      FreeArgusWireFmtBuffer(awf);
+   }
+   MUTEX_UNLOCK(&list->lock);
 }
 
 void
@@ -2552,14 +2573,7 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
       struct ArgusWireFmtBuffer *awf;
       struct ArgusQueueNode *node;
 
-      pthread_mutex_lock(&list->lock);
-      while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-         awf = node->datum;
-         FreeArgusQueueNode(node);
-         FreeArgusWireFmtBuffer(awf);
-      }
-      pthread_mutex_unlock(&list->lock);
-   
+      DrainArgusSocketQueue(client);
       ArgusDeleteList(asock->ArgusOutputList, ARGUS_OUTPUT_LIST);
 
       close(asock->fd);
@@ -2814,11 +2828,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                            FreeArgusWireFmtBuffer(asock->rec);
                            asock->rec = NULL;
                         }
-                        while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-                           awf = node->datum;
-                           FreeArgusQueueNode(node);
-                           FreeArgusWireFmtBuffer(awf);
-                        }
+                        DrainArgusSocketQueue(client);
 
                      } else {
                         switch (errno) {
@@ -2854,11 +2864,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               asock->writen = 0;
                               asock->length = 0;
                               FreeArgusWireFmtBuffer(awf);
-                              while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-                                 awf = node->datum;
-                                 FreeArgusQueueNode(node);
-                                 FreeArgusWireFmtBuffer(awf);
-                              }
+                              DrainArgusSocketQueue(client);
 
                               count = 0;
                               retn = -1;
@@ -2898,12 +2904,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                asock->writen = 0;
                asock->length = 0;
             }
-            while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
-               awf = node->datum;
-               FreeArgusQueueNode(node);
-               FreeArgusWireFmtBuffer(awf);
-            }
-
+            DrainArgusSocketQueue(client);
             asock->errornum = 0;
             retn = -1;
          }
