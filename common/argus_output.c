@@ -55,7 +55,6 @@
 #include <argus_util.h>
 #include <argus_output.h>
 
-
 void ArgusSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
 static void *ArgusControlChannelProcess(void *);
 
@@ -2588,7 +2587,7 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
 #define ARGUS_MAXERROR		500000
 #define ARGUS_MAXWRITENUM	64
 
-int ArgusMaxListLength = 500000;
+static const int ArgusMaxListLength = 500000;
 int ArgusCloseFile = 0;
 
 
@@ -2605,25 +2604,36 @@ ArgusWriteSocket(struct ArgusOutputStruct *output,
    struct ArgusListStruct *list = asock->ArgusOutputList;
    struct ArgusQueueNode *node;
 
-   if (list->count >= ArgusMaxListLength) {
-      if (ArgusWriteOutSocket(output, client) < 0) {
-#if defined(ARGUS_THREADS)
-         pthread_mutex_lock(&list->lock);
-#endif
-         if (list->count >= ArgusMaxListLength) {
-            struct ArgusWireFmtBuffer *tawf;
-            int i;
-#define ARGUS_MAX_TOSS_RECORD	128
-            ArgusLog (LOG_WARNING, "ArgusWriteSocket: tossing records to %s\n", client->hostname);
+   if (list->count > ArgusMaxListLength) {
+      struct ArgusWireFmtBuffer *tawf;
+      int i = 0;
 
-            for (i = 0; i < ARGUS_MAX_TOSS_RECORD; i++)
-               if ((tawf = (struct ArgusWireFmtBuffer *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL)
-                  FreeArgusWireFmtBuffer(tawf);
-         }
 #if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&list->lock);
+      pthread_mutex_lock(&list->lock);
 #endif
+
+      /* Get the queue length down to the max.  The addition below
+       * will push it back over the max length and ArgusWriteOutSocket()
+       * can later determine if it needs to hang up the connection.
+       */
+      while (list->count > ArgusMaxListLength) {
+         node = (struct ArgusWireFmtBuffer *)ArgusPopFrontList(list, ARGUS_NOLOCK);
+         if (node == NULL)
+            break;
+
+         tawf = node->datum;
+         FreeArgusQueueNode(node);
+         FreeArgusWireFmtBuffer(tawf);
+         i++;
       }
+
+      ArgusLog(LOG_WARNING, "%s: tossed %d record(s) for slow client %s\n",
+               __func__, i, client->hostname);
+
+
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&list->lock);
+#endif
    }
 
 #ifdef ARGUSDEBUG
