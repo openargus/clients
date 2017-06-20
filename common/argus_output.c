@@ -328,7 +328,9 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
 
          freeaddrinfo(hp);
       }
-#else
+
+#else /* HAVE_GETADDRINFO */
+
       struct sockaddr_in sin;
       struct hostent *host;
 
