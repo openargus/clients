@@ -505,9 +505,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    if (parser->ArgusOutput && parser->ArgusOutput->ArgusOutputList) {
       int cnt;
 
-      pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond); 
-
       pthread_mutex_lock(&parser->ArgusOutput->ArgusOutputList->lock);
+      pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond);
       cnt = parser->ArgusOutput->ArgusOutputList->count;
       pthread_mutex_unlock(&parser->ArgusOutput->ArgusOutputList->lock);
 
