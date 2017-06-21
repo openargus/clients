@@ -6891,7 +6891,29 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
-         snprintf(trans, 32, " ");
+         struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
+         unsigned int value = 0;
+         char pbuf[32];
+
+         if (rec != NULL) {
+            value = rec->argus_mar.flows;
+            sprintf (pbuf, "%u", value);
+         } else
+            bzero(pbuf, sizeof(pbuf));
+
+         if (parser->ArgusPrintXml) {
+            sprintf (trans, " Flows = \"%s\"", pbuf);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+               len = strlen(pbuf);
+            } else {
+               if (strlen(pbuf) > len) {
+                  pbuf[len - 1] = '*';
+                  pbuf[len]     = '\0';
+               }
+            }
+            sprintf (trans, "%*.*s ", len, len, pbuf);
+         }
          break;
       }
 
@@ -6902,18 +6924,22 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
             count = agr->count;
 
-         if (parser->Pctflag && parser->ns) {
-            nsagr = (struct ArgusAgrStruct *) parser->ns->dsrs[ARGUS_AGR_INDEX];
-            snprintf(trans, 32, "%3.*f", parser->pflag, (count * 100.0) / (nsagr->count) * 1.0);
+         if (parser->ArgusPrintXml) {
+            sprintf(trans, " Trans = \"%s\"", trans);
          } else {
-            snprintf(trans, 32, "%u", count);
+            if (parser->Pctflag && parser->ns) {
+               nsagr = (struct ArgusAgrStruct *) parser->ns->dsrs[ARGUS_AGR_INDEX];
+               snprintf(trans, 32, "%3.*f", parser->pflag, (count * 100.0) / (nsagr->count) * 1.0);
+            } else {
+               snprintf(trans, 32, "%u", count);
+            }
          }
          break;
       }
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, " Trans = \"%s\"", trans);
+      sprintf (buf, "%s", trans);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(trans);
