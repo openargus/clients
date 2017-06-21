@@ -160,13 +160,11 @@ DrainArgusSocketQueue(struct ArgusClientData *client)
    if (asock == NULL)
       return;
 
-   MUTEX_LOCK(&list->lock);
    while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
       awf = node->datum;
       FreeArgusQueueNode(node);
       FreeArgusWireFmtBuffer(awf);
    }
-   MUTEX_UNLOCK(&list->lock);
 }
 
 void
