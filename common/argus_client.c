@@ -843,17 +843,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                         break;
                   }
 
-               } else {
-                  if (input->fd >= 0) {
-                     if (input->hostname && input->ArgusMarInterval) {
-                        if (input->ArgusLastTime.tv_sec) {
-                           if ((rtime.tv_sec - input->ArgusLastTime.tv_sec) > (input->ArgusMarInterval * 2)) {
-                              ArgusLog (LOG_WARNING, "ArgusReadStream %s: idle stream: closing", input->hostname);
-                              ArgusCloseInput(parser, input);
-                           }
-                        }
-                     }
-                  }
                }
                input = (void *)input->qhdr.nxt;
             }
