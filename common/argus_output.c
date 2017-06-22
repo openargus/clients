@@ -2629,7 +2629,7 @@ ArgusWriteSocket(struct ArgusOutputStruct *output,
        * can later determine if it needs to hang up the connection.
        */
       while (list->count > ArgusMaxListLength) {
-         node = (struct ArgusWireFmtBuffer *)ArgusPopFrontList(list, ARGUS_NOLOCK);
+         node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK);
          if (node == NULL)
             break;
 
