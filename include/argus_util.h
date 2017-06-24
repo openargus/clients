@@ -1801,6 +1801,13 @@ extern char *lookup_alias(const u_char *, struct anamemem *);
 
 extern unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
+extern void *
+ArgusRealloc(void *buf, size_t size)
+#if defined(__GNUC__)
+__attribute__ ((warn_unused_result))
+#endif
+;
+
 extern void ArgusFree (void *buf);
 extern void *ArgusMalloc (int);
 extern void *ArgusCalloc (int, int);

@@ -137,6 +137,9 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format)
       return NULL;
    }
 
+   if (awf->len < sizeof(*awf)/2)
+      awf = ArgusRealloc(awf, sizeof(*awf) - sizeof(awf->buf) + awf->len);
+
    return awf;
 }
 

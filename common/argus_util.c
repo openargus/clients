@@ -25146,6 +25146,16 @@ ArgusMallocAligned(int bytes, size_t alignment)
    return __argus_malloc(bytes, __malloc_aligned, &alignment);
 }
 
+void *
+ArgusRealloc(void *buf, size_t size)
+{
+#if defined(ARGUSMEMDEBUG)
+   /* Do nothing */
+   return buf;
+#endif
+
+   return realloc(buf, size);
+}
 
 void
 ArgusFree (void *buf)
