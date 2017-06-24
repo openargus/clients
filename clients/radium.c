@@ -84,7 +84,7 @@ static int RadiumMinSsf = 0;
 static int RadiumMaxSsf = 0;
 static int RadiumAuthLocalhost = 1;
 
-const static int ArgusClientMaxQueueDepth = 500000;
+const static unsigned int ArgusClientMaxQueueDepth = 500000;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -503,7 +503,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
 #if defined(ARGUS_THREADS)
    if (parser->ArgusOutput && parser->ArgusOutput->ArgusOutputList) {
-      int cnt;
+      unsigned int cnt;
 
       pthread_mutex_lock(&parser->ArgusOutput->ArgusOutputList->lock);
       pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond);
