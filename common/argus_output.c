@@ -2791,7 +2791,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                      }
                   }
                }
-               
+
                if ((len = (asock->length - asock->writen)) > 0) {
                   if (client->host != NULL) {
                      if ((retn = sendto (asock->fd, outputbuf, outputlen, 0,
