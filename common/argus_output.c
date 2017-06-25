@@ -2801,8 +2801,8 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                          client->host->ai_addr, client->host->ai_addrlen)) < 0)
                         ArgusLog (LOG_ERR, "ArgusInitOutput: sendto(): retn %d %s", retn, strerror(errno));
 #ifdef ARGUSDEBUG
-                        ArgusDebug (3, "ArgusWriteSocket: sendto (%d, %x, %d, ...) %d\n",
-                                    asock->fd, outputbuf, outputlen, retn);
+                     ArgusDebug (3, "ArgusWriteSocket: sendto (%d, %x, %d, ...) %d\n",
+                                 asock->fd, outputbuf, outputlen, retn);
 #endif
                      asock->errornum = 0;
                      asock->writen += len;
