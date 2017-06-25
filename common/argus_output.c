@@ -2910,8 +2910,10 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
             retn = -1;
          }
 
-         if ((count = ArgusGetListCount(list)) > ArgusMaxListLength) {
-            ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x) max queue exceeded %d\n", asock, count);
+         if ((ArgusGetListCount(list)) > ArgusMaxListLength) {
+            ArgusLog(LOG_WARNING,
+                     "ArgusWriteOutSocket(0x%x) max queue exceeded %d\n",
+                     asock, ArgusMaxListLength);
             retn = -1;
          }
 
