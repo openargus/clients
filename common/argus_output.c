@@ -2896,7 +2896,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
          }
 
          if (asock->errornum >= ARGUS_MAXERROR) {
-            ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x) client not processing: disconnecting\n", asock, asock->errornum);
+            ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x) client not processing (%d errors): disconnecting\n", asock, asock->errornum);
             close(asock->fd);
             asock->fd = -1;
             if (asock->rec != NULL) {
