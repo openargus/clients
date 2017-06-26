@@ -416,6 +416,14 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
 #endif
 
    }
+
+#if defined(ARGUS_THREADS)
+   if (parser->listenthread == 0) {
+      if ((pthread_create(&parser->listenthread, NULL,
+                          ArgusListenProcess, parser)) != 0)
+         ArgusLog (LOG_ERR, "%s() pthread_create error %s\n", __func__, strerror(errno));
+   }
+#endif
      
 #ifdef ARGUSDEBUG
    if (baddr)
@@ -460,11 +468,6 @@ ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
    retn->ArgusPortNum   = parser->ArgusPortNum;
    retn->ArgusBindAddr  = parser->ArgusBindAddr;
    retn->ArgusWfileList = parser->ArgusWfileList;
-
-   for (i = 0; i < parser->ArgusListens; i++)
-      retn->ArgusLfd[i] = parser->ArgusLfd[i];
-
-   retn->ArgusListens = parser->ArgusListens;
 
    retn->ArgusInputList   = parser->ArgusOutputList;
    parser->ArgusWfileList = NULL;
@@ -547,11 +550,6 @@ ArgusNewControlChannel (struct ArgusParserStruct *parser)
    retn->ArgusControlPort = parser->ArgusControlPort;
    retn->ArgusBindAddr    = parser->ArgusBindAddr;
    retn->ArgusWfileList   = parser->ArgusWfileList;
-
-   for (i = 0; i < parser->ArgusListens; i++)
-      retn->ArgusLfd[i] = parser->ArgusLfd[i];
-
-   retn->ArgusListens = parser->ArgusListens;
 
    retn->ArgusInputList   = parser->ArgusOutputList;
    parser->ArgusWfileList = NULL;
@@ -1009,6 +1007,17 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 #endif
 }
 
+void
+ArgusCloseListen(struct ArgusParserStruct *parser)
+{
+#ifdef ARGUSDEBUG
+   ArgusDebug(1, "%s\n", __func__);
+#endif
+#if defined(ARGUS_THREADS)
+   if (parser->listenthread)
+      pthread_join(parser->listenthread, NULL);
+#endif
+}
 
 void
 ArgusCloseOutput(struct ArgusOutputStruct *output)
@@ -1074,6 +1083,165 @@ ArgusOutputStatusTime(struct ArgusOutputStruct *output)
    return (retn);
 }
 
+static int
+__output_is_active(const struct ArgusOutputStruct * const output)
+{
+   if (output == NULL)
+      return 0;
+
+   if (output->status & ARGUS_STOP)
+      return 0;
+
+   return 1;
+}
+
+static int
+__build_output_array(struct ArgusParserStruct *parser,
+                     struct ArgusOutputStruct *outputs[],
+                     int lfd[])
+{
+   int i;
+   int count;
+
+   MUTEX_LOCK(&parser->lock);
+   for (i = 0, count = 0; i < parser->ArgusListens; i++) {
+      if (__output_is_active(parser->ArgusOutputs[i])) {
+         outputs[count] = parser->ArgusOutputs[i];
+         lfd[count] = parser->ArgusLfd[i];
+         count++;
+      }
+   }
+   MUTEX_UNLOCK(&parser->lock);
+
+   return count;
+}
+
+#ifdef ARGUS_THREADS
+# define LISTEN_WAIT_INITIALIZER {1, 0}
+#else
+# define LISTEN_WAIT_INITIALIZER {0, 0}
+#endif
+
+void *ArgusListenProcess(void *arg)
+{
+   struct ArgusParserStruct *parser = arg;
+   struct ArgusOutputStruct *output;
+   struct ArgusOutputStruct *outputs[ARGUS_MAXLISTEN];
+   int lfd[ARGUS_MAXLISTEN];
+   int nbout;
+
+#if defined(ARGUS_THREADS)
+   sigset_t blocked_signals;
+#endif /* ARGUS_THREADS */
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "%s(0x%x) starting\n", __func__, output);
+#endif
+
+   if (arg == NULL)
+      goto out;
+
+   nbout = __build_output_array(parser, outputs, lfd);
+
+#if defined(ARGUS_THREADS)
+   sigfillset(&blocked_signals);
+   pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
+
+   while (nbout > 0 && !parser->RaShutDown)
+#else
+   if (nbout > 0 && !parser->RaShutDown)
+#endif
+   {
+      int cur;
+      int count;
+      int val;
+
+         struct timeval wait = LISTEN_WAIT_INITIALIZER;
+         fd_set readmask;
+         int i, width = 0;
+
+         /* Build new fd_set of listening sockets */
+
+         FD_ZERO(&readmask);
+
+         for (cur = 0; cur < nbout; cur++) {
+            /* Build new fd_set of client sockets */
+
+            if (lfd[cur] != -1) {
+               FD_SET(lfd[cur], &readmask);
+               width = (lfd[cur] > width) ? lfd[cur] : width;
+            }
+
+            output = outputs[cur];
+
+            MUTEX_LOCK(&output->ArgusClients->lock);
+            if ((count = output->ArgusClients->count) > 0) {
+               struct ArgusClientData *client = (void *)output->ArgusClients->start;
+               int i;
+
+               for (i = 0; i < count && client; i++) {
+                  if (client->sock &&
+                      client->sock->filename == NULL &&
+                      client->readable == 0 &&
+                      client->fd != -1) {
+                     FD_SET(client->fd, &readmask);
+                     width = (client->fd > width) ? client->fd : width;
+                  }
+                  client = (void *) client->qhdr.nxt;
+               }
+            }
+            MUTEX_UNLOCK(&output->ArgusClients->lock);
+         }
+
+         if ((val = select (width + 1, &readmask, NULL, NULL, &wait)) >= 0) {
+            if (val > 0) {
+               struct ArgusClientData *client;
+
+#ifdef ARGUSDEBUG
+               ArgusDebug(3, "%s() select returned with tasks\n", __func__);
+#endif
+
+               for (cur = 0; cur < nbout; cur++) {
+
+                  if (FD_ISSET(lfd[cur], &readmask))
+                     ArgusCheckClientStatus(outputs[cur], lfd[cur]);
+
+                  output = outputs[cur];
+
+                  /* This is not great since checkmessage() can take a
+                   * while for RADIUM_FILE.
+                   */
+                  MUTEX_LOCK(&output->ArgusClients->lock);
+                  client = (void *)output->ArgusClients->start;
+                  if (client != NULL)  {
+                     do {
+                        if (FD_ISSET(client->fd, &readmask) && (client->fd != -1)) {
+                           client->readable = 1;
+                        }
+                        client = (void *) client->qhdr.nxt;
+                     } while (client != (void *)output->ArgusClients->start);
+                  }
+                  MUTEX_UNLOCK(&output->ArgusClients->lock);
+
+               }
+            }
+         }
+
+#if defined(ARGUS_THREADS)
+      nbout = __build_output_array(parser, outputs, lfd);
+#endif
+   }
+
+   /* The list of clients must be cleaned up somewhere else.  Currently,
+    * __ArgusOutputProcess() does this.
+    */
+
+out:
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "%s(0x%x) exiting\n", __func__, output);
+#endif
+   return NULL;
+}
 
 typedef int (*ArgusCheckMessageFunc)(struct ArgusOutputStruct *output,
                                      struct ArgusClientData *client);
@@ -1085,7 +1253,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                      const char * const caller)
 {
    struct timeval ArgusUpDate = {0, 50000}, ArgusNextUpdate = {0,0};
-   int val, count;
+   int count;
    void *retn = NULL;
 
 #if defined(ARGUS_THREADS)
@@ -1117,92 +1285,35 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
             ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
              (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
 
-            if (output->ArgusListens) {
-               struct timeval wait = {0, 0};
-               fd_set readmask;
-               int i, width = 0;
+            have_argus_client = 0;
+            have_ciscov5_client = 0;
 
-               /* Build new fd_set of listening sockets */
+            MUTEX_LOCK(&output->ArgusClients->lock);
+            if ((count = output->ArgusClients->count) > 0) {
+               struct ArgusClientData *client = (void *)output->ArgusClients->start;
+               int i;
 
-               FD_ZERO(&readmask);
-
-               for (i = 0; i < output->ArgusListens; i++) {
-                  if (output->ArgusLfd[i] != -1) {
-                     FD_SET(output->ArgusLfd[i], &readmask);
-                     width = (output->ArgusLfd[i] > width) ? output->ArgusLfd[i] : width;
+               for (i = 0; i < count && client; i++) {
+                  if (client->sock &&
+                      client->sock->filename == NULL &&
+                      client->fd != -1) {
+                     if (client->format == ARGUS_DATA)
+                        have_argus_client = 1;
+                     else if (client->format == ARGUS_CISCO_V5_DATA)
+                        have_ciscov5_client = 1;
                   }
-               }
-
-               if (output->ArgusClients) {
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_lock(&output->ArgusClients->lock);
-#endif
-
-                  /* Build new fd_set of client sockets */
-
-                  if ((count = output->ArgusClients->count) > 0) {
-                     struct ArgusClientData *client = (void *)output->ArgusClients->start;
-                     int i;
-
-                     have_argus_client = 0;
-                     have_ciscov5_client = 0;
-
-                     for (i = 0; i < count && client; i++) {
-                        if (client->sock &&
-                            client->sock->filename == NULL &&
-                            client->fd != -1) {
-                           FD_SET(client->fd, &readmask);
-                           width = (client->fd > width) ? client->fd : width;
-                           if (client->format == ARGUS_DATA)
-                              have_argus_client = 1;
-                           else if (client->format == ARGUS_CISCO_V5_DATA)
-                              have_ciscov5_client = 1;
-                        }
-                        client = (void *) client->qhdr.nxt;
-                     }
-                  }
-
-                  if (width) {
-                     if ((val = select (width + 1, &readmask, NULL, NULL, &wait)) >= 0) {
-                        if (val > 0) {
-                           struct ArgusClientData *client = (void *)output->ArgusClients->start;
-
-#ifdef ARGUSDEBUG
-                           ArgusDebug(3, "%s/%s() select returned with tasks\n",
-                                      caller, __func__);
-#endif
-                           for (i = 0; i < output->ArgusListens; i++)
-                              if (FD_ISSET(output->ArgusLfd[i], &readmask))
-                                 ArgusCheckClientStatus(output, output->ArgusLfd[i]);
-
-                           if (client != NULL)  {
-                              do {
-                                 if (client->fd != -1 &&
-                                     FD_ISSET(client->fd, &readmask)) {
-                                    if (checkmessage(output, client) < 0) {
-                                       ArgusDeleteSocket(output, client);
-                                    }
-                                 }
-                                 client = (void *) client->qhdr.nxt;
-                              } while (client != (void *)output->ArgusClients->start);
-                           }
-                        }
-                     }
-                  }
-
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_unlock(&output->ArgusClients->lock);
-#endif
-               }
-
-               ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
-               ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
-
-               if (ArgusNextUpdate.tv_usec > 1000000) {
-                  ArgusNextUpdate.tv_sec++;
-                  ArgusNextUpdate.tv_usec -= 1000000;
+                  client = (void *) client->qhdr.nxt;
                }
             }
+            MUTEX_UNLOCK(&output->ArgusClients->lock);
+
+            ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
+            ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
+            if (ArgusNextUpdate.tv_usec > 1000000) {
+               ArgusNextUpdate.tv_sec++;
+               ArgusNextUpdate.tv_usec -= 1000000;
+            }
+
          }
 
          if (ArgusOutputStatusTime(output) &&
@@ -1275,7 +1386,10 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
                            if (ArgusWriteRecord) {
                               /* post record for transmit */
-                              ArgusWriteSocket (output, client, have_argus_client ? arg : v5);
+                              if ((client->format == ARGUS_DATA) && have_argus_client)
+                                 ArgusWriteSocket (output, client, arg);
+                              else if ((client->format == ARGUS_CISCO_V5_DATA) && have_ciscov5_client)
+                                 ArgusWriteSocket (output, client, v5);
 
                               /* write available records */
                               if (ArgusWriteOutSocket (output, client) < 0) {
@@ -1352,16 +1466,27 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                      ArgusWriteOutSocket (output, client);
                      ArgusDeleteSocket(output, client);
                   } else {
+                     int delete = 0;
+
+                     if (client->readable) {
+                        if (checkmessage(output, client) < 0)
+                           delete = 1;
+                        client->readable = 0;
+                     }
+
                      if (ArgusWriteOutSocket (output, client) < 0) {
-                        ArgusDeleteSocket(output, client);
+                        delete = 1;
                      } else {
                         if (client->pid > 0) {
                            if (waitpid(client->pid, &status, WNOHANG) == client->pid) {
                               client->ArgusClientStart++;
-                              ArgusDeleteSocket(output, client);
+                              delete = 1;
                            }
                         }
                      }
+                     if (delete)
+                        ArgusDeleteSocket(output, client);
+
                   }
                }
                client = (void *) client->qhdr.nxt;
@@ -1800,15 +1925,15 @@ no_auth:
                      ArgusDeleteSocket(output, client);
                      ArgusLog (LOG_ALERT, "ArgusCheckClientStatus: ArgusAuthenticateClient failed\n");
                   } else {
-                     ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
+                     ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
                      fcntl (fd, F_SETFL, flags);
                   }
 
                } else {
-                     ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
+                     ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
                }
 #else
-               ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
+               ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
 #endif
             } else {
                char buf[4];

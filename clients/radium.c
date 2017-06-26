@@ -285,6 +285,7 @@ RaParseComplete (int sig)
          if ((rec = ArgusGenerateStatusMarRecord(ArgusParser->ArgusOutput, ARGUS_SHUTDOWN)) != NULL)
             ArgusPushBackList(ArgusParser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *)rec, ARGUS_LOCK);
       
+         ArgusCloseListen(ArgusParser);
          ArgusCloseOutput(ArgusParser->ArgusOutput);
          ArgusDeleteOutput(ArgusParser, ArgusParser->ArgusOutput);
          ArgusParser->ArgusOutput = NULL;
@@ -519,6 +520,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    }
 
 #else
+   ArgusListenProcess(parser);
    ArgusOutputProcess(parser->ArgusOutput);
 #endif
 

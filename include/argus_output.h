@@ -106,6 +106,7 @@ struct ArgusClientData {
    struct nff_program ArgusNFFcode;
    char *filename, *hostname, *filter;
    int format;
+   char readable;
 
 #if defined(HAVE_GETADDRINFO)
    struct addrinfo *host;
@@ -180,6 +181,7 @@ struct ArgusControlHandlerStruct {
 
 struct ArgusOutputStruct *ArgusOutputTask = NULL;
 
+void *ArgusListenProcess(void *arg);
 void *ArgusOutputProcess(void *);
 
 void ArgusUsr1Sig (int);
@@ -216,6 +218,7 @@ void clearRadiumConfiguration (void);
 
 struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
 
+void *ArgusListenProcess(void *arg);
 void *ArgusOutputProcess(void *);
 void ArgusInitOutput (struct ArgusOutputStruct *);
 struct ArgusOutputStruct *ArgusNewOutput (struct ArgusParserStruct *, int, int, int);
