@@ -33,7 +33,6 @@ extern "C" {
 #endif
 
 #define ARGUS_MONITORPORT	561
-#define ARGUS_MAXLISTEN		32
 
 #include <unistd.h>
 #include <stdlib.h>
