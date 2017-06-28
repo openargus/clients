@@ -990,11 +990,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
 
          if (parser->ArgusControlPort != 0) {
-            if (ArgusEstablishListen (parser, parser->ArgusControlPort, "127.0.0.1") < 0)
-               ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
-
             if ((parser->ArgusControlChannel = ArgusNewControlChannel (parser)) == NULL)
                ArgusLog (LOG_ERR, "could not create control channel: %s\n", strerror(errno));
+
+            if (ArgusEstablishListen (parser, parser->ArgusControlChannel,
+                                      parser->ArgusControlPort, "127.0.0.1") < 0)
+               ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
 
             tvp = getArgusMarReportInterval(ArgusParser);
             if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {

@@ -297,11 +297,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if (parser->ArgusPortNum != 0) {
-         if (ArgusEstablishListen (parser, parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
-            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
-      }
-
       if (chroot_dir != NULL)
          ArgusSetChroot(chroot_dir);
  
@@ -337,6 +332,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                                                 RadiumMaxSsf,
                                                 RadiumAuthLocalhost)) == NULL)
          ArgusLog (LOG_ERR, "could not generate output: %s.\n", strerror(errno));
+
+      if (parser->ArgusPortNum != 0) {
+         if (ArgusEstablishListen (parser, parser->ArgusOutput,
+                                   parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
+            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
+      }
 
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {

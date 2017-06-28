@@ -149,8 +149,10 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
 
    parser->ArgusGenerateManRecords = 0;
 
-   for (i = 0; i < ARGUS_MAXLISTEN; i++)
+   for (i = 0; i < ARGUS_MAXLISTEN; i++) {
       parser->ArgusLfd[i] = -1;
+      parser->ArgusOutputs[i] = NULL;
+   }
 
    parser->ArgusListens = 0;
 

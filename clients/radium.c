@@ -173,11 +173,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if (parser->ArgusPortNum != 0) {
-         if (ArgusEstablishListen (parser, parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
-            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
-      }
-
       if (chroot_dir != NULL)
          ArgusSetChroot(chroot_dir);
  
@@ -220,6 +215,13 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                                                 RadiumMaxSsf,
                                                 RadiumAuthLocalhost)) == NULL)
          ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
+
+      /* Need valid parser->ArgusOutput before starting listener */
+      if (parser->ArgusPortNum != 0) {
+         if (ArgusEstablishListen (parser, parser->ArgusOutput,
+                                   parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
+            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
+      }
 
 #if defined(ARGUS_THREADS)
       sigemptyset(&blocked_signals);

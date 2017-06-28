@@ -198,7 +198,9 @@ extern void clearArgusWfile(struct ArgusParserStruct *);
 int  ArgusTcpWrapper (struct ArgusOutputStruct *, int, struct sockaddr *, char *);
 
 int RadiumParseResourceFile (struct ArgusParserStruct *, char *);
-int ArgusEstablishListen (struct ArgusParserStruct *, int, char *);
+int ArgusEstablishListen(struct ArgusParserStruct *,
+                         struct ArgusOutputStruct *,
+                         int, char *);
 
 struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *);
 struct ArgusRecordStruct *ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *);

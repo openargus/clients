@@ -256,7 +256,9 @@ RadiumDNSServiceCallback (DNSServiceRef sdRef, DNSServiceFlags flags, DNSService
 #endif
 
 int
-ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
+ArgusEstablishListen (struct ArgusParserStruct *parser,
+                      struct ArgusOutputStruct *output,
+                      int port, char *baddr)
 {
    int s = -1;
 
@@ -310,7 +312,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
                   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                   if (!(bind (s, host->ai_addr, host->ai_addrlen))) {
                      if ((retn = listen (s, ARGUS_MAXLISTEN)) >= 0) {
-                        parser->ArgusLfd[parser->ArgusListens++] = s;
+                        parser->ArgusOutputs[parser->ArgusListens] = output;
+                        parser->ArgusLfd[parser->ArgusListens] = s;
+                        parser->ArgusListens++;
+
+                        output->ArgusLfd[output->ArgusListens] = s;
+                        output->ArgusListens++;
                      } else {
                         ArgusLog(LOG_ERR, "ArgusEstablishListen: listen() error %s", strerror(errno));
                      }
@@ -361,7 +368,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser, int port, char *baddr)
             setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
             if (!(bind (s, (struct sockaddr *)&sin, sizeof(sin)))) {
                if ((listen (s, ARGUS_MAXLISTEN)) >= 0) {
-                  parser->ArgusLfd[parser->ArgusListens++] = s;
+                  parser->ArgusOutputs[parser->ArgusListens] = output;
+                  parser->ArgusLfd[parser->ArgusListens] = s;
+                  parser->ArgusListens++;
+
+                  output->ArgusLfd[output->ArgusListens] = s;
+                  output->ArgusListens++;
                } else {
                   close (s);
                   s = -1;

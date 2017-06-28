@@ -349,6 +349,7 @@ struct ArgusParserStruct {
 
    struct ArgusOutputStruct *ArgusOutput;
    struct ArgusOutputStruct *ArgusControlChannel;
+   struct ArgusOutputStruct *ArgusOutputs[ARGUS_MAXLISTEN];
    struct ArgusListStruct *ArgusOutputList, *ArgusInputList;
    struct ArgusListStruct *ArgusNameList, *ArgusProcessList;
 
