@@ -311,7 +311,7 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
                   int on = 1;
                   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                   if (!(bind (s, host->ai_addr, host->ai_addrlen))) {
-                     if ((retn = listen (s, ARGUS_MAXLISTEN)) >= 0) {
+                     if ((retn = listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
                         parser->ArgusOutputs[parser->ArgusListens] = output;
                         parser->ArgusLfd[parser->ArgusListens] = s;
                         parser->ArgusListens++;
@@ -367,7 +367,7 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
             int on = 1;
             setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
             if (!(bind (s, (struct sockaddr *)&sin, sizeof(sin)))) {
-               if ((listen (s, ARGUS_MAXLISTEN)) >= 0) {
+               if ((listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
                   parser->ArgusOutputs[parser->ArgusListens] = output;
                   parser->ArgusLfd[parser->ArgusListens] = s;
                   parser->ArgusListens++;
@@ -1792,7 +1792,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s)
       if ((fcntl (fd, F_SETFL, flags | O_NONBLOCK)) >= 0) {
          bzero(clienthost, sizeof(clienthost));
          if (ArgusTcpWrapper (output, fd, &from, clienthost) >= 0) {
-            if (output->ArgusClients->count < ARGUS_MAXLISTEN) {
+            if (output->ArgusClients->count <= ARGUS_MAXCLIENTS) {
                struct ArgusClientData *client = (void *) ArgusCalloc (1, sizeof(struct ArgusClientData));
 
                if (client == NULL)
