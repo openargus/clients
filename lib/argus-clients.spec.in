@@ -39,7 +39,7 @@ Copyright: 2000-2022 QoSient, LLC
 %prep
 %setup -n %{srcname}-%{ver}.%{rel}
 %build
-./configure --prefix=/usr --with-sasl %{?_workstation:--without-mysql --without-GeoIP}
+./configure --prefix=/usr --with-sasl %{?_workstation:--without-mysql}
 make EXTRA_CFLAGS="-ggdb"
 
 %install
@@ -183,6 +183,9 @@ distribution.
 %package devel
 Summary: Argus Client Software Development Libraries
 Group: Applications/Internet
+Requires: GeoIP-devel = 1.5.0
+Requires: zlib-devel
+Requires: cyrus-sasl-devel
 
 %description devel
 Argus Clients contains a number of programs that process Argus data.
