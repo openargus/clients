@@ -1718,7 +1718,9 @@ ArgusOutputProcess(void *arg)
                count = 0;
 
    rv = __ArgusOutputProcess(arg, portnum, checkmessage, __func__);
+#if defined(ARGUS_THREADS)
    RaParseComplete(1);
+#endif
    return rv;
 }
 
