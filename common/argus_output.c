@@ -118,7 +118,7 @@ FreeArgusQueueNode(struct ArgusQueueNode *n)
 }
 
 static struct ArgusWireFmtBuffer *
-NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format)
+NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format, char version)
 {
    struct ArgusWireFmtBuffer *awf;
 
@@ -134,7 +134,7 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format)
       return awf;
 
    if (format == ARGUS_DATA) {
-      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0], ARGUS_VERSION)) {
+      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0], version)) {
          awf->len = ((struct ArgusRecord *)&awf->buf[0])->hdr.len * 4;
          ArgusHtoN((struct ArgusRecord *)&awf->buf[0]);
       }
@@ -3529,6 +3529,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
       struct ArgusListStruct *list = NULL;
       struct ArgusRecordStruct *rec = NULL;
       int have_argus_client = 0;
+      int have_argusv3_client = 0;
       int have_ciscov5_client = 0;
 
       if (output && ((list = output->ArgusOutputList) != NULL)) {
@@ -3540,6 +3541,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
              (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
 
             have_argus_client = 0;
+            have_argusv3_client = 0;
             have_ciscov5_client = 0;
 
             MUTEX_LOCK(&output->ArgusClients->lock);
@@ -3551,10 +3553,15 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                   if (client->sock &&
                       client->sock->filename == NULL &&
                       client->fd != -1) {
-                     if (client->format == ARGUS_DATA)
-                        have_argus_client = 1;
-                     else if (client->format == ARGUS_CISCO_V5_DATA)
+                     if (client->format == ARGUS_DATA) {
+                        if (client->version == ARGUS_VERSION_3)
+                           have_argusv3_client = 1;
+                        else
+                           have_argus_client = 1;
+                     }
+                     else if (client->format == ARGUS_CISCO_V5_DATA) {
                         have_ciscov5_client = 1;
+                     }
                   }
                   client = (void *) client->qhdr.nxt;
                }
@@ -3608,6 +3615,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
                if (output->ArgusClients) {
                   struct ArgusWireFmtBuffer *arg;
+                  struct ArgusWireFmtBuffer *argv3;
                   struct ArgusWireFmtBuffer *v5;
 
 #if defined(ARGUS_THREADS)
@@ -3623,9 +3631,11 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 #endif
 
                      if (have_argus_client)
-                        arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA);
+                        arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION);
+                     if (have_argusv3_client)
+                        argv3 = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION_3);
                      if (have_ciscov5_client)
-                        v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA);
+                        v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA, 0);
 
                      for (i = 0; i < output->ArgusClients->count; i++) {
                         if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
@@ -3641,10 +3651,17 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
                            if (ArgusWriteRecord) {
                               /* post record for transmit */
-                              if ((client->format == ARGUS_DATA) && have_argus_client)
-                                 ArgusWriteSocket (output, client, arg);
-                              else if ((client->format == ARGUS_CISCO_V5_DATA) && have_ciscov5_client)
+                              if (client->format == ARGUS_DATA) {
+                                 if (client->version == ARGUS_VERSION
+                                     && have_argus_client)
+                                    ArgusWriteSocket (output, client, arg);
+                                 else if (client->version == ARGUS_VERSION_3
+                                          && have_argusv3_client)
+                                    ArgusWriteSocket (output, client, argv3);
+                              }
+                              else if ((client->format == ARGUS_CISCO_V5_DATA) && have_ciscov5_client) {
                                  ArgusWriteSocket (output, client, v5);
+                              }
 
                               /* write available records */
                               if (ArgusWriteOutSocket (output, client) < 0) {
@@ -3684,6 +3701,8 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
                      if (have_argus_client)
                         FreeArgusWireFmtBuffer(arg);
+                     if (have_argusv3_client)
+                        FreeArgusWireFmtBuffer(argv3);
                      if (have_ciscov5_client)
                         FreeArgusWireFmtBuffer(v5);
 
@@ -5111,7 +5130,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                  outputlen = 0;
                                  outputbuf = NULL;
 
-                                 awfsasl = NewArgusWireFmtBuffer(NULL, -1);
+                                 awfsasl = NewArgusWireFmtBuffer(NULL, -1, -1);
                                  if (awfsasl == NULL)
                                     /* no memory, try to keep going */
                                     continue;
