@@ -225,6 +225,13 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                                    ARGUS_VERSION) < 0)
             ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
       }
+      if (parser->ArgusV3Port != 0) {
+         if (ArgusEstablishListen (parser, parser->ArgusOutput,
+                                   parser->ArgusV3Port, parser->ArgusBindAddr,
+                                   ARGUS_VERSION_3) < 0)
+            ArgusLog (LOG_ERR, "%s: ArgusEstablishListen returned %s",
+                      __func__, strerror(errno));
+      }
 
 #if defined(ARGUS_THREADS)
       sigemptyset(&blocked_signals);
@@ -568,7 +575,7 @@ void ArgusWindowClose(void) {
 #define RADIUM_SETGROUP_ID                      21
 #define RADIUM_CLASSIFIER_FILE                  22
 #define RADIUM_ZEROCONF_REGISTER                23
-#define RADIUM_OUTPUT_VERSION                   24
+#define RADIUM_V3_ACCESS_PORT                   24
 #define RADIUM_SRCID_CONVERSION_FILE            25
 #define RADIUM_AUTH_LOCALHOST                   26
 
@@ -597,7 +604,7 @@ char *RadiumResourceFileStr [] = {
    "RADIUM_SETGROUP_ID=",
    "RADIUM_CLASSIFIER_FILE=",
    "RADIUM_ZEROCONF_REGISTER=",
-   "RADIUM_OUTPUT_VERSION=",
+   "RADIUM_V3_ACCESS_PORT=",
    "RADIUM_SRCID_CONVERSION_FILE=",
    "RADIUM_AUTH_LOCALHOST=",
 };
@@ -853,8 +860,8 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            break;
                         }
 
-                        case RADIUM_OUTPUT_VERSION:
-                           parser->RadiumOutputVersion = strdup(optarg);
+                        case RADIUM_V3_ACCESS_PORT:
+                           parser->ArgusV3Port = atoi(optarg);
                            break;
 
                         case RADIUM_SRCID_CONVERSION_FILE:
