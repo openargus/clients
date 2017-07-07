@@ -10006,7 +10006,7 @@ ac_config_files="$ac_config_files Makefile ./common/Makefile ./include/Makefile 
 
 
 if test "$with_examples" != no; then :
-  ac_config_files="$ac_config_files ./examples/Makefile ./examples/race/Makefile ./examples/raconvert/Makefile ./examples/radecode/Makefile ./examples/radns/Makefile ./examples/radhcp/Makefile ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/rahosts/Makefile ./examples/ralabel/Makefile"
+  ac_config_files="$ac_config_files ./examples/Makefile ./examples/race/Makefile ./examples/raconvert/Makefile ./examples/radbase/Makefile ./examples/radecode/Makefile ./examples/radns/Makefile ./examples/radhcp/Makefile ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/rahosts/Makefile ./examples/ralabel/Makefile"
 
 
    if test "$ARGUS_MYSQL_MAKEFILE" != no; then :
@@ -10724,6 +10724,7 @@ do
     "./examples/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/Makefile" ;;
     "./examples/race/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/race/Makefile" ;;
     "./examples/raconvert/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raconvert/Makefile" ;;
+    "./examples/radbase/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radbase/Makefile" ;;
     "./examples/radecode/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radecode/Makefile" ;;
     "./examples/radns/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radns/Makefile" ;;
     "./examples/radhcp/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radhcp/Makefile" ;;

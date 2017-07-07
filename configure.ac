@@ -468,6 +468,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/Makefile
       ./examples/race/Makefile
       ./examples/raconvert/Makefile
+      ./examples/radbase/Makefile
       ./examples/radecode/Makefile
       ./examples/radns/Makefile
       ./examples/radhcp/Makefile
