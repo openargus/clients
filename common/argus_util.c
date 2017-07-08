@@ -29864,15 +29864,15 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
                break;
             }
             case ARGUS_TYPE_IPV6: {
-               slen = sizeof(src->trans.srcid.a_un.ipv6);
-               bcopy(&src->trans.srcid.a_un.ipv6, buf, slen); 
+               slen = sizeof(srcid->a_un.ipv6);
+               bcopy(&srcid->a_un.ipv6, buf, slen);
                type = ARGUS_TYPE_IPV6;
                break;
             }
 
             case ARGUS_TYPE_UUID  : {
-               slen = sizeof(src->trans.srcid.a_un.uuid);
-               bcopy(&src->trans.srcid.a_un.uuid, buf, slen); 
+               slen = sizeof(srcid->a_un.uuid);
+               bcopy(&srcid->a_un.uuid, buf, slen);
                type = ARGUS_TYPE_UUID;
                break;
             }
@@ -29978,7 +29978,7 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
 
       if (iptr != NULL) {
          int len;
-         if (strcmp(iptr, "inf") == 0) {
+         if (src && strcmp(iptr, "inf") == 0) {
             char *inf = getArgusManInf(src);
             if (inf != NULL) {
                if ((len = strlen(inf)) > 4) {
@@ -30000,15 +30000,26 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
          }
       }
 
-      if (type)
-         setParserArgusID (src, buf, slen, type);
-      else
+      if (type) {
+         if (src)
+            setParserArgusID (src, buf, slen, type);
+         else
+            setArgusID (srcid, buf, slen, type);
+      } else
          retn = 1;
 
       free (sptr);
       if (retn > 0)
          ArgusLog (LOG_ERR, "Srcid format error: %s\n", sptr);
    }
+
+   return type;
+}
+
+void
+ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
+{
+   (void)ArgusCommonParseSourceID(&src->trans.srcid, src, optarg);
 }
 
 void
