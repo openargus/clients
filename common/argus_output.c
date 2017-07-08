@@ -327,10 +327,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
                   setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
                   if (!(bind (s, host->ai_addr, host->ai_addrlen))) {
                      if ((retn = listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
+                        MUTEX_LOCK(&parser->lock);
                         parser->ArgusOutputs[parser->ArgusListens] = output;
                         parser->ArgusLfdVersion[parser->ArgusListens] = version;
                         parser->ArgusLfd[parser->ArgusListens] = s;
                         parser->ArgusListens++;
+                        MUTEX_UNLOCK(&parser->lock);
 
                         output->ArgusLfd[output->ArgusListens] = s;
                         output->ArgusLfdVersion[output->ArgusListens] = version;
@@ -385,10 +387,12 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
             setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
             if (!(bind (s, (struct sockaddr *)&sin, sizeof(sin)))) {
                if ((listen (s, ARGUS_LISTEN_BACKLOG)) >= 0) {
+                  MUTEX_LOCK(&parser->lock);
                   parser->ArgusOutputs[parser->ArgusListens] = output;
                   parser->ArgusLfdVersion[parser->ArgusListens] = version;
                   parser->ArgusLfd[parser->ArgusListens] = s;
                   parser->ArgusListens++;
+                  MUTEX_UNLOCK(&parser->lock);
 
                   output->ArgusLfd[output->ArgusListens] = s;
                   output->ArgusLfdVersion[output->ArgusListens] = version;
