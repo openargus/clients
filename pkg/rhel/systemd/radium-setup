@@ -5,6 +5,17 @@ set -e
 typeset -r RADIUM_CONF=/run/argus/radium.conf
 typeset -r CLIENT_CONF=/run/argus/radium-client.conf
 
+if [[ -r /etc/os-release ]] ; then
+	. /etc/os-release
+fi
+
+is_sensor_appliance(){
+	if [[ "${QOSIENT_SYSTEM_TYPE}" == sensor \
+	      || -z "${QOSIENT_SYSTEM_TYPE}" ]] ; then
+		return 0;
+	fi
+	return 1
+}
 
 generate_monitor_id() {
 	local uuid=$(dmidecode -s system-uuid)
@@ -55,11 +66,18 @@ get_monitor_id() {
 	fi
 }
 
-# Minimal configuration
 radium_configure(){
 	echo "RADIUM_MONITOR_ID=$(get_monitor_id)"
 	echo "RADIUM_MONITOR_ID_INCLUDE_INF=yes"
 	echo "RADIUM_BIND_IP=::"
+
+	# collectors and, later, distribution nodes will need this
+	if ! is_sensor_appliance ; then
+		echo "RADIUM_V3_ACCESS_PORT=5561"
+		echo "RADIUM_MIN_SSF=1"
+		echo "RADIUM_MAX_SSF=128"
+		echo "RADIUM_AUTH_LOCALHOST=no"
+	fi
 }
 
 client_configure(){
