@@ -41,10 +41,10 @@ use DBI;
 
 my $Program = `which racluster`;
 my $Options = " -nc , ";   # Default Options
-my $VERSION = "5.0";
+my $VERSION = "5.0.3";
 my $format  = 'addr';
-my $fields  = '-M rmon -s saddr proto sport';
-my $model   = '-m saddr proto sport';
+my $fields  = '-M rmon -s sid inf saddr proto sport';
+my $model   = '-m sid inf saddr proto sport';
 my $uri     = 0;
 my $quiet   = 0;
 my $scheme;
@@ -64,16 +64,16 @@ ARG: while (my $arg = shift(@ARGV)) {
          for ($ARGV[0]) {
             /src/  && do {
                $format = 'src';
-               $fields = '-s saddr:15 proto sport:15';
-               $model  = '-m saddr proto sport';
+               $fields = '-s sid:42 inf saddr:15 proto sport:15';
+               $model  = '-m sid inf saddr proto sport';
                shift (@ARGV);
                next ARG;
             };
 
             /dst/  && do {
                $format = 'dst';
-               $fields = '-s daddr:15 proto dport:15';
-               $model  = '-m daddr proto dport';
+               $fields = '-s sid:42 inf daddr:15 proto dport:15';
+               $model  = '-m sid inf daddr proto dport';
                shift (@ARGV);
                next ARG;
             };
@@ -88,22 +88,22 @@ ARG: while (my $arg = shift(@ARGV)) {
 # Start the program
 chomp $Program;
 my @args = ($Program, $Options, $model, $fields, @arglist);
-my (%items, %addrs, $addr, $proto, $port);
+my (%items, %addrs, $sid, $inf, $addr, $proto, $port);
 
 open(SESAME, "@args |");
 while (my $data = <SESAME>) {
    $data =~ s/^,//;
-   ($addr, $proto, $port) = split(/,/, $data);
+   ($sid, $inf, $addr, $proto, $port) = split(/,/, $data);
    chomp $port;
    if (!($addr eq "0.0.0.0")) {
       for ($proto) {
          /6/   && do {
-            $addrs{$addr}++;
-            $items{$addr}{$proto}{$port}++;
+            $addrs{$sid}{$inf}{$addr}++;
+            $items{$sid}{$inf}{$addr}{$proto}{$port}++;
          } ;
          /17/   && do {
-            $addrs{$addr}++;
-            $items{$addr}{$proto}{$port}++;
+            $addrs{$sid}{$inf}{$addr}++;
+            $items{$sid}{$inf}{$addr}{$proto}{$port}++;
          } ;
       }
    }
@@ -154,141 +154,149 @@ if ($uri) {
 
    # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
-   $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr ))");
+   $dbh->do("CREATE TABLE $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr,sid,inf ))");
  
-   for $addr ( keys %items ) {
-      $tcpports = 0;
-      $udpports = 0;
-      $tcpportstring = "";
-      $udpportstring = "";
+   for $sid ( keys %items ) {
+      for $inf ( keys %{$items{$sid}} ) {
+         for $addr ( keys %{$items{$sid}{$inf}} ) {
+            $tcpports = 0;
+            $udpports = 0;
+            $tcpportstring = "";
+            $udpportstring = "";
 
-      for $proto ( keys %{ $items{$addr} } ) {
-         if ($proto == 6) {
-            $tcpports = scalar(keys(%{$items{$addr}{$proto} }));
+            for $proto ( keys %{ $items{$sid}{$inf}{$addr} } ) {
+               if ($proto == 6) {
+                  $tcpports = scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
 
-            $startseries = 0;
-            $lastseries = 0;
-   
-            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
-               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
-                  if ($startseries > 0) {
-                     if ($port == ($lastseries + 1)) {
-                        $lastseries = $port;
-                     } else {
-                        if ($startseries != $lastseries) {
-                           $tcpportstring .= "$startseries - $lastseries, ";
-                           $startseries = $port;
-                           $lastseries = $port;
+                  $startseries = 0;
+                  $lastseries = 0;
+         
+                  if ( scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} })) > 0 ) {
+                     for $port ( sort numerically keys %{ $items{$sid}{$inf}{$addr}{$proto} } ) {
+                        if ($startseries > 0) {
+                           if ($port == ($lastseries + 1)) {
+                              $lastseries = $port;
+                           } else {
+                              if ($startseries != $lastseries) {
+                                 $tcpportstring .= "$startseries-$lastseries,";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              } else {
+                                 $tcpportstring .= "$startseries,";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              }
+                           }
                         } else {
-                           $tcpportstring .= "$startseries, ";
                            $startseries = $port;
                            $lastseries = $port;
                         }
                      }
-                  } else {
-                     $startseries = $port;
-                     $lastseries = $port;
-                  }
-               }
-   
-               if ($startseries > 0) {
-                  if ($startseries != $lastseries) {
-                     $tcpportstring .= "$startseries - $lastseries";
-                  } else {
-                     $tcpportstring .= "$startseries";
-                  }
-               }
-            }
-
-         } else {
-            $udpports = scalar(keys(%{$items{$addr}{$proto} }));
-
-            $startseries = 0;
-            $lastseries = 0;
-            
-            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
-               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
-                  if ($startseries > 0) {
-                     if ($port == ($lastseries + 1)) {
-                        $lastseries = $port;
-                     } else {
+         
+                     if ($startseries > 0) {
                         if ($startseries != $lastseries) {
-                           $udpportstring .= "$startseries - $lastseries, ";
-                           $startseries = $port;
-                           $lastseries = $port;
+                           $tcpportstring .= "$startseries-$lastseries";
                         } else {
-                           $udpportstring .= "$startseries, ";
+                           $tcpportstring .= "$startseries";
+                        }
+                     }
+                  }
+
+               } else {
+                  $udpports = scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
+
+                  $startseries = 0;
+                  $lastseries = 0;
+                  
+                  if ( scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} })) > 0 ) {
+                     for $port ( sort numerically keys %{ $items{$sid}{$inf}{$addr}{$proto} } ) {
+                        if ($startseries > 0) {
+                           if ($port == ($lastseries + 1)) {
+                              $lastseries = $port;
+                           } else {
+                              if ($startseries != $lastseries) {
+                                 $udpportstring .= "$startseries - $lastseries, ";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              } else {
+                                 $udpportstring .= "$startseries, ";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              }
+                           }
+                        } else {
                            $startseries = $port;
                            $lastseries = $port;
                         }
                      }
-                  } else {
-                     $startseries = $port;
-                     $lastseries = $port;
-                  }
-               }
-               
-               if ($startseries > 0) {
-                  if ($startseries != $lastseries) {
-                     $udpportstring .= "$startseries - $lastseries";
-                  } else {
-                     $udpportstring .= "$startseries";
+                     
+                     if ($startseries > 0) {
+                        if ($startseries != $lastseries) {
+                           $udpportstring .= "$startseries - $lastseries";
+                        } else {
+                           $udpportstring .= "$startseries";
+                        }
+                     }
                   }
                }
             }
+
+            $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?)", undef, $sid, $inf, $addr, $tcpports, $udpports, $tcpportstring, $udpportstring);
          }
       }
-
-      $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?)", undef, $addr, $tcpports, $udpports, $tcpportstring, $udpportstring);
    }
 
    $dbh->disconnect();
 
 } else {
-   for $addr ( keys %items ) {
-      for $proto ( keys %{ $items{$addr} } ) {
-         if ($proto == 6) {
-            printf "$addr tcp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
-         } else {
-            printf "$addr udp: (%d) ", scalar(keys(%{$items{$addr}{$proto} }));
-         }
+   for $sid ( keys %items ) {
+      for $inf ( keys %{ $items{$sid} } ) {
+         for $addr ( keys %{ $items{$sid}{$inf} } ) {
+            for $proto ( keys %{ $items{$sid}{$inf}{$addr} } ) {
+               if ($proto == 6) {
+                  printf "$addr tcp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
+               } else {
+                  printf "$addr udp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
+               }
 
-         if ($quiet == 0) {
-            $startseries = 0;
-            $lastseries = 0;
+               if ($quiet == 0) {
+                  $startseries = 0;
+                  $lastseries = 0;
 
-            if ( scalar(keys(%{$items{$addr}{$proto} })) > 0 ) {
-               for $port ( sort numerically keys %{ $items{$addr}{$proto} } ) {
-                  if ($startseries > 0) {
-                     if ($port == ($lastseries + 1)) {
-                        $lastseries = $port;
-                     } else {
-                        if ($startseries != $lastseries) {
-                           print "$startseries - $lastseries, ";
-                           $startseries = $port;
-                           $lastseries = $port;
+                  if ( scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} })) > 0 ) {
+                     for $port ( sort numerically keys %{ $items{$sid}{$inf}{$addr}{$proto} } ) {
+                        if ($startseries > 0) {
+                           if ($port == ($lastseries + 1)) {
+                              $lastseries = $port;
+                           } else {
+                              if ($startseries != $lastseries) {
+                                 print "$startseries-$lastseries,";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              } else {
+                                 print "$startseries,";
+                                 $startseries = $port;
+                                 $lastseries = $port;
+                              }
+                           }
                         } else {
-                           print "$startseries, ";
                            $startseries = $port;
                            $lastseries = $port;
                         }
                      }
-                  } else {
-                     $startseries = $port;
-                     $lastseries = $port;
-                  }
-               }
 
-               if ($startseries > 0) {
-                  if ($startseries != $lastseries) {
-                     print "$startseries - $lastseries";
-                  } else {
-                     print "$startseries";
+                     if ($startseries > 0) {
+                        if ($startseries != $lastseries) {
+                           print "$startseries-$lastseries";
+                        } else {
+                           print "$startseries";
+                        }
+                     }
                   }
                }
+               print "\n";
             }
          }
-         print "\n";
       }
    }
 }
