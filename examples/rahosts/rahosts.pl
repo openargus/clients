@@ -55,9 +55,6 @@ my $quiet = 0;
 my $done = 0;
 my @args;
 
-my ($sx, $sy, $sz, $sw);
-my ($dx, $dy, $dz, $dw);
-
 my $uri     = 0;
 my $scheme;
 my $netloc;
@@ -182,73 +179,77 @@ if ($uri) {
    $dbh->do("CREATE TABLE $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, count INTEGER, hoststring TEXT, PRIMARY KEY ( addr,sid,inf ))");
 
    for $stype ( sort keys(%items) ) {
-      for $sid ( sort keys(%{$items{$stype}}) ) {
-         for $inf ( sort keys( $items{$stype}{$sid}) ) {
-            for $saddr ( sort internet keys( $items{$stype}{$sid}{$inf}) ) {
-               my $hoststring = "";
-               $startseries = 0;
-               $lastseries = 0;
+      my $hoststring;
+      switch ($stype) {
+         case "ether" { next }
+         case "ipv6"  {
+            for $sid ( sort keys(%{$items{$stype}}) ) {
+               for $inf ( sort keys( %{$items{$stype}{$sid}}) ) {
+                  for $saddr ( sort internet keys( %{$items{$stype}{$sid}{$inf}}) ) {
+                     my $cnt = 0;
+                     $hoststring = "";
 
-               if ($addrs{$stype}{$sid}{$inf}{$saddr} >= 1) {
-                  if ( scalar(keys(%{$items{$stype}{$sid}{$inf}{$saddr} })) > 0 ) {
+                     $count = RaGetAddressCount($saddr, $stype, $sid, $inf);
+                     $hoststring .= "$sid:$inf $saddr: ($count) ";
+                     for $daddr ( sort internet keys( %{$items{$stype}{$sid}{$inf}{$saddr}}) ) {
+                        if ($cnt++ > 0) {
+                           $hoststring .= ",";
+                        }
+                        $hoststring .= "$daddr";
+                     }
+                  }
+               }
+            }
+         }
+         case "ipv4"  {
+            for $sid ( sort keys(%{$items{$stype}}) ) {
+               for $inf ( sort keys( %{$items{$stype}{$sid}}) ) {
+                  for $saddr ( sort internet keys( %{$items{$stype}{$sid}{$inf}}) ) {
+                     $hoststring = "";
+                     $startseries = 0;
+                     $lastseries = 0;
                      $count = RaGetAddressCount($saddr, $stype, $sid, $inf);
 
                      if ( $quiet == 0 ) {
-                        switch ($stype) {
-                           case "ipv4"  { 
-                              for $sx ( sort numerically keys(%{$items{$stype}{$sid}{$inf}{$saddr} })) {
-                                 if ( scalar(keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx} })) > 0 ) {
-                                    for $sy ( sort numerically keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx}})) {
-                                       if ( scalar(keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}})) > 0 ) {
-                                          for $sz ( sort numerically keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}})) {
-                                             if ( scalar(keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}})) > 0 ) {
-                                                for $sw ( sort numerically keys(%{$items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}})) {
-                                                   my $addr = "$sx.$sy.$sz.$sw";
-                                                   my $ipaddr = inet_aton($addr);
-                                                   my $naddr = unpack "N", $ipaddr;
+                        for $daddr ( sort internet keys(%{$items{$stype}{$sid}{$inf}{$saddr} })) {
+                           my $ipaddr = inet_aton($daddr);
+                           my $naddr = unpack "N", $ipaddr;
 
-                                                   if ($startseries > 0) {
-                                                      if ($naddr == ($lastseries + 1)) {
-                                                         $lastseries = $naddr;  
-                                                         $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                      } else {
-                                                         my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
-                                                         if ((($a4 == 254) && ($sw == 0)) && (($a3 + 1) == $sz)) {
-                                                            $lastseries = $naddr;
-                                                            $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                         } else {
-                                                            my $startaddr = inet_ntoa(pack "N", $startseries);
-                                                            my $lastaddr  = inet_ntoa(pack "N", $lastseries);
+                           if ($startseries > 0) {
+                              if ($naddr == ($lastseries + 1)) {
+                                 $lastseries = $naddr;  
+                                 $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};
+                              } else {
+                                 my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
 
-                                                            if ($startseries != $lastseries) {
-                                                               $hoststring .= "$startaddr($startcount)-$lastaddr($lastcount),";
-                                                               $startseries = $naddr;
-                                                               $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                               $lastseries = $naddr;
-                                                               $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                            } else {
-                                                               $hoststring .= "$startaddr($startcount),";
-                                                               $startseries = $naddr;
-                                                               $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                               $lastseries = $naddr;
-                                                               $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                            }
-                                                         }
-                                                      }
+                                 if ((($naddr - $lastseries) < 3) && ($a4 == 254)) {
+                                    $lastseries = $naddr;
+                                    $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};  
+                                 } else {
+                                    my $startaddr = inet_ntoa(pack "N", $startseries);
+                                    my $lastaddr  = inet_ntoa(pack "N", $lastseries);
 
-                                                   } else {
-                                                      $startseries = $naddr;
-                                                      $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                      $lastseries = $naddr;
-                                                      $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$sx}{$sy}{$sz}{$sw};  
-                                                   }
-                                                }
-                                             }
-                                          }
-                                       }
+                                    if ($startseries != $lastseries) {
+                                       $hoststring .= "$startaddr($startcount)-$lastaddr($lastcount),";
+                                       $startseries = $naddr;
+                                       $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};
+                                       $lastseries = $naddr;
+                                       $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};
+                                    } else {
+                                       $hoststring .= "$startaddr($startcount),";
+                                       $startseries = $naddr;
+                                       $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};  
+                                       $lastseries = $naddr;
+                                       $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};  
                                     }
                                  }
                               }
+
+                           } else {
+                              $startseries = $naddr;
+                              $startcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};  
+                              $lastseries = $naddr;
+                              $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};  
                            }
                         }
                      }
@@ -263,10 +264,10 @@ if ($uri) {
                            $hoststring .= "$startaddr($startcount)";
                         }
                      }
-                  }
 
-                  if (length ($hoststring)) {
-                     $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?)", undef, $sid, $inf, $saddr, $count, $hoststring);
+                     if (length ($hoststring)) {
+                        $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?)", undef, $sid, $inf, $saddr, $count, $hoststring);
+                     }
                   }
                }
             }
@@ -319,7 +320,8 @@ if ($uri) {
                                  $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};
                               } else {
                                  my ($a1, $a2, $a3, $a4) = unpack('C4', pack("N", $lastseries));
-                                 if ((($a4 == 254) && ($sw == 0)) && (($a3 + 1) == $sz)) {
+
+                                 if ((($naddr - $lastseries) < 3) && ($a4 == 254)) {
                                     $lastseries = $naddr;
                                     $lastcount = $items{$stype}{$sid}{$inf}{$saddr}{$daddr};
                                  } else {
