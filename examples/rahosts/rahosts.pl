@@ -40,6 +40,7 @@ use Socket;
 
 # Global variables
 my $debug = 0;
+my $drop  = 0;
 my $tmpfile = tmpnam();
 my $tmpconf = $tmpfile . ".conf";
 
@@ -55,6 +56,16 @@ my $quiet = 0;
 my $done = 0;
 my @args;
 
+my $startseries = 0;
+my $startcount = 0;
+my $lastseries = 0;
+my $lastcount = 0;
+my $count = 0;
+ 
+my ($user, $pass, $host, $port, $space, $db, $table);
+my $dbh;
+my $sth;
+
 my $uri     = 0;
 my $scheme;
 my $netloc;
@@ -68,6 +79,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-q//     && do { $quiet++; next ARG; };
          s/^-w//     && do { $uri = shift (@ARGV); next ARG; };
          s/^-debug// && do { $debug++; next ARG; };
+         s/^-drop//  && do { $drop++; next ARG; };
       }
 
    } else {
@@ -77,6 +89,41 @@ ARG: while (my $arg = shift(@ARGV)) {
       }
    }
    $arglist[@arglist + 0] = $arg;
+}
+
+if ($uri) {
+   my $url = URI::URL->new($uri);
+ 
+   $scheme = $url->scheme;
+   $netloc = $url->netloc;
+   $path   = $url->path;
+ 
+   if ($netloc ne "") {
+      ($user, $host) = split /@/, $netloc;
+      if ($user =~ m/:/) {
+         ($user , $pass) = split/:/, $user;
+      }
+      if ($host =~ m/:/) {
+         ($host , $port) = split/:/, $host;
+      }
+   }
+   if ($path ne "") {
+      ($space, $db, $table)  = split /\//, $path;
+   }
+ 
+   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
+   # Thus we put an eval around it.
+ 
+   if ($drop > 0) {
+      local $dbh->{RaiseError} = 0;
+      local $dbh->{PrintError} = 0;
+      eval { $dbh->do("DROP TABLE IF EXISTS $table") };
+   }
+ 
+   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+ 
+   $dbh->do("CREATE TABLE IF NOT EXISTS $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, count INTEGER, hoststring TEXT, PRIMARY KEY ( addr,sid,inf ))");
 }
 
 # Start the program
@@ -109,8 +156,6 @@ while (my $data = <SESAME>) {
          $stype = "ether";
       }}}}
 
-      print "DEBUG: address type: $stype\n" if $debug;
-
       switch ($stype) {
          case "ipv4"  { 
             if ((!($saddr eq "0.0.0.0")) && (!($daddr eq "0.0.0.0"))) {
@@ -133,51 +178,7 @@ while (my $data = <SESAME>) {
 close(SESAME);
 
 
-my $startseries = 0;
-my $startcount = 0;
-my $lastseries = 0;
-my $lastcount = 0;
-my $count = 0;
-
-my ($user, $pass, $host, $port, $space, $db, $table);
-my $dbh;
-
 if ($uri) {
-   my $url = URI::URL->new($uri);
-
-   $scheme = $url->scheme;
-   $netloc = $url->netloc;
-   $path   = $url->path;
-
-   if ($netloc ne "") {
-      ($user, $host) = split /@/, $netloc;
-      if ($user =~ m/:/) {
-         ($user , $pass) = split/:/, $user;
-      }
-      if ($host =~ m/:/) {
-         ($host , $port) = split/:/, $host;
-      }
-   }
-   if ($path ne "") {
-      ($space, $db, $table)  = split /\//, $path;
-   }
-
-   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
-
-   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
-   # Thus we put an eval around it.
-
-   {
-      local $dbh->{RaiseError} = 0;
-      local $dbh->{PrintError} = 0;
-
-      eval { $dbh->do("DROP TABLE $table") };
-   }
-
-   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-
-   $dbh->do("CREATE TABLE $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, count INTEGER, hoststring TEXT, PRIMARY KEY ( addr,sid,inf ))");
-
    for $stype ( sort keys(%items) ) {
       my $hoststring;
       switch ($stype) {
@@ -190,12 +191,15 @@ if ($uri) {
                      $hoststring = "";
 
                      $count = RaGetAddressCount($saddr, $stype, $sid, $inf);
-                     $hoststring .= "$sid:$inf $saddr: ($count) ";
                      for $daddr ( sort internet keys( %{$items{$stype}{$sid}{$inf}{$saddr}}) ) {
                         if ($cnt++ > 0) {
                            $hoststring .= ",";
                         }
                         $hoststring .= "$daddr";
+                     }
+
+                     if (length ($hoststring)) {
+                        $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?)", undef, $sid, $inf, $saddr, $count, $hoststring);
                      }
                   }
                }
@@ -395,5 +399,11 @@ sub numerically { $a <=> $b };
 sub internet {
    my $ipA = new Net::IP ($a);
    my $ipB = new Net::IP ($b);
-   return ($ipA->intip() <=> $ipB->intip()); 
+   my $retn = 0;
+
+   if ((defined $ipA) && (defined $ipB)) {
+      $retn = ($ipA->intip() <=> $ipB->intip()); 
+   }
+
+   return ($retn);
 }
