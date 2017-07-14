@@ -18,7 +18,27 @@
  */
 
 /*
- *  rahosts     - IP address inventory reporting
+ *  rahosts     - network address matrix inventory reporting
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+Rahosts and its companion rahostsdaily, generate ascii based address
+inventories, reporting on the network addresses seen in an argus data
+file, and the other addresses that they are talking to.  
+
+In the standard gargoyle suite, this table provides quick lookup
+for addresses and gives cursory information on the addresses
+community of interest (clique);
+
+Both programs can insert their data into mysql database tables, which
+can be used by other programs, especially cgi-scripts to visualize
+things like N-degree.
+
+The schema supports IPv4, IPv6 and ethernet address, and provides N-degree
+metrics and a list of peer level addresses (L2 and L3 matrix).
+
+Filters can be used to generate "connected" relationships, i.e. process
+flow records that are active, to generate empirical interactions, rather
+than requests for addresses.
+
