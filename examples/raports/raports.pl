@@ -38,10 +38,11 @@ use URI::URL;
 use DBI;
 
 # Global variables
-
+my $debug = 0;
+my $drop  = 0;
 my $Program = `which racluster`;
 my $Options = " -nc , ";   # Default Options
-my $VERSION = "5.0.3";
+my $VERSION = "5.0";
 my $format  = 'addr';
 my $fields  = '-M rmon -s sid inf saddr proto sport';
 my $model   = '-m sid inf saddr proto sport';
@@ -51,11 +52,14 @@ my $scheme;
 my $netloc;
 my $path;
 
+my ($user, $pass, $host, $port, $space, $db, $table);
+my $dbh;
 my @arglist = ();
 
 ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-q//             && do { $quiet++; next ARG; };
+      s/^-debug//         && do { $debug++; next ARG; };
       s/^-w//             && do {
          $uri = shift (@ARGV);
          next ARG;
@@ -79,16 +83,63 @@ ARG: while (my $arg = shift(@ARGV)) {
             };
          };
       };
+      /^-$/               && do {
+         $arglist[@arglist + 0] = "-";
+         while (length $ARGV[0]) {
+            $arglist[@arglist + 0] = shift (@ARGV);
+         }
+         next ARG;
+      };
    }
 
    $arglist[@arglist + 0] = $arg;
 }
 
 
+if ($uri) {
+   my $url = URI::URL->new($uri);
+ 
+   $scheme = $url->scheme;
+   $netloc = $url->netloc;
+   $path   = $url->path;
+ 
+   if ($netloc ne "") {
+      ($user, $host) = split /@/, $netloc;
+      if ($user =~ m/:/) {
+         ($user , $pass) = split/:/, $user;
+      }
+      if ($host =~ m/:/) {
+         ($host , $port) = split/:/, $host;
+      }
+   }
+   if ($path ne "") {
+      ($space, $db, $table)  = split /\//, $path;
+   }
+ 
+   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+ 
+   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
+   # Thus we put an eval around it.
+ 
+   if ($drop > 0) {
+      local $dbh->{RaiseError} = 0;
+      local $dbh->{PrintError} = 0;
+      eval { $dbh->do("DROP TABLE IF EXISTS $table") };
+   }
+ 
+   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+ 
+   $dbh->do("CREATE TABLE IF NOT EXISTS $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr, sid, inf ))");
+}
+
+
 # Start the program
+
 chomp $Program;
 my @args = ($Program, $Options, $model, $fields, @arglist);
 my (%items, %addrs, $sid, $inf, $addr, $proto, $port);
+
+print "DEBUG: raports: calling '@args'\n" if $debug;
 
 open(SESAME, "@args |");
 while (my $data = <SESAME>) {
@@ -112,50 +163,15 @@ close(SESAME);
 
 my $startseries = 0;
 my $lastseries = 0;
-my ($user, $pass, $host, $port, $space, $db, $table);
-my $dbh;
+
 my $tcpports;
 my $udpports;
 
 my $udpportstring;
 my $tcpportstring;
 
-if ($uri) {
-   my $url = URI::URL->new($uri);
-
-   $scheme = $url->scheme;
-   $netloc = $url->netloc;
-   $path   = $url->path;
-
-   if ($netloc ne "") {
-      ($user, $host) = split /@/, $netloc;
-      if ($user =~ m/:/) {
-         ($user , $pass) = split/:/, $user;
-      }
-      if ($host =~ m/:/) {
-         ($host , $port) = split/:/, $host;
-      }
-   }
-   if ($path ne "") {
-      ($space, $db, $table)  = split /\//, $path;
-   }
-
-   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
-
-   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
-   # Thus we put an eval around it.
-
-   {
-      local $dbh->{RaiseError} = 0;
-      local $dbh->{PrintError} = 0;
-
-      eval { $dbh->do("DROP TABLE $table") };
-   }
-
-   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-
-   $dbh->do("CREATE TABLE $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr,sid,inf ))");
  
+if ($uri) {
    for $sid ( keys %items ) {
       for $inf ( keys %{$items{$sid}} ) {
          for $addr ( keys %{$items{$sid}{$inf}} ) {
@@ -178,7 +194,7 @@ if ($uri) {
                               $lastseries = $port;
                            } else {
                               if ($startseries != $lastseries) {
-                                 $tcpportstring .= "$startseries-$lastseries,";
+                                 $tcpportstring .= "$startseries-$lastseries, ";
                                  $startseries = $port;
                                  $lastseries = $port;
                               } else {
@@ -215,11 +231,11 @@ if ($uri) {
                               $lastseries = $port;
                            } else {
                               if ($startseries != $lastseries) {
-                                 $udpportstring .= "$startseries - $lastseries, ";
+                                 $udpportstring .= "$startseries-$lastseries, ";
                                  $startseries = $port;
                                  $lastseries = $port;
                               } else {
-                                 $udpportstring .= "$startseries, ";
+                                 $udpportstring .= "$startseries,";
                                  $startseries = $port;
                                  $lastseries = $port;
                               }
@@ -232,7 +248,7 @@ if ($uri) {
                      
                      if ($startseries > 0) {
                         if ($startseries != $lastseries) {
-                           $udpportstring .= "$startseries - $lastseries";
+                           $udpportstring .= "$startseries-$lastseries";
                         } else {
                            $udpportstring .= "$startseries";
                         }
@@ -240,23 +256,21 @@ if ($uri) {
                   }
                }
             }
-
             $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?)", undef, $sid, $inf, $addr, $tcpports, $udpports, $tcpportstring, $udpportstring);
          }
       }
    }
-
    $dbh->disconnect();
 
 } else {
    for $sid ( keys %items ) {
-      for $inf ( keys %{ $items{$sid} } ) {
-         for $addr ( keys %{ $items{$sid}{$inf} } ) {
-            for $proto ( keys %{ $items{$sid}{$inf}{$addr} } ) {
+      for $inf ( keys %{$items{$sid}} ) {
+         for $addr ( keys %{$items{$sid}{$inf}} ) {
+            for $proto ( keys %{$items{$sid}{$inf}{$addr}} ) {
                if ($proto == 6) {
-                  printf "$addr tcp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
+                  printf "$sid:$inf $addr tcp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
                } else {
-                  printf "$addr udp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
+                  printf "$sid:$inf $addr udp: (%d) ", scalar(keys(%{$items{$sid}{$inf}{$addr}{$proto} }));
                }
 
                if ($quiet == 0) {
@@ -270,11 +284,11 @@ if ($uri) {
                               $lastseries = $port;
                            } else {
                               if ($startseries != $lastseries) {
-                                 print "$startseries-$lastseries,";
+                                 print "$startseries-$lastseries, ";
                                  $startseries = $port;
                                  $lastseries = $port;
                               } else {
-                                 print "$startseries,";
+                                 print "$startseries, ";
                                  $startseries = $port;
                                  $lastseries = $port;
                               }

@@ -83,14 +83,18 @@ YACC = @V_YACC@
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = raports.pl
+SRC = raports.pl raportsdaily.pl
 
-PROGS = $(INSTALLBIN)/raports
+PROGS = $(INSTALLBIN)/raports $(INSTALLBIN)/raportsdaily
 
 all: $(PROGS)
 
 $(INSTALLBIN)/raports: raports.pl
 	sed 's+@PERLBIN@+$(PERL)+' raports.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/raportsdaily: raportsdaily.pl
+	sed 's+@PERLBIN@+$(PERL)+' raportsdaily.pl > $@
 	chmod +x $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -104,9 +108,11 @@ install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/raports $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/raportsdaily $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/raports
+	rm -f $(DESTDIR)$(BINDIR)/raportsdaily
 
 clean:
 	rm -f $(CLEANFILES)
