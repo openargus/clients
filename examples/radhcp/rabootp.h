@@ -192,8 +192,9 @@ struct ArgusDhcpStruct {
    /* first x86_64 cacheline */
    unsigned char chaddr[16];       /* client L2 address */
    unsigned char shaddr[16];       /* accepted server's L2 address */
-   struct ArgusDhcpV6DUID server_id_v6; /* 10 bytes */
-   uint8_t pad0;
+   pthread_mutex_t *lock;
+   enum ArgusDhcpState state;      /* 4 bytes on x86_64 with llvm & gcc */
+   uint8_t pad0[3];
    uint8_t flags;
    struct in_addr server_id_v4;
 
@@ -201,12 +202,10 @@ struct ArgusDhcpStruct {
    uint16_t msgtypemask;           /* mask of option-53 message types */
    uint8_t hlen;
    uint8_t refcount;
-
-   pthread_mutex_t *lock;
+   uint8_t pad1[4];
 
    /* second cacheline */
    struct ArgusDhcpV4RequstOptsStruct req;
-   enum ArgusDhcpState state;      /* 4 bytes on x86_64 with llvm & gcc */
 
    /* third + fourth cachelines */
    struct ArgusDhcpV4LeaseOptsStruct rep; /* This is a linked list of replies */
@@ -219,6 +218,9 @@ struct ArgusDhcpStruct {
    unsigned short num_responders;  /* how many unique servers replied */
    unsigned short total_requests;  /* request packets with this chaddr+xid */
    unsigned short total_unknownops;/* unknown opcodes received */
+
+   /* sixth cacheline */
+   struct ArgusDhcpV6DUID server_id_v6;
 };
 
 void RabootpCleanup(void);
