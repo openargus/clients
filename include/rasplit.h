@@ -77,9 +77,7 @@ extern "C" {
 #define ARGUSSPLITMINUTE	6
 #define ARGUSSPLITSECOND	7
 
-#if defined(ArgusClient)
-
-char *RaSplitModes[ARGUSSPLITMODENUM] = {
+static const char *RaSplitModes[ARGUSSPLITMODENUM] = {
   "time",
   "count",  
   "size",    
@@ -92,12 +90,6 @@ char *RaSplitModes[ARGUSSPLITMODENUM] = {
   "rate",    
 };
 
-#else
-
-extern char *RaSplitModes[ARGUSSPLITMODENUM];
-
-#endif
- 
 char *RaSplitFilename (struct ArgusAdjustStruct *);
  
 extern void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);
