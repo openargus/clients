@@ -59,6 +59,8 @@ ArgusDhcpStructFree(void *v)
       if (--(a->refcount) == 0) {
          ArgusDhcpStructFreeClientID(v);
          ArgusDhcpStructFreeReplies(v);
+         if (a->sql_table_name)
+            free(a->sql_table_name);
          MUTEX_DESTROY(a->lock);
          ArgusFree(a->lock);
          ArgusFree(a);

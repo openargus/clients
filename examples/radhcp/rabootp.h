@@ -221,6 +221,7 @@ struct ArgusDhcpStruct {
 
    /* sixth cacheline */
    struct ArgusDhcpV6DUID server_id_v6;
+   char *sql_table_name;
 };
 
 void RabootpCleanup(void);
