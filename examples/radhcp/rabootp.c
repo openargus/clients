@@ -222,6 +222,30 @@ nouser:
    return ads;
 }
 
+static struct ArgusDhcpStruct *
+__parse_one_dhcp_record_direction(const struct ether_header * const ehdr,
+                                  const struct ArgusDataStruct * const user,
+                                  const struct ArgusTimeStruct * const time,
+                                  struct RabootpTimerStruct *timer)
+{
+   struct ArgusDhcpStruct *retn;
+
+   /* THIS HAS TO CHANGE.  Lock timer first to preserve lock
+    * ordering.  The problem is the timer lock may be aquired
+    * for quite some time.  Per-timer-slot locks?
+    */
+   RabootpTimerLock(timer);
+   retn = __parse_one_dhcp_record(ehdr, user, time);
+   RabootpTimerUnlock(timer);
+
+#if defined(ARGUSDEBUG)
+   bootp_print((u_char *)&(user->array[0]), user->count);
+   strncat(ArgusBuf, "\n", MAXSTRLEN);
+#endif
+
+   return retn;
+}
+
 struct ArgusDhcpStruct *
 ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
                      struct ArgusRecordStruct *argus,
@@ -245,23 +269,14 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
          }
       }
 
-      /* THIS HAS TO CHANGE.  Lock timer first to preserve lock
-       * ordering.  The problem is the timer lock may be aquired
-       * for quite some time.  Per-timer-slot locks?
-       */
       if (suser != NULL) {
-         RabootpTimerLock(timer);
-         retn = __parse_one_dhcp_record(ehdr, suser, &time->src);
-         RabootpTimerUnlock(timer);
-         bootp_print((u_char *)&(suser->array[0]), suser->count);
-         strncat(ArgusBuf, "\n", MAXSTRLEN);
+         retn = __parse_one_dhcp_record_direction(ehdr, suser, &time->src,
+                                                  timer);
       }
 
       if (duser != NULL) {
-         RabootpTimerLock(timer);
-         retn = __parse_one_dhcp_record(ehdr, duser, &time->dst);
-         RabootpTimerUnlock(timer);
-         bootp_print((u_char *)&(duser->array[0]), duser->count);
+         retn = __parse_one_dhcp_record_direction(ehdr, duser, &time->dst,
+                                                  timer);
       }
    }
 
