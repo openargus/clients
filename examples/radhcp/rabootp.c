@@ -50,6 +50,12 @@
 #include "rabootp_timer.h"
 #include "rabootp_patricia_tree.h"
 
+#if defined(ARGUS_MYSQL)
+extern char RaSQLSaveTable[];
+char *ArgusCreateSQLSaveTableName(struct ArgusParserStruct *,
+                                  struct ArgusRecordStruct *, char *);
+#endif
+
 static struct {
    struct rabootp_cblist state_change; /* called when dhcp FSA state changes */
    struct rabootp_cblist xid_new;      /* called when new transaction added */
@@ -246,6 +252,21 @@ __parse_one_dhcp_record_direction(const struct ether_header * const ehdr,
    return retn;
 }
 
+static void
+__set_sql_table_name(struct ArgusParserStruct *parser,
+                     struct ArgusRecordStruct *argus,
+                     struct ArgusDhcpStruct *ads)
+{
+#if defined(ARGUS_MYSQL)
+         MUTEX_LOCK(&parser->lock);
+         if (parser->writeDbstr && ads->sql_table_name == NULL) {
+            ads->sql_table_name =
+             strdup(ArgusCreateSQLSaveTableName(parser, argus, RaSQLSaveTable));
+         }
+         MUTEX_UNLOCK(&parser->lock);
+#endif
+}
+
 struct ArgusDhcpStruct *
 ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
                      struct ArgusRecordStruct *argus,
@@ -272,11 +293,13 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
       if (suser != NULL) {
          retn = __parse_one_dhcp_record_direction(ehdr, suser, &time->src,
                                                   timer);
+         __set_sql_table_name(parser, argus, retn);
       }
 
       if (duser != NULL) {
          retn = __parse_one_dhcp_record_direction(ehdr, duser, &time->dst,
                                                   timer);
+         __set_sql_table_name(parser, argus, retn);
       }
    }
 

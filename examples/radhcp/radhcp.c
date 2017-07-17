@@ -85,6 +85,7 @@ extern int ArgusSOptionRecord;
 
 extern pthread_mutex_t RaMySQLlock;
 extern MYSQL *RaMySQL;
+extern struct RaBinProcessStruct *RaBinProcess;
 #endif
 
 struct RaBinProcessStruct *RaBinProcess;
@@ -491,7 +492,17 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE_VISITED;
 
       if ((mode = parser->ArgusModeList) != NULL) {
+         struct ArgusModeStruct *nxtmode;
+         int splitmode = -1;
+
          while (mode) {
+
+            nxtmode = RaParseSplitMode(parser, &RaBinProcess, mode, &splitmode);
+            if (nxtmode != mode) {
+               mode = nxtmode;
+               continue;
+            }
+
             if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                 (!(strncasecmp (mode->mode, "debug", 5)))) {
                ArgusDebugTree = 1;
