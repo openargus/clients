@@ -126,6 +126,7 @@ void ArgusDnsOutputProcessClose(void);
 
 char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *);
 struct RaBinProcessStruct *ArgusNewRateBins (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+extern struct RaBinProcessStruct *RaBinProcess;
 
 int RaInitialized = 0;
 int RaSQLMcastMode = 0;
@@ -1355,7 +1356,6 @@ time_t ArgusTableEndSecs = 0;
 char *
 ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table)
 {
-   struct RaBinProcessStruct *RaBinProcess = parser->RaBinProcess;
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    int timeLabel = 0, objectLabel = 0;
    char *retn = NULL;

@@ -175,8 +175,6 @@ void RaOutputModifyScreen (void);
 void RaOutputHelpScreen (void);
 int RaSearchDisplay (struct ArgusParserStruct *, struct ArgusQueueStruct *, int, int *, int *, char *, int);
 
-struct RaBinProcessStruct *RaBinProcess = NULL;
-
 struct RaTopProcessStruct *RaTopNewProcess(struct ArgusParserStruct *parser);
 
 char *ArgusGenerateProgramArgs(struct ArgusParserStruct *);

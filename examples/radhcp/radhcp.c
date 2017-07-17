@@ -87,6 +87,8 @@ extern pthread_mutex_t RaMySQLlock;
 extern MYSQL *RaMySQL;
 #endif
 
+struct RaBinProcessStruct *RaBinProcess;
+
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
