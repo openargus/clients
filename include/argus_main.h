@@ -324,6 +324,13 @@ extern int ArgusCheckTimeFormat (struct tm *tm, char *str);
 extern int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 
 #endif
+
+struct ArgusModeStruct *
+RaParseSplitMode(struct ArgusParserStruct *,
+                 struct RaBinProcessStruct **,
+                 struct ArgusModeStruct *,
+                 int *);
+
 #ifdef __cplusplus
 }
 #endif
