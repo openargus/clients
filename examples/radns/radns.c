@@ -163,6 +163,7 @@ ArgusHandleTreeCommand (char *command)
 
 void ArgusPrintAddressResponse(char *, struct RaAddressStruct *, char **, int *);
 
+#define ARGUS_MAX_RESPONSE	0x100000
 void
 ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **result, int *rind)
 {
@@ -178,7 +179,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
       float diff;
       int ind = *rind;
 
-      if ((resbuf = ArgusMalloc(0x1000)) == NULL)
+      if ((resbuf = ArgusMalloc(ARGUS_MAX_RESPONSE)) == NULL)
          ArgusLog (LOG_ERR, "ArgusPrintAddressResponse: ArgusMalloc error %s\n", strerror(errno));
 
       bzero(tbuf, sizeof(tbuf));
@@ -192,7 +193,6 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
          raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
 
       if (ArgusParser->ArgusPrintJson) {
-//       sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s(%0.*f)\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string, ArgusParser->pflag, diff);
          sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       } else {
          sprintf (resbuf, "%s: %s ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
@@ -203,6 +203,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
 #endif
          int auth = 0, refer = 0, ptr = 0;
          int x, cnt = raddr->dns->count;
+         int len = strlen(resbuf);
 
          tdns = raddr->dns->start;
          for (x = 0; x < cnt; x++) {
@@ -218,13 +219,18 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
             int tref = 0;
             tdns = raddr->dns->start;
             if (ArgusParser->ArgusPrintJson) {
-               sprintf (&resbuf[strlen(resbuf)], ", \"auth\":");
+               char *buf = ", \"auth\":";
+               sprintf (&resbuf[len], "%s", buf);
+               len += strlen(buf);
             } else {
-               sprintf (&resbuf[strlen(resbuf)], "A: ");
+               sprintf (&resbuf[len], "%s", "A: ");
+               len += 3;
             }
 
-            if (auth > 1)
-               sprintf (&resbuf[strlen(resbuf)], "[");
+            if (auth > 1) {
+               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+               len++;
+            }
   
             for (x = 0; x < cnt; x++) {
                if (tdns->status == ARGUS_DNS_AUTH) {
@@ -234,33 +240,40 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
                   diff = (tvp->tv_sec * 1.0) + (tvp->tv_usec / 1000000.0);
 
                   if (ArgusParser->ArgusPrintJson) {
-                     if (tref++ > 0)
-                        sprintf (&resbuf[strlen(resbuf)], ",");
-//                   sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
-                     sprintf (&resbuf[strlen(resbuf)], "\"%s\"", tname->n_name);
+                     if (tref++ > 0) {
+                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                        len++;
+                     }
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                     len = strlen(resbuf);
                   } else {
-                     sprintf (&resbuf[strlen(resbuf)], "%s ", tname->n_name);
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", tname->n_name);
+                     len = strlen(resbuf);
                   }
                }
                tdns = tdns->nxt;
             }
 
             if (auth > 1)
-               sprintf (&resbuf[strlen(resbuf)], "]");
+               sprintf (&resbuf[len++], "]");
          }
 
          if (refer > 0) {
             int tref = 0;
             tdns = raddr->dns->start;
             if (ArgusParser->ArgusPrintJson) {
-               sprintf (&resbuf[strlen(resbuf)], ", \"refer\":");
+               char *buf = ", \"refer\":";
+               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+               len += strlen(buf);
             } else {
-               sprintf (&resbuf[strlen(resbuf)], "REF: ");
+               char *buf = "REF: ";
+               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+               len += strlen(buf);
             }
 
             if (ArgusParser->ArgusPrintJson) {
                if (refer > 1)
-                  sprintf (&resbuf[strlen(resbuf)], "[");
+                  sprintf (&resbuf[len++], "[");
             }
 
             for (x = 0; x < cnt; x++) {
@@ -272,11 +285,12 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
 
                   if (ArgusParser->ArgusPrintJson) {
                      if (tref++ > 0)
-                        sprintf (&resbuf[strlen(resbuf)], ",");
-//                   sprintf (&resbuf[strlen(resbuf)], "\"%s(%0.*f)\"", tname->n_name, ArgusParser->pflag, diff);
-                     sprintf (&resbuf[strlen(resbuf)], "\"%s\"", tname->n_name);
+                        sprintf (&resbuf[len++], ",");
+                     sprintf (&resbuf[len], "\"%s\"", tname->n_name);
+                     len = strlen(resbuf);
                   } else {
-                     sprintf (&resbuf[strlen(resbuf)], "%s ", tname->n_name);
+                     sprintf (&resbuf[len], "%s ", tname->n_name);
+                     len = strlen(resbuf);
                   }
                }
                tdns = tdns->nxt;
@@ -284,7 +298,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
 
             if (ArgusParser->ArgusPrintJson) {
                if (refer > 1)
-                  sprintf (&resbuf[strlen(resbuf)], "]");
+                  sprintf (&resbuf[len++], "]");
             }
          }
 
@@ -292,39 +306,50 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
             int tref = 0;
             tdns = raddr->dns->start;
             if (ArgusParser->ArgusPrintJson) {
-               sprintf (&resbuf[strlen(resbuf)], ", \"ptr\":");
+               char *buf = ", \"ptr\":";
+               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+               len += slen;
             } else {
-               sprintf (&resbuf[strlen(resbuf)], "PTR: ");
+               char *buf = "PTR: ";
+               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+               len += slen;
             }
 
             if (ArgusParser->ArgusPrintJson) {
-               if (ptr > 1)
-                  sprintf (&resbuf[strlen(resbuf)], "[");
+               if (ptr > 1) {
+                  int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+                  len += slen;
+               }
             }
 
             for (x = 0; x < cnt; x++) {
                if (tdns->status == ARGUS_DNS_PTR) {
                   struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
                   if (ArgusParser->ArgusPrintJson) {
-                     if (tref++ > 0)
-                        sprintf (&resbuf[strlen(resbuf)], ",");
-                     sprintf (&resbuf[strlen(resbuf)], "\"%s\"", tname->n_name);
+                     if (tref++ > 0) {
+                        int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                        len += slen;
+                     }
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
                   } else {
-                     sprintf (&resbuf[strlen(resbuf)], "%s ", tname->n_name);
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
                   }
-
+                  len = strlen(resbuf);
                }
                tdns = tdns->nxt;
             }
 
             if (ArgusParser->ArgusPrintJson) {
-               if (ptr > 1)
-                  sprintf (&resbuf[strlen(resbuf)], "]");
+               if (ptr > 1) {
+                  int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
+                  len += slen;
+               }
             }
          }
 
          if (ArgusParser->ArgusPrintJson) {
-            sprintf (&resbuf[strlen(resbuf)], "}");
+            int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "}");
+            len += slen;
          }
 
          result[ind++] = strdup(resbuf);
