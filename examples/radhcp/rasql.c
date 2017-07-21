@@ -49,7 +49,7 @@
 static int ArgusCloseDown = 0;
 
 #if defined(ARGUS_MYSQL)
-
+#include "rabootp_sql.h"
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -727,114 +727,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
 
       if (!exists) {
          RaTableCreateNames[cindex] = strdup(stable);
-
-         sprintf (sbuf, "CREATE table %s (", RaTableCreateNames[cindex]);
-         ind = 0;
-
-         for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-            if (ArgusParser->RaPrintAlgorithmList[i] != NULL) {
-               ArgusParser->RaPrintAlgorithm = ArgusParser->RaPrintAlgorithmList[i];
-
-               if ((ArgusAutoId == 0) && !strncmp(ArgusParser->RaPrintAlgorithm->field, "autoid", 6))
-                  ArgusAutoId = 1;
-
-               for (x = 0; x < ARGUS_MAX_PRINT_ALG; x++) {
-                  if (!strcmp(ArgusParser->RaPrintAlgorithm->field, RaPrintAlgorithmTable[x].field)) {
-                     if (ind++ > 0)
-                        sprintf (&sbuf[strlen(sbuf)], ",");
-
-                     sprintf (&sbuf[strlen(sbuf)], "%s %s", RaPrintAlgorithmTable[x].field, RaPrintAlgorithmTable[x].dbformat);
-                     break;
-                  }
-               }
-            }
-         }
-
-         if ((ArgusParser->ArgusAggregator != NULL) || ArgusAutoId) {
-            struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
-
-            long long mask = 0;
-            int status = 0;
-
-            while (agg != NULL) {
-               mask |= agg->mask;
-               status |= agg->status;
-               agg = agg->nxt;
-            }
-
-            if (mask || ArgusAutoId) {
-               ind = 0;
-               sprintf (kbuf, "primary key (");
-
-               if (ArgusAutoId) {
-                  sprintf (&kbuf[strlen(kbuf)], "autoid");
-                  ind++;
-               }
-
-               if (mask) {
-                  for (i = 0; i < ARGUS_MAX_MASK_LIST; i++) {
-                     int found; 
-                     if (mask & (0x01LL << i)) {
-                        for (found = 0, x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
-                           if (ArgusParser->RaPrintAlgorithmList[x] != NULL) {
-                              ArgusParser->RaPrintAlgorithm = ArgusParser->RaPrintAlgorithmList[x];
-                              if (!strcmp(ArgusParser->RaPrintAlgorithm->field, ArgusMaskDefs[i].name)) {
-                                 found = 1;
-                                 break;
-                              }
-                           }
-                        }
-
-                        if (!found)
-                           ArgusLog(LOG_ERR, "key field '%s' not in schema (-s option)",  ArgusMaskDefs[i].name);
-
-                        for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
-                           if (!(strcasecmp (ArgusMaskDefs[i].name, RaPrintAlgorithmTable[x].field))) {
-                              if (ind++ > 0)
-                                 sprintf (&kbuf[strlen(kbuf)], ",");
-
-                              sprintf (&kbuf[strlen(kbuf)], "%s", RaPrintAlgorithmTable[x].field);
-                              break;
-                           }
-                        }
-                     }
-                  }
-               }
-               sprintf (&kbuf[strlen(kbuf)], ")");
-            }
-         }
-
-         if (strlen(kbuf))
-            sprintf (&sbuf[strlen(sbuf)], ", %s", kbuf);
-
-         if (ArgusSOptionRecord)
-            sprintf (&sbuf[strlen(sbuf)], ", record blob");
-
-         if ((MySQLVersionMajor > 4) || ((MySQLVersionMajor == 4) &&
-                                         (MySQLVersionMinor >= 1)))
-            sprintf (&sbuf[strlen(sbuf)], ") ENGINE=%s", ArgusParser->MySQLDBEngine);
-         else
-            sprintf (&sbuf[strlen(sbuf)], ") TYPE=%s", ArgusParser->MySQLDBEngine);
-         RaTableCreateString[cindex] = strdup(sbuf);
-
-         cindex++;
-
-         for (i = 0; i < cindex; i++) {
-            char *str = NULL;
-            if (RaTableCreateNames[i] != NULL) {
-               if ((str = RaTableCreateString[i]) != NULL) {
-#ifdef ARGUSDEBUG
-                  ArgusDebug (2, "ArgusCreateSQLSaveTable: %s\n", str);
-#endif
-                  if ((retn = mysql_real_query(RaMySQL, str, strlen(str))) != 0)
-                     ArgusLog(LOG_INFO, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
-
-                  ArgusCreateTable = 1;
-                  RaSQLCurrentTable = strdup(stable);
-               }
-            }
-         }
-
+         RabootpSQLCreateTable(ArgusParser, stable);
       } else {
          if (RaSQLCurrentTable == NULL)
             RaSQLCurrentTable = strdup(stable);
