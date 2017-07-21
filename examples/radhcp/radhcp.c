@@ -60,6 +60,7 @@
 #include "rabootp_lease_pullup.h"
 #include "argus_format_json.h"
 #include "rabootp_l2addr_list.h"
+#include "rabootp_sql.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
@@ -362,15 +363,28 @@ ArgusHandleSearchCommand (char *command)
    snprintf(temporary, sizeof(temporary), "%zd\n", invec_used);
    retn[0] = &temporary[0];
 
-   invecstr[0] = '\0';
-   memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
-
-   /* leave a little room at the end of the buffer because
-    * ArgusPrintTime() doesn't take a length parameter so we can't
-    * tell it when to stop!
+   /* only dump search results to database if the query was supplied
+    * on the commandline.
     */
-   RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN-64, fmtable);
-   retn[1] = invecstr;
+   if (global_query_str && ArgusParser->writeDbstr) {
+      ssize_t i;
+
+      for (i = 0; i < invec_used; i++) {
+         struct ArgusDhcpStruct *ads = invec[i].data;
+         ArgusCreateSQLSaveTable(RaDatabase, ads->sql_table_name);
+         RabootpSQLInsertOne(ArgusParser, &invec[i], ads->sql_table_name);
+      }
+   } else {
+      invecstr[0] = '\0';
+      memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
+
+      /* leave a little room at the end of the buffer because
+       * ArgusPrintTime() doesn't take a length parameter so we can't
+       * tell it when to stop!
+       */
+      RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN-64, fmtable);
+      retn[1] = invecstr;
+   }
 
    while (invec_used > 0) {
      invec_used--;
