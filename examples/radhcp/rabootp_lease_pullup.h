@@ -22,6 +22,9 @@
 
 # include "rabootp_interval_tree.h"
 
+void
+RabootpLeasePullupSort(struct ArgusDhcpIntvlNode *, size_t);
+
 int
 RabootpLeasePullup(const struct ArgusDhcpIntvlNode * const, size_t,
                    struct ArgusDhcpIntvlNode * const, size_t);

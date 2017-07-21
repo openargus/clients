@@ -26,6 +26,7 @@
  * transaction ID).
  */
 
+#include <stdlib.h>
 #include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
 
@@ -62,13 +63,39 @@ __overlap(const struct ArgusDhcpIntvlNode * const a,
    return 0;
 }
 
+static int
+__compare_addr_intvl(const void *a, const void *b)
+{
+   const struct ArgusDhcpIntvlNode *ina = a;
+   const struct ArgusDhcpIntvlNode *inb = b;
+   int res;
+ 
+   res = memcmp(&ina->data->rep.yiaddr, &inb->data->rep.yiaddr,
+                sizeof(ina->data->rep.yiaddr));
+   if (res)
+      return res;
+
+   if (timercmp(&ina->intlo, &inb->intlo, <))
+      return -1;
+   if (timercmp(&ina->intlo, &inb->intlo, >))
+      return 1;
+   return 0;
+}
+
+void
+RabootpLeasePullupSort(struct ArgusDhcpIntvlNode *src_invec,
+                       size_t src_nitems)
+{
+   /* src_invec[] must be sorted by (yiaddr, starttime) such that all records
+    * with the same IP address are contiguous and all records for a given IP
+    * address are in ascending order by time.
+    */
+   qsort(src_invec, src_nitems, sizeof(*src_invec), __compare_addr_intvl);
+}
+
 /* caller must hold references to all of the dhcp structures pointed to by
  * the interval nodes.  RabootpLeasePullup increments the refcount for every
  * ArgusDhcpStruct referenced by the output vector, dst_invec.
- *
- * src_invec[] must be sorted by (yiaddr, starttime) such that all records
- * with the same IP address are contiguous and all records for a given IP
- * address are in ascending order by time.
  */
 int
 RabootpLeasePullup(const struct ArgusDhcpIntvlNode * const src_invec,

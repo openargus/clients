@@ -216,9 +216,10 @@ ArgusHandleSearchCommand (char *command)
    int res = 0; /* ok */
    char *string = &command[8];
    char **retn = ArgusHandleResponseArray;
-   struct ArgusDhcpIntvlNode *invec;
+   struct ArgusDhcpIntvlNode *invec, *tmp_invec;
    size_t invec_nitems = 256; /* needs to be tunable? or automatic? */
-   ssize_t invec_used;
+   ssize_t invec_used, tmp_invec_used;
+   int pullup = 0; /* combine consecutive leases for same mac/ip pair */
 
    struct tm starttime = {0, };
    struct tm endtime = {0, };
@@ -227,6 +228,7 @@ ArgusHandleSearchCommand (char *command)
    struct timeval starttime_tv;
    struct timeval endtime_tv;
    struct in_addr addr = {0, };
+
 
    /* Also remember where in the string the separator was. */
    char *plusminusloc = NULL;
@@ -272,7 +274,7 @@ ArgusHandleSearchCommand (char *command)
    }
 
    if (string[off] != '\0') {
-      if (string[off] == 'i' && string[off+1] == 'p' && string[off+2] == ':') {
+      if (string[off] == 'i' && string[off+1] == 'p' && string[off+2] == '=') {
          DEBUGLOG(1, "%s: Checking for IP address in command (str=%s)\n",
                   __func__, &string[off+3]);
          /* unsafe - no check for null term */
@@ -284,8 +286,18 @@ ArgusHandleSearchCommand (char *command)
          }
          addr.s_addr = ntohl(addr.s_addr);
          DEBUGLOG(1, "%s: Searching for IP address 0x%08x\n", __func__, addr.s_addr);
+         /* skip over the ip=... */
+         while (!isspace(string[off]) && string[off] != '\0')
+            off++;
+
+         /* and any spaces after */
+         while (isspace(string[off]) && string[off] != '\0')
+            off++;
       }
    }
+
+   if (!strcasecmp(&string[off], "pullup"))
+      pullup = 1;
 
    localtime_r(&tsec, &endtime);
 
@@ -317,22 +329,33 @@ ArgusHandleSearchCommand (char *command)
    endtime_tv.tv_sec = mktime(&endtime);
    endtime_tv.tv_usec = 0;
 
-   if (addr.s_addr == 0) {
-      invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv,
-                                                 invec, invec_nitems);
-   } else {
-      int tmp_invec_used;
-      struct ArgusDhcpIntvlNode *tmp_invec;
+   tmp_invec = ArgusMalloc(sizeof(*tmp_invec)*invec_nitems);
+   if (tmp_invec == NULL) {
+      retn[0] = "Not enough memory\n";
+      retn[1] = "FAIL\n";
+      retn[2] = NULL;
+      res = -1;
+      goto out;
+   }
 
-      tmp_invec = ArgusMalloc(sizeof(*tmp_invec)*invec_nitems);
-      if (tmp_invec == NULL) {
-         retn[0] = "Not enough memory\n";
-         retn[1] = "FAIL\n";
-         retn[2] = NULL;
+   if (addr.s_addr == 0) {
+      tmp_invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv,
+                                                     tmp_invec, invec_nitems);
+
+      if (tmp_invec_used < 0) {
+         retn[0] = "FAIL\n";
+         retn[1] = NULL;
          res = -1;
+         ArgusFree(tmp_invec);
          goto out;
       }
 
+      /* If we're going to combine consecutive leases, need to first sort
+       * the array.
+       */
+      if (tmp_invec_used > 0 && pullup)
+         RabootpLeasePullupSort(tmp_invec, tmp_invec_used);
+   } else {
       tmp_invec_used = __search_ipaddr(&addr, &starttime_tv, &endtime_tv,
                                        tmp_invec, invec_nitems);
       if (tmp_invec_used < 0) {
@@ -342,15 +365,23 @@ ArgusHandleSearchCommand (char *command)
          ArgusFree(tmp_invec);
          goto out;
       }
+   }
 
+   if (pullup) {
       invec_used = RabootpLeasePullup(tmp_invec, tmp_invec_used,
                                       invec, invec_nitems);
       while (tmp_invec_used > 0) {
         tmp_invec_used--;
         ArgusDhcpStructFree(tmp_invec[tmp_invec_used].data);
       }
-      ArgusFree(tmp_invec);
+   } else {
+      invec_used = tmp_invec_used;
+      while (tmp_invec_used > 0) {
+        tmp_invec_used--;
+        invec[tmp_invec_used] = tmp_invec[tmp_invec_used];
+      }
    }
+   ArgusFree(tmp_invec);
 
    if (invec_used < 0) {
          retn[0] = "FAIL\n";
