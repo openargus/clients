@@ -185,7 +185,7 @@ int
 IntvlTreeForEach(struct ArgusDhcpIntvlTree * const head,
                   IntvlTreeCallback cb, void *cp_arg0)
 {
-   int rv;
+   int rv = 0;
    struct ArgusDhcpIntvlNode *node;
 
    MUTEX_LOCK(&head->lock);
