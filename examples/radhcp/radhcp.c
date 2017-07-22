@@ -96,6 +96,9 @@ void RaArgusInputComplete (struct ArgusInput *input) {};
 int RaTreePrinted = 0;
 int RaPruneLevel = 0;
 
+/* max number of interval-tree nodes to allocate in an array for searching */
+static const size_t INVECMAX = 16*1024;
+
 struct RaProcessStruct {
    int status, timeout;
    int value, size;
@@ -199,7 +202,7 @@ ArgusHandleSearchCommand (char *command)
    char *string = &command[8];
    char **retn = ArgusHandleResponseArray;
    struct ArgusDhcpIntvlNode *invec, *tmp_invec;
-   size_t invec_nitems = 256; /* needs to be tunable? or automatic? */
+   size_t invec_nitems = 0;
    ssize_t invec_used, tmp_invec_used;
    int pullup = 0; /* combine consecutive leases for same mac/ip pair */
 
@@ -301,6 +304,12 @@ ArgusHandleSearchCommand (char *command)
       /* Not a time relative to "now" AND not a time range */
       endtime = starttime;
    }
+
+   invec_nitems = RabootpIntvlTreeCount();
+   if (invec_nitems == 0)
+      invec_nitems = 1;
+   else if (invec_nitems > INVECMAX)
+      invec_nitems = INVECMAX;
 
    invec = ArgusMalloc(invec_nitems * sizeof(struct ArgusDhcpIntvlNode));
    if (invec == NULL)
