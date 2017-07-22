@@ -18,14 +18,9 @@ static ssize_t
 RabootpPrintL2(const struct ArgusParserStruct * const parser,
                const void * const datum, char *str, size_t len)
 {
-   size_t tmplen = 0;
-   size_t remain = len;
-   ssize_t rv;
-
-   rv = snprintf_append(str, &tmplen, &remain, "%s",
-                        etheraddr_string((struct ArgusParserStruct *)parser,
-                                         (unsigned char *)datum));
-   return tmplen;
+   return snprintf(str, len, "%s",
+                   etheraddr_string((struct ArgusParserStruct *)parser,
+                                    (unsigned char *)datum));
 }
 
 static ssize_t
@@ -214,8 +209,7 @@ RabootpPrintField(const struct ArgusParserStruct * const parser,
          __adv(rv, &used, &remain);
    }
    value[0] = 0;
-   rv = ArgusPrintField(parser, table_entry, ptr, 0,
-                        value, RABOOTP_PRINT_FIELD_MAX);
+   ArgusPrintField(parser, table_entry, ptr, 0, value, RABOOTP_PRINT_FIELD_MAX);
    if (fmtable->fieldData) {
       rv = fmtable->fieldData(out+used, remain, DataTypeString, value);
       if (rv > 0)

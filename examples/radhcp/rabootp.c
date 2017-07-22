@@ -112,7 +112,7 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 {
    int newads = 0;
    uint32_t xid;
-   struct ArgusDhcpStruct *ads;
+   struct ArgusDhcpStruct *ads = NULL;
    struct ArgusDhcpStruct parsed;
    register const struct dhcp_packet *bp;
    enum ArgusDhcpState newstate;

@@ -445,7 +445,6 @@ ArgusHandleTreeCommand (char *command)
    static char buf[4096];
 
    char *string = &command[6], *sptr;
-   int slen = strlen(string);
    char **retn = ArgusHandleResponseArray;
    char *result;
    int verbose = 0;
@@ -509,9 +508,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if (ArgusLabeler->ArgusAddrTree == NULL)
          if ((ArgusLabeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
             ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
-
-      ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
-      parser->ArgusLabeler = ArgusLabeler;
 
       ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
       parser->ArgusLabeler = ArgusLabeler;
@@ -717,7 +713,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
          struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
-         struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
 
          unsigned short proto = 0, sport = 0, dport = 0;
          int type, process = 0, dhcpTransaction = 0;
@@ -767,8 +762,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             }
 
             if (dhcpTransaction) {
-               struct ArgusDhcpStruct dhcpbuf, *dhcp = &dhcpbuf;
-
                if (ArgusParseDhcpRecord(parser, argus, timer) != NULL) {
                   DEBUGLOG(2, "%s: %s", __func__, ArgusBuf);
                   ArgusBuf[0] = '\0';
