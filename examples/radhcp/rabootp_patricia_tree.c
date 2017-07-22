@@ -206,7 +206,6 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
                                const struct timeval * const intlo,
                                struct ArgusParserStruct *parser)
 {
-   struct ArgusLabelerStruct *labeler;
    struct RaAddressStruct *ras;
    struct rabootp_l2addr_list_head *l2list;
    struct rabootp_l2addr_entry *l2entry;
@@ -215,7 +214,6 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
 
    if (parser == NULL)
       parser = ArgusParser;
-   labeler = parser->ArgusLabeler;
 
    ras = __find(yiaddr, parser);
    if (ras == NULL) {
