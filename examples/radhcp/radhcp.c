@@ -61,28 +61,10 @@
 #include "argus_format_json.h"
 #include "rabootp_l2addr_list.h"
 #include "rabootp_sql.h"
+#include "rasql.h"
 
 #if defined(ARGUS_MYSQL)
 #include <mysql.h>
-
-extern void RaMySQLInit (void);
-
-char *ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, char *, char *, int, int);
-int ArgusGrepBuf (regex_t *, char *, char *);
-
-extern char RaSQLSaveTable[];
-extern char *ArgusGetSQLSaveTable();
-
-extern int RaSQLDBDeletes;
-extern int ArgusDropTable;
-extern int ArgusCreateTable;
-extern int RaSQLCacheDB;
-
-extern long long ArgusTotalSQLSearches;
-extern long long ArgusTotalSQLUpdates;
-extern long long ArgusTotalSQLWrites;
-
-extern int ArgusSOptionRecord;
 
 extern pthread_mutex_t RaMySQLlock;
 extern MYSQL *RaMySQL;
