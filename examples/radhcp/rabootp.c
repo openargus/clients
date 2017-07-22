@@ -875,8 +875,6 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
 {
    register u_int16_t tag;
    register u_int len, size;
-   register const char *cp;
-   register char c;
    int first;
    u_int32_t ul;
    u_int16_t us;
@@ -899,13 +897,6 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
          continue;
       if (tag == DHO_END)
          return;
-
-      /* we don't need to format the option as text, but this still
-       * tells us how to extract the data -- a particular size integer,
-       * ascii, etc.
-       */
-      cp = tok2str(tag2str, "?T%u", tag);
-      c = *cp++;
 
       /* Get the length; check for truncation */
       if (bp + 1 >= endp)
@@ -1090,17 +1081,7 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
          continue;
       }
 
-      /* Print data */
       size = len;
-      if (c == '?') {
-         /* Base default formats for unknown tags on data size */
-         if (size & 1)
-            c = 'b';
-         else if (size & 2)
-            c = 's';
-         else
-            c = 'l';
-      }
 
       /* If this is an option we care about, keep going and parse.
        * Otherwise, just note that the option was present and go
@@ -1130,7 +1111,6 @@ static int
 __raboot_dump_node_req(void *arg0,
                        const struct ArgusDhcpClientNode * const node)
 {
-   struct ArgusDhcpStruct *data;
    int i;
    size_t optarrlen;
    struct in_addr msb;
@@ -1142,7 +1122,6 @@ __raboot_dump_node_req(void *arg0,
    snprintf_append(s->str, &s->len, &s->remain, "  REQUEST ");
 
    optarrlen = sizeof(node->data->req.options)/sizeof(node->data->req.options[0]);
-   data = node->data;
 
    snprintf_append(s->str, &s->len, &s->remain, "options ");
    for (i = 0; i < optarrlen; i++)
