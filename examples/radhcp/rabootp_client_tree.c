@@ -195,7 +195,7 @@ int
 ClientTreeForEach(struct ArgusDhcpClientTree * const head,
                   ClientTreeCallback cb, void *cp_arg0)
 {
-   int rv;
+   int rv = 0;
    struct ArgusDhcpClientNode *node;
 
    MUTEX_LOCK(&head->lock);
