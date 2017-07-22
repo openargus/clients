@@ -69,6 +69,7 @@ ArgusDhcpIntvlTreeAlloc(void)
    res = ArgusMalloc(sizeof(*res));
    if (res) {
       RB_INIT(&res->inttree);
+      res->count = 0;
       pthread_mutex_init(&res->lock, NULL);
    }
 
@@ -113,6 +114,8 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
 
       MUTEX_LOCK(&head->lock);
       RB_INSERT(dhcp_intvl_tree, &head->inttree, node);
+      if (head->count < -1U)
+         head->count++;
       MUTEX_UNLOCK(&head->lock);
    }
 
@@ -130,8 +133,11 @@ ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
    search.data = NULL;
    MUTEX_LOCK(&head->lock);
    node = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
-   if (node)
+   if (node) {
       RB_REMOVE(dhcp_intvl_tree, &head->inttree, node);
+      if (head->count > 0)
+         head->count--;
+   }
    MUTEX_UNLOCK(&head->lock);
 
    if (node)
@@ -378,4 +384,15 @@ IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
       return rv;
 
    return x.used;
+}
+
+size_t
+IntvlTreeCount(struct ArgusDhcpIntvlTree *head)
+{
+   size_t count = 0;
+   if (MUTEX_LOCK(&head->lock) == 0) {
+      count = head->count;
+      MUTEX_UNLOCK(&head->lock);
+   }
+   return count;
 }

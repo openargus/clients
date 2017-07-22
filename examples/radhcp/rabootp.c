@@ -1427,6 +1427,11 @@ int RabootpIntvlRemove(const struct timeval * const intlo)
    return ArgusDhcpIntvlTreeRemove(&interval_tree, intlo);
 }
 
+size_t RabootpIntvlTreeCount(void)
+{
+   return IntvlTreeCount(&interval_tree);
+}
+
 void
 RabootpCallbacksInit(struct ArgusParserStruct *parser)
 {

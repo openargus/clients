@@ -39,6 +39,7 @@ struct ArgusDhcpIntvlNode {
 
 struct ArgusDhcpIntvlTree {
   struct dhcp_intvl_tree inttree;
+  unsigned long long count;
   pthread_mutex_t lock;
 };
 
@@ -75,5 +76,5 @@ ssize_t IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
                                const struct timeval * const stop,
                                struct ArgusDhcpIntvlNode *invec,
                                size_t nitems);
-
+size_t IntvlTreeCount(struct ArgusDhcpIntvlTree *);
 #endif
