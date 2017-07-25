@@ -137,6 +137,14 @@ struct invecTimeRangeStruct {
 };
 
 static int
+__is_oneshot_query(void)
+{
+   if (global_query_str != NULL)
+      return 1;
+   return 0;
+}
+
+static int
 __search_ipaddr_cb(struct rabootp_l2addr_entry *e, void *arg)
 {
    struct invecTimeRangeStruct *itr = arg;
@@ -607,9 +615,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #endif
       RabootpCallbacksInit(parser);
       timer = RabootpTimerInit(NULL, NULL); /* for now */
-      if (pthread_create(&timer_thread, NULL, RabootpTimer, timer) < 0)
-         ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
-      RabootpProtoTimersInit(timer);
+      if (!__is_oneshot_query()) {
+         if (pthread_create(&timer_thread, NULL, RabootpTimer, timer) < 0)
+            ArgusLog(LOG_ERR, "%s: unable to create timer thread\n", __func__);
+         RabootpProtoTimersInit(timer);
+      }
    }
 
    invecstr = ArgusMalloc(INVECSTRLEN);
@@ -644,9 +654,11 @@ RaParseComplete (int sig)
 #if defined(ARGUS_MYSQL)
          mysql_close(RaMySQL);
 #endif
-         pthread_join(timer_thread, NULL);
-         RabootpProtoTimersCleanup(timer);
-         RabootpTimerCleanup(timer);
+         if (!__is_oneshot_query()) {
+            pthread_join(timer_thread, NULL);
+            RabootpProtoTimersCleanup(timer);
+            RabootpTimerCleanup(timer);
+         }
          RabootpCallbacksCleanup();
          RabootpCleanup();
          ArgusFree(invecstr);
