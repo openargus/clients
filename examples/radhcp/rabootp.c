@@ -188,8 +188,13 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       newstate = fsa_advance_state(&parsed, ads);
       if (ads->state != newstate) {
          if (newstate == BOUND) {
+
+            /* DEBUG -- THIS CONDITIONAL "FIXES" THE INDEFINITE REFCOUNT */
+            if (ads->last_bind.tv_sec == 0) {
             ads->last_bind.tv_sec = time->end.tv_sec;
             ads->last_bind.tv_usec = time->end.tv_usec;
+            }
+
          }
          parsed.state = newstate;
          rabootp_cb_exec(&callback.state_change, &parsed, ads);
