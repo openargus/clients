@@ -52,11 +52,11 @@ static int
 __dhcp_client_compare(struct ArgusDhcpIntvlNode *aa,
                       struct ArgusDhcpIntvlNode *bb)
 {
-   int res;
-   struct timeval diff;
-
-   timersub(&aa->intlo, &bb->intlo, &diff);
-   return diff.tv_sec;
+   if (timercmp(&aa->intlo, &bb->intlo, <))
+      return -1;
+   else if (timercmp(&aa->intlo, &bb->intlo, >))
+      return 1;
+   return 0;
 }
 
 RB_GENERATE_STATIC(dhcp_intvl_tree, ArgusDhcpIntvlNode, inttree, __dhcp_client_compare);
