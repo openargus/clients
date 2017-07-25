@@ -56,6 +56,12 @@ ArgusDhcpStructFree(void *v)
    struct ArgusDhcpStruct *a = v;
 
    if (MUTEX_LOCK(&__memlock) == 0) {
+
+#ifdef ARGUSDEBUG
+      if (a->refcount == 0)
+         abort();
+#endif
+
       if (--(a->refcount) == 0) {
          ArgusDhcpStructFreeClientID(v);
          ArgusDhcpStructFreeReplies(v);
@@ -73,6 +79,13 @@ void
 ArgusDhcpStructUpRef(struct ArgusDhcpStruct *a)
 {
    if (MUTEX_LOCK(&__memlock) == 0) {
+
+#ifdef ARGUSDEBUG
+      if (a->refcount == 255) {
+         abort();
+      }
+#endif
+
       a->refcount++;
       MUTEX_UNLOCK(&__memlock);
    }
