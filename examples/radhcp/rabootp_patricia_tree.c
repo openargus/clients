@@ -34,6 +34,7 @@
 #include "argus_filter.h" /* etheraddr_string */
 #include "argus_debug.h"
 #include "rabootp.h"
+#include "rabootp_memory.h"
 #include "rabootp_l2addr_list.h"
 #include "rabootp_interval_tree.h"
 #include "rabootp_patricia_tree.h"
@@ -98,16 +99,15 @@ RabootpPatriciaTreeUpdate(const struct ArgusDhcpStruct * const parsed,
       goto out;
    }
 
-   node = IntvlTreeFind(intvltree, &cached->last_bind);
-   if (node == NULL) {
-      ArgusDhcpIntvlTreeInsert(intvltree,
-                               &cached->last_bind,
-                               parsed->rep.leasetime,
-                               cached);
-   } else {
+   ArgusDhcpStructUpRef(cached);
+   if (ArgusDhcpIntvlTreeInsert(intvltree,
+                                &cached->last_bind,
+                                parsed->rep.leasetime,
+                                cached) != 0) {
       /* can't update interval tree yet.  we already complain about this
        * elsewhere
        */
+      ArgusDhcpStructFree(cached);
    }
 
 out:

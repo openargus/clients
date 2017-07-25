@@ -113,9 +113,13 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
       node->subtreehi = node->inthi;
 
       MUTEX_LOCK(&head->lock);
-      RB_INSERT(dhcp_intvl_tree, &head->inttree, node);
-      if (head->count < -1U)
-         head->count++;
+      if (RB_INSERT(dhcp_intvl_tree, &head->inttree, node)) {
+         ArgusFree(node);
+         node = NULL;
+      } else {
+         if (head->count < -1U)
+            head->count++;
+      }
       MUTEX_UNLOCK(&head->lock);
    }
 

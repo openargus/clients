@@ -1315,16 +1315,12 @@ __rabootp_update_interval_tree(const void * const v_parsed,
          struct ArgusDhcpIntvlTree *head = v_arg;
          struct ArgusDhcpIntvlNode *node;
 
-         /* IntvlTreeFind() ups the refcount on cached if found */
-         node = IntvlTreeFind(&interval_tree, &cached->last_bind);
-         if (node == NULL) {
-            ArgusDhcpIntvlTreeInsert(head,
-                               &cached->last_bind,
-                               parsed->rep.leasetime,
-                               cached);
-         } else {
-            /* need ArgusDhcpIntvlTreeUpdate() ?  . . . yes */
-            /* remove from tree and re-insert */
+         ArgusDhcpStructUpRef(cached);
+         if (ArgusDhcpIntvlTreeInsert(head,
+                                      &cached->last_bind,
+                                      parsed->rep.leasetime,
+                                      cached) != 0) {
+            ArgusDhcpStructFree(cached);
             DEBUGLOG(1, "CAN'T UPDATE INTERVAL TREE YET!!!\n");
          }
       }
