@@ -168,6 +168,14 @@ static const struct ArgusPrinterTable ArgusDhcpIntvlPrinterTable[] = {
                            RabootpSQLBindTimeval),
 };
 
+static const struct ArgusPrinterTable ArgusDhcpRequestTable[] = {
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4RequstOptsStruct, requested_hostname,
+                           "requested_hostname", \
+                           RabootpPrintString, "varchar(128)", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
+                           RabootpSQLBindString),
+};
+
 static inline void
 __adv(ssize_t val, ssize_t *used, size_t *remain)
 {
@@ -279,12 +287,15 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
    int t;  /* table index */
    int timax; /* size of interval printer table */
    int tcmax; /* size of client printer table */
+   int tqmax; /* size of client request table */
    ssize_t fmtlen; /* length of string from ArgusPrintField */
 
    timax = sizeof(ArgusDhcpIntvlPrinterTable)/
            sizeof(ArgusDhcpIntvlPrinterTable[0]);
    tcmax = sizeof(ArgusDhcpStructPrinterTable)/
            sizeof(ArgusDhcpStructPrinterTable[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
 
    if (fmtable->docStart) {
       fmtlen = fmtable->docStart(str, strlen, "Query Results");
@@ -345,6 +356,24 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
             str += fmtlen;
          }
       }
+      for (t = 0; t < tqmax; t++) {
+         fmtlen = RabootpPrintField(parser, &ArgusDhcpRequestTable[t],
+                                    &invec[n].data->req, str, strlen, fmtable);
+         if (fmtlen > 0) {
+            strlen -= ((fmtlen < strlen) ? fmtlen : strlen);
+            str += fmtlen;
+         }
+
+         if (fmtable->fieldSeparate == NULL)
+            continue;
+
+         fmtlen = fmtable->fieldSeparate(str, strlen,
+                                         ArgusDhcpRequestTable[t].label);
+         if (fmtlen > 0) {
+            strlen -= ((fmtlen < strlen) ? fmtlen : strlen);
+            str += fmtlen;
+         }
+      }
 
       fmtlen = __print_lease(parser, invec[n].data, str, strlen, fmtable);
       MUTEX_UNLOCK(invec[n].data->lock);
@@ -390,7 +419,7 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
 unsigned
 RabootpPrintMaxFields(void)
 {
-   unsigned tcmax, timax, trmax;
+   unsigned tcmax, timax, trmax, tqmax;
 
    tcmax = sizeof(ArgusDhcpStructPrinterTable)/
            sizeof(ArgusDhcpStructPrinterTable[0]);
@@ -398,8 +427,10 @@ RabootpPrintMaxFields(void)
            sizeof(ArgusDhcpIntvlPrinterTable[0]);
    trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
            sizeof(ArgusDhcpReplyPrinterTablep[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
 
-   return (tcmax + timax + trmax);
+   return (tcmax + timax + trmax + tqmax);
 }
 
 #if defined(ARGUS_MYSQL)
@@ -410,7 +441,7 @@ int RabootpPrintSQL(const struct ArgusParserStruct * const parser,
                     const struct ArgusDhcpIntvlNode *node,
                     MYSQL_BIND *bindvec, size_t nitems)
 {
-   int timax, tcmax, trmax, t;
+   int timax, tcmax, trmax, tqmax, t;
    int res;
    int out_idx = 0;
 
@@ -420,6 +451,8 @@ int RabootpPrintSQL(const struct ArgusParserStruct * const parser,
            sizeof(ArgusDhcpIntvlPrinterTable[0]);
    trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
            sizeof(ArgusDhcpReplyPrinterTablep[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
 
    for (t = 0; t < tcmax && out_idx < nitems; t++) {
       res = ArgusPrintFieldSQL(parser, ArgusDhcpStructPrinterTable, node->data, t,
@@ -439,13 +472,19 @@ int RabootpPrintSQL(const struct ArgusParserStruct * const parser,
       if (res > 0)
          out_idx++;
    }
+   for (t = 0; t < tqmax && out_idx < nitems; t++) {
+      res = ArgusPrintFieldSQL(parser, ArgusDhcpRequestTable,
+                               &(node->data->req), t, &bindvec[out_idx]);
+      if (res > 0)
+         out_idx++;
+   }
    return out_idx;
 }
 
 int RabootpPrintLabelSQL(const struct ArgusParserStruct * const parser,
                          const char **namevec, size_t nitems)
 {
-   int timax, tcmax, trmax, t;
+   int timax, tcmax, trmax, t, tqmax;
    int res;
    int out_idx = 0;
 
@@ -455,6 +494,8 @@ int RabootpPrintLabelSQL(const struct ArgusParserStruct * const parser,
            sizeof(ArgusDhcpIntvlPrinterTable[0]);
    trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
            sizeof(ArgusDhcpReplyPrinterTablep[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
 
    for (t = 0; t < tcmax && out_idx < nitems; t++) {
       if (ArgusDhcpStructPrinterTable[t].enabled > ENA_DISPLAY) {
@@ -474,13 +515,19 @@ int RabootpPrintLabelSQL(const struct ArgusParserStruct * const parser,
          out_idx++;
       }
    }
+   for (t = 0; t < tqmax && out_idx < nitems; t++) {
+      if (ArgusDhcpRequestTable[t].enabled > ENA_DISPLAY) {
+         namevec[out_idx] = ArgusDhcpRequestTable[t].label;
+         out_idx++;
+      }
+   }
    return out_idx;
 }
 
 int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
                         const char **typevec, size_t nitems)
 {
-   int timax, tcmax, trmax, t;
+   int timax, tcmax, trmax, tqmax, t;
    int res;
    int out_idx = 0;
 
@@ -490,6 +537,8 @@ int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
            sizeof(ArgusDhcpIntvlPrinterTable[0]);
    trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
            sizeof(ArgusDhcpReplyPrinterTablep[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
 
    for (t = 0; t < tcmax && out_idx < nitems; t++) {
       if (ArgusDhcpStructPrinterTable[t].enabled > ENA_DISPLAY) {
@@ -506,6 +555,12 @@ int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
    for (t = 0; t < trmax && out_idx < nitems; t++) {
       if (ArgusDhcpReplyPrinterTablep[t].enabled > ENA_DISPLAY) {
          typevec[out_idx] = ArgusDhcpReplyPrinterTablep[t].sqltype;
+         out_idx++;
+      }
+   }
+   for (t = 0; t < tqmax && out_idx < nitems; t++) {
+      if (ArgusDhcpRequestTable[t].enabled > ENA_DISPLAY) {
+         typevec[out_idx] = ArgusDhcpRequestTable[t].sqltype;
          out_idx++;
       }
    }

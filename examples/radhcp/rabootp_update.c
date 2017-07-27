@@ -220,6 +220,11 @@ __update_dhcprequest(const struct ArgusDhcpStruct * const parsed,
    if (__options_mask_isset(parsed->req.options, DHO_DHCP_REQUESTED_ADDRESS))
       cached->req.requested_addr = parsed->req.requested_addr;
 
+   if (__options_mask_isset(parsed->req.options, DHO_HOST_NAME)) {
+      STRDUP_CHANGE_NOTIFY(cached->req.requested_hostname,
+                           parsed->req.requested_hostname);
+   }
+
    if (parsed->req.requested_options_count) {
       uint8_t *un;
       size_t unlen;
