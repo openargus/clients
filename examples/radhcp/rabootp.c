@@ -220,7 +220,7 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    MUTEX_UNLOCK(ads->lock);
 
    ArgusDhcpStructFreeReplies(&parsed);
-   ArgusDhcpStructFreeClientID(&parsed);
+   ArgusDhcpStructFreeRequest(&parsed);
 
    if (!newads) {
       /* ClientTreeFind() ups the refcount.  We're done making changes,

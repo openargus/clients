@@ -4,7 +4,7 @@
 
 struct ArgusDhcpStruct *ArgusDhcpStructAlloc(void);
 void ArgusDhcpStructFreeReplies(void *);
-void ArgusDhcpStructFreeClientID(void *);
+void ArgusDhcpStructFreeRequest(void *);
 void ArgusDhcpStructFree(void *);
 void ArgusDhcpStructUpRef(struct ArgusDhcpStruct *);
 

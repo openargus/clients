@@ -42,12 +42,14 @@ ArgusDhcpStructFreeReplies(void *v)
 }
 
 void
-ArgusDhcpStructFreeClientID(void *v)
+ArgusDhcpStructFreeRequest(void *v)
 {
    struct ArgusDhcpStruct *a = v;
 
    if (a->req.client_id_len > 8 && a->req.client_id.ptr)
       ArgusFree(a->req.client_id.ptr);
+   if (a->req.requested_opts)
+      ArgusFree(a->req.requested_opts);
 }
 
 void
@@ -63,7 +65,7 @@ ArgusDhcpStructFree(void *v)
 #endif
 
       if (--(a->refcount) == 0) {
-         ArgusDhcpStructFreeClientID(v);
+         ArgusDhcpStructFreeRequest(v);
          ArgusDhcpStructFreeReplies(v);
          if (a->sql_table_name)
             free(a->sql_table_name);
