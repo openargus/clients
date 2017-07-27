@@ -200,7 +200,13 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
 
       intvlnode = ArgusCalloc(1, sizeof(*intvlnode));
       if (intvlnode) {
-         ArgusDhcpStructUpRef(cached); /* up again for the interval tree */
+         if (cached->timers.intvl) {
+            RabootpTimerStop(rts, cached->timers.intvl);
+            free(cached->timers.intvl);
+          } else {
+            /* up again for the interval tree */
+            ArgusDhcpStructUpRef(cached);
+         }
          intvlnode->data = cached;
          intvlnode->intlo = cached->last_bind;
          cached->timers.intvl = RabootpTimerStart(rts, &exp_intvl, __intvl_exp_cb,
@@ -271,7 +277,7 @@ static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
    struct ArgusDhcpStruct *cached = v_cached;
    struct RabootpTimerStruct *rts = v_arg;
 
-   if (cached->state == BOUND) {
+   if (cached->state == BOUND || cached->state == RENEWING) {
       if (cached->timers.non_lease) {
          RabootpTimerStop(rts, cached->timers.non_lease);
          free(cached->timers.non_lease);
