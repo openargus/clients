@@ -978,9 +978,19 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
       }
 
       /* 12 */
-      if (tag == DHO_HOST_NAME && op == BOOTREPLY) {
+      if (tag == DHO_HOST_NAME) {
+         u_char lenchar = (u_char)(len & 0xff);
+
          if (len > 0) {
-            ads->rep.hostname = __extract_string(bp, (u_char)(len & 0xff));
+            if (op == BOOTREPLY) {
+               if (ads->rep.hostname)
+                  free(ads->rep.hostname);
+               ads->rep.hostname = __extract_string(bp, lenchar);
+            } else if (op == BOOTREQUEST) {
+               if (ads->req.requested_hostname)
+                  free(ads->req.requested_hostname);
+               ads->req.requested_hostname = __extract_string(bp, lenchar);
+            }
             bp += len;
          }
          continue;

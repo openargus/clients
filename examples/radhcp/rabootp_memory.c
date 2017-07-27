@@ -50,6 +50,8 @@ ArgusDhcpStructFreeRequest(void *v)
       ArgusFree(a->req.client_id.ptr);
    if (a->req.requested_opts)
       ArgusFree(a->req.requested_opts);
+   if (a->req.requested_hostname)
+      free(a->req.requested_hostname);
 }
 
 void

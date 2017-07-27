@@ -171,9 +171,12 @@ struct ArgusDhcpV4RequstOptsStruct {
    } client_id;                    /* option 61 */
    struct in_addr requested_addr;  /* option 50 */
    struct in_addr requested_server_id; /* option 54 */
+   char *requested_hostname;       /* option 12 */
+
+   /* second cacheline */
    uint8_t requested_options_count;
    uint8_t client_id_len;
-   /* uint8_t pad[4]; */           /* PAD */
+   uint8_t pad[6];
 };
 
 struct ArgusDhcpV4Timers {
@@ -204,24 +207,26 @@ struct ArgusDhcpStruct {
    uint8_t refcount;
    uint8_t pad1[4];
 
-   /* second cacheline */
+   /* second + third cachelines */
    struct ArgusDhcpV4RequstOptsStruct req;
-
-   /* third + fourth cachelines */
-   struct ArgusDhcpV4LeaseOptsStruct rep; /* This is a linked list of replies */
-
-   /* fifth cacheline */
-   struct ArgusDhcpV4Timers timers;
-   struct timeval first_req;       /* this client transaction was first seen */
-   struct timeval last_bind;       /* last time we entered the BOUND state */
+   char *sql_table_name;
+   struct ArgusDhcpV6DUID server_id_v6;
    unsigned short total_responses; /* how many replies received with this xid */
    unsigned short num_responders;  /* how many unique servers replied */
    unsigned short total_requests;  /* request packets with this chaddr+xid */
    unsigned short total_unknownops;/* unknown opcodes received */
 
+   /* do not put ArgusDhcpV4Timers here - shared with timer thread */
+   uint8_t pad3[24];
+
+   /* fourth + fifth cachelines */
+   struct ArgusDhcpV4LeaseOptsStruct rep; /* This is a linked list of replies */
+
    /* sixth cacheline */
-   struct ArgusDhcpV6DUID server_id_v6;
-   char *sql_table_name;
+   struct ArgusDhcpV4Timers timers;
+   struct timeval first_req;       /* this client transaction was first seen */
+   struct timeval last_bind;       /* last time we entered the BOUND state */
+
 };
 
 void RabootpCleanup(void);
