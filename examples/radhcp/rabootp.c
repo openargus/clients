@@ -35,6 +35,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <argus/extract.h>
+#include <arpa/inet.h>
 
 #include "interface.h"
 #include "rabootp.h"

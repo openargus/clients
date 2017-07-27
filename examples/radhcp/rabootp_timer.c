@@ -2,6 +2,11 @@
 #include "argus_config.h"
 #endif
 
+#if defined(ARGUS_THREADS)
+# define _GNU_SOURCE
+# include <pthread.h>
+#endif
+
 #include "rabootp_timer.h"
 #include "argus_util.h"
 #include "argus_parser.h"
