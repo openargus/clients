@@ -2,6 +2,10 @@
 # include "argus_config.h"
 #endif
 
+#if defined(HAVE_ARPA_INET_H)
+# include <arpa/inet.h>
+#endif
+
 #include <limits.h>
 #include "argus_util.h"
 #include "argus_parser.h"
