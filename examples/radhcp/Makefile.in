@@ -89,6 +89,7 @@ SRC =	radhcp.c rabootp.c rasql.c rabootp_memory.c rabootp_client_tree.c \
 	rabootp_l2addr_list.c \
 	rabootp_patricia_tree.c \
 	rabootp_lease_pullup.c \
+	rabootp_querystr.c \
         rabootp_sql.c
 
 PROGS = $(INSTALLBIN)/radhcp
