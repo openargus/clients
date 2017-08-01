@@ -393,6 +393,7 @@ ArgusHandleSearchCommand (char *command)
     * on the commandline.
     */
    if (__is_oneshot_query() && ArgusParser->writeDbstr) {
+#if defined(ARGUS_MYSQL)
       ssize_t i;
 
       for (i = 0; i < invec_used; i++) {
@@ -400,6 +401,9 @@ ArgusHandleSearchCommand (char *command)
          ArgusCreateSQLSaveTable(RaDatabase, ads->sql_table_name);
          RabootpSQLInsertOne(ArgusParser, &invec[i], ads->sql_table_name);
       }
+#else
+      ArgusLog(LOG_ERR, "%s: no dabase support\n", __func__);
+#endif
    } else {
       invecstr[0] = '\0';
       memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
