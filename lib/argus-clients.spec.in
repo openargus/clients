@@ -160,8 +160,6 @@ distribution.
 %files examples
 %defattr(-,root,root)
 %{argusbin}/*
-%{argussbin}/radhcp-setup
-%{_unitdir}/radhcp.service
 %exclude %{argusbin}/ra
 %exclude %{argusbin}/rabins
 %exclude %{argusbin}/racluster
@@ -171,6 +169,7 @@ distribution.
 %exclude %{argusbin}/rastream
 %exclude %{argusbin}/ragraph
 %exclude %{argusbin}/rasql*
+%exclude %{argusbin}/radhcp
 %{argusman}
 %exclude %{argusman}/man1/ra.1.gz
 %exclude %{argusman}/man1/rabins.1.gz
@@ -184,6 +183,28 @@ distribution.
 %exclude %{argusman}/man1/rastream.1.gz
 %exclude %{argusman}/man1/ragraph.1.gz
 %exclude %{argusman}/man1/rasql.1.gz
+
+%package dhcp
+Summary: Argus DHCP-tracking Client Software
+Group: Applications/Internet
+
+%description dhcp
+Argus DHCP-tracking Client Software
+
+%files dhcp
+%defattr(-,root,root)
+%{_sbindir}/radhcp-setup
+%{_unitdir}/radhcp.service
+%{_bindir}/radhcp
+
+%post dhcp
+%systemd_post radhcp.service
+
+%preun dhcp
+%systemd_preun radhcp.service
+
+%postun dhcp
+%systemd_postun_with_restart radhcp.service
 
 
 %package devel
