@@ -170,6 +170,8 @@ distribution.
 %exclude %{argusbin}/ragraph
 %exclude %{argusbin}/rasql*
 %exclude %{argusbin}/radhcp
+%exclude %{argusbin}/radns
+%exclude %{argusbin}/radnsdb
 %{argusman}
 %exclude %{argusman}/man1/ra.1.gz
 %exclude %{argusman}/man1/rabins.1.gz
@@ -205,6 +207,23 @@ Argus DHCP-tracking Client Software
 
 %postun dhcp
 %systemd_postun_with_restart radhcp.service
+
+
+
+
+%package dns
+Summary: Argus DNS-tracking Client Software
+Group: Applications/Internet
+Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.25
+
+%description dns
+Argus DNS-tracking Client Software
+
+%files dns
+%defattr(-,root,root)
+%{_bindir}/radns
+%{_bindir}/radnsdb
+
 
 
 %package devel
