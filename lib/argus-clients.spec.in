@@ -189,6 +189,7 @@ distribution.
 %package dhcp
 Summary: Argus DHCP-tracking Client Software
 Group: Applications/Internet
+Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.22
 
 %description dhcp
 Argus DHCP-tracking Client Software
