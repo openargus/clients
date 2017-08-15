@@ -1391,9 +1391,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       while ((table = RaTables[tableIndex]) != NULL) {
          if (strcmp("Seconds", table)) {
             sprintf (ArgusSQLStatement, "desc %s", table);
-            if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0)
-               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-            break;
+            if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
+               if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
+                  ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+#ifdef ARGUSDEBUG
+               } else {
+                  ArgusDebug (4, "%s: skip missing table %s", __func__, table);
+#endif
+               }
+            } else
+               break;
          }
          tableIndex++;
       }
