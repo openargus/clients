@@ -1392,7 +1392,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (strcmp("Seconds", table)) {
             sprintf (ArgusSQLStatement, "desc %s", table);
             if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0)
-               ArgusLog(LOG_ERR, "mysql_real_qauery error %s", mysql_error(RaMySQL));
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
             break;
          }
          tableIndex++;
