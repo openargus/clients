@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Call this soon after midnight to process yesterday's dhcp leases.
+# Read in two days of argus records so that we catch (most) long leases.
+
+set -e
+export LC_ALL=C
+
+if [[ -L /etc/localtime ]] ; then
+	# let's not open /etc/localtime for every date string formatted
+	export TZ=$(readlink -f /etc/localtime | awk -F/ '{print $(NF-1)"/"$NF}')
+fi
+
+# systemd likes all output on stdout, so redirect stderr.
+( \
+rasql -r mysql://root@localhost/dhcp/dhcp_%Y_%m_%d \
+      -Mtime 1d \
+      -t -3d+2d \
+      -w - \
+   | radhcp -r - \
+            -Mquery:SEARCH:\ when=-1d,table=detail_%Y_%m_%d \
+            -Mquery:SEARCH:\ when=-1d,table=summary_%Y_%m_%d,pullup \
+            -w mysql://root@localhost/dhcp/ \
+            -Mtime 1d \
+) 2>&1

@@ -1,0 +1,8 @@
+[Unit]
+Description=Process DHCP transactions
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/radhcp-nightly
+TimeoutStartSec=1hr
+

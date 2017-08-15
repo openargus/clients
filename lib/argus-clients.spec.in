@@ -61,11 +61,15 @@ install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.l2_l3 $RPM_BUILD_ROO
 install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ipv4matrix $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ipv4matrix
 install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.dns $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.dns
 install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.man $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.man
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.dhcp $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.dhcp
 install -D -m 0755 pkg/rhel/rastream.d/00rasqltimeindex $RPM_BUILD_ROOT%{_sysconfdir}/rastream.d/00rasqltimeindex
 install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
 install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
 install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service
 install -D -m 0755 pkg/rhel/systemd/rastream-process $RPM_BUILD_ROOT%{argussbin}/rastream-process
+install -D -m 0755 pkg/rhel/systemd/radhcp-nightly $RPM_BUILD_ROOT%{argussbin}/radhcp-nightly
+install -D -m 0644 pkg/rhel/systemd/radhcp-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/radhcp-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/radhcp-nightly.service $RPM_BUILD_ROOT%{_unitdir}/radhcp-nightly.service
 %else
 install -D -m 0644 pkg/rhel/sysconfig/rasplit $RPM_BUILD_ROOT/etc/sysconfig/rasplit
 install -D -m 0644 pkg/rhel/systemd/rasplit.service $RPM_BUILD_ROOT%{_unitdir}/rasplit.service
@@ -189,6 +193,9 @@ distribution.
 Summary: Argus DHCP-tracking Client Software
 Group: Applications/Internet
 Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.22
+%if 0%{!?_workstation:1}
+Requires: argus-clients-sql
+%endif
 
 %description dhcp
 Argus DHCP-tracking Client Software
@@ -198,6 +205,12 @@ Argus DHCP-tracking Client Software
 %{_sbindir}/radhcp-setup
 %{_unitdir}/radhcp.service
 %{_bindir}/radhcp
+%if 0%{!?_workstation:1}
+%{_sbindir}/radhcp-nightly
+%{_unitdir}/radhcp-nightly.timer
+%{_unitdir}/radhcp-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.dhcp
+%endif
 
 %post dhcp
 %systemd_post radhcp.service
