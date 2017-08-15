@@ -123,7 +123,6 @@ static struct RabootpTimerStruct *timer = NULL;
 static pthread_t timer_thread;
 
 int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
-static char temporary[32];
 static char *invecstr;
 static char **global_query_strs;
 static const unsigned long INVECSTRLEN = 1024*1024; /* 1 MB */
@@ -384,10 +383,7 @@ ArgusHandleSearchCommand (char *command)
          goto out;
    }
 
-   /* format string here */
-   /* TEMP: output number of transactions found */
-   snprintf(temporary, sizeof(temporary), "%zd\n", invec_used);
-   retn[0] = &temporary[0];
+   DEBUGLOG(1, "%s found %zd matches\n", __func__, invec_used);
 
    /* only dump search results to database if the query was supplied
     * on the commandline.
@@ -413,7 +409,8 @@ ArgusHandleSearchCommand (char *command)
        * tell it when to stop!
        */
       RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN-64, fmtable);
-      retn[1] = invecstr;
+      retn[0] = invecstr;
+      retn[1] = NULL;
    }
 
    while (invec_used > 0) {
