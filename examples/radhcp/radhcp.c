@@ -227,14 +227,16 @@ ArgusHandleSearchCommand (char *command)
       OPT_WHEN = 0,
       OPT_ADDR = 1,
       OPT_PULLUP = 2,
+      OPT_DB = 3,
    };
    static const struct QueryOptsStruct __query_opts[] = {
       { "when", 1 },
       { "addr", 1 },
       { "pullup", 0 },
+      { "table", 1},      /* output database for this response */
    };
    static const size_t nqopts = sizeof(__query_opts)/sizeof(__query_opts[0]);
-   char *parsed[3] = {NULL, };
+   char *parsed[4] = {NULL, };
    char *cpy = NULL;
 
    /* Also remember where in the string the separator was. */
@@ -250,7 +252,12 @@ ArgusHandleSearchCommand (char *command)
    bzero(retn, sizeof(ArgusHandleResponseArray));
 
    cpy = strdup(&command[8]);
-   RabootpParseQueryString(__query_opts, nqopts, cpy, parsed);
+   if (RabootpParseQueryString(__query_opts, nqopts, cpy, parsed) < 0) {
+      retn[0] = "Invalid query string\n";
+      retn[1] = "FAIL\n";
+      res = -1;
+      goto out;
+   }
    string = parsed[OPT_WHEN];
 
    if (string == NULL)
@@ -384,18 +391,60 @@ ArgusHandleSearchCommand (char *command)
    }
 
    DEBUGLOG(1, "%s found %zd matches\n", __func__, invec_used);
+   if (parsed[OPT_DB])
+      DEBUGLOG(1, "%s parsed table name is %s\n", __func__, parsed[OPT_DB]);
+   else
+      DEBUGLOG(1, "%s no parsed table name\n", __func__);
 
    /* only dump search results to database if the query was supplied
     * on the commandline.
     */
-   if (__is_oneshot_query() && ArgusParser->writeDbstr) {
+   if (__is_oneshot_query() && (ArgusParser->writeDbstr || parsed[OPT_DB])) {
 #if defined(ARGUS_MYSQL)
       ssize_t i;
+      char *writeDbstr;
+      char *table = NULL;
+
+      /* If a database string was provided with the query we can't use the
+       * cached table name (ads->sql_table_name).  Stash away the parser's
+       * write-database string and format a new strftime'd table name.
+       */
+      if (parsed[OPT_DB]) {
+         MUTEX_LOCK(&ArgusParser->lock);
+         writeDbstr = ArgusParser->writeDbstr;
+         ArgusParser->writeDbstr = parsed[OPT_DB];
+         MUTEX_UNLOCK(&ArgusParser->lock);
+      }
+
+      /* If the output database table name was provided with the query, its
+       * time component is based on the end of the search time range (times
+       * that overlap the lease interval), not the time when the lease was
+       * last bound.  Use the "usec" variety of ArgusCreateSQLSaveTableName
+       * to force the name to be recalculated.
+       */
+
+      if (parsed[OPT_DB]) {
+         table = ArgusCreateSQLSaveTableName_usec(ArgusParser, NULL,
+                                                  endtime_tv.tv_sec * 1000000LL,
+                                                  parsed[OPT_DB]);
+         if (table == NULL)
+            table = parsed[OPT_DB];
+      }
 
       for (i = 0; i < invec_used; i++) {
          struct ArgusDhcpStruct *ads = invec[i].data;
-         ArgusCreateSQLSaveTable(RaDatabase, ads->sql_table_name);
-         RabootpSQLInsertOne(ArgusParser, &invec[i], ads->sql_table_name);
+
+         if (table == NULL)
+            table = ads->sql_table_name;
+
+         ArgusCreateSQLSaveTable(RaDatabase, table);
+         RabootpSQLInsertOne(ArgusParser, &invec[i], table);
+      }
+
+      if (parsed[OPT_DB]) {
+         MUTEX_LOCK(&ArgusParser->lock);
+         ArgusParser->writeDbstr = writeDbstr;
+         MUTEX_UNLOCK(&ArgusParser->lock);
       }
 #else
       ArgusLog(LOG_ERR, "%s: no dabase support\n", __func__);
