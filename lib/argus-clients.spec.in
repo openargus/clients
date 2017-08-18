@@ -103,9 +103,7 @@ rm -f %{argusbin}/rasplit
 %files
 %defattr(-,root,root)
 
-%{argusdata}/delegated-ipv4-latest
-%{argusdata}/wireshark.manuf.txt
-%{argusdata}/rarc
+%{argusdata}
 
 %doc %{argusdocs}
 
