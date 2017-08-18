@@ -23,6 +23,7 @@ BuildRequires: mariadb-devel
 BuildRequires: cyrus-sasl-devel
 BuildRequires: libuuid-devel
 Requires: cyrus-sasl
+Conflicts: argus-clients-misc < 5.0-3.1%{dist}.1
 
 %description
 Argus Clients contains a number of programs that process Argus data.
