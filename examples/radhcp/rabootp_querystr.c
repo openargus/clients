@@ -29,7 +29,7 @@ __parse_subtoken(const struct QueryOptsStruct * const qopts,
              }
           }
 
-          if (i == nqopts)
+          if (i == nqopts && opt < 0)
              /* unknown token */
              return -RABOOTP_QS_UNKNOWN;
 
