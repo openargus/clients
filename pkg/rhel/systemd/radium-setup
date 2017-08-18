@@ -77,6 +77,7 @@ radium_configure(){
 		echo "RADIUM_MIN_SSF=1"
 		echo "RADIUM_MAX_SSF=128"
 		echo "RADIUM_AUTH_LOCALHOST=no"
+		echo "RADIUM_CLASSIFIER_FILE=/usr/argus/ralabel.country.conf"
 	fi
 }
 
