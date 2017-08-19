@@ -11,6 +11,11 @@
 void RaMySQLInit (void);
 
 char *
+ArgusCreateSQLSaveTableName_usec(struct ArgusParserStruct *parser,
+                                 struct ArgusRecordStruct *ns,
+                                 long long when_usec,
+                                 char *table);
+char *
 ArgusCreateSQLSaveTableName(struct ArgusParserStruct *parser,
                             struct ArgusRecordStruct *ns, char *table);
 

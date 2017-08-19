@@ -551,7 +551,10 @@ time_t ArgusTableEndSecs = 0;
 
 
 char *
-ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table)
+ArgusCreateSQLSaveTableName_usec(struct ArgusParserStruct *parser,
+                                 struct ArgusRecordStruct *ns,
+                                 long long when_usec,
+                                 char *table)
 {
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    int timeLabel = 0, objectLabel = 0;
@@ -568,7 +571,9 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
 
       if (ns != NULL) 
          start = ArgusFetchStartuSecTime(ns);
-      else 
+      else  if (when_usec > 0)
+         start = when_usec;
+      else
          start = parser->ArgusRealTime.tv_sec * 1000000LL + parser->ArgusRealTime.tv_usec;
       
       if (timeLabel && (start == 0)) 
@@ -576,7 +581,9 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
 
       tableSecs = start / 1000000;
 
-      if (!(ArgusTableStartSecs) || !((tableSecs >= ArgusTableStartSecs) && (tableSecs < ArgusTableEndSecs))) {
+      if (!((tableSecs >= ArgusTableStartSecs) && (tableSecs < ArgusTableEndSecs))
+          || (ns == NULL && when_usec > 0)
+          || !(ArgusTableStartSecs)) {
          switch (nadp->qual) {
             case ARGUSSPLITYEAR:
             case ARGUSSPLITMONTH:
@@ -665,11 +672,22 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
       retn = ArgusSQLSaveTableNameBuf;
 
    } else {
-      bcopy(ArgusSQLSaveTableNameBuf, table, strlen(table));
-      retn = ArgusSQLSaveTableNameBuf;
+      /* If no name is calculated here just return the buffer that was
+       * passed in.
+       */
+      retn = table;
    }
 
    return (retn);
+}
+
+
+char *
+ArgusCreateSQLSaveTableName(struct ArgusParserStruct *parser,
+                            struct ArgusRecordStruct *ns,
+                            char *table)
+{
+   return ArgusCreateSQLSaveTableName_usec(parser, ns, 0, table);
 }
 
 char *ArgusGetSQLSaveTable(void);
