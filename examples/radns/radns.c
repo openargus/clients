@@ -585,7 +585,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 {
    struct RaAddressStruct **ArgusAddrTree;
    struct ArgusModeStruct *mode = NULL;
-   parser->RaWriteOut = 1;
+
+   parser->RaWriteOut  = 1;
+   parser->RaPruneMode = 0;
 
    if (!(parser->RaInitialized)) {
 

@@ -110,7 +110,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 
 %token  START STOP STATUS SHUTDOWN ERROR
 %token  MAN FAR EVENT INDEX
-%token  REMOTE LOCAL
+%token  REMOTE LOCAL INTERNET INTRANET
 %token  DST SRC HOST INODE GATEWAY IPID TTL TOS DSB SRCID SID INF TCPBASE
 %token  NET AMASK MASKLEN PORT EQUAL NOTEQUAL LESS GREATER PROTO BYTE PKT APPBYTE
 %token  TRANS ARP RARP IP IPV4 IPV6 TCP UDP ICMP IGMP 
@@ -459,6 +459,8 @@ oname:     TCPOPT               { $$ = Q_TCPOPT; }
 
 other:	  pqual TK_BROADCAST	{ $$ = Argusgen_broadcast($1); }
 	| pqual TK_MULTICAST	{ $$ = Argusgen_multicast($1); }
+	| INTRANET		{ $$ = Argusgen_intranet(); }
+	| INTERNET		{ $$ = Argusgen_internet(); }
 	| INBOUND		{ $$ = Argusgen_inbound(0); }
 	| OUTBOUND		{ $$ = Argusgen_inbound(1); }
 	;

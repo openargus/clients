@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -1153,10 +1153,10 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
          struct ArgusNetspatialStruct local;
          offset = ((char *)&local.status - (char *)&local);;
          b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_SRC_LOCAL, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
-
+ 
          b1 = Argusgen_hostop(addr, mask, type, Q_SRC, proto);
          Argusgen_and(b0, b1);
-
+ 
          b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_DST_LOCAL, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT); 
          b2 = Argusgen_hostop(addr, mask, type, Q_DST, proto);
          Argusgen_and(b0, b2);
@@ -4777,7 +4777,6 @@ Argusgen_scode(char *name, struct qual q)
          if (alist == NULL || *alist == NULL)
             ArgusLog(LOG_ERR, "unknown host '%s'", name);
          b = Argusgen_gateway(eaddr, *alist, type, proto, dir);
-
 #endif
          break;
 
@@ -5854,6 +5853,58 @@ int proto;
 #endif
 
    return b1;
+}
+
+/*
+ * generate command for intranet/internet.  this uses Netspatial DSR to
+ * test if traffic addresses are both local or both remote.
+ *
+ */
+
+struct ablock *
+Argusgen_intranet(void)
+{
+   register struct ablock *b = NULL, *b0 = NULL, *b1 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+
+   b = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+
+   offset = ((char *)&local.sloc - (char *)&local);
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_GEQ, Q_DEFAULT);
+   offset = ((char *)&local.dloc - (char *)&local);
+   b1 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_GEQ, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+   Argusgen_and(b1, b);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_intranet(void) returns %p\n", b);
+#endif
+
+   return b;
+}
+
+struct ablock *
+Argusgen_internet(void)
+{
+   register struct ablock *b = NULL, *b0 = NULL, *b1 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+
+   b = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+
+   offset = ((char *)&local.sloc - (char *)&local);
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_LESS, Q_DEFAULT);
+   offset = ((char *)&local.dloc - (char *)&local);
+   b1 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_LESS, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+   Argusgen_and(b1, b);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_intranet(void) returns %p\n", b);
+#endif
+
+   return b;
 }
 
 /*

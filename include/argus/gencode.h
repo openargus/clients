@@ -58,7 +58,11 @@
 #define Q_SRCID		2
 #define Q_NET		3
 #define Q_PORT		4
+
 #define Q_GATEWAY	5
+#define Q_INTRANET	186
+#define Q_INTERNET	187
+
 #define Q_PROTO		6
 #define Q_IPID		7
 #define Q_TTL		8
@@ -426,6 +430,8 @@ struct ablock *Argusgen_greater(int);
 struct ablock *Argusgen_byteop(int, int, int);
 struct ablock *Argusgen_broadcast(int);
 struct ablock *Argusgen_multicast(int);
+struct ablock *Argusgen_intranet(void);
+struct ablock *Argusgen_internet(void);
 struct ablock *Argusgen_inbound(int);
 struct ablock *Argusgen_dns(int, int, int);
 struct ablock *Argusgen_appbytes(int, int, u_int);
