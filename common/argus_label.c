@@ -4952,8 +4952,9 @@ RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         node.addr.addr[0] = flow->ip_flow.ip_src;
                         node.addr.masklen = 32;
                         if (labeler->RaLabelLocalityInterfaceIsMe) {
-                           if ((saddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
-                              saddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+                           if ((labeler = parser->ArgusLocalLabeler) != NULL)
+                              if ((saddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
+                                 saddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
                         }
 
                         if (saddr == NULL)
