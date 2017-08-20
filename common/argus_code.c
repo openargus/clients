@@ -2304,6 +2304,18 @@ Argusgen_asnatom( int off, long v, int op)
 }
 
 static struct ablock *
+Argusgen_locatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, off, NFF_B, (u_int)v, op, Q_DEFAULT);
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_locatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_coratom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -3345,6 +3357,61 @@ Argusgen_lon(float v, int dir, u_int op)
    
    return b1;
 }
+
+static struct ablock *
+Argusgen_loc(u_int v, int dir, u_int op)
+{
+   struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+
+   switch (dir) {
+   case Q_SRC:
+      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_SRC_LOCAL, Q_EQUAL, Q_DEFAULT);
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      Argusgen_and(b0, b1);
+      break;
+
+   case Q_DST:
+      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_DST_LOCAL, Q_EQUAL, Q_DEFAULT);
+      offset = ((char *)&local.dloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      Argusgen_and(b0, b1);
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      offset = ((char *)&local.dloc - (char *)&local);
+      b2 = Argusgen_locatom(offset, (u_int)v, op);
+      Argusgen_or(b2, b1);
+      Argusgen_and(b0, b1);
+      break;
+
+   case Q_AND:
+      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      offset = ((char *)&local.dloc - (char *)&local);
+      b2 = Argusgen_locatom(offset, (u_int)v, op);
+      Argusgen_and(b2, b1);
+      Argusgen_and(b0, b1);
+      break;
+
+   default:
+      abort();
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_loc (0x%x, %d) returns 0x%x\n", v, dir, b1);
+#endif
+
+   return b1;
+}
+
 
 static struct ablock *
 Argusgen_pcr(float v, int dir, u_int op)
@@ -5182,6 +5249,12 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
       case Q_LON: {
          float f = v; 
          b = Argusgen_lon(f, dir, op);
+         break;
+      }
+
+      case Q_LOC: {
+         float f = v; 
+         b = Argusgen_loc(f, dir, op);
          break;
       }
 
