@@ -286,14 +286,11 @@ char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-// struct ArgusLabelStruct *lstruct = NULL;
    struct ArgusRecordStruct *ns = NULL;
    char buf[MAXSTRLEN];
 
    if ((ns = ArgusCopyRecordStruct(argus)) != NULL) {
       ArgusLabelRecord(parser, ns);
-
-//    lstruct = (void *) ns->dsrs[ARGUS_LABEL_INDEX];
 
       if (parser->ArgusWfileList != NULL) {
          struct ArgusWfileStruct *wfile = NULL;

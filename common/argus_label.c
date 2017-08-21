@@ -5073,14 +5073,30 @@ RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         }
                         break;
                      }
+                     case ARGUS_TYPE_IPV6: {
+                        break;
+                     }
+                     case ARGUS_TYPE_RARP: {
+                        break;
+                     }
+                     case ARGUS_TYPE_ARP: {
+                        break;
+                     }
+                     case ARGUS_TYPE_ISIS: {
+                        break;
+                     }
+                     case ARGUS_TYPE_ETHER: {
+                        break;
+                     }
                   }
+                  break;
+               }
+
+               case ARGUS_FLOW_ARP: {
                   break;
                }
             }
          }
-      }
-      if ((saddr && saddr->label) || (daddr && daddr->label)) {
-         bzero (RaLocalityLabelBuffer, sizeof(RaLocalityLabelBuffer));
 
          if (saddr && saddr->label) {
             int slen = strlen(RaLocalityLabelBuffer);

@@ -1025,26 +1025,30 @@ involve an ethernet broadcast address.
 True if the Argus record is of ether type \fIprotocol\fR.
 \fIProtocol\fP can be a number or a name like
 \fIip\fP, \fIarp\fP, or \fIrarp\fP.
+
+.IP "\fB[src | dst] loc [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the Locality value for addresses in the Argus record compares to \fInumber\fP.
+
 .IP "\fB[src | dst] ttl [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the TTL in the Argus record equals \fInumber\fP.
+True if the TTL in the Argus record compares to \fInumber\fP.
 .IP "\fB[src | dst] tos [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the TOS in the Argus record (default) equals \fInumber\fP.
+True if the TOS in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] vid [gt | gte | lt | lte | eq] \fInumber\fR"
-True if th VLAN id in the Argus record (default) equals \fInumber\fP.
+True if th VLAN id in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] vpri [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the VLAN priority in the Argus record (default) equals \fInumber\fP.
+True if the VLAN priority in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] mid [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the MPLS Label in the Argus record (default) equals \fInumber\fP.
+True if the MPLS Label in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] pkts [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the packet count in the Argus record (default) equals \fInumber\fP.
+True if the packet count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] bytes [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the byte count in the Argus record (default) equals \fInumber\fP.
+True if the byte count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] appbytes [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the application byte count in the Argus record (default) equals \fInumber\fP.
+True if the application byte count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] rate [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the rate in the Argus record (default) equals \fInumber\fP.
+True if the rate in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] load [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the load in the Argus record (default) equals \fInumber\fP.
+True if the load in the Argus record (default) compares to \fInumber\fP.
 
 .LP
 Ra filter expressions support primitives that are specific

@@ -136,7 +136,7 @@ static void deadman(pid_t);
 
 static void backpatch(struct ablock *, struct ablock *);
 static void merge(struct ablock *, struct ablock *);
-static struct ablock *Argusgen_cmp(int, u_int, u_int, u_int, u_int, int);
+static struct ablock *Argusgen_cmp(int, u_int, u_int, int, u_int, int);
 static struct ablock *Argusgen_mcmp(int, u_int, u_int, u_int, u_int, u_int, int);
 static struct ablock *Argusgen_bcmp(int, u_int, u_int, u_char *, int);
 static struct ablock *Argusgen_prototype(u_int, u_int);
@@ -636,7 +636,7 @@ struct ablock *b;
 }
 
 static struct ablock *
-Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
+Argusgen_cmp(int dsr, u_int offset, u_int size, int v, u_int op, int type)
 {
    struct slist *s;
    struct ablock *b;
@@ -2308,7 +2308,7 @@ Argusgen_locatom( int off, long v, int op)
 {
    struct ablock *b0;
 
-   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, off, NFF_B, (u_int)v, op, Q_DEFAULT);
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, off, NFF_B, v, op, Q_DEFAULT);
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_locatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
 #endif
@@ -3359,7 +3359,7 @@ Argusgen_lon(float v, int dir, u_int op)
 }
 
 static struct ablock *
-Argusgen_loc(u_int v, int dir, u_int op)
+Argusgen_loc(int v, int dir, u_int op)
 {
    struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
    struct ArgusNetspatialStruct local;
@@ -3369,14 +3369,14 @@ Argusgen_loc(u_int v, int dir, u_int op)
    case Q_SRC:
       b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_SRC_LOCAL, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
-      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      b1 = Argusgen_locatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
 
    case Q_DST:
       b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_DST_LOCAL, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.dloc - (char *)&local);
-      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      b1 = Argusgen_locatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
 
@@ -3384,9 +3384,9 @@ Argusgen_loc(u_int v, int dir, u_int op)
    case Q_DEFAULT:
       b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
-      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      b1 = Argusgen_locatom(offset, v, op);
       offset = ((char *)&local.dloc - (char *)&local);
-      b2 = Argusgen_locatom(offset, (u_int)v, op);
+      b2 = Argusgen_locatom(offset, v, op);
       Argusgen_or(b2, b1);
       Argusgen_and(b0, b1);
       break;
@@ -3394,9 +3394,9 @@ Argusgen_loc(u_int v, int dir, u_int op)
    case Q_AND:
       b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
-      b1 = Argusgen_locatom(offset, (u_int)v, op);
+      b1 = Argusgen_locatom(offset, v, op);
       offset = ((char *)&local.dloc - (char *)&local);
-      b2 = Argusgen_locatom(offset, (u_int)v, op);
+      b2 = Argusgen_locatom(offset, v, op);
       Argusgen_and(b2, b1);
       Argusgen_and(b0, b1);
       break;
