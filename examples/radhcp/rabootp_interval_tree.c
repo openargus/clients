@@ -106,6 +106,8 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
 
    node = ArgusCalloc(1, sizeof(*node));
    if (node) {
+      struct ArgusDhcpIntvlNode *exist;
+
       node->data = ads;
       node->intlo = *start;
       node->inthi = *start;
@@ -113,7 +115,14 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
       node->subtreehi = node->inthi;
 
       MUTEX_LOCK(&head->lock);
-      if (RB_INSERT(dhcp_intvl_tree, &head->inttree, node)) {
+      exist = RB_INSERT(dhcp_intvl_tree, &head->inttree, node);
+      if (exist != NULL) {
+         /* extend this node's interval */
+         exist->inthi.tv_sec = ads->last_bind.tv_sec + seconds;
+         if (timercmp(&exist->subtreehi, &exist->inthi, <))
+            exist->subtreehi = exist->inthi;
+
+         /* clean up the node we allocated but don't need */
          ArgusFree(node);
          node = NULL;
       } else {

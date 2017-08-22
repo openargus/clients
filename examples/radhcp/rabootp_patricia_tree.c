@@ -101,14 +101,13 @@ RabootpPatriciaTreeUpdate(const struct ArgusDhcpStruct * const parsed,
 
    ArgusDhcpStructUpRef(cached);
    if (ArgusDhcpIntvlTreeInsert(intvltree,
-                                &cached->last_bind,
+                                &cached->first_bind,
                                 parsed->rep.leasetime,
-                                cached) != 0) {
-      /* can't update interval tree yet.  we already complain about this
-       * elsewhere
+                                cached) != 0)
+      /* interval found for this transaction and was updated.
+       * Do not increment the refcount again.
        */
       ArgusDhcpStructFree(cached);
-   }
 
 out:
    return rv;

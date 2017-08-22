@@ -222,10 +222,11 @@ struct ArgusDhcpStruct {
    /* fourth + fifth cachelines */
    struct ArgusDhcpV4LeaseOptsStruct rep; /* This is a linked list of replies */
 
-   /* sixth cacheline */
-   struct ArgusDhcpV4Timers timers;
+   /* sixth+ cacheline */
    struct timeval first_req;       /* this client transaction was first seen */
+   struct timeval first_bind;      /* first time we entered the BOUND state */
    struct timeval last_bind;       /* last time we entered the BOUND state */
+   struct ArgusDhcpV4Timers timers;
 
 };
 
