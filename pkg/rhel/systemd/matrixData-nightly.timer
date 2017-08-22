@@ -1,0 +1,11 @@
+[Unit]
+Description=Process Matrix Database Tables
+
+[Timer]
+# daily at 0015 hrs
+OnCalendar=*-*-* 01:15:00
+Persistent=true
+
+[Install]
+Also=matrixData-nightly.service
+WantedBy=multi-user.target
