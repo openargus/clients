@@ -119,7 +119,7 @@ RabootpLeasePullup(const struct ArgusDhcpIntvlNode * const src_invec,
 
    if (src_nitems == 1) {
       *dst_invec = *src_invec;
-      return 0;
+      return 1;
    }
 
    while (in_idx < (src_nitems-1) && out_idx < dst_nitems) {
