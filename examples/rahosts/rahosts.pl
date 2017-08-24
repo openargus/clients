@@ -40,7 +40,7 @@ use Socket;
 
 # Global variables
 my $debug = 0;
-my $drop  = 0;
+my $drop  = 1;
 my $tmpfile = tmpnam();
 my $tmpconf = $tmpfile . ".conf";
 
@@ -79,7 +79,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-q//     && do { $quiet++; next ARG; };
          s/^-w//     && do { $uri = shift (@ARGV); next ARG; };
          s/^-debug// && do { $debug++; next ARG; };
-         s/^-drop//  && do { $drop++; next ARG; };
+         s/^-drop//  && do { $drop = 0; next ARG; };
       }
 
    } else {
@@ -110,8 +110,11 @@ if ($uri) {
    if ($path ne "") {
       ($space, $db, $table)  = split /\//, $path;
    }
+
+   $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+   $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
+   $dbh->do("use $db");
  
-   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
    # Drop table 'foo'. This may fail, if 'foo' doesn't exist
    # Thus we put an eval around it.
  

@@ -116,7 +116,9 @@ if ($uri) {
       ($space, $db, $table)  = split /\//, $path;
    }
  
-   $dbh = DBI->connect("DBI:$scheme:$db", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+   $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+   $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
+   $dbh->do("use $db");
  
    # Drop table 'foo'. This may fail, if 'foo' doesn't exist
    # Thus we put an eval around it.
