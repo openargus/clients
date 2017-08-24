@@ -46,6 +46,14 @@ make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 %install
 rm -rf $RPM_BUILD_ROOT
 make DESTDIR="$RPM_BUILD_ROOT" %{?_workstation:WORKSTATION_BUILD=1} install
+install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ntp $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ntp
+install -D -m 0755 pkg/rhel/systemd/radns-nightly $RPM_BUILD_ROOT%{argussbin}/radns-nightly
+install -D -m 0644 pkg/rhel/systemd/radns-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/radns-nightly.service $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.service
+install -D -m 0755 pkg/rhel/systemd/matrixData-nightly $RPM_BUILD_ROOT%{argussbin}/matrixData-nightly
+install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.service $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.service
+
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
 %if 0%{!?_workstation:1}
@@ -112,6 +120,9 @@ rm -f %{argusbin}/rasplit
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rastream
 %{argussbin}/rastream-process
+%{_sbindir}/matrixData-nightly
+%{_unitdir}/matrixData-nightly.timer
+%{_unitdir}/matrixData-nightly.service
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
@@ -190,8 +201,6 @@ Argus DHCP-tracking Client Software
 %systemd_postun_with_restart radhcp.service
 
 
-
-
 %package dns
 Summary: Argus DNS-tracking Client Software
 Group: Applications/Internet
@@ -204,8 +213,12 @@ Argus DNS-tracking Client Software
 %defattr(-,root,root)
 %{_bindir}/radns
 %{_bindir}/radnsdb
-
-
+%if 0%{!?_workstation:1}
+%{_sbindir}/radns-nightly
+%{_unitdir}/radns-nightly.timer
+%{_unitdir}/radns-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.dns
+%endif
 
 %package devel
 Summary: Argus Client Software Development Libraries
