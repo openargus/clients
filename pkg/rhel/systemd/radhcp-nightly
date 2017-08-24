@@ -6,9 +6,11 @@
 set -e
 export LC_ALL=C
 
-if [[ -L /etc/localtime ]] ; then
-	# let's not open /etc/localtime for every date string formatted
-	export TZ=$(readlink -f /etc/localtime | awk -F/ '{print $(NF-1)"/"$NF}')
+# let's not open /etc/localtime for every date string formatted
+if [[ -x /usr/bin/timedatectl ]] ; then
+	export TZ=$(timedatectl | awk '/Time zone:/{print $3}')
+elif [[ -L /etc/localtime ]] ; then
+	export TZ=$(readlink /etc/localtime | awk -F/ '{print $(NF-1)"/"$NF}')
 fi
 
 # systemd likes all output on stdout, so redirect stderr.
