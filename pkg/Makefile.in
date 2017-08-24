@@ -56,7 +56,7 @@ ifndef WORKSTATION_BUILD
                 rhel/systemd/rastream.service
     USR_ARGUS = rhel/ralabel.country.conf
       PKGDATA = rhel/share/argus-clients/rasqlinsert.l2_l3 \
-                rhel/share/argus-clients/rasqlinsert.ipv4matrix \
+                rhel/share/argus-clients/rasqlinsert.ipmatrix \
                 rhel/share/argus-clients/rasqlinsert.dns \
                 rhel/share/argus-clients/rasqlinsert.man \
                 rhel/share/argus-clients/rasqlinsert.dhcp

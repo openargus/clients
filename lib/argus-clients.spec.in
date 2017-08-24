@@ -67,6 +67,7 @@ ln -s /etc/pam.d/system-auth /etc/pam.d/radium
 %preun
 %systemd_preun radium.service
 %systemd_preun rastream.service
+%systemd_preun rasqlinsert@ipv4matrix
 
 %postun
 %systemd_postun_with_restart radium.service
