@@ -4,5 +4,6 @@ Description=Process DHCP transactions
 [Service]
 Type=oneshot
 ExecStart=/sbin/radhcp-nightly
+ExecStartPost=/sbin/radhcp-nightly-derived
 TimeoutStartSec=1hr
 

@@ -213,6 +213,7 @@ Argus DHCP-tracking Client Software
 %{_bindir}/radhcp
 %if 0%{!?_workstation:1}
 %{_sbindir}/radhcp-nightly
+%{_sbindir}/radhcp-nightly-derived
 %{_unitdir}/radhcp-nightly.timer
 %{_unitdir}/radhcp-nightly.service
 %{_datarootdir}/argus-clients/rasqlinsert.dhcp

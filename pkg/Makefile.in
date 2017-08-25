@@ -49,6 +49,7 @@ ifndef WORKSTATION_BUILD
                 rhel/systemd/rastream-process \
                 rhel/systemd/radhcp-nightly \
                 rhel/systemd/radhcp-setup \
+                rhel/systemd/radhcp-nightly-derived \
                 rhel/systemd/rasqlinsert-setup \
                 rhel/systemd/radns-nightly \
                 rhel/systemd/matrixData-nightly \
