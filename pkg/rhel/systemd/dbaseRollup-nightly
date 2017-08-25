@@ -1,0 +1,79 @@
+#!/usr/bin/perl
+#
+#   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2017 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#   dbaseRollup-nightly - Rollup Argus Database nightly scripts to
+#                         manage many databases.
+#
+#
+# Complain about undeclared variables
+use v5.6.0;
+use strict;
+use warnings;
+
+use POSIX;
+use Time::Local;
+use File::Temp qw/ :POSIX /;
+use File::Which qw/ which where /;
+
+my $tmpfile = tmpnam();
+
+$ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
+
+my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+
+my  $dtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
+my  $mtime = sprintf "%4d_%02d", $year+1900, $mon+1;
+my  $ytime = sprintf "%4d", $year+1900;
+
+my $fname        = tmpnam();
+my $rasql        = which 'rasql';
+my $racluster    = which 'racluster';
+my $rasqlinsert  = which 'rasqlinsert';
+
+my @db1 = qw( inventory ipAddrs );
+my @db2 = qw( ipMatrix ip );
+my @db3 = qw( dnsMatrix dns );
+my @db4 = qw( arpMatrix  arp );
+my @db5 = qw( ntpMatrix ntp );
+my @db6 = qw( ldapMatrix ldap );
+
+my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6);
+
+foreach my $i (0 .. $#databases) {
+   my ($db, $table) = @{$databases[$i]};
+
+   my $cmd = "$rasql -r mysql://root\@localhost/".$db."/".$table."_".$dtime." -w ".$tmpfile;
+   my $minsert = "$rasqlinsert -M time 1M -r ".$tmpfile." -m daddr saddr sid inf -M cache -w mysql://root\@localhost/".$db."/".$table."_%Y_%m -s stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr";
+   my $yinsert = "$rasqlinsert -M time 1Y -r ".$tmpfile." -m daddr saddr sid inf -M cache -w mysql://root\@localhost/".$db."/".$table."_%Y -s stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr";
+
+   print "$cmd \n";
+   `$cmd`;
+
+   print "$minsert \n";
+   `$minsert`;
+
+   print "$yinsert \n";
+   `$yinsert`;
+}
+
+print "rm -f $tmpfile\n";
+`rm -f $tmpfile`;
+

@@ -124,6 +124,10 @@ rm -f %{argusbin}/rasplit
 %{_sbindir}/matrixData-nightly
 %{_unitdir}/matrixData-nightly.timer
 %{_unitdir}/matrixData-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.ntp
+%{_datarootdir}/argus-clients/rasqlinsert.ipmatrix
+%{_datarootdir}/argus-clients/rasqlinsert.man
+%{_datarootdir}/argus-clients/rasqlinsert.l2_l3
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit

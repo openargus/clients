@@ -1,0 +1,8 @@
+[Unit]
+Description=Rollup Argus Database Tables By Month and Year
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/dbaseRollup-nightly
+TimeoutStartSec=1hr
+
