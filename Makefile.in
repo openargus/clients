@@ -57,7 +57,7 @@ docdir = @datadir@/doc/argus-clients-5.0
 SHELL = /bin/sh
 
 DIRS = @DIRS@
-INSTDIRS = ./clients ./examples ./common ./include
+INSTDIRS = ./clients ./examples ./common ./include ./pkg
 OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in README VERSION \

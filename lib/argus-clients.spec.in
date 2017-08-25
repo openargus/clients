@@ -40,44 +40,12 @@ Copyright: 2000-2022 QoSient, LLC
 %prep
 %setup -n %{srcname}-%{ver}.%{rel}
 %build
-./configure --prefix=/usr --with-sasl %{?_workstation:--without-mysql}
-make EXTRA_CFLAGS="-ggdb"
+%configure --with-sasl %{?_workstation:--without-mysql}
+make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 
 %install
 rm -rf $RPM_BUILD_ROOT
-make DESTDIR="$RPM_BUILD_ROOT" install
-
-install -D -m 0644 pkg/ra.conf $RPM_BUILD_ROOT/etc/ra.conf
-install -D -m 0600 pkg/radium.conf $RPM_BUILD_ROOT/etc/radium.conf
-
-%if 0%{!?_workstation:1}
-install -D -m 0644 pkg/rhel/ralabel.country.conf $RPM_BUILD_ROOT/usr/argus/ralabel.country.conf
-install -D -m 0644 pkg/rhel/sasl2/radium.conf $RPM_BUILD_ROOT/etc/sasl2/radium.conf
-install -D -m 0644 pkg/rhel/sysconfig/radium $RPM_BUILD_ROOT/etc/sysconfig/radium
-install -D -m 0644 pkg/rhel/sysconfig/rastream $RPM_BUILD_ROOT/etc/sysconfig/rastream
-install -D -m 0644 pkg/rhel/systemd/rasqlinsert@.service $RPM_BUILD_ROOT%{_unitdir}/rasqlinsert@.service
-install -D -m 0755 pkg/rhel/systemd/rasqlinsert-setup $RPM_BUILD_ROOT%{argussbin}/rasqlinsert-setup
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.l2_l3 $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.l2_l3
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ipv4matrix $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ipv4matrix
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.dns $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.dns
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.man $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.man
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.dhcp $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.dhcp
-install -D -m 0755 pkg/rhel/rastream.d/00rasqltimeindex $RPM_BUILD_ROOT%{_sysconfdir}/rastream.d/00rasqltimeindex
-install -D -m 0644 pkg/rhel/systemd/radium.service $RPM_BUILD_ROOT%{_unitdir}/radium.service
-install -D -m 0755 pkg/rhel/systemd/radium-setup $RPM_BUILD_ROOT%{argussbin}/radium-setup
-install -D -m 0644 pkg/rhel/systemd/rastream.service $RPM_BUILD_ROOT%{_unitdir}/rastream.service
-install -D -m 0755 pkg/rhel/systemd/rastream-process $RPM_BUILD_ROOT%{argussbin}/rastream-process
-install -D -m 0755 pkg/rhel/systemd/radhcp-nightly $RPM_BUILD_ROOT%{argussbin}/radhcp-nightly
-install -D -m 0644 pkg/rhel/systemd/radhcp-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/radhcp-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/radhcp-nightly.service $RPM_BUILD_ROOT%{_unitdir}/radhcp-nightly.service
-%else
-install -D -m 0644 pkg/rhel/sysconfig/rasplit $RPM_BUILD_ROOT/etc/sysconfig/rasplit
-install -D -m 0644 pkg/rhel/systemd/rasplit.service $RPM_BUILD_ROOT%{_unitdir}/rasplit.service
-%endif
-
-install -D -m 0644 pkg/rhel/systemd/radhcp.service $RPM_BUILD_ROOT%{_unitdir}/radhcp.service
-install -D -m 0755 pkg/rhel/systemd/radhcp-setup $RPM_BUILD_ROOT%{argussbin}/radhcp-setup
-install -d -m 0755 $RPM_BUILD_ROOT/%{argusdocs}/support
+make DESTDIR="$RPM_BUILD_ROOT" %{?_workstation:WORKSTATION_BUILD=1} install
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
 %if 0%{!?_workstation:1}
@@ -250,16 +218,13 @@ Requires: cyrus-sasl-devel
 Argus Clients contains a number of programs that process Argus data.
 Copyright 2000-2016 QoSient, LLC
 
-%define argusinc        %{argusdir}/include
-%define arguslib        %{argusdir}/lib
-
 %files devel
 %defattr(-,root,root)
-%{argusinc}/argus
-%{arguslib}/argus_client.a
-%{arguslib}/argus_common.a
-%{arguslib}/argus_parse.a
-%{arguslib}/pkgconfig/argus-clients.pc
+%{_includedir}/argus
+%{_libdir}/argus_client.a
+%{_libdir}/argus_common.a
+%{_libdir}/argus_parse.a
+%{_libdir}/pkgconfig/argus-clients.pc
 
 %package graph
 Summary: Argus Client Software Graph Tool

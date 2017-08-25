@@ -1,0 +1,154 @@
+#
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2017 QoSient, LLC
+#  All rights reserved.
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#
+
+VERSION = @PACKAGE_VERSION@.@PACKAGE_RELEASE@
+
+NOOP = $(SHELL) -c true
+NOECHO = @
+INSTALL = @INSTALL@
+SHELL = /bin/sh
+datarootdir = @datarootdir@
+exec_prefix = @exec_prefix@
+prefix = @prefix@
+sbindir = @sbindir@
+srcdir = @srcdir@
+sysconfdir = @sysconfdir@
+unitdir = @systemdsystemunitdir@
+target_os = @target_os@
+
+         SBIN_DIR := $(DESTDIR)$(sbindir)
+    UNITFILES_DIR := $(DESTDIR)$(unitdir)
+    USR_ARGUS_DIR := $(DESTDIR)$(prefix)/argus
+      PKGDATA_DIR := $(DESTDIR)$(datarootdir)/argus-clients
+    SYSCONFIG_DIR := $(DESTDIR)$(sysconfdir)/sysconfig
+GLOBAL_CONFIG_DIR := $(DESTDIR)$(sysconfdir)
+    RASTREAMD_DIR := $(DESTDIR)$(sysconfdir)/rastream.d
+ SASL2_CONFIG_DIR := $(DESTDIR)$(sysconfdir)/sasl2
+
+ifndef WORKSTATION_BUILD
+ SBIN_SCRIPTS = rhel/systemd/radium-setup \
+                rhel/systemd/rastream-process \
+                rhel/systemd/radhcp-nightly \
+                rhel/systemd/radhcp-setup \
+                rhel/systemd/rasqlinsert-setup
+    UNITFILES = rhel/systemd/radhcp-nightly.timer \
+                rhel/systemd/radhcp-nightly.service \
+                rhel/systemd/radhcp.service \
+                rhel/systemd/radium.service \
+                rhel/systemd/rasqlinsert@.service \
+                rhel/systemd/rastream.service
+    USR_ARGUS = rhel/ralabel.country.conf
+      PKGDATA = rhel/share/argus-clients/rasqlinsert.l2_l3 \
+                rhel/share/argus-clients/rasqlinsert.ipv4matrix \
+                rhel/share/argus-clients/rasqlinsert.dns \
+                rhel/share/argus-clients/rasqlinsert.man \
+                rhel/share/argus-clients/rasqlinsert.dhcp
+    SYSCONFIG = rhel/sysconfig/radium \
+                rhel/sysconfig/rastream
+    RASTREAMD = rhel/rastream.d/00rasqltimeindex
+ SASL2_CONFIG = rhel/sasl2/radium.conf
+else
+ SBIN_SCRIPTS = rhel/systemd/radhcp-setup
+    UNITFILES = rhel/systemd/radhcp.service \
+                rhel/systemd/rasplit.service
+    SYSCONFIG = rhel/sysconfig/rasplit
+endif
+
+GLOBAL_CONFIG = ra.conf radium.conf
+
+.PHONY: install installdirs install-sbin-scripts install-unitfiles \
+        install-usr-argus install-pkgdata install-sysconfig \
+        install-global-config install-rastreamd all
+
+all:
+	$(NOOP)
+
+install:  install-sbin-scripts install-unitfiles install-usr-argus \
+          install-pkgdata install-sysconfig install-global-config \
+          install-rastreamd install-sasl2-config
+
+install-sbin-scripts: $(SBIN_SCRIPTS)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(SBIN_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0755 $$i $(SBIN_DIR)/`basename $$i` ; \
+	done
+endif
+
+install-unitfiles: $(UNITFILES)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(UNITFILES_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(UNITFILES_DIR)/`basename $$i` ; \
+	done
+endif
+
+install-usr-argus: $(USR_ARGUS)
+	@set -e ; \
+	mkdir -p $(USR_ARGUS_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(USR_ARGUS_DIR)/`basename $$i` ; \
+	done
+
+install-pkgdata: $(PKGDATA)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(PKGDATA_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(PKGDATA_DIR)/`basename $$i` ; \
+	done
+endif
+
+install-sysconfig: $(SYSCONFIG)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(SYSCONFIG_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(SYSCONFIG_DIR)/`basename $$i` ; \
+	done
+endif
+
+install-global-config: $(GLOBAL_CONFIG)
+	@set -e ; \
+	mkdir -p $(GLOBAL_CONFIG_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(GLOBAL_CONFIG_DIR)/`basename $$i` ; \
+	done
+
+install-rastreamd: $(RASTREAMD)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(RASTREAMD_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(RASTREAMD_DIR)/`basename $$i` ; \
+	done
+endif
+
+install-sasl2-config: $(SASL2_CONFIG)
+	@set -e ; \
+	mkdir -p $(SASL2_CONFIG_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(SASL2_CONFIG_DIR)/`basename $$i` ; \
+	done
+
+# Prevent GNU make v3 from overflowing arg limit on SysV.
+.NOEXPORT:
