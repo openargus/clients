@@ -35,16 +35,18 @@ use URI::URL;
 use DBI;
 use Switch;
 use Net::IP;
-
+use File::Which qw/ which /;
 use Socket;
+
+local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 
 # Global variables
 my $debug = 0;
-my $drop  = 1;
+my $drop  = 0;
 my $tmpfile = tmpnam();
 my $tmpconf = $tmpfile . ".conf";
 
-my $Program = `which ra`;
+my $Program = which 'ra';
 my $Options = "-L -1 -n -s sid:42 inf saddr:32 daddr:32 proto -c , ";
 my $VERSION = "5.0";                
 
@@ -79,7 +81,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-q//     && do { $quiet++; next ARG; };
          s/^-w//     && do { $uri = shift (@ARGV); next ARG; };
          s/^-debug// && do { $debug++; next ARG; };
-         s/^-drop//  && do { $drop = 0; next ARG; };
+         s/^-drop//  && do { $drop++; next ARG; };
       }
 
    } else {

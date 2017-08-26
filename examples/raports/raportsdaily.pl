@@ -40,10 +40,13 @@ use File::Which qw/ which /;
 use Time::Local;
 use Switch;
 
+local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
+
 # Global variables
-my $VERSION = "5.0,3";
+my $VERSION = "5.0.3";
 my $done    = 0;
 my $debug   = 0;
+my $drop    = 1;
 my $time;
 my $archive;
 
@@ -54,6 +57,7 @@ ARG: while (my $arg = shift(@ARGV)) {
   if (!$done) {
      for ($arg) {
          s/^-debug$//  && do { $debug++; next ARG; };
+         s/^-drop$//   && do { $drop++; next ARG; };
          s/^-r$//      && do { $archive = shift(@ARGV); next ARG; };
          s/^-t$//      && do { $time = shift(@ARGV); next ARG; };
      }
@@ -115,6 +119,7 @@ if ($time eq "") {
             }
             $value = 0 
          }
+         case 'y' { $year -= $value ; $value = 0 }
          case 'Y' { $year -= $value ; $value = 0 }
       }
       my $time = timelocal($sec,$min,$hour,$mday,$mon,$year) - $value;

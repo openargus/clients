@@ -36,11 +36,17 @@ use strict;
 use POSIX;
 use URI::URL;
 use DBI;
+use File::Which qw/ which /;
+
+
+local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 
 # Global variables
 my $debug = 0;
 my $drop  = 0;
-my $Program = `which racluster`;
+my $Program = which 'racluster';
+chomp $Program;
+
 my $Options = " -nc , ";   # Default Options
 my $VERSION = "5.0";
 my $format  = 'addr';
@@ -60,6 +66,7 @@ ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-q//             && do { $quiet++; next ARG; };
       s/^-debug//         && do { $debug++; next ARG; };
+      s/^-drop//          && do { $drop = 1; next ARG; };
       s/^-w//             && do {
          $uri = shift (@ARGV);
          next ARG;

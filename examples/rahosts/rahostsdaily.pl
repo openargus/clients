@@ -41,8 +41,10 @@ use File::Which qw/ which /;
 use Time::Local;
 use Switch;
 
+local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
+
 # Global variables
-my $VERSION = "5.0,3";
+my $VERSION = "5.0.3";
 my $done    = 0;
 my $debug   = 0;
 my $time;
@@ -116,6 +118,7 @@ if ($time eq "") {
             }
             $value = 0 
          }
+         case 'y' { $year -= $value ; $value = 0 }
          case 'Y' { $year -= $value ; $value = 0 }
       }
       my $time = timelocal($sec,$min,$hour,$mday,$mon,$year) - $value;
