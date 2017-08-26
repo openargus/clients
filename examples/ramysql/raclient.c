@@ -1466,6 +1466,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              sprintf (stable, "%s.%s", RaDatabase, table);
                                              bin->table = strdup(stable);
                                           }
+                                       } else {
+                                          bin->table = strdup(RaSQLSaveTable);
                                        }
                                     }
                                     if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {

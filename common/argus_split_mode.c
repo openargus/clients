@@ -74,6 +74,7 @@ RaParseSplitMode(struct ArgusParserStruct * parser,
                   else {
                      switch (*ptr) {
                         case 'y':
+                        case 'Y':
                            nadp->qual = ARGUSSPLITYEAR;
                            localtime_r(&tsec, &nadp->RaStartTmStruct);
                            nadp->RaStartTmStruct.tm_sec = 0;

@@ -35,45 +35,83 @@ my $tmpfile = tmpnam();
 
 $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
 
-my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
-($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+# Parse the arguments if any
+my @arglist = ();
 
-my  $dtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
-my  $mtime = sprintf "%4d_%02d", $year+1900, $mon+1;
-my  $ytime = sprintf "%4d", $year+1900;
+my $debug       = 0;
+my $done        = 0;
+
+my $time = "";
+my ($dtime, $mtime, $ytime);
+
+ARG: while (my $arg = shift(@ARGV)) {
+    if (!$done) {
+      for ($arg) {
+         s/^-debug$//      && do { $debug++; next ARG; };
+         s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
+      }
+    } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+   }
+    $arglist[@arglist + 0] = $arg;
+}
+
+if ($time eq "") {
+   my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+   my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+   ($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+
+     $time = sprintf "%4d/%02d/%02d", $year+1900, $mon+1, $mday;
+    $dtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
+    $mtime = sprintf "%4d_%02d", $year+1900, $mon+1;
+    $ytime = sprintf "%4d", $year+1900;
+
+} else {
+   ($dtime = $time) =~ s/\//_/g;
+   my ($year, $mon, $mday) = split("_", $dtime);
+   $mtime = sprintf "%4d_%02d", $year, $mon;
+   $ytime = sprintf "%4d", $year;
+}
+
+print "DEBUG: using date $time for query \n" if $debug;
 
 my $fname        = tmpnam();
 my $rasql        = which 'rasql';
 my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
-my @db1 = qw( inventory ipAddrs );
-my @db2 = qw( ipMatrix ip );
-my @db3 = qw( dnsMatrix dns );
-my @db4 = qw( arpMatrix  arp );
-my @db5 = qw( ntpMatrix ntp );
-my @db6 = qw( ldapMatrix ldap );
+my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state");
+my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db4 = ( "arpMatrix",  "arp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 
 my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6);
 
 foreach my $i (0 .. $#databases) {
-   my ($db, $table) = @{$databases[$i]};
+   my ($db, $table, $keys, $fields) = @{$databases[$i]};
 
    my $cmd = "$rasql -r mysql://root\@localhost/".$db."/".$table."_".$dtime." -w ".$tmpfile;
-   my $minsert = "$rasqlinsert -M time 1M -r ".$tmpfile." -m daddr saddr sid inf -M cache -w mysql://root\@localhost/".$db."/".$table."_%Y_%m -s stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr";
-   my $yinsert = "$rasqlinsert -M time 1Y -r ".$tmpfile." -m daddr saddr sid inf -M cache -w mysql://root\@localhost/".$db."/".$table."_%Y -s stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr";
-
-   print "$cmd \n";
+   print "DEBUG: $cmd \n" if $debug;
    `$cmd`;
 
-   print "$minsert \n";
-   `$minsert`;
+   if (-e $tmpfile) {
+      my $minsert = "$rasqlinsert -M cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$mtime." -s ".$fields;
+      my $yinsert = "$rasqlinsert -M cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$ytime." -s ".$fields;
 
-   print "$yinsert \n";
-   `$yinsert`;
+      print "DEBUG: $minsert \n" if $debug;
+      `$minsert`;
+
+      print "DEBUG: $yinsert \n" if $debug;
+      `$yinsert`;
+
+      print "DEBUG: rm -f $tmpfile\n" if $debug;
+      `rm -f $tmpfile`;
+   }
 }
-
-print "rm -f $tmpfile\n";
-`rm -f $tmpfile`;
 
