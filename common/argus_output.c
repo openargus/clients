@@ -4034,25 +4034,41 @@ ArgusLocalConnection(struct sockaddr *local, struct sockaddr *remote)
 {
    int localaddr_lo = 0;
    int remoteaddr_lo = 0;
+   struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)remote;
+   struct sockaddr_in *in = (struct sockaddr_in *)remote;
+   uint32_t *u6_addr32;
 
    if (remote->sa_family == AF_INET &&
-       ((struct sockaddr_in *)remote)->sin_addr.s_addr == INADDR_LOOPBACK)
+      (in->sin_addr.s_addr == htonl(INADDR_LOOPBACK))) {
       remoteaddr_lo = 1;
-   else if (remote->sa_family == AF_INET6 &&
-            IN6_IS_ADDR_LOOPBACK(&((struct sockaddr_in6 *)remote)->sin6_addr))
+   } else if (remote->sa_family == AF_INET6) {
+      u6_addr32 = (uint32_t *)&(in6->sin6_addr.s6_addr[0]);
+
+      if (IN6_IS_ADDR_LOOPBACK(&(in6->sin6_addr)) ||
+         (IN6_IS_ADDR_V4MAPPED(&(in6->sin6_addr))
+              && u6_addr32[3] == htonl(INADDR_LOOPBACK)))
       remoteaddr_lo = 1;
+   }
+
+   if (remoteaddr_lo == 0)
+      return 0;
+
+   in6 = (struct sockaddr_in6 *)local;
+   in = (struct sockaddr_in *)local;
 
    if (local->sa_family == AF_INET &&
-       ((struct sockaddr_in *)local)->sin_addr.s_addr == INADDR_LOOPBACK)
+      (in->sin_addr.s_addr == htonl(INADDR_LOOPBACK))) {
       localaddr_lo = 1;
-   else if (local->sa_family == AF_INET6 &&
-            IN6_IS_ADDR_LOOPBACK(&((struct sockaddr_in6 *)local)->sin6_addr))
+   } else if (remote->sa_family == AF_INET6) {
+      u6_addr32 = (uint32_t *)&(in6->sin6_addr.s6_addr[0]);
+
+      if (IN6_IS_ADDR_LOOPBACK(&(in6->sin6_addr)) ||
+         (IN6_IS_ADDR_V4MAPPED(&(in6->sin6_addr))
+              && u6_addr32[3] == htonl(INADDR_LOOPBACK)))
       localaddr_lo = 1;
+   }
 
-   if (remoteaddr_lo && localaddr_lo)
-      return 1;
-
-   return 0;
+   return localaddr_lo;
 }
 #endif
 
