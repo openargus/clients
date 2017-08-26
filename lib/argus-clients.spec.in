@@ -53,6 +53,9 @@ install -D -m 0644 pkg/rhel/systemd/radns-nightly.service $RPM_BUILD_ROOT%{_unit
 install -D -m 0755 pkg/rhel/systemd/matrixData-nightly $RPM_BUILD_ROOT%{argussbin}/matrixData-nightly
 install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.timer
 install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.service $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.service
+install -D -m 0755 pkg/rhel/systemd/dbaseRollup-nightly $RPM_BUILD_ROOT%{argussbin}/dbaseRollup-nightly
+install -D -m 0644 pkg/rhel/systemd/dbaseRollup-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/dbaseRollup-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/dbaseRollup-nightly.service $RPM_BUILD_ROOT%{_unitdir}/dbaseRollup-nightly.service
 
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
@@ -124,6 +127,9 @@ rm -f %{argusbin}/rasplit
 %{_sbindir}/matrixData-nightly
 %{_unitdir}/matrixData-nightly.timer
 %{_unitdir}/matrixData-nightly.service
+%{_sbindir}/dbaseRollup-nightly
+%{_unitdir}/dbaseRollup-nightly.timer
+%{_unitdir}/dbaseRollup-nightly.service
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
 %{_datarootdir}/argus-clients/rasqlinsert.ipmatrix
 %{_datarootdir}/argus-clients/rasqlinsert.man
