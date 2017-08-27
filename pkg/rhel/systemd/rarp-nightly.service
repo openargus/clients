@@ -1,0 +1,8 @@
+[Unit]
+Description=Process ARP transactions
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/rarp-nightly
+TimeoutStartSec=1hr
+

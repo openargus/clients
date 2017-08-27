@@ -1,0 +1,1 @@
+-B 15s -M time 1d -m none -s stime ltime saddr daddr proto sport dport pkts bytes pcr -S localhost -w mysql://root@localhost/ldapFlows/ldap_%Y_%m_%d - port 389 or 636

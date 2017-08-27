@@ -87,7 +87,7 @@ my $rasqlinsert  = which 'rasqlinsert';
 my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state");
 my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
-my @db4 = ( "arpMatrix",  "arp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db4 = ( "etherMatrix", "ether", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 

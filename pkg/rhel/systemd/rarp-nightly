@@ -17,8 +17,8 @@
 #  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 #  THIS SOFTWARE.
 #
-#   radns-nightly - DNS nightly scripts to manage dns databases.
-#                   Need to generate dnsNames table (radnsdb).
+#   rarp-nightly - ARP nightly scripts to manage dns databases.
+#                  Need to generate and maintain arpMatrix table.
 #
 #
 # Complain about undeclared variables
@@ -46,7 +46,7 @@ my $ralabel      = which 'ralabel';
 my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
-my @services    = qw( dns ether ntp ldap );
+my @services    = qw( arp );
 
 foreach my $i (0 .. $#services) {
    my     $srv = $services[$i];
