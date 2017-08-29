@@ -1,0 +1,11 @@
+[Unit]
+Description=Process Argus Host COI Daily Data 
+
+[Timer]
+# daily at 0145 hrs
+OnCalendar=*-*-* 01:45:00
+Persistent=true
+
+[Install]
+Also=rahosts-nightly.service
+WantedBy=multi-user.target

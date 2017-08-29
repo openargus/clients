@@ -50,6 +50,10 @@ install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ntp $RPM_BUILD_ROOT%
 install -D -m 0755 pkg/rhel/systemd/radns-nightly $RPM_BUILD_ROOT%{argussbin}/radns-nightly
 install -D -m 0644 pkg/rhel/systemd/radns-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.timer
 install -D -m 0644 pkg/rhel/systemd/radns-nightly.service $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.service
+install -D -m 0644 pkg/rhel/systemd/rahosts-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/rahosts-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/rahosts-nightly.service $RPM_BUILD_ROOT%{_unitdir}/rahosts-nightly.service
+install -D -m 0644 pkg/rhel/systemd/raports-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/raports-nightly.timer
+install -D -m 0644 pkg/rhel/systemd/raports-nightly.service $RPM_BUILD_ROOT%{_unitdir}/raports-nightly.service
 install -D -m 0755 pkg/rhel/systemd/matrixData-nightly $RPM_BUILD_ROOT%{argussbin}/matrixData-nightly
 install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.timer
 install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.service $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.service
@@ -130,6 +134,10 @@ rm -f %{argusbin}/rasplit
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rastream
 %{argussbin}/rastream-process
+%{_unitdir}/rahosts-nightly.timer
+%{_unitdir}/rahosts-nightly.service
+%{_unitdir}/raports-nightly.timer
+%{_unitdir}/raports-nightly.service
 %{_sbindir}/matrixData-nightly
 %{_unitdir}/matrixData-nightly.timer
 %{_unitdir}/matrixData-nightly.service
