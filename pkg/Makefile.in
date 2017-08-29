@@ -31,6 +31,7 @@ sbindir = @sbindir@
 srcdir = @srcdir@
 sysconfdir = @sysconfdir@
 unitdir = @systemdsystemunitdir@
+libexecdir = @libexecdir@
 target_os = @target_os@
 
          SBIN_DIR := $(DESTDIR)$(sbindir)
@@ -41,6 +42,7 @@ target_os = @target_os@
 GLOBAL_CONFIG_DIR := $(DESTDIR)$(sysconfdir)
     RASTREAMD_DIR := $(DESTDIR)$(sysconfdir)/rastream.d
  SASL2_CONFIG_DIR := $(DESTDIR)$(sysconfdir)/sasl2
+      LIBEXEC_DIR := $(DESTDIR)$(libexecdir)/argus-clients
 
 ifndef WORKSTATION_BUILD
  SBIN_SCRIPTS = rhel/systemd/radium-setup \
@@ -84,6 +86,7 @@ ifndef WORKSTATION_BUILD
                 rhel/sysconfig/rastream
     RASTREAMD = rhel/rastream.d/00rasqltimeindex
  SASL2_CONFIG = rhel/sasl2/radium.conf
+      LIBEXEC = rhel/libexec/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp
 else
  SBIN_SCRIPTS = rhel/systemd/radhcp-setup
     UNITFILES = rhel/systemd/radhcp.service \
@@ -95,14 +98,14 @@ GLOBAL_CONFIG = ra.conf radium.conf
 
 .PHONY: install installdirs install-sbin-scripts install-unitfiles \
         install-usr-argus install-pkgdata install-sysconfig \
-        install-global-config install-rastreamd all
+        install-global-config install-rastreamd install-libexec all
 
 all:
 	$(NOOP)
 
 install:  install-sbin-scripts install-unitfiles install-usr-argus \
           install-pkgdata install-sysconfig install-global-config \
-          install-rastreamd install-sasl2-config
+          install-rastreamd install-sasl2-config install-libexec
 
 install-sbin-scripts: $(SBIN_SCRIPTS)
 ifeq ($(target_os),linux-gnu)
@@ -169,6 +172,15 @@ install-sasl2-config: $(SASL2_CONFIG)
 	for i in  $^ ; do \
 		$(INSTALL) -m 0644 $$i $(SASL2_CONFIG_DIR)/`basename $$i` ; \
 	done
+
+install-libexec: $(LIBEXEC)
+ifeq ($(target_os),linux-gnu)
+	@set -e ; \
+	mkdir -p $(LIBEXEC_DIR) ; \
+	for i in  $^ ; do \
+		$(INSTALL) -m 0644 $$i $(LIBEXEC_DIR)/`basename $$i` ; \
+	done
+endif
 
 # Prevent GNU make v3 from overflowing arg limit on SysV.
 .NOEXPORT:

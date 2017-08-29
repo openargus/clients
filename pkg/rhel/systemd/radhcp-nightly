@@ -15,13 +15,13 @@ fi
 
 # systemd likes all output on stdout, so redirect stderr.
 ( \
-rasql -r mysql://root@localhost/dhcp/dhcp_%Y_%m_%d \
+rasql -r mysql://root@localhost/dhcpFlows/dhcp_%Y_%m_%d \
       -Mtime 1d \
       -t -3d+2d \
       -w - \
    | radhcp -r - \
             -Mquery:SEARCH:\ when=-1d,table=detail_%Y_%m_%d \
             -Mquery:SEARCH:\ when=-1d,table=summary_%Y_%m_%d,pullup \
-            -w mysql://root@localhost/dhcp/ \
+            -w mysql://root@localhost/dhcpFlows/ \
             -Mtime 1d \
 ) 2>&1
