@@ -46,26 +46,6 @@ make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 %install
 rm -rf $RPM_BUILD_ROOT
 make DESTDIR="$RPM_BUILD_ROOT" %{?_workstation:WORKSTATION_BUILD=1} install
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ntp $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ntp
-install -D -m 0755 pkg/rhel/systemd/radns-nightly $RPM_BUILD_ROOT%{argussbin}/radns-nightly
-install -D -m 0644 pkg/rhel/systemd/radns-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/radns-nightly.service $RPM_BUILD_ROOT%{_unitdir}/radns-nightly.service
-install -D -m 0644 pkg/rhel/systemd/rahosts-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/rahosts-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/rahosts-nightly.service $RPM_BUILD_ROOT%{_unitdir}/rahosts-nightly.service
-install -D -m 0644 pkg/rhel/systemd/raports-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/raports-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/raports-nightly.service $RPM_BUILD_ROOT%{_unitdir}/raports-nightly.service
-install -D -m 0755 pkg/rhel/systemd/matrixData-nightly $RPM_BUILD_ROOT%{argussbin}/matrixData-nightly
-install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/matrixData-nightly.service $RPM_BUILD_ROOT%{_unitdir}/matrixData-nightly.service
-install -D -m 0755 pkg/rhel/systemd/dbaseRollup-nightly $RPM_BUILD_ROOT%{argussbin}/dbaseRollup-nightly
-install -D -m 0644 pkg/rhel/systemd/dbaseRollup-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/dbaseRollup-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/dbaseRollup-nightly.service $RPM_BUILD_ROOT%{_unitdir}/dbaseRollup-nightly.service
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.arp $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.arp
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ether $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ether
-install -D -m 0644 pkg/rhel/share/argus-clients/rasqlinsert.ldap $RPM_BUILD_ROOT%{_datarootdir}/argus-clients/rasqlinsert.ldap
-install -D -m 0755 pkg/rhel/systemd/rarp-nightly $RPM_BUILD_ROOT%{argussbin}/rarp-nightly
-install -D -m 0644 pkg/rhel/systemd/rarp-nightly.timer $RPM_BUILD_ROOT%{_unitdir}/rarp-nightly.timer
-install -D -m 0644 pkg/rhel/systemd/rarp-nightly.service $RPM_BUILD_ROOT%{_unitdir}/rarp-nightly.service
 
 cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 
