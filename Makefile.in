@@ -67,7 +67,7 @@ DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in READM
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
 
-.PHONY: install installdirs
+.PHONY: install installdirs install-perl uninstall-perl
 
 all: force
 	@set -e ; for i in  $(DIRS) ; do \
@@ -83,7 +83,7 @@ clients: common
 examples: common
 include: common
 
-install:  force
+install: install-perl force
 	$(MAKE) installdirs
 	[ -d $(DESTDIR)@prefix@ ] || \
 		(mkdir -p $(DESTDIR)@prefix@; chmod 755 $(DESTDIR)@prefix@)
@@ -180,7 +180,13 @@ install:  force
 		(mkdir -p $(DESTDIR)$(docdir); chmod 755 $(DESTDIR)$(docdir))
 	$(INSTALL) -m 0644 $(srcdir)/README $(DESTDIR)$(docdir)
 
-uninstall:
+install-perl:
+	@set -e ; \
+	mkdir -p $(DESTDIR)$(datarootdir)/perl5/qosient ; \
+	$(INSTALL) -m 0644 $(srcdir)/lib/perl5/qosient/util.pm \
+	           $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
+
+uninstall: uninstall-perl
 	@for i in  $(INSTDIRS) ; do \
 		if [ -d $$i ] ; then \
 			echo "making in $$i"; \
@@ -221,6 +227,9 @@ uninstall:
 	rm -f $(DESTDIR)@mandir@/man8/radium.8
 	rm -rf $(DESTDIR)$(docdir)
 	rm -rf $(DESTDIR)$(prefix)/argus
+
+uninstall-perl:
+	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
 
 installdirs:
 	${srcdir}/config/mkinstalldirs $(bindir) $(infodir)

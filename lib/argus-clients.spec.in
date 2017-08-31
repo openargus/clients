@@ -130,6 +130,7 @@ rm -f %{argusbin}/rasplit
 %{_datarootdir}/argus-clients/rasqlinsert.ldap
 %{_datarootdir}/argus-clients/rasqlinsert.man
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
+%{_datarootdir}/perl5/qosient
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
