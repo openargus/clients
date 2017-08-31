@@ -902,8 +902,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                RaCursesUpdateInterval.tv_sec  = parser->ArgusUpdateInterval.tv_sec;
                RaCursesUpdateInterval.tv_usec = parser->ArgusUpdateInterval.tv_usec;
             } else {
-               RaCursesUpdateInterval.tv_sec  = 1;
-               RaCursesUpdateInterval.tv_usec = 153613;
+               RaCursesUpdateInterval.tv_sec  = 10;
+               RaCursesUpdateInterval.tv_usec = 0;
             }
          }
 
@@ -1141,10 +1141,12 @@ ArgusClientTimeout ()
                      ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STATUS);
                      if (ArgusParser->Bflag > 0) {
                         if ((bin->etime.tv_sec + ArgusParser->Bflag) < tvp->tv_sec) {
+#ifdef ARGUSDEBUG
+                           ArgusDebug (2, "ArgusClientTimeout: deleting time bin %p\n", bin);
+#endif
                            RaDeleteBin(ArgusParser, bin);
                            RaBinProcess->array[i] = NULL;
                            deleted++;
-
                         }
                      }
                   }
