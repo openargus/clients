@@ -38,8 +38,7 @@ use DBI;
 use File::DosGlob qw/ bsd_glob /;
 use File::Temp qw/ tempfile tempdir /;
 use File::Which qw/ which /;
-use Time::Local;
-use Switch;
+use qosient::util;  # parsetime
 
 local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 
@@ -89,48 +88,7 @@ foreach my $i (@dirs) {
 }
 print "DEBUG: rahostsdaily: using $archive as source files.\n" if $debug;
 
-my @time;
-my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-
-if ($time eq "") {
-   my $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
-   @time = localtime($yesterday);
-
-} else {
-   my $op = substr( $time, 0, 1 );
-
-   if ($op == '-') {
-      my $value = substr($time, 1);
-      my $index = substr($time, -1);
-      $value =~ /(\d+)/;
-
-      switch ($index) {
-         case 's' { }
-         case 'm' { $value *= 60 }
-         case 'h' { $value *= 60 * 60 }
-         case 'd' { $value *= 24 * 60 * 60 }
-         case 'w' { $value *= 7 * 24 * 60 * 60 }
-         case 'M' { 
-            $mon -= $value ;
-            while ($mon < 0) {
-               $year--;
-               $mon += 12;
-            }
-            $value = 0 
-         }
-         case 'y' { $year -= $value ; $value = 0 }
-         case 'Y' { $year -= $value ; $value = 0 }
-      }
-      my $time = timelocal($sec,$min,$hour,$mday,$mon,$year) - $value;
-      @time = localtime($time);
-
-   } else {
-      my ($year, $mon, $mday) = split ( '/', $time);
-      my $time = timelocal(0,0,12,$mday,$mon-1,$year-1900);
-      @time = localtime($time);
-   }
-}
-
+my    @time = parsetime($time);
 my    $date = strftime '%Y/%m/%d', @time;
 my  $dbdate = strftime '%Y_%m_%d', @time;
 my $pattern = strftime $archive, @time;
