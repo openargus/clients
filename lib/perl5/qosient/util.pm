@@ -22,7 +22,7 @@ sub parsetime {
     my @time;
     my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
 
-    if ( $time eq "" ) {
+    if ( !defined $time || $time eq "" ) {
         my $yesterday =
           timelocal( 0, 0, 12, $mday, $mon, $year ) - 24 * 60 * 60;
         @time = localtime($yesterday);
@@ -31,11 +31,12 @@ sub parsetime {
     else {
         my $op = substr( $time, 0, 1 );
 
-        if ( $op == '-' ) {
+        if ( $op eq '-' ) {
             my $value = substr( $time, 1 );
             my $index = substr( $time, -1 );
-            $value =~ /(\d+)/;
-
+            if ( $value =~ /(\d+)/ ) {
+                $value = $1;
+            }
             switch ($index) {
                 case 's' { }
                 case 'm' { $value *= 60 }
