@@ -504,26 +504,30 @@ ArgusHandleSearchCommand (char *command)
                            
                   if (name->cnames != NULL) {
 #if defined(ARGUS_THREADS)
-                              do {
-                                 if (name->cnames == NULL) {
-                                    done = 1;
-                                 } else {
-                                    if (pthread_mutex_lock(&name->cnames->lock) == 0) {
+                     do {
+                        if (name->cnames == NULL) {
+                           done = 1;
+                        } else {
+                           if (pthread_mutex_lock(&name->cnames->lock) == 0) {
 #endif
-                                       int cnt = name->cnames->count;
-                                       struct ArgusListObjectStruct *list = name->cnames->start;
+                              int cnt = name->cnames->count;
+                              cnt = (cnt >= (2048 - resultnum)) ? (2048 - resultnum) : cnt;
+                              struct ArgusListObjectStruct *list = name->cnames->start;
 
-                                       for (x = 0; x < cnt; x++) {
-                                          cname = (struct nnamemem *)list->list_obj;
-                                          results[resultnum++] = strdup(cname->n_name);
-                                          list = list->nxt;
-                                       }
+                              for (x = 0; x < cnt; x++) {
+                                 cname = (struct nnamemem *)list->list_obj;
+                                 results[resultnum++] = strdup(cname->n_name);
+                                 list = list->nxt;
+                              }
 #if defined(ARGUS_THREADS)
-                                       pthread_mutex_unlock(&name->cnames->lock);
-                                    }
-                                    if (cname != NULL) name = cname; else done = 1;
-                                }
-                              } while (!done && (resultnum < 2048));
+                              pthread_mutex_unlock(&name->cnames->lock);
+                           }
+                           if ((cname != NULL) && (cname != name))
+                              name = cname;
+                          else
+                              done = 1;
+                        }
+                     } while (!done && (resultnum < 2048));
 #endif
                   }
 
