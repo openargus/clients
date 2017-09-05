@@ -181,10 +181,12 @@ install: install-perl force
 	$(INSTALL) -m 0644 $(srcdir)/README $(DESTDIR)$(docdir)
 
 install-perl:
+ifndef WORKSTATION_BUILD
 	@set -e ; \
 	mkdir -p $(DESTDIR)$(datarootdir)/perl5/qosient ; \
 	$(INSTALL) -m 0644 $(srcdir)/lib/perl5/qosient/util.pm \
 	           $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
+endif
 
 uninstall: uninstall-perl
 	@for i in  $(INSTDIRS) ; do \
@@ -229,7 +231,9 @@ uninstall: uninstall-perl
 	rm -rf $(DESTDIR)$(prefix)/argus
 
 uninstall-perl:
+ifndef WORKSTATION_BUILD
 	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
+endif
 
 installdirs:
 	${srcdir}/config/mkinstalldirs $(bindir) $(infodir)
