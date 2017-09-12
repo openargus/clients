@@ -2549,42 +2549,85 @@ ArgusParseAliasFile(char *file)
 
 
 int ArgusParserWiresharkManufFileRead = 0;
+int ArgusParseWiresharkManufEntry (struct ArgusParserStruct *, char *);
+int ArgusWellKnownTag = 0;
+
+
+#define ARGUS_MAX_ETHER_ENTRIES		8
+char *ArgusAdditionalWiresharkManufEntries[ARGUS_MAX_ETHER_ENTRIES] = {
+   "01:00:5E        IPv4Multi       U.S. Department of Defense (IANA)",
+   "33:33/16        IPv6Multi       (RFC 2464), insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)",
+   "FF:FF:FF        Broadcast       IEEE Registration Authority",
+   "01:00:0C        Cisco           (Cisco Discovery Protocol), VTP (VLAN Trunking Protocol)",
+   "01:80:C2        Ieee802         Spanning Tree Protocol (for bridges) IEEE 802.1D",
+   "01:0C:CD        IEC             (IEC 61850 GOOSE, GSSE and Multicast sampled values)",
+   "01:1B:19        PrecTime        Precision Time Protocol (PTP) over Ethernet",
+   "01:80:C2        PrecTime        Precision Time Protocol (PTP) over Ethernet",
+};
 
 int 
 ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
 {
-   int retn = 0, ArgusWellKnownTag = 0;
    struct stat statbuf;
    FILE *fd = NULL;
+   int i, retn = 0;
 
    if (ArgusParserWiresharkManufFileRead == 0) {
       if (stat(file, &statbuf) >= 0) {
          if ((fd = fopen(file, "r")) != NULL) {
-            char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
-            char ptrbuf[MAXSTRLEN];
+            char strbuf[MAXSTRLEN], *str = strbuf;
             int lines = 0;
+            ArgusWellKnownTag = 0;
+
+            while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
+               ArgusParseWiresharkManufEntry (parser, str);
+               lines++;
+            }
 
             retn = 1;
+            ArgusParserWiresharkManufFileRead = 1;
+            fclose(fd);
+         }
+      }
 
-            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               lines++;
-               str = strbuf;
-               while (*str && isspace((int)*str))
-                   str++;
+      for (i = 0; i < ARGUS_MAX_ETHER_ENTRIES; i++) { 
+         char *entry = strdup(ArgusAdditionalWiresharkManufEntries[i]);
+
+         ArgusParseWiresharkManufEntry (parser, entry);
+         free(entry);
+      }
+   }
+ 
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusParserWiresharkManufFile (%p, %s) returning %d\n", parser, file, retn);
+#endif
+   
+   return (retn);
+}
+
+int
+ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str) 
+{
+   char *optarg = NULL;
+   char ptrbuf[MAXSTRLEN];
+   int retn = 0, ArgusWellKnownTag = 0;
+
+   while (*str && isspace((int)*str))
+      str++;
 
 #define RA_READING_ETHER_PART		0
 #define RA_READING_ETHER_CLASS		1
 #define RA_READING_ETHER_HOST		2
 #define RA_READING_ETHER_VENDOR		3
 
-               if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-                  int state = RA_READING_ETHER_PART;
-                  int done = 0, masklen = 0, addr;
-                  u_char eaddr[6];
+   if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+      int state = RA_READING_ETHER_PART;
+      int done = 0, masklen = 0, addr;
+      u_char eaddr[6];
 
-                  strcpy(ptrbuf, str);
-                  while ((optarg = strtok(str, " \t\n")) != NULL) {
-                     switch (state) {
+      strcpy(ptrbuf, str);
+      while ((optarg = strtok(str, " \t\n")) != NULL) {
+         switch (state) {
                         case RA_READING_ETHER_PART: {
                            char *sptr, *tptr = optarg;
                            int result, cnt = 0;
@@ -2662,30 +2705,20 @@ ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
                            done++;
                            break;
                         }
-                     }
-                     str = NULL;
+         }
+         str = NULL;
                     
-                     if (done)
-                        break;
-                  }
+         if (done)
+            break;
+      }
 
-               } else {
+   } else {
                   if (strstr(str, "Well-known addresses.") != NULL)  {
                      ArgusWellKnownTag++;
                   }
-               }
-            }
-            ArgusParserWiresharkManufFileRead = 1;
-            fclose(fd);
-         }
-      }
    }
 
-#ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusParserWiresharkManufFile (%p, %s) returning %d\n", parser, file, retn);
-#endif
-
-   return (retn);
+   return retn;
 }
 
 
@@ -21093,7 +21126,7 @@ etheraddr_oui(struct ArgusParserStruct *parser, u_char *ep)
       }
    }
 
-   return ("Uknown");
+   return ("Unknown");
 }
 
 char *
