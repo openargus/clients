@@ -136,7 +136,7 @@ static void deadman(pid_t);
 
 static void backpatch(struct ablock *, struct ablock *);
 static void merge(struct ablock *, struct ablock *);
-static struct ablock *Argusgen_cmp(int, u_int, u_int, int, u_int, int);
+static struct ablock *Argusgen_cmp(int, u_int, u_int, u_int, u_int, int);
 static struct ablock *Argusgen_mcmp(int, u_int, u_int, u_int, u_int, u_int, int);
 static struct ablock *Argusgen_bcmp(int, u_int, u_int, u_char *, int);
 static struct ablock *Argusgen_prototype(u_int, u_int);
@@ -636,7 +636,7 @@ struct ablock *b;
 }
 
 static struct ablock *
-Argusgen_cmp(int dsr, u_int offset, u_int size, int v, u_int op, int type)
+Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
 {
    struct slist *s;
    struct ablock *b;
