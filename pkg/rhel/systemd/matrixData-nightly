@@ -85,8 +85,10 @@ my @db1 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime ltime sid inf sadd
 my @db2 = ( "etherMatrix", "ether", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "not ip");
 my @db3 = ( "ntpMatrix", "ntp", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 123");
 my @db4 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 389");
+my @db5 = ( "smtpMatrix", "smtp", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 25");
+my @db6 = ( "imapsMatrix", "imaps", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 993");
 
-my @databases = \(@db1, @db2, @db3, @db4);
+my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6);
 
 foreach my $i (0 .. $#databases) {
    my ($db, $srv, $keys, $fields, $filter) = @{$databases[$i]};
