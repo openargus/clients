@@ -155,7 +155,7 @@ distribution.
 %exclude %{argusbin}/rastream
 %exclude %{argusbin}/ragraph
 %exclude %{argusbin}/rasql*
-%exclude %{argusbin}/radhcp
+%exclude %{argusbin}/radhcp*
 %exclude %{argusbin}/radns
 %exclude %{argusbin}/radnsdb
 %{argusman}
@@ -206,7 +206,7 @@ Argus DHCP-tracking Client Software
 %defattr(-,root,root)
 %{_sbindir}/radhcp-setup
 %{_unitdir}/radhcp.service
-%{_bindir}/radhcp
+%{_bindir}/radhcp*
 %if 0%{!?_workstation:1}
 %{_sbindir}/radhcp-nightly
 %{_sbindir}/radhcp-nightly-derived

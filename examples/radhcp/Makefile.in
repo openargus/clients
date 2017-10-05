@@ -94,19 +94,25 @@ SRC =	radhcp.c rabootp.c rasql.c rabootp_memory.c rabootp_client_tree.c \
         rabootp_sql.c
 
 PROGS = $(INSTALLBIN)/radhcp
+ifndef WORKSTATION_BUILD
+SCRIPTS = $(INSTALLBIN)/radhcp-query
+endif
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
  
 OBJ =	$(SRC:.c=.o)
 
-all: $(PROGS)
+all: $(PROGS) $(SCRIPTS)
 
 $(INSTALLBIN)/radhcp: $(OBJ) $(LIB)
 	$(CC) $(CCOPT) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
+$(INSTALLBIN)/radhcp-query: radhcp-query
+	$(INSTALL) -m 0755 $^ $@
 
-CLEANFILES = $(OBJ) $(PROGS)
+# Need to clean radhcp-query from both $(INSTALLBIN) and $PWD
+CLEANFILES = $(OBJ) $(PROGS) $(SCRIPTS) radhcp-query
 
 .PHONY: install
 install: force all install-perl
@@ -117,6 +123,7 @@ install: force all install-perl
 		(mkdir -p $(BINDIR); chmod 755 $(BINDIR))
 
 	$(INSTALL) $(INSTALLBIN)/radhcp $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/radhcp-query $(DESTDIR)$(BINDIR)
 
 install-perl:
 ifndef WORKSTATION_BUILD

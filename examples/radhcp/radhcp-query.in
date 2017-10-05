@@ -1,0 +1,154 @@
+#!@V_PERL@
+
+# usage: radhcp-query [-v] <date> [<address>]
+#
+# example: radhcp-query -v 172.20.2.160 2017/01/04
+
+use strict;
+use warnings;
+use qosient::radhcp;
+use Getopt::Std;
+use vars qw/$opt_g/;
+use POSIX qw/strftime floor/;
+
+# Display one hash (row) from the database.
+sub _display {
+    my ( $href, $colwidth, $cols_aref, $header ) = @_;
+    my $line     = q{};
+    my @keyary   = keys %$href;
+    my $keycount = scalar(@keyary);
+    my $colcount = 0;
+
+    if ( !defined $cols_aref ) {
+        $cols_aref = \@keyary;
+    }
+
+    if ( defined $header && $header > 0 ) {
+        for my $col (@$cols_aref) {
+            $line .= sprintf( "%*s", -1 * $colwidth, $col );
+            $colcount++;
+        }
+
+        print "$line\n";
+        $line = q{};
+
+        print '-' x ( $colcount * $colwidth );
+        print "\n";
+    }
+
+    for my $col (@$cols_aref) {
+        my $val = "";
+
+        if ( defined $href->{$col} ) {
+            $val = $href->{$col};
+        }
+        $line .= sprintf( "%*.*s", -1 * $colwidth, $colwidth - 1, $val );
+    }
+
+    print "$line\n";
+    return;
+}
+
+# Display all of the SQL query results.
+sub display {
+    my ( $aref, $colwidth, $cols_aref, $header ) = @_;
+    my $len = scalar(@$aref);
+
+    if ( $len < 1 ) {
+        return;
+    }
+
+    my @keyary = keys %{ (@$aref)[0] };
+    if ( !defined $cols_aref ) {
+        $cols_aref = \@keyary;
+    }
+
+    _display( (@$aref)[0], $colwidth, $cols_aref, $header );
+    $len = $len - 1;
+    if ( $len < 1 ) {
+        return;
+    }
+
+    for my $href ( (@$aref)[ 1 .. $len ] ) {
+        _display( $href, $colwidth, $cols_aref, 0 );
+    }
+    return;
+}
+
+sub time_to_string {
+    my ( $aref, $timecols_aref ) = @_;
+
+    for my $href ( @$aref ) {
+        for my $col (@$timecols_aref) {
+            # $href->{$col} = scalar localtime(POSIX::floor($href->{$col}));
+            $href->{$col} = strftime "%c", localtime(POSIX::floor($href->{$col}));
+        }
+    }
+}
+
+# Call getopts before using ARGV
+my %args;
+getopts( 'v', \%args );
+
+my $addr   = "";
+
+if ( defined $ARGV[1] ) {
+    $addr = "$ARGV[1]";
+} else {
+}
+
+my $date   = $ARGV[0];
+my $dbh    = dhcp_opendb;
+my $empty  = 0;
+my $header = 1;
+my $undef;
+my $_colwidth = 35;
+
+my $lres = dhcp_getleasebyaddr( $dbh, $date, '4', $addr );
+my @cols =
+  qw(fqdn clientaddr stime ltime);
+my @timecols =
+  qw(stime ltime);
+
+if ( !defined $lres ) {
+    $empty = 1;
+    goto CLOSE;
+}
+
+if ( scalar @$lres < 1 ) {
+    $empty = 1;
+    goto CLOSE;
+}
+
+dhcp_insert_fqdn( $lres );
+if ( !$args{v} ) {
+    time_to_string( $lres, \@timecols );
+    display( $lres, $_colwidth, \@cols, $header );
+    goto CLOSE;
+}
+
+my $lresexp = qosient::radhcp::dhcp_lease_expand( $dbh, $lres );
+my $rescount = 0;
+if ( defined $lresexp && ( scalar @$lresexp > 0 ) ) {
+    for my $aref (@$lresexp) {
+        $rescount += scalar @$aref;
+        dhcp_insert_fqdn( $aref );
+        time_to_string( $aref, \@timecols );
+        display( $aref, $_colwidth, \@cols, $header );
+        if ( $header > 0 ) {
+            $header = 0;
+        }
+    }
+    if ( $rescount == 0 ) {
+        $empty = 1;
+    }
+}
+else {
+    time_to_string( $lres, \@timecols );
+    display( $lres, $_colwidth, \@cols, $header );
+}
+
+CLOSE: if ( $empty > 0 ) {
+    print "No match\n";
+}
+dhcp_closedb($dbh);

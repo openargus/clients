@@ -493,6 +493,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/radecode/Makefile
       ./examples/radns/Makefile
       ./examples/radhcp/Makefile
+      ./examples/radhcp/radhcp-query
       ./examples/radump/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
