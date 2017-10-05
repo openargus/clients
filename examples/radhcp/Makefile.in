@@ -24,6 +24,7 @@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
+perlextlib = @PERL_EXT_LIB@
 
 # Pathname of directory to install the system binaries
 SBINDIR = @sbindir@
@@ -107,7 +108,8 @@ $(INSTALLBIN)/radhcp: $(OBJ) $(LIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 
-install: force all
+.PHONY: install
+install: force all install-perl
 	[ -d $(DESTDIR) ] || \
 		(mkdir -p $(DESTDIR); chmod 755 $(DESTDIR))
 
@@ -116,8 +118,19 @@ install: force all
 
 	$(INSTALL) $(INSTALLBIN)/radhcp $(DESTDIR)$(BINDIR)
 
-uninstall: force all
+install-perl:
+ifndef WORKSTATION_BUILD
+	@set -e ; \
+	mkdir -p $(DESTDIR)$(perlextlib)/qosient ; \
+	$(INSTALL) -m 0644 radhcp.pm \
+	           $(DESTDIR)$(perlextlib)/qosient/radhcp.pm
+endif
+
+uninstall: force all uninstall-perl
 	rm -f $(DESTDIR)$(BINDIR)/radhcp
+
+uninstall-perl:
+	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/radhcp.pm
 
 clean:
 	rm -f $(CLEANFILES)

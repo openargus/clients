@@ -132,7 +132,7 @@ rm -f %{argusbin}/rasplit
 %{_datarootdir}/argus-clients/rasqlinsert.ldap
 %{_datarootdir}/argus-clients/rasqlinsert.man
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
-%{perl_vendorlib}/qosient
+%{perl_vendorlib}/qosient/util.pm
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
@@ -220,6 +220,7 @@ Argus DHCP-tracking Client Software
 %{_unitdir}/radhcp-nightly.service
 %{_datarootdir}/argus-clients/rasqlinsert.dhcp
 %{_libexecdir}/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp
+%{perl_vendorlib}/qosient/radhcp.pm
 %endif
 
 %post dhcp
