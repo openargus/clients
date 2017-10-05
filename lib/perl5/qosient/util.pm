@@ -65,6 +65,7 @@ sub parsetime {
             @time = localtime($time);
         }
     }
+    return @time;
 }
 
 1;
