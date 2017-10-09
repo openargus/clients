@@ -3776,6 +3776,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
 
                         switch (i) {
                            case ARGUS_TRANSPORT_INDEX:
+                           case ARGUS_FLOW_HASH_INDEX:
                            case ARGUS_TIME_INDEX:
                            case ARGUS_METRIC_INDEX:
                            case ARGUS_PSIZE_INDEX:
