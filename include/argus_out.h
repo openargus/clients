@@ -739,6 +739,12 @@ struct ArgusV3AddrStruct {
 // unsigned char inf[4];
 };
 
+struct ArgusFlowHashStruct {
+   struct ArgusDSRHeader hdr;
+   unsigned int hash;
+   unsigned int ind;
+};
+
 struct ArgusAddrStruct {
    union {
       unsigned int value;
@@ -761,10 +767,6 @@ struct ArgusTimeStruct {
    struct ArgusTime start, end;
 };
 
-struct ArgusHashObject {
-   struct ArgusDSRHeader hdr;
-   unsigned long long hash;
-};
 
 struct ArgusTimeObject {
    struct ArgusDSRHeader hdr;
@@ -1018,8 +1020,8 @@ struct ArgusRecordHeader {
 struct ArgusCanonRecord {
    struct ArgusRecordHeader      hdr;
    struct ArgusFlow              flow;
+   struct ArgusFlowHashStruct    hash;
    struct ArgusTransportStruct   trans;
-   struct ArgusHashObject        hash;
    struct ArgusTimeObject        time;
    struct ArgusEncapsStruct      encaps;
    struct ArgusAsnStruct         asn;

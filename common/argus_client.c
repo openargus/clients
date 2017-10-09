@@ -2012,6 +2012,15 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         retn->dsrindex |= (0x01 << ARGUS_FLOW_INDEX);
                         break;
                      }
+
+                     case ARGUS_FLOW_HASH_DSR: {
+                        struct ArgusFlowHashStruct *hash = (struct ArgusFlowHashStruct *) dsr;
+
+                        bcopy(hash, (char *)&canon->hash, sizeof(*hash));
+                        retn->dsrs[ARGUS_FLOW_HASH_INDEX] = (struct ArgusDSRHeader*) &canon->hash;
+                        retn->dsrindex |= (0x01 << ARGUS_FLOW_HASH_INDEX);
+                        break;
+                     }
         
                      case ARGUS_TRANSPORT_DSR: {
                         struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;

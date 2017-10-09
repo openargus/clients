@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	220
-#define MAX_PRINT_ALG_TYPES     	220
+#define ARGUS_MAX_PRINT_ALG     	221
+#define MAX_PRINT_ALG_TYPES     	221
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -640,6 +640,7 @@ void ArgusPrintDuration (struct ArgusParserStruct *, char *, struct ArgusRecordS
 void ArgusPrintTransactions (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSequenceNumber (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintHashRef (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintHashIndex (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintRank (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintBinNumber (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintBins (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -875,6 +876,7 @@ void ArgusPrintDurationLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintTransactionsLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSequenceNumberLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintHashRefLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintHashIndexLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintRankLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintBinNumberLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintBinsLabel (struct ArgusParserStruct *, char *, int);
@@ -2014,6 +2016,7 @@ extern void ArgusPrintDuration (struct ArgusParserStruct *, char *, struct Argus
 extern void ArgusPrintTransactions (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSequenceNumber (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintHashRef (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintHashIndex (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintRank (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintBinNumber (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintBins (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -2153,6 +2156,7 @@ extern void ArgusPrintDurationLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintTransactionsLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSequenceNumberLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintHashRefLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintHashIndexLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintRankLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintBinNumberLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintBinsLabel (struct ArgusParserStruct *, char *, int);
