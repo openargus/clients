@@ -8481,7 +8481,8 @@ ArgusPrintHashRef (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
          struct ArgusFlowHashStruct *hstruct = (struct ArgusFlowHashStruct *) argus->dsrs[ARGUS_FLOW_HASH_INDEX];
-         hash = hstruct->hash;
+         if (hstruct != NULL)
+            hash = hstruct->hash;
          break;
       }
    }
