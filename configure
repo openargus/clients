@@ -686,6 +686,13 @@ CFLAGS
 CC
 SHLICC2
 CLANG
+PERL_EXT_DLEXT
+PERL_EXT_LDFLAGS
+PERL_EXT_CPPFLAGS
+PERL_EXT_LIB
+PERL_EXT_INC
+PERL_EXT_PREFIX
+PERL
 target_os
 target_vendor
 target_cpu
@@ -739,7 +746,6 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
-with_perl
 with_gcc
 with_examples
 with_pluribus
@@ -758,6 +764,12 @@ with_systemdsystemunitdir
       ac_precious_vars='build_alias
 host_alias
 target_alias
+PERL_EXT_PREFIX
+PERL_EXT_INC
+PERL_EXT_LIB
+PERL_EXT_CPPFLAGS
+PERL_EXT_LDFLAGS
+PERL_EXT_DLEXT
 CC
 CFLAGS
 LDFLAGS
@@ -1388,7 +1400,6 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-perl=DIR         Use perl in <DIR>
   --without-gcc           don't use gcc
   --without-examples      don't compile examples
   --with-pluribus         Compile for pluribus
@@ -1405,6 +1416,18 @@ Optional Packages:
                           Directory for systemd service files
 
 Some influential environment variables:
+  PERL_EXT_PREFIX
+              Perl PREFIX
+  PERL_EXT_INC
+              Directory to include XS headers from
+  PERL_EXT_LIB
+              Directory to install perl files into
+  PERL_EXT_CPPFLAGS
+              CPPFLAGS to compile perl extensions
+  PERL_EXT_LDFLAGS
+              LDFLAGS to build perl extensions
+  PERL_EXT_DLEXT
+              Perl dynamic library extension
   CC          C compiler command
   CFLAGS      C compiler flags
   LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
@@ -2599,47 +2622,148 @@ test -n "$target_alias" &&
 
 
 
-# Check whether --with-perl was given.
-if test "${with_perl+set}" = set; then :
-  withval=$with_perl; with_perl="$withval"
+        #
+        # Check if perl executable exists.
+        #
+        for ac_prog in "${PERL-perl}"
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PERL+:} false; then :
+  $as_echo_n "(cached) " >&6
 else
-  with_perl="yes"
+  case $PERL in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PERL="$PERL" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PERL="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PERL=$ac_cv_path_PERL
+if test -n "$PERL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL" >&5
+$as_echo "$PERL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 
 
-   perl=FAIL
+  test -n "$PERL" && break
+done
 
-   if ! test ${with_perl} = "no"; then
-      if test ${with_perl} = "yes"; then
-         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for standard perl installation" >&5
-$as_echo_n "checking for standard perl installation... " >&6; }
-         for dir in /usr /usr/local /opt /opt/local; do
-            if test -r $dir/bin/perl ; then
-                perl=$dir/bin/perl
-                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $perl" >&5
-$as_echo "$perl" >&6; }
-                V_PERL="$perl"
-                break;
-            else
-               { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-            fi
-         done
-      else
-         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for perl installation in ${with_perl}" >&5
-$as_echo_n "checking for perl installation in ${with_perl}... " >&6; }
-         if test -r ${with_perl}/perl ; then
-            perl=${with_perl}/perl
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: $perl" >&5
-$as_echo "$perl" >&6; }
-            V_PERL="$perl"
-         else
-            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-         fi
-      fi
-   fi
 
+        if test -n "$PERL" ; then
+
+                #
+                # Check for Perl prefix.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl prefix" >&5
+$as_echo_n "checking for Perl prefix... " >&6; }
+                if test -z "$PERL_EXT_PREFIX" ; then
+                        PERL_EXT_PREFIX=`$PERL -MConfig -e 'print $Config{prefix};'`;
+                fi
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_PREFIX" >&5
+$as_echo "$PERL_EXT_PREFIX" >&6; }
+
+
+                #
+                # Check for Perl extensions include path.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl extension include path" >&5
+$as_echo_n "checking for Perl extension include path... " >&6; }
+                if test -z "$PERL_EXT_INC" ; then
+                        PERL_EXT_INC=`$PERL -MConfig -e 'print $Config{archlibexp}, "/CORE";'`;
+                fi
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_INC" >&5
+$as_echo "$PERL_EXT_INC" >&6; }
+
+
+                #
+                # Check for the extensions target directory.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl extension target directory" >&5
+$as_echo_n "checking for Perl extension target directory... " >&6; }
+                if test -z "$PERL_EXT_LIB" ; then
+                        PERL_EXT_LIB=`$PERL -MConfig -e 'print $Config{sitearch};'`;
+                fi
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_LIB" >&5
+$as_echo "$PERL_EXT_LIB" >&6; }
+
+
+                #
+                # Check for Perl CPP flags.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl extensions C preprocessor flags" >&5
+$as_echo_n "checking for Perl extensions C preprocessor flags... " >&6; }
+                if test -z "$PERL_EXT_CPPFLAGS" ; then
+                        PERL_EXT_CPPFLAGS=`$PERL -MConfig -e 'print $Config{cppflags};'`;
+                fi
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_CPPFLAGS" >&5
+$as_echo "$PERL_EXT_CPPFLAGS" >&6; }
+
+
+                #
+                # Check for Perl extension link flags.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl extensions linker flags" >&5
+$as_echo_n "checking for Perl extensions linker flags... " >&6; }
+                if test -z "$PERL_EXT_LDFLAGS" ; then
+                        PERL_EXT_LDFLAGS=`$PERL -MConfig -e 'print $Config{lddlflags};'`;
+                fi
+                # Fix LDFLAGS for OS X.  We don't want any -arch flags here, otherwise
+                # linking will fail.  Also, OS X Perl LDFLAGS contains "-arch ppc" which
+                # is not supported by XCode anymore.
+                case "${host}" in
+                *darwin*)
+                        PERL_EXT_LDFLAGS=`echo ${PERL_EXT_LDFLAGS} | sed -e "s,-arch [^ ]*,,g"`
+                        ;;
+                esac
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_LDFLAGS" >&5
+$as_echo "$PERL_EXT_LDFLAGS" >&6; }
+
+
+                #
+                # Check for Perl dynamic library extension.
+                #
+
+                { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Perl dynamic library extension" >&5
+$as_echo_n "checking for Perl dynamic library extension... " >&6; }
+                if test -z "$PERL_EXT_DLEXT" ; then
+                        PERL_EXT_DLEXT=`$PERL -MConfig -e 'print ".", $Config{'dlext'};'`;
+                fi
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PERL_EXT_DLEXT" >&5
+$as_echo "$PERL_EXT_DLEXT" >&6; }
+
+        fi
+
+if test x"$PERL" = x; then
+    as_fn_error $? "\"cannot find Perl\"" "$LINENO" 5
+fi
+V_PERL=$PERL
 
 # Checks for programs.
 

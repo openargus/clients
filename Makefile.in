@@ -47,6 +47,7 @@ LDFLAGS = -g
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
+perlextlib = @PERL_EXT_LIB@
 
 srcdir = @srcdir@
 incdir = @prefix@/include
@@ -183,9 +184,9 @@ install: install-perl force
 install-perl:
 ifndef WORKSTATION_BUILD
 	@set -e ; \
-	mkdir -p $(DESTDIR)$(datarootdir)/perl5/qosient ; \
+	mkdir -p $(DESTDIR)$(perlextlib)/qosient ; \
 	$(INSTALL) -m 0644 $(srcdir)/lib/perl5/qosient/util.pm \
-	           $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
+	           $(DESTDIR)$(perlextlib)/qosient/util.pm
 endif
 
 uninstall: uninstall-perl

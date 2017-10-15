@@ -31,7 +31,11 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADER([include/argus_config.h])
 AC_CANONICAL_TARGET
 
-AC_QOSIENT_PERL(V_PERL)
+AX_PERL_EXT
+if test x"$PERL" = x; then
+    AC_ERROR(["cannot find Perl"])
+fi
+V_PERL=$PERL
 
 # Checks for programs.
 AC_LBL_C_INIT(V_CCOPT, V_INCLS)

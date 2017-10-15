@@ -22,6 +22,8 @@ BuildRequires: pcre-devel, GeoIP-devel
 BuildRequires: mariadb-devel
 BuildRequires: cyrus-sasl-devel
 BuildRequires: libuuid-devel
+BuildRequires: autoconf-archive
+BuildRequires: perl-generators
 Requires: cyrus-sasl
 Conflicts: argus-clients-misc < 5.0-3.1%{dist}.1
 
@@ -40,7 +42,7 @@ Copyright: 2000-2022 QoSient, LLC
 %prep
 %setup -n %{srcname}-%{ver}.%{rel}
 %build
-%configure --with-sasl %{?_workstation:--without-mysql}
+%configure --with-sasl %{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
 make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 
 %install
@@ -130,7 +132,7 @@ rm -f %{argusbin}/rasplit
 %{_datarootdir}/argus-clients/rasqlinsert.ldap
 %{_datarootdir}/argus-clients/rasqlinsert.man
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
-%{_datarootdir}/perl5/qosient
+%{perl_vendorlib}/qosient
 %else
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
