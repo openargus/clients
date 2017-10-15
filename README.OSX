@@ -19,14 +19,14 @@ Notes on building packages for MacOS X
 
    % cd ../argus-clients
    % ./configure --with-readline=/Users/ekinzie/opt/readline --without-GeoIP --without-mysql
-   % make
+   % make -j WORKSTATION_BUILD=1
 
 Then depending on whether your able to sign packages or not ...
 
-   % make OSXSIGN='--sign "Developer ID Installer"' osxpackage
+   % make WORKSTATION_BUILD=1 OSXSIGN='--sign "Developer ID Installer"' osxpackage
 
       or
 
-   % make osxpackage
+   % make WORKSTATION_BUILD=1 osxpackage
 
 
