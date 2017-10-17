@@ -31,6 +31,7 @@
 #include "argus_util.h"    /* needed by argus_client.h */
 #include "argus_client.h"  /* ArgusLog() */
 #include "argus_threads.h"
+#include "argus_main.h"
 #include "rabootp.h"
 #include "rabootp_memory.h"
 #include "rabootp_client_tree.h"
