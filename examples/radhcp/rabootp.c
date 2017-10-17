@@ -872,6 +872,22 @@ __extract_ipv4array(const u_char * const bp, u_char len,
    return count;
 }
 
+/* use with qsort */
+static int
+__uchar_compar(const void *a, const void *b)
+{
+   const unsigned char *uca, *ucb;
+
+   uca = a;
+   ucb = b;
+   if (*uca < *ucb)
+      return -1;
+   if (*uca == *ucb)
+      return 0;
+   return 1;
+}
+
+
 static void
 rfc1048_parse(const u_char *bp, const u_char *endp,
               struct ArgusDhcpStruct *ads, u_char op)

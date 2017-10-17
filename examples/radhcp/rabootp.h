@@ -97,22 +97,6 @@ __options_mask_isset(const uint64_t mask[], uint8_t opt)
    return 0;
 }
 
-/* use with qsort */
-static int
-__uchar_compar(const void *a, const void *b)
-{
-   const unsigned char *uca, *ucb;
-
-   uca = a;
-   ucb = b;
-   if (*uca < *ucb)
-      return -1;
-   if (*uca == *ucb)
-      return 0;
-   return 1;
-}
-
-
 enum ArgusDhcpState {
    __INVALID__  = 0,
    INITREBOOT   = 1,
