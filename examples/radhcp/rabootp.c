@@ -427,8 +427,11 @@ bootp_print(register const u_char *cp, u_int length)
       rfc1048_print(bp->options, (const u_char *)cp+length);
    else {
       u_int32_t ul;
+      u_int32_t options;
 
-      ul = EXTRACT_32BITS(&bp->options[0]);
+      memcpy(&options, bp->options, sizeof(options));
+
+      ul = EXTRACT_32BITS(&options);
       if (ul != 0)
          sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-#0x%x", ul);
    }
