@@ -1,6 +1,10 @@
 #ifndef __ARGUS_THREADS_H
 #  define __ARGUS_THREADS_H
 
+#  ifdef HAVE_CONFIG_H
+#   include "argus_config.h"
+#  endif
+
 #  if defined(ARGUS_THREADS)
 #    include <pthread.h>
 #    define MUTEX_LOCK(l) pthread_mutex_lock(l)
