@@ -54,7 +54,6 @@ RabootpPatriciaTreeUpdate(const struct ArgusDhcpStruct * const parsed,
    struct rabootp_l2addr_list_head *l2list;
    struct rabootp_l2addr_entry *l2entry;
    struct ArgusDhcpIntvlTree *intvltree;
-   struct ArgusDhcpIntvlNode *node;
    int rv = 0;
 
    /* TODO: dig through the replies and use that chosen by the client (if known) */
@@ -211,7 +210,6 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
    struct RaAddressStruct *ras;
    struct rabootp_l2addr_list_head *l2list;
    struct rabootp_l2addr_entry *l2entry;
-   struct ArgusDhcpIntvlTree *intvltree;
    int rv = 0;
 
    if (parser == NULL)

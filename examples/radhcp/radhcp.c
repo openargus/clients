@@ -174,7 +174,6 @@ __search_ipaddr(const struct in_addr * const addr,
    struct RaAddressStruct *ras;
    struct invecTimeRangeStruct itr;
    struct invecStruct x;
-   size_t i;
    int rv = 0;
 
    MUTEX_LOCK(&ArgusParser->lock);
@@ -501,7 +500,7 @@ ArgusHandleTreeCommand (char *command)
 {
    static char buf[4096];
 
-   char *string = &command[6], *sptr;
+   char *string = &command[6];
    char **retn = ArgusHandleResponseArray;
    char *result;
    int verbose = 0;

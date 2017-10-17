@@ -278,7 +278,6 @@ out:
 static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
 			      void *v_cached, void *v_arg)
 {
-   const struct ArgusDhcpStruct * const parsed = v_parsed;
    struct ArgusDhcpStruct *cached = v_cached;
    struct RabootpTimerStruct *rts = v_arg;
 

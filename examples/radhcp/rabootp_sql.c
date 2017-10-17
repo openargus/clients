@@ -89,7 +89,6 @@ RabootpSQLCreateTable(const struct ArgusParserStruct * const parser,
    size_t max_columns;
    int ncols;
    int tmpcol;
-   int querylen;
    int rv = 0;
 
    size_t slen = 0, sremain = querymax;

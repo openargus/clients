@@ -489,7 +489,6 @@ int RabootpPrintLabelSQL(const struct ArgusParserStruct * const parser,
                          const char **namevec, size_t nitems)
 {
    int timax, tcmax, trmax, t, tqmax;
-   int res;
    int out_idx = 0;
 
    tcmax = sizeof(ArgusDhcpStructPrinterTable)/
@@ -532,7 +531,6 @@ int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
                         const char **typevec, size_t nitems)
 {
    int timax, tcmax, trmax, tqmax, t;
-   int res;
    int out_idx = 0;
 
    tcmax = sizeof(ArgusDhcpStructPrinterTable)/

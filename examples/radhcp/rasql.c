@@ -710,8 +710,7 @@ ArgusGetSQLSaveTable()
 int
 ArgusCreateSQLSaveTable(char *db, char *table)
 {
-   int retn = 0, cindex = 0, ind = 0, i, x, exists = 0;
-   struct ArgusMaskStruct *ArgusMaskDefs = ArgusIpV4MaskDefs; 
+   int retn = 0, cindex = 0, exists = 0;
    char stable[1024], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN];
    MYSQL_RES *mysqlRes;
 

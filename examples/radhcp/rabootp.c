@@ -532,11 +532,6 @@ static struct tok tag2str[] = {
 	{ 0, NULL },
 };
 
-/* 2-byte extended tags */
-static struct tok xtag2str[] = {
-   { 0, NULL }
-};
-
 /* DHCP "options overload" types */
 static struct tok oo2str[] = {
    { 1,   "file" },
@@ -883,11 +878,7 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
 {
    register u_int16_t tag;
    register u_int len, size;
-   int first;
-   u_int32_t ul;
-   u_int16_t us;
    u_int8_t uc;
-   size_t off;
 
    /* Step over magic cookie */
    bp += sizeof(int32_t);
@@ -1326,7 +1317,6 @@ __rabootp_update_interval_tree(const void * const v_parsed,
    if (parsed->state == BOUND && cached->state != BOUND) {
       if (parsed->rep.leasetime) {
          struct ArgusDhcpIntvlTree *head = v_arg;
-         struct ArgusDhcpIntvlNode *node;
 
          ArgusDhcpStructUpRef(cached);
          if (ArgusDhcpIntvlTreeInsert(head,
