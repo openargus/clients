@@ -105,33 +105,6 @@ ArgusTimerSleep(struct argus_timer_wheel *);
 int
 ArgusTimerAdvanceWheel(struct argus_timer_wheel *);
 
-static int
-__argus_timer_compare(struct argus_timer *a, struct argus_timer *b)
-{
-   struct timespec result;
-
-   result.tv_sec = a->expiry.tv_sec - b->expiry.tv_sec;
-   result.tv_nsec = a->expiry.tv_nsec - b->expiry.tv_nsec;
-   if (result.tv_nsec < 0) {
-      --result.tv_sec;
-      result.tv_nsec += 1000000000;
-   }
-   if (result.tv_sec < 0)
-      return -1;
-   if (result.tv_sec > 0)
-      return 1;
-
-   /* times are the same.  compare distinguishers */
-   if (a->td < b->td)
-      return -1;
-   if (a->td > b->td)
-      return 1;
-   return 0;
-}
-
-RB_GENERATE_STATIC(argus_timer_tree, argus_timer, tree, __argus_timer_compare);
-
-
 static inline void
 __timespec_sub(const struct timespec * const a,
                const struct timespec * const b,
