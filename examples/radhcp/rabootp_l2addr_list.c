@@ -17,6 +17,9 @@
  * THIS SOFTWARE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 #include "argus_util.h"
 #include "argus_threads.h"
 #include "rabootp_l2addr_list.h"

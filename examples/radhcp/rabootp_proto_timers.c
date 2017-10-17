@@ -25,6 +25,10 @@
  * while after expiration for use by streaming analytics.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <stdlib.h>
 #include <syslog.h>
 #include "argus_threads.h"

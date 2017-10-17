@@ -26,6 +26,9 @@
  * address by endsystem with the current L-2 address.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 #include <syslog.h>
 #include "argus_util.h"
 #include "argus_client.h"

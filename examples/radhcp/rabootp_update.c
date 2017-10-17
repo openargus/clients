@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 #include <stdlib.h>
 #include <syslog.h>
 #include "argus_util.h"

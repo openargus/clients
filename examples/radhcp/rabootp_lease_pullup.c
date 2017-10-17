@@ -26,6 +26,9 @@
  * transaction ID).
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 #include <stdlib.h>
 #include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
