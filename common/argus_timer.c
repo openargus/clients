@@ -58,7 +58,10 @@ __argus_timer_compare(struct argus_timer *a, struct argus_timer *b)
    return 0;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 RB_GENERATE_STATIC(argus_timer_tree, argus_timer, tree, __argus_timer_compare);
+#pragma GCC diagnostic pop
 
 #define TS_MSEC(ts) ((ts)->tv_sec*1000+(ts)->tv_nsec/1000000)
 static unsigned
