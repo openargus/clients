@@ -62,7 +62,10 @@ __dhcp_client_compare(struct ArgusDhcpIntvlNode *aa,
    return 0;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
 RB_GENERATE_STATIC(dhcp_intvl_tree, ArgusDhcpIntvlNode, inttree, __dhcp_client_compare);
+#pragma GCC diagnostic pop
 
 struct ArgusDhcpIntvlTree *
 ArgusDhcpIntvlTreeAlloc(void)
