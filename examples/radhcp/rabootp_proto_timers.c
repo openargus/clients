@@ -213,7 +213,7 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
             ArgusDhcpStructUpRef(cached);
          }
          intvlnode->data = cached;
-         intvlnode->intlo = cached->last_bind;
+         intvlnode->intlo = cached->first_bind;
          cached->timers.intvl = RabootpTimerStart(rts, &exp_intvl, __intvl_exp_cb,
                                                   intvlnode);
       }
