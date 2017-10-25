@@ -130,6 +130,9 @@ struct ArgusOutputStruct {
 #if defined(ARGUS_THREADS)
    pthread_t thread;
    pthread_mutex_t lock;
+   int ListenNotify[2]; /* used by output thread to signal the listen thread
+                         * that it is finished reading the client's command
+                         */
 #endif
 
    struct ArgusSourceStruct *ArgusSrc;
