@@ -511,7 +511,9 @@ ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
    retn->sasl_min_ssf = sasl_min_ssf;
    retn->sasl_max_ssf = sasl_max_ssf;
    retn->auth_localhost = auth_localhost;
+#if defined(ARGUS_THREADS)
    retn->ListenNotify[0] = retn->ListenNotify[1] = -1;
+#endif
 
    ArgusInitOutput(retn);
 
@@ -538,10 +540,12 @@ ArgusDeleteOutput (struct ArgusParserStruct *parser, struct ArgusOutputStruct *o
       ArgusFree(output->ArgusInitMar);
 
    parser->ArgusOutputList = NULL;
+#if defined(ARGUS_THREADS)
    if (output->ListenNotify[0] >= 0)
       close(output->ListenNotify[0]);
    if (output->ListenNotify[1] >= 0)
       close(output->ListenNotify[1]);
+#endif
    ArgusFree(output);
 
 
@@ -3377,7 +3381,9 @@ __build_output_array(struct ArgusParserStruct *parser,
          outputs[count] = parser->ArgusOutputs[i];
          lfd[count] = parser->ArgusLfd[i];
          lfdver[count] = parser->ArgusLfdVersion[i];
+#if defined(ARGUS_THREADS)
          notifyfd[count] = parser->ArgusOutputs[i]->ListenNotify[0];
+#endif
          count++;
       }
    }
@@ -3791,8 +3797,10 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                            delete = 1;
                         client->readable = 0;
 
+#if defined(ARGUS_THREADS)
                         /* tell ArgusListenProcess() we're done */
                         write(output->ListenNotify[1], "0", 1);
+#endif
                      }
 
                      if (ArgusWriteOutSocket (output, client) < 0) {
