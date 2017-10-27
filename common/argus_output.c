@@ -597,6 +597,9 @@ ArgusNewControlChannel (struct ArgusParserStruct *parser)
       retn->ArgusReportTime.tv_usec -= 1000000;
    }
 
+#if defined(ARGUS_THREADS)
+   retn->ListenNotify[0] = retn->ListenNotify[1] = -1;
+#endif
    ArgusInitControlChannel(retn);
 
 #ifdef ARGUSDEBUG
@@ -621,6 +624,12 @@ ArgusDeleteControlChannel (struct ArgusParserStruct *parser, struct ArgusOutputS
    if (output->ArgusInitMar != NULL)
       ArgusFree(output->ArgusInitMar);
    parser->ArgusOutputList = NULL;
+#if defined(ARGUS_THREADS)
+   if (output->ListenNotify[0] >= 0)
+      close(output->ListenNotify[0]);
+   if (output->ListenNotify[1] >= 0)
+      close(output->ListenNotify[1]);
+#endif
    ArgusFree(output);
 
 #ifdef ARGUSDEBUG
