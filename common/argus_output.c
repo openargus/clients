@@ -3495,8 +3495,10 @@ void *ArgusListenProcess(void *arg)
                   client = (void *)output->ArgusClients->start;
                   if (client != NULL)  {
                      do {
-                        if (FD_ISSET(client->fd, &readmask) && (client->fd != -1)) {
-                           client->readable = 1;
+                        if (client->fd != -1) {
+                           if (FD_ISSET(client->fd, &readmask)) {
+                              client->readable = 1;
+                           }
                         }
                         client = (void *) client->qhdr.nxt;
                      } while (client != (void *)output->ArgusClients->start);
