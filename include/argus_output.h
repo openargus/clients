@@ -64,6 +64,7 @@ extern "C" {
 #include <argus_main.h>
 
 #include <argus_filter.h>
+#include "ring.h"
 
 #ifdef ARGUS_SASL
 #include <sasl/sasl.h>
@@ -163,6 +164,7 @@ struct ArgusOutputStruct {
    struct timeval ArgusLastMarUpdateTime;
    struct timeval ArgusMarReportInterval;
    unsigned int ArgusLocalNet, ArgusNetMask;
+   struct RingBuffer ring;
 };
 
 typedef char ** (*ArgusControlHandler)(char *str);
