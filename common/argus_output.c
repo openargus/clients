@@ -4528,10 +4528,6 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
    char buf[MAXSTRLEN], *ptr = buf;
    unsigned int value = 0;
     
-#ifdef ARGUS_SASL
-   const char *outputbuf = NULL;
-   unsigned int outputlen = 0;
-#endif /* ARGUS_SASL */
 
    bzero(buf, MAXSTRLEN);
 
@@ -4563,39 +4559,6 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
       ArgusDebug (3, "ArgusCheckControlMessage (0x%x, %d) recv() returned %d bytes\n", client, fd, cnt);
 #endif
    }
-
-#ifdef ARGUS_SASL
-   if ((client->sasl_conn)) {
-      const int *ssfp;
-      int result;
-
-      if ((result = sasl_getprop(client->sasl_conn, SASL_SSF, (const void **) &ssfp)) != SASL_OK)
-         ArgusLog (LOG_ERR, "sasl_getprop: error %s\n", sasl_errdetail(client->sasl_conn));
-
-      if (ssfp && (*ssfp > 0)) {
-         if (sasl_decode (client->sasl_conn, buf, cnt, &outputbuf, &outputlen) != SASL_OK) {
-            ArgusLog (LOG_WARNING, "ArgusCheckControlMessage(0x%x, %d) sasl_decode (0x%x, 0x%x, %d, 0x%x, %d) failed",
-                       client, fd, client->sasl_conn, buf, cnt, &outputbuf, outputlen);
-            return(-1);
-         } else {
-#ifdef ARGUSDEBUG
-            ArgusDebug (3, "ArgusCheckControlMessage (0x%x, %d) sasl_decode() returned %d bytes\n", client, fd, outputlen);
-#endif
-         }
-         if (outputlen > 0) {
-            if (outputlen < MAXSTRLEN) {
-               bzero (buf, MAXSTRLEN);
-               bcopy (outputbuf, buf, outputlen);
-               cnt = outputlen;
-            } else
-               ArgusLog (LOG_ERR, "ArgusCheckControlMessage(0x%x, %d) sasl_decode returned %d bytes\n", client, fd, outputlen);
-        
-         } else {
-            return (0);
-         }
-      }
-   }
-#endif /* ARGUS_SASL */
 
    ptr[strcspn(ptr, "\r\n")] = '\0';
 
