@@ -452,11 +452,7 @@ ArgusHandleSearchCommand (char *command)
       invecstr[0] = '\0';
       memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
 
-      /* leave a little room at the end of the buffer because
-       * ArgusPrintTime() doesn't take a length parameter so we can't
-       * tell it when to stop!
-       */
-      RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN-64, fmtable);
+      RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN, fmtable);
       retn[0] = invecstr;
       retn[1] = NULL;
    }
