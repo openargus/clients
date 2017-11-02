@@ -450,8 +450,6 @@ ArgusHandleSearchCommand (char *command)
 #endif
    } else {
       invecstr[0] = '\0';
-      memset(invecstr, 0, INVECSTRLEN); /* FIXME: this shouldn't be necessary */
-
       RabootpPrintDhcp(ArgusParser, invec, invec_used, invecstr, INVECSTRLEN, fmtable);
       retn[0] = invecstr;
       retn[1] = NULL;
