@@ -70,7 +70,7 @@ int IntvlTreeForEachOverlaps(struct ArgusDhcpIntvlTree * const,
                              IntvlTreeCallback, void *,
                              const struct timeval * const,
                              const struct timeval * const);
-int IntvlTreeDump(struct ArgusDhcpIntvlTree *);
+int IntvlTreeDump(struct ArgusDhcpIntvlTree *, char *str, size_t strlen);
 ssize_t IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
                                const struct timeval * const start,
                                const struct timeval * const stop,

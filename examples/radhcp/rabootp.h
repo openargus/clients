@@ -221,9 +221,8 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
 
 int RabootpClientRemove(struct ArgusDhcpStruct *);
 int RabootpIntvlRemove(const struct timeval * const intlo);
-void RabootpDumpTree(void);
-char *RabootpDumpTreeStr(int);
-void RabootpIntvlTreeDump(void);
+char *RabootpDumpTreeStr(int, char *, size_t);
+void RabootpIntvlTreeDump(char *, size_t);
 
 struct ArgusDhcpIntvlNode;
 ssize_t RabootpIntvlTreeOverlapsRange(const struct timeval * const,

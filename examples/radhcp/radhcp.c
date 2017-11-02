@@ -503,7 +503,7 @@ ArgusHandleTreeCommand (char *command)
       verbose = 1;
 
    buf[0] = '\0';
-   result = RabootpDumpTreeStr(verbose);
+   result = RabootpDumpTreeStr(verbose, invecstr, INVECSTRLEN);
    if (result) {
       strncpy(&buf[0], result, sizeof(buf));
       free(result);
@@ -519,7 +519,7 @@ ArgusHandleTreeCommand (char *command)
       retn[1] = NULL;
    }
 
-   RabootpIntvlTreeDump();
+   RabootpIntvlTreeDump(invecstr, INVECSTRLEN);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "%s(%s) result %s", __func__, string, retn[0]);

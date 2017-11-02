@@ -335,30 +335,22 @@ __dump_tree_structure_cb(void *arg, struct ArgusDhcpIntvlNode *node)
 }
 
 int
-IntvlTreeDump(struct ArgusDhcpIntvlTree *it)
+IntvlTreeDump(struct ArgusDhcpIntvlTree *it, char *str, size_t strlen)
 {
    struct string s;
-   FILE *fp;
 
-   s.str = ArgusMalloc(8*16384);
+   s.str = str;
    s.len = 0;
-   s.remain = 8*16384-1;
+   s.remain = strlen-1;
 
    if (s.str == NULL)
       return -1;
 
    *s.str = '\0';
+   snprintf_append(s.str, &s.len, &s.remain, "digraph \"intervaltree\" {\n");
    IntvlTreeForEach(it, __dump_tree_structure_cb, &s);
+   snprintf_append(s.str, &s.len, &s.remain, "}");
 
-   fp = fopen("intervaltree.dot", "w");
-   if (fp) {
-      fprintf(fp, "digraph \"intervaltree\" {\n");
-      fwrite(s.str, 1, s.len, fp);
-      fprintf(fp, "}\n");
-      fclose(fp);
-   }
-
-   ArgusFree(s.str);
    return 0;
 }
 

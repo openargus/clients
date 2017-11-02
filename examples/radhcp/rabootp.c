@@ -1281,16 +1281,13 @@ __rabootp_dump_node_verbose(void *arg0, struct ArgusDhcpClientNode *node)
 }
 
 /* Caller is responsible for freeing returned string */
-char *RabootpDumpTreeStr(int verbose)
+char *RabootpDumpTreeStr(int verbose, char *str, size_t strlen)
 {
    struct string s;
 
-   s.str = ArgusMalloc(4096);
-   if (s.str == NULL)
-      return NULL;
-
+   s.str = str;
    s.len = 0;
-   s.remain = 4096-1;
+   s.remain = strlen - 1;
    *s.str = '\0';
    if (verbose)
       ClientTreeForEach(&client_tree, __rabootp_dump_node_verbose, &s);
@@ -1300,9 +1297,9 @@ char *RabootpDumpTreeStr(int verbose)
    return s.str;
 }
 
-void RabootpIntvlTreeDump(void)
+void RabootpIntvlTreeDump(char *str, size_t strlen)
 {
-   IntvlTreeDump(&interval_tree);
+   IntvlTreeDump(&interval_tree, str, strlen);
 }
 
 
