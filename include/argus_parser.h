@@ -352,7 +352,14 @@ struct ArgusParserStruct {
 
    struct ArgusOutputStruct *ArgusOutput;
    struct ArgusOutputStruct *ArgusControlChannel;
+
+   /* ArgusOutputs[] is a parallel array with ArgusLfd*.  It maps
+    * listening file descriptors to a particular output process.  Since
+    * a single output thread can have multiple listening file
+    * descriptors there may be valid duplicate entries in this array.
+    */
    struct ArgusOutputStruct *ArgusOutputs[ARGUS_MAXLISTEN];
+
    struct ArgusListStruct *ArgusOutputList, *ArgusInputList;
    struct ArgusListStruct *ArgusNameList, *ArgusProcessList;
 
