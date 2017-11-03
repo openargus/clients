@@ -3508,8 +3508,17 @@ void *ArgusListenProcess(void *arg)
                   if (FD_ISSET(lfd[cur], &readmask))
                      ArgusCheckClientStatus(outputs[cur], lfd[cur], lfdver[cur]);
 
-                  if (FD_ISSET(notifyfd[cur], &readmask))
+                  /* If the pipe(2) failed then the notifyfd could be -1. */
+                  if (notifyfd[cur] >= 0 && FD_ISSET(notifyfd[cur], &readmask)) {
                      read(notifyfd[cur], &pchar, 1);
+
+                     /* Make sure we don't try to read from the
+                      * notifyfd a second time since the notifyfd array
+                      * can have duplicate entries when there is more
+                      * than one listening fd per output thread.
+                      */
+                     FD_CLR(notifyfd[cur], &readmask);
+                  }
 
                   output = outputs[cur];
 
