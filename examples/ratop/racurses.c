@@ -5316,6 +5316,12 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
    if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
       ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
+   /* Do not attempt to search for empty string.  This will loop
+    * forever.
+    */
+   if (*pattern == '\0')
+      return -1;
+
 #if defined(ARGUS_PCRE)
    options = 0;
 #else
@@ -5387,6 +5393,12 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 
    if ((buf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
       ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+
+   /* Do not attempt to search for empty string.  This will loop
+    * forever.
+    */
+   if (*pattern == '\0')
+      return -1;
 
 #if defined(ARGUS_PCRE)
    options = 0;
