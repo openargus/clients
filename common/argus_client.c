@@ -165,7 +165,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
    val = (cnt > val) ? val : cnt;
 
    if ((cnt = read (fd, input->ArgusSaslBuffer + input->ArgusSaslBufCnt, val)) > 0) {
-      ptr = (char *) input->ArgusSaslBuffer;
+      ptr = (char *) input->ArgusSaslBuffer + input->ArgusSaslBufCnt;
       input->ArgusSaslBufCnt += cnt;
 
 #ifdef ARGUSDEBUG
@@ -176,7 +176,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
          ArgusLog (LOG_ERR, "sasl_getprop: error %s\n", sasl_errdetail(input->sasl_conn));
 
       if (ssfp && (*ssfp > 0)) {
-         if ((retn = sasl_decode (input->sasl_conn, ptr, input->ArgusSaslBufCnt, (const char **) &output, &outputlen)) == SASL_OK) {
+         if ((retn = sasl_decode (input->sasl_conn, ptr, cnt, (const char **) &output, &outputlen)) == SASL_OK) {
 #ifdef ARGUSDEBUG
             ArgusDebug (5, "ArgusReadSaslStreamSocket (%p) sasl_decoded %d bytes\n", input, outputlen);
 #endif
