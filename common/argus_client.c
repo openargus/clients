@@ -215,7 +215,9 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                               if (input->ArgusReadSocketCnt >= length)
                                  rec = (struct ArgusRecord *) ArgusConvertRecord (input, (char *)input->ArgusReadPtr);
                            } else {
-                              ArgusLog (LOG_ALERT, "ArgusReadSaslStreamSocket (%p) record length is zero");
+                              ArgusLog (LOG_ALERT,
+                                        "ArgusReadSaslStreamSocket (%p) record length is zero",
+                                        input);
                               retn = 1;
                            }
                         }
@@ -230,7 +232,9 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                               }
 
                            } else {
-                              ArgusLog (LOG_ALERT, "ArgusReadSaslStreamSocket (%p) record length is zero");
+                              ArgusLog (LOG_ALERT,
+                                        "ArgusReadSaslStreamSocket (%p) record length is zero",
+                                        input);
                               retn = 1;
                            }
                         }
