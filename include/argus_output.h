@@ -106,6 +106,7 @@ struct ArgusClientData {
    struct ArgusSocketStruct *sock;
    struct nff_program ArgusNFFcode;
    char *filename, *hostname, *filter;
+   char *clientid;
    int format;
    char readable;
    char version;

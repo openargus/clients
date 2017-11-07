@@ -73,6 +73,8 @@
 
 #include <argus_compat.h>
 
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 #include <arpa/inet.h>
@@ -805,6 +807,9 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
    for (i = 0; i < parser->RaPrintOptionIndex; i++)
       if (parser->RaPrintOptionStrings[i] != NULL)
          parser->RaPrintOptionStrings[i] = NULL;
+
+   parser->uid = getuid();
+   parser->pid = getpid();
 
    parser->RaPrintOptionIndex = 0;
 
@@ -28062,7 +28067,12 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 
                            if (input->major_version >= MAJOR_VERSION_3) {
                               if (!parser->RaPollMode) {
-                                 sprintf ((char *) buf, "START: ");
+                                 char *cmd = parser->ArgusProgramName;
+                                 struct passwd *pw = getpwuid(parser->uid);
+                                 pid_t pid = parser->pid;
+
+                                 snprintf ((char *) buf, ARGUS_RINGBUFFER_MAX, "START: user='%s',cmd='%s[%d]'", pw->pw_name, cmd, pid);
+
                                  len = strlen((char *) buf);
                                  if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
                                     ArgusLog (LOG_ALERT, "%s: write remote START msg error %s.", strerror(errno));

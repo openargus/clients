@@ -4455,7 +4455,21 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
       if (!(strncmp (ptr, ArgusClientCommands[i], strlen(ArgusClientCommands[i])))) {
          found++;
          switch (i) {
-            case RADIUM_START: client->ArgusClientStart++; retn = 0; break;
+            case RADIUM_START: {
+               int slen = strlen(ArgusClientCommands[i]);
+               char *sptr;
+
+               if (strlen(ptr) > slen) {
+                  if ((sptr = strstr(ptr, "user=")) != NULL) {
+                     if (client->clientid != NULL)
+                        free(client->clientid);
+                     client->clientid = strdup(sptr);
+
+                  }
+               }
+               client->ArgusClientStart++;
+               retn = 0; break;
+            }
             case RADIUM_DONE:  {
                if (client->hostname != NULL)
                   ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
@@ -5440,9 +5454,15 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
          }
 
          if ((ArgusGetListCount(list)) > ArgusMaxListLength) {
-            ArgusLog(LOG_WARNING,
-                     "ArgusWriteOutSocket(0x%x) max queue exceeded %d\n",
-                     asock, ArgusMaxListLength);
+            if (client->clientid == NULL) {
+               ArgusLog(LOG_WARNING,
+                        "ArgusWriteOutSocket(0x%x) max queue exceeded %d on client hostname %s\n",
+                        asock, ArgusMaxListLength, client->hostname);
+            } else {
+               ArgusLog(LOG_WARNING,
+                        "ArgusWriteOutSocket(0x%x) max queue exceeded %d on client hostname %s %s\n",
+                        asock, ArgusMaxListLength, client->hostname, client->clientid);
+            }
             retn = -1;
          }
 
