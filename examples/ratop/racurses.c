@@ -3831,7 +3831,10 @@ argus_command_string(void)
                ind = ARGUS_REMOTE_FILTER;
             } else 
             if ((str = strstr (ptr, "none")) != NULL) {
+               ptr = strdup(RaCommandInputStr);
                ind = RaFilterIndex;
+            } else {
+               ptr = strdup(RaCommandInputStr);
             }
 
             if ((retn = ArgusFilterCompile (&lfilter, ptr, 1)) < 0) {
