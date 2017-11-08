@@ -3876,8 +3876,9 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                if ((client->fd == -1) && (client->sock == NULL) && client->ArgusClientStart) {
                   ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
 #ifdef ARGUSDEBUG
-                  ArgusDebug(1, "%s/%s: client %s removed", caller, __func__,
-                             client->hostname ? client->hostname : "(unknown)");
+                  ArgusDebug(1, "%s/%s: client %s %s removed", caller, __func__,
+                             client->hostname ? client->hostname : "(unknown)",
+                             client->clientid ? client->clientid : "(unknown)");
 #endif
                   ArgusDeleteClient(client);
                   ArgusFree(client);
