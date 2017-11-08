@@ -5326,7 +5326,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
 
                if ((len = (asock->length - asock->writen)) > 0) {
                   if (client->host != NULL) {
-                     if ((retn = sendto (asock->fd, outputbuf, outputlen, 0,
+                     if ((retn = sendto (asock->fd, (unsigned char *)&ptr[asock->writen], len, 0,
                                          client->host->ai_addr, client->host->ai_addrlen)) < 0)
                         ArgusLog (LOG_ERR, "ArgusInitOutput: sendto(): retn %d %s", retn, strerror(errno));
 #ifdef ARGUSDEBUG
