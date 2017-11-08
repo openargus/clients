@@ -472,6 +472,17 @@ ArgusEstablishListen (struct ArgusParserStruct *parser,
 #include <pthread.h>
 #endif
 
+static void
+ArgusDeleteClient(struct ArgusClientData *client)
+{
+#ifdef ARGUSDEBUG
+   ArgusDebug(1, "%s(%p)\n", __func__, client);
+#endif
+   if (client->clientid) {
+      ArgusFree(client->clientid);
+      client->clientid = NULL;
+   }
+}
 
 struct ArgusOutputStruct *
 ArgusNewOutput (struct ArgusParserStruct *parser, int sasl_min_ssf,
@@ -535,6 +546,18 @@ ArgusDeleteOutput (struct ArgusParserStruct *parser, struct ArgusOutputStruct *o
 #if defined(ARGUS_THREADS)
    pthread_mutex_destroy(&output->lock);
 #endif
+
+   if (output->ArgusClients &&
+       MUTEX_LOCK(&output->ArgusClients->lock) == 0) {
+      struct ArgusClientData *oc;
+
+      oc = (struct ArgusClientData *)output->ArgusClients->start;
+      while (oc) {
+         ArgusDeleteClient(oc);
+         oc = (struct ArgusClientData *)oc->qhdr.nxt;
+      }
+      MUTEX_UNLOCK(&output->ArgusClients->lock);
+   }
 
    ArgusDeleteList(output->ArgusInputList, ARGUS_OUTPUT_LIST);
    ArgusDeleteList(output->ArgusOutputList, ARGUS_OUTPUT_LIST);
@@ -3856,6 +3879,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                   ArgusDebug(1, "%s/%s: client %s removed", caller, __func__,
                              client->hostname ? client->hostname : "(unknown)");
 #endif
+                  ArgusDeleteClient(client);
                   ArgusFree(client);
                   i = 0; count = output->ArgusClients->count;
                   client = (void *)output->ArgusClients->start;
