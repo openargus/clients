@@ -5268,9 +5268,9 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                      * the entire buffer this time.
                                      */
                                     memcpy(&awfsasl->buf[0], outputbuf, outputlen);
-                                    awf->len = outputlen;
                                     FreeArgusWireFmtBuffer(awf);
                                     awf = awfsasl;
+                                    awf->len = outputlen;
 
                                  } else
                                     ArgusLog (LOG_ERR, "sasl_encode: failed returned %d\n", retn);
@@ -5286,6 +5286,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
             }
 
             if (asock->rec != NULL) {
+               awf = asock->rec;
                ptr = (unsigned char *)&awf->buf[0];
                if ((client->host == NULL) && (!(asock->writen))) {
                   if (!(output->ArgusWriteStdOut) && (asock->filename)) {
