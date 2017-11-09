@@ -128,18 +128,24 @@ sub dhcp_gethostbyaddr_from_table {
     }
 
     for my $tmpaddr (@_) {
-        if ( !( $tmpaddr =~ /$addr_valid_characters{'4'}/ ) ) {
-            my $sub_name = ( caller(0) )[3];
-            carp "$sub_name: address contains invalid characters";
-            return;
+        if ( length($tmpaddr) > 0 ) {
+            if ( !( $tmpaddr =~ /$addr_valid_characters{'4'}/ ) ) {
+                my $sub_name = ( caller(0) )[3];
+                carp "$sub_name: address contains invalid characters";
+                return;
+            }
         }
     }
 
     my $query =
-        'SELECT clientaddr, requested_hostname, domainname '
-      . "FROM $table WHERE clientaddr IN ('$addrs') "
-      . 'AND requested_hostname <> "" '
-      . 'GROUP BY clientaddr, requested_hostname, domainname';
+        "SELECT clientaddr, requested_hostname, domainname FROM $table WHERE";
+
+    if ( length($addrs) > 0 ) {
+        $query .= " clientaddr IN ('$addrs') AND"
+    }
+
+    $query .= ' requested_hostname <> ""'
+           .  ' GROUP BY clientaddr, requested_hostname, domainname';
     my $sth = $dbh->prepare($query);
 
     if ( !defined $sth ) {
@@ -179,8 +185,10 @@ sub dhcp_gethostbyaddr {
     return dhcp_gethostbyaddr_from_table( $dbh, "$dbase.$table", @_ );
 }
 
-# args: <database-handle> <table> <name> [<name> [<name> ...] ...]
-# returns reference to array of hash references
+# args: <database-handle> <table> [<name> [<name> [<name> ...] ...]]
+# returns reference to array of hash references.
+# If no name specified, returns all names in table.  Leases without a hostname
+# are ignored.
 sub dhcp_gethostbyname_from_table {
     my $dbh   = shift(@_);
     my $table = shift(@_);
@@ -193,18 +201,27 @@ sub dhcp_gethostbyname_from_table {
     }
 
     for my $tmpname (@_) {
-        if ( !( $tmpname =~ /$addr_valid_characters{'n'}/ ) ) {
-            my $sub_name = ( caller(0) )[3];
-            carp "$sub_name: hostname contains invalid characters";
-            return;
+        if ( length($tmpname) > 0 ) {
+            if ( !( $tmpname =~ /$addr_valid_characters{'n'}/ ) ) {
+                my $sub_name = ( caller(0) )[3];
+                carp "$sub_name: hostname contains invalid characters";
+                return;
+            }
         }
     }
 
     my $query =
         'SELECT clientaddr, hostname, requested_hostname, domainname '
-      . "FROM $table WHERE requested_hostname IN ('$names') "
-      . "OR hostname IN ('$names') "
-      . 'GROUP BY clientaddr, hostname, requested_hostname, domainname';
+      . "FROM $table";
+
+    if ( length($names) > 0 ) {
+        $query .= " WHERE requested_hostname IN ('$names')"
+          . " OR hostname IN ('$names')";
+    }
+    else {
+        $query .= ' WHERE requested_hostname <> "" OR hostname <> ""';
+    }
+    $query .= ' GROUP BY clientaddr, hostname, requested_hostname, domainname';
     my $sth = $dbh->prepare($query);
 
     if ( !defined $sth ) {
@@ -231,12 +248,6 @@ sub dhcp_gethostbyname {
     my $dbh        = shift(@_);
     my $when       = shift(@_);
     my $paramcount = @_;
-
-    if ( $paramcount < 1 ) {
-
-        # no addresses or insufficient args
-        return;
-    }
 
     my @whenary = parsetime($when);
     my $table = strftime $table_summary, @whenary;
@@ -276,10 +287,12 @@ my $_dhcp_getlease_from_table = sub {
     my $pattern = $addr_valid_characters{$addrtype};
 
     for my $tmpaddr (@_) {
-        if ( !( $tmpaddr =~ /$pattern/ ) ) {
-            my $sub_name = ( caller(0) )[3];
-            carp "$sub_name: address contains invalid characters";
-            return;
+        if ( length($tmpaddr) > 0 ) {
+            if ( !( $tmpaddr =~ /$pattern/ ) ) {
+                my $sub_name = ( caller(0) )[3];
+                carp "$sub_name: address contains invalid characters";
+                return;
+            }
         }
     }
 
@@ -287,8 +300,13 @@ my $_dhcp_getlease_from_table = sub {
 
     # SELECT * FROM $table WHERE $addrfield IN (...)
     # ORDER BY clientmac, clientaddr, stime ;
-    my $query = qq{SELECT * FROM $table WHERE $addrfield IN ('$addrs') }
-      . q{ORDER BY clientmac, clientaddr, stime};
+    my $query = qq{SELECT * FROM $table};
+
+    if ( length($addrs) > 0 ) {
+        $query .= qq{ WHERE $addrfield IN ('$addrs')};
+    }
+
+    $query .= q{ ORDER BY clientmac, clientaddr, stime};
     my $sth = $dbh->prepare($query);
 
     if ( !defined $sth ) {
@@ -321,12 +339,6 @@ sub dhcp_getleasebyaddr {
     my $addrtype   = shift(@_);
     my $paramcount = @_;
 
-    if ( $paramcount < 1 ) {
-
-        # no addresses or insufficient args
-        return;
-    }
-
     my @whenary = parsetime($when);
     my $table = strftime $table_summary, @whenary;
 
@@ -349,12 +361,6 @@ sub dhcp_getleasebyname {
     my $dbh        = shift(@_);
     my $when       = shift(@_);
     my $paramcount = @_;
-
-    if ( $paramcount < 1 ) {
-
-        # no addresses or insufficient args
-        return;
-    }
 
     my @whenary = parsetime($when);
     my $table = strftime $table_summary, @whenary;
