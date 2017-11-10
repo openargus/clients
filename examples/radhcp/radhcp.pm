@@ -41,6 +41,7 @@ $VERSION = "1.00";
   dhcp_getleasebyaddr
   dhcp_getleasebyname_from_table
   dhcp_getleasebyname
+  dhcp_insert_fqdn
   dhcp_opendb
   dhcp_closedb);
 
@@ -451,6 +452,54 @@ sub dhcp_lease_expand {
         push @reslist, $aref;
     }
     return \@reslist;
+}
+
+# dhcp_insert_fqdn takes an array reference as returned by dhcp_gethostby* and
+# adds an fqdn entry to each hash if enough information is present.
+sub dhcp_insert_fqdn {
+    my ($aref) = @_;
+
+    for my $href (@$aref) {
+        my $have_domainname = 0;
+        my $domainname      = $href->{'domainname'};
+        my $hostname;
+
+        if ( defined $href->{'hostname'} && length( $href->{'hostname'} ) > 0 )
+        {
+            $hostname = $href->{'hostname'};
+        }
+        else {
+            if ( defined $href->{'requested_hostname'}
+                && length( $href->{'requested_hostname'} ) > 0 )
+            {
+                $hostname = $href->{'requested_hostname'};
+            }
+        }
+
+        # If the hostname (requested or otherwise) has a period in it,
+        # most likely it is something like .local or .home and was put
+        # there by a residential router, cablemodem, etc.  In this case
+        # assume that there is no effect on DNS and that the hostname we
+        # already have is as "fully qualified" as it is going to get.
+        if ( $hostname =~ /\./ ) {
+            $href->{'fqdn'} = $hostname;
+            next;
+        }
+
+        if ( !defined $hostname ) {
+            $href->{'fqdn'} = "";
+            next;
+        }
+
+        if ( defined $href->{'domainname'}
+            && length( $href->{'domainname'} ) > 0 )
+        {
+            $hostname .= ".$domainname";
+        }
+
+        $href->{'fqdn'} = $hostname;
+    }
+    return;
 }
 
 1;
