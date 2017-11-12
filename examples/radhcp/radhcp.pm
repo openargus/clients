@@ -369,7 +369,7 @@ sub dhcp_getleasebyname {
 }
 
 sub dhcp_lease_expand_one {
-    my ( $dbh, $href ) = @_;
+    my ( $dbh, $href, $now ) = @_;
 
     if ( !defined $href ) {
         return;
@@ -380,11 +380,22 @@ sub dhcp_lease_expand_one {
     # the leases that contributed to the summary.
 
     # summary lease start and last times
+    my $seconds_in_day   = 86400;
     my $date_range_stime = POSIX::floor( $href->{'stime'} );
     my $date_range_ltime = POSIX::ceil( $href->{'ltime'} );
+
+    if ( $date_range_ltime > ( $now + $seconds_in_day ) ) {
+        # DHCP Precognition is not a supported feature
+        $date_range_ltime = $now + $seconds_in_day;
+    }
+
+    if ( $date_range_stime > $date_range_ltime ) {
+        # something went wrong
+        return;
+    }
+
     my $duration         = $date_range_ltime - $date_range_stime;
     my $seconds          = $date_range_stime;
-    my $seconds_in_day   = 86400;
     my $results_aref;
 
     # Step through the range of lease times one 24-hour period at a
@@ -409,8 +420,7 @@ sub dhcp_lease_expand_one {
         my $res = $sth->execute;
 
         if ( !defined $res ) {
-            $sth->finish;
-            return;
+            goto ADVANCE;
         }
 
         my $tmp = $_result_list->($sth);
@@ -424,6 +434,7 @@ sub dhcp_lease_expand_one {
             $results_aref = $tmp;
         }
 
+ADVANCE:
         $duration -= $seconds_in_day;
         $seconds += $seconds_in_day;
         $sth->finish;
@@ -447,9 +458,11 @@ sub dhcp_lease_expand_one {
 sub dhcp_lease_expand {
     my ( $dbh, $aref ) = @_;
     my @reslist = ();
+    my @time = localtime();
+    my $now = timegm(@time);
 
     for my $href (@$aref) {
-        my $aref = dhcp_lease_expand_one( $dbh, $href );
+        my $aref = dhcp_lease_expand_one( $dbh, $href, $now );
 
         if ( !defined $aref ) {
             next;
