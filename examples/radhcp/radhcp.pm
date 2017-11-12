@@ -404,7 +404,7 @@ sub dhcp_lease_expand_one {
     while ( $duration > 0 ) {
         my $table = strftime $table_detail, localtime($seconds);
         my $query = qq{SELECT * FROM $table WHERE }
-          . q{(clientmac=? AND clientaddr=? AND stime=? AND ltime=?)};
+          . q{(clientmac=? AND clientaddr=? AND stime>=? AND ltime<?)};
         my $sth = $dbh->prepare($query);
 
         if ( !defined $sth ) {
