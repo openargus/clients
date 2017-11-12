@@ -138,14 +138,14 @@ sub dhcp_gethostbyaddr_from_table {
     }
 
     my $query =
-        "SELECT clientaddr, requested_hostname, domainname FROM $table WHERE";
+        "SELECT clientaddr, hostname, requested_hostname, domainname FROM $table WHERE";
 
     if ( length($addrs) > 0 ) {
         $query .= " clientaddr IN ('$addrs') AND"
     }
 
-    $query .= ' requested_hostname <> ""'
-           .  ' GROUP BY clientaddr, requested_hostname, domainname';
+    $query .= ' ( requested_hostname <> "" OR hostname <> "" )'
+           .  ' GROUP BY clientaddr, hostname, requested_hostname, domainname';
     my $sth = $dbh->prepare($query);
 
     if ( !defined $sth ) {
