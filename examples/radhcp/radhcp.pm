@@ -57,7 +57,7 @@ my $table_ethers  = q{ethers_%Y_%m_%d};
 my $dsn;
 my $dbuser   = 'root';
 my $password = q{};
-my %attr     = ( PrintError => 1, RaiseError => 0 );
+my %attr     = ( PrintError => $debug, RaiseError => 0 );
 my $errcount = 0;
 
 # regular expressions to ensure user-provided address have only
