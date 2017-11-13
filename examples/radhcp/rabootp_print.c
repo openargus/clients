@@ -417,6 +417,16 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
       strlen--;
    }
 
+   if (strlen > 0) {
+      *str++ = '\0';
+      strlen--;
+   } else {
+      /* make sure the last byte is null even if the results don't
+       * completely fit
+       */
+      *(str-1) = '\0';
+   }
+
    return 0;
 }
 
