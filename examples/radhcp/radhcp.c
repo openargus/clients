@@ -699,8 +699,6 @@ RaParseComplete (int sig)
             query++;
          }
 
-         if (ArgusDebugTree)
-            RabootpDumpTree();
          ArgusShutDown(sig);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
 

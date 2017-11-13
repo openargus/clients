@@ -1300,16 +1300,6 @@ char *RabootpDumpTreeStr(int verbose)
    return s.str;
 }
 
-void RabootpDumpTree(void)
-{
-   char *str = RabootpDumpTreeStr(1);
-
-   if (str) {
-      ArgusLog(LOG_INFO, "%s", str);
-      ArgusFree(str);
-   }
-}
-
 void RabootpIntvlTreeDump(void)
 {
    IntvlTreeDump(&interval_tree);
