@@ -492,37 +492,29 @@ out:
 char **
 ArgusHandleTreeCommand (char *command)
 {
-   static char buf[4096];
-
    char *string = &command[6];
    char **retn = ArgusHandleResponseArray;
-   char *result;
    int verbose = 0;
+   int graph = 0;
  
    if (*string == 'v')
       verbose = 1;
+   else if (*string == 'g')
+      graph = 1;
 
-   buf[0] = '\0';
-   result = RabootpDumpTreeStr(verbose, invecstr, INVECSTRLEN);
-   if (result) {
-      strncpy(&buf[0], result, sizeof(buf));
-      free(result);
-   }
+   *invecstr = '\0';
+
+   if (graph)
+      RabootpIntvlTreeDump(invecstr, INVECSTRLEN);
+   else
+      RabootpDumpTreeStr(verbose, invecstr, INVECSTRLEN);
  
-   if (result) {
-      retn[0] = "OK\n";
-      retn[1] = &buf[0];
-      retn[2] = "\n";
-      retn[3] = NULL;
-   } else {
-      retn[0] = "FAIL\n";
-      retn[1] = NULL;
-   }
-
-   RabootpIntvlTreeDump(invecstr, INVECSTRLEN);
+   retn[0] = invecstr,
+   retn[1] = "\n";
+   retn[2] = NULL;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "%s(%s) result %s", __func__, string, retn[0]);
+   ArgusDebug (1, "%s(%s) returning", __func__, string);
 #endif
    return retn;
 }
