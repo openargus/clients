@@ -215,8 +215,12 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
 
    if (newads)
       rabootp_cb_exec(&callback.xid_new, &parsed, ads);
-   else
+   else {
       rabootp_cb_exec(&callback.xid_update, &parsed, ads);
+      if (ads->state == INIT)
+         /* check if this transaction was removed */
+         rabootp_cb_exec(&callback.xid_delete, &parsed, ads);
+   }
 
    if (bp->op == BOOTREQUEST)
       ads->total_requests++;

@@ -227,6 +227,68 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
    return 0;
 }
 
+
+/* This function changes the contents of the cached transaction and should
+ * only be called from the main/parse thread
+ *
+ * Add this function to the XIDDELETE callback list.
+ *
+ * PREREQ: calling function must hold reference to v_cached
+ *         (must have incremented refcount) so that the reference
+ *         count can safely be incremented here without holding the
+ *         client tree lock!!!  Caller must hold v_cached->lock.
+ *
+ */
+static int
+RabootpProtoTimersHolddownSet(const void * const v_parsed,
+                              void *v_cached,
+                              void *v_arg)
+{
+   const struct ArgusDhcpStruct * const parsed = v_parsed;
+   struct ArgusDhcpStruct *cached = v_cached;
+   struct RabootpTimerStruct *rts = v_arg;
+   struct ArgusDhcpIntvlNode *intvlnode;
+   struct timespec exp_lease = {
+      .tv_sec = RABOOTP_PROTO_TIMER_HOLDDOWN,
+   };
+   struct timespec exp_intvl = {
+      .tv_sec = RABOOTP_PROTO_TIMER_INTVLTREE,
+   };
+
+   if (__mask2type(parsed->msgtypemask) != DHCPRELEASE)
+      return 0;
+
+   if (cached->flags & ARGUS_DHCP_LEASEREL)
+      return 0;
+
+   cached->flags |= (ARGUS_DHCP_LEASEEXP|ARGUS_DHCP_LEASEREL);
+
+   if (cached->timers.lease) {
+      RabootpTimerStop(rts, cached->timers.lease);
+      free(cached->timers.lease);
+   } else {
+      ArgusDhcpStructUpRef(cached); /* up once for the client tree */
+   }
+   cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
+                                            cached);
+
+   intvlnode = ArgusCalloc(1, sizeof(*intvlnode));
+   if (intvlnode) {
+      if (cached->timers.intvl) {
+         RabootpTimerStop(rts, cached->timers.intvl);
+         free(cached->timers.intvl);
+       } else {
+         /* up again for the interval tree */
+         ArgusDhcpStructUpRef(cached);
+      }
+      intvlnode->data = cached;
+      intvlnode->intlo = cached->first_bind;
+      cached->timers.intvl = RabootpTimerStart(rts, &exp_intvl,
+                                               __intvl_exp_cb, intvlnode);
+   }
+   return 0;
+}
+
 /* This function should only be called from the timer thread */
 static ArgusTimerResult
 __discover_exp_cb(struct argus_timer *tim, struct timespec *ts)
@@ -331,6 +393,8 @@ void RabootpProtoTimersInit(struct RabootpTimerStruct *rts)
                            RabootpProtoTimersNonleaseSet, rts);
    RabootpCallbackRegister(CALLBACK_XIDNEW,
                            RabootpProtoTimersNonleaseSet, rts);
+   RabootpCallbackRegister(CALLBACK_XIDDELETE,
+                           RabootpProtoTimersHolddownSet, rts);
 
    gcarray = ArgusMallocAligned(gclen, 64);
    if (gcarray == NULL)
@@ -345,6 +409,7 @@ void RabootpProtoTimersCleanup(struct RabootpTimerStruct *rts)
    RabootpCallbackUnregister(CALLBACK_STATECHANGE, RabootpProtoTimersLeaseSet);
    RabootpCallbackUnregister(CALLBACK_XIDUPDATE, RabootpProtoTimersNonleaseSet);
    RabootpCallbackUnregister(CALLBACK_XIDNEW, RabootpProtoTimersNonleaseSet);
+   RabootpCallbackUnregister(CALLBACK_XIDDELETE, RabootpProtoTimersHolddownSet);
    RabootpTimerStop(rts, gctimer);
    ArgusFree(gcarray);
    gcarray = NULL;

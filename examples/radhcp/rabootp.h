@@ -171,6 +171,7 @@ struct ArgusDhcpV4Timers {
 
 enum ArgusDhcpStructFlags {
    ARGUS_DHCP_LEASEEXP = 0x1,
+   ARGUS_DHCP_LEASEREL = 0x2,
 };
 
 /* chaddr + xid uniquely identifies host state */
