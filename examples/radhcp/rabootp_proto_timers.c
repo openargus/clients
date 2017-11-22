@@ -160,6 +160,11 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
    /* decrement refcount -- interval and patricia trees are done with this. */
    ArgusDhcpStructFree(ads);
 
+   /* remove from client tree here */
+   RabootpClientRemove(ads);
+   /* decrement refcount -- client tree is done with this. */
+   ArgusDhcpStructFree(ads);
+
 cleanup:
    ArgusFree(intvlnode);
    __gc_schedule(tim);
