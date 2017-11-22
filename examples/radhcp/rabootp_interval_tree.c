@@ -142,6 +142,33 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
 }
 
 int
+ArgusDhcpIntvlTreeReduce(struct ArgusDhcpIntvlTree *head,
+                         const struct timeval * const intlo,
+                         const struct timeval * const end)
+{
+   struct ArgusDhcpIntvlNode *exist;
+   struct ArgusDhcpIntvlNode search;
+
+   search.intlo = *intlo;
+   search.data = NULL;
+   MUTEX_LOCK(&head->lock);
+   exist = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
+   if (exist) {
+      if (timercmp(end, &exist->inthi, <)) {
+         /* only apply reduce/truncate logic if the new end time is
+          * earlier than the interval upper bound
+          */
+
+         exist->inthi = *end;
+         __dhcp_intvl_node_update(exist);
+      }
+   }
+   MUTEX_UNLOCK(&head->lock);
+
+   return -(exist == NULL);
+}
+
+int
 ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
                          const struct timeval * const intlo)
 {

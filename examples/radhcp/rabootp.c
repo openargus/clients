@@ -1343,6 +1343,9 @@ __rabootp_update_interval_tree(const void * const v_parsed,
              */
             ArgusDhcpStructFree(cached);
       }
+   } else if (parsed->state == INIT && cached->state == BOUND &&
+              __mask2type(parsed->msgtypemask) == DHCPRELEASE) {
+      ArgusDhcpIntvlTreeReduce(v_arg, &cached->first_bind, &cached->last_mod);
    }
    return 0;
 }
