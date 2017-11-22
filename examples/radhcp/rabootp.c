@@ -192,6 +192,9 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    else
       newstate = fsa_advance_state(&parsed, ads);
 
+   ads->last_mod.tv_sec = time->end.tv_sec;
+   ads->last_mod.tv_usec = time->end.tv_usec;
+
    if (ads->state != newstate) {
       if (newstate == BOUND) {
          if (ads->first_bind.tv_sec == 0) {
