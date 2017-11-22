@@ -201,10 +201,12 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
       };
 
       cached->flags &= ~ARGUS_DHCP_LEASEEXP;
-      if (cached->timers.lease)
+      if (cached->timers.lease) {
           RabootpTimerStop(rts, cached->timers.lease);
-      else
+          free(cached->timers.lease);
+      } else {
          ArgusDhcpStructUpRef(cached); /* up once for the client tree */
+      }
       cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
                                                cached);
 
