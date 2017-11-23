@@ -682,7 +682,12 @@ RaParseComplete (int sig)
          while (query < RADHCP_MAX_QUERIES && global_query_strs[query]) {
             int i = 0;
 
-            ArgusHandleSearchCommand(global_query_strs[query]);
+            ArgusHandleResponseArray[0] = NULL;
+
+            if (*(global_query_strs[query]) == 'S')
+               ArgusHandleSearchCommand(global_query_strs[query]);
+            else if (*(global_query_strs[query]) == 'T')
+               ArgusHandleTreeCommand(global_query_strs[query]);
             while (ArgusHandleResponseArray[i]) {
                printf("%s", ArgusHandleResponseArray[i]);
                i++;
