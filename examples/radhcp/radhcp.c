@@ -125,7 +125,7 @@ static pthread_t timer_thread;
 int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 static char *invecstr;
 static char **global_query_strs;
-static const unsigned long INVECSTRLEN = 1024*1024; /* 1 MB */
+static const unsigned long INVECSTRLEN = 8*1024*1024; /* 8 MB */
 static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
 
 static const size_t INTVL_NODE_ARRAY_MAX = 64;
