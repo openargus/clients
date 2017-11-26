@@ -741,8 +741,6 @@ usage ()
    exit(1);
 }
 
-#define ISPORT(p) (dport == (p) || sport == (p))
-
 void RaProcessEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 void RaProcessThisEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 void RaProcessManRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
@@ -812,8 +810,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          if (process) {
             switch (proto) {
                case IPPROTO_UDP: 
-                  if (ISPORT(IPPORT_BOOTPS) || ISPORT(IPPORT_BOOTPC))
-                     dhcpTransaction++;
+                  if ((sport == IPPORT_BOOTPS && dport == IPPORT_BOOTPC) ||
+                      (sport == IPPORT_BOOTPC && dport == IPPORT_BOOTPS) ||
+                      (sport == IPPORT_BOOTPS && dport == IPPORT_BOOTPS))
+                     dhcpTransaction = 1;
                   break;
             }
 
