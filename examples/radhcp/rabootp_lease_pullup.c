@@ -33,6 +33,14 @@
 #include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
 
+/* If two similar leases have a gap of __OVERLAP_ALLOWANCE or less
+ * between the end of the first and start of the second, consider them
+ * to be contiguous.
+ */
+static const struct timeval __OVERLAP_ALLOWANCE = {
+   .tv_sec = 1,
+};
+
 static int
 __chaddr_same(const unsigned char * const a,
               const unsigned char * const b,
@@ -60,9 +68,19 @@ static int
 __overlap(const struct ArgusDhcpIntvlNode * const a,
           const struct ArgusDhcpIntvlNode * const b)
 {
+   struct timeval diff;
+
    /* assume a->intlo < b->intlo */
    if (timercmp(&a->inthi, &b->intlo, >=))
       return 1;
+
+   /* allow a little slop between the end of lease a and the start of
+    * lease b
+    */
+   timersub(&b->intlo, &a->inthi, &diff);
+   if (timercmp(&diff, &__OVERLAP_ALLOWANCE, <))
+      return 1;
+
    return 0;
 }
 
