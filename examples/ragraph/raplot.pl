@@ -32,7 +32,8 @@
 use strict;
 
 # Used modules
-use POSIX;
+use POSIX qw/ strftime /;
+use File::Temp qw/ :POSIX /;
 
 # Global variables
 my $tmpfile     = tmpnam();

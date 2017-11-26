@@ -31,7 +31,7 @@
 #  $Change: 2939 $
 #
 
-use POSIX;
+use File::Temp qw/ :POSIX /;
 use strict;
 use Digest::MD5 qw(md5_hex);
 use DBI;

@@ -32,7 +32,6 @@ use strict;
 local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 
 # Used modules
-use POSIX;
 use URI::URL;
 use DBI;
 use Switch;
@@ -53,9 +52,6 @@ my $filter;
 my $sort;
 my $fields;
 my $obj;
-
-my $tmpfile = tmpnam();
-my $tmpconf = $tmpfile . ".conf";
 
 my $VERSION = "5.0";                
 
@@ -479,7 +475,6 @@ sub RaHostsCleanUp {
    my $file = shift;
    print "DEBUG: deleting '$file'\n" if $debug;
    unlink $file;
-   unlink $tmpconf;
    exit 0;
 }
 
