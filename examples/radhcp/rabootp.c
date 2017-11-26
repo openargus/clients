@@ -262,6 +262,7 @@ __parse_one_dhcp_record_direction(const struct ether_header * const ehdr,
    return retn;
 }
 
+/* all three arguments must be valid non-NULL pointers */
 static void
 __set_sql_table_name(struct ArgusParserStruct *parser,
                      struct ArgusRecordStruct *argus,
@@ -284,7 +285,7 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
 {
    struct ArgusDhcpStruct *retn = NULL;
 
-   if (argus != NULL) {
+   if (argus != NULL && parser != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
       struct ArgusDataStruct *duser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
       struct ArgusTimeObject *time = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
@@ -303,13 +304,15 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *parser,
       if (suser != NULL) {
          retn = __parse_one_dhcp_record_direction(ehdr, suser, &time->src,
                                                   timer);
-         __set_sql_table_name(parser, argus, retn);
+         if (retn)
+            __set_sql_table_name(parser, argus, retn);
       }
 
       if (duser != NULL) {
          retn = __parse_one_dhcp_record_direction(ehdr, duser, &time->dst,
                                                   timer);
-         __set_sql_table_name(parser, argus, retn);
+         if (retn)
+            __set_sql_table_name(parser, argus, retn);
       }
    }
 
