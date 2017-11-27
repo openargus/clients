@@ -131,75 +131,12 @@ static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
 static const size_t INTVL_NODE_ARRAY_MAX = 64;
 static const size_t RADHCP_MAX_QUERIES = 8;
 
-struct invecTimeRangeStruct {
-   struct invecStruct *x;
-   const struct timeval * starttime;
-   const struct timeval * endtime;
-};
-
 static int
 __is_oneshot_query(void)
 {
    if (global_query_strs[0] != NULL)
       return 1;
    return 0;
-}
-
-static int
-__search_ipaddr_cb(struct rabootp_l2addr_entry *e, void *arg)
-{
-   struct invecTimeRangeStruct *itr = arg;
-   struct invecStruct *x = itr->x;
-   ssize_t count;
-
-   count = IntvlTreeOverlapsRange(e->datum,
-                                  itr->starttime,
-                                  itr->endtime,
-                                  &x->invec[x->used],
-                                  x->nitems - x->used);
-
-   if (count > 0)
-      x->used += count;
-
-   return 0;
-}
-
-static int
-__search_ipaddr(const struct in_addr * const addr,
-                const struct timeval * const starttime,
-                const struct timeval * const endtime,
-                struct ArgusDhcpIntvlNode *invec,
-                size_t invec_nitems)
-{
-   struct RaAddressStruct *ras;
-   struct invecTimeRangeStruct itr;
-   struct invecStruct x;
-   int rv = 0;
-
-   MUTEX_LOCK(&ArgusParser->lock);
-
-   ras = RabootpPatriciaTreeFind(&addr->s_addr, ArgusParser);
-   if (ras == NULL)
-     goto out;
-
-   x.nitems = invec_nitems;
-   x.used = 0;
-   x.invec = invec;
-
-   if (x.invec == NULL)
-      goto out;
-
-   itr.x = &x;
-   itr.starttime = starttime;
-   itr.endtime = endtime;
-
-   rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
-
-   rv = (int)x.used;
-
-out:
-   MUTEX_UNLOCK(&ArgusParser->lock);
-   return rv;
 }
 
 /* SEARCH: <argus-time-string> */
@@ -356,8 +293,13 @@ ArgusHandleSearchCommand (char *command)
       if (tmp_invec_used > 0 && pullup)
          RabootpLeasePullupSort(tmp_invec, tmp_invec_used);
    } else {
-      tmp_invec_used = __search_ipaddr(&addr, &starttime_tv, &endtime_tv,
-                                       tmp_invec, invec_nitems);
+      tmp_invec_used = 0;
+      if (MUTEX_LOCK(&ArgusParser->lock) == 0) {
+         tmp_invec_used = RabootpPatriciaTreeSearch(&addr, &starttime_tv,
+                                                    &endtime_tv, tmp_invec,
+                                                    invec_nitems);
+         MUTEX_UNLOCK(&ArgusParser->lock);
+      }
       if (tmp_invec_used < 0) {
          retn[0] = "FAIL\n";
          retn[1] = NULL;

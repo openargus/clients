@@ -46,4 +46,10 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const,
                                const struct timeval * const,
                                struct ArgusParserStruct *);
 
+int
+RabootpPatriciaTreeSearch(const struct in_addr * const,
+                          const struct timeval * const,
+                          const struct timeval * const,
+                          struct ArgusDhcpIntvlNode *,
+                          size_t);
 #endif
