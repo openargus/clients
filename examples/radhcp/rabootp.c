@@ -98,6 +98,42 @@ static struct ArgusDhcpIntvlTree interval_tree = {
    .lock = PTHREAD_MUTEX_INITIALIZER,
 };
 
+static struct ArgusDhcpStruct *
+__find_lease_by_addr(const struct dhcp_packet *bp, struct timeval *when)
+{
+   struct ArgusDhcpStruct *ads = NULL;
+
+   if (MUTEX_LOCK(&ArgusParser->lock) == 0) {
+      size_t nitems;
+      size_t i;
+      struct in_addr ciaddr;
+      struct ArgusDhcpIntvlNode *invec;
+
+      invec = ArgusMalloc(sizeof(*invec)*1024);
+      if (invec == NULL)
+         return NULL;
+
+      ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
+      nitems = RabootpPatriciaTreeSearch(&ciaddr, when, when, invec, 1024);
+      DEBUGLOG(1, "%s: found %u transaction(s) for IP address 0x%08x\n",
+               __func__, nitems, ciaddr.s_addr);
+      for (i = 0; i < nitems; i++) {
+         /* make sure the mac address of the host requesting the
+          * RELEASE matches that of the host holding the lease.
+          */
+         if (ads == NULL && bp->hlen == invec[i].data->hlen &&
+             memcmp(bp->chaddr, invec[i].data->chaddr, bp->hlen) == 0)
+            ads = invec[i].data;
+         else
+            /* The reference count was incremented by the search. */
+            ArgusDhcpStructFree(invec[i].data);
+      }
+      MUTEX_UNLOCK(&ArgusParser->lock);
+      ArgusFree(invec);
+   }
+   return ads;
+}
+
 
 /* The TCHECK* macros are not safe to use since we are checking
  * multiple buffers
@@ -124,7 +160,7 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    struct ArgusDhcpStruct parsed;
    register const struct dhcp_packet *bp;
    enum ArgusDhcpState newstate;
-   size_t bytes_processed = 0;
+   size_t bytes_processed = DHCP_FIXED_NON_UDP;
 
    bp = (struct dhcp_packet *)&(user->array[*bytes]);
 
@@ -147,8 +183,28 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
    if (!__tcheck(&bp->options[0], sizeof(bp->options[0]), user))
       goto nouser;
 
+   memset(&parsed, 0, sizeof(parsed));
+   if (memcmp((const char *)&bp->options[0], vm_rfc1048,
+       sizeof(u_int32_t)) == 0)
+      bytes_processed += rfc1048_parse(bp->options,
+                              (const u_char *)(user->array+user->count),
+                              &parsed, bp->op);
+
    xid = EXTRACT_32BITS(&bp->xid);
-   ads = ClientTreeFind(&client_tree, &bp->chaddr[0], bp->hlen, xid);
+
+   if (parsed.msgtypemask != __type2mask(DHCPRELEASE))
+       ads = ClientTreeFind(&client_tree, &bp->chaddr[0], bp->hlen, xid);
+   else {
+      struct timeval when = {
+         .tv_sec = time->start.tv_sec,
+         .tv_usec = time->start.tv_usec,
+      };
+
+       /* search radix tree for ip address - release messages don't use
+        * same xid as lease being removed */
+      ads = __find_lease_by_addr(bp, &when);
+   }
+
    if (!ads) {
       /* don't have a cached entry, so allocate a new one to insert. */
       ads = ArgusDhcpStructAlloc(); /* refcount = 1 already */
@@ -167,8 +223,6 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
       DEBUGLOG(2, "%s(): found dhcp structure in tree\n", __func__);
    }
 
-   memset(&parsed, 0, sizeof(parsed));
-
    MUTEX_LOCK(ads->lock);
 
    if (bp->op == BOOTREQUEST) {
@@ -185,13 +239,6 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
          memcpy(&parsed.rep.shaddr[0], &ehdr->ether_shost[0],
                 sizeof(ehdr->ether_shost));
    }
-
-   bytes_processed = DHCP_FIXED_NON_UDP;
-   if (memcmp((const char *)&bp->options[0], vm_rfc1048,
-       sizeof(u_int32_t)) == 0)
-      bytes_processed += rfc1048_parse(bp->options,
-                              (const u_char *)(user->array+user->count),
-                              &parsed, bp->op);
 
    if (newads)
       newstate = fsa_choose_initial_state(&parsed);
