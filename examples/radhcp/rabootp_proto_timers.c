@@ -108,20 +108,21 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
 
    struct ArgusDhcpStruct *ads = tim->data;
    MUTEX_LOCK(ads->lock);
-   if (ads->flags & ARGUS_DHCP_LEASEEXP) {
-      holddown_expired = 1;
-   } else {
-      ads->flags |= ARGUS_DHCP_LEASEEXP;
-      ads->timers.lease = NULL;
-      tim->expiry = exp;
-      result = RESCHEDULE_REL;
+   if (ads->timers.lease == tim) {
+      if (ads->flags & ARGUS_DHCP_LEASEEXP) {
+         holddown_expired = 1;
+         ads->timers.lease = NULL;
+         __gc_schedule(tim);
+      } else {
+         ads->flags |= ARGUS_DHCP_LEASEEXP;
+         tim->expiry = exp;
+         result = RESCHEDULE_REL;
+      }
    }
    MUTEX_UNLOCK(ads->lock);
 
    if (holddown_expired)
       ArgusDhcpStructFree(ads);
-
-   __gc_schedule(tim);
 
    return result;
 }
@@ -263,14 +264,14 @@ RabootpProtoTimersHolddownSet(const void * const v_parsed,
    if (cached->flags & ARGUS_DHCP_LEASEREL)
       return 0;
 
-   cached->flags |= (ARGUS_DHCP_LEASEEXP|ARGUS_DHCP_LEASEREL);
-
    if (cached->timers.lease) {
       RabootpTimerStop(rts, cached->timers.lease);
       free(cached->timers.lease);
    } else {
       ArgusDhcpStructUpRef(cached); /* up once for the client tree */
    }
+
+   cached->flags |= ARGUS_DHCP_LEASEREL;
    cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
                                             cached);
 

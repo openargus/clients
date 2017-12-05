@@ -189,9 +189,9 @@ free_wheel:
 }
 
 static struct argus_timer *
-__argus_timer_start(struct argus_timer_wheel *w, struct timespec *exp,
-                    callback_t callback, cleanup_t cleanup,
-                    void *callbackdata, int relative)
+__argus_timer_start(struct argus_timer_wheel *w, struct argus_timer *tim_in,
+                    struct timespec *exp, callback_t callback,
+                    cleanup_t cleanup, void *callbackdata, int relative)
 {
    struct argus_timer *tim;
    unsigned slot;
@@ -207,7 +207,10 @@ __argus_timer_start(struct argus_timer_wheel *w, struct timespec *exp,
        w->current = __slot(w, &currenttime);
    }
 
-   tim = malloc(sizeof(*tim));
+   if (tim_in)
+      tim = tim_in;
+   else
+      tim = malloc(sizeof(*tim));
    memset(&tim->tree, 0, sizeof(tim->tree));
 
    if (relative) {
@@ -236,7 +239,7 @@ ArgusTimerStartRelative(struct argus_timer_wheel *w, struct timespec *exp,
                         callback_t callback, cleanup_t cleanup,
                         void *callbackdata)
 {
-   return __argus_timer_start(w, exp, callback, cleanup, callbackdata, 1);
+   return __argus_timer_start(w, NULL, exp, callback, cleanup, callbackdata, 1);
 }
 
 struct argus_timer *
@@ -244,7 +247,7 @@ ArgusTimerStartAbsolute(struct argus_timer_wheel *w, struct timespec *exp,
                         callback_t callback, cleanup_t cleanup,
                         void *callbackdata)
 {
-   return __argus_timer_start(w, exp, callback, cleanup, callbackdata, 0);
+   return __argus_timer_start(w, NULL, exp, callback, cleanup, callbackdata, 0);
 }
 
 void
@@ -276,8 +279,8 @@ __fire_timers(struct argus_timer_wheel *w,
          w->ntimers--;
          if ((res = tim->callback(tim, &w->now)) < FINISHED) {
             /* reschedule - callback updated expiry */
-            __argus_timer_start(w, &tim->expiry, tim->callback, tim->cleanup,
-                                tim->data, (int)res);
+            __argus_timer_start(w, tim, &tim->expiry, tim->callback,
+                                tim->cleanup, tim->data, (int)res);
          } else {
             if (tim->cleanup)
                tim->cleanup(tim->data);
