@@ -96,7 +96,7 @@ ARG: while (my $arg = shift(@ARGV)) {
 
 my $dburl  = "mysql://root\@localhost/scanners/".$mode."_%Y_%m_%d -M time 1d";
 
-  print "DEBUG: arglist is: '@arglist'\n" if $debug;
+  print "DEBUG: dburl is: '$dburl' arglist is: '@arglist'\n" if $debug;
 
   if ($time eq "") {
      $time = RaTodaysDate();
@@ -147,13 +147,10 @@ sub RaStatusFetchData {
 
    chmod 0644, $ips;
 
-   if (scalar(@arglist) > 0) {
-      $qcmd = "rasql -r mysql://root\@localhost/ipMatrix/ip_$tabletime -w - @arglist | rafilteraddr -f $ips -m saddr -w - | racluster -m saddr daddr -w - | ralabel -f /usr/argus/ralabel.local.conf -w - | racluster -m saddr daddr/$cidr -M dsrs='-agr' -w - | rasort -w $file -m saddr trans daddr - $filter; rasqlinsert -r $file  -w $dburl -t $time -m saddr daddr/$cidr -M drop -s stime dur saddr daddr spkts dpkts trans -p3";
+   $qcmd = "rasql -r mysql://root\@localhost/ipMatrix/ip_$tabletime -w - @arglist | rafilteraddr -f $ips -m saddr -w - | racluster -m saddr daddr -w - | ralabel -f /usr/argus/ralabel.local.conf -w - | racluster -m saddr daddr/$cidr -M dsrs='-agr' -w - | rasort -w $file -m saddr trans daddr - $filter; rasqlinsert -r $file  -w $dburl -t $time -m saddr daddr/$cidr -M drop -s stime dur saddr daddr spkts dpkts trans -p3";
 
-      print "DEBUG: RaStatusFetchData: query: $qcmd\n" if $debug;
-      system($qcmd);
-   }
-
+   print "DEBUG: RaStatusFetchData: query: $qcmd\n" if $debug;
+   system($qcmd);
    return;
 }
 
