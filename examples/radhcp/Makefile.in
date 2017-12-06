@@ -112,7 +112,7 @@ $(INSTALLBIN)/radhcp-query: radhcp-query
 	$(INSTALL) -m 0755 $^ $@
 
 # Need to clean radhcp-query from both $(INSTALLBIN) and $PWD
-CLEANFILES = $(OBJ) $(PROGS) $(SCRIPTS) radhcp-query
+CLEANFILES = $(OBJ) $(PROGS) $(SCRIPTS)
 
 .PHONY: install
 install: force all install-perl
@@ -144,7 +144,8 @@ clean:
 
 distclean:
 	rm -f $(CLEANFILES) Makefile config.cache config.log config.status \
-	    gnuc.h os-proto.h bpf_filter.c net
+	    gnuc.h os-proto.h bpf_filter.c net \
+	    radhcp-query
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
