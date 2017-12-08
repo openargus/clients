@@ -81,7 +81,7 @@ my $ralabel      = which 'ralabel';
 my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
-my @db1 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 53");
+my @db1 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "udp and dst port 53");
 my @db2 = ( "etherMatrix", "ether", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "not ip");
 my @db3 = ( "ntpMatrix", "ntp", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 123");
 my @db4 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr", "dst port 389");
@@ -94,7 +94,7 @@ foreach my $i (0 .. $#databases) {
    my ($db, $srv, $keys, $fields, $filter) = @{$databases[$i]};
 
    if (($dbase eq "") || ($dbase eq $srv)) {
-      my     $cmd = "$rasql -t $time -r mysql://root\@localhost/".$srv."Flows/".$srv."_%Y_%m_%d -M time 1d  -w - -".$filter;
+      my     $cmd = "$rasql -t $time -r mysql://root\@localhost/".$srv."Flows/".$srv."_%Y_%m_%d -M time 1d  -w - - ".$filter;
       my   $label = "$ralabel -f /usr/argus/ralabel.local.conf -w - ";
       my $cluster = "$racluster -r - -M dsrs='-agr -suser -duser' -m ".$keys." -w ".$fname;
       my  $insert = "$rasqlinsert -r $fname -m ".$keys." -M drop time 1d -w mysql://root\@localhost/".$srv."Matrix/".$srv."_%Y_%m_%d -s ".$fields;
