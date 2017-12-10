@@ -113,6 +113,10 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
          holddown_expired = 1;
          ads->timers.lease = NULL;
          __gc_schedule(tim);
+
+         /* remove from client tree here */
+         RabootpClientRemove(ads);
+
       } else {
          ads->flags |= ARGUS_DHCP_LEASEEXP;
          tim->expiry = exp;
@@ -121,6 +125,7 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
    }
    MUTEX_UNLOCK(ads->lock);
 
+   /* decrement refcount -- client tree is done with this */
    if (holddown_expired)
       ArgusDhcpStructFree(ads);
 
@@ -159,11 +164,6 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
    RabootpIntvlRemove(&intvlnode->intlo);
 
    /* decrement refcount -- interval and patricia trees are done with this. */
-   ArgusDhcpStructFree(ads);
-
-   /* remove from client tree here */
-   RabootpClientRemove(ads);
-   /* decrement refcount -- client tree is done with this. */
    ArgusDhcpStructFree(ads);
 
 cleanup:
