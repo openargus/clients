@@ -96,6 +96,7 @@ static ArgusTimerResult
 __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
 {
    int holddown_expired = 0;
+   int remove_err;
    int result = FINISHED;
    struct timespec exp = {
       .tv_sec = RABOOTP_PROTO_TIMER_HOLDDOWN,
@@ -115,7 +116,7 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
          __gc_schedule(tim);
 
          /* remove from client tree here */
-         RabootpClientRemove(ads);
+         remove_err = RabootpClientRemove(ads);
 
       } else {
          ads->flags |= ARGUS_DHCP_LEASEEXP;
@@ -125,9 +126,14 @@ __lease_exp_cb(struct argus_timer *tim, struct timespec *ts)
    }
    MUTEX_UNLOCK(ads->lock);
 
-   /* decrement refcount -- client tree is done with this */
-   if (holddown_expired)
+   if (holddown_expired) {
+      /* decrement refcount -- client tree is done with this */
+      if (remove_err == 0)
+         ArgusDhcpStructFree(ads);
+
+      /* decrement refcount -- lease timer does with this */
       ArgusDhcpStructFree(ads);
+   }
 
    return result;
 }
@@ -142,6 +148,8 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
     */
    struct ArgusDhcpIntvlNode *intvlnode = tim->data;
    struct ArgusDhcpStruct *ads;
+   int timer_removed = 0;
+   int premove_err = 0;
 
    if (intvlnode == NULL)
       return FINISHED;
@@ -152,18 +160,31 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
 
    MUTEX_LOCK(ads->lock);
    if (ads->timers.intvl) {
-      if (tim == ads->timers.intvl)
+      if (tim == ads->timers.intvl) {
          ads->timers.intvl = NULL;
+         timer_removed = 1;
+      }
    }
+
+   if (!timer_removed)
+      goto cleanup;
+
    MUTEX_LOCK(&ArgusParser->lock);
-   RabootpPatriciaTreeRemoveLease(&ads->rep.yiaddr.s_addr, ads->chaddr,
-                                  ads->hlen, &intvlnode->intlo, NULL);
+   premove_err = RabootpPatriciaTreeRemoveLease(&ads->rep.yiaddr.s_addr,
+                                                ads->chaddr, ads->hlen,
+                                                &intvlnode->intlo, NULL);
    MUTEX_UNLOCK(&ArgusParser->lock);
    MUTEX_UNLOCK(ads->lock);
 
-   RabootpIntvlRemove(&intvlnode->intlo);
+   if (premove_err == 0)
+      /* decrement refcount -- patricia tree is done with this. */
+      ArgusDhcpStructFree(ads);
 
-   /* decrement refcount -- interval and patricia trees are done with this. */
+   if (RabootpIntvlRemove(&intvlnode->intlo) == 0)
+      /* decrement refcount -- interval tree is done with this. */
+      ArgusDhcpStructFree(ads);
+
+   /* decrement refcount -- interval timer done with this */
    ArgusDhcpStructFree(ads);
 
 cleanup:
@@ -323,9 +344,9 @@ __discover_exp_cb(struct argus_timer *tim, struct timespec *ts)
 
    if (!bound) {
       /* remove from client tree here */
-      RabootpClientRemove(ads);
-      /* decrement refcount -- client tree is done with this. */
-      ArgusDhcpStructFree(ads);
+      if (RabootpClientRemove(ads) == 0)
+         /* decrement refcount -- client tree is done with this. */
+         ArgusDhcpStructFree(ads);
    }
 
 out:
