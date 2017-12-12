@@ -149,6 +149,7 @@ ArgusDhcpClientTreeRemove(struct ArgusDhcpClientTree *head,
    if (node)
       ArgusFree(node);
 
+   DEBUGLOG(4, "%s returned %d\n", __func__, -(node == NULL));
    return -(node == NULL);
 }
 
