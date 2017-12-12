@@ -248,8 +248,6 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
       }
    }
 
-   DEBUGLOG(1, "%s: ArgusDhcpIntvlTreeRemove() returned %d\n", __func__, rv);
-
 out:
    return rv;
 }
