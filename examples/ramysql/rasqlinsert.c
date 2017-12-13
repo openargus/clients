@@ -5981,9 +5981,11 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
                   } else {
                      struct ArgusRecordStruct *ns = NULL;
                      MYSQL_RES *mysqlRes;
-                     char buf[MAXBUFFERLEN];
+                     struct ArgusRecord *buf;
 
-                     if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+                     buf = ArgusMalloc(MAXBUFFERLEN);
+
+                     if (buf && ((mysqlRes = mysql_store_result(RaMySQL)) != NULL)) {
                         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
                            MYSQL_ROW row;
                            while ((row = mysql_fetch_row(mysqlRes))) {
@@ -5991,16 +5993,16 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
                               int x;
 
                               lengths = mysql_fetch_lengths(mysqlRes);
-                              bzero(buf, sizeof(buf));
+                              bzero(buf, MAXBUFFERLEN);
 
                               for (x = 0; x < retn; x++) {
                                  bcopy (row[x], buf, (int) lengths[x]);
-                                 if ((((struct ArgusRecord *)buf)->hdr.type & ARGUS_FAR) ||
-                                     (((struct ArgusRecord *)buf)->hdr.type & ARGUS_NETFLOW)) {
+                                 if ((buf->hdr.type & ARGUS_FAR) ||
+                                     (buf->hdr.type & ARGUS_NETFLOW)) {
 #ifdef _LITTLE_ENDIAN
-                                    ArgusNtoH((struct ArgusRecord *) buf);
+                                    ArgusNtoH(buf);
 #endif
-                                    if ((ns = ArgusGenerateRecordStruct (ArgusParser, ArgusInput, (struct ArgusRecord *) buf)) != NULL) {
+                                    if ((ns = ArgusGenerateRecordStruct (ArgusParser, ArgusInput, buf)) != NULL) {
                                        RaProcessRecord(ArgusParser, ns);
                                     }
                                  }
@@ -6008,6 +6010,7 @@ ArgusProcessSQLQueryList(struct ArgusParserStruct *parser, struct ArgusListStruc
                            }
                         }
                         mysql_free_result(mysqlRes);
+                        ArgusFree(buf);
                      }
                   }
                   ArgusTotalSQLSearches++;
@@ -7387,9 +7390,11 @@ ArgusCheckSQLCache(struct ArgusParserStruct *parser, struct RaBinStruct *bin, st
          ArgusLog(LOG_INFO, "ArgusProcessSQLQueryList(Update): %s mysql_real_query error %s", sqry->dptr, mysql_error(RaMySQL));
       } else {
          MYSQL_RES *mysqlRes;
-         char buf[MAXBUFFERLEN];
+         struct ArgusRecord *buf;
 
-         if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+         buf = ArgusMalloc(MAXBUFFERLEN);
+
+         if (buf && ((mysqlRes = mysql_store_result(RaMySQL)) != NULL)) {
             if ((retn = mysql_num_fields(mysqlRes)) > 0) {
                MYSQL_ROW row;
                while ((row = mysql_fetch_row(mysqlRes))) {
@@ -7397,7 +7402,7 @@ ArgusCheckSQLCache(struct ArgusParserStruct *parser, struct RaBinStruct *bin, st
                   int x;
 
                   lengths = mysql_fetch_lengths(mysqlRes);
-                  bzero(buf, sizeof(buf));
+                  bzero(buf, MAXBUFFERLEN);
 
                   for (x = 0; x < retn; x++) {
                      bcopy (row[x], buf, (int) lengths[x]);
@@ -7406,17 +7411,18 @@ ArgusCheckSQLCache(struct ArgusParserStruct *parser, struct RaBinStruct *bin, st
 #endif
 
 
-                     if ((((struct ArgusRecord *)buf)->hdr.type & ARGUS_FAR) || (((struct ArgusRecord *)buf)->hdr.type & ARGUS_NETFLOW)) {
+                     if ((buf->hdr.type & ARGUS_FAR) || (buf->hdr.type & ARGUS_NETFLOW)) {
 #ifdef _LITTLE_ENDIAN
-                        ArgusNtoH((struct ArgusRecord *) buf);
+                        ArgusNtoH(buf);
 #endif
-                        if ((argus = ArgusGenerateRecordStruct (ArgusParser, ArgusInput, (struct ArgusRecord *) buf)) == NULL)
+                        if ((argus = ArgusGenerateRecordStruct (ArgusParser, ArgusInput, buf)) == NULL)
                            ArgusLog(LOG_INFO, "mysql_real_query recieved record could not parse");
                      }
                   }
                }
             }
             mysql_free_result(mysqlRes);
+            ArgusFree(buf);
          }
       }
       MUTEX_UNLOCK(&RaMySQLlock);
