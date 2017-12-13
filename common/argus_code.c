@@ -4917,14 +4917,17 @@ Argusgen_ucode(char *uuid, struct qual q)
 {
    struct ArgusTransportStruct trans;
    int len = 16, i, offset = ((char *)&trans.srcid.a_un.value - (char *)&trans);
-   unsigned char u[len];
+   union {
+      u_int ui[4];
+      unsigned char uc[16];
+   } u;
    struct ablock *b0 = NULL, *b1 = NULL;
    const char *cptr = (const char *) uuid;
 
-   bzero(u, len);
+   bzero(&u, len);
 
    for (i = 0; i < len; i++) {
-      sscanf((const char *) cptr, "%2hhx", &u[i]);
+      sscanf((const char *) cptr, "%2hhx", &u.uc[i]);
       cptr += 2;
       if (*cptr == '-') cptr++;
    }
@@ -4932,7 +4935,7 @@ Argusgen_ucode(char *uuid, struct qual q)
    b1 = Argusgen_recordtype(ARGUS_FAR);
 
    for (i = 0; i < 4; i++) {
-      b0 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset + i*4, NFF_W, *(u_int *)&u[i*4], Q_EQUAL, Q_DEFAULT);
+      b0 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset + i*4, NFF_W, u.ui[i], Q_EQUAL, Q_DEFAULT);
       Argusgen_and(b0, b1);
    }
 
@@ -4941,7 +4944,7 @@ Argusgen_ucode(char *uuid, struct qual q)
    offset = ((char *)&mar.uuid - (char *)&mar);
 
    for (i = 0; i < 4; i++) {
-      b0 = Argusgen_cmp(ARGUS_MAR_INDEX, offset + i*4, NFF_W, *(u_int *)&u[i*4], Q_EQUAL, Q_DEFAULT);
+      b0 = Argusgen_cmp(ARGUS_MAR_INDEX, offset + i*4, NFF_W, u.ui[i], Q_EQUAL, Q_DEFAULT);
       Argusgen_and(b0, b2);
    }
 
