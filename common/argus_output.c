@@ -89,7 +89,10 @@ struct ArgusQueueNode {
 struct ArgusWireFmtBuffer {
    uint32_t refcount;
    uint32_t len;
-   unsigned char buf[ARGUS_MAXRECORD]; /* 256 KB */
+   union {
+       struct ArgusRecord rec;
+       unsigned char buf[ARGUS_MAXRECORD]; /* 256 KB */
+   } data;
 };
 
 static void ArgusWriteSocket(struct ArgusOutputStruct *,
@@ -135,12 +138,12 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format, char version)
       return awf;
 
    if (format == ARGUS_DATA) {
-      if (ArgusGenerateRecord (rec, 0, (char *)&awf->buf[0], version)) {
-         awf->len = ((struct ArgusRecord *)&awf->buf[0])->hdr.len * 4;
-         ArgusHtoN((struct ArgusRecord *)&awf->buf[0]);
+      if (ArgusGenerateRecord (rec, 0, (char *)&awf->data.buf[0], version)) {
+         awf->len = awf->data.rec.hdr.len * 4;
+         ArgusHtoN(&awf->data.rec);
       }
    } else if (format == ARGUS_CISCO_V5_DATA) {
-      if (ArgusGenerateCiscoRecord(rec, 0, (char *)&awf->buf[0])) {
+      if (ArgusGenerateCiscoRecord(rec, 0, (char *)&awf->data.buf[0])) {
          awf->len = sizeof(CiscoFlowHeaderV5_t) + sizeof(CiscoFlowEntryV5_t);
       }
    }
@@ -151,7 +154,7 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format, char version)
    }
 
    if (awf->len < sizeof(*awf)/2)
-      awf = ArgusRealloc(awf, sizeof(*awf) - sizeof(awf->buf) + awf->len);
+      awf = ArgusRealloc(awf, sizeof(*awf) - sizeof(awf->data.buf) + awf->len);
 
    return awf;
 }
@@ -5265,7 +5268,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               if (!client->sasl_conn) {
 #endif
                                  outputlen = awf->len;
-                                 outputbuf = (const char *)&awf->buf[0];
+                                 outputbuf = (const char *)&awf->data.buf[0];
 #ifdef ARGUS_SASL
                               } else {
                                  struct ArgusWireFmtBuffer *awfsasl;
@@ -5280,7 +5283,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                  ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, %d, 0x%x, 0x%x)\n",
                                                             client->sasl_conn, awf->len, &outputbuf, &outputlen);
 #endif
-                                 if ((retn = sasl_encode(client->sasl_conn, (const char *)&awf->buf[0],
+                                 if ((retn = sasl_encode(client->sasl_conn, (const char *)&awf->data.buf[0],
                                                          awf->len, &outputbuf, &outputlen)) == SASL_OK) {
 #ifdef ARGUSDEBUG
                                     ArgusDebug (7, "ArgusHandleClientData: sasl_encode returned %d bytes\n", outputlen);
@@ -5293,7 +5296,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                      * around if the socket can't accept
                                      * the entire buffer this time.
                                      */
-                                    memcpy(&awfsasl->buf[0], outputbuf, outputlen);
+                                    memcpy(&awfsasl->data.buf[0], outputbuf, outputlen);
                                     FreeArgusWireFmtBuffer(awf);
                                     awf = awfsasl;
                                     awf->len = outputlen;
@@ -5313,7 +5316,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
 
             if (asock->rec != NULL) {
                awf = asock->rec;
-               ptr = (unsigned char *)&awf->buf[0];
+               ptr = (unsigned char *)&awf->data.buf[0];
                if ((client->host == NULL) && (!(asock->writen))) {
                   if (!(output->ArgusWriteStdOut) && (asock->filename)) {
                      if (asock->lastwrite.tv_sec < output->ArgusGlobalTime.tv_sec) {
