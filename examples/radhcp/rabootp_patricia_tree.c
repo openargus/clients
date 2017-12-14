@@ -305,7 +305,8 @@ RabootpPatriciaTreeSearch(const struct in_addr * const addr,
    itr.starttime = starttime;
    itr.endtime = endtime;
 
-   rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
+   if (ras->obj)
+      rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
 
    rv = (int)x.used;
 
