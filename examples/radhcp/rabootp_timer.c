@@ -29,17 +29,22 @@ void *
 RabootpTimer(void *arg)
 {
    struct RabootpTimerStruct *rts = arg;
+   struct argus_timer_wheel dummy;
 
 #ifdef __linux
    pthread_setname_np(pthread_self(), "radhcp/timer");
 #endif
 
+   /* set once; period doesn't change */
+   dummy.period = rts->w->period;
+
    while (!ArgusParser->RaDonePending && !ArgusParser->RaParseDone) {
       MUTEX_LOCK(&rts->lock);
       ArgusTimerAdvanceWheel(rts->w);
+      dummy.now = rts->w->now;
       MUTEX_UNLOCK(&rts->lock);
 
-      rts->sleepfunc(rts->w);
+      rts->sleepfunc(&dummy);
    }
 
    return NULL;
