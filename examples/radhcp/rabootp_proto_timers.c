@@ -425,7 +425,10 @@ void RabootpProtoTimersInit(struct RabootpTimerStruct *rts)
       ArgusLog(LOG_ERR, "%s: Unable to allocate garbage collection array\n",
                __func__);
 
-   gctimer = RabootpTimerStart(rts, &exp, __gctimer_cb, NULL);
+   if (RabootpTimerLock(rts) == 0) {
+      gctimer = RabootpTimerStart(rts, &exp, __gctimer_cb, NULL);
+      RabootpTimerUnlock(rts);
+   }
 }
 
 void RabootpProtoTimersCleanup(struct RabootpTimerStruct *rts)
