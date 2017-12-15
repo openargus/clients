@@ -227,7 +227,7 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
           RabootpTimerStop(rts, cached->timers.lease);
           free(cached->timers.lease);
       } else {
-         ArgusDhcpStructUpRef(cached); /* up once for the client tree */
+         ArgusDhcpStructUpRef(cached); /* up once for the lease timer */
       }
       cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
                                                cached);
@@ -238,7 +238,7 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
             RabootpTimerStop(rts, cached->timers.intvl);
             free(cached->timers.intvl);
           } else {
-            /* up again for the interval tree */
+            /* up again for the interval timer */
             ArgusDhcpStructUpRef(cached);
          }
          intvlnode->data = cached;
@@ -289,7 +289,7 @@ RabootpProtoTimersHolddownSet(const void * const v_parsed,
       RabootpTimerStop(rts, cached->timers.lease);
       free(cached->timers.lease);
    } else {
-      ArgusDhcpStructUpRef(cached); /* up once for the client tree */
+      ArgusDhcpStructUpRef(cached); /* up once for the lease timer */
    }
 
    cached->flags |= ARGUS_DHCP_LEASEREL;
@@ -302,7 +302,7 @@ RabootpProtoTimersHolddownSet(const void * const v_parsed,
          RabootpTimerStop(rts, cached->timers.intvl);
          free(cached->timers.intvl);
        } else {
-         /* up again for the interval tree */
+         /* up again for the interval timer */
          ArgusDhcpStructUpRef(cached);
       }
       intvlnode->data = cached;
