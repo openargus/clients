@@ -119,14 +119,21 @@ ArgusDhcpClientTreeInsert(struct ArgusDhcpClientTree *head,
                           struct ArgusDhcpStruct *ads)
 {
    struct ArgusDhcpClientNode *node;
+   struct ArgusDhcpClientNode *exist;
 
    node = ArgusCalloc(1, sizeof(*node));
    if (node) {
       node->data = ads;
 
       MUTEX_LOCK(&head->lock);
-      RB_INSERT(dhcp_client_tree, &head->tree, node);
+      exist = RB_INSERT(dhcp_client_tree, &head->tree, node);
       MUTEX_UNLOCK(&head->lock);
+
+      if (exist) {
+          DEBUGLOG(6, "%s: Node already exists in client tree.\n", __func__);
+          ArgusFree(node);
+          node = NULL;
+      }
    }
 
    return -(node == NULL);
