@@ -57,8 +57,16 @@ __dhcp_client_compare(struct ArgusDhcpIntvlNode *aa,
 {
    if (timercmp(&aa->intlo, &bb->intlo, <))
       return -1;
-   else if (timercmp(&aa->intlo, &bb->intlo, >))
+
+   if (timercmp(&aa->intlo, &bb->intlo, >))
       return 1;
+
+   if (aa->data < bb->data)
+      return -1;
+
+   if (aa->data > bb->data)
+      return 1;
+
    return 0;
 }
 
@@ -144,13 +152,14 @@ ArgusDhcpIntvlTreeInsert(struct ArgusDhcpIntvlTree *head,
 int
 ArgusDhcpIntvlTreeReduce(struct ArgusDhcpIntvlTree *head,
                          const struct timeval * const intlo,
-                         const struct timeval * const end)
+                         const struct timeval * const end,
+                         const struct ArgusDhcpStruct * const ads)
 {
    struct ArgusDhcpIntvlNode *exist;
    struct ArgusDhcpIntvlNode search;
 
    search.intlo = *intlo;
-   search.data = NULL;
+   search.data = ads;
    MUTEX_LOCK(&head->lock);
    exist = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
    if (exist) {
@@ -170,13 +179,14 @@ ArgusDhcpIntvlTreeReduce(struct ArgusDhcpIntvlTree *head,
 
 int
 ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
-                         const struct timeval * const intlo)
+                         const struct timeval * const intlo,
+                         const struct ArgusDhcpStruct * const ads)
 {
    struct ArgusDhcpIntvlNode *node;
    struct ArgusDhcpIntvlNode search;
 
    search.intlo = *intlo;
-   search.data = NULL;
+   search.data = ads;
    MUTEX_LOCK(&head->lock);
    node = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
    if (node) {
@@ -195,10 +205,12 @@ ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
 
 struct ArgusDhcpIntvlNode *
 IntvlTreeFind(struct ArgusDhcpIntvlTree *head,
-               const struct timeval * const intlo)
+               const struct timeval * const intlo,
+               const struct ArgusDhcpStruct * const ads)
 {
    struct ArgusDhcpIntvlNode node = {
       .intlo = *intlo,
+      .data = ads,
    };
    struct ArgusDhcpIntvlNode *res;
 

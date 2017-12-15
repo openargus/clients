@@ -1462,7 +1462,8 @@ __rabootp_update_interval_tree(const void * const v_parsed,
       }
    } else if (parsed->state == INIT && cached->state == BOUND &&
               __mask2type(parsed->msgtypemask) == DHCPRELEASE) {
-      ArgusDhcpIntvlTreeReduce(v_arg, &cached->first_bind, &cached->last_mod);
+      ArgusDhcpIntvlTreeReduce(v_arg, &cached->first_bind, &cached->last_mod,
+                               cached);
    }
    return 0;
 }
@@ -1545,9 +1546,10 @@ int RabootpClientRemove(struct ArgusDhcpStruct *ads)
    return ArgusDhcpClientTreeRemove(&client_tree, ads);
 }
 
-int RabootpIntvlRemove(const struct timeval * const intlo)
+int RabootpIntvlRemove(const struct timeval * const intlo,
+                       const struct ArgusDhcpStruct * const ads)
 {
-   return ArgusDhcpIntvlTreeRemove(&interval_tree, intlo);
+   return ArgusDhcpIntvlTreeRemove(&interval_tree, intlo, ads);
 }
 
 size_t RabootpIntvlTreeCount(void)

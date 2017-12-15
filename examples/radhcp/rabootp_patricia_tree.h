@@ -44,6 +44,7 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const,
                                const unsigned char * const,
                                size_t,
                                const struct timeval * const,
+                               const struct ArgusDhcpStruct * const,
                                struct ArgusParserStruct *);
 
 int

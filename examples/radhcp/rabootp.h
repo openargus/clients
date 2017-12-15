@@ -224,7 +224,8 @@ ArgusParseDhcpRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *,
                      struct RabootpTimerStruct *);
 
 int RabootpClientRemove(struct ArgusDhcpStruct *);
-int RabootpIntvlRemove(const struct timeval * const intlo);
+int RabootpIntvlRemove(const struct timeval * const,
+                       const struct ArgusDhcpStruct * const);
 char *RabootpDumpTreeStr(int, char *, size_t);
 void RabootpIntvlTreeDump(char *, size_t);
 

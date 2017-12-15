@@ -205,6 +205,7 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
                                const unsigned char * const l2addr,
                                size_t l2len,
                                const struct timeval * const intlo,
+                               const struct ArgusDhcpStruct * const ads,
                                struct ArgusParserStruct *parser)
 {
    struct RaAddressStruct *ras;
@@ -233,7 +234,7 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
       goto out;
    }
 
-   rv = ArgusDhcpIntvlTreeRemove(l2entry->datum, intlo);
+   rv = ArgusDhcpIntvlTreeRemove(l2entry->datum, intlo, ads);
 
    if (ArgusDhcpIntvlTreeEmpty(l2entry->datum)) {
       ArgusDhcpIntvlTreeFree(l2entry->datum);

@@ -172,7 +172,7 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
    MUTEX_LOCK(&ArgusParser->lock);
    premove_err = RabootpPatriciaTreeRemoveLease(&ads->rep.yiaddr.s_addr,
                                                 ads->chaddr, ads->hlen,
-                                                &intvlnode->intlo, NULL);
+                                                &intvlnode->intlo, ads, NULL);
    MUTEX_UNLOCK(&ArgusParser->lock);
    MUTEX_UNLOCK(ads->lock);
 
@@ -180,7 +180,7 @@ __intvl_exp_cb(struct argus_timer *tim, struct timespec *ts)
       /* decrement refcount -- patricia tree is done with this. */
       ArgusDhcpStructFree(ads);
 
-   if (RabootpIntvlRemove(&intvlnode->intlo) == 0)
+   if (RabootpIntvlRemove(&intvlnode->intlo, ads) == 0)
       /* decrement refcount -- interval tree is done with this. */
       ArgusDhcpStructFree(ads);
 
