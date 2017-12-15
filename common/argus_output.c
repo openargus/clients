@@ -4692,12 +4692,23 @@ process:
 
                while ((rstr = result[sindex++]) != NULL) {
                   int slen = strlen(rstr);
-                  if (send (fd, rstr, slen, 0) != slen) {
-                     retn = -3;
+                  int rv = -1;
+
+                  while (slen > 0 && retn == 0) {
+                     rv = send (fd, rstr, slen, 0);
+                     if (rv > 0) {
+                         slen -= rv;
+                         rstr += rv;
+                     } else if (rv == 0) {
+                         retn = -3;
+                     } else if (rv < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                         retn = -3;
+                     }
+                  }
 #ifdef ARGUSDEBUG
+                  if (rv < 0)
                      ArgusDebug (3, "ArgusCheckControlMessage: send error %s\n", strerror(errno));
 #endif
-                  }
                }
                if (retn != -3) {
                   if (send (fd, "OK\n", 3, 0) != 3) {
