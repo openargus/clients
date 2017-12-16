@@ -4542,14 +4542,15 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
    return (retn);
 }
 
-struct ArgusControlHandlerStruct ArgusControlCommands[ARGUSMAXCONTROLCOMMANDS] = {
+struct ArgusControlHandlerStruct ArgusControlCommands[] = {
    { "START: ", NULL},
    { "DONE: ", NULL},
    { "DISPLAY: ", NULL},
    { "HIGHLIGHT: ", NULL},
    { "SEARCH: ", NULL},
    { "FILTER: ", NULL},
-   { "TREE: ", NULL}
+   { "TREE: ", NULL},
+   { NULL, NULL},
 };
 
 int
@@ -4643,7 +4644,7 @@ process:
       ArgusDebug (1, "ArgusCheckControlMessage: dequeued %s\n", ptr);
 #endif
 
-   for (i = 0, found = 0; i < ARGUSMAXCONTROLCOMMANDS; i++) {
+   for (i = 0, found = 0; ArgusControlCommands[i].command; i++) {
       size_t cmdlen = strlen(ArgusControlCommands[i].command);
       int cmp;
 

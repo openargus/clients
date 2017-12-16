@@ -175,7 +175,6 @@ struct ArgusControlHandlerStruct {
   ArgusControlHandler handler;
 };
 
-#define ARGUSMAXCONTROLCOMMANDS         7
 #define CONTROL_START                   0
 #define CONTROL_DONE                    1
 #define CONTROL_DISPLAY                 2
