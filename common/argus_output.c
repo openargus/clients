@@ -919,12 +919,6 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
                if (client == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
 
-               if (output->ArgusInitMar != NULL)
-                  ArgusFree (output->ArgusInitMar);
-
-               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, client->version)) == NULL)
-                  ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusGenerateInitialMar error %s", strerror(errno));
-
                len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
                if (strcmp (wfile->filename, "-")) {
@@ -1014,36 +1008,6 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 
                if ((client->sock = ArgusNewSocket(client->fd)) == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusNewSocket error %s", strerror(errno));
-
-               if (client->host != NULL) {
-                  switch (client->format) {
-                     case ARGUS_DATA:
-                     if ((retn = sendto(client->fd, (char *) output->ArgusInitMar, len, 0, client->host->ai_addr, client->host->ai_addrlen)) < 0)
-                        ArgusLog (LOG_ERR, "ArgusInitControlChannel: sendto(): retn %d %s", retn, strerror(errno));
-                     break;
-                  }
-
-               } else {
-                  struct ArgusClientData *oc = (struct ArgusClientData *)output->ArgusClients->start;
-                  int x, count = output->ArgusClients->count;
-
-                  stat (wfile->filename, &client->sock->statbuf);
-
-                  for (x = 0; x < count; x++) {
-                     if ((oc->sock->statbuf.st_dev == client->sock->statbuf.st_dev) &&
-                         (oc->sock->statbuf.st_ino == client->sock->statbuf.st_ino))
-                        ArgusLog (LOG_ERR, "ArgusInitControlChannel: writing to same file multiple times.");
-                     oc = (struct ArgusClientData *)oc->qhdr.nxt;
-                  }
-
-                  if ((retn = write (client->fd, (char *) output->ArgusInitMar, len)) != len) {
-                     if (!output->ArgusWriteStdOut) {
-                        close (client->fd);
-                        unlink (wfile->filename);
-                     }
-                     ArgusLog (LOG_ERR, "ArgusInitControlChannel: write(): %s", strerror(errno));
-                  }
-               }
 
                if (strcmp(wfile->filename, "/dev/null"))
                   client->sock->filename = strdup(wfile->filename);
