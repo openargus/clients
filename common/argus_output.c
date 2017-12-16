@@ -612,7 +612,8 @@ ArgusNewControlChannel (struct ArgusParserStruct *parser)
    retn->ArgusInputList   = parser->ArgusOutputList;
    parser->ArgusWfileList = NULL;
 
-   retn->ArgusMarReportInterval   = parser->ArgusMarReportInterval;
+   memset(&retn->ArgusMarReportInterval, 0,
+          sizeof(retn->ArgusMarReportInterval));
 
    gettimeofday (&retn->ArgusStartTime, 0L);
    retn->ArgusLastMarUpdateTime = retn->ArgusStartTime;
@@ -3372,6 +3373,11 @@ int
 ArgusOutputStatusTime(struct ArgusOutputStruct *output)
 {
    int retn = 0;
+
+   /* MAR output disabled if reporting interval set to zero */
+   if (output->ArgusMarReportInterval.tv_sec == 0 &&
+       output->ArgusMarReportInterval.tv_usec == 0)
+      return 0;
 
    gettimeofday (&output->ArgusGlobalTime, 0L);
    if ((output->ArgusReportTime.tv_sec  < output->ArgusGlobalTime.tv_sec) ||
