@@ -4658,7 +4658,7 @@ process:
 
       if (cmp == 0) {
          if (ArgusControlCommands[i].handler != NULL) {
-               result = ArgusControlCommands[i].handler(ptr);
+               result = ArgusControlCommands[i].handler(output, ptr);
 
             if (result != NULL) {
                int sindex = 0;

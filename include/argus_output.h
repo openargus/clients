@@ -168,7 +168,8 @@ struct ArgusOutputStruct {
    struct RingBuffer ring;
 };
 
-typedef char ** (*ArgusControlHandler)(char *str);
+typedef char** (*ArgusControlHandler)
+               (struct ArgusOutputStruct *, char *);
 
 struct ArgusControlHandlerStruct {
   char *command;

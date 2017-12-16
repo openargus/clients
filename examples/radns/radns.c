@@ -141,11 +141,11 @@ extern struct tok ns_type2str[];
 
 char **ArgusHandleResponseArray = NULL;
 
-char **ArgusHandleTreeCommand (char *);
-char **ArgusHandleSearchCommand (char *);
+char **ArgusHandleTreeCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleSearchCommand (struct ArgusOutputStruct *, char *);
 
 char **
-ArgusHandleTreeCommand (char *command)
+ArgusHandleTreeCommand (struct ArgusOutputStruct *output, char *command)
 {
    char *string = &command[10], *sptr;
    int slen = strlen(string);
@@ -430,7 +430,7 @@ extern int ArgusGrepBuf (regex_t *, char *, char *);
 
 
 char **
-ArgusHandleSearchCommand (char *command)
+ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 {
    char *cmd = &command[8], *sptr, *string, *str;
    struct ArgusCIDRAddr *cidr = NULL;
@@ -763,7 +763,7 @@ RaParseComplete (int sig)
          ArgusShutDown(sig);
 
          if (ArgusPendingSearchCommand != NULL) {
-            if ((result = ArgusHandleSearchCommand (ArgusPendingSearchCommand)) != NULL) {
+            if ((result = ArgusHandleSearchCommand (NULL, ArgusPendingSearchCommand)) != NULL) {
                while (*result != NULL)
                   printf("%s\n", *result++);
             }

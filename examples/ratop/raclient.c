@@ -62,11 +62,11 @@ int ArgusProcessQueue (struct ArgusQueueStruct *);
 int ArgusCorrelateRecord (struct ArgusRecordStruct *);
 int ArgusCorrelateQueue (struct ArgusQueueStruct *);
 
-char **ArgusHandleControllerCommand (char *);
-char **ArgusHandleHighlightCommand (char *);
-char **ArgusHandleDisplayCommand (char *);
-char **ArgusHandleFilterCommand (char *);
-char **ArgusHandleSearchCommand (char *);
+char **ArgusHandleControllerCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleHighlightCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleDisplayCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleFilterCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleSearchCommand (struct ArgusOutputStruct *, char *);
 
 
 struct ArgusWirelessStruct ArgusWirelessBuf, *ArgusWireless = &ArgusWirelessBuf;
@@ -367,7 +367,7 @@ ArgusProcessData (void *arg)
 extern pthread_mutex_t RaCursesLock;
 
 char **
-ArgusHandleControllerCommand (char *command)
+ArgusHandleControllerCommand (struct ArgusOutputStruct *output, char *command)
 {
    char **retn = NULL;
 
@@ -382,7 +382,7 @@ ArgusHandleControllerCommand (char *command)
 }
 
 char **
-ArgusHandleHighlightCommand (char *command)
+ArgusHandleHighlightCommand (struct ArgusOutputStruct *output, char *command)
 {
    extern int RaHighlightDisplay (struct ArgusParserStruct *, struct ArgusQueueStruct *, char *);
    char *string = &command[11], *sptr;
@@ -404,7 +404,7 @@ ArgusHandleHighlightCommand (char *command)
 
 
 char **
-ArgusHandleDisplayCommand (char *command)
+ArgusHandleDisplayCommand (struct ArgusOutputStruct *output, char *command)
 {
    char *string = &command[10], *sptr;
    struct nff_program lfilter;

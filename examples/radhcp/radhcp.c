@@ -116,8 +116,8 @@ extern char *ArgusTrimString (char *);
 
 char *ArgusHandleResponseArray[1024];
 
-char **ArgusHandleTreeCommand (char *);
-char **ArgusHandleSearchCommand (char *);
+char **ArgusHandleTreeCommand (struct ArgusOutputStruct *, char *);
+char **ArgusHandleSearchCommand (struct ArgusOutputStruct *, char *);
 
 static struct RabootpTimerStruct *timer = NULL;
 static pthread_t timer_thread;
@@ -141,7 +141,7 @@ __is_oneshot_query(void)
 
 /* SEARCH: <argus-time-string> */
 char **
-ArgusHandleSearchCommand (char *command)
+ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 {
    int res = 0; /* ok */
    char *string = &command[8];
@@ -432,7 +432,7 @@ out:
 }
 
 char **
-ArgusHandleTreeCommand (char *command)
+ArgusHandleTreeCommand (struct ArgusOutputStruct *output, char *command)
 {
    char *string = &command[6];
    char **retn = ArgusHandleResponseArray;
@@ -627,9 +627,9 @@ RaParseComplete (int sig)
             ArgusHandleResponseArray[0] = NULL;
 
             if (*(global_query_strs[query]) == 'S')
-               ArgusHandleSearchCommand(global_query_strs[query]);
+               ArgusHandleSearchCommand(NULL, global_query_strs[query]);
             else if (*(global_query_strs[query]) == 'T')
-               ArgusHandleTreeCommand(global_query_strs[query]);
+               ArgusHandleTreeCommand(NULL, global_query_strs[query]);
             while (ArgusHandleResponseArray[i]) {
                printf("%s", ArgusHandleResponseArray[i]);
                i++;
