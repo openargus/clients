@@ -2627,7 +2627,7 @@ ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str)
 
    if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
       int state = RA_READING_ETHER_PART;
-      int done = 0, masklen = 0, addr;
+      int done = 0, masklen = 0, addr = 0;
       u_char eaddr[6];
 
       strcpy(ptrbuf, str);
@@ -6140,7 +6140,8 @@ ArgusPrintDstLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
 void
 ArgusPrintRelativeDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct timeval tvpbuf, *tvp = &tvpbuf;
+   struct timeval tvpbuf = {0, };
+   struct timeval *tvp = &tvpbuf;
    char tbuf[256], *ptr;
 
    switch (argus->hdr.type & 0xF0) {
@@ -20501,6 +20502,7 @@ ArgusGetName(struct ArgusParserStruct *parser, u_char *ap)
                            char *tptr, *dptr, *hptr, *hstr = strdup(hp->h_name);
                            int periods = 0;
 
+                           dptr = "\0";
                            hptr = hstr;
                            while ((tptr = strrchr(hptr, (int) '.')) != NULL) {
                               *tptr = ' ';
@@ -22843,7 +22845,7 @@ ArgusGetTCPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
    struct ArgusMetricStruct *metric;
    struct ArgusNetworkStruct *net;
    unsigned int status = 0;
-   unsigned char sflags, dflags;
+   unsigned char sflags = 0, dflags = 0;
 
    if ((net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX]) != NULL) {
       switch (net->hdr.subtype) {
@@ -26097,7 +26099,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
    char strbuf[128], *str = strbuf;
    int retn = 0, year = 0, month = 0, day = 0, hour = 0, mins = 0, sec = 0, sign = 1;
    time_t thistime = 0;
-   double i;
+   double i = 0;
 
    /*[[[yyyy/]mm/]dd].]hh[:mm[:ss]]*/
    /* yyyy/mm */
@@ -26496,7 +26498,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
 
 #ifdef ARGUSDEBUG
    {
-      char *rstr;
+      char *rstr = "";
       switch (retn) {
          case ARGUS_YEAR:  rstr = "year"; break;
          case ARGUS_MONTH: rstr = "mon"; break;
@@ -26520,7 +26522,9 @@ ArgusCheckTime(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                int strategy)
 {
    struct ArgusTimeObject *dtime = NULL;
-   struct timeval start, last, pstart, plast;
+   struct timeval pstart, plast;
+   struct timeval start = {0, };
+   struct timeval last = {0, };
    struct tm tmbuf, *tm;
    int retn = 0;
 
@@ -26537,9 +26541,6 @@ ArgusCheckTime(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
 
             last.tv_sec   = rec->argus_mar.now.tv_sec;
             last.tv_usec  = rec->argus_mar.now.tv_usec;
-      } else {
-         bzero(&start, sizeof(start));
-         bzero(&last,  sizeof(last));
       }
 
    } else {

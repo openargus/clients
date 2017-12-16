@@ -639,7 +639,7 @@ static struct ablock *
 Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
 {
    struct slist *s;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    s = new_stmt(NFF_LD|NFF_DSR|size);
    s->s.dsr = dsr;
@@ -652,10 +652,15 @@ Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
       case Q_GEQ:     b = new_block(JMP(NFF_JGE)); break;
       case Q_LEQ:     b = new_block(JMP(NFF_JGT)); b->sense = !b->sense; break;
    }
+
+   if (b == NULL)
+      goto out;
+
    b->stmts = s;
    b->s.data.k = v;
    b->s.type = type;
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (7, "Argusgen_cmp (%d, %d, %d, %d, %d, %d) returns %p\n", dsr, offset, size, v, op, type, b);
 #endif
@@ -668,7 +673,7 @@ static struct ablock *
 Argusgen_fcmp(int dsr, u_int offset, u_int size, float v, u_int op, int type)
 {
    struct slist *s;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    s = new_stmt(NFF_LD|NFF_DSR|size);
    s->s.dsr = dsr;
@@ -683,9 +688,13 @@ Argusgen_fcmp(int dsr, u_int offset, u_int size, float v, u_int op, int type)
       case Q_LEQ:      b = new_block(JMP(NFF_JGT|NFF_F)); b->sense = !b->sense; break;
    }
 
+   if (b == NULL)
+      goto out;
+
    b->stmts = s;
    b->s.data.f = v;
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (7, "Argusgen_fcmp (%d, %d, %f, %d, %d) returns %p\n", offset, size, v, op, type, b);
 #endif
@@ -1046,7 +1055,8 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 {
    struct ArgusFlow flow;
    struct ArgusNetworkStruct net;
-   struct ablock *b0, *b1;
+   struct ablock *b0;
+   struct ablock *b1 = NULL;
    int offset;
 
    switch (v) {
@@ -3437,7 +3447,13 @@ Argusgen_inter(float v, int dir, int type, u_int op)
    struct ablock *b1 = NULL, *b0 = NULL;
    struct ArgusJitterStruct jitter;
    float value = v * 1000.0;
-   int offset;
+   int offset = -1;
+
+   /* If type is not one of these, offset will not hold a valid value
+    * at the end of the nested switches.
+    */
+   if (type != Q_INTER && type != Q_INTERACTIVE && type != Q_INTERIDLE)
+      goto out;
 
    switch (dir) {
       case Q_SRC:
@@ -3490,6 +3506,7 @@ Argusgen_inter(float v, int dir, int type, u_int op)
          break;
    }
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_inter (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
 #endif
@@ -3503,7 +3520,10 @@ Argusgen_jitter(float v, int dir, int type, u_int op)
    struct ablock *b1 = NULL, *b0 = NULL;
    struct ArgusJitterStruct jitter;
    float value = v * 1000.0;
-   int offset;
+   int offset = -1;
+
+   if (type != Q_JITTER && type != Q_JITTERACTIVE && type != Q_JITTERIDLE)
+      goto out;
 
    switch (dir) {
       case Q_SRC:
@@ -3556,6 +3576,7 @@ Argusgen_jitter(float v, int dir, int type, u_int op)
          break;
    }
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_jitter (%f, %d) returns 0x%x\n", v, dir, b1);
 #endif
@@ -4638,6 +4659,7 @@ Argusgen_scode(char *name, struct qual q)
                      proto = Q_IPV4;
                      *mask = 0xffffffff;
                      addr[0] = ntohl(addr[0]);
+                     tmp = NULL;
 
                      switch (q.addr) {
                         case Q_INODE: 
@@ -4649,9 +4671,11 @@ Argusgen_scode(char *name, struct qual q)
                            break;
                      }
 
-                     if (b != NULL)
-                        Argusgen_or(b, tmp);
-                     b = tmp;
+                     if (tmp != NULL) {
+                        if (b != NULL)
+                           Argusgen_or(b, tmp);
+                        b = tmp;
+                     }
                      break;
                   }
                }
@@ -5005,7 +5029,7 @@ Argusgen_mcode(char *s1, char *s2, int masklen, struct qual q)
 struct ablock *
 Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 {
-   int dir = q.dir, vlen, proto = q.proto, type = q.type;
+   int dir = q.dir, vlen = -1, proto = q.proto, type = q.type;
    u_int *addr = NULL, maskbuf[4], *mask = maskbuf;
    struct ablock *b;
 
@@ -5056,11 +5080,16 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
                      v <<= 8;
                      *mask <<= 8;
                   }
-               } else {
+               } else if (vlen >= 0) {
                   /* Promote short ipaddr */
                   v <<= 32 - vlen;
                   *mask <<= 32 - vlen;
                }
+#ifdef ARGUSDEBUG
+               else {
+                  ArgusDebug(9, "%s: unable to 'promote' short ipaddr\n", __func__);
+               }
+#endif
                addr = (u_int *)&v;
                break;
             }
