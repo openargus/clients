@@ -4279,12 +4279,15 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s,
                output->ArgusInitMar->argus_mar.status |= htonl(ARGUS_SASL_AUTHENTICATE);
 no_auth:
 #endif
-               len = ntohs(output->ArgusInitMar->hdr.len) * 4;
+               /* send initial MAR if this is NOT a control channel */
+               if (output->ArgusControlPort == 0) {
+                  len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
-               if (write (client->fd, (char *) output->ArgusInitMar, len) != len) {
-                  close (client->fd);
-                  /* FIXME: this is not a reason for the process to exit */
-                  ArgusLog (LOG_ERR, "ArgusInitOutput: write(): %s", strerror(errno));
+                  if (write (client->fd, (char *) output->ArgusInitMar, len) != len) {
+                     close (client->fd);
+                     /* FIXME: this is not a reason for the process to exit */
+                     ArgusLog (LOG_ERR, "ArgusInitOutput: write(): %s", strerror(errno));
+                  }
                }
 
 #ifdef ARGUS_SASL
