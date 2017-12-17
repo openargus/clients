@@ -1007,7 +1007,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                   ArgusParser->Lflag = 0;
             }
 
-            *(int *)&buf = 0;
+            buf[0] = 0;
             ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
 
             if (fprintf (stdout, "%s", buf) < 0)
