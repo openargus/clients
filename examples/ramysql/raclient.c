@@ -1375,7 +1375,7 @@ void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
-   int found = 0, offset, tstrat;
+   int found = 0, offset;
 
    extern int ArgusTimeRangeStrategy;
 
@@ -1396,7 +1396,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          int tretn = 0, fretn = -1, lretn = -1;
 
          if (ArgusParser->tflag) {
-            tstrat = ArgusTimeRangeStrategy;
             ArgusTimeRangeStrategy = 1;
          }
 
