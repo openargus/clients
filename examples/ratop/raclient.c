@@ -1330,6 +1330,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusHashStruct *hstruct = NULL;
    int found = 0;
 
+   /* terminal aggregator -- The aggregators form a singly-linked list
+    * so we have to find this value along the way.  Initialize to the
+    * first element for the case where there is only one.
+    */
+   tagg = parser->ArgusAggregator;
+
    while (ArgusParser->Pauseflag) {
       struct timespec ts = {0, 15000000};
       nanosleep (&ts, NULL);
