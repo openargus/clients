@@ -78,7 +78,7 @@ int ArgusDebugTree = 0;
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
-   extern int RaPrintLabelStartTreeLevel, RaPrintLabelTreeLevel;
+   extern int RaPrintLabelTreeLevel;
    struct RaAddressStruct **ArgusAddrTree;
    struct ArgusModeStruct *mode = NULL;
    parser->RaWriteOut = 0;
@@ -443,7 +443,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       if (!parser->qflag) {
          char buf[MAXSTRLEN];
 
-         *(int *)&buf = 0;
+         buf[0] = 0;
          ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
          if (fprintf (stdout, "%s ", buf) < 0)
             RaParseComplete(SIGQUIT);
