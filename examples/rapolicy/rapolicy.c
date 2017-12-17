@@ -333,7 +333,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                ArgusParser->Lflag = 0;
          }
 
-         *(int *)&buf = 0;
+         buf[0] = 0;
          ArgusPrintRecord(ArgusParser, buf, ns, MAXSTRLEN);
 
          if (ArgusParser->ArgusPrintJson) {
@@ -1693,7 +1693,7 @@ RaMeetsPolicyCriteria (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 
       if (policy->flags & (RA_TCPFLG_SET)) {
          struct ArgusNetworkStruct *net;
-         unsigned char sflags;
+         unsigned char sflags = 0;
  
 //  Checking the state of the TCP header flags
 //
