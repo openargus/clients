@@ -184,7 +184,7 @@ void *
 ArgusCursesProcess (void *arg)
 {
    int done = 0, cnt = 0;
-   struct timeval ntvbuf, *ntvp = &ntvbuf;
+   struct timeval ntvbuf = {0, }, *ntvp = &ntvbuf;
 
    ArgusCursesProcessInit();
 
