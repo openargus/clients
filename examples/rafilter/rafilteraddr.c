@@ -292,7 +292,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         parser->Lflag = 0;
                   }
 
-                  *(int *)&buf = 0;
+                  buf[0] = 0;
                   ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
                   if (fprintf (stdout, "%s", buf) < 0)
                      RaParseComplete(SIGQUIT);
