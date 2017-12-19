@@ -201,6 +201,8 @@ void ArgusInitClientProcess(struct ArgusClientData *, struct ArgusWfileStruct *)
 
 void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
 int getArgusOutputVersion (struct ArgusOutputStruct *);
+void ArgusCloseListen(struct ArgusParserStruct *);
+
 
 #else
 
@@ -220,6 +222,7 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *, unsigned char, char);
 
 extern void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
 extern int getArgusOutputVersion (struct ArgusOutputStruct *);
+extern void ArgusCloseListen(struct ArgusParserStruct *);
 void setArgusMarReportInterval (struct ArgusParserStruct *, char *);
 struct timeval *getArgusMarReportInterval(struct ArgusParserStruct *);
 void setArgusPortNum (struct ArgusParserStruct *, int, char *);
