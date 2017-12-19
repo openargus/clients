@@ -525,7 +525,8 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                for (i = 0; i < mind; i++) {
                   int x, resultnum = 0, done = 0;
                   char *results[2048];
-                  struct nnamemem *cname, *name = matches[i];
+                  struct nnamemem *cname = NULL;
+                  struct nnamemem *name = matches[i];
                   bzero(results, sizeof(results));
                   results[resultnum++] = strdup(name->n_name);
                            
@@ -1446,7 +1447,8 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStr
                   }
 
                   if ((cidr = RaParseCIDRAddr (ArgusParser, addr)) != NULL) {
-                     int ndns, ncidr, cnt;
+                     int ndns, cnt;
+                     int ncidr = 0;
 
                      bzero ((char *)&node, sizeof(node));
                      bcopy(cidr, &node.addr, sizeof(*cidr));
