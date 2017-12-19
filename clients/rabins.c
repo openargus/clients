@@ -967,11 +967,11 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
    int found = 0, offset, tstrat;
 
+   tstrat = ArgusTimeRangeStrategy;
    while (agg && !found) {
       int tretn = -1, fretn = -1, lretn = -1;
 
       if (ArgusParser->tflag) {
-         tstrat = ArgusTimeRangeStrategy;
          ArgusTimeRangeStrategy = 1;
       }
 
