@@ -1317,7 +1317,7 @@ isakmp_print(const u_char *bp, u_int length)
 	}
 	sprintf(&ArgusBuf[strlen(ArgusBuf)],":");
 
-	phase = (*(u_int32_t *)base.msgid == 0) ? 1 : 2;
+	phase = (EXTRACT_32BITS(base.msgid) == 0) ? 1 : 2;
 	if (phase == 1)
 		sprintf(&ArgusBuf[strlen(ArgusBuf)]," phase %d", phase);
 	else
