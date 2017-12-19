@@ -1853,6 +1853,8 @@ extern void setParserArgusID(struct ArgusParserStruct *, void *, int, unsigned i
 
 extern int getParserArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
 extern unsigned int getArgusIDType(struct ArgusParserStruct *);
+extern int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
+                                     struct ArgusParserStruct *, char *);
 
 extern void setArgusManInf (struct ArgusParserStruct *, char *);
 extern char *getArgusManInf (struct ArgusParserStruct *);
