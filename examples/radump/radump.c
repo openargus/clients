@@ -291,7 +291,7 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    unsigned short sport = 0, dport = 0;
    int type, proto, process = 0;
    struct ArgusDataStruct *user = NULL;
-   u_char buf[MAXSTRLEN], *bp = NULL;
+   u_char *bp = NULL;
    int slen = 0, done = 0;
 
    if ((user = (struct ArgusDataStruct *)argus->dsrs[ind]) == NULL)
@@ -421,8 +421,6 @@ struct ArgusMacFlow {
    }
 
    if (process && bp) {
-      *(int *)&buf = 0;
-
 #define ISPORT(p) (dport == (p) || sport == (p))
 
       switch (proto) {
