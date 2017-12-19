@@ -770,7 +770,7 @@ RaceInit(struct RaceDaemonStruct *raced)
 
             switch (ind) {
                case RACEDEBUG: {
-                  for (x = 0, ind = -1; x < RACE_MAXDEBUG; x++) {
+                  for (x = 0, ind = -1; x < RACE_MAXMODES; x++) {
                      if (!(strncasecmp (mode->mode, RaceDaemonModes[x], 3))) {
                         raced->debug = x << ind;
                         switch (ind) {
