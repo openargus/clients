@@ -1207,7 +1207,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                      printf ("\n");
                }
 
-               *(int *)&buf = 0;
+               buf[0] = 0;
 
                ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
 
