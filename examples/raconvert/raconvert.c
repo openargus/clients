@@ -348,7 +348,7 @@ ArgusClientInit(struct ArgusParserStruct *parser)
 
          switch (ind) {
             case RASCIIDEBUG: {
-               for (x = 0, ind = -1; x < RASCII_MAXDEBUG; x++) {
+               for (x = 0, ind = -1; x < RASCII_MAXMODES; x++) {
                   if (!(strncasecmp (mode->mode, RaConvertDaemonModes[x], 3))) {
                      ArgusDebugMode |= 0x01 << x;
                      switch (ind) {
