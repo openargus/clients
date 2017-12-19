@@ -476,7 +476,10 @@ ArgusDnsOutputProcessClose()
 
 #if defined(ARGUS_MYSQL)
 
-char ArgusQueryBuffer[ARGUS_MAXRECORDSIZE];
+static union {
+	char c[ARGUS_MAXRECORDSIZE];
+	struct ArgusRecord rec;
+} ArgusQueryBuffer;
 
 void
 RaSQLQueryTable (char *table)
@@ -525,15 +528,15 @@ RaSQLQueryTable (char *table)
                unsigned long *lengths;
 
                lengths = mysql_fetch_lengths(mysqlRes);
-               bzero(ArgusQueryBuffer, sizeof(ArgusQueryBuffer));
+               bzero(&ArgusQueryBuffer.c, sizeof(ArgusQueryBuffer.c));
  
                for (x = 0; x < retn; x++) {
-                  bcopy (row[x], ArgusQueryBuffer, (int) lengths[x]);
+                  bcopy (row[x], ArgusQueryBuffer.c, (int) lengths[x]);
 
-                  if (((struct ArgusRecord *)ArgusQueryBuffer)->hdr.type & ARGUS_MAR) {
-                     bcopy ((char *) &ArgusQueryBuffer, (char *)&ArgusInput->ArgusInitCon, sizeof (struct ArgusRecord));
+                  if (ArgusQueryBuffer.rec.hdr.type & ARGUS_MAR) {
+                     bcopy (ArgusQueryBuffer.c, (char *)&ArgusInput->ArgusInitCon, sizeof (struct ArgusRecord));
                   } else 
-                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&ArgusQueryBuffer, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (ArgusParser, ArgusInput, &ArgusQueryBuffer.rec, &ArgusParser->ArgusFilterCode);
                }
             }
          }
