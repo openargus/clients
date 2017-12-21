@@ -328,10 +328,11 @@ __discover_exp_cb(struct argus_timer *tim, struct timespec *ts)
    int have_timer = 0; /* avoid race with RabootpProtoTimersNonleaseSet() */
 
    MUTEX_LOCK(ads->lock);
-   if (ads->timers.non_lease) {
+   if (ads->timers.non_lease == tim) {
       have_timer = 1;
       ads->timers.non_lease = NULL;
-      if (ads->state == BOUND)
+      if (ads->state == BOUND || ads->state == REBINDING ||
+          ads->state == RENEWING)
          bound = 1;
    }
    MUTEX_UNLOCK(ads->lock);
