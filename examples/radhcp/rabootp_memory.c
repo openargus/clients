@@ -88,6 +88,9 @@ ArgusDhcpStructUpRef(struct ArgusDhcpStruct *a)
    if (MUTEX_LOCK(&__memlock) == 0) {
 
 #ifdef ARGUSDEBUG
+      if (a->refcount == 0)
+         abort();
+
       if (a->refcount == 255) {
          abort();
       }
