@@ -373,7 +373,10 @@ static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
    struct ArgusDhcpStruct *cached = v_cached;
    struct RabootpTimerStruct *rts = v_arg;
 
-   if (cached->state == BOUND || cached->state == RENEWING) {
+   /* If this lease has ever been in the bound state, make sure
+    * the discovery timer has been stopped.
+    */
+   if (cached->last_bind.tv_sec || cached->last_bind.tv_usec) {
       if (cached->timers.non_lease) {
          RabootpTimerStop(rts, cached->timers.non_lease);
          free(cached->timers.non_lease);
