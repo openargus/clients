@@ -190,9 +190,13 @@ ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *head,
    MUTEX_LOCK(&head->lock);
    node = RB_FIND(dhcp_intvl_tree, &head->inttree, &search);
    if (node) {
-      RB_REMOVE(dhcp_intvl_tree, &head->inttree, node);
-      if (head->count > 0)
-         head->count--;
+      if (node->data == ads) {
+         RB_REMOVE(dhcp_intvl_tree, &head->inttree, node);
+         if (head->count > 0)
+            head->count--;
+      } else {
+         DEBUGLOG(1, "%s: FOUND WRONG ArgusDhcpStruct\n", __func__);
+      }
    }
    MUTEX_UNLOCK(&head->lock);
 

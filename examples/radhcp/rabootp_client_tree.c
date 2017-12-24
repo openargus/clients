@@ -149,8 +149,14 @@ ArgusDhcpClientTreeRemove(struct ArgusDhcpClientTree *head,
    search.data = ads;
    MUTEX_LOCK(&head->lock);
    node = RB_FIND(dhcp_client_tree, &head->tree, &search);
-   if (node)
-      RB_REMOVE(dhcp_client_tree, &head->tree, node);
+
+   if (node) {
+      if (node->data == ads)
+         RB_REMOVE(dhcp_client_tree, &head->tree, node);
+      else {
+         DEBUGLOG(1, "%s: FOUND WRONG ArgusDhcpStruct\n", __func__);
+      }
+   }
    MUTEX_UNLOCK(&head->lock);
 
    if (node)
