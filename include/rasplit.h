@@ -77,7 +77,7 @@ extern "C" {
 #define ARGUSSPLITMINUTE	6
 #define ARGUSSPLITSECOND	7
 
-const char *RaSplitModes[ARGUSSPLITMODENUM];
+extern const char *RaSplitModes[ARGUSSPLITMODENUM];
 
 char *RaSplitFilename (struct ArgusAdjustStruct *);
  
