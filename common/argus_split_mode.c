@@ -5,15 +5,15 @@
 
 const char *RaSplitModes[ARGUSSPLITMODENUM] = {
   "time",
-  "count",  
-  "size",    
-  "flow",    
-  "pattern",    
-  "nomodify",    
-  "hard",    
-  "soft",    
-  "zero",    
-  "rate",    
+  "count",
+  "size",
+  "flow",
+  "pattern",
+  "nomodify",
+  "hard",
+  "soft",
+  "zero",
+  "rate",
 };
 
 /* Since the mode pointer may be advanced here, return the resulting
