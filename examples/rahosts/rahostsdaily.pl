@@ -47,6 +47,7 @@ my $VERSION = "5.0.3";
 my $done    = 0;
 my $debug   = 0;
 my $time;
+my $archiveDir;
 my $archive;
 
 # Parse the arguments if any
@@ -58,6 +59,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-debug$//  && do { $debug++; next ARG; };
          s/^-r$//      && do { $archive = shift(@ARGV); next ARG; };
          s/^-t$//      && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//   && do { $time = shift(@ARGV); next ARG; };
      }
   } else {
       for ($arg) {
@@ -68,11 +70,21 @@ ARG: while (my $arg = shift(@ARGV)) {
   $arglist[@arglist + 0] = $arg;
 }
 
+if (not defined ($time)) {
+   $time = "-1d";
+}
+
 
 print "DEBUG: rahostsdaily: using $time as date adjustment\n" if $debug;
 
 if (not defined ($archive)) {
-  $archive = "/home/argus/\$sid/\$inf/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S";
+  if (-e "/home/argus") {
+     $archiveDir = "/home/argus";
+     $archive = $archiveDir."/\$sid/\$inf/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S";
+  } else {
+     $archiveDir = "~/Archive";
+     $archive = $archiveDir."/\$sid/\$inf/%Y/%m/argus.%Y.%m.%d";
+  }
 }
 print "DEBUG: rahostsdaily: archive: $archive\n" if $debug;
 

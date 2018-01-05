@@ -1,0 +1,8 @@
+[Unit]
+Description=Process Daily Scanner data for all four regions
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rascannerdaily -time -1d
+TimeoutStartSec=1hr
+

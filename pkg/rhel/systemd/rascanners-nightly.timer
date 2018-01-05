@@ -1,0 +1,11 @@
+[Unit]
+Description=Generate Enterprise Scanner Reports from Argus Matrix Data 
+
+[Timer]
+# daily at 0245 hrs
+OnCalendar=*-*-* 02:45:00
+Persistent=true
+
+[Install]
+Also=rascanners-nightly.service
+WantedBy=multi-user.target

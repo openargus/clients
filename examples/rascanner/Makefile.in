@@ -83,9 +83,9 @@ YACC = @V_YACC@
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = radark.pl rascanner.pl rascan.pl
+SRC = radark.pl rascanner.pl rascannerdaily.pl rascan.pl 
 
-PROGS = $(INSTALLBIN)/radark $(INSTALLBIN)/rascanner $(INSTALLBIN)/rascan
+PROGS = $(INSTALLBIN)/radark $(INSTALLBIN)/rascanner $(INSTALLBIN)/rascannerdaily $(INSTALLBIN)/rascan
 
 all: $(PROGS)
 
@@ -95,6 +95,10 @@ $(INSTALLBIN)/radark: radark.pl
 
 $(INSTALLBIN)/rascanner: rascanner.pl
 	sed 's+@PERLBIN@+$(PERL)+' rascanner.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rascannerdaily: rascannerdaily.pl
+	sed 's+@PERLBIN@+$(PERL)+' rascannerdaily.pl > $@
 	chmod +x $@
 
 $(INSTALLBIN)/rascan: rascan.pl
@@ -113,6 +117,7 @@ install: force all
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/radark $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rascanner $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rascannerdaily $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rascan $(DESTDIR)$(BINDIR)
 
 clean:

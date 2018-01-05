@@ -37,6 +37,7 @@ use CGI qw(:standard);
 
 use File::Temp qw/ tempfile tempdir /;
 use Time::Local;
+use qosient::util;  # parsetime
 
 my $query = new CGI;
 
@@ -102,9 +103,13 @@ my $dburl  = "mysql://root\@localhost/scanners/".$mode."_%Y_%m_%d -M time 1d";
      $time = RaTodaysDate();
   }
 
+my       @time = parsetime($time);
+my       $date = strftime '%Y/%m/%d', @time;
+my  $tabletime = strftime '%Y_%m_%d', @time;
+
+  chomp($date);
+
   my $hosttable = "";
-  my $tabletime = $time;
-  $tabletime =~ s/\//_/g;
 
   if (not defined $filter) {
      $mode = "outside";
