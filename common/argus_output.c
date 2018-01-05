@@ -97,6 +97,7 @@ static void ArgusWriteSocket(struct ArgusOutputStruct *,
                              struct ArgusWireFmtBuffer *);
 static int ArgusWriteOutSocket(struct ArgusOutputStruct *,
                                struct ArgusClientData *);
+static char ** ArgusHandleMARCommand(struct ArgusOutputStruct *, char *);
 
 static struct ArgusQueueNode *
 NewArgusQueueNode(void *datum)
@@ -4550,6 +4551,7 @@ struct ArgusControlHandlerStruct ArgusControlCommands[] = {
    { "SEARCH: ", NULL},
    { "FILTER: ", NULL},
    { "TREE: ", NULL},
+   { "MAR: ", ArgusHandleMARCommand},
    { NULL, NULL},
 };
 
@@ -5962,3 +5964,35 @@ ArgusGetSaslString(FILE *f, char *buf, int buflen)
 }
 
 #endif 
+
+#define MAR_RESPONSE_BUFLEN 1024
+static char *mar_response_array[3];
+static char *mar_response_buf = NULL;
+static char **
+ArgusHandleMARCommand(struct ArgusOutputStruct *output, char *command)
+{
+   struct ArgusRecordStruct *argus;
+
+   mar_response_array[0] = "FAIL\n";
+   mar_response_array[1] = NULL;
+
+   if (mar_response_buf == NULL)
+      mar_response_buf = ArgusMalloc(MAR_RESPONSE_BUFLEN);
+
+   if (mar_response_buf == NULL)
+      goto out;
+
+   mar_response_buf[0] = 0;
+   argus = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS, ARGUS_VERSION);
+   if (argus == NULL)
+      goto out;
+
+   ArgusPrintRecord(output->ArgusParser, mar_response_buf, argus,
+                    MAR_RESPONSE_BUFLEN);
+   mar_response_array[0] = mar_response_buf;
+   mar_response_array[1] = "\n";
+   mar_response_array[2] = NULL;
+
+out:
+      return mar_response_array;
+}
