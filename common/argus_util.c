@@ -5299,7 +5299,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    if (parser->ArgusPrintXml) {
       parser->RaTimeFormat="%Y-%m-%dT%H:%M:%S.%f";
 
-      if (parser->RaOutputStarted == 0) {
+      /* If input is NULL this record was generated locally, not received. */
+      if (parser->RaOutputStarted == 0 && input != NULL) {
          struct ArgusRecord *rec = (struct ArgusRecord *) &input->ArgusManStart;
          struct ArgusInterfaceStruct *interface = &ArgusInterfaceTypes[0];
 
