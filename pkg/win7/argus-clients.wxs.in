@@ -2,7 +2,7 @@
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'
      xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
   <Product Name='ArgusPro Clients @PACKAGE_VERSION@'
-  Id='0002f85d-6809-4708-9443-c588d98e65cb'
+  Id="*"
   UpgradeCode='6dadd131-fcf4-4e19-bec2-fbcb78c0f0c0'
   Language='1033' Codepage='1252'
   Version='@PACKAGE_VERSION@.@PACKAGE_RELEASE@'
