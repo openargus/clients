@@ -14,13 +14,8 @@
     <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes'
     DiskPrompt="CD-ROM #1" />
 
-    <Upgrade Id='f86c9c25-613b-479e-afcc-4b677cc0e9cb'>
-      <UpgradeVersion OnlyDetect='no' Property='PREVIOUSFOUND'
-        Minimum='1.0.0' IncludeMinimum='yes'
-        Maximum='@PACKAGE_VERSION@.@PACKAGE_RELEASE@'
-        IncludeMaximum='yes' />
-    </Upgrade>
-
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version alredy installed." />
 
     <Property Id='DiskPrompt' Value="Argus Clients Installation [1]" />
     <Directory Id='TARGETDIR' Name='SourceDir'>
@@ -219,10 +214,6 @@
       <ComponentRef Id='create_var_directory' />
       <ComponentRef Id='create_varlog_directory' />
     </Feature>
-
-    <InstallExecuteSequence>
-      <RemoveExistingProducts After="InstallInitialize" />
-    </InstallExecuteSequence>
 
   </Product>
 </Wix>
