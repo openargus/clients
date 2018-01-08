@@ -711,17 +711,25 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                if (ArgusParser && ArgusParser->ArgusAggregator) {
                   struct ArgusAgrStruct *agr = (void *)argus->dsrs[ARGUS_AGR_INDEX];
+
                   if (agr) {
-                     agr->count = 1;
-                     agr->act.maxval = value;
-                     agr->act.minval = value;
-                     agr->act.meanval = value;
-                     agr->act.n = 1;
-                     agr->act.stdev = 0;
+                     agr->hdr.subtype  = 0x01;
+                     agr->count        = 1;
+                     agr->act.maxval   = value;
+                     agr->act.minval   = value;
+                     agr->act.meanval  = value;
+                     agr->act.n        = 1;
+                     agr->act.stdev    = 0;
+
+                     agr->idle.maxval  = 0;
+                     agr->idle.minval  = 0;
+                     agr->idle.meanval = 0;
+                     agr->idle.n       = 0;
+                     agr->idle.stdev   = 0;
                   }
                }
 
-               if (agg && agg->RaMetricFetchAlgorithm != NULL)
+               if (agg && (agg->RaMetricFetchAlgorithm != NULL))
                   ArgusHistoTallyMetric (parser, argus, value);
                break;
             }
