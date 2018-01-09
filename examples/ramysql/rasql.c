@@ -1328,16 +1328,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                } else
                if (!(strncasecmp (mode->mode, "rtime", 5)) ||
                   (!(strncasecmp (mode->mode, "realtime", 8)))) {
-                  char *ptr = NULL;
                   ArgusParser->status |= ARGUS_REAL_TIME_PROCESS;
-                  if ((ptr = strchr(mode->mode, ':')) != NULL) {
-                     double value = 0.0;
-                     char *endptr = NULL;
-                     ptr++;
-                     value = strtod(ptr, &endptr);
-                     if (ptr != endptr)
-                        parser->ArgusTimeMultiplier = value;
-                  }
                } else
                if (!(strncasecmp (mode->mode, "oui", 3))) {
                   parser->ArgusPrintEthernetVendors++;
