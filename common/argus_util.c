@@ -396,6 +396,7 @@ void relts_print(char *, uint32_t);
 
 static int CompareArgusInput (const void *, const void *);
 static void ArgusSortFileList (struct ArgusInput **, struct ArgusInput **);
+static int RaDescend(char *, size_t, size_t);
 
 #if !defined(HAVE_TIMEGM)
 time_t timegm (struct tm *);
@@ -408,15 +409,29 @@ RaProcessRecursiveFiles (char *path)
 {
    int retn = 1;
    struct stat statbuf;
+   char *name;
+   size_t pathlen;
 
    if (stat(path, &statbuf) < 0)
       return(0);
 
-   if ((strlen(path) > 1) && ((path[0] == '.') && (path[1] != '/')))
+   pathlen = strlen(path);
+   if (pathlen > MAXSTRLEN) {
+      ArgusLog(LOG_WARNING, "%s: path name > %u\n", __func__, MAXSTRLEN);
+      return 0;
+   }
+
+   if ((pathlen > 1) && ((path[0] == '.') && (path[1] != '/')))
       return (0);
 
+   name = ArgusMalloc(MAXSTRLEN);
+   if (name == NULL)
+      ArgusLog(LOG_ERR, "%s: Unable to allocate filename buffer\n", __func__);
+
+   strcpy(name, path);
+
    if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
-      retn = RaDescend (path);
+      retn = RaDescend (name, MAXSTRLEN, pathlen);
    } else {
       if ((statbuf.st_mode & S_IFMT) == S_IFREG) {
 #ifdef ARGUSDEBUG
@@ -427,20 +442,21 @@ RaProcessRecursiveFiles (char *path)
       }
    }
 
+   ArgusFree(name);
    ArgusSortFileList (&ArgusParser->ArgusInputFileList,
                       &ArgusParser->ArgusInputFileListTail);
    return (retn);
 }
 
  
-int
-RaDescend(char *name)
+static int
+RaDescend(char *name, size_t len, size_t end)
 {
    int retn = 0;
    DIR *dir;
    struct dirent *direntry;
    struct stat statbuf;
-   char buf[MAXSTRLEN];
+   int slen;
  
    if (stat(name, &statbuf) < 0)
       return(0);
@@ -448,23 +464,33 @@ RaDescend(char *name)
    if ((dir = opendir(name)) != NULL) {
       while ((direntry = readdir(dir)) != NULL) {
          if (*direntry->d_name != '.') {
-            snprintf (buf, MAXSTRLEN, "%s/%s", name, direntry->d_name);
-            if (stat(buf, &statbuf) == 0) {
+            /* append another directory component */
+            slen = snprintf (&name[end], len-end, "/%s", direntry->d_name);
+
+            /* snprintf returns the number of bytes that would be used
+             * even if that exceeds the length parameter
+             */
+            if (slen > (len - end))
+               slen = len - end;
+
+            if (stat(name, &statbuf) == 0) {
                if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
-                  retn += RaDescend(buf);
+                  retn += RaDescend(name, len, end + slen);
  
                } else {
                   if ((statbuf.st_mode & S_IFMT) == S_IFREG) {
 #ifdef ARGUSDEBUG
-                     ArgusDebug (2, "RaDescend: adding %s\n", buf);
+                     ArgusDebug (2, "RaDescend: adding %s\n", name);
 #endif
-                     if (!(ArgusAddFileList (ArgusParser, buf, ARGUS_DATA_SOURCE, -1, -1)))
-                        ArgusLog (LOG_ERR, "error: -R file arg %s\n", buf);
+                     if (!(ArgusAddFileList (ArgusParser, name, ARGUS_DATA_SOURCE, -1, -1)))
+                        ArgusLog (LOG_ERR, "error: -R file arg %s\n", name);
 
                      retn++;
                   }
                }
             }
+            /* remove a directory component */
+            name[end] = '0';
          }
       }
       closedir(dir);

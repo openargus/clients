@@ -422,7 +422,6 @@ void ArgusMainInit (struct ArgusParserStruct *, int, char **);
 
 
 
-int RaDescend(char *);
 int RaProcessRecursiveFiles (char *);
 
 #define RAENVITEMS      2
