@@ -649,12 +649,85 @@ close_out:
 /* used by RadiumParseResourceLine */
 static int roption = 0;
 
+/* configuration files can contain values with backticks, such as
+ * `hostname` and `hostuuid`.  Convert those to the actual values here.
+ */
+char *
+ArgusExpandBackticks(const char * const in)
+{
+   char *res = NULL;
+   char *optargstart;
+   char *optarg = strdup(in);
+   FILE *fd;
+
+   optargstart = optarg;
+   optarg++;
+   optarg[strlen(optarg) - 1] = '\0';
+
+   if (!(strcmp (optarg, "hostname"))) {
+      if ((fd = popen("hostname", "r")) != NULL) {
+         char *ptr = NULL;
+         char *result = malloc(MAXSTRLEN); /* since we use strdup() elsewhere */
+
+         if (result == NULL)
+            ArgusLog (LOG_ERR, "%s: Unable to allocate hostname buffer\n",
+                      __func__);
+
+         clearerr(fd);
+         while ((ptr == NULL) && !(feof(fd)))
+            ptr = fgets(result, MAXSTRLEN, fd);
+
+         if (ptr == NULL)
+            ArgusLog (LOG_ERR, "%s: `hostname` failed %s.\n", __func__, strerror(errno));
+
+         ptr[strlen(ptr) - 1] = '\0';
+         pclose(fd);
+
+         if ((ptr = strstr(optarg, ".local")) != NULL) {
+            if (strlen(ptr) == strlen(".local"))
+               *ptr = '\0';
+         }
+
+         res = result;
+      } else
+         ArgusLog (LOG_ERR, "%s: System error: popen() %s\n", __func__, strerror(errno));
+   } else
+#ifdef HAVE_GETHOSTUUID
+   if (!(strcmp (optarg, "hostuuid"))) {
+      uuid_t id;
+      struct timespec ts = {0,0};
+      if (gethostuuid(id, &ts) == 0) {
+         char sbuf[64];
+         uuid_unparse(id, sbuf);
+         res = strdup(sbuf);
+      } else
+         ArgusLog (LOG_ERR, "%s: System error: gethostuuid() %s\n", __func__, strerror(errno));
+   } else
+#else
+# ifdef CYGWIN
+
+   if (!(strcmp (optarg, "hostuuid"))) {
+      char uuidstr[64];
+
+      if (__wmic_get_uuid(uuidstr, 37) == 0)
+         res = strdup(uuidstr);
+      else
+         ArgusLog(LOG_ERR, "%s: unable to read system UUID\n", __func__);
+   } else
+# endif
+#endif
+      ArgusLog (LOG_ERR, "%s: unsupported command `%s`.\n", __func__, in);
+
+   free(optargstart);
+   return res;
+}
+
 int
 RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
                          char *optarg, int quoted, int idx)
 {
    int retn = 0;
-   char result[MAXSTRLEN], *ptr;
+   char *ptr;
    FILE *fd;
 
    switch (idx) {
@@ -668,21 +741,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
          } else {
             if (optarg && (*optarg == '`')) {
                if (optarg[strlen(optarg) - 1] == '`') {
-                  optarg++;
-                  optarg[strlen(optarg) - 1] = '\0';
-                  if (!(strcmp (optarg, "hostname"))) {
-                     if ((fd = popen("hostname", "r")) != NULL) {
-                        ptr = NULL;
-                        clearerr(fd);
-                        while ((ptr == NULL) && !(feof(fd)))
-                           ptr = fgets(result, MAXSTRLEN, fd);
-
-                        if (ptr == NULL)
-                           ArgusLog (LOG_ERR, "%s: `hostname` failed %s.\n", __func__, strerror(errno));
-
-                        optarg = ptr;
-                        optarg[strlen(optarg) - 1] = '\0';
-                        pclose(fd);
+                  char *val = ArgusExpandBackticks(optarg);
 
                      switch (i) {
                         case RADIUM_MONITOR_ID: {
