@@ -394,7 +394,7 @@ void relts_print(char *, uint32_t);
 
 #include <dirent.h>
 
-int RaSortFileList (const void *, const void *);
+static int CompareArgusInput (const void *, const void *);
 static void ArgusSortFileList (struct ArgusInput **, struct ArgusInput **);
 
 #if !defined(HAVE_TIMEGM)
@@ -476,8 +476,8 @@ RaDescend(char *name)
 
 
 
-int
-RaSortFileList (const void *item1, const void *item2)
+static int
+CompareArgusInput (const void *item1, const void *item2)
 {
    struct ArgusInput *input1 = *(struct ArgusInput **) item1;
    struct ArgusInput *input2 = *(struct ArgusInput **) item2;
@@ -508,7 +508,7 @@ ArgusSortFileList (struct ArgusInput **head,
           input = (struct ArgusInput *)input->qhdr.nxt;
       }
 
-      qsort (array, count, sizeof(input), RaSortFileList);
+      qsort (array, count, sizeof(input), CompareArgusInput);
 
       for (i = 0; i < count; i++) {
          ((struct ArgusInput *)array[i])->qhdr.nxt = NULL;
