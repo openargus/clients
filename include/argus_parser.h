@@ -523,7 +523,8 @@ struct ArgusParserStruct {
    struct ArgusModeStruct *ArgusModeList;
    struct ArgusModeStruct *ArgusMaskList;
 
-   struct ArgusInput *ArgusInputFileList;
+   struct ArgusInput *ArgusInputFileList;	/* first element in file list */
+   struct ArgusInput *ArgusInputFileListTail;	/* last element in file list */
    struct ArgusInput *ArgusRemoteHostList;
 
    struct ArgusListStruct *ArgusLabelerFileList;
