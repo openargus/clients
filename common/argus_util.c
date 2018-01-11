@@ -2455,11 +2455,32 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
 
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
-         while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-            done = 0; linenum++;
-            while (*str && isspace((int)*str))
-                str++;
+         size_t soff = 0;
+         char *tmpstr;
 
+         while ((tmpstr = fgets(str + soff, MAXSTRLEN - soff, fd)) != NULL)  {
+            size_t spaces = 0;
+
+            soff += strlen(tmpstr);
+            linenum++;
+            while (*(tmpstr + spaces) && isspace((int)*(tmpstr + spaces)))
+                spaces++;
+
+            /* remove the leading spaces */
+            if (spaces > 0)
+               memmove(tmpstr, tmpstr + spaces, soff - spaces);
+
+            /* handle blackslash line continuation */
+            if (soff >= 2) {
+               if ((str[soff - 2] == '\\') && (str[soff - 1] == '\n')) {
+                  soff -= 2;		/* backup to the backslash */
+                  str[soff] = 0;	/* replace backslash with null */
+                  continue;		/* soff remains greater than zero */
+               }
+            }
+            soff = 0;
+
+            done = 0;
             if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
                for (i = 0; i < items && !done; i++) {
                   len = strlen(directives[i]);
