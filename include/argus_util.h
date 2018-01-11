@@ -406,6 +406,11 @@ snprintf_append(char *str, size_t *len, size_t *remain, const char *fmt, ...)
    return c;
 }
 
+typedef int (*ResourceCallback)(struct ArgusParserStruct *, int, char *, int, int);
+
+#define ARGUS_SOPTIONS_IGNORE	0
+#define ARGUS_SOPTIONS_PROCESS	1
+
 #ifdef ArgusUtil
 
 void ArgusHandleSig (int);
@@ -419,6 +424,9 @@ extern int ArgusDeletePIDFile (struct ArgusParserStruct *);
 extern char *ArgusCreatePIDFile (struct ArgusParserStruct *, char *);
 
 void ArgusMainInit (struct ArgusParserStruct *, int, char **);
+int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
+                         int enable_soptions, char *directives[], size_t items,
+                         ResourceCallback cb);
 
 
 
@@ -1899,6 +1907,10 @@ extern void ArgusPrintRecord (struct ArgusParserStruct *, char *, struct ArgusRe
 extern void ArgusDump (const u_char *, int, char *);
 
 extern void ArgusMainInit (struct ArgusParserStruct *, int, char **);
+extern int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
+                                int enable_soptions, char *directives[],
+                                size_t items, ResourceCallback cb);
+
 
 extern void ArgusPrintCause (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int, int);
 extern void ArgusPrintDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int, int);
