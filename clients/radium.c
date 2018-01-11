@@ -85,6 +85,9 @@ int RadiumParseSrcidConversionFile (char *);
 static int RadiumMinSsf = 0;
 static int RadiumMaxSsf = 0;
 static int RadiumAuthLocalhost = 1;
+static int RadiumParseResourceLine (struct ArgusParserStruct *parser,
+                                    int linenum, char *optarg, int quoted,
+                                    int idx);
 
 const static unsigned int ArgusClientMaxQueueDepth = 500000;
 
@@ -93,6 +96,67 @@ extern uid_t new_uid;
 extern gid_t new_gid;
 
 void ArgusSetChroot(char *);
+
+#define RADIUM_RCITEMS                          27
+
+#define RADIUM_MONITOR_ID                       0
+#define RADIUM_MONITOR_ID_INCLUDE_INF		1
+#define RADIUM_ARGUS_SERVER                     2
+#define RADIUM_DAEMON                           3
+#define RADIUM_CISCONETFLOW_PORT                4
+#define RADIUM_ACCESS_PORT                      5
+#define RADIUM_INPUT_FILE                       6
+#define RADIUM_USER_AUTH                        7
+#define RADIUM_AUTH_PASS                        8
+#define RADIUM_OUTPUT_FILE                      9
+#define RADIUM_OUTPUT_STREAM                    10
+#define RADIUM_MAR_STATUS_INTERVAL              11
+#define RADIUM_DEBUG_LEVEL                      12
+#define RADIUM_FILTER_OPTIMIZER                 13
+#define RADIUM_FILTER_TAG                       14
+#define RADIUM_BIND_IP                          15
+#define RADIUM_MIN_SSF                          16
+#define RADIUM_MAX_SSF                          17
+#define RADIUM_ADJUST_TIME                      18
+#define RADIUM_CHROOT_DIR                       19
+#define RADIUM_SETUSER_ID                       20
+#define RADIUM_SETGROUP_ID                      21
+#define RADIUM_CLASSIFIER_FILE                  22
+#define RADIUM_ZEROCONF_REGISTER                23
+#define RADIUM_V3_ACCESS_PORT                   24
+#define RADIUM_SRCID_CONVERSION_FILE            25
+#define RADIUM_AUTH_LOCALHOST                   26
+
+char *RadiumResourceFileStr [] = {
+   "RADIUM_MONITOR_ID=",
+   "RADIUM_MONITOR_ID_INCLUDE_INF=",
+   "RADIUM_ARGUS_SERVER=",
+   "RADIUM_DAEMON=",
+   "RADIUM_CISCONETFLOW_PORT=",
+   "RADIUM_ACCESS_PORT=",
+   "RADIUM_INPUT_FILE=",
+   "RADIUM_USER_AUTH=",
+   "RADIUM_AUTH_PASS=",
+   "RADIUM_OUTPUT_FILE=",
+   "RADIUM_OUTPUT_STREAM=",
+   "RADIUM_MAR_STATUS_INTERVAL=",
+   "RADIUM_DEBUG_LEVEL=",
+   "RADIUM_FILTER_OPTIMIZER=",
+   "RADIUM_FILTER=",
+   "RADIUM_BIND_IP=",
+   "RADIUM_MIN_SSF=",
+   "RADIUM_MAX_SSF=",
+   "RADIUM_ADJUST_TIME=",
+   "RADIUM_CHROOT_DIR=",
+   "RADIUM_SETUSER_ID=",
+   "RADIUM_SETGROUP_ID=",
+   "RADIUM_CLASSIFIER_FILE=",
+   "RADIUM_ZEROCONF_REGISTER=",
+   "RADIUM_V3_ACCESS_PORT=",
+   "RADIUM_SRCID_CONVERSION_FILE=",
+   "RADIUM_AUTH_LOCALHOST=",
+};
+
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -124,10 +188,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
       if (parser->ArgusFlowModelFile != NULL) {
-         RadiumParseResourceFile (parser, parser->ArgusFlowModelFile);
+         RaParseResourceFile (parser, parser->ArgusFlowModelFile,
+                              ARGUS_SOPTIONS_IGNORE, RadiumResourceFileStr,
+                              RADIUM_RCITEMS, RadiumParseResourceLine);
       } else {
          if (!(parser->Xflag)) {
-            RadiumParseResourceFile (parser, "/etc/radium.conf");
+            RaParseResourceFile (parser, "/etc/radium.conf",
+                                 ARGUS_SOPTIONS_IGNORE, RadiumResourceFileStr,
+                                 RADIUM_RCITEMS, RadiumParseResourceLine);
          }
       }
 
@@ -549,66 +617,6 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          27
-
-#define RADIUM_MONITOR_ID                       0
-#define RADIUM_MONITOR_ID_INCLUDE_INF		1
-#define RADIUM_ARGUS_SERVER                     2
-#define RADIUM_DAEMON                           3
-#define RADIUM_CISCONETFLOW_PORT                4
-#define RADIUM_ACCESS_PORT                      5
-#define RADIUM_INPUT_FILE                       6
-#define RADIUM_USER_AUTH                        7
-#define RADIUM_AUTH_PASS                        8
-#define RADIUM_OUTPUT_FILE                      9
-#define RADIUM_OUTPUT_STREAM                    10
-#define RADIUM_MAR_STATUS_INTERVAL              11
-#define RADIUM_DEBUG_LEVEL                      12
-#define RADIUM_FILTER_OPTIMIZER                 13
-#define RADIUM_FILTER_TAG                       14
-#define RADIUM_BIND_IP                          15
-#define RADIUM_MIN_SSF                          16
-#define RADIUM_MAX_SSF                          17
-#define RADIUM_ADJUST_TIME                      18
-#define RADIUM_CHROOT_DIR                       19
-#define RADIUM_SETUSER_ID                       20
-#define RADIUM_SETGROUP_ID                      21
-#define RADIUM_CLASSIFIER_FILE                  22
-#define RADIUM_ZEROCONF_REGISTER                23
-#define RADIUM_V3_ACCESS_PORT                   24
-#define RADIUM_SRCID_CONVERSION_FILE            25
-#define RADIUM_AUTH_LOCALHOST                   26
-
-char *RadiumResourceFileStr [] = {
-   "RADIUM_MONITOR_ID=",
-   "RADIUM_MONITOR_ID_INCLUDE_INF=",
-   "RADIUM_ARGUS_SERVER=",
-   "RADIUM_DAEMON=",
-   "RADIUM_CISCONETFLOW_PORT=",
-   "RADIUM_ACCESS_PORT=",
-   "RADIUM_INPUT_FILE=",
-   "RADIUM_USER_AUTH=",
-   "RADIUM_AUTH_PASS=",
-   "RADIUM_OUTPUT_FILE=",
-   "RADIUM_OUTPUT_STREAM=",
-   "RADIUM_MAR_STATUS_INTERVAL=",
-   "RADIUM_DEBUG_LEVEL=",
-   "RADIUM_FILTER_OPTIMIZER=",
-   "RADIUM_FILTER=",
-   "RADIUM_BIND_IP=",
-   "RADIUM_MIN_SSF=",
-   "RADIUM_MAX_SSF=",
-   "RADIUM_ADJUST_TIME=",
-   "RADIUM_CHROOT_DIR=",
-   "RADIUM_SETUSER_ID=",
-   "RADIUM_SETGROUP_ID=",
-   "RADIUM_CLASSIFIER_FILE=",
-   "RADIUM_ZEROCONF_REGISTER=",
-   "RADIUM_V3_ACCESS_PORT=",
-   "RADIUM_SRCID_CONVERSION_FILE=",
-   "RADIUM_AUTH_LOCALHOST=",
-};
-
 #ifdef CYGWIN
 static int
 __wmic_get_uuid(char *uuidstr, size_t len)
@@ -722,7 +730,7 @@ ArgusExpandBackticks(const char * const in)
    return res;
 }
 
-int
+static int
 RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
                          char *optarg, int quoted, int idx)
 {
@@ -1055,80 +1063,13 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "%s(%d,%s,%d) returning %d\n", __func__, linenum, optarg, idx,
-               retn);
+   ArgusDebug (1, "%s(%d,%s%s,%d) returning %d\n", __func__, linenum,
+               RadiumResourceFileStr[idx], optarg, idx, retn);
 #endif
 
    return (retn);
 }
 
-int
-RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
-{
-   int retn = 0;
-   int i, len, done = 0, linenum = 0;
-   char strbuf[MAXSTRLEN], *str = strbuf, *optarg;
-   FILE *fd;
-
-   roption = 0;
-
-   if (file) {
-      if ((fd = fopen (file, "r")) != NULL) {
-         while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-            done = 0; linenum++;
-            while (*str && isspace((int)*str))
-                str++;
-
-            if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-               for (i = 0; i < RADIUM_RCITEMS && !done; i++) {
-                  len = strlen(RadiumResourceFileStr[i]);
-                  if (!(strncmp (str, RadiumResourceFileStr[i], len))) {
-                     char *qptr = NULL;
-                     int quoted = 0;
-                     optarg = &str[len];
-                     if (*optarg == '\"') {
-                        optarg++;
-                        if ((qptr = strchr(optarg, '"')) != NULL)
-                           *qptr++ = '\0';
-                        else
-                           ArgusLog (LOG_ERR, "RaParseResourceFile(%s) string unterminated at line %d\n", file, linenum);
-                        quoted = 1;
-                     }
-
-                     /* deal with potential embedded comments */
-                     if (!quoted) {
-                        if (((qptr = strstr(optarg, " //")) != NULL) ||
-                            ((qptr = strstr(optarg, "\t//")) != NULL))
-                           *qptr++ = '\0';
-                     }
-
-                     if (optarg[strlen(optarg) - 1] == '\n')
-                        optarg[strlen(optarg) - 1] = '\0';
-
-                     RadiumParseResourceLine(parser, linenum, optarg, quoted, i);
-                     done = 1;
-                     break;
-                  }
-               }
-            }
-         }
-
-         fclose(fd);
-
-      } else {
-         retn++;
-#ifdef ARGUSDEBUG
-         ArgusDebug (1, "RadiumParseResourceFile: open %s %s\n", file, strerror(errno));
-#endif 
-      }
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (1, "RadiumParseResourceFile (%s) returning %d\n", file, retn);
-#endif 
-
-   return (retn);
-}
 
 void
 clearRadiumConfiguration (void)
