@@ -72,7 +72,9 @@ ifndef WORKSTATION_BUILD
                 rhel/systemd/dbaseRollup-nightly.timer \
                 rhel/systemd/dbaseRollup-nightly.service \
                 rhel/systemd/rarp-nightly.timer \
-                rhel/systemd/rarp-nightly.service
+                rhel/systemd/rarp-nightly.service \
+                rhel/systemd/rascanners-nightly.timer \
+                rhel/systemd/rascanners-nightly.service
     USR_ARGUS = rhel/ralabel.country.conf
       PKGDATA = rhel/share/argus-clients/rasqlinsert.l2_l3 \
                 rhel/share/argus-clients/rasqlinsert.ipmatrix \
