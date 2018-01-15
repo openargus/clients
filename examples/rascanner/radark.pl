@@ -52,7 +52,7 @@
 
 use POSIX;
 use strict;
-use Digest::MD5 qw(md5 md5_hex md5_base64);
+use Digest::MD5 qw(md5_hex);
 
 my %attr = (PrintError=>0, RaiseError=>0);
 
