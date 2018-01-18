@@ -26,7 +26,7 @@
           <RegistryValue Type="expandable" Name="AppPath"
           Value="/bin/rasplit.exe" />
           <RegistryValue Type="string" Name="AppArgs"
-          Value='-S localhost:562 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S'/>
+          Value='-S localhost:562 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S -f /bin/ramanage'/>
           <RegistryValue Type="integer" Name="NeverExits"
           Value="1" />
         </RegistryKey>
@@ -42,6 +42,11 @@
             <Component Id='Config' Guid="*">
               <File Id='ra.conf' Name='ra.conf' DiskId='1'
               Source="etc/rarc"
+              KeyPath='yes'></File>
+            </Component>
+            <Component Id='RamanageConfig' Guid="*">
+              <File Id='ramanage.conf' Name='ramanage.conf' DiskId='1'
+              Source="etc/ramanage.conf"
               KeyPath='yes'></File>
             </Component>
           </Directory>
@@ -89,6 +94,11 @@
             <Component Id='rastream.exe' Guid="*">
               <File Id='rastream.exe' Name='rastream.exe' DiskId='1'
               Source="BUILDROOT/usr/bin/rastream.exe" KeyPath='yes'>
+              </File>
+            </Component>
+            <Component Id='ramanage.exe' Guid="*">
+              <File Id='ramanage.exe' Name='ramanage.exe' DiskId='1'
+              Source="BUILDROOT/usr/bin/ramanage.exe" KeyPath='yes'>
               </File>
             </Component>
             <Component Id='dash.exe' Guid="*">
@@ -202,6 +212,7 @@
       <ComponentRef Id='ranonymize.exe' />
       <ComponentRef Id='rasort.exe' />
       <ComponentRef Id='racount.exe' />
+      <ComponentRef Id='ramanage.exe' />
       <ComponentRef Id='dash.exe' />
       <ComponentRef Id='LibGCC' />
       <ComponentRef Id='LibCygwin1' />
@@ -209,6 +220,7 @@
       <ComponentRef Id='LibSasl2' />
       <ComponentRef Id='ProgramMenuDir' />
       <ComponentRef Id='Config' />
+      <ComponentRef Id='RamanageConfig' />
       <ComponentRef Id='cygrunsrv.exe' />
       <ComponentRef Id='REG_MACHINE' />
       <ComponentRef Id='create_var_directory' />

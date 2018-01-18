@@ -102,6 +102,7 @@ rm -f %{argusbin}/rasplit
 %{argusbin}/ranonymize
 %{argusbin}/rasort
 %{argusbin}/rastream
+%{argusbin}/ramanage
 %ghost %{argusbin}/rasplit
 %{argussbin}/radium
 %config /etc/ra.conf
@@ -147,6 +148,7 @@ distribution.
 %exclude %{argusbin}/ranonymize
 %exclude %{argusbin}/rasort
 %exclude %{argusbin}/rastream
+%exclude %{argusbin}/ramanage
 %exclude %{argusbin}/ragraph
 %exclude %{argusbin}/rasql*
 %exclude %{argusbin}/radhcp*
