@@ -10074,26 +10074,10 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                         char chksum[32];
                         sprintf (chksum, "0x%x", flow->flow_un.isis.chksum);
 
-                        if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
-                           switch (parser->RaFieldWidth) {
-                              case RA_FIXED_WIDTH:
-                                 if (strlen(chksum) > len) {
-                                    chksum[len - 1] = '*';
-                                    chksum[len]     = '\0';
-                                 }
-                                 sprintf (buf, "%-*.*s%c", len, len, chksum, parser->RaFieldDelimiter);
-                                 break;
-                              default:
-                                 sprintf (buf, "0x%x%c", flow->flow_un.isis.chksum, parser->RaFieldDelimiter);
-                                 break;
-                           }
-
-                        } else {
-                           if (strlen(chksum) > len)
-                              chksum[len - 1] = '*';
-                           chksum[len]     = '\0';
-                           sprintf (buf, "%-*.*s ", len, len, chksum);
-                        }
+                        if (strlen(chksum) > len)
+                           chksum[len - 1] = '*';
+                        chksum[len]     = '\0';
+                        sprintf (buf, "%-*.*s ", len, len, chksum);
                         done++;
                         break;
                      }
