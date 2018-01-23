@@ -143,7 +143,7 @@ static int labellen(const u_char *);
 static const u_char *blabel_print(const u_char *);
 
 struct ArgusDomainQueryStruct *ArgusParseDNSBuffer (struct ArgusParserStruct *, struct ArgusDataStruct *);
-void relts_print(char *, int);
+void relts_print(char *, u_int32_t);
 
 #define ARGUS_UPDATE   0
 #define ARGUS_CHECK     1
@@ -186,16 +186,15 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
          
          if ((cp = ns_nprint((const u_char *)(np + 1), bp, ArgusBuf)) != NULL) {
             query->name = strdup(ArgusBuf);
-            ns_nparse(query, (const u_char *)(np + 1), bp, ARGUS_UPDATE);
+//          ns_nparse(query, (const u_char *)(np + 1), bp, ARGUS_UPDATE);
 
             query->qtype = EXTRACT_16BITS(cp);
             cp += 2;
             query->qclass = EXTRACT_16BITS(cp);
             cp += 2;
 
-            if (!(DNS_QR(np))) {
-               /* this is a request */
-            } else {
+            if (!(DNS_QR(np))) {      // a request
+            } else {                  // a response
                int cnt;
                query->rcode   = DNS_RCODE(np);
                if (cp && ((cnt = query->ancount) > 0)) {
@@ -763,9 +762,8 @@ ns_nprint(register const u_char *cp, register const u_char *bp, char *buf)
    register u_int i, l;
    register const u_char *rp = NULL;
    register int compress = 0;
-   int chars_processed;
    int elt;
-   int data_size = snapend - bp;
+   u_int offset, max_offset;
 
    if ((l = labellen(cp)) == (u_int) -1)
       return(NULL);
@@ -773,7 +771,8 @@ ns_nprint(register const u_char *cp, register const u_char *bp, char *buf)
    if (!TTEST2(*cp, 1))
       return(NULL);
 
-   chars_processed = 1;
+   max_offset = (u_int)(cp - bp);
+
    if (((i = *cp++) & INDIR_MASK) != INDIR_MASK) {
       compress = 0;
       rp = cp + l;
@@ -788,26 +787,21 @@ ns_nprint(register const u_char *cp, register const u_char *bp, char *buf)
             }
             if (!TTEST2(*cp, 1))
                return(NULL);
-            cp = bp + (((i << 8) | *cp) & 0x3fff);
+
+            offset = (((i << 8) | *cp) & 0x3fff);
+            if (offset >= max_offset) {
+               return(NULL);
+            }
+            max_offset = offset;
+            cp = bp + offset;
             if ((l = labellen(cp)) == (u_int)-1)
                return(NULL);
             if (!TTEST2(*cp, 1))
                return(NULL);
             i = *cp++;
-            chars_processed++;
-
-            /*
-             * If we've looked at every character in
-             * the message, this pointer will make
-             * us look at some character again,
-             * which means we're looping.
-             */
-            if (chars_processed >= data_size) {
-               sprintf(buf,"<LOOP>");
-               return (NULL);
-            }
             continue;
          }
+
          if ((i & INDIR_MASK) == EDNS0_MASK) {
             elt = (i & ~INDIR_MASK);
             switch(elt) {
@@ -826,7 +820,6 @@ ns_nprint(register const u_char *cp, register const u_char *bp, char *buf)
          }
 
          cp += l;
-         chars_processed += l;
 
          *buf++ = '.';
          if ((l = labellen(cp)) == (u_int)-1)
@@ -834,7 +827,6 @@ ns_nprint(register const u_char *cp, register const u_char *bp, char *buf)
          if (!TTEST2(*cp, 1))
             return(NULL);
          i = *cp++;
-         chars_processed++;
          if (!compress)
             rp += l + 1;
       }
@@ -875,6 +867,8 @@ ns_qprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    i = EXTRACT_16BITS(cp);
    cp += 2;
    sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tok2str(ns_type2str, "Type%d", i));
+
+   /* print the qclass (if it's not IN) */
    i = EXTRACT_16BITS(cp);
    cp += 2;
 
@@ -955,10 +949,12 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
 
    switch (typ) {
    case T_A: {
-      unsigned int addr = htonl(*(unsigned int *)cp);
       if (!TTEST2(*cp, sizeof(struct in_addr)))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ipaddr_string(&addr));
+      {
+         unsigned int addr = htonl(EXTRACT_32BITS(cp));
+         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ipaddr_string(&addr));
+      }
       break;
    }
 
@@ -1062,7 +1058,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    case T_OPT:
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," UDPsize=%u", class);
       if (opt_flags & 0x8000)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," OK");
+         sprintf(&ArgusBuf[strlen(ArgusBuf)]," DO");
       break;
 
    case T_UNSPECA:      /* One long string */

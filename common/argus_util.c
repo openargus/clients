@@ -390,7 +390,7 @@ char *bittok2str(const struct tok *, const char *, int);
 int print_unknown_data(const u_char *, const char *, int);
 void hex_print_with_offset(const u_char *, const u_char *, u_int, u_int);
 void hex_print(const u_char *, const u_char *, u_int);
-void relts_print(char *, int);
+void relts_print(char *, uint32_t);
 
 #include <dirent.h>
 
@@ -30972,7 +30972,7 @@ hex_print(const u_char *ident, const u_char *cp, u_int length)
  * is represented as 1y1w1d1h1m1s.
  */
 void
-relts_print(char *buf, int secs)
+relts_print(char *buf, uint32_t secs)
 {
    static const char *lengths[] = {"y", "w", "d", "h", "m", "s"};
    static const int seconds[] = {31536000, 604800, 86400, 3600, 60, 1};
@@ -30982,10 +30982,6 @@ relts_print(char *buf, int secs)
    if (secs == 0) {
       (void)sprintf(&buf[strlen(buf)], "0s");
       return;
-   }
-   if (secs < 0) {
-      (void)sprintf(&buf[strlen(buf)], "-");
-      secs = -secs;
    }
    while (secs > 0) {
       if (secs >= *s) {

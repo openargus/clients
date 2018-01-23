@@ -195,7 +195,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
       if (ArgusParser->ArgusPrintJson) {
          sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       } else {
-         sprintf (resbuf, "%s: %s ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+         sprintf (resbuf, "%s: \"%s\" ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       }
 
 #if defined(ARGUS_THREADS)
@@ -248,7 +248,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
                      snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
                   } else {
-                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", tname->n_name);
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
                   }
                }
@@ -293,7 +293,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
                      sprintf (&resbuf[len], "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
                   } else {
-                     sprintf (&resbuf[len], "%s ", tname->n_name);
+                     sprintf (&resbuf[len], "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
                   }
                }
@@ -1244,10 +1244,10 @@ RaProcessCRecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStruc
                }
             }
 
-            if (name->stime.tv_sec > tvp->tv_sec)
+            if ((name->stime.tv_sec == 0) || (name->stime.tv_sec > tvp->tv_sec))
                name->stime = *tvp;
 
-            if (name->ltime.tv_sec < tvp->tv_sec)
+            if ((name->ltime.tv_sec == 0) || (name->ltime.tv_sec < tvp->tv_sec))
                name->ltime = *tvp;
          }
 
@@ -1310,7 +1310,6 @@ RaProcessNSRecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStru
 
    return retn;
 }
-
 
 
 //
@@ -1691,12 +1690,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if ((req->name && strlen(req->name)) && (res->name && strlen(res->name))) {
                         if (req->seqnum == res->seqnum) {
                            if (!(strcasecmp(req->name, res->name))) {
+                              if (req->qtype != T_SOA) {
                               if (res->ans)
                                  RaProcessARecord(parser, res, tvp);
-/*
+
                               if (res->soa)
                                  RaProcessSOARecord(parser, res, tvp);
-*/
+
                               if (res->ns)
                                  RaProcessNSRecord(parser, res, tvp);
 
@@ -1705,6 +1705,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                               if (res->ptr)
                                  RaProcessPTRRecord(parser, res, tvp);
+                              }
 
                               if (!parser->qflag) {
 //  Print the response
@@ -1734,9 +1735,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                        struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
-                                       fprintf (stdout, "%s ", type);
-                                       if (i == 0) fprintf (stdout, " %s %s %s", type, rr->name, rr->data);
-                                       else fprintf (stdout, ",%s %s", rr->name, rr->data);
+                                       fprintf (stdout, " %s %s %s", type, rr->name, rr->data);
                                        ArgusPushBackList(res->cname, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }
                                  }
@@ -2197,98 +2196,6 @@ RaNewProcess(struct ArgusParserStruct *parser)
    ArgusDebug (3, "RaNewProcess(0x%x) returns 0x%x\n", parser, retn);
 #endif
    return (retn);
-}
-
-
-char *RaDnsUserBuffer (struct ArgusParserStruct *, struct ArgusRecordStruct *, int, int);
-
-char *
-RaDnsUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, int ind, int len) 
-{
-   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
-   unsigned short sport = 0, dport = 0;
-   int type, proto, process = 0;
-   struct ArgusDataStruct *user = NULL;
-   u_char buf[MAXSTRLEN], *bp = NULL;
-   int slen = 0;
-
-   if ((user = (struct ArgusDataStruct *)argus->dsrs[ind]) == NULL)
-      return (ArgusBuf);
-
-/*
-   switch (ind) {
-      case ARGUS_SRCUSERDATA_INDEX:
-         dchr = 's';
-         break;
-      case ARGUS_DSTUSERDATA_INDEX:
-         dchr = 'd';
-         break;
-   }
-*/
-
-   bp = (u_char *) &user->array;
-   slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-   slen = (user->count < slen) ? user->count : slen;
-   slen = (slen > len) ? len : slen;
-   snapend = bp + slen;
-
-   if (flow != NULL) {
-      switch (flow->hdr.subtype & 0x3F) {
-         case ARGUS_FLOW_CLASSIC5TUPLE: {
-            switch ((type = flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-               case ARGUS_TYPE_IPV4:
-                  switch (flow->ip_flow.ip_p) {
-                     case IPPROTO_TCP:
-                     case IPPROTO_UDP: {
-                        proto = flow->ip_flow.ip_p;
-                        sport = flow->ip_flow.sport;
-                        dport = flow->ip_flow.dport;
-                        process++;
-                        break;
-                     }
-                  }
-                  break; 
-               case ARGUS_TYPE_IPV6: {
-                  switch (flow->ipv6_flow.ip_p) {
-                     case IPPROTO_TCP:
-                     case IPPROTO_UDP: {
-                        proto = flow->ipv6_flow.ip_p;
-                        sport = flow->ipv6_flow.sport;
-                        dport = flow->ipv6_flow.dport;
-                        process++;
-                        break;
-                     }
-                  }
-                  break;
-               }
-            }
-            break;
-         }
-      }
-   }
-
-   if (process && bp) {
-      *(int *)&buf = 0;
-
-#define ISPORT(p) (dport == (p) || sport == (p))
-
-      switch (proto) {
-         case IPPROTO_TCP: {
-            if (ISPORT(NAMESERVER_PORT) || ISPORT(MULTICASTDNS_PORT)) 
-                ns_print(bp + 2, slen - 2, 0);
-            break;
-         }
-
-         case IPPROTO_UDP: {
-            if (ISPORT(NAMESERVER_PORT))
-               ns_print(bp, slen, 0);
-            else if (ISPORT(MULTICASTDNS_PORT))
-               ns_print(bp, slen, 1);
-         }
-      }
-   }
-
-   return (ArgusBuf);
 }
 
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) {return 0;}
