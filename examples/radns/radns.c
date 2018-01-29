@@ -111,6 +111,9 @@ void RaArgusInputComplete (struct ArgusInput *input) {};
 int RaTreePrinted = 0;
 int RaPruneLevel = 0;
 
+#define ARGUS_MAX_RESPONSE		0x100000
+#define ARGUS_DEFAULT_RESULTLEN         0x10000
+
 #define ARGUS_NAME_REQUESTED	0x10
 #define ARGUS_DNS_MIN_TTL       30
 
@@ -136,8 +139,7 @@ extern char *ArgusTrimString (char *);
 extern struct tok ns_type2str[];
 
 
-char *ArgusHandleResponseArray[1024];
-char *ArgusHandleResponseString[0x1000];
+char **ArgusHandleResponseArray = NULL;
 
 char **ArgusHandleTreeCommand (char *);
 char **ArgusHandleSearchCommand (char *);
@@ -147,13 +149,20 @@ ArgusHandleTreeCommand (char *command)
 {
    char *string = &command[10], *sptr;
    int slen = strlen(string);
-   char **retn = ArgusHandleResponseArray;
+   char **retn = NULL;
+
+   if (ArgusHandleResponseArray == NULL) {
+      if ((ArgusHandleResponseArray = ArgusCalloc(ARGUS_DEFAULT_RESULTLEN, sizeof(char *))) == NULL)
+         ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
+   }
+
+   retn = ArgusHandleResponseArray;
  
    sptr = &string[slen - 1];
    while (isspace((int)*sptr)) {*sptr-- = '\0';}
  
    retn[0] = "OK\n";
-   retn[1] = NULL;
+
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusHandleTreeCommand(%s) filter %s", string, retn);
 #endif
@@ -161,16 +170,15 @@ ArgusHandleTreeCommand (char *command)
 }
 
 
-void ArgusPrintAddressResponse(char *, struct RaAddressStruct *, char **, int *);
+void ArgusPrintAddressResponse(char *, struct RaAddressStruct *, char ***, int *, int *);
 
-#define ARGUS_MAX_RESPONSE	0x100000
 void
-ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **result, int *rind)
+ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***result, int *rind, int *reslen)
 {
    struct ArgusListStruct *dns = raddr->dns;
 
-   if (raddr->r != NULL) ArgusPrintAddressResponse(string, raddr->r, result, rind);
-   if (raddr->l != NULL) ArgusPrintAddressResponse(string, raddr->l, result, rind);
+   if (raddr->r != NULL) ArgusPrintAddressResponse(string, raddr->r, result, rind, reslen);
+   if (raddr->l != NULL) ArgusPrintAddressResponse(string, raddr->l, result, rind, reslen);
 
    if (dns != NULL) {
       struct ArgusListObjectStruct *tdns;
@@ -355,7 +363,18 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char **re
             len += slen;
          }
 
-         result[ind++] = strdup(resbuf);
+         if (ind >= *reslen) {
+            int blen = *reslen * sizeof(char *);
+            int nlen = ARGUS_DEFAULT_RESULTLEN * sizeof(char *);
+
+            if ((*result = ArgusRealloc(*result, blen + nlen)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
+
+            bzero(&(*result)[blen], nlen);
+            *reslen += ARGUS_DEFAULT_RESULTLEN;
+         }
+
+         (*result)[ind++] = strdup(resbuf);
 
 #if defined(ARGUS_THREADS)
          pthread_mutex_unlock(&raddr->dns->lock);
@@ -409,14 +428,16 @@ extern int ArgusGrepBuf (regex_t *, char *, char *);
  */
 
 
+
 char **
 ArgusHandleSearchCommand (char *command)
 {
    char *cmd = &command[8], *sptr, *string, *str;
    struct ArgusCIDRAddr *cidr = NULL;
+   char *resbuf = NULL;
+   int reslen = ARGUS_DEFAULT_RESULTLEN;
 
    int slen = strlen(cmd), options, rege, rind = 0;
-   char resbuf[0x10000];
    char **retn = NULL;
    struct RaAddressStruct *raddr = NULL;
 
@@ -427,8 +448,17 @@ ArgusHandleSearchCommand (char *command)
    sptr = &string[slen - 1];
    while (isspace((int)*sptr)) {*sptr-- = '\0';}
 
-   bzero(ArgusHandleResponseArray, sizeof(ArgusHandleResponseArray));
+   if (ArgusHandleResponseArray == NULL) {
+      if ((ArgusHandleResponseArray = ArgusCalloc(reslen, sizeof(char *))) == NULL)
+         ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
+   }
+
    retn = ArgusHandleResponseArray;
+
+   if (resbuf == NULL) {
+      if ((resbuf = ArgusMalloc(0x10000 * sizeof(char *)) + 1) == NULL)
+         ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
+   }
 
    while ((sptr = strtok(string, ",")) != NULL) {
 #ifdef ARGUSDEBUG
@@ -447,7 +477,7 @@ ArgusHandleSearchCommand (char *command)
          bcopy(cidr, &node.addr, sizeof(*cidr));
 
          if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[AF_INET], &node, matchMode)) != NULL) {
-            ArgusPrintAddressResponse(sptr, raddr, retn, &rind);
+            ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen);
          } else {
 #ifdef ARGUSDEBUG
             ArgusDebug (1, "ArgusHandleSearchCommand: address search %s returned not found", sptr);
@@ -455,8 +485,6 @@ ArgusHandleSearchCommand (char *command)
          }
 
       } else {
-         bzero(resbuf, sizeof(resbuf));
-
 #if defined(ARGUS_PCRE)
          options = 0;
 #else
@@ -759,6 +787,9 @@ RaParseComplete (int sig)
 
          ArgusDeleteHashTable(ArgusDNSNameTable);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
+
+         if (ArgusHandleResponseArray != NULL)
+            ArgusFree(ArgusHandleResponseArray);
 
          ArgusCloseParser(ArgusParser);
          exit (ArgusExitStatus);
