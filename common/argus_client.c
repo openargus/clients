@@ -6230,12 +6230,14 @@ ArgusEmptyHashTable (struct ArgusHashTable *htbl)
 #endif
    for (i = 0; i < htbl->size; i++) {
       if ((htblhdr = htbl->array[i]) != NULL) {
-         htblhdr->prv->nxt = NULL;
-         while ((tmp = htblhdr) != NULL) {
-            htblhdr = htblhdr->nxt;
-            if (tmp->hstruct.buf != NULL)
-               ArgusFree (tmp->hstruct.buf);
-            ArgusFree (tmp);
+         if (htblhdr->prv && htblhdr->nxt) {
+            htblhdr->prv->nxt = NULL;
+            while ((tmp = htblhdr) != NULL) {
+               htblhdr = htblhdr->nxt;
+               if (tmp->hstruct.buf != NULL)
+                  ArgusFree (tmp->hstruct.buf);
+               ArgusFree (tmp);
+            }
          }
          htbl->array[i] = NULL;
       }
