@@ -6294,8 +6294,8 @@ RaGetFloatDuration (struct ArgusRecordStruct *argus)
          if (dtime != NULL) {
             struct timeval stbuf, *st = &stbuf;
             struct timeval ltbuf, *lt = &ltbuf;
-            struct timeval stimebuf, *stime = &stimebuf;
-            struct timeval ltimebuf, *ltime = &ltimebuf;
+            struct timeval stimebuf = {0, 0}, *stime = &stimebuf;
+            struct timeval ltimebuf = {0, 0}, *ltime = &ltimebuf;
 
             unsigned char subtype = dtime->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
                                                           ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
