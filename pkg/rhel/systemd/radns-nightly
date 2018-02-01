@@ -38,7 +38,7 @@ my @arglist = ();
 my $debug       = 0;
 my $done        = 0;
 
-my $time;
+my $time        = "";
 my $dbtime;
 my $filter;
 my $dbase       = "dnsNames";

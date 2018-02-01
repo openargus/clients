@@ -97,9 +97,11 @@ while (my $data = <SESAME>) {
    print "DEBUG: RaDnsDb:  radns returned: $data\n" if $debug;
 
    if (length($data)) {
-      print "DEBUG: RaDNSDbFetchData: $data\n" if $debug;
-      my $decoded = decode_json $data;
-      push(@$results_ref, $decoded);
+      if ($data !~ /\^/) {
+         print "DEBUG: RaDNSDbFetchData: $data\n" if $debug;
+         my $decoded = decode_json $data;
+         push(@$results_ref, $decoded);
+      }
    }
 }
 close(SESAME);
