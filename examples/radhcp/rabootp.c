@@ -231,6 +231,8 @@ __parse_one_dhcp_record(const struct ether_header * const ehdr,
          ads->first_req.tv_usec = time->start.tv_usec;
       }
    } else if (bp->op == BOOTREPLY) {
+      parsed.rep.hops = bp->hops;
+
       /* extract some data from the non-options portion of the packet */
       parsed.rep.yiaddr.s_addr = EXTRACT_32BITS(&bp->yiaddr.s_addr);
       parsed.rep.ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);

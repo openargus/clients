@@ -140,7 +140,8 @@ struct ArgusDhcpV4LeaseOptsStruct {
    uint8_t option_overload;        /* option 52 */
    struct in_addr siaddr;          /* siaddr from non-options payload */
    uint16_t mtu;                   /* option 26 */
-   uint16_t pad0;                  /* PAD */
+   uint8_t hops;                   /* hop count from header */
+   uint8_t pad0;                   /* PAD */
    struct ArgusDhcpV4LeaseOptsStruct *next;
 };
 

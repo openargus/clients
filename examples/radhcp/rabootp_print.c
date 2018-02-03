@@ -148,6 +148,11 @@ static const struct ArgusPrinterTable ArgusDhcpReplyPrinterTablep[] = {
                            RabootpPrintL2, "varchar(18)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
                            RabootpSQLBindString),
+   ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, hops, \
+                           "hops", \
+                           RabootpPrintUint8, "tinyint unsigned", \
+                           ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
+                           RabootpSQLBindTiny),
 };
 
 static const struct ArgusPrinterTable ArgusDhcpStructPrinterTable[] = {

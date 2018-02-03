@@ -327,6 +327,7 @@ __update_common_reply(const struct ArgusDhcpStruct * const parsed,
    SET_CHANGE_NOTIFY(rep->nameserver_count, parsed->rep.nameserver_count, 0);
    SET_CHANGE_NOTIFY(rep->timeserver_count, parsed->rep.timeserver_count, 0);
    SET_CHANGE_NOTIFY(rep->option_overload, parsed->rep.option_overload, 0);
+   SET_CHANGE_NOTIFY(rep->hops, parsed->rep.hops, 0);
    SET_CHANGE_NOTIFY(rep->mtu, parsed->rep.mtu, 0);
    STRDUP_CHANGE_NOTIFY(rep->hostname, parsed->rep.hostname);
    STRDUP_CHANGE_NOTIFY(rep->domainname, parsed->rep.domainname);
