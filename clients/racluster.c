@@ -301,16 +301,18 @@ RaParseComplete (int sig)
                   if ((ArgusSorter = ArgusNewSorter(ArgusParser)) == NULL)
                      ArgusLog (LOG_ERR, "RaParseComplete: ArgusNewSorter error %s", strerror(errno));
 
-               if ((mode = ArgusParser->ArgusMaskList) != NULL) {
-                  while (mode) {
-                     for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
-                        if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
-                           ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
-                           break;
+               if (agg->queue->count > 1) {
+                  if ((mode = ArgusParser->ArgusMaskList) != NULL) {
+                     while (mode) {
+                        for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
+                           if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
+                              ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
+                              break;
+                           }
                         }
-                     }
 
-                     mode = mode->nxt;
+                        mode = mode->nxt;
+                     }
                   }
                }
 
