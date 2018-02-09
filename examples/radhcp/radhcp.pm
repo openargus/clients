@@ -1,7 +1,7 @@
 package qosient::radhcp;
 
 #   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
-#   Copyright (c) 2017 QoSient, LLC
+#   Copyright (c) 2017-2018 QoSient, LLC
 #   All Rights Reserved
 #
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -27,6 +27,8 @@ use Carp;
 use strict;
 use warnings;
 use Try::Tiny;
+use IO::Socket::INET;
+use JSON;
 
 use strict;
 use Exporter;
@@ -43,7 +45,10 @@ $VERSION = "1.00";
   dhcp_getleasebyname
   dhcp_insert_fqdn
   dhcp_opendb
-  dhcp_closedb);
+  dhcp_closedb
+  dhcp_opensocket
+  dhcp_closesocket
+  dhcp_getleasebyaddr_from_socket);
 
 my $debug = 0;
 my $time  = q{};    # "yesterday" according to parsetime()
@@ -81,6 +86,170 @@ my %addr_search_field = (
                                      # also be checked.  Maybe
                                      # qw(hostname requested_hostname)
 );
+
+sub dhcp_opensocket {
+    my $socket = IO::Socket::INET->new(
+        PeerHost => 'localhost',
+        PeerPort => '9999',
+        Proto    => 'tcp',
+        Timeout  => 1,
+    );
+
+    if ( !$socket ) {
+        return;
+    }
+
+    $socket->timeout(5);
+
+    my $start = "START: \n";
+    my $bytes = $socket->send($start);
+
+    if ( $bytes != length($start) ) {
+        carp "could not send start command";
+        $socket->close();
+        return;
+    }
+
+    return $socket;
+}
+
+sub dhcp_closesocket {
+    my ($socket) = @_;
+
+    my $done  = "DONE: \n";
+    my $bytes = $socket->send($done);
+
+    if ( $bytes != length($done) ) {
+        carp "could not send done command";
+    }
+
+    $socket->close();
+}
+
+# The control channel code in the clients is a little broken when
+# the callback that generates the response needs to report an error.
+# The data from the control channel may end with "FAIL\nOK\n".
+# _response_complete can always check for a string ending in "OK\n"
+# to figure out if the response is finished, but will also have to
+# check for a preceding "FAIL\n" to know if the response is valid.
+my $_response_complete = sub {
+    my ($str) = @_;
+    my $last3 = substr $str, -3;    # OK
+
+    if ( not ( $last3 eq "OK\n" ) ) {
+        return;
+    }
+
+    return 1;
+};
+
+# $str must be a completed response (ends in OK)
+my $_response_success = sub {
+    my ($str) = @_;
+    my $prev5 = substr $str, -8, 5;    # FAIL (maybe);
+
+    if ( $prev5 eq "FAIL\n" ) {
+        return;
+    }
+
+    return 1;
+};
+
+my $MAX_SOCKET_READ    = 4096;
+my $MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
+my $_read_response = sub {
+    my ($socket) = @_;
+    my $resp = q{};
+    my $tmpstr;
+    my $tmpbytes;
+    my $bytes = 0;
+
+    do {
+        $tmpbytes = $socket->sysread( $tmpstr, $MAX_SOCKET_READ );
+        if ( $tmpbytes && $tmpstr && $tmpbytes > 0 ) {
+            $resp .= $tmpstr;
+            $bytes += $tmpbytes;
+        }
+      } while ( defined($tmpbytes)
+        && !$_response_complete->($resp)
+        && $bytes < $MAX_RESPONSE_BYTES );
+
+    if ( $bytes == 0 ) {
+        return;
+    }
+
+    if ( !$_response_success->($resp) ) {
+        return;
+    }
+
+    $resp = substr $resp, 0, -3;    # remove "OK\n"
+    return $resp;
+};
+
+sub dhcp_getleasebyaddr_from_socket {
+    my $socket     = shift(@_);
+    my $when       = shift(@_);
+    my $summary    = shift(@_);
+    my $paramcount = @_;
+    my @results;
+
+    if ( $paramcount < 1 ) {
+        return;
+    }
+
+    chomp $when;
+    my $json = JSON->new->allow_nonref;
+
+    # To make these queries match the behavior of the database queries,
+    # search for an entire day if nothing but the date was supplied.
+    if ( $when =~ /^[1-9][0-9][0-9][0-9]\/[0-9][0-9]\/[0-9][0-9]$/ ) {
+        $when .= '+1d';
+    }
+
+    foreach my $addr (@_) {
+        my $query = "SEARCH: when=$when,addr=$addr";
+
+        if ( defined($summary) && $summary != 0 ) {
+            $query .= ',pullup';
+        }
+        $query .= "\n";
+
+        my $bytes = $socket->send($query);
+
+        if ( $bytes != length($query) ) {
+            carp "could not send entire SEARCH string?";
+            return;
+        }
+
+        # _read_search_response needs to strip "OK" from the end
+        # and return undef on any error
+        my $resp = $_read_response->($socket);
+        if ( !$resp ) {
+            carp "did not receive response to SEARCH";
+            return;
+        }
+
+        my $resp_href = $json->decode($resp);
+        if ( !$resp_href ) {
+            carp "received invalid JSON in response to SEARCH";
+            return;
+        }
+
+        foreach my $idx ( keys %$resp_href ) {
+
+            # assemble an array of hash references, assuming that JSON
+            # builds nested hashes
+            push @results, $resp_href->{$idx};
+        }
+    }
+
+    if ( !@results ) {
+        return;
+    }
+
+    return \@results;
+}
 
 sub dhcp_opendb {
     @time = parsetime(q{});
@@ -342,6 +511,19 @@ sub dhcp_getleasebyaddr {
     my @whenary = parsetime($when);
     my $table = strftime $table_summary, @whenary;
 
+    my $whensec        = timelocal(@whenary);
+    my $now            = timelocal( localtime() );
+    my $seconds_in_day = 86400;
+    if ( $whensec > $now || ( $now - $whensec ) <= $seconds_in_day ) {
+        my $socket = dhcp_opensocket;
+        if ( defined($socket) ) {
+            my $rv = dhcp_getleasebyaddr_from_socket( $socket, $when, 1, @_ );
+
+            dhcp_closesocket($socket);
+            return $rv;
+        }
+    }
+
     return $_dhcp_getlease_from_table->( $dbh, "$dbase.$table", $addrtype, @_ );
 }
 
@@ -495,6 +677,11 @@ sub dhcp_insert_fqdn {
             }
         }
 
+        if ( !defined $hostname ) {
+            $href->{'fqdn'} = "";
+            next;
+        }
+
         # If the hostname (requested or otherwise) has a period in it,
         # most likely it is something like .local or .home and was put
         # there by a residential router, cablemodem, etc.  In this case
@@ -502,11 +689,6 @@ sub dhcp_insert_fqdn {
         # already have is as "fully qualified" as it is going to get.
         if ( $hostname =~ /\./ ) {
             $href->{'fqdn'} = $hostname;
-            next;
-        }
-
-        if ( !defined $hostname ) {
-            $href->{'fqdn'} = "";
             next;
         }
 
