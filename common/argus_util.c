@@ -1220,6 +1220,12 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv,
                   parser->ArgusPrintHashZero = 1;
                   ArgusAddMode = 0;
                } else
+               if (!(strcmp (optarg, "correct"))) {
+                  parser->ArgusPerformCorrection = 1;
+               } else
+               if (!(strcmp (optarg, "nocorrect"))) {
+                  parser->ArgusPerformCorrection = 0;
+               } else
                if (!(strcmp (optarg, "disa"))) {
                   parser->ArgusDSCodePoints = ARGUS_DISA_DSCODES;
                   RaPrintAlgorithmTable[ARGUSPRINTSRCDSBYTE].length = 8;
@@ -2415,6 +2421,14 @@ ArgusParseResourceFile(struct ArgusParserStruct *parser, char *file,
                                  parser->RaSeparateAddrPortWithPeriod = 1;
                               else
                                  parser->RaSeparateAddrPortWithPeriod = 0;
+                              break;
+                           }
+
+                           case RA_RECORD_CORRECTION: {
+                              if (!(strncasecmp(optarg, "yes", 3)))
+                                 parser->ArgusPerformCorrection = 1;
+                              else
+                                 parser->ArgusPerformCorrection = 0;
                               break;
                            }
                         }
