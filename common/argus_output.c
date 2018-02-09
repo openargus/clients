@@ -3232,8 +3232,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            dsrptr += size;
                            tgeo->hdr.argus_dsrvl8.len += size;
                         }
-/*
-                        // no inode geo data in v3 argus records.
+
                         if (geo->hdr.argus_dsrvl8.qual & ARGUS_INODE_GEO) {
                            xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusCoordinates), XDR_ENCODE);
                            xdr_float(xdrs, &geo->inode.lat);
@@ -3241,7 +3240,6 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            dsrptr += size; 
                            tgeo->hdr.argus_dsrvl8.len += size;
                         }
-*/
                         len = tgeo->hdr.argus_dsrvl8.len;
 #endif
                         break;
