@@ -106,7 +106,7 @@ ArgusNewParser(char *progname)
    retn->pflag  = 6;
    retn->ArgusReverse = 1;
    retn->ArgusPrintWarnings = 1;
-   retn->ArgusPerformCorrection = 1;
+   retn->ArgusPerformCorrection = 0;
    retn->ArgusTimeMultiplier = 1.0;
    retn->RaSeparateAddrPortWithPeriod = 1;
    retn->RaPruneMode = 1;
