@@ -110,6 +110,7 @@ struct ArgusClientData {
    int format;
    char readable;
    char version;
+   char delete; /* marked for deletion if > 0 */
 
 #if defined(HAVE_GETADDRINFO)
    struct addrinfo *host;

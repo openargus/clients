@@ -3845,7 +3845,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
             }
 
             for (i = 0, count = output->ArgusClients->count; (i < count) && output->ArgusClients->count; i++) {
-               if ((client->fd == -1) && (client->sock == NULL) && client->ArgusClientStart) {
+               if (client->delete) {
                   ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
 #ifdef ARGUSDEBUG
                   ArgusDebug(1, "%s/%s: client %s %s removed", caller, __func__,
@@ -5146,6 +5146,7 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
    
       ArgusFree (asock);
       client->sock = NULL;
+      client->delete = 1;
    }
 
 #ifdef ARGUSDEBUG
