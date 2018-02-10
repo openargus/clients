@@ -7112,10 +7112,23 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
                                  ArgusLog (LOG_ERR, "ArgusGenerateNewFlow: buf %d not big enough %d\n", len, sizeof(tflow.ip_flow));
 
                               tflow.ip_flow.ip_src = flow->ip_flow.ip_src;
-                              tflow.ip_flow.smask  = flow->ip_flow.smask ;
+
+                              if (!(na->mask & (ARGUS_MASK_PROTO_INDEX | ARGUS_MASK_SPORT_INDEX | ARGUS_MASK_DPORT_INDEX))) {
+                                 if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT) {
+                                    tflow.hdr.subtype &= 0x3F;
+                                    tflow.hdr.argus_dsrvl8.qual &= 0x1F;
+                                    tflow.ip_flow.smask = 32;
+                                 } else {
+                                    tflow.ip_flow.smask  = flow->ip_flow.smask;
+                                 }
+                              } else {
+                                 tflow.ip_flow.smask  = flow->ip_flow.smask;
+                              }
+
                               if ((na->saddrlen > 0) && (na->saddrlen < tflow.ip_flow.smask)) {
                                  tflow.ip_flow.ip_src &= na->smask.addr_un.ipv4;
                                  tflow.ip_flow.smask = na->saddrlen;
+                                 tflow.hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
                               }
                               break;
                            }
@@ -7214,10 +7227,23 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
                         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                            case ARGUS_TYPE_IPV4:
                               tflow.ip_flow.ip_dst = flow->ip_flow.ip_dst;
-                              tflow.ip_flow.dmask  = flow->ip_flow.dmask;
+
+                              if (!(na->mask & (ARGUS_MASK_PROTO_INDEX | ARGUS_MASK_SPORT_INDEX | ARGUS_MASK_DPORT_INDEX))) {
+                                 if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT) {
+                                    tflow.hdr.subtype &= 0x3F;
+                                    tflow.hdr.argus_dsrvl8.qual &= 0x1F;
+                                    tflow.ip_flow.dmask = 32;
+                                 } else {
+                                    tflow.ip_flow.dmask  = flow->ip_flow.dmask;
+                                 }
+                              } else {
+                                 tflow.ip_flow.dmask  = flow->ip_flow.dmask;
+                              }
+
                               if ((na->daddrlen > 0) && (na->daddrlen < tflow.ip_flow.dmask)) {
                                  tflow.ip_flow.ip_dst &= na->dmask.addr_un.ipv4;
                                  tflow.ip_flow.dmask = na->daddrlen;
+                                 tflow.hdr.argus_dsrvl8.qual |= ARGUS_MASKLEN;
                               }
 
                               break;
