@@ -4382,13 +4382,14 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
    if (value == 0)
       value = MAXSTRLEN;
 
-   if ((cnt = recv (fd, buf, value, 0)) <= 0) {
-      if (cnt == 0) {
+   cnt = recv (fd, buf, value, 0);
+   if (cnt == 0) {
 #ifdef ARGUSDEBUG
-         ArgusDebug (3, "%s (0x%x, %d) recv() found no connection\n", __func__, client, fd);
+      ArgusDebug (3, "%s (0x%x, %d) recv() found no connection\n", __func__,
+                  client, fd);
 #endif
-         return -1;
-      }
+      return -1;
+   } else if (cnt < 0) {
       switch(errno) {
          default:
          case EBADF:
@@ -4575,7 +4576,14 @@ ArgusCheckControlMessage (struct ArgusOutputStruct *output, struct ArgusClientDa
       goto process;
    }
 
-   if ((cnt = recv (fd, buf, avail, 0)) <= 0) {
+   cnt = recv (fd, buf, avail, 0);
+   if (cnt == 0) {
+#ifdef ARGUSDEBUG
+      ArgusDebug (3, "%s (0x%x, %d) recv() found no connection\n", __func__,
+                  client, fd);
+#endif
+      return -1;
+   } else if (cnt < 0) {
       switch(errno) {
          default:
          case EBADF:
