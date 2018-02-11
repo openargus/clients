@@ -140,6 +140,7 @@ RabootpLeasePullup(const struct ArgusDhcpIntvlNode * const src_invec,
 
    if (src_nitems == 1) {
       *dst_invec = *src_invec;
+      ArgusDhcpStructUpRef(dst_invec[0].data);
       return 1;
    }
 
