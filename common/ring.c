@@ -44,7 +44,8 @@ RingAlloc(struct RingBuffer *r)
 void
 RingFree(struct RingBuffer *r)
 {
-   ArgusFree(r->Buffer);
+   if (r->Buffer)
+      ArgusFree(r->Buffer);
 }
 
 /* results of RingDequeue() are undefined if !RingNullTerm(r) */

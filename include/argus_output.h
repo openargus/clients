@@ -108,6 +108,7 @@ struct ArgusClientData {
    char *filename, *hostname, *filter;
    char *clientid;
    int format;
+   struct RingBuffer ring;
    char readable;
    char version;
    char delete; /* marked for deletion if > 0 */
@@ -166,7 +167,6 @@ struct ArgusOutputStruct {
    struct timeval ArgusLastMarUpdateTime;
    struct timeval ArgusMarReportInterval;
    unsigned int ArgusLocalNet, ArgusNetMask;
-   struct RingBuffer ring;
 };
 
 typedef char** (*ArgusControlHandler)
