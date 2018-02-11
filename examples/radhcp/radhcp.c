@@ -81,8 +81,6 @@ struct RaBinProcessStruct *RaBinProcess;
 #include <interface.h>
 #include <rabootp.h>
 
-#define RaDomain   1
-
 #include <signal.h>
 #include <ctype.h>
 
