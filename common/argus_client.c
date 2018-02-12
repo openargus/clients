@@ -7114,7 +7114,10 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
                               tflow.ip_flow.ip_src = flow->ip_flow.ip_src;
 
                               if (!(na->mask & (ARGUS_MASK_PROTO_INDEX | ARGUS_MASK_SPORT_INDEX | ARGUS_MASK_DPORT_INDEX))) {
-                                 if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT) {
+                                 struct ArgusIPAttrStruct *attr = (void *)ns->dsrs[ARGUS_IPATTR_INDEX];
+                                 if ((attr != NULL) && ((attr->hdr.argus_dsrvl8.qual &
+                                                   (ARGUS_IPATTR_SRC_FRAGMENTS | ARGUS_IPATTR_DST_FRAGMENTS)) ||
+                                                   (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT))) {
                                     tflow.hdr.subtype &= 0x3F;
                                     tflow.hdr.argus_dsrvl8.qual &= 0x1F;
                                     tflow.ip_flow.smask = 32;
