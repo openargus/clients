@@ -1801,6 +1801,8 @@ extern char *lookup_alias(const u_char *, struct anamemem *);
 
 
 
+extern char *lookup_srcid(const u_char *, struct anamemem *);
+
 extern unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
 extern void *
