@@ -78,7 +78,7 @@ RingDequeue(struct RingBuffer * const r)
       unsigned bytes_until_wrap = RingBytesUntilWrap(r);
 
       bcopy(RingHeadPtr(r), tmp, bytes_until_wrap);
-      bcopy(r->Buffer, tmp + bytes_until_wrap, next_null);
+      bcopy(r->Buffer, tmp + bytes_until_wrap, next_null+1);
    }
 
    /* Skip over extra nulls at the end of the string, if any */
