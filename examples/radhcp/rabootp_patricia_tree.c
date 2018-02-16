@@ -117,7 +117,11 @@ out:
 
 
 /* __minmax and __next adapted from BSD's sys/tree.h for non-recursive
- * traversal
+ * traversal.  The argus patricia trees are "backwards" in that the
+ * the left subtree holds values (addresses) numerically greater
+ * than the parent node and the right subtree holds values less
+ * than the parent node, so reverse the minmax and next functions
+ * so to reflect that.
  */
 
 static
@@ -129,30 +133,35 @@ __minmax(struct RaAddressStruct *elm, int val)
    while (tmp) {
       parent = tmp;
       if (val < 0)
-         tmp = tmp->l;
-      else
          tmp = tmp->r;
+      else
+         tmp = tmp->l;
    }
    return (parent);
 }
 
 static
 struct RaAddressStruct *
-__next(struct RaAddressStruct *elm)
+__next(struct RaAddressStruct *elm, struct RaAddressStruct *subtreeroot)
 {
    if (elm == NULL)
       return NULL;
 
-   if (elm->r) {
-      elm = elm->r;
-      while (elm->l)
-         elm = elm->l;
+   if (elm->l) {
+      elm = elm->l;
+      while (elm->r)
+         elm = elm->r;
    } else {
-      if (elm->p && elm == (elm->p)->l)
+      if (elm->p && elm == (elm->p)->r) {
+         if (elm == subtreeroot)
+            return NULL;
          elm = elm->p;
-      else {
-         while (elm->p && elm == (elm->p)->r)
+      } else {
+         while (elm->p && elm == (elm->p)->l) {
             elm = elm->p;
+            if (elm == subtreeroot)
+               return NULL;
+         }
          elm = elm->p;
       }
    }
@@ -168,14 +177,18 @@ RabootpPatriciaTreeForeach(struct RaAddressStruct *node,
    struct RaAddressStruct *tmp;
    int rv = 0;
 
-   for (tmp = __minmax(node, -1); tmp && !rv; tmp = __next(tmp))
+   for (tmp = __minmax(node, -1); tmp && !rv; tmp = __next(tmp, node))
       rv = cb(tmp, arg);
+
+   if (rv == 0)
+      rv = cb(node, arg);
 
    return rv;
 }
 
 static struct RaAddressStruct *
 __find(const unsigned int * const yiaddr,
+       unsigned char masklen,
        struct ArgusParserStruct *parser)
 {
    struct ArgusLabelerStruct *labeler;
@@ -185,18 +198,19 @@ __find(const unsigned int * const yiaddr,
 
    memset(&node, 0, sizeof(node));
    node.addr.addr[0] = *yiaddr;
-   node.addr.masklen = 32;
-   node.addr.mask[0] = 0xFFFFFFFF;
+   node.addr.masklen = masklen;
+   node.addr.mask[0] = 0xFFFFFFFF << (32 - masklen);
 
    return RaFindAddress(parser, labeler->ArgusAddrTree[AF_INET], &node,
-                        ARGUS_EXACT_MATCH);
+                        masklen == 32 ? ARGUS_EXACT_MATCH : ARGUS_MASK_MATCH);
 }
 
 struct RaAddressStruct *
 RabootpPatriciaTreeFind(const unsigned int * const yiaddr,
+                        unsigned char masklen,
                         struct ArgusParserStruct *parser)
 {
-   return __find(yiaddr, parser ? parser : ArgusParser);
+   return __find(yiaddr, masklen, parser ? parser : ArgusParser);
 }
 
 /* remove one lease from the patricia tree */
@@ -216,7 +230,7 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
    if (parser == NULL)
       parser = ArgusParser;
 
-   ras = __find(yiaddr, parser);
+   ras = __find(yiaddr, 32, parser);
    if (ras == NULL) {
       rv = -1;
       goto out;
@@ -281,6 +295,7 @@ __search_ipaddr_cb(struct rabootp_l2addr_entry *e, void *arg)
 /* caller must hold ArgusParser lock */
 int
 RabootpPatriciaTreeSearch(const struct in_addr * const addr,
+                          unsigned char masklen,
                           const struct timeval * const starttime,
                           const struct timeval * const endtime,
                           struct ArgusDhcpIntvlNode *invec,
@@ -291,7 +306,7 @@ RabootpPatriciaTreeSearch(const struct in_addr * const addr,
    struct invecStruct x;
    int rv = 0;
 
-   ras = RabootpPatriciaTreeFind(&addr->s_addr, ArgusParser);
+   ras = RabootpPatriciaTreeFind(&addr->s_addr, masklen, ArgusParser);
    if (ras == NULL)
      goto out;
 
@@ -306,8 +321,17 @@ RabootpPatriciaTreeSearch(const struct in_addr * const addr,
    itr.starttime = starttime;
    itr.endtime = endtime;
 
-   if (ras->obj)
-      rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
+   if (masklen != 32) {
+      struct RaAddressStruct *tmp;
+
+      for (tmp = __minmax(ras, -1); tmp; tmp = __next(tmp, ras)) {
+         if (tmp->obj)
+            rabootp_l2addr_list_foreach(tmp->obj, __search_ipaddr_cb, &itr);
+      }
+   } else {
+      if (ras->obj)
+         rabootp_l2addr_list_foreach(ras->obj, __search_ipaddr_cb, &itr);
+   }
 
    rv = (int)x.used;
 
@@ -372,7 +396,7 @@ RabootpPatriciaTreeDump(struct RaAddressStruct *ras, char *s, size_t slen)
     *
     */
 
-   for (tmp = __minmax(ras, -1); tmp && !rv; tmp = __next(tmp))
+   for (tmp = __minmax(ras, -1); tmp && !rv; tmp = __next(tmp, ras))
       rv = __display_ipv4_cb(tmp, &string);
 
    return (ssize_t)string.len;

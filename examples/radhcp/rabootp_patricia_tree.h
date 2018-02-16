@@ -37,6 +37,7 @@ RabootpPatriciaTreeForeach(struct RaAddressStruct *,
 
 struct RaAddressStruct *
 RabootpPatriciaTreeFind(const unsigned int * const,
+                        unsigned char masklen,
                         struct ArgusParserStruct *);
 
 int
@@ -49,6 +50,7 @@ RabootpPatriciaTreeRemoveLease(const unsigned int * const,
 
 int
 RabootpPatriciaTreeSearch(const struct in_addr * const,
+                          unsigned char masklen,
                           const struct timeval * const,
                           const struct timeval * const,
                           struct ArgusDhcpIntvlNode *,

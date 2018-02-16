@@ -137,6 +137,59 @@ __is_oneshot_query(void)
    return 0;
 }
 
+static int
+__parse_ipv4_prefix(const char * const prefixstr, struct in_addr *addr,
+                    unsigned char *masklen)
+{
+   char *cpy = strdup(prefixstr);
+   char *saveptr;
+   char *tok;
+   int rv = 0;
+   unsigned long val;
+
+   if (cpy == NULL)
+      ArgusLog(LOG_ERR, "%s unable to allocate string\n", __func__);
+
+   tok = strtok_r(cpy, "/", &saveptr);
+   if (tok == NULL) {
+      rv = -1;
+      goto out;
+   }
+
+   if (inet_aton(tok, addr) != 1) {
+      rv = -1;
+      goto out;
+   }
+
+   tok = strtok_r(NULL, "/", &saveptr);
+   if (tok == NULL) {
+      /* no slash is ok.  we're done */
+      *masklen = 32;
+      goto out;
+   }
+
+   errno = 0;    /* To distinguish success/failure after call */
+   val = strtoul(tok, &saveptr, 10);
+   if ((errno == ERANGE && (val == ULONG_MAX || val == 0))
+        || (errno != 0 && val == 0)) {
+      DEBUGLOG(4, "%s: strtoul returned an error: %s\n", __func__,
+               strerror(errno));
+      rv = -1;
+      goto out;
+   }
+
+   if (saveptr == tok) {
+      DEBUGLOG(4, "%s: strtoul found no digits\n", __func__);
+      rv = -1;
+   }
+
+   *masklen = (unsigned char)(val & 0xff);
+
+out:
+   free(cpy);
+   return rv;
+}
+
 /* SEARCH: <argus-time-string> */
 char **
 ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
@@ -156,6 +209,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    struct timeval starttime_tv;
    struct timeval endtime_tv;
    struct in_addr addr = {0, };
+   unsigned char masklen; /* prefix length */
 
    enum QueryOptsEnum {
       OPT_WHEN = 0,
@@ -214,7 +268,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    }
 
    if (parsed[OPT_ADDR]) {
-      if (inet_aton(parsed[OPT_ADDR], &addr) != 1) {
+      if (__parse_ipv4_prefix(parsed[OPT_ADDR], &addr, &masklen) < 0) {
          retn[0] = "Invalid IP address\n";
          retn[1] = "FAIL\n";
          res = -1;
@@ -293,7 +347,8 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    } else {
       tmp_invec_used = 0;
       if (MUTEX_LOCK(&ArgusParser->lock) == 0) {
-         tmp_invec_used = RabootpPatriciaTreeSearch(&addr, &starttime_tv,
+         tmp_invec_used = RabootpPatriciaTreeSearch(&addr, masklen,
+                                                    &starttime_tv,
                                                     &endtime_tv, tmp_invec,
                                                     invec_nitems);
          MUTEX_UNLOCK(&ArgusParser->lock);

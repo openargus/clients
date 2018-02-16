@@ -114,7 +114,7 @@ __find_lease_by_addr(const struct dhcp_packet *bp, struct timeval *when)
          return NULL;
 
       ciaddr.s_addr = EXTRACT_32BITS(&bp->ciaddr.s_addr);
-      nitems = RabootpPatriciaTreeSearch(&ciaddr, when, when, invec, 1024);
+      nitems = RabootpPatriciaTreeSearch(&ciaddr, 32, when, when, invec, 1024);
       DEBUGLOG(1, "%s: found %u transaction(s) for IP address 0x%08x\n",
                __func__, nitems, ciaddr.s_addr);
       for (i = 0; i < nitems; i++) {
