@@ -164,10 +164,10 @@ struct ArgusAdjustStruct {
 
    double sploss, dploss;
 
-   float spkts, sbytes, sappbytes;
-   float scpkts, scbytes, scappbytes;
-   float dpkts, dbytes, dappbytes;
-   float dcpkts, dcbytes, dcappbytes;
+   double spkts, sbytes, sappbytes;
+   double scpkts, scbytes, scappbytes;
+   double dpkts, dbytes, dappbytes;
+   double dcpkts, dcbytes, dcappbytes;
 
    struct timeval start, end;
    struct tm RaStartTmStruct, RaEndTmStruct;
