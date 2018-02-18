@@ -88,11 +88,14 @@ YACC = @V_YACC@
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
 
-SRC =	rasql.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c
+SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c
 
-PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf
+PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf
 
 all: $(PROGS)
+
+$(INSTALLBIN)/rascore: rascore.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasql: rasql.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasql.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
@@ -120,12 +123,14 @@ install: force all
 	[ -d $(BINDIR) ] || \
 		(mkdir -p $(BINDIR); chmod 755 $(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/rasql $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rascore $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlinsert $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqltimeindex $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlcheckconf $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
+	rm -f $(DESTDIR)$(BINDIR)/rascore
 	rm -f $(DESTDIR)$(BINDIR)/rasqlinsert
 	rm -f $(DESTDIR)$(BINDIR)/rasqltimeindex
 	rm -f $(DESTDIR)$(BINDIR)/rasqlcheckconf
