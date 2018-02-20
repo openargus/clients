@@ -452,7 +452,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    retn = ArgusHandleResponseArray;
 
    if (resbuf == NULL) {
-      if ((resbuf = ArgusMalloc(0x10000 * sizeof(char *)) + 1) == NULL)
+      if ((resbuf = ArgusMalloc(0x100000 * sizeof(char *)) + 1) == NULL)
          ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
    }
 
@@ -528,6 +528,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                   struct nnamemem *cname = NULL;
                   struct nnamemem *name = matches[i];
                   bzero(results, sizeof(results));
+
                   results[resultnum++] = strdup(name->n_name);
                            
                   if (name->cnames != NULL) {
@@ -544,7 +545,13 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 
                               for (x = 0; x < cnt; x++) {
                                  cname = (struct nnamemem *)list->list_obj;
-                                 results[resultnum++] = strdup(cname->n_name);
+                                 if (ArgusParser->ArgusPrintJson) {
+                                    char cnamebuf[256];
+                                    snprintf(cnamebuf, 256, "\"cname\":\"%s\"", cname->n_name);
+                                    results[resultnum++] = strdup(cnamebuf);
+                                 } else {
+                                    results[resultnum++] = strdup(cname->n_name);
+                                 }
                                  list = list->nxt;
                               }
 #if defined(ARGUS_THREADS)
@@ -565,12 +572,18 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 #endif
                         int x, cnt = name->cidrs->count;
                         struct ArgusListObjectStruct *list = name->cidrs->start;
-       
+
                         for (x = 0; x < cnt; x++) {
                            struct RaAddressStruct *raddr = (struct RaAddressStruct *)list->list_obj;
                            unsigned int addr = htonl(raddr->addr.addr[0]);
                            struct in_addr naddr = *(struct in_addr *)&addr;
-                           results[resultnum++] = strdup(inet_ntoa(naddr));
+                           if (x == 0) {
+                              char sbuf[256];
+                              snprintf (sbuf, 256, "\"addr\":[%s", inet_ntoa(naddr));
+                              results[resultnum++] = strdup(sbuf);
+                           } else {
+                              results[resultnum++] = strdup(inet_ntoa(naddr));
+                           }
                            list = list->nxt;
                         }
 #if defined(ARGUS_THREADS)
@@ -579,14 +592,23 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 #endif
                   }
 
-                  sprintf (resbuf, "%s: %s [", sptr, results[0]);
+                  if (ArgusParser->ArgusPrintJson) {
+                     sprintf (resbuf, "{ \"name\":\"%s\", ", results[0]);
+                  } else {
+                     sprintf (resbuf, "%s: %s [", sptr, results[0]);
+                  }
 
                   for (x = 1; x < resultnum; x++) {
-                              if (x > 1) sprintf (&resbuf[strlen(resbuf)], ", ");
-                              sprintf (&resbuf[strlen(resbuf)], "%s", results[x]);
-                              free(results[x]);
+                     if (x > 1) sprintf (&resbuf[strlen(resbuf)], ", ");
+                     sprintf (&resbuf[strlen(resbuf)], "%s", results[x]);
+                     free(results[x]);
                   }
-                  sprintf (&resbuf[strlen(resbuf)], "]");
+
+                  if (ArgusParser->ArgusPrintJson) {
+                     sprintf (&resbuf[strlen(resbuf)], "]}");
+                  } else {
+                     sprintf (&resbuf[strlen(resbuf)], "]");
+                  }
                   retn[rind++] = strdup(resbuf);
                   free(results[0]);
                }
