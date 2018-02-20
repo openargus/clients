@@ -1870,9 +1870,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         node.addr.len = 4;
 
                         if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                           ArgusDebug (1, "%s: RaProcessRecord: no DNS cache for remote address %s\n", tptr, intoa(node.addr.addr[0]));
-#endif
+                           fprintf (stdout, "%s: RaProcessRecord: no DNS cache for remote address %s\n", tptr, intoa(node.addr.addr[0]));
+
                            if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                               bcopy(&node, raddr, sizeof(node));
                               RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
