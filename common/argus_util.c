@@ -6802,8 +6802,12 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
    if ((ptr = strchr (str, ':')) != NULL)
       retn->type = AF_INET6;
    else
-   if ((ptr = strchr (str, '.')) != NULL)
-      retn->type = AF_INET;
+   if ((ptr = strchr (str, '.')) != NULL) {
+      if (strlen (str) > 1) {
+         retn->type = AF_INET;
+      } else
+         return (NULL);
+   }
   
    if (!(retn->type))
       retn->type = (retn->masklen > 32) ? AF_INET6 : AF_INET;
