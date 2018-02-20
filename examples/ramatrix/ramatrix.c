@@ -23,16 +23,16 @@
  *               This program will spit out a table and a matrix that
  *               are suitable as javascript data variables.
  *
- *               var objects = [{name:"value",color:"value"},
- *                              {name:"value",color:"value"},
- *                              . . .
- *                              {name:"value",color:"value"}];
+ *               objects  = [{name:"value",color:"value"},
+ *                           {name:"value",color:"value"},
+ *                           . . .
+ *                           {name:"value",color:"value"}];
  *
  *               The matrix is an NxN matrix (array of arrays) containing scalers.
  *
- *               var   matrix = [[1,2,...,N],[1,2,...,N],...];
+ *               matrix   = [[1,2,...,N],[1,2,...,N],...];
  *
- *               var category = [[1,2,...,N],[1,2,...,N],...];
+ *               category = [[1,2,...,N],[1,2,...,N],...];
  *
  *
  *               So, we need to aggregate the data appropriately for the study,
@@ -260,10 +260,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 void ArgusProcessMatrix(struct ArgusParserStruct *);
 
 /* 
- *               var objects = [{name:"value", oui:"value",rank:"value", color:"value"},
- *                              {name:"value", oui:"value",rank:"value", color:"value"},
- *                              . . .
- *                              {name:"value", oui:"value",rank:"value", color:"value"}];
+ *               objects = [{name:"value", oui:"value",rank:"value", color:"value"},
+ *                          {name:"value", oui:"value",rank:"value", color:"value"},
+ *                          . . .
+ *                          {name:"value", oui:"value",rank:"value", color:"value"}];
  */
 
 #define ARGUS_MAX_OUI_COLORS	16
@@ -321,7 +321,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
       ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);
       bzero(entitytable, sizeof(entitytable));
 
-      printf ("var objects = [\n");
+      printf ("objects = [ ");
 
       for (i = 0; i < n; i++) {
          if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
@@ -360,14 +360,14 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                }
 
                if (color == NULL) color = "#AAAAAA";
-               if (argus->rank > 0) printf (",\n");
+               if (argus->rank > 0) printf (",");
 
-               printf ("    {name:\"%s\", oui:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
-                                ArgusTrimString(addr), 
-                                ArgusTrimString(oui),
-                                ArgusTrimString(pcr),
-                                category,
-                                color);
+               printf ("{name:\"%s\", oui:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+                         ArgusTrimString(addr), 
+                         ArgusTrimString(oui),
+                         ArgusTrimString(pcr),
+                         category,
+                         color);
 
                if ((tp = lookup_emem (entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
                   tp->rank = argus->rank;
@@ -382,9 +382,9 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          }
       }
 
-      printf("\n];\n");
+      printf("];\n");
 
-      printf ("var matrix = [\n");
+      printf ("matrix = [");
 
       agg = ArgusParser->ArgusAggregator;
       if (agg->queue->count) {
@@ -455,28 +455,28 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          }
 
          for (i = 0; i < n; i++) {
-            printf ("  \[");
+            printf ("\[");
             for (x = 0; x < n; x++) {
                if (x > 0) printf (",%0.2f", matrix[i][x]);
                else       printf ("%0.2f",  matrix[i][x]);
             }
-            if (i < (n -1)) printf ("],\n");
-            else            printf ("]\n");
+            if (i < (n -1)) printf ("],");
+            else            printf ("]");
          }
       }
       printf ("];\n");
 
-      printf ("var category = [\n");
+      printf ("category = [");
       for (i = 0; i < n; i++) {
-         printf ("  \[");
+         printf ("\[");
          for (x = 0; x < n; x++) {
             if (category[i][x] == 0)
                category[i][x] = 3;
             if (x > 0) printf (",%0.2f", category[i][x]);
             else       printf ("%0.2f",  category[i][x]);
          }
-         if (i < (n -1)) printf ("],\n");
-         else            printf ("]\n");
+         if (i < (n -1)) printf ("],");
+         else            printf ("]");
       }
       printf ("];\n");
 
