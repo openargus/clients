@@ -145,7 +145,7 @@ void RaArgusInputComplete (struct ArgusInput *input) {
    int cnt, retn, fileindex, filestatus;
    char buf[MAXSTRLEN], *endptr = NULL;
    char sbuf[MAXSTRLEN], *sptr = NULL;
-   char *pathptr, filename[MAXSTRLEN];
+   char *filename;
    struct ArgusInput *ArgusInput = input;
    struct RaTimeProbesStruct *probe = NULL;
 
@@ -192,15 +192,15 @@ void RaArgusInputComplete (struct ArgusInput *input) {
       } while ((probe = (struct RaTimeProbesStruct *) probe->qhdr.nxt) != (void *) ArgusProbes->queue->start);
 
       bzero (buf, sizeof(buf));
-      bzero (filename, sizeof(filename));
       fileindex = -1, filestatus = -1;
 
-     if ((pathptr = realpath(input->filename, filename)) != NULL) {
-         free (input->filename);
-         input->filename = strdup(filename);
-     }
+      filename = realpath(input->filename, NULL);
+      if (filename != NULL) {
+          free (input->filename);
+          input->filename = filename;
+      }
 
-      sprintf (buf, RaTableQueryString[0], filename);
+      sprintf (buf, RaTableQueryString[0], input->filename);
       if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
          ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
@@ -248,14 +248,14 @@ void RaArgusInputComplete (struct ArgusInput *input) {
          size = ArgusInput->statbuf.st_size;
          mtime = ArgusInput->statbuf.st_mtime;
 
-         sprintf (buf, RaTableQueryString[1], filename, size, 
+         sprintf (buf, RaTableQueryString[1], input->filename, size,
                        mtime, MDFile(ArgusInput->filename), RaStartTime, RaEndTime);
 
          if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0) 
             ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
       }
 
-      sprintf (buf, RaTableQueryString[2], filename);
+      sprintf (buf, RaTableQueryString[2], input->filename);
 
       if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
          ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
@@ -332,7 +332,7 @@ void RaArgusInputComplete (struct ArgusInput *input) {
       } while ((probe = (struct RaTimeProbesStruct *) probe->qhdr.nxt) != (void *) ArgusProbes->queue->start);
 
       if (ArgusParser->vflag)
-         ArgusLog(LOG_INFO, "file %s complete", filename);
+         ArgusLog(LOG_INFO, "file %s complete", input->filename);
    }
 
 RaArgusInputCompleteDone:
@@ -948,16 +948,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          do {
             int retn, fileindex = -1, filestatus = -1;
-            char filename[2048], *endptr = NULL;
+            char *filename, *endptr = NULL;
 
             nxtinput = (struct ArgusInput *) input->qhdr.nxt;
             input->qhdr.nxt = NULL;
 
-            bzero (filename, sizeof(filename));
-
-            if (realpath(input->filename, filename) != NULL) {
+            filename = realpath(input->filename, NULL);
+            if (filename != NULL) {
                free (input->filename);
-               input->filename =  strdup(filename);
+               input->filename = filename;
             }
 
             sprintf (buf, RaTableQueryString[0], input->filename);
