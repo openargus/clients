@@ -26,7 +26,7 @@
           <RegistryValue Type="expandable" Name="AppPath"
           Value="/bin/rasplit.exe" />
           <RegistryValue Type="string" Name="AppArgs"
-          Value='-S localhost:562 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S -f /bin/ramanage'/>
+          Value='-S localhost:562 -B 10 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S -f /bin/ramanage'/>
           <RegistryValue Type="integer" Name="NeverExits"
           Value="1" />
         </RegistryKey>
