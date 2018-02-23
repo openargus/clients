@@ -72,8 +72,8 @@ my $errcount = 0;
 # or semicolons must be checked very carefully.  So far, nothing
 # of that sort here.
 my %addr_valid_characters = (
-    '4' => q{^[0-9.]+$},             # IPv4
-    '6' => q{^[0-9a-fA-F:]+$},       # IPv6
+    '4' => q{^[0-9./]+$},            # IPv4
+    '6' => q{^[0-9a-fA-F:/]+$},      # IPv6
     'h' => q{^[0-9a-fA-F:]+$},       # hardware address (oui48)
     'n' => q{^[0-9a-zA-Z_._\-]+},    # name
 );
