@@ -3724,6 +3724,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      retn->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
                   }
                }
+
+               if (retn->dsrs[ARGUS_BEHAVIOR_INDEX]) {
+                  struct ArgusBehaviorStruct *actor = (struct ArgusBehaviorStruct *) retn->dsrs[ARGUS_BEHAVIOR_INDEX];
+
+                  if (actor->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
+                     retn->score = actor->behvScore.values[0];
+                  }
+               }
             }
             break;
          }
@@ -9074,15 +9082,30 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         break;
                      }
 
-// Merging the behavioral dsr's currently involve just accumulating the counters.
+// Merging the behavioral dsr's currently involve accumulating the counters for keystrokes.
+// and taking the greatest of the scores.
 
                      case ARGUS_BEHAVIOR_INDEX: {
                         struct ArgusBehaviorStruct *a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
                         struct ArgusBehaviorStruct *a2 = (void *) ns2->dsrs[ARGUS_BEHAVIOR_INDEX];
 
                         if (a1 && a2) {
-                           a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
-                           a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
+                           if (a1->hdr.subtype == a2->hdr.subtype) {
+                              switch (a1->hdr.subtype) {
+                                 case ARGUS_BEHAVIOR_KEYSTROKE:
+                                    a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
+                                    a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
+                                    break;
+
+                                 case ARGUS_BEHAVIOR_SCORE: {
+                                    int i;
+                                    for (i = 0; i < 8; i++) {
+                                       if (a2->behvScore.values[i] > a1->behvScore.values[i])
+                                          a1->behvScore.values[i] = a2->behvScore.values[i];
+                                    }
+                                 }
+                              }
+                           }
 
                         } else {
                            if (a2 && (a1 == NULL)) {
@@ -16413,6 +16436,19 @@ ArgusSortInf (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
       if ((t1->hdr.subtype & ARGUS_SRCID) && (t2->hdr.subtype & ARGUS_SRCID))
          if ((t1->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) && (t2->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE))
             retn = strcmp((const char *)t2->srcid.inf, (const char *)t1->srcid.inf);
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+
+int
+ArgusSortScore (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   int retn = 0;
+
+   if (n1 && n2) {
+      retn = (n2->score > n1->score) ? 1 : 0;
    }
 
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);

@@ -8462,6 +8462,12 @@ ArgusPrintScore (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
+         struct ArgusBehaviorStruct *actor = (void *)argus->dsrs[ARGUS_BEHAVIOR_INDEX];
+         if (actor != NULL) {
+            if (actor->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
+               argus->score = actor->behvScore.values[0];
+            }
+         }
          snprintf (score, sizeof(score), format, argus->score);
          break;
       }

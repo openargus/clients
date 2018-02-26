@@ -881,15 +881,21 @@ struct ArgusKeyStrokeMetrics {
 struct ArgusKeyStrokeStruct {
    struct ArgusKeyStrokeMetrics src, dst;
 };
+
+struct ArgusScoreStruct {
+   u_char values[8];
+};
  
 struct ArgusBehaviorStruct {
    struct ArgusDSRHeader hdr;
    union {
       struct ArgusKeyStrokeStruct keyStroke;
+      struct ArgusScoreStruct score;
    } behavior_union;
 };
  
-#define     keyStroke behavior_union.keyStroke
+#define keyStroke behavior_union.keyStroke
+#define behvScore behavior_union.score
 
 struct ArgusJitterObject {
    struct ArgusOutputStatObject act, idle;

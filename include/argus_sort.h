@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		79
-#define MAX_SORT_ALG_TYPES		79
+#define ARGUS_MAX_SORT_ALG		80
+#define MAX_SORT_ALG_TYPES		80
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -154,6 +154,7 @@ int ArgusSortRoutine (const void *, const void *);
 int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortInf (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortScore (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortIdleTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -335,6 +336,7 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortDstMasklen,
    ArgusSortSID,
    ArgusSortInf,
+   ArgusSortScore,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -425,6 +427,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
 
    "sid",
    "inf",
+   "score",
 };
 
 #else
@@ -442,6 +445,7 @@ extern int ArgusSortRoutine (const void *, const void *);
 extern int ArgusSortSrcId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortSID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortInf (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortScore (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortIdleTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
