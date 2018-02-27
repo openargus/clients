@@ -430,6 +430,7 @@ int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
 
 
 
+int ArgusMkdirPath(const char * const);
 int RaProcessRecursiveFiles (char *);
 
 #define RAENVITEMS      2
@@ -1818,6 +1819,8 @@ ArgusRealloc(void *buf, size_t size)
 __attribute__ ((warn_unused_result))
 #endif
 ;
+
+extern int ArgusMkdirPath(const char * const);
 
 extern void ArgusFree (void *buf);
 extern void *ArgusMalloc (int);

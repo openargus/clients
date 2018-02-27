@@ -977,8 +977,6 @@ static
 int
 ArgusInitNewFilename(struct ArgusParserStruct *parser, struct ArgusWfileStruct *tfile, char *filename)
 {
-   char *tptr = NULL, *pptr = NULL;
-   char tmpbuf[MAXSTRLEN]; 
    int retn = 0;
 
    if (tfile->fd != NULL) {
@@ -1003,38 +1001,7 @@ ArgusInitNewFilename(struct ArgusParserStruct *parser, struct ArgusWfileStruct *
    /* got new filename, need to check the
       path to be sure that all the directories exist */
 
-   bzero (tmpbuf, sizeof(tmpbuf));
-   strncpy (tmpbuf, tfile->filename, MAXSTRLEN);
-   if ((tptr = strrchr(tmpbuf, (int) '/')) != NULL) {   /* if there is a path */
-      *tptr = '\0';
-      pptr = tptr;
-
-      while ((pptr != NULL) && ((stat(tmpbuf, &tfile->statbuf)) < 0)) {
-         switch (errno) {
-            case ENOENT:
-               if ((pptr = strrchr(tmpbuf, (int) '/')) != NULL) {
-                  if (pptr != tmpbuf) {
-                     *pptr = '\0';
-                  } else {
-                     pptr = NULL;
-                  }
-               }
-               break;
-
-            default:
-               ArgusLog (LOG_ERR, "stat: %s %s\n", tmpbuf, strerror(errno));
-         }
-      }
-
-      while (&tmpbuf[strlen(tmpbuf)] <= tptr) {
-         if ((mkdir(tmpbuf, 0777)) < 0) {
-            if (errno != EEXIST)
-               ArgusLog (LOG_ERR, "mkdir: %s %s\n", tmpbuf, strerror(errno));
-         }
-         tmpbuf[strlen(tmpbuf)] = '/';
-      }
-      *tptr = '/';
-   }
+   ArgusMkdirPath(tfile->filename);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusInitNewFilename(0x%x, 0x%x, %s) done\n", parser, tfile, filename); 
