@@ -275,7 +275,7 @@ RaProcessBaselineData (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
                if (retn != 0) {
-                  struct ArgusRecordStruct *ns;
+                  struct ArgusRecordStruct *ns, *tns;
 
                   ns = ArgusCopyRecordStruct(argus);
 
@@ -290,9 +290,18 @@ RaProcessBaselineData (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                      agg->ArgusMaskDefs = NULL;
 
                      if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
-                        if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+                        if ((tns = ArgusFindRecord(process->htable, hstruct)) == NULL) {
                            ns->htblhdr = ArgusAddHashEntry (process->htable, ns, hstruct);
                            ArgusAddToQueue (process->queue, &ns->qhdr, ARGUS_LOCK);
+                           process->status |= ARGUS_AGGREGATOR_DIRTY;
+
+                        } else {
+                           ArgusMergeRecords (agg, tns, ns);
+
+                           ArgusRemoveFromQueue (process->queue, &tns->qhdr, ARGUS_LOCK);
+                           ArgusAddToQueue (process->queue, &tns->qhdr, ARGUS_LOCK);         // use the agg queue as an idle timeout queue
+
+                           ArgusDeleteRecordStruct(parser, ns);
                            process->status |= ARGUS_AGGREGATOR_DIRTY;
                         }
                      }
@@ -628,7 +637,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #define	SECONDS_IN_YEAR		86400*365.25
 
                         if (nstvp->tv_sec > tstvp->tv_sec) {
-                           int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_MONTH) ? 16 : ((tdur > SECONDS_IN_WEEK) ? 8 : 4)) : ((tdur > SECONDS_IN_WEEK) ? 4 : 2);
+                           int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_MONTH) ? 4 : ((tdur > SECONDS_IN_WEEK) ? 4 : 0)) : ((tdur > SECONDS_IN_WEEK) ? 4 : 0);
                            ns->score = ns->score > score ? ns->score : score;
                         }
                      }
@@ -1703,7 +1712,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       RaMySQLInit();
 
-      if (parser->tflag) {
 
 // so we've been given a time filter, so we have a start and end time
 // stored in parser->startime_t && parser->lasttime_t, and we support
@@ -1714,8 +1722,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 // So the actual table, datatbase, etc..., were set in the RaMySQLInit()
 // call so we can test some values here.
 // 
-         RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
-      }
+      RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
 
       if (RaTables == NULL) {
          char *sptr, *str = NULL, *base = NULL;
@@ -1725,13 +1732,31 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char RaMonthlyBaseLineTable[256];
          int n = 0;
 
+
          if (RaTable != NULL) {
             sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
+            str = strdup(ArgusSQLTableNameBuf);
 
+         } else {
+            if (RaDatabase == NULL) {
+               RaDatabase = strdup("inventory");
+            }
+            if (strcmp(RaDatabase, "inventory") == 0) {
+               struct timeval now;
+               struct tm tmval;
+
+               gettimeofday (&now, 0L);
+               localtime_r(&now.tv_sec, &tmval);
+
+               strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
+               str = strdup(ArgusSQLTableNameBuf);
+               *ArgusSQLTableNameBuf = '\0';
+            }
+         }
+
+         if (str != NULL) {
             if ((RaTables = ArgusCalloc(sizeof(void *), 5)) == NULL)
                ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
-
-            str = strdup(RaTable);
 
             while ((sptr = strsep(&str, "_")) != NULL) {
                switch (n++) {
@@ -1746,7 +1771,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
             RaTables[0] = strdup(RaAnnualBaseLineTable);
             RaTables[1] = strdup(RaMonthlyBaseLineTable);
-            RaTables[2] = strdup(ArgusSQLTableNameBuf);
+            if (strlen(ArgusSQLTableNameBuf) > 0) 
+               RaTables[2] = strdup(ArgusSQLTableNameBuf);
 
             if (str != NULL) free(str);
             if (base != NULL) free(base);
@@ -1827,12 +1853,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (RaTables) {
                RaSQLQueryTable (RaTables[0], RaAnnualProcess);
                RaSQLQueryTable (RaTables[1], RaMonthlyProcess);
-               RaSQLQueryTable (RaTables[2], NULL);
 
-               if (ArgusModelerQueue->count > 0)
-                  RaSQLProcessQueue (ArgusModelerQueue);
-               else
-                  RaParseComplete (SIGINT);
+               if (RaTables[2] != NULL) {
+                  RaSQLQueryTable (RaTables[2], NULL);
+
+                  if (ArgusModelerQueue->count > 0)
+                     RaSQLProcessQueue (ArgusModelerQueue);
+                  else
+                     RaParseComplete (SIGINT);
+               }
+               found++;
             }
          }
       }
@@ -1968,10 +1998,10 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    int retnIndex = 2;
 
-   if ((retn = ArgusCalloc(sizeof(void *), ARGUS_MAX_TABLE_LIST_SIZE)) == NULL)
-      ArgusLog(LOG_ERR, "ArgusCreateSQLTimeTableNames ArgusCalloc %s", strerror(errno));
-
    if (table && (strchr(table, '%') || strchr(table, '$'))) {
+      if ((retn = ArgusCalloc(sizeof(void *), ARGUS_MAX_TABLE_LIST_SIZE)) == NULL)
+         ArgusLog(LOG_ERR, "ArgusCreateSQLTimeTableNames ArgusCalloc %s", strerror(errno));
+
       if (nadp->size > 0) {
          int size = nadp->size / 1000000;
          long long start;
@@ -2080,8 +2110,9 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
             }
          }
 
-      } else
+      } else {
          ArgusLog(LOG_ERR, "ArgusCreateSQLTimeTableNames no time mode (-M time xx) specified");
+      }
 
    } else {
       if (table) {
@@ -2094,11 +2125,11 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
             retnIndex = 0;
          }
 
-         retn[retnIndex++] = strdup(fileStr);
+         retn[2] = strdup(fileStr);
       }
    }
 
-   if (retn[2] != NULL) {
+   if (retn != NULL) {
       char *sptr, *str;
       char *base, *year, *month;
       int n = 0;
