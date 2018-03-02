@@ -439,6 +439,9 @@ RaProcessRecursiveFiles (char *path)
 #endif
          if (!(ArgusAddFileList (ArgusParser, path, ARGUS_DATA_SOURCE, -1, -1)))
             ArgusLog (LOG_ERR, "error: -R file arg %s\n", path);
+
+         /* Copy the stat() results since we already have them. */
+         ((struct ArgusInput *)ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
       }
    }
 
