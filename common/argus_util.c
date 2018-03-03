@@ -27477,18 +27477,18 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                         input->file = NULL;
 
                         if (ptr[0] == 'B')
-                           strncpy(cmd, "bzip2 -dc ", 11);
+                           strncpy(cmd, "bzip2 -dc \"", 11);
                         else
                         if (ptr[1] == 0x8B)
-                           strncpy(cmd, "gzip -dc ", 11);
+                           strncpy(cmd, "gzip -dc \"", 11);
                         else
                         if ((ptr[0] == 0xFD) && (ptr[1] == 0x37) && (ptr[2] == 0x7A) && (ptr[3] == 0x58) &&  (ptr[4] == 0x5A) && (ptr[5] == 0x00))
-                           strncpy(cmd, "xzcat ", 7);
+                           strncpy(cmd, "xzcat \"", 7);
                         else
-                           strncpy(cmd, "zcat ", 6);
+                           strncpy(cmd, "zcat \"", 6);
             
                         strncat(cmd, input->filename, (256 - strlen(cmd)));
-                        strncat(cmd, " 2>/dev/null", (256 - strlen(cmd)));
+                        strncat(cmd, "\" 2>/dev/null", (256 - strlen(cmd)));
              
                         if ((input->pipe = popen(cmd, "r")) == NULL)
                            ArgusLog (LOG_ERR, "ArgusReadConnection: popen(%s) failed. %s", cmd, strerror(errno));
