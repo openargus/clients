@@ -821,8 +821,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       offset = (ArgusParser->Bflag + (RaBinProcess->nadp.size - 1))/RaBinProcess->nadp.size;
       RaBinProcess->nadp.stperiod = 0.0;
       RaBinProcess->nadp.dtperiod = 0.0;
-  
-      while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
+
+      ArgusAlignInit(parser, ns, &RaBinProcess->nadp);
+      while (!(ns->status & ARGUS_RECORD_PROCESSED) &&
+             (tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
          if ((retn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
             struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
             struct ArgusRecordStruct *rec = NULL;
