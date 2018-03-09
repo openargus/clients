@@ -2194,6 +2194,45 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
    return (retn);
 }
 
+unsigned int /* dwords */
+ArgusGenerateV5SrcId(struct ArgusTransportStruct *trans, unsigned int *buf)
+{
+   struct ArgusTransportStruct *dtrans = (struct ArgusTransportStruct *)buf;
+   unsigned int *dsrptr = buf;
+   unsigned int x = 0;
+
+   *dsrptr++ = ((unsigned int *)trans)[x++];
+
+   if (trans->hdr.subtype & ARGUS_SRCID) {
+      switch (trans->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+         case ARGUS_TYPE_INT:
+         case ARGUS_TYPE_IPV4:
+         case ARGUS_TYPE_STRING:
+            *dsrptr++ = ((unsigned int *)trans)[x++];
+            break;
+
+         case ARGUS_TYPE_IPV6:
+         case ARGUS_TYPE_UUID: {
+            int z;
+            for (z = 0; z < 4; z++) {
+               *dsrptr++ = ((unsigned int *)trans)[x++];
+            }
+            break;
+         }
+      }
+      if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
+         *dsrptr++ = *(unsigned int *)&trans->srcid.inf;
+         x++;
+      }
+   }
+   if (trans->hdr.subtype & ARGUS_SEQ) {
+      *dsrptr++ = (unsigned int)trans->seqnum;
+      x++;
+   }
+   dtrans->hdr.argus_dsrvl8.len = x;
+   return x;
+}
+
 struct ArgusRecord *
 ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char *buf)
 {
@@ -2233,43 +2272,10 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
                                                               dsr->argus_dsrvl8.len));
                   switch (y) {
-                     case ARGUS_TRANSPORT_INDEX: {
-                        struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
-                        struct ArgusTransportStruct *dtrans = (struct ArgusTransportStruct *) dsrptr;
-                        x = 0;
-
-                        *dsrptr++ = ((unsigned int *)dsr)[x++];
-
-                        if (trans->hdr.subtype & ARGUS_SRCID) {
-                           switch (trans->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
-                              case ARGUS_TYPE_INT:
-                              case ARGUS_TYPE_IPV4:
-                              case ARGUS_TYPE_STRING:
-                                 *dsrptr++ = ((unsigned int *)dsr)[x++];
-                                 break;
-
-                              case ARGUS_TYPE_IPV6:
-                              case ARGUS_TYPE_UUID: {
-                                 int z;
-                                 for (z = 0; z < 4; z++) {
-                                    *dsrptr++ = ((unsigned int *)dsr)[x++];
-                                 }
-                                 break;
-                              }
-                           }
-                           if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
-                              *dsrptr++ = *(unsigned int *)&trans->srcid.inf;
-                              x++;
-                           }
-                        }
-                        if (trans->hdr.subtype & ARGUS_SEQ) {
-                           *dsrptr++ = (unsigned int)trans->seqnum;
-                           x++;
-                        }
-                        dtrans->hdr.argus_dsrvl8.len = x;
-                        len = x;
+                     case ARGUS_TRANSPORT_INDEX:
+                        len = ArgusGenerateV5SrcId((struct ArgusTransportStruct *)dsr, dsrptr);
+                        dsrptr += len;
                         break;
-                     }
 
                      case ARGUS_NETWORK_INDEX: {
                         struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
