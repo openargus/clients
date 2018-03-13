@@ -132,6 +132,9 @@ struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
 void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrvSignatures (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
+static void
+ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const,
+                             int, struct ArgusTransportStruct *, int);
 
 #ifdef ARGUS_SASL
 #include <argus/saslint.h>
@@ -2030,60 +2033,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
         
                      case ARGUS_TRANSPORT_DSR: {
                         struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
-             
-                        if (input->major_version < MAJOR_VERSION_5)
-                           if (cnt >= 12)
-                              trans->hdr.subtype |= (ARGUS_SRCID | ARGUS_SEQ);
 
-                        bzero ((char *)&canon->trans, sizeof(struct ArgusTransportStruct));
-                        bcopy((char *)&trans->hdr, (char *)&canon->trans.hdr, 4);
-                        canon->trans.hdr.argus_dsrvl8.len = (sizeof(struct ArgusTransportStruct) + 3) / 4;
-
-                        if (trans->hdr.subtype & ARGUS_SRCID) {
-                           char *iptr = NULL;
-                           switch (trans->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
-                              case ARGUS_TYPE_INT: {
-                                 canon->trans.srcid.a_un.value = trans->srcid.a_un.value;
-                                 iptr = (char *)&trans->srcid.a_un.value + 4;
-                                 break;
-                              }
-
-                              default:
-                              case ARGUS_TYPE_IPV4: {
-                                 canon->trans.srcid.a_un.ipv4 = trans->srcid.a_un.ipv4;
-                                 iptr = (char *)&trans->srcid.a_un.value + 4;
-                                 break;
-                              }
-                              case ARGUS_TYPE_IPV6: {
-                                 bcopy(trans->srcid.a_un.ipv6,
-                                       canon->trans.srcid.a_un.ipv6,
-                                       sizeof(trans->srcid.a_un.ipv6));
-                                 iptr = (char *)&trans->srcid.a_un.value + 16;
-                                 break;
-                              }
-                              case ARGUS_TYPE_ETHER: {
-                                 iptr = (char *)&trans->srcid.a_un.value + 8;
-                                 break;
-                              }
-                              case ARGUS_TYPE_STRING: {
-                                 bcopy(trans->srcid.a_un.str, canon->trans.srcid.a_un.str, 4);
-                                 iptr = (char *)&trans->srcid.a_un.value + 4;
-                                 break;
-                              }
-                              case ARGUS_TYPE_UUID: {
-                                 bcopy(trans->srcid.a_un.uuid, canon->trans.srcid.a_un.uuid, 16);
-                                 iptr = (char *)&trans->srcid.a_un.value + 16;
-                                 break;
-                              }
-                           }
-                           if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
-                              bcopy (iptr, &canon->trans.srcid.inf, 4);
-                           }
-                        }
-
-                        if (trans->hdr.subtype & ARGUS_SEQ)
-                           canon->trans.seqnum = trans->seqnum;
-
+                        ArgusGenerateTransportStruct(trans, cnt, &canon->trans,
+                                                     input->major_version);
                         retn->dsrs[ARGUS_TRANSPORT_INDEX] = (struct ArgusDSRHeader*) &canon->trans;
                         retn->dsrindex |= (0x01 << ARGUS_TRANSPORT_INDEX);
                         break;
@@ -3764,6 +3716,66 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
    return (retn);
 }
 
+static void
+ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const src,
+                             int srclen, struct ArgusTransportStruct *dst,
+                             int major_version)
+{
+   unsigned char subtype;
+
+   if (major_version < MAJOR_VERSION_5)
+      if (srclen >= 12)
+         subtype = src->hdr.subtype | (ARGUS_SRCID | ARGUS_SEQ);
+
+   bzero ((char *)dst, sizeof(struct ArgusTransportStruct));
+   bcopy((char *)&src->hdr, (char *)&dst->hdr, 4);
+   dst->hdr.argus_dsrvl8.len = (sizeof(struct ArgusTransportStruct) + 3) / 4;
+
+   if (src->hdr.subtype & ARGUS_SRCID) {
+      char *iptr = NULL;
+      switch (src->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
+         case ARGUS_TYPE_INT: {
+            dst->srcid.a_un.value = src->srcid.a_un.value;
+            iptr = (char *)&src->srcid.a_un.value + 4;
+            break;
+         }
+
+         default:
+         case ARGUS_TYPE_IPV4: {
+            dst->srcid.a_un.ipv4 = src->srcid.a_un.ipv4;
+            iptr = (char *)&src->srcid.a_un.value + 4;
+            break;
+         }
+         case ARGUS_TYPE_IPV6: {
+            bcopy(src->srcid.a_un.ipv6,
+                  dst->srcid.a_un.ipv6,
+                  sizeof(src->srcid.a_un.ipv6));
+            iptr = (char *)&src->srcid.a_un.value + 16;
+            break;
+         }
+         case ARGUS_TYPE_ETHER: {
+            iptr = (char *)&src->srcid.a_un.value + 8;
+            break;
+         }
+         case ARGUS_TYPE_STRING: {
+            bcopy(src->srcid.a_un.str, dst->srcid.a_un.str, 4);
+            iptr = (char *)&src->srcid.a_un.value + 4;
+            break;
+         }
+         case ARGUS_TYPE_UUID: {
+            bcopy(src->srcid.a_un.uuid, dst->srcid.a_un.uuid, 16);
+            iptr = (char *)&src->srcid.a_un.value + 16;
+            break;
+         }
+      }
+      if (src->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
+         bcopy (iptr, &dst->srcid.inf, 4);
+      }
+   }
+
+   if (subtype & ARGUS_SEQ)
+      dst->seqnum = src->seqnum;
+}
 
 struct ArgusRecordStruct *
 ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
