@@ -428,7 +428,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #define SECOND_PASS	1
 
                if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
-                  for (int pass = 0; pass < 2; pass++) {
+                  int pass;
+
+                  for (pass = 0; pass < 2; pass++) {
                      struct ArgusRecordStruct *tns;
                      switch (pass) {
                          case FIRST_PASS: process = RaAnnualProcess; break;
