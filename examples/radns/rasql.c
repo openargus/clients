@@ -536,7 +536,7 @@ RaSQLQueryTable (char *table)
                   if (ArgusQueryBuffer.rec.hdr.type & ARGUS_MAR) {
                      bcopy (ArgusQueryBuffer.c, (char *)&ArgusInput->ArgusInitCon, sizeof (struct ArgusRecord));
                   } else 
-                     ArgusHandleRecord (ArgusParser, ArgusInput, &ArgusQueryBuffer.rec, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (ArgusParser, ArgusInput, &ArgusQueryBuffer.rec, lengths[x], &ArgusParser->ArgusFilterCode);
                }
             }
          }

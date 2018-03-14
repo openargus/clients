@@ -185,7 +185,7 @@ int RaProcessRecursiveFiles (char *);
 
 int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusHandleDatum (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
-int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
+int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, unsigned long, struct nff_program *);
 int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecordStruct *, struct nff_program *);
 void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 
@@ -290,7 +290,7 @@ extern void setArgusWfile(struct ArgusParserStruct *, char *, char *);
 extern int RaProcessRecursiveFiles (char *);
 extern int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int ArgusHandleDatum (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
-extern int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
+extern int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, unsigned long, struct nff_program *);
 extern int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecordStruct *, struct nff_program *);
 extern void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 extern int ArgusReadRemoteConnection (int, struct nff_program *);

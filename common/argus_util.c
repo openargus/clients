@@ -3143,7 +3143,7 @@ time that needs to lapse */
 char ArgusHandleRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 int
-ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, struct ArgusRecord *ptr, struct nff_program *filter)
+ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, struct ArgusRecord *ptr, unsigned long length, struct nff_program *filter)
 {
    struct ArgusRecordStruct *argus = NULL;
    int retn = 0;
@@ -3152,6 +3152,11 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
       int len = ntohs(ptr->hdr.len) * 4;
       struct nff_insn *fcode = filter->bf_insns;
 
+      if (length && (len > length)) {
+         int hdrlen = (length + 3)/ 4;
+         len = length;
+         ptr->hdr.len = htons(hdrlen);
+      }
       if (len < sizeof(input->ArgusOriginalBuffer)) {
          bcopy ((char *)ptr, (char *)input->ArgusOriginal, len);
 #ifdef _LITTLE_ENDIAN

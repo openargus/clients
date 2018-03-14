@@ -790,7 +790,8 @@ RaSQLQueryTable (char **tables)
 
                      ArgusParser->ArgusAutoId = autoid;
                      bcopy (row[x], sbuf, (int) lengths[x]);
-                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, &ArgusParser->ArgusFilterCode);
+
+                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, lengths[x], &ArgusParser->ArgusFilterCode);
                   }
                }
 

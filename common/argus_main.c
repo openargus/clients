@@ -245,7 +245,7 @@ extern void * ArgusTimeoutProcess (void *);
                      pthread_mutex_unlock(&ArgusParser->lock);
 #endif
                      if (ArgusParser->RaPollMode) {
-                         ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, &ArgusParser->ArgusFilterCode);
+                         ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
                          ArgusCloseInput(ArgusParser, file);  
                      } else {
                         if (file->ostart != -1) {
@@ -253,7 +253,7 @@ extern void * ArgusTimeoutProcess (void *);
                            if (fseek(file->file, file->offset, SEEK_SET) >= 0)
                               ArgusReadFileStream(ArgusParser, file);
                         } else {
-                           ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, &ArgusParser->ArgusFilterCode);
+                           ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
                            ArgusReadFileStream(ArgusParser, file);
                         }
                      }
@@ -370,7 +370,7 @@ extern void * ArgusTimeoutProcess (void *);
                      if (fcntl(addr->fd, F_SETFL, flags | O_NONBLOCK) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 
-                     ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
 
                      if (ArgusParser->RaPollMode) {
                         ArgusCloseInput (ArgusParser, addr);

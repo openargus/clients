@@ -196,7 +196,7 @@ ArgusProcessData (void *arg)
                      parser->ArgusTotalRecords++;
 
                      if (parser->RaPollMode) {
-                         ArgusHandleRecord (parser, file, &file->ArgusInitCon, &parser->ArgusFilterCode);
+                         ArgusHandleRecord (parser, file, &file->ArgusInitCon, 0, &parser->ArgusFilterCode);
                      } else {
                         if (file->ostart != -1) {
                            file->offset = file->ostart;
@@ -270,7 +270,7 @@ ArgusProcessData (void *arg)
                               ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 
                            if (parser->RaPollMode)
-                              ArgusHandleRecord (parser, input, &input->ArgusInitCon, &parser->ArgusFilterCode);
+                              ArgusHandleRecord (parser, input, &input->ArgusInitCon, 0, &parser->ArgusFilterCode);
 
                            ArgusAddToQueue(parser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
                            parser->RaTasksToDo++;

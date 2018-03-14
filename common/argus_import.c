@@ -1690,7 +1690,7 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
 #ifdef _LITTLE_ENDIAN
                      ArgusHtoN(argus);
 #endif
-                     ArgusHandleRecord (parser, input, argus, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (parser, input, argus, 0, &ArgusParser->ArgusFilterCode);
 #ifdef ARGUSDEBUG
                      ArgusDebug (3, "ArgusParseCiscoRecordV9Data (%p, %p, %p, %p, %d) new flow\n", parser, input, templates, sptr, *cnt);
 #endif
@@ -3015,7 +3015,7 @@ ArgusReadCiscoStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput 
                   case CISCO_VERSION_9: {
                      struct ArgusRecord *argus = input->ArgusCiscoNetFlowParse (ArgusParser, input, &input->ArgusReadPtr, NULL);
                      if  (argus != NULL)
-                        if (ArgusHandleRecord (ArgusParser, input, argus, &ArgusParser->ArgusFilterCode) < 0)
+                        if (ArgusHandleRecord (ArgusParser, input, argus, 0, &ArgusParser->ArgusFilterCode) < 0)
                            return(1);
                      break;
                   }
@@ -3254,7 +3254,7 @@ ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *parser, struct ArgusInpu
             }
 
             case ARGUS_READINGBLOCK: {
-               if (ArgusHandleRecord (parser, input, input->ArgusCiscoNetFlowParse (parser, input, &ptr, &count), &ArgusParser->ArgusFilterCode) < 0)
+               if (ArgusHandleRecord (parser, input, input->ArgusCiscoNetFlowParse (parser, input, &ptr, &count), 0, &ArgusParser->ArgusFilterCode) < 0)
                   return(1);
 
                break;

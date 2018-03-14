@@ -244,7 +244,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
 
                   if (rec) {
                      int len;
-                     if ((len = ArgusHandleRecord (ArgusParser, input, rec, &ArgusParser->ArgusFilterCode)) < 0) {
+                     if ((len = ArgusHandleRecord (ArgusParser, input, rec, 0, &ArgusParser->ArgusFilterCode)) < 0) {
                         retn = 1;
                      } else {
                         input->offset += len;
@@ -456,7 +456,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          if (rec && !done && !parser->RaParseDone) {
             int len = 0;
 
-            if ((len = ArgusHandleRecord (ArgusParser, input, rec, &ArgusParser->ArgusFilterCode)) < 0) {
+            if ((len = ArgusHandleRecord (ArgusParser, input, rec, 0, &ArgusParser->ArgusFilterCode)) < 0) {
                switch (len) {
                   case -1: {
                      input->offset += length;
@@ -946,7 +946,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                         ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
       
                      if (ArgusParser->RaPollMode)
-                        ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, &ArgusParser->ArgusFilterCode);
+                        ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
       
                      ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
 #if defined(ARGUS_THREADS)
