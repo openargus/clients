@@ -154,6 +154,8 @@ struct ArgusDomainStruct {
    struct ArgusWindowStruct *ws;
 };
 
+extern struct timeval RaCursesUpdateInterval;
+
 #if defined(RA_CURSES_MAIN)
 
 #if defined(HAVE_ZLIB_H)
@@ -343,7 +345,6 @@ int RaWindowImmediate = 1;
 struct timeval RaCursesStartTime      = {0, 0};
 struct timeval RaCursesStopTime       = {0, 0};
 struct timeval RaCursesUpdateTime     = {1, 0};
-struct timeval RaCursesUpdateInterval = {0, 20000};
 struct timeval RaProbeUptime       = {0, 0};
 
 void clearArgusWfile(struct ArgusParserStruct *);
@@ -562,7 +563,6 @@ extern char RaProgramArgs[MAXSTRLEN];
 extern struct timeval RaCursesStartTime;
 extern struct timeval RaCursesStopTime;
 extern struct timeval RaCursesUpdateTime;
-extern struct timeval RaCursesUpdateInterval;
 extern struct timeval RaProbeUptime;
 
 extern void clearArgusWfile(struct ArgusParserStruct *);

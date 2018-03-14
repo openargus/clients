@@ -114,6 +114,8 @@ int RaCloseBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
 
 extern struct ArgusRecordStruct *ArgusCheckSQLCache(struct ArgusParserStruct *, struct RaBinStruct *, struct ArgusRecordStruct *);
 
+struct timeval RaCursesUpdateInterval = {5, 0};
+
 
 void
 ArgusThreadsInit(pthread_attr_t *attr)
@@ -893,18 +895,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                if (parser->RaPrintAlgorithmList[i]->print == ArgusPrintIdleTime)
                   ArgusAlwaysUpdate++;
 
-         if (parser->RaTasksToDo == RA_IDLE) {
-            RaCursesUpdateInterval.tv_sec  = 1;
-            RaCursesUpdateInterval.tv_usec = 0;
-
-         } else {
-            if ((parser->ArgusUpdateInterval.tv_sec > 0) || (parser->ArgusUpdateInterval.tv_usec > 0)) {
-               RaCursesUpdateInterval.tv_sec  = parser->ArgusUpdateInterval.tv_sec;
-               RaCursesUpdateInterval.tv_usec = parser->ArgusUpdateInterval.tv_usec;
-            } else {
-               RaCursesUpdateInterval.tv_sec  = 10;
-               RaCursesUpdateInterval.tv_usec = 0;
-            }
+         if ((parser->ArgusUpdateInterval.tv_sec > 0) || (parser->ArgusUpdateInterval.tv_usec > 0)) {
+            RaCursesUpdateInterval.tv_sec  = parser->ArgusUpdateInterval.tv_sec;
+            RaCursesUpdateInterval.tv_usec = parser->ArgusUpdateInterval.tv_usec;
          }
 
          if (ArgusCursesEnabled)
