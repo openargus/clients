@@ -23519,9 +23519,9 @@ ArgusDebug (int d, char *fmt, ...)
       (void) snprintf_append(buf, &len, &remain, "%s[%d]: ",
                              ArgusParser->ArgusProgramName, (int)getpid());
 #endif
-      ArgusPrintTime(ArgusParser, &buf[len], remain, &tvp);
-      len = strlen(buf);
-      remain = sizeof(buf) - len;
+      c = ArgusPrintTime(ArgusParser, &buf[len], remain, &tvp);
+      len += c;
+      remain -= c;
       snprintf_append(buf, &len, &remain, " ");
 
 #if defined(__STDC__)
