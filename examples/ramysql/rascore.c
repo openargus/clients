@@ -2142,7 +2142,9 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
 
    if (retn != NULL) {
       char *sptr, *str;
-      char *base, *year, *month;
+      char *base = NULL;
+      char *year = NULL;
+      char *month = NULL;
       int n = 0;
 
       char RaAnnualBaseLineTable[256];
