@@ -7119,16 +7119,17 @@ ArgusPrintCor (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
                if (trans != NULL) {
                   switch (trans->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
                      case ARGUS_TYPE_INT: {
-                        snprintf (strbuf, sizeof(strbuf), "%d", srcid->a_un.value);
+                        snprintf (strbuf, sizeof(strbuf), "%d", trans->srcid.a_un.value);
                         value = strdup(strbuf);
                         break;
                      }
-                     case ARGUS_TYPE_STRING: value = ArgusGetString(parser, (u_char *)srcid->a_un.str, 4); break;
+                     case ARGUS_TYPE_STRING: value = ArgusGetString(parser, (u_char *)&trans->srcid.a_un.str, 4); break;
+                     case ARGUS_TYPE_UUID:   value = ArgusGetUuidString(parser, (u_char *)&trans->srcid.a_un.uuid, 16); break;
 
                      default:
-                     case ARGUS_TYPE_IPV4:   value =   strdup(ArgusGetName(parser, (u_char *)&srcid->a_un.ipv4)); break;
-//                   case ARGUS_TYPE_IPV6:   value = ArgusGetV6Name(parser, (u_char *)&srcid->ipv6); break;
-//                   case ARGUS_TYPE_ETHER:  value = ArgusGetEtherName(parser, (u_char *)&srcid->ether); break;
+                     case ARGUS_TYPE_IPV4:   value =   strdup(ArgusGetName(parser, (u_char *)&trans->srcid.a_un.ipv4)); break;
+                     case ARGUS_TYPE_IPV6:   value = ArgusGetV6Name(parser, (u_char *)&trans->srcid.a_un.ipv6); break;
+//                   case ARGUS_TYPE_ETHER:  value = ArgusGetEtherName(parser, (u_char *)&trans->srcid.a_un.ether); break;
                   }
                   if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
                      char inf[8];
