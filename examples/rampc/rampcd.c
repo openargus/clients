@@ -213,6 +213,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*RaBinProcess))) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
+      ArgusParser->RaBinProcess = RaBinProcess;
+
 #if defined(ARGUS_THREADS)
       pthread_mutex_init(&RaBinProcess->lock, NULL);
 #endif
@@ -736,7 +738,6 @@ RaParseComplete (int sig)
          if (rbps) {
             RaCloseBinProcess(ArgusParser, rbps);
             RaDeleteBinProcess(ArgusParser, rbps);
-            ArgusParser->RaBinProcess = NULL;
          }
 
 #ifdef ARGUSDEBUG
