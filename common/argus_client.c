@@ -6084,8 +6084,11 @@ ArgusGenerateHintStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                                     if (tcp->src.seqbase != 0) {
                                        bcopy((char *)&tcp->src.seqbase, ptr, sizeof(tcp->src.seqbase));
                                        ptr += sizeof(tcp->src.seqbase);
-                                       bcopy((char *)&flow->ip_flow.ip_dst, ptr, 4);
-                                       len = 8;
+                                       len += sizeof(tcp->src.seqbase);
+
+                                       bcopy((char *)&flow->ip_flow.ip_p, ptr, 1);
+                                       ptr += sizeof(flow->ip_flow.ip_p);
+                                       len += sizeof(flow->ip_flow.ip_p);
                                     }
                                     break;
                                  }
@@ -6096,25 +6099,31 @@ ArgusGenerateHintStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
 
                         case IPPROTO_UDP: {
                            struct ArgusIPAttrStruct *attr = (void *) ns->dsrs[ARGUS_IPATTR_INDEX];
-                           if (attr != NULL) {
+
+                           if ((attr != NULL) && (attr->src.ip_id != 0)) {
                               bcopy((char *)&attr->src.ip_id, ptr, sizeof(attr->src.ip_id));
                               ptr += sizeof(attr->src.ip_id);
                               len += sizeof(attr->src.ip_id);
+
+                              bcopy((char *)&flow->ip_flow.dport, ptr, sizeof(flow->ip_flow.dport));
+                              len += sizeof(flow->ip_flow.dport);
+                              ptr += sizeof(flow->ip_flow.dport);
                            }
-                           bcopy((char *)&flow->ip_flow.ip_dst, ptr, 4);
-                           len += 4;
-                           ptr += 4;
-                           bcopy((char *)&flow->ip_flow.dport, ptr, sizeof(flow->ip_flow.dport));
-                           len += sizeof(flow->ip_flow.dport);
-                           ptr += sizeof(flow->ip_flow.dport);
                            break;
                         }
 
                         case IPPROTO_ICMP: {
-                           int ilen = (sizeof(struct ArgusICMPFlow) - sizeof(flow->icmp_flow.ip_src));
-                           bcopy((char *)&flow->icmp_flow.ip_dst, ptr, ilen);
-                           len += ilen;
-                           ptr += ilen;
+                           bcopy((char *)&flow->icmp_flow.ip_p, ptr++, 1); len++;
+                           bcopy((char *)&flow->icmp_flow.tp_p, ptr++, 1); len++;
+                           bcopy((char *)&flow->icmp_flow.type, ptr++, 1); len++;
+                           bcopy((char *)&flow->icmp_flow.code, ptr++, 1); len++;
+
+                           bcopy((char *)&flow->icmp_flow.id, ptr, sizeof(flow->icmp_flow.id));
+                           ptr += sizeof(flow->icmp_flow.id);
+                           len += sizeof(flow->icmp_flow.id);
+                           bcopy((char *)&flow->icmp_flow.ip_id, ptr, sizeof(flow->icmp_flow.ip_id));
+                           ptr += sizeof(flow->icmp_flow.ip_id);
+                           len += sizeof(flow->icmp_flow.id);
                            break;
                         }
                      }
