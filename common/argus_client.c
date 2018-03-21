@@ -3064,7 +3064,8 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         struct ArgusDataStruct *user = (struct ArgusDataStruct *) dsr;
 
                         if (subtype & ARGUS_LEN_16BITS) {
-                           int datasz = sizeof(input->ArgusSrcUserData);
+                           int usersz = sizeof(input->ArgusSrcUserData);
+                           int datasz = sizeof(input->ArgusSrcUserData) - 8;
 
                            if (user->hdr.argus_dsrvl16.len == 0)
                               ArgusLog (LOG_ERR, "ArgusGenerateRecordStruct: pre ARGUS_DATA_DSR len is zero");
@@ -3072,19 +3073,26 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                            if (subtype & ARGUS_SRC_DATA) {
 //                            bzero(input->ArgusSrcUserData, sizeof(input->ArgusSrcUserData));
                               retn->dsrs[ARGUS_SRCUSERDATA_INDEX] = (struct ArgusDSRHeader *)input->ArgusSrcUserData;
-                              bcopy (user, retn->dsrs[ARGUS_SRCUSERDATA_INDEX], (cnt > datasz) ? datasz : cnt);
 
-                              if ((datasz - cnt) > 0)
-                                 bzero (&input->ArgusSrcUserData[cnt], ((datasz - cnt) > 32) ? 32 : (datasz - cnt));
+                              if (user->size > datasz)   user->size = datasz; 
+                              if (user->count > datasz) user->count = datasz; 
+
+                              bcopy (user, retn->dsrs[ARGUS_SRCUSERDATA_INDEX], (cnt > usersz) ? usersz : cnt);
+
+                              if ((usersz - cnt) > 0)
+                                 bzero (&input->ArgusSrcUserData[cnt], ((usersz - cnt) > 32) ? 32 : (usersz - cnt));
 
                               retn->dsrindex |= (0x01 << ARGUS_SRCUSERDATA_INDEX);
                            } else {
 //                            bzero(input->ArgusDstUserData, sizeof(input->ArgusDstUserData));
                               retn->dsrs[ARGUS_DSTUSERDATA_INDEX] = (struct ArgusDSRHeader *)input->ArgusDstUserData;
-                              bcopy (user, retn->dsrs[ARGUS_DSTUSERDATA_INDEX], (cnt > datasz) ? datasz : cnt);
+                              if (user->size > datasz)   user->size = datasz; 
+                              if (user->count > datasz) user->count = datasz; 
 
-                              if ((datasz - cnt) > 0)
-                                 bzero (&input->ArgusDstUserData[cnt], ((datasz - cnt) > 32) ? 32 : (datasz - cnt));
+                              bcopy (user, retn->dsrs[ARGUS_DSTUSERDATA_INDEX], (cnt > usersz) ? usersz : cnt);
+
+                              if ((usersz - cnt) > 0)
+                                 bzero (&input->ArgusDstUserData[cnt], ((usersz - cnt) > 32) ? 32 : (usersz - cnt));
 
                               retn->dsrindex |= (0x01 << ARGUS_DSTUSERDATA_INDEX);
                            }
@@ -8888,12 +8896,19 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         struct ArgusDataStruct *d2 = (struct ArgusDataStruct *) ns2->dsrs[i];
 
                         if (d1 && d2) {
-                           int tlen = d1->size - d1->count;
-                           tlen = (tlen > d2->count) ? d2->count : tlen;
-                           if (tlen > 0) {
-                              bcopy(d2->array, &d1->array[d1->count], tlen);
-                              d1->count += tlen;
+                           int t1len = d1->size - d1->count;
+                           int t2len = d2->size - d2->count;
+
+                           if (t1len < 0) { d1->count = d1->size; t1len = 0; }
+                           if (t2len < 0) { d2->count = d2->size; t2len = 0; }
+
+                           t1len = (t1len > d2->count) ? d2->count : t1len;
+
+                           if (t1len > 0) {
+                              bcopy(d2->array, &d1->array[d1->count], t1len);
+                              d1->count += t1len;
                            }
+
                         } else
                         if (!d1 && d2) {
                            struct ArgusDataStruct *t2;
@@ -8905,6 +8920,7 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
 
                            bcopy ((char *)d2, (char *)t2, len * 4);
                            t2->size  = (len - 2) * 4;
+                           t2->count  = (len - 2) * 4;
                            ns1->dsrs[i] = (struct ArgusDSRHeader *) t2;
                            ns1->dsrindex |= (0x01 << i);
                         }
