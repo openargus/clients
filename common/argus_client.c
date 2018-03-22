@@ -3939,6 +3939,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                   }
                }
 
+               retn->score   = rec->score;
                retn->dur     = rec->dur;
                retn->srate   = rec->srate;
                retn->drate   = rec->drate;
