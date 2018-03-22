@@ -335,6 +335,10 @@ RaProcessBaselineData (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
+   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+   int retn = 0;
+
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
          RaProcessThisRecord (parser, argus);
@@ -352,6 +356,33 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             parser->ArgusTotalPkts  += metric->dst.pkts;
             parser->ArgusTotalBytes += metric->src.bytes;
             parser->ArgusTotalBytes += metric->dst.bytes;
+         }
+
+         if (flow) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4:
+                        if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
+                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
+                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH);
+                        break;
+                     case ARGUS_TYPE_IPV6:
+                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
+                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
+                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                        break;
+                  }
+                  break;
+               }
+            }
+         }
+
+         if (retn > 0) {
+            argus->score = 15;
          }
 
          if (parser->RaMonMode) {
@@ -1522,12 +1553,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       else
          parser->ArgusReverse = 0;
 
-      if (parser->ArgusFlowModelFile) {
-         if ((parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseAggregator error");
+      if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
-      } else
-         parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
+      if (parser->ArgusFlowModelFile)
+         if ((parser->ArgusLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
       parser->ArgusDirectionFunction = 0;
       if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
