@@ -9184,6 +9184,9 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                   }
                }
 
+               if (ns1->score > ns2->score)
+                  ns1->score = ns2->score;
+
                ns1->status |= ARGUS_RECORD_MODIFIED;
                break;
             }
