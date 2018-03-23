@@ -3745,7 +3745,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                if (retn->dsrs[ARGUS_SCORE_INDEX]) {
                   struct ArgusScoreStruct *score = (struct ArgusScoreStruct *) retn->dsrs[ARGUS_SCORE_INDEX];
-                  if (score->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
+                  if (score && (score->hdr.subtype == ARGUS_BEHAVIOR_SCORE)) {
                      retn->score = score->behvScore.values[0];
                   }
                }
@@ -9139,8 +9139,9 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         } else {
                            if (a2 && (a1 == NULL)) {
                               ns1->dsrs[ARGUS_BEHAVIOR_INDEX] = calloc(1, sizeof(struct ArgusBehaviorStruct));
-                              a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
+                              ns1->dsrindex |= (0x01 << ARGUS_BEHAVIOR_INDEX);
 
+                              a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
                               bcopy(a2, a1, sizeof(*a2));
                            }
                         }
@@ -9151,17 +9152,26 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         struct ArgusScoreStruct *s1 = (void *) ns1->dsrs[ARGUS_SCORE_INDEX];
                         struct ArgusScoreStruct *s2 = (void *) ns2->dsrs[ARGUS_SCORE_INDEX];
                         
-                        if (s1 && s2) {
-                           if (s1->hdr.subtype == s2->hdr.subtype) {
-                              switch (s1->hdr.subtype) {
-                                 case ARGUS_BEHAVIOR_SCORE: {
-                                    int i;
-                                    for (i = 0; i < 8; i++) {
-                                       if (s2->behvScore.values[i] > s1->behvScore.values[i])
-                                          s1->behvScore.values[i] = s2->behvScore.values[i];
+                        if (s1 || s2) {
+                           if (s1 && s2) {
+                              if (s1->hdr.subtype == s2->hdr.subtype) {
+                                 switch (s1->hdr.subtype) {
+                                    case ARGUS_BEHAVIOR_SCORE: {
+                                       int i;
+                                       for (i = 0; i < 8; i++) {
+                                          if (s2->behvScore.values[i] > s1->behvScore.values[i])
+                                             s1->behvScore.values[i] = s2->behvScore.values[i];
+                                       }
                                     }
                                  }
                               }
+                           } else 
+                           if (!s1 && s2) {
+                              ns1->dsrs[ARGUS_SCORE_INDEX] = calloc(1, sizeof(struct ArgusScoreStruct));
+                              ns1->dsrindex |= (0x01 << ARGUS_SCORE_INDEX);
+
+                              s1 = (void *) ns1->dsrs[ARGUS_SCORE_INDEX];
+                              bcopy(s2, s1, sizeof(*s2));
                            }
                         }
                         break;
