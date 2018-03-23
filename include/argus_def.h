@@ -305,7 +305,7 @@ extern "C" {
  
 /* Argus Record Data Specific Record (DSR) Types */
 
-#define ARGUSMAXDSRTYPE				25
+#define ARGUSMAXDSRTYPE				27
 
 /* Argus Data Specific Record (DSR) Formats
       There are two types of DSR, 1) a Type Value (TV) record
@@ -1734,7 +1734,7 @@ extern "C" {
 
 /* Argus Score DSR Type */
 #define ARGUS_SCORE_DSR                 0x55
-#define ARGUS_SCORE_INDEX               25
+#define ARGUS_SCORE_INDEX               26
 
 /* Argus Behavior DSR SubTypes */
 #define ARGUS_BEHAVIOR_KEYSTROKE      	0x00
