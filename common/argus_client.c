@@ -1632,6 +1632,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
       canon->time.hdr.argus_dsrvl8.len = (sizeof(canon->time) + 3)/4;
       retn->dsrindex |= (0x01 << ARGUS_TIME_INDEX);
 
+      retn->score =  0;
       retn->sload =  0.0;
       retn->dload =  0.0;
       retn->srate =  0.0;
@@ -1647,6 +1648,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
       retn->status   = 0;
       retn->dsrindex = 0;
+      retn->score    = 0;
       retn->input = input;
 
       retn->sload =  0.0;
