@@ -1729,8 +1729,12 @@ extern "C" {
 #define ARGUS_ICMP_INDEX		14
 
 /* Argus Behavior DSR Type */
-#define ARGUS_BEHAVIOR_DSR               0x54
-#define ARGUS_BEHAVIOR_INDEX             17
+#define ARGUS_BEHAVIOR_DSR              0x54
+#define ARGUS_BEHAVIOR_INDEX            17
+
+/* Argus Score DSR Type */
+#define ARGUS_SCORE_DSR                 0x55
+#define ARGUS_SCORE_INDEX               25
 
 /* Argus Behavior DSR SubTypes */
 #define ARGUS_BEHAVIOR_KEYSTROKE      	0x00

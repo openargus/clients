@@ -8467,12 +8467,12 @@ ArgusPrintScore (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
-         struct ArgusBehaviorStruct *actor = (void *)argus->dsrs[ARGUS_BEHAVIOR_INDEX];
-         if (actor != NULL) {
-            if (actor->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
-               int score = actor->behvScore.values[0];
-               if (score > argus->score) {
-                  argus->score = score;
+         struct ArgusScoreStruct *scr = (void *)argus->dsrs[ARGUS_SCORE_INDEX];
+         if (scr != NULL) {
+            if (scr->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
+               int value = scr->behvScore.values[0];
+               if (value > argus->score) {
+                  argus->score = value;
                }
             }
          }
@@ -24288,6 +24288,9 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
+                  case ARGUS_SCORE_DSR:
+                     break;
+
                   case ARGUS_LOCAL_DSR: {
                      struct ArgusNetspatialStruct *nss = (struct ArgusNetspatialStruct *) dsr;
                      nss->status = ntohs(nss->status);
@@ -24911,6 +24914,9 @@ ArgusHtoN (struct ArgusRecord *argus)
                      }
                      break;
                   }
+
+                  case ARGUS_SCORE_DSR:
+                     break;
 
                   case ARGUS_LOCAL_DSR: {
                      struct ArgusNetspatialStruct *nss = (struct ArgusNetspatialStruct *) dsr;
@@ -30337,6 +30343,8 @@ ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)
 #define ARGUS_ASN_INDEX                 21
 #define ARGUS_GEO_INDEX                 22
 #define ARGUS_LOCAL_INDEX               23
+#define ARGUS_FLOW_HASH_INDEX           24
+#define ARGUS_SCORE_INDEX               25
 */
 
 char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
@@ -30364,6 +30372,8 @@ char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
    "asn",
    "geo",
    "local",
+   "hash",
+   "score",
 };
 
 

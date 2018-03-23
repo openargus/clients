@@ -882,7 +882,7 @@ struct ArgusKeyStrokeStruct {
    struct ArgusKeyStrokeMetrics src, dst;
 };
 
-struct ArgusScoreStruct {
+struct ArgusScoreObject {
    u_char values[8];
 };
  
@@ -890,12 +890,18 @@ struct ArgusBehaviorStruct {
    struct ArgusDSRHeader hdr;
    union {
       struct ArgusKeyStrokeStruct keyStroke;
-      struct ArgusScoreStruct score;
    } behavior_union;
+};
+
+struct ArgusScoreStruct {
+   struct ArgusDSRHeader hdr;
+   union {
+      struct ArgusScoreObject score;
+   } score_union;
 };
  
 #define keyStroke behavior_union.keyStroke
-#define behvScore behavior_union.score
+#define behvScore score_union.score
 
 struct ArgusJitterObject {
    struct ArgusOutputStatObject act, idle;
@@ -1048,6 +1054,7 @@ struct ArgusCanonRecord {
    struct ArgusNetspatialStruct  local;
    struct ArgusLabelStruct       label;
    struct ArgusDataStruct        data;
+   struct ArgusScoreStruct       score;
 };
 
 struct ArgusEventStruct {

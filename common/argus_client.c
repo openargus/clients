@@ -3018,6 +3018,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
+                     case ARGUS_SCORE_DSR: {
+                        struct ArgusScoreStruct *score = (struct ArgusScoreStruct *) dsr;
+                        bcopy((char *)score, (char *)&canon->score, sizeof(*score));
+                        retn->dsrs[ARGUS_SCORE_INDEX] = (struct ArgusDSRHeader*) &canon->score;
+                        retn->dsrindex |= (0x01 << ARGUS_SCORE_INDEX);
+                        break;
+                     }
+
                      case ARGUS_COCODE_DSR: {
                         struct ArgusCountryCodeStruct *cocode = (struct ArgusCountryCodeStruct *) dsr;
                         bcopy((char *)cocode, (char *)&canon->cocode, sizeof(*cocode));
@@ -3735,11 +3743,10 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   }
                }
 
-               if (retn->dsrs[ARGUS_BEHAVIOR_INDEX]) {
-                  struct ArgusBehaviorStruct *actor = (struct ArgusBehaviorStruct *) retn->dsrs[ARGUS_BEHAVIOR_INDEX];
-
-                  if (actor->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
-                     retn->score = actor->behvScore.values[0];
+               if (retn->dsrs[ARGUS_SCORE_INDEX]) {
+                  struct ArgusScoreStruct *score = (struct ArgusScoreStruct *) retn->dsrs[ARGUS_SCORE_INDEX];
+                  if (score->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
+                     retn->score = score->behvScore.values[0];
                   }
                }
             }
@@ -3814,6 +3821,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                            case ARGUS_ASN_INDEX:
                            case ARGUS_AGR_INDEX:
                            case ARGUS_BEHAVIOR_INDEX:
+                           case ARGUS_SCORE_INDEX:
                            case ARGUS_COCODE_INDEX:
                            case ARGUS_COR_INDEX: 
                            case ARGUS_GEO_INDEX: 
@@ -9120,17 +9128,10 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         if (a1 && a2) {
                            if (a1->hdr.subtype == a2->hdr.subtype) {
                               switch (a1->hdr.subtype) {
-                                 case ARGUS_BEHAVIOR_KEYSTROKE:
+                                 case ARGUS_BEHAVIOR_KEYSTROKE: {
                                     a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
                                     a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
                                     break;
-
-                                 case ARGUS_BEHAVIOR_SCORE: {
-                                    int i;
-                                    for (i = 0; i < 8; i++) {
-                                       if (a2->behvScore.values[i] > a1->behvScore.values[i])
-                                          a1->behvScore.values[i] = a2->behvScore.values[i];
-                                    }
                                  }
                               }
                            }
@@ -9141,6 +9142,26 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                               a1 = (void *) ns1->dsrs[ARGUS_BEHAVIOR_INDEX];
 
                               bcopy(a2, a1, sizeof(*a2));
+                           }
+                        }
+                        break;
+                     }
+
+                     case ARGUS_SCORE_INDEX: {
+                        struct ArgusScoreStruct *s1 = (void *) ns1->dsrs[ARGUS_SCORE_INDEX];
+                        struct ArgusScoreStruct *s2 = (void *) ns2->dsrs[ARGUS_SCORE_INDEX];
+                        
+                        if (s1 && s2) {
+                           if (s1->hdr.subtype == s2->hdr.subtype) {
+                              switch (s1->hdr.subtype) {
+                                 case ARGUS_BEHAVIOR_SCORE: {
+                                    int i;
+                                    for (i = 0; i < 8; i++) {
+                                       if (s2->behvScore.values[i] > s1->behvScore.values[i])
+                                          s1->behvScore.values[i] = s2->behvScore.values[i];
+                                    }
+                                 }
+                              }
                            }
                         }
                         break;
