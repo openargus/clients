@@ -1058,69 +1058,69 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                }
             }
          }
+      }
 
-      } else {
-         if (!ArgusParser->qflag) {
-            char buf[MAXSTRLEN];
+   } else {
+      if (!ArgusParser->qflag) {
+         char buf[MAXSTRLEN];
 
-            if (!(ArgusParser->ArgusPrintJson) && (ArgusParser->Lflag)) {
-               if (ArgusParser->RaLabel == NULL)
-                  ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, argus);
+         if (!(ArgusParser->ArgusPrintJson) && (ArgusParser->Lflag)) {
+            if (ArgusParser->RaLabel == NULL)
+               ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, argus);
  
-               if (!(ArgusParser->RaLabelCounter++ % ArgusParser->Lflag))
-                  printf ("%s\n", ArgusParser->RaLabel);
+            if (!(ArgusParser->RaLabelCounter++ % ArgusParser->Lflag))
+               printf ("%s\n", ArgusParser->RaLabel);
  
-               if (ArgusParser->Lflag < 0)
-                  ArgusParser->Lflag = 0;
-            }
-
-            buf[0] = 0;
-            ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete (SIGQUIT);
-
-            if (ArgusParser->eflag == ARGUS_HEXDUMP) {
-               int i;
-               for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-                  if (ArgusParser->RaPrintAlgorithmList[i] != NULL) {
-                     struct ArgusDataStruct *user = NULL;
-                     if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintSrcUserData) {
-                        int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
-                        if (len > 0) {
-                           if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX]) != NULL) {
-                              if (user->hdr.type == ARGUS_DATA_DSR) {
-                                 slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-                              } else
-                                 slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
-
-                              slen = (user->count < slen) ? user->count : slen;
-                              slen = (slen > len) ? len : slen;
-                              ArgusDump ((const u_char *) &user->array, slen, "      ");
-                           }
-                        }
-                     }
-                     if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintDstUserData) {
-                        int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
-                        if (len > 0) {
-                           if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX]) != NULL) {
-                              if (user->hdr.type == ARGUS_DATA_DSR) {
-                                 slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-                              } else
-                                 slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
-
-                              slen = (user->count < slen) ? user->count : slen;
-                              slen = (slen > len) ? len : slen;
-                              ArgusDump ((const u_char *) &user->array, slen, "      ");
-                           }
-                        }
-                     }
-                  } else
-                     break;
-               }
-            }
-            fflush(stdout);
+            if (ArgusParser->Lflag < 0)
+               ArgusParser->Lflag = 0;
          }
+
+         buf[0] = 0;
+         ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
+
+         if (fprintf (stdout, "%s\n", buf) < 0)
+            RaParseComplete (SIGQUIT);
+
+         if (ArgusParser->eflag == ARGUS_HEXDUMP) {
+            int i;
+            for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+               if (ArgusParser->RaPrintAlgorithmList[i] != NULL) {
+                  struct ArgusDataStruct *user = NULL;
+                  if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintSrcUserData) {
+                     int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
+                     if (len > 0) {
+                        if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX]) != NULL) {
+                           if (user->hdr.type == ARGUS_DATA_DSR) {
+                              slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
+                           } else
+                              slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
+
+                           slen = (user->count < slen) ? user->count : slen;
+                           slen = (slen > len) ? len : slen;
+                           ArgusDump ((const u_char *) &user->array, slen, "      ");
+                        }
+                     }
+                  }
+                  if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintDstUserData) {
+                     int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
+                     if (len > 0) {
+                        if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX]) != NULL) {
+                           if (user->hdr.type == ARGUS_DATA_DSR) {
+                              slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
+                           } else
+                              slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
+
+                           slen = (user->count < slen) ? user->count : slen;
+                           slen = (slen > len) ? len : slen;
+                           ArgusDump ((const u_char *) &user->array, slen, "      ");
+                        }
+                     }
+                  }
+               } else
+                  break;
+            }
+         }
+         fflush(stdout);
       }
    }
 
