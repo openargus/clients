@@ -7631,23 +7631,26 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                double deltaDstTime = 0.0;
 
                if ((ns1time && ns2time) && (ns1metric && ns2metric)) {
-                  long long nst1, nst2;
-                  nst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
-                  nst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
+                  double stime1 = ArgusFetchStartuSecTime(ns1);
+                  double stime2 = ArgusFetchStartuSecTime(ns2);
+                  double ltime1 = ArgusFetchLastuSecTime(ns1);
+                  double ltime2 = ArgusFetchLastuSecTime(ns2);
 
-                  if ((deltaTime = (nst2 - nst1) * 1.00) < 0.0)
-                     deltaTime = -deltaTime;
+                  double dt1 = fabs(stime2 - ltime1);
+                  double dt2 = fabs(stime1 - ltime2);
+
+                  double snst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
+                  double dnst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
+                  double snst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
+                  double dnst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
+
+                  deltaTime = ((dt1 < dt2) ? dt1 : dt2)/1000000.0;
 
                   if (ns1metric->src.pkts && ns2metric->src.pkts)
-                     if ((deltaSrcTime = (nst2 - nst1) * 1.00) < 0.0)
-                        deltaSrcTime = -deltaSrcTime;
-
-                  nst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
-                  nst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
+                     deltaSrcTime = fabs(snst1 - snst2)/1000000.0;
 
                   if (ns1metric->dst.pkts && ns2metric->dst.pkts)
-                     if ((deltaDstTime = (nst2 - nst1) * 1.00) < 0.0)
-                        deltaDstTime = -deltaDstTime;
+                     deltaDstTime = fabs(dnst1 - dnst2)/1000000.0;
                }
 
                ns1->status &= ~ARGUS_RECORD_WRITTEN; 
