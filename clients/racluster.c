@@ -1029,14 +1029,15 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (argus->status & ARGUS_RECORD_WRITTEN)
       return (retn);
 
-   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+   if (ArgusParser->ArgusWfileList != NULL) {
+      struct ArgusWfileStruct *wfile = NULL;
+      struct ArgusListObjectStruct *lobj = NULL;
+      int i, count = ArgusParser->ArgusWfileList->count;
+
+      if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
 #ifdef _LITTLE_ENDIAN
-      ArgusHtoN(argusrec);
+         ArgusHtoN(argusrec);
 #endif
-      if (ArgusParser->ArgusWfileList != NULL) {
-         struct ArgusWfileStruct *wfile = NULL;
-         struct ArgusListObjectStruct *lobj = NULL;
-         int i, count = ArgusParser->ArgusWfileList->count;
  
          if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
             for (i = 0; i < count; i++) {
