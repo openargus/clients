@@ -691,14 +691,28 @@ RaMySQLInit ()
 void
 RaSQLQueryTable (char **tables)
 {
-   char ArgusSQLStatement[MAXSTRLEN];
-   char buf[MAXARGUSRECORD], sbuf[MAXARGUSRECORD], *table;
+   char *ArgusSQLStatement;
+   char *buf, *sbuf, *table;
    MYSQL_RES *mysqlRes;
    struct timeval now;
    int retn, x, i;
 
    if ((ArgusInput = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) == NULL)
       ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+   ArgusSQLStatement = ArgusMalloc(MAXSTRLEN);
+   if (ArgusSQLStatement == NULL)
+      ArgusLog(LOG_ERR, "unable to allocate ArgusSQLStatement: %s", strerror(errno));
+   *ArgusSQLStatement = 0;
+
+   buf = ArgusMalloc(MAXARGUSRECORD);
+   if (buf == NULL)
+      ArgusLog(LOG_ERR, "unable to allocate buf: %s", strerror(errno));
+   *buf = 0;
+
+   sbuf = ArgusMalloc(MAXARGUSRECORD);
+   if (sbuf == NULL)
+      ArgusLog(LOG_ERR, "unable to allocate sbuf: %s", strerror(errno));
 
    ArgusInput->fd            = -1;
    ArgusInput->ArgusOriginal = (struct ArgusRecord *)&ArgusInput->ArgusOriginalBuffer;
@@ -779,7 +793,7 @@ RaSQLQueryTable (char **tables)
                      unsigned long *lengths = mysql_fetch_lengths(mysqlRes);
                      int autoid = 0;
 
-                     bzero(sbuf, sizeof(sbuf));
+                     bzero(sbuf, MAXARGUSRECORD);
                      if (ArgusAutoId && (retn > 1)) {
                         char *endptr;
                         autoid = strtol(row[0], &endptr, 10);
@@ -792,7 +806,7 @@ RaSQLQueryTable (char **tables)
                      ArgusParser->ArgusAutoId = autoid;
                      bcopy (row[x], sbuf, (int) lengths[x]);
 
-                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)&sbuf, lengths[x], &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)sbuf, lengths[x], &ArgusParser->ArgusFilterCode);
                   }
                }
 
@@ -810,6 +824,10 @@ RaSQLQueryTable (char **tables)
          }
       }
    }
+
+   ArgusFree(buf);
+   ArgusFree(sbuf);
+   ArgusFree(ArgusSQLStatement);
 }
 
 void
