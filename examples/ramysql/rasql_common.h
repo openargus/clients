@@ -5,10 +5,15 @@
 #  include "argus_config.h"
 # endif
 
+#include <mysql.h>
+#include <mysqld_error.h>
+
 # include "argus_util.h"
 # include "argus_parser.h"
 # include "argus_client.h"
 # include "rasplit.h"
+
+#define ARGUSSQLMAXCOLUMNS	256
 
 char **
 ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
@@ -17,5 +22,8 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
                               int ArgusSQLSecondsTable,
                               const struct ArgusAdjustStruct * const nadp,
                               const char * const table);
+
+void
+RaSQLQueryTable (MYSQL *, const char **, int, int, const char **); 
 
 #endif
