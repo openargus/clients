@@ -88,7 +88,8 @@ YACC = @V_YACC@
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
 
-SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c
+SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c \
+	rasql_common.c
 
 PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf
 
@@ -97,8 +98,8 @@ all: $(PROGS)
 $(INSTALLBIN)/rascore: rascore.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
-$(INSTALLBIN)/rasql: rasql.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasql.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+$(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
+	$(CC) $(CCOPT) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB)
 	$(CC) $(CCOPT) -o $@ raclient.o rasqlinsert.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB) $(CURSESLIB)
