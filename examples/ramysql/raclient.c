@@ -53,8 +53,11 @@
 #define ARGUS_SQL_SELECT        0x0200000
 #define ARGUS_SQL_UPDATE        0x0400000
 #define ARGUS_SQL_DELETE        0x0800000
+#define ARGUS_SQL_REWRITE       0x1000000
 
-#define ARGUS_SQL_STATUS        (ARGUS_SQL_INSERT | ARGUS_SQL_SELECT | ARGUS_SQL_UPDATE | ARGUS_SQL_DELETE)
+#define ARGUS_SQL_STATUS        (ARGUS_SQL_INSERT | ARGUS_SQL_SELECT | \
+                                 ARGUS_SQL_UPDATE | ARGUS_SQL_DELETE | \
+                                 ARGUS_SQL_REWRITE)
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -83,6 +86,7 @@ extern int RaSQLDBDeletes;
 extern int ArgusDropTable;
 extern int ArgusCreateTable;
 extern int RaSQLCacheDB;
+extern int RaSQLRewrite;
 
 extern long long ArgusTotalSQLSearches;
 extern long long ArgusTotalSQLUpdates;
@@ -714,6 +718,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   }
 
                } else {
+                  if (!strncasecmp (mode->mode, "rewrite", 7)) {
+                     parser->RaCumulativeMerge = 0;
+                     RaSQLRewrite = 1;
+                     RaSQLDBDeletes = 0;
+                  } else
                   if (!(strncasecmp (mode->mode, "cache", 5))) {
                      RaSQLCacheDB = 1;
                      RaSQLDBDeletes = 0;
@@ -804,6 +813,34 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                }
                mode = mode->nxt;
             }
+         }
+
+         if (RaSQLRewrite) {
+            /* If rewriting tables, make sure there are no contradictory
+             * cmdline parameters.
+             */
+            if (RaSQLCacheDB)
+               ArgusLog(LOG_ERR, "cache and rewrite modes are mutually exclusive\n");
+            if (ArgusDropTable)
+               ArgusLog(LOG_ERR, "drop and rewrite modes are mutually exclusive\n");
+            if (parser->ArgusRemoteHosts) {
+               MUTEX_LOCK(&parser->ArgusRemoteHosts->lock);
+               if (parser->ArgusRemoteHosts->count > 0)
+                  ArgusLog(LOG_ERR, "cannot rewrite records from remote host\n");
+               MUTEX_UNLOCK(&parser->ArgusRemoteHosts->lock);
+            }
+            if (parser->ArgusInputFileCount > 0)
+               ArgusLog(LOG_ERR, "cannot rewrite records from file.\n");
+
+            if (parser->sflag)
+               ArgusLog(LOG_WARNING,
+                        "Fields specified with -s ignored during rewrite\n");
+
+            /* Read and write from the same table(s) */
+            if (parser->readDbstr)
+               free(parser->readDbstr);
+            parser->readDbstr = strdup(parser->writeDbstr);
+            ArgusAddFileList (parser, parser->readDbstr, ARGUS_DATA_SOURCE, -1, -1);
          }
 
          if (parser->ArgusFlowModelFile)
@@ -1544,7 +1581,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          tbl = RaSQLSaveTable;
       
       if (tbl != NULL) {
-         argus->status |= ARGUS_SQL_INSERT;
+         if (RaSQLRewrite)
+            argus->status |= ARGUS_SQL_REWRITE;
+         else
+            argus->status |= ARGUS_SQL_INSERT;
          ArgusScheduleSQLQuery (ArgusParser, ArgusParser->ArgusAggregator, argus, tbl, ARGUS_STATUS);
       }
    }

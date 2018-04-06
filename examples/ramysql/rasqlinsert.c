@@ -34,6 +34,7 @@
 #endif
 
 #include <argus_threads.h>
+#include "rasql_common.h"
 #include <time.h>
 
 
@@ -44,6 +45,7 @@
 #define ARGUS_SQL_SELECT        0x0200000
 #define ARGUS_SQL_UPDATE        0x0400000
 #define ARGUS_SQL_DELETE        0x0800000
+#define ARGUS_SQL_REWRITE       0x1000000
 
 #define ARGUS_SQL_STATUS        (ARGUS_SQL_INSERT | ARGUS_SQL_SELECT | ARGUS_SQL_UPDATE | ARGUS_SQL_DELETE)
 
@@ -97,6 +99,8 @@ int ArgusSQLBulkBufferCount = 0;
 char *ArgusSQLBulkLastTable = NULL;
 char *ArgusSQLBulkBuffer = NULL;
 char *ArgusSQLVersion = NULL;
+char *ArgusTableColumnName[ARGUSSQLMAXCOLUMNS];
+size_t ArgusTableColumnKeys;
 int MySQLVersionMajor = 0;
 int MySQLVersionMinor = 0;
 int MySQLVersionSub = 0;
@@ -107,6 +111,9 @@ int ArgusDeleteTable = 0;
 int ArgusDropTable = 0;
 int ArgusCreateTable = 0;
 int ArgusAutoId = 0;
+int ArgusSQLSecondsTable = 0;
+time_t ArgusTableStartSecs = 0;
+time_t ArgusTableEndSecs = 0;
 
 struct timeval ArgusLastRealTime     = {0, 0};
 struct timeval ArgusLastTime         = {0, 0};
@@ -149,6 +156,7 @@ char *RaTableValues[256];
 char *RaTableCreateNames[RA_MAXTABLES];
 char *RaTableCreateString[RA_MAXTABLES];
 char *RaTableDeleteString[RA_MAXTABLES];
+char ArgusSQLTableNameBuf[MAXSTRLEN];
 
 char *RaSource       = NULL;
 char *RaArchive      = NULL;
@@ -161,6 +169,7 @@ int   RaStatus       = 1;
 int   RaSQLMaxSecs   = 0;
 int   RaSQLUpdateDB  = 1;
 int   RaSQLCacheDB   = 0;
+int   RaSQLRewrite   = 0;
 int   RaSQLDBInserts = 0;
 int   RaSQLDBUpdates = 0;
 int   RaSQLDBDeletes = 1;
@@ -248,6 +257,60 @@ static void *ArgusOutputProcess (void *);
 
 #endif
 
+/* RasqlInsertSetupRewriteColumns: override the default fields, or those
+ * specified with -s/RA_FIELD_SPECIFIER, with column names from the SQL
+ * table that we're rewriting.
+ */
+static void
+RasqlInsertSetupRewriteColumns(struct ArgusParserStruct *parser,
+                               const char **cols)
+{
+   /* Clean up array of field/column names */
+   while (parser->RaPrintOptionIndex > 0) {
+      if (parser->RaPrintOptionStrings[parser->RaPrintOptionIndex-1]) {
+         parser->RaPrintOptionIndex--;
+         free(parser->RaPrintOptionStrings[parser->RaPrintOptionIndex]);
+         parser->RaPrintOptionStrings[parser->RaPrintOptionIndex] = NULL;
+      }
+   }
+
+   /* build new array of column names from columns in database table */
+   while (cols[parser->RaPrintOptionIndex] != NULL) {
+      parser->RaPrintOptionStrings[parser->RaPrintOptionIndex] =
+       strdup(cols[parser->RaPrintOptionIndex]);
+      if (parser->RaPrintOptionStrings[parser->RaPrintOptionIndex] == NULL)
+         ArgusLog(LOG_ERR, "%s no memory to copy column name\n", __func__);
+      parser->RaPrintOptionIndex++;
+   }
+
+   ArgusProcessSOptions(parser);
+}
+
+static int
+RasqlInsertSetupRewriteAgg(struct ArgusParserStruct *parser,
+                           const char **cols, size_t nkeys)
+{
+   size_t i;
+
+   ArgusDeleteMaskList(parser);
+   for (i = 0; i < nkeys; i++) {
+      if (ArgusAddMaskList(parser, cols[i]) == 0) {
+         ArgusDeleteMaskList(parser);
+         return 0;
+      }
+   }
+   if (parser->ArgusAggregator)
+      ArgusDeleteAggregator(parser, parser->ArgusAggregator);
+
+   parser->ArgusAggregator = ArgusNewAggregator(parser, NULL,
+                                                ARGUS_RECORD_AGGREGATOR);
+
+   if (parser->ArgusAggregator == NULL)
+      return 0;
+
+   return 1;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -285,7 +348,7 @@ main(int argc, char **argv)
       }
 
 #if defined(ARGUS_MYSQL)
-      RaMySQLInit(1);
+      RaMySQLInit(RaSQLRewrite ? 2 : 1);
       ArgusParseInit(parser, NULL);
 
       for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
@@ -332,11 +395,58 @@ main(int argc, char **argv)
       if ((pthread_create(&RaOutputThread, NULL, ArgusOutputProcess, ArgusParser)) != 0)
          ArgusLog (LOG_ERR, "ArgusOutputProcess() pthread_create error %s\n", strerror(errno));
  
-      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
-         ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
+      if (RaSQLRewrite) {
+         if (parser->tflag) {
+            RaTables = ArgusCreateSQLTimeTableNames(parser, &ArgusTableStartSecs,
+                                                    &ArgusTableEndSecs,
+                                                    ArgusSQLSecondsTable,
+                                                    &RaBinProcess->nadp, RaTable);
+         }
 
-      pthread_join(RaDataThread, NULL);
-      ArgusCloseDown = 1;
+         if (RaTables == NULL) {
+            sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
+
+            if ((RaTables = ArgusCalloc(sizeof(void *), 2)) == NULL)
+               ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+
+            RaTables[0] = strdup(ArgusSQLTableNameBuf);
+         }
+
+         if (RaTables) {
+            int i;
+            int done;
+
+            /* Boldly assume that all tables being rewritten by this
+             * process have the same columns and primary key.
+             */
+            for (i = 0, done = 0; RaTables[i] && done <= 0; i++) {
+               if (!strcmp("Seconds", RaTables[i]))
+                  continue;
+
+               done = RasqlManageGetColumns(RaMySQL+1, RaTables[i], ArgusTableColumnName,
+                      sizeof(ArgusTableColumnName)/sizeof(ArgusTableColumnName[0]),
+                      &ArgusTableColumnKeys);
+            }
+            RasqlInsertSetupRewriteColumns(parser,
+                                           (const char **)ArgusTableColumnName);
+            RasqlInsertSetupRewriteAgg(parser,
+                                       (const char **)ArgusTableColumnName,
+                                       ArgusTableColumnKeys);
+            RaSQLQueryTable (RaMySQL+1, (const char **)RaTables, ArgusAutoId,
+                             argus_version,
+                             (const char **)&ArgusTableColumnName[0]);
+         }
+         mysql_close(RaMySQL+1);
+         ArgusCloseDown = 1;
+         RaParseComplete(0);
+      } else {
+         /* ArgusProcessData will set ArgusCloseDown and call RaParseComplete */
+         /* Does this even need to be a thread? */
+         if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
+            ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
+         pthread_join(RaDataThread, NULL);
+      }
+
 
       pthread_join(RaMySQLInsertThread, NULL);
       pthread_join(RaMySQLUpdateThread, NULL);
@@ -6715,10 +6825,6 @@ RaMySQLInit (int ncons)
 
 extern int RaDaysInAMonth[12];
 
-time_t ArgusTableStartSecs = 0;
-time_t ArgusTableEndSecs = 0;
-
-
 char *
 ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, char *table, char *tbuf, int len)
 {
@@ -7221,7 +7327,7 @@ ArgusGenerateSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
 
             default: {
                len = 0;
-               if (ArgusSOptionRecord) {
+               if (ArgusSOptionRecord || RaSQLRewrite) {
                   int tlen;
 
                   if ((argus = ArgusGenerateRecord (ns, 0L, rbuf, argus_version)) == NULL)
@@ -7241,7 +7347,7 @@ ArgusGenerateSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
 
                if (len < (MAXBUFFERLEN - (strlen(ibuf) + strlen(ubuf)))) {
                   if (!(ns->status & ARGUS_SQL_INSERT)) {
-                     if (ArgusSOptionRecord) {
+                     if (ArgusSOptionRecord || RaSQLRewrite) {
                         if (strlen(ibuf)) {
                            snprintf (sbuf, MAXBUFFERLEN, "UPDATE %s SET %s,record=\"%s\" WHERE %s", tbl, ibuf, mbuf, ubuf);
 #ifdef ARGUSDEBUG
@@ -7348,7 +7454,7 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
    int retn = 0;
 
    if ((agg == NULL) || (agg->mask == 0))
-      if (!(ns->status & ARGUS_SQL_INSERT))
+      if (!(ns->status & (ARGUS_SQL_INSERT|ARGUS_SQL_REWRITE)))
          return retn;
 
    if ((sqry = ArgusGenerateSQLQuery(parser, agg, ns,tbl, state)) != NULL) {
@@ -7363,6 +7469,7 @@ ArgusScheduleSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
             ArgusPushBackList (ArgusSQLSelectQueryList, (struct ArgusListRecord *)&sqry->nxt, ARGUS_LOCK);
             COND_SIGNAL(&ArgusSQLSelectQueryList->cond);
             break;
+         case ARGUS_SQL_REWRITE:
          case ARGUS_SQL_UPDATE:
             ArgusPushBackList (ArgusSQLUpdateQueryList, (struct ArgusListRecord *)&sqry->nxt, ARGUS_LOCK);
             COND_SIGNAL(&ArgusSQLUpdateQueryList->cond);

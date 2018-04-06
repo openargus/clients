@@ -101,8 +101,8 @@ $(INSTALLBIN)/rascore: rascore.o $(LIB)
 $(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
-$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB)
-	$(CC) $(CCOPT) -o $@ raclient.o rasqlinsert.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB) $(CURSESLIB)
+$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o rasql_common.o $(LIB)
+	$(CC) $(CCOPT) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
