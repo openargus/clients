@@ -179,7 +179,7 @@ char *RaHost = NULL, *RaUser = NULL, *RaPass = NULL;
 int RaPort = 0;
 
 struct ArgusInput *ArgusInput = NULL;
-void RaMySQLInit (void);
+void RaMySQLInit (int);
 
 MYSQL_ROW row;
 MYSQL *RaMySQL = NULL;
@@ -244,7 +244,6 @@ struct RaMySQLProbeTable {
 };
  
 
-void RaMySQLInit (void);
 static void *ArgusOutputProcess (void *);
 
 #endif
@@ -286,7 +285,7 @@ main(int argc, char **argv)
       }
 
 #if defined(ARGUS_MYSQL)
-      RaMySQLInit();
+      RaMySQLInit(1);
       ArgusParseInit(parser, NULL);
 
       for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
@@ -6446,7 +6445,7 @@ ArgusMySQLDeleteProcess (void *arg)
 
 
 void
-RaMySQLInit ()
+RaMySQLInit (int ncons)
 {
    my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    char *sptr = NULL, *ptr;
@@ -6561,13 +6560,15 @@ RaMySQLInit ()
 
    MUTEX_INIT(&RaMySQLlock, NULL);
    if (MUTEX_LOCK(&RaMySQLlock) == 0) {
+      int con;
 
       if (RaMySQL == NULL)
-         if ((RaMySQL = (void *) ArgusCalloc(1, sizeof(*RaMySQL))) == NULL)
+         if ((RaMySQL = (void *) ArgusCalloc(ncons, sizeof(*RaMySQL))) == NULL)
             ArgusLog(LOG_ERR, "RaMySQLInit: ArgusCalloc error %s", strerror(errno));
     
-      if ((mysql_init(RaMySQL)) == NULL)
-         ArgusLog(LOG_ERR, "mysql_init error %s");
+      for (con = 0; con < ncons; con++)
+         if ((mysql_init(RaMySQL+con)) == NULL)
+            ArgusLog(LOG_ERR, "mysql_init error %s");
 
       if (!mysql_thread_safe())
          ArgusLog(LOG_INFO, "mysql not thread-safe");
@@ -6579,8 +6580,9 @@ RaMySQLInit ()
       ArgusDebug (2, "RaMySQLInit: connect %s %s %d\n", RaHost, RaUser, RaPort);
 #endif
 
-      if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
-         ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
+      for (con = 0; con < ncons; con++)
+         if ((mysql_real_connect(RaMySQL+con, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
+            ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
 
       bzero(sbuf, sizeof(sbuf));
       sprintf (sbuf, "SHOW VARIABLES LIKE 'version'");
@@ -6659,8 +6661,9 @@ RaMySQLInit ()
 
       sprintf (sbuf, "USE %s", RaDatabase);
 
-      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-         ArgusLog(LOG_ERR, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
+      for (con = 0; con < ncons; con++)
+         if ((retn = mysql_real_query(RaMySQL+con, sbuf, strlen(sbuf))) != 0)
+            ArgusLog(LOG_ERR, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
 
       if (ArgusParser->writeDbstr != NULL) {
          char *ptr;
