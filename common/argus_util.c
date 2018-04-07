@@ -820,17 +820,17 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
    (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
    (void) signal (SIGPIPE,  SIG_IGN);
 
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "stime";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "flgs";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "proto";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "saddr";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "sport";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "dir";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "daddr";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "dport";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "pkts";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "bytes";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "state";
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("stime");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("flgs");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("proto");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("saddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("sport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dir");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("daddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("pkts");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("bytes");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("state");
 
    ArgusProcessSOptions(parser);
 
@@ -2983,19 +2983,25 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
       parser->ArgusRemoteHostList = NULL;
    }
 
-   parser->RaPrintOptionIndex = 0;
+   while (parser->RaPrintOptionIndex > 0) {
+      if (parser->RaPrintOptionStrings[parser->RaPrintOptionIndex-1]) {
+         parser->RaPrintOptionIndex--;
+         free(parser->RaPrintOptionStrings[parser->RaPrintOptionIndex]);
+         parser->RaPrintOptionStrings[parser->RaPrintOptionIndex] = NULL;
+      }
+   }
 
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "stime";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "flgs";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "proto";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "saddr";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "sport";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "dir";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "daddr";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "dport";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "pkts";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "bytes";
-   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = "state";
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("stime");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("flgs");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("proto");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("saddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("sport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dir");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("daddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("pkts");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("bytes");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("state");
 
    ArgusProcessSOptions(parser);
 
