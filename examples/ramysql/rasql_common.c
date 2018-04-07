@@ -327,3 +327,87 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
    ArgusFree(sbuf);
    ArgusFree(ArgusSQLStatement);
 }
+
+/* The array *columns[] must be allocated to hold ncolumns number of
+ * char *pointers, but the char* elements should not be allocated before
+ * calling RasqlManageGetColumns().  On return, the first *keylen elements
+ * in the array are primary keys according to SQL.  The element following
+ * the last column name is always NULL, so really only ncolumns-1 column
+ * names can be recorded.
+ */
+int
+RasqlManageGetColumns(MYSQL *RaMySQL, const char * const table, char **columns,
+                      size_t ncolumns, size_t *keylen)
+{
+   unsigned int num_fields;
+   unsigned int i;
+   unsigned int pricount;	/* primary key columns */
+   unsigned int other;		/* non-key column index */
+   int retn = -1;
+   int slen;
+   char *query;
+   MYSQL_RES *result;
+   MYSQL_FIELD *fields;
+
+
+   query = ArgusMalloc(MAXSTRLEN);
+   if (query == NULL)
+      ArgusLog(LOG_ERR, "%s unable to allocate query buffer\n", __func__);
+
+   slen = snprintf(query, MAXSTRLEN, "SELECT * from %s LIMIT 1", table);
+   if (slen >= MAXSTRLEN) {
+#ifdef ARGUSDEBUG
+      ArgusDebug(4, "%s query string too long\n", __func__);
+#endif
+   }
+
+   retn = mysql_real_query(RaMySQL, query, slen);
+   if (retn) {
+      if (mysql_errno(RaMySQL) == ER_NO_SUCH_TABLE)
+         retn = 0;
+#ifdef ARGUSDEBUG
+      ArgusDebug(4, "mysql_real_query error %s", mysql_error(RaMySQL));
+#endif
+      goto out;
+   }
+
+   result = mysql_store_result(RaMySQL);
+   if (result == NULL)
+      goto out;
+
+   num_fields = mysql_num_fields(result);
+   if (num_fields > ncolumns) {
+#ifdef ARGUSDEBUG
+      ArgusDebug(4, "%s not enough space to store column names\n", __func__);
+#endif
+      goto out;
+   }
+
+   fields = mysql_fetch_fields(result);
+   pricount = 0;
+   other = num_fields;
+
+   /* Build the array of column names from both ends -- primary key
+    * columns have the lowest numbered indices, non-key columns have
+    * the largest indices.
+    */
+
+   for (i = 0; i < num_fields && pricount < other; i++) {
+      if (fields[i].flags & PRI_KEY_FLAG) {
+         columns[pricount] = strdup(fields[i].name);
+         pricount++;
+      } else {
+         other--;
+         columns[other] = strdup(fields[i].name);
+      }
+   }
+   if (num_fields < ncolumns)
+      columns[num_fields] = NULL;
+
+   retn = (int)num_fields;
+   *keylen = pricount;
+
+out:
+   ArgusFree(query);
+   return retn;
+}
