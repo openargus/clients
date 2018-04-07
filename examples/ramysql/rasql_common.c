@@ -411,3 +411,42 @@ out:
    ArgusFree(query);
    return retn;
 }
+
+/* caller is responsible for preventing concurrent accesses
+ * to MYSQL *RaMySQL.
+ */
+void
+RaSQLOptimizeTables (MYSQL *RaMySQL, const char **tables)
+{
+   int i;
+   int len;
+   char *query;
+   MYSQL_RES *result;
+
+#ifdef ARGUSDEBUG
+      ArgusDebug(2, "%s\n", __func__);
+#endif
+
+   query = ArgusMalloc(MAXSTRLEN);
+   if (query == NULL)
+      ArgusLog(LOG_ERR, "%s unable to allocate query string\n");
+
+   for (i = 0; tables[i]; i++) {
+      len = snprintf(query, MAXSTRLEN, "OPTIMIZE TABLE %s", tables[i]);
+      if (len >= MAXSTRLEN) {
+         ArgusLog(LOG_WARNING, "%s table name too long?\n", __func__);
+         continue;
+      }
+
+      /* If the table doesn't support optimization, keep going and
+       * don't complain.
+       */
+      if (mysql_real_query(RaMySQL, query, len))
+         continue;
+
+      result = mysql_store_result(RaMySQL);
+      if (result)
+         mysql_free_result(result);
+   }
+   ArgusFree(query);
+}

@@ -453,6 +453,12 @@ main(int argc, char **argv)
       pthread_join(RaMySQLSelectThread, NULL);
       pthread_join(RaMySQLDeleteThread, NULL);
 
+      /* there is a good chance we can recover some disk space
+       * after updating the contents.
+       */
+      if (RaSQLRewrite)
+         RaSQLOptimizeTables (RaMySQL, (const char **)RaTables);
+
       mysql_close(RaMySQL);
       ArgusWindowClose();
 #endif

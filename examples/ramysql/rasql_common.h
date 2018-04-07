@@ -28,4 +28,7 @@ RaSQLQueryTable (MYSQL *, const char **, int, int, const char **);
 
 int
 RasqlManageGetColumns(MYSQL *, const char * const, char **, size_t , size_t *);
+
+void
+RaSQLOptimizeTables (MYSQL *, const char **);
 #endif
