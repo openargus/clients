@@ -214,6 +214,12 @@ struct RaMySQLProbeTable {
    char *name;
 };
 
+static enum RaScoreLimitsEnum {
+   RASCORE_LIMIT_NOSCORE = 0,
+   RASCORE_LIMIT_MIN = 1,
+   RASCORE_LIMIT_MAX = 15,
+};
+
 
 
 extern int ArgusTotalMarRecords;
@@ -367,6 +373,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      case ARGUS_TYPE_IPV4:
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
                            if (flow->ip_flow.smask == 32) {
+                              argus->score = RASCORE_LIMIT_MIN;
                               if ((retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH)) == 0) {
                                  if ((retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_MATCH)) == 0) {
 
@@ -377,6 +384,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            }
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
                            if (flow->ip_flow.dmask == 32) {
+                              argus->score = RASCORE_LIMIT_MIN;
                               if ((retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH)) == 0) {
                                  if ((retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_MATCH)) == 0) {
 
@@ -387,10 +395,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            }
                         break;
                      case ARGUS_TYPE_IPV6:
-                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
+                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
+                           argus->score = RASCORE_LIMIT_MIN;
                            retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
-                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
+                        }
+                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                           argus->score = RASCORE_LIMIT_MIN;
                            retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_EXACT_MATCH);
+                        }
                         break;
                   }
                   break;
