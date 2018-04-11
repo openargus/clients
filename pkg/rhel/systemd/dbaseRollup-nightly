@@ -31,6 +31,42 @@ use Time::Local;
 use File::Temp qw/ :POSIX /;
 use File::Which qw/ which where /;
 
+my $debug       = 0;
+
+# $dbaref is an array reference containing
+#   (database, base table name, primary key columns, all columns)
+# $dtime is a string representation of the table name's date component
+#   e.g., 2018_02_12 if operating on the table for Feb 12, 2018.
+sub score_one_table {
+    my ($dbaref, $dtime) = @_;
+
+    my ($db, $table_bn, $keys, $fields) = @$dbaref;
+    my $dburi = "mysql://root\@localhost/$db";
+    my $table = "${table_bn}_${dtime}";
+    my $scorecmd = "rasql -r ${dburi}/${table} -w - | "
+                 . "rascore -f /usr/share/argus-clients/emerging-threats-current.conf"
+                 . "        -r - -r $dburi -m saddr -w - | "
+                 . "rasqlinsert -M time 1d -m $keys -s $fields -w ${dburi}/${table}_rascore";
+    print "DEBUG: ${scorecmd}\n" if $debug;
+    if ( system($scorecmd) != 0 ) {
+        warn "Unable to add score to table ${table}\n";
+        return;
+    }
+
+    my $sqlfile = tmpnam();
+    my $fh;
+    if ( ! open($fh, ">", $sqlfile) ) {
+        warn "Can't open > $sqlfile: $!";
+        return;
+    }
+    print $fh "DROP TABLE ${table};\n";
+    print $fh "RENAME TABLE ${table}_rascore TO ${table};\n";
+    close $fh;
+    system("mysql -u root $db < $sqlfile");
+    unlink $sqlfile;
+    return 1;
+}
+
 my $tmpfile = tmpnam();
 
 $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
@@ -38,7 +74,6 @@ $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
 # Parse the arguments if any
 my @arglist = ();
 
-my $debug       = 0;
 my $done        = 0;
 
 my $time = "";
@@ -92,6 +127,12 @@ my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf sadd
 my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
 
 my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6);
+
+# first add score DSR to the daily table
+
+score_one_table(\@db1, $dtime) or die;
+
+# Now update the monthly and yearly caches
 
 foreach my $i (0 .. $#databases) {
    my ($db, $table, $keys, $fields) = @{$databases[$i]};
