@@ -3167,7 +3167,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                }
             }
 
-            if (parser->ArgusStripFields) {
+            if (retn != NULL && parser->ArgusStripFields) {
                int x;
                for (x = 0; x < ARGUSMAXDSRTYPE; x++) {
                   if (!(parser->ArgusDSRFields[x])) {
