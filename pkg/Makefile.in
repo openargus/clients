@@ -165,7 +165,7 @@ ifeq ($(target_os),linux-gnu)
 	@set -e ; \
 	mkdir -p $(RASTREAMD_DIR) ; \
 	for i in  $^ ; do \
-		$(INSTALL) -m 0644 $$i $(RASTREAMD_DIR)/`basename $$i` ; \
+		$(INSTALL) -m 0755 $$i $(RASTREAMD_DIR)/`basename $$i` ; \
 	done
 endif
 
