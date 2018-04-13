@@ -1838,6 +1838,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
                *ArgusSQLTableNameBuf = '\0';
+
+            } else
+            if (strcmp(RaDatabase, "dnsMatrix") == 0) {
+               struct timeval now;
+               struct tm tmval;
+               gettimeofday (&now, 0L);
+               localtime_r(&now.tv_sec, &tmval);
+               strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
+               str = strdup(ArgusSQLTableNameBuf);
+               *ArgusSQLTableNameBuf = '\0';
             }
          }
 
