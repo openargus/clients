@@ -311,8 +311,18 @@ Copyright 2000-2016 QoSient, LLC
 %{_datarootdir}/argus-clients/rasqlinsert.ldap
 %{_datarootdir}/argus-clients/rasqlinsert.man
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
+%{_datarootdir}/argus-clients/emerging-Block-IPs*.conf
+%ghost %{_datarootdir}/argus-clients/emerging-threats-current.conf
 %{_sysconfdir}/rastream.d/00rasqltimeindex
 %dir %{_sysconfdir}/rastream.d
+
+%post sql
+ln -f -s %{_datarootdir}/argus-clients/emerging-Block-IPs-2018-03-22.conf \
+         %{_datarootdir}/argus-clients/emerging-threats-current.conf
+
+%postun sql
+rm -f %{_datarootdir}/argus-clients/emerging-threats-current.conf
+
 %endif
 
 %changelog

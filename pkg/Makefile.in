@@ -84,7 +84,8 @@ ifndef WORKSTATION_BUILD
                 rhel/share/argus-clients/rasqlinsert.arp \
                 rhel/share/argus-clients/rasqlinsert.ether \
                 rhel/share/argus-clients/rasqlinsert.ldap \
-                rhel/share/argus-clients/rasqlinsert.ntp
+                rhel/share/argus-clients/rasqlinsert.ntp \
+                rhel/share/argus-clients/emerging-Block-IPs-2018-03-22.conf
     SYSCONFIG = rhel/sysconfig/radium \
                 rhel/sysconfig/rastream
     RASTREAMD = rhel/rastream.d/00rasqltimeindex
