@@ -4620,6 +4620,21 @@ Argusgen_scode(char *name, struct qual q)
          }
          break;
 
+      case Q_NODE: {
+         extern struct anamemem  aliastable[];
+         char *srcid = NULL;
+
+         if ((srcid = lookup_alias((const u_char *)name, aliastable)) != NULL) {
+#if defined(ARGUSDEBUG)
+            ArgusDebug (4, "Argusgen_scode (%s, 0x%x) Q_NODE srcid is %s\n", name, q, srcid);
+#endif
+            b = Argusgen_ucode(srcid, q);
+         } else {
+            ArgusLog(LOG_ERR, "no node named %s", name);
+         }
+         break;
+      }
+
       case Q_INODE: 
       case Q_SID:
       case Q_SRCID: {
@@ -4962,18 +4977,6 @@ Argusgen_ucode(char *uuid, struct qual q)
       b0 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset + i*4, NFF_W, u.ui[i], Q_EQUAL, Q_DEFAULT);
       Argusgen_and(b0, b1);
    }
-
-/*
-   b2 = Argusgen_recordtype(ARGUS_MAR);
-   offset = ((char *)&mar.uuid - (char *)&mar);
-
-   for (i = 0; i < 4; i++) {
-      b0 = Argusgen_cmp(ARGUS_MAR_INDEX, offset + i*4, NFF_W, u.ui[i], Q_EQUAL, Q_DEFAULT);
-      Argusgen_and(b0, b2);
-   }
-
-   Argusgen_or(b2, b1);
-*/
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_ucode (%s, 0x%x) returns %p\n", uuid, q, b1);

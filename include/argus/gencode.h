@@ -109,6 +109,7 @@
 #define Q_SID		184
 #define Q_INF		185
 #define Q_LOC		188
+#define Q_NODE		189
 
 /* Protocol qualifiers. */
 

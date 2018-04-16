@@ -167,6 +167,7 @@ spi      return SPI;
 host     return HOST;
 srcid    return SRCID;
 sid      return SID;
+node     return NODE;
 inf      return INF;
 inode    return INODE;
 net      return NET;

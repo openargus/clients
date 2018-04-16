@@ -2605,15 +2605,27 @@ ArgusParseAliasFile(char *file)
                         break;
                   }
 
-                  hash = getnamehash((const u_char *)srcid);
-                  ap = &aliastable[hash % (HASHNAMESIZE-1)];
-                  while (ap->n_nxt)
-                     ap = ap->n_nxt;
-     
-                  ap->hashval = hash;
-                  ap->name = strdup((char *) srcid);
-                  ap->alias = strdup((char *) alias);
-                  ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
+                  if (strlen(srcid)) {
+                     hash = getnamehash((const u_char *)srcid);
+                     ap = &aliastable[hash % (HASHNAMESIZE-1)];
+                     while (ap->n_nxt)
+                        ap = ap->n_nxt;
+    
+                     ap->hashval = hash;
+                     ap->name = strdup((char *) srcid);
+                     ap->alias = strdup((char *) alias);
+                     ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
+                  }
+                  if (strlen(alias)) {
+                     hash = getnamehash((const u_char *)alias);
+                     ap = &aliastable[hash % (HASHNAMESIZE-1)];
+                     while (ap->n_nxt)
+                        ap = ap->n_nxt;
+                     ap->hashval = hash;
+                     ap->name = strdup((char *) srcid);
+                     ap->alias = strdup((char *) alias);
+                     ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
+                  }
                }
             }
          }
@@ -21300,6 +21312,31 @@ lookup_srcid(const u_char *srcid, struct anamemem *table)
       while (ap->n_nxt && (retn == NULL)) {
          if (!strcmp((char *)srcid, ap->name))
             retn = ap->alias;
+         else
+            ap = ap->n_nxt;
+      }
+   }
+
+   return (retn);
+}
+
+
+char *
+lookup_alias(const u_char *alias, struct anamemem *table)
+{
+   char *retn = NULL;
+
+   struct anamemem *ap = NULL;
+   if (alias != NULL) {
+      u_int hash;
+
+      hash  = getnamehash(alias);
+      hash %= (HASHNAMESIZE - 1);
+
+      ap = &table[hash];
+      while (ap->n_nxt && (retn == NULL)) {
+         if (!strcmp((char *)alias, ap->alias))
+            retn = ap->name;
          else
             ap = ap->n_nxt;
       }
