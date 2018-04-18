@@ -112,7 +112,7 @@ int RaTreePrinted = 0;
 int RaPruneLevel = 0;
 
 #define ARGUS_MAX_RESPONSE		0x100000
-#define ARGUS_DEFAULT_RESULTLEN         0x10000
+#define ARGUS_DEFAULT_RESULTLEN         0x100000
 
 #define ARGUS_NAME_REQUESTED	0x10
 #define ARGUS_DNS_MIN_TTL       30
@@ -452,7 +452,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    retn = ArgusHandleResponseArray;
 
    if (resbuf == NULL) {
-      if ((resbuf = ArgusMalloc(0x100000 * sizeof(char *)) + 1) == NULL)
+      if ((resbuf = ArgusCalloc(0x100000, sizeof(char *))) == NULL)
          ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
    }
 
@@ -500,11 +500,11 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
             }
          } else {
             struct ArgusHashTable *table = ArgusDNSNameTable;
-            int i, mind = 0, mlen = 2048;
+            int i, mind = 0, mlen = 0x10000;
             int size = ArgusDNSNameTable->size;
             struct nnamemem **matches;
 
-            if ((matches = ArgusCalloc(2048, sizeof(struct nnamemem *))) == NULL)
+            if ((matches = ArgusCalloc(0x10000, sizeof(struct nnamemem *))) == NULL)
                ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
 
             for (i = 0; i < size; i++) {
@@ -524,10 +524,12 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
             if (mind > 0) {
                for (i = 0; i < mind; i++) {
                   int x, resultnum = 0, done = 0;
-                  char *results[2048];
+                  char **results = NULL;
                   struct nnamemem *cname = NULL;
                   struct nnamemem *name = matches[i];
-                  bzero(results, sizeof(results));
+
+                  if ((results = ArgusCalloc(0x100000, sizeof(char *))) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
 
                   results[resultnum++] = strdup(name->n_name);
                            
@@ -540,7 +542,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                            if (pthread_mutex_lock(&name->cnames->lock) == 0) {
 #endif
                               int cnt = name->cnames->count;
-                              cnt = (cnt >= (2048 - resultnum)) ? (2048 - resultnum) : cnt;
+                              cnt = (cnt >= (0x10000 - resultnum)) ? (0x10000 - resultnum) : cnt;
                               struct ArgusListObjectStruct *list = name->cnames->start;
 
                               for (x = 0; x < cnt; x++) {
@@ -579,10 +581,12 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                            struct in_addr naddr = *(struct in_addr *)&addr;
                            if (x == 0) {
                               char sbuf[256];
-                              snprintf (sbuf, 256, "\"addr\":[%s", inet_ntoa(naddr));
+                              snprintf (sbuf, 256, "\"addr\":[ \"%s\"", inet_ntoa(naddr));
                               results[resultnum++] = strdup(sbuf);
                            } else {
-                              results[resultnum++] = strdup(inet_ntoa(naddr));
+                              char sbuf[256];
+                              snprintf (sbuf, 256, "\"%s\"", inet_ntoa(naddr));
+                              results[resultnum++] = strdup(sbuf);
                            }
                            list = list->nxt;
                         }
@@ -593,26 +597,34 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                   }
 
                   if (ArgusParser->ArgusPrintJson) {
-                     sprintf (resbuf, "{ \"name\":\"%s\", ", results[0]);
+                     sprintf (resbuf, "{ \"name\":\"%s\"", results[0]);
                   } else {
                      sprintf (resbuf, "%s: %s [", sptr, results[0]);
                   }
 
-                  for (x = 1; x < resultnum; x++) {
-                     if (x > 1) sprintf (&resbuf[strlen(resbuf)], ", ");
-                     sprintf (&resbuf[strlen(resbuf)], "%s", results[x]);
-                     free(results[x]);
+                  if (resultnum > 1) {
+                     sprintf (&resbuf[strlen(resbuf)], ", ");
+                     for (x = 1; x < resultnum; x++) {
+                        if (x > 1) sprintf (&resbuf[strlen(resbuf)], ", ");
+                        sprintf (&resbuf[strlen(resbuf)], "%s", results[x]);
+                        free(results[x]);
+                     }
                   }
 
                   if (ArgusParser->ArgusPrintJson) {
-                     sprintf (&resbuf[strlen(resbuf)], "]}");
+                     if (resultnum > 1) {
+                        sprintf (&resbuf[strlen(resbuf)], " ]}");
+                     } else {
+                        sprintf (&resbuf[strlen(resbuf)], " }");
+                     }
                   } else {
-                     sprintf (&resbuf[strlen(resbuf)], "]");
+                     sprintf (&resbuf[strlen(resbuf)], " ]");
                   }
                   retn[rind++] = strdup(resbuf);
                   free(results[0]);
                }
             }
+            ArgusFree(matches);
          }
       }
       string = NULL;
