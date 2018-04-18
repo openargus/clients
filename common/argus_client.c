@@ -5692,7 +5692,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
 
       switch (ns->hdr.type & 0xF0) {
          case ARGUS_MAR: {
-            if (na->mask & ARGUS_MASK_SRCID_INDEX) {
+            if ((na->mask == -1) || (na->mask & ARGUS_MASK_SRCID_INDEX)) {
                struct ArgusRecord *rec = (struct ArgusRecord *) ns->dsrs[0];
                int i, len, s = sizeof(unsigned short);
                struct ArgusAddrStruct thisid;
@@ -5763,7 +5763,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
             retn->hash = 0; 
             retn->len  = 0;
 
-            if (na->mask) {
+            if (na->mask != -1) {
                if (flow == NULL)
                   flow = tflow;
 
@@ -11766,10 +11766,12 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
             if (retn->correct) free(retn->correct);
             retn->correct = NULL;
          } else
+         if (!(strncasecmp (sptr, "all", 3))) {
+            retn->mask  = -1;
+            ArgusParser->RaCumulativeMerge = 1;
+            retn->correct = NULL;
+         } else
          if (!(strncasecmp (sptr, "macmatrix", 9))) {
-            retn->ArgusMatrixMode++;
-            retn->mask |= (0x01LL << ARGUS_MASK_SMAC);
-            retn->mask |= (0x01LL << ARGUS_MASK_DMAC);
             if (len > 0) {
                retn->saddrlen = len;
                retn->daddrlen = len;
