@@ -91,7 +91,7 @@ ArgusNewParser(char *progname)
 
    retn->ArgusProgramName = strdup(progname);
    retn->ArgusCIDRPtr = &retn->ArgusCIDRBuffer;
-   retn->RaTimeFormat = strdup("%T.%f");
+// retn->RaTimeFormat = strdup("%T.%f");
    retn->ArgusFractionalDate = 1;
 
    retn->RaFilterTimeout = 1.5;
