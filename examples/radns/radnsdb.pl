@@ -31,6 +31,7 @@ $ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin';
 
 # Used modules
 use POSIX;
+use IO::Handle;
 use URI::URL;
 
 use JSON;
@@ -46,6 +47,9 @@ my $debug   = 0;
 my $quiet   = 0;
 my $uri     = 0;
 my $time    = "-1d";
+my $mtbl    = "";
+
+my $mode    = 0;
 
 my $scheme;
 my $netloc;
@@ -59,6 +63,10 @@ ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-debug//         && do { $debug++; next ARG; };
       s/^-t//             && do { $time = shift (@ARGV); next ARG; };
+
+      s/^-time//          && do { $time = shift (@ARGV); next ARG; };
+      s/^-mode//          && do { $mode = shift (@ARGV); next ARG; };
+
       s/^-q//             && do { $quiet++; next ARG; };
       s/^-w//             && do { $uri = shift (@ARGV); next ARG; };
       /^-M/               && do {
@@ -82,29 +90,11 @@ my $results_ref = \@results;
 
 my $rasql       = which 'rasql';
 my $radns       = which 'radns';
-my $options     = "-qM json search:0.0.0.0/0";
 
-my $Program = "$rasql -t $time -r mysql://root\@localhost/dnsFlows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+my $Program;
+my $options;
 
 my (%items, %addrs, $addr);
-
-print "DEBUG: RaDNSDb: calling $Program\n" if $debug;
-open(SESAME, "$Program |");
-
-while (my $data = <SESAME>) {
-   chomp($data);
-
-   print "DEBUG: RaDnsDb:  radns returned: $data\n" if $debug;
-
-   if (length($data)) {
-      if ($data !~ /\^/) {
-         print "DEBUG: RaDNSDbFetchData: $data\n" if $debug;
-         my $decoded = decode_json $data;
-         push(@$results_ref, $decoded);
-      }
-   }
-}
-close(SESAME);
 
 my $startseries = 0;
 my $lastseries = 0;
@@ -135,12 +125,13 @@ if ($uri) {
       ($space, $db, $table)  = split /\//, $path;
    }
 
+   print "DEBUG: RaDNSDb: access database host $host user $user using database $db table $table\n" if $debug;
+
    $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
 
    $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
    $dbh->do("use $db");
 
-   print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
 
    # Drop table 'foo'. This may fail, if 'foo' doesn't exist
    # Thus we put an eval around it.
@@ -149,29 +140,81 @@ if ($uri) {
       local $dbh->{RaiseError} = 0;
       local $dbh->{PrintError} = 0;
 
+      print "DEBUG: RaDnsDB: DROP TABLE $table\n" if $debug;
       eval { $dbh->do("DROP TABLE $table") };
    }
 
-   # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+   switch ($db) {
+      case "dnsNames" {
+         $options = "-qM json search:0.0.0.0/0";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/dnsFlows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
 
-   print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
+         # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
-   $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
-
-   if ((length @results) > 0) {
-      foreach my $n (@$results_ref) {
-         my $addr = $n->{'addr'};
-         my $data = JSON->new->utf8->space_after->encode($n);
-
-         my $sql = "INSERT INTO $table VALUE('$addr', '$data')";
-         print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
-         $dbh->do($sql);
+         print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
+         $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
       }
+      case "dnsAddrs" {
+         $options = "-qM json search:'.'";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/dnsFlows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
 
-   } else {
-      print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
+         # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+
+         print "DEBUG: RaDnsDB: CREATE TABLE $table (name VARCHAR(128) NOT NULL, addrs TEXT, PRIMARY KEY ( name ))\n" if $debug;
+         $dbh->do("CREATE TABLE $table (name VARCHAR(128) NOT NULL, addrs TEXT, PRIMARY KEY ( name ))");
+      }
    }
+
+   print "DEBUG: RaDNSDb: calling $Program\n" if $debug;
+   open(SESAME, "$Program |");
+   while (my $data = <SESAME>) {
+      chomp($data);
+
+      print "DEBUG: RaDnsDb:  radns returned: $data\n" if $debug;
+
+      if (length($data)) {
+         if ($data !~ /\^/) {
+            eval {
+               my $decoded = JSON->new->utf8->decode($data);
+               push(@$results_ref, $decoded);
+            } or do {
+            }
+         }
+      }
+   }
+   close(SESAME);
+
+   switch ($db) {
+      case "dnsNames" {
+         if ((length @results) > 0) {
+            foreach my $n (@$results_ref) {
+               my $addr = $n->{'addr'};
+               my $data = JSON->new->utf8->space_after->encode($n);
  
+               my $sql = "INSERT INTO $table VALUE('$addr', '$data')";
+               print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
+               $dbh->do($sql);
+            }
+         } else {
+            print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
+         }
+      }
+      case "dnsAddrs" {
+         if ((length @results) > 0) {
+            foreach my $n (@$results_ref) {
+               my $name = $n->{'name'};
+               my $data = JSON->new->utf8->space_after->encode($n);
+
+               my $sql = "INSERT INTO $table VALUE('$name', '$data')";
+               print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
+               $dbh->do($sql);
+            }
+         } else {
+            print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
+         }
+      }
+   }
+
    $dbh->disconnect();
 
 } else {
