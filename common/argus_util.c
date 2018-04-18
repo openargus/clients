@@ -2917,7 +2917,6 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
 
    if (parser->RaTimeFormat) {
       free (parser->RaTimeFormat);
-      parser->RaTimeFormat = strdup("%T.%f");
       parser->ArgusFractionalDate = 1;
    }
 
@@ -5383,7 +5382,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       ArgusParseInited = 1;
    }
    if (parser->ArgusPrintJson) {
-      parser->RaTimeFormat = strdup("%H:%M:%S.%f");
+      if (timeFormat == NULL)
+         parser->RaTimeFormat = strdup("%H:%M:%S.%f");
       if (parser->RaOutputStarted == 0) {
          parser->RaOutputStarted++;
       }
@@ -22196,6 +22196,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
                struct timeval *tvp)
 {
    char timeFormatBuf[128], *tstr = timeFormatBuf;
+   char *timeFormat = parser->RaTimeFormat;
    char *ptr;
    struct tm tmbuf, *tm = &tmbuf;
    time_t tsec = tvp->tv_sec;
@@ -22205,13 +22206,13 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
  
    timeFormatBuf[0] = '\0';
 
-   if (parser->RaTimeFormat == NULL)
-      return 0;
+   if (timeFormat == NULL)
+      timeFormat = "%m/%d.%T.%f";
 
    if ((tm = localtime_r (&tsec, &tmbuf)) == NULL)
       return 0;
 
-   if (parser->uflag || parser->RaTimeFormat == NULL) {
+   if (parser->uflag || timeFormat == NULL) {
       size_t tlen = 0;
       c = snprintf (tstr, sizeof(timeFormatBuf), "%u", (int) tvp->tv_sec);
       if (c > 0)
@@ -22225,7 +22226,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
       return (int)len;
    }
 
-   strncpy(timeFormatBuf, parser->RaTimeFormat, sizeof(timeFormatBuf));
+   strncpy(timeFormatBuf, timeFormat, sizeof(timeFormatBuf));
 
    for (ptr=tstr; *ptr; ptr++) {
       if (*ptr != '%') {
