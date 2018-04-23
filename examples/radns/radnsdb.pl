@@ -50,6 +50,8 @@ my $time    = "-1d";
 my $mtbl    = "";
 
 my $mode    = 0;
+my $node    = "";
+my $flows   = "dnsFlows";
 
 my $scheme;
 my $netloc;
@@ -66,6 +68,8 @@ ARG: while (my $arg = shift(@ARGV)) {
 
       s/^-time//          && do { $time = shift (@ARGV); next ARG; };
       s/^-mode//          && do { $mode = shift (@ARGV); next ARG; };
+      s/^-node//          && do { $node = shift (@ARGV); next ARG; };
+      s/^-flows//         && do { $flows = shift (@ARGV); next ARG; };
 
       s/^-q//             && do { $quiet++; next ARG; };
       s/^-w//             && do { $uri = shift (@ARGV); next ARG; };
@@ -145,18 +149,18 @@ if ($uri) {
    }
 
    switch ($db) {
-      case "dnsNames" {
+      case /^dnsNames/ {
          $options = "-qM json search:0.0.0.0/0";
-         $Program = "$rasql -t $time -r mysql://root\@localhost/dnsFlows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
 
          # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
          print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
          $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
       }
-      case "dnsAddrs" {
+      case /^dnsAddrs/ {
          $options = "-qM json search:'.'";
-         $Program = "$rasql -t $time -r mysql://root\@localhost/dnsFlows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
 
          # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
@@ -165,7 +169,7 @@ if ($uri) {
       }
    }
 
-   print "DEBUG: RaDNSDb: calling $Program\n" if $debug;
+   print "DEBUG: RaDNSDb: calling Program $Program\n" if $debug;
    open(SESAME, "$Program |");
    while (my $data = <SESAME>) {
       chomp($data);
@@ -185,7 +189,7 @@ if ($uri) {
    close(SESAME);
 
    switch ($db) {
-      case "dnsNames" {
+      case /^dnsNames/ {
          if ((length @results) > 0) {
             foreach my $n (@$results_ref) {
                my $addr = $n->{'addr'};
@@ -199,7 +203,7 @@ if ($uri) {
             print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
          }
       }
-      case "dnsAddrs" {
+      case /^dnsAddrs/ {
          if ((length @results) > 0) {
             foreach my $n (@$results_ref) {
                my $name = $n->{'name'};
