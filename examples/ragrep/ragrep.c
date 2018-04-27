@@ -66,7 +66,6 @@ int ArgusParseGrepExpressionFile(struct ArgusParserStruct *, char *);
 char *ArgusGrepBuffer = NULL;
 int ArgusRecordMatches = 0;
 int ArgusTotalMatches = 0;
-int ArgusTotalFiles = 0;
 
 int
 ArgusParseGrepExpressionFile(struct ArgusParserStruct *parser, char *file) {
@@ -141,8 +140,6 @@ ArgusParseGrepExpressionFile(struct ArgusParserStruct *parser, char *file) {
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
-   struct ArgusInput *list;
-
    parser->RaWriteOut = 0;
    parser->ArgusPrintMan = 0;
 
@@ -161,13 +158,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseGrepExpression error");
       }
 
-
-      if ((list = parser->ArgusInputFileList) != NULL) {
-         while (list->qhdr.nxt) {
-            list = (struct ArgusInput *)list->qhdr.nxt;
-            ArgusTotalFiles++;
-         }
-      }
 
       if (parser->Lflag < 0)
          parser->Lflag = 0;
@@ -419,7 +409,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
 
                if (argus->input->filename != NULL)
-                  if (((ArgusTotalFiles > 1) || parser->Hflag) && !(parser->hflag))
+                  if (((parser->ArgusInputFileCount > 1) || parser->Hflag) && !(parser->hflag))
                      fprintf (stdout, "%s:", argus->input->filename);
 
                if (parser->bflag)
