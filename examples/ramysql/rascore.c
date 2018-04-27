@@ -214,7 +214,7 @@ struct RaMySQLProbeTable {
    char *name;
 };
 
-static enum RaScoreLimitsEnum {
+enum RaScoreLimitsEnum {
    RASCORE_LIMIT_NOSCORE = 0,
    RASCORE_LIMIT_MIN = 1,
    RASCORE_LIMIT_MAX = 15,
