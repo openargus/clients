@@ -2616,24 +2616,32 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      break;
 
                   case 'R': {
+                     size_t len = strlen(RaCommandInputStr);
+                     size_t remain = sizeof(RaCommandInputStr) - len;
                      struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+
                      retn = RAGETTINGR;
                      RaInputString = RAGETTINGRSTR;
                      while (input) {
-                        sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s", input->filename);
-                        RaCommandIndex = strlen(RaCommandInputStr); 
+                        RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                         &len, &remain, " %s",
+                                                         input->filename);
                         input = (void *)input->qhdr.nxt;
                      }
                      break;
                   }
 
                   case 'r': {
+                     size_t len = strlen(RaCommandInputStr);
+                     size_t remain = sizeof(RaCommandInputStr) - len;
                      struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+
                      retn = RAGETTINGr;
                      RaInputString = RAGETTINGrSTR;
                      while (input) {
-                        sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s", input->filename);
-                        RaCommandIndex = strlen(RaCommandInputStr); 
+                        RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                         &len, &remain, " %s",
+                                                         input->filename);
                         input = (void *)input->qhdr.nxt;
                      }
                      break;
@@ -4872,27 +4880,34 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
              break;
 
           case 'R': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
-             retn = RAGETTINGR;
-             RaInputString = RAGETTINGRSTR;
-             while (input) {
-                sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", input->filename);
-                RaCommandIndex = strlen(RaCommandInputStr); 
-                input = (void *) input->qhdr.nxt;
-             }
-             break;
+            size_t len = strlen(RaCommandInputStr);
+            size_t remain = sizeof(RaCommandInputStr) - len;
+            struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+
+            retn = RAGETTINGR;
+            RaInputString = RAGETTINGRSTR;
+            while (input) {
+               RaCommandIndex = snprintf_append(RaCommandInputStr, &len,
+                                                &remain, " %s", input->filename);
+               input = (void *) input->qhdr.nxt;
+            }
+            break;
           }
 
           case 'r': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
-             retn = RAGETTINGr;
-             RaInputString = RAGETTINGrSTR;
-             while (input) {
-                sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", input->filename);
-                RaCommandIndex = strlen(RaCommandInputStr); 
-                input = (void *) input->qhdr.nxt;
-             }
-             break;
+            size_t len = strlen(RaCommandInputStr);
+            size_t remain = sizeof(RaCommandInputStr) - len;
+            struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+
+            retn = RAGETTINGr;
+            RaInputString = RAGETTINGrSTR;
+            while (input) {
+               RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                &len, &remain, " %s",
+                                                input->filename);
+               input = (void *) input->qhdr.nxt;
+            }
+            break;
           }
 
           case 'S': {
@@ -5779,29 +5794,32 @@ char *RaTable = NULL;
 char *
 ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
 {
+   size_t len = strlen(RaProgramArgs);
+   size_t remain = sizeof(RaProgramArgs) - len;
    char *retn = RaProgramArgs;
    struct ArgusModeStruct *mode = NULL;
    struct ArgusInput *input = NULL;
    
-   sprintf (retn, "%s ", parser->ArgusProgramName);
+   snprintf_append(retn, &len, &remain, "%s ", parser->ArgusProgramName);
 
    if (parser->Aflag) {
-      sprintf (&retn[strlen(retn)], "-A ");
+      snprintf_append(retn, &len, &remain, "-A ");
    }
    if (parser->ArgusActiveHosts) {
       if (parser->Sflag) {
-         sprintf (&retn[strlen(retn)], "-S ");
+         snprintf_append(retn, &len, &remain, "-S ");
          if ((input = (void *)parser->ArgusActiveHosts->start) != NULL) {
             do {
-                  sprintf (&retn[strlen(retn)], "%s:%d ", input->hostname, input->portnum);
+                  snprintf_append(retn, &len, &remain, "%s:%d ",
+                                  input->hostname, input->portnum);
                input = (void *)input->qhdr.nxt;
             } while (input != (void *)parser->ArgusActiveHosts->start);
          }
       } else {
-         sprintf (&retn[strlen(retn)], "-r ");
+         snprintf_append(retn, &len, &remain, "-r ");
          if ((input = (void *)parser->ArgusInputFileList) != NULL) {
             while (input != NULL) {
-               sprintf (&retn[strlen(retn)], "%s ", input->filename);
+               snprintf_append(retn, &len, &remain, "%s ", input->filename);
                input = (void *)input->qhdr.nxt;
             }
          }
@@ -5810,37 +5828,37 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
 
    } else {
       if (RaDatabase && RaTable) {
-         sprintf (&retn[strlen(retn)], "-P %s:%s ", RaDatabase, RaTable);
+         snprintf_append(retn, &len, &remain, "-P %s:%s ", RaDatabase, RaTable);
       }
    }
 
    if ((mode = parser->ArgusModeList) != NULL) { 
-      sprintf (&retn[strlen(retn)], "-M ");
+      snprintf_append(retn, &len, &remain, "-M ");
       while (mode) { 
-         sprintf (&retn[strlen(retn)], "%s ", mode->mode);
+         snprintf_append(retn, &len, &remain, "%s ", mode->mode);
          mode = mode->nxt;
       }
    }
 
    if (((mode = parser->ArgusMaskList) != NULL) || ((parser->ArgusAggregator != NULL) && (parser->ArgusAggregator->mask == 0))) {
-      sprintf (&retn[strlen(retn)], "-m ");
+      snprintf_append(retn, &len, &remain, "-m ");
       while (mode) {
-         sprintf (&retn[strlen(retn)], "%s ", mode->mode);
+         snprintf_append(retn, &len, &remain, "%s ", mode->mode);
          mode = mode->nxt;
       }
    }
 
    if (parser->Hstr)
-      sprintf (&retn[strlen(retn)], "-H %s ", parser->Hstr);
+      snprintf_append(retn, &len, &remain, "-H %s ", parser->Hstr);
 
    if ((parser->ArgusDisplayFilter) || parser->ArgusLocalFilter || parser->ArgusRemoteFilter) {
-      sprintf (&retn[strlen(retn)], "- ");
+      snprintf_append(retn, &len, &remain, "- ");
       if (parser->ArgusDisplayFilter)
-         sprintf (&retn[strlen(retn)], "display '%s' ", parser->ArgusDisplayFilter);
+         snprintf_append(retn, &len, &remain, "display '%s' ", parser->ArgusDisplayFilter);
       if (parser->ArgusLocalFilter)
-         sprintf (&retn[strlen(retn)], "local '%s' ", parser->ArgusLocalFilter);
+         snprintf_append(retn, &len, &remain, "local '%s' ", parser->ArgusLocalFilter);
       if (parser->ArgusRemoteFilter) 
-         sprintf (&retn[strlen(retn)], "remote '%s' ", parser->ArgusRemoteFilter);
+         snprintf_append(retn, &len, &remain, "remote '%s' ", parser->ArgusRemoteFilter);
    }
    return (retn);
 }
