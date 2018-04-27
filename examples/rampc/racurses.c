@@ -2520,7 +2520,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      break;
 
                   case 'R': {
-                     struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+                     struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
                      retn = RAGETTINGR;
                      RaInputString = RAGETTINGRSTR;
                      while (input) {
@@ -2532,7 +2532,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   }
 
                   case 'r': {
-                     struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+                     struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
                      retn = RAGETTINGr;
                      RaInputString = RAGETTINGrSTR;
                      while (input) {
@@ -4759,7 +4759,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
              break;
 
           case 'R': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+             struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
              retn = RAGETTINGR;
              RaInputString = RAGETTINGRSTR;
              while (input) {
@@ -4771,7 +4771,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
           }
 
           case 'r': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+             struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
              retn = RAGETTINGr;
              RaInputString = RAGETTINGrSTR;
              while (input) {
@@ -5616,6 +5616,7 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
    char *retn = RaProgramArgs;
    struct ArgusModeStruct *mode = NULL;
    struct ArgusInput *input = NULL;
+   struct ArgusFileInput *file = NULL;
    
    sprintf (retn, "%s ", parser->ArgusProgramName);
 
@@ -5633,10 +5634,10 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
          }
       } else {
          sprintf (&retn[strlen(retn)], "-r ");
-         if ((input = (void *)parser->ArgusInputFileList) != NULL) {
-            while (input != NULL) {
-               sprintf (&retn[strlen(retn)], "%s ", input->filename);
-               input = (void *)input->qhdr.nxt;
+         if ((file = (void *)parser->ArgusInputFileList) != NULL) {
+            while (file != NULL) {
+               sprintf (&retn[strlen(retn)], "%s ", file->filename);
+               input = (void *)file->qhdr.nxt;
             }
          }
       }
