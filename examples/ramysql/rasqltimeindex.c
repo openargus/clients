@@ -941,17 +941,27 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewQueue error %s\n", strerror(errno));
 
       if (parser->ArgusInputFileList != NULL) {
-         struct ArgusInput *input = NULL, *nxtinput = NULL;
+         struct ArgusInput *input;
+         struct ArgusFileInput *nxtfile;
+         struct ArgusFileInput *file;
 
-         input = parser->ArgusInputFileList;
+         input = ArgusMalloc(sizeof(*input));
+         if (input == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
+         file = parser->ArgusInputFileList;
          parser->ArgusInputFileList = NULL;
 
          do {
             int retn, fileindex = -1, filestatus = -1;
             char *filename, *endptr = NULL;
 
-            nxtinput = (struct ArgusInput *) input->qhdr.nxt;
-            input->qhdr.nxt = NULL;
+            nxtfile = (struct ArgusFileInput *) file->qhdr.nxt;
+            file->qhdr.nxt = NULL;
+            parser->ArgusInputFileCount--;
+
+            ArgusInputFromFile(input, file);
+            ArgusParser->ArgusCurrentInput = input;
 
             filename = realpath(input->filename, NULL);
             if (filename != NULL) {
@@ -984,24 +994,23 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
 
             if (!((filestatus == 1) || (filestatus == 2))) {
-               struct ArgusInput *list;
-               if ((list = parser->ArgusInputFileList) != NULL) {
-                  while (list->qhdr.nxt)
-                     list = (struct ArgusInput *)list->qhdr.nxt;
-                  list->qhdr.nxt = &input->qhdr;
-               } else
-                  parser->ArgusInputFileList = input;
+               if (parser->ArgusInputFileListTail != NULL) {
+                  parser->ArgusInputFileListTail->qhdr.nxt = &file->qhdr;
+               } else {
+                  parser->ArgusInputFileList = file;
+                  parser->ArgusInputFileListTail = file;
+               }
+               parser->ArgusInputFileCount++;
 
             } else {
                ArgusLog(LOG_INFO, "file %s index %d has already been processed", input->filename, fileindex);
-               if (input->filename != NULL)
-                  free (input->filename);
-               ArgusFree(input);
+               ArgusFileFree(file);
             }
 
-            input = nxtinput;
+            file = nxtfile;
+         } while (file);
 
-         } while (input);
+         ArgusFree(input);
       }
 
       if (parser->ArgusInputFileList == NULL) 
