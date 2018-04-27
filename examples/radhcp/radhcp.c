@@ -209,7 +209,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    struct timeval starttime_tv;
    struct timeval endtime_tv;
    struct in_addr addr = {0, };
-   unsigned char masklen; /* prefix length */
+   unsigned char masklen = 32; /* prefix length */
 
    enum QueryOptsEnum {
       OPT_WHEN = 0,
