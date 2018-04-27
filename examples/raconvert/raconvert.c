@@ -271,7 +271,12 @@ main (int argc, char **argv) {
 */
 
    if (ArgusParser->ArgusInputFileList != NULL) {
-      struct ArgusInput *file; 
+      struct ArgusInput *input;
+      struct ArgusFileInput *file;
+
+      input = ArgusMalloc(sizeof(*input));
+      if (input == NULL)
+         ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
       while (ArgusParser->ArgusPassNum) {
          file = ArgusParser->ArgusInputFileList;
@@ -280,18 +285,23 @@ main (int argc, char **argv) {
                RaConvertReadFile(ArgusParser, file);
             } else {
                if (ArgusParser->ArgusPassNum == 1)
-                  RaConvertReadFile(ArgusParser, file);
+                  RaConvertReadFile(ArgusParser, input);
             }
 
 #ifdef ARGUSDEBUG
-            ArgusDebug (1, "main: RaConvertReadFile(%s) done", file->filename);
+            ArgusDebug (1, "main: RaConvertReadFile(%s) done", input->filename);
 #endif
-            RaArgusInputComplete(file);
-            file = (struct ArgusInput *)file->qhdr.nxt;
+            RaArgusInputComplete(input);
+            ArgusParser->ArgusCurrentInput = NULL;
+            ArgusCloseInput(ArgusParser, input);
+            file = (struct ArgusFileInput *)file->qhdr.nxt;
          }
 
          ArgusParser->ArgusPassNum--;
       }
+
+      ArgusFree(input);
+      input = NULL;
    }
 
 #ifdef ARGUSDEBUG
