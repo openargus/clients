@@ -311,12 +311,30 @@ ArgusQsortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queu
 void
 RaParseComplete (int sig)
 {
-   struct ArgusInput *file;
+   struct ArgusInput *input;
+   struct ArgusFileInput *file = NULL;
    char buf[MAXSTRLEN];
    int label;
+   int have_input = 0;
+   int alloc_input = 0;
 
-   if ((file = ArgusParser->ArgusCurrentFile) == NULL)
+   if ((input = ArgusParser->ArgusCurrentFile) == NULL) {
       file = ArgusParser->ArgusInputFileList;
+
+      if (file) {
+         input = ArgusMalloc(sizeof(*input));
+         if (input == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
+         ArgusInputFromFile(input, file);
+         alloc_input = 1;
+      }
+   }
+
+   if (input || file)
+      have_input = 1;
+
+   ArgusParser->ArgusCurrentInput = input;
 
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
@@ -325,7 +343,7 @@ RaParseComplete (int sig)
          if (ArgusParser->ArgusPrintJson)
             fprintf (stdout, "\n");
 
-         if (ArgusSorter->ArgusReplaceMode && file) {
+         if (ArgusSorter->ArgusReplaceMode && have_input) {
             if (!(ArgusParser->ArgusRandomSeed))
                srandom(ArgusParser->ArgusRandomSeed);
 
@@ -333,7 +351,7 @@ RaParseComplete (int sig)
             label = random() % 100000;
 
             bzero(buf, sizeof(buf));
-            snprintf (buf, MAXSTRLEN, "%s.tmp%d", file->filename, label);
+            snprintf (buf, MAXSTRLEN, "%s.tmp%d", input->filename, label);
 
             setArgusWfile(ArgusParser, buf, NULL);
          }
@@ -342,40 +360,40 @@ RaParseComplete (int sig)
             ArgusQsortQueue(ArgusSorter, ArgusSorter->ArgusRecordQueue);
             ArgusSecondPass = 1;
 
-            if (file != NULL) {
-               if (file->file == NULL) {        
+            if (have_input) {
+               if (input->file == NULL) {
                   struct ArgusQsortStruct *qs;
 
-                  ArgusParseInit(ArgusParser, file);
+                  ArgusParseInit(ArgusParser, input);
 
-                  if ((file->file = fopen (file->filename, "r")) == NULL)
+                  if ((input->file = fopen (input->filename, "r")) == NULL)
                      ArgusLog (LOG_ERR, "ArgusQsortQueue: fopen %s\n", strerror(errno));
 
                   while ((qs = (struct ArgusQsortStruct *)ArgusPopQueue(ArgusSorter->ArgusRecordQueue, ARGUS_NOLOCK)) != NULL) {
-                     file->offset = qs->offset;
-                     file->ostart = qs->offset;
-                     file->ostop  = qs->offset + qs->len;
-                     if (fseek(file->file, file->offset, SEEK_SET) >= 0) {
+                     input->offset = qs->offset;
+                     input->ostart = qs->offset;
+                     input->ostop  = qs->offset + qs->len;
+                     if (fseek(input->file, input->offset, SEEK_SET) >= 0) {
                         int done = 0;
       	             while (!done) {
-      	               done = ArgusReadStreamSocket (ArgusParser, file);
+                        done = ArgusReadStreamSocket (ArgusParser, input);
                         }
                      }
-                     file->ArgusReadSocketCnt = 0;
-                     file->ArgusReadSocketSize = 0;
+                     input->ArgusReadSocketCnt = 0;
+                     input->ArgusReadSocketSize = 0;
                   }
                }
             }
          }
       }
 
-      if (ArgusSorter->ArgusReplaceMode && file) {
+      if (ArgusSorter->ArgusReplaceMode && have_input) {
          if (ArgusParser->ArgusWfileList != NULL) {
             struct ArgusWfileStruct *wfile = NULL;
 
             if ((wfile = (void *)ArgusParser->ArgusWfileList->start) != NULL) {
                fflush (wfile->fd);
-               rename (wfile->filename, file->filename);
+               rename (wfile->filename, input->filename);
                fclose (wfile->fd);
                wfile->fd = NULL;
             }
@@ -384,7 +402,7 @@ RaParseComplete (int sig)
             ArgusParser->ArgusWfileList = NULL;
 
             if (ArgusParser->Vflag)
-               ArgusLog(LOG_INFO, "file %s aggregated", file->filename);
+               ArgusLog(LOG_INFO, "file %s aggregated", input->filename);
          }
       }
 
@@ -425,6 +443,9 @@ RaParseComplete (int sig)
          }
       }
    }
+
+   if (alloc_input)
+      ArgusFree(input);
 }
 
 
