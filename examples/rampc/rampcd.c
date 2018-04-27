@@ -196,7 +196,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    struct ArgusAdjustStruct *nadp;
    struct ArgusModeStruct *mode = NULL;
    int i = 0, ind = 0, size = 1;
-   char *nocorrect = NULL;
    char *correct = NULL;
 
    parser->RaWriteOut = 1;
@@ -252,9 +251,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                else
                if (!(strncasecmp (mode->mode, "rmon", 4)))
                   parser->RaMonMode++;
-               else
-               if (!(strncasecmp (mode->mode, "nocorrect", 5)))
-                  nocorrect = strdup(mode->mode);
                else
                if (!(strncasecmp (mode->mode, "correct", 5)))
                   correct = strdup(mode->mode);
