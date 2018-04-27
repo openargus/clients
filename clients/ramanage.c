@@ -159,7 +159,7 @@ struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
 
 static inline int
-__file_older_than(const struct ArgusInput * const file, time_t when)
+__file_older_than(const struct ArgusFileInput * const file, time_t when)
 {
    return (file->statbuf.st_mtime <= when);
 }
@@ -745,11 +745,11 @@ RamanageConfigure(struct ArgusParserStruct * const parser,
 
 static int
 RamanageCompress(const struct ArgusParserStruct * const parser,
-                 struct ArgusInput **filvec, size_t filcount,
+                 struct ArgusFileInput **filvec, size_t filcount,
                  const configuration_t * const config)
 {
    static const size_t buflen = 32*1024;
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
    time_t when; /* files older than this are compressed */
    char *gzfilename;
    char *origfilename;
@@ -833,7 +833,7 @@ RamanageCompress(const struct ArgusParserStruct * const parser,
 
 static int
 RamanageUpload(const struct ArgusParserStruct * const parser,
-               struct ArgusInput **filvec, size_t filcount,
+               struct ArgusFileInput **filvec, size_t filcount,
                const configuration_t * const config)
 {
 #ifdef HAVE_LIBCURL
@@ -841,7 +841,7 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
 #else
    ramanage_str_t *hnd;
 #endif
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
    unsigned int upload_kb = 0;
    int res;
    size_t i;
@@ -951,10 +951,10 @@ out:
 
 static int
 RamanageRemove(const struct ArgusParserStruct * const parser,
-               struct ArgusInput **filvec, size_t filcount,
+               struct ArgusFileInput **filvec, size_t filcount,
                const configuration_t * const config)
 {
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
    time_t when; /* files older than this are removed */
    size_t i;
 
@@ -979,7 +979,7 @@ static int
 RamanageCheckPaths(const struct ArgusParserStruct * const parser,
                    const configuration_t * const config)
 {
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
    int path_archive_len, path_staging_len = 0;
    int rv = 0;
 
@@ -1008,14 +1008,14 @@ RamanageCheckPaths(const struct ArgusParserStruct * const parser,
       }
    }
 
-   file = (struct ArgusInput *)parser->ArgusInputFileList;
+   file = (struct ArgusFileInput *)parser->ArgusInputFileList;
    while (file && rv == 0) {
       rv = __check_filename(file->filename, path_archive_len, path_staging_len,
                             config);
       if (rv < 0)
          ArgusLog(LOG_WARNING, "%s: not processing file %s; wrong directory\n",
                   __func__, file->filename);
-      file = (struct ArgusInput *)file->qhdr.nxt;
+      file = (struct ArgusFileInput *)file->qhdr.nxt;
    }
 
    return rv;
@@ -1024,11 +1024,11 @@ RamanageCheckPaths(const struct ArgusParserStruct * const parser,
 static int
 RamanageStat(const struct ArgusParserStruct * const parser)
 {
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
 
-   file = (struct ArgusInput *)parser->ArgusInputFileList;
+   file = (struct ArgusFileInput *)parser->ArgusInputFileList;
    while (file) {
-      /* ArgusInput structures are zero-filled at creation.  If the
+      /* ArgusFileInput structures are zero-filled at creation.  If the
        * stat buffer holds a modification time of the unix epoch
        * (0), assume that it hasn't already been filled in and we
        * need to call stat().
@@ -1038,7 +1038,7 @@ RamanageStat(const struct ArgusParserStruct * const parser)
          ArgusLog(LOG_WARNING, "unable to stat file %s\n", file->filename);
          return -1;
       }
-      file = (struct ArgusInput *)file->qhdr.nxt;
+      file = (struct ArgusFileInput *)file->qhdr.nxt;
    }
    return 0;
 }
@@ -1046,8 +1046,8 @@ RamanageStat(const struct ArgusParserStruct * const parser)
 static int
 __compare_argus_input_file_mtime(const void *a, const void *b)
 {
-   const struct ArgusInput * const *aa = a;
-   const struct ArgusInput * const *bb = b;
+   const struct ArgusFileInput * const *aa = a;
+   const struct ArgusFileInput * const *bb = b;
 
    /* NULL is always > !NULL so that it ends of at the end of the array */
    if (*aa == NULL)
@@ -1063,17 +1063,17 @@ __compare_argus_input_file_mtime(const void *a, const void *b)
 /* return an array of pointers into the file list, sorted by
  * modification time.
 */
-static struct ArgusInput **
+static struct ArgusFileInput **
 RamanageSortFiles(const struct ArgusParserStruct * const parser,
-                  struct ArgusInput **filvec)
+                  struct ArgusFileInput **filvec)
 {
-   struct ArgusInput *tmp;
+   struct ArgusFileInput *tmp;
    size_t i;
 
    tmp = parser->ArgusInputFileList;
    for (i = 0; i < parser->ArgusInputFileCount; i++) {
       *(filvec+i) = tmp;
-      tmp = (struct ArgusInput *)tmp->qhdr.nxt;
+      tmp = (struct ArgusFileInput *)tmp->qhdr.nxt;
    }
 
    qsort(filvec, parser->ArgusInputFileCount, sizeof(*filvec),
@@ -1088,8 +1088,9 @@ RamanageSortFiles(const struct ArgusParserStruct * const parser,
  * returns: the number of files trimmed from the array
  */
 static size_t
-RamanageTrimFiles(struct ArgusParserStruct *parser, struct ArgusInput *exemplar,
-                  struct ArgusInput **filvec)
+RamanageTrimFiles(struct ArgusParserStruct *parser,
+                  struct ArgusFileInput *exemplar,
+                  struct ArgusFileInput **filvec)
 {
    size_t i = parser->ArgusInputFileCount - 1;
    size_t trimmed = 0;
@@ -1138,8 +1139,8 @@ main(int argc, char **argv)
    struct ArgusParserStruct *parser = NULL;
    ArgusLockContext lockctx;
    struct ArgusModeStruct *mode;
-   struct ArgusInput **filvec = NULL;
-   struct ArgusInput *exemplar;
+   struct ArgusFileInput **filvec = NULL;
+   struct ArgusFileInput *exemplar;
    size_t trimmed;
    size_t filcount;
 
@@ -1161,7 +1162,7 @@ main(int argc, char **argv)
 
    if (parser->ArgusInputFileCount != 1)
       ArgusLog(LOG_ERR, "Need exactly *one* source file (-r)\n");
-   exemplar = (struct ArgusInput *)parser->ArgusInputFileList;
+   exemplar = (struct ArgusFileInput *)parser->ArgusInputFileList;
 
    if ((mode = parser->ArgusModeList) != NULL) {
       while (mode) {
