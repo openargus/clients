@@ -395,8 +395,8 @@ void relts_print(char *, uint32_t);
 #include <dirent.h>
 
 static int CompareArgusInput (const void *, const void *);
-static void ArgusSortFileList (struct ArgusInput **, struct ArgusInput **,
-                               size_t);
+static void ArgusSortFileList (struct ArgusFileInput **,
+                               struct ArgusFileInput **, size_t);
 static int RaDescend(char *, size_t, size_t);
 
 #if !defined(HAVE_TIMEGM)
@@ -442,7 +442,7 @@ RaProcessRecursiveFiles (char *path)
             ArgusLog (LOG_ERR, "error: -R file arg %s\n", path);
 
          /* Copy the stat() results since we already have them. */
-         ((struct ArgusInput *)ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
+         ((struct ArgusFileInput *)ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
       }
    }
 
@@ -510,19 +510,19 @@ RaDescend(char *name, size_t len, size_t end)
 static int
 CompareArgusInput (const void *item1, const void *item2)
 {
-   struct ArgusInput *input1 = *(struct ArgusInput **) item1;
-   struct ArgusInput *input2 = *(struct ArgusInput **) item2;
+   struct ArgusFileInput *input1 = *(struct ArgusFileInput **) item1;
+   struct ArgusFileInput *input2 = *(struct ArgusFileInput **) item2;
 
    return (strcmp (input1->filename, input2->filename));
 }
 
 
 static void
-ArgusSortFileList (struct ArgusInput **head,
-                   struct ArgusInput **tail,
+ArgusSortFileList (struct ArgusFileInput **head,
+                   struct ArgusFileInput **tail,
                    size_t count)
 {
-   struct ArgusInput *input = NULL;
+   struct ArgusFileInput *input = NULL;
    void **array = NULL;
    size_t i;
 
@@ -532,7 +532,7 @@ ArgusSortFileList (struct ArgusInput **head,
 
       for (i = 0, input = *head ; i < count; i++) {
           array[i] = input;
-          input = (struct ArgusInput *)input->qhdr.nxt;
+          input = (struct ArgusFileInput *)input->qhdr.nxt;
       }
 
       qsort (array, count, sizeof(input), CompareArgusInput);
@@ -540,7 +540,7 @@ ArgusSortFileList (struct ArgusInput **head,
       for (i = 0; i < count; i++) {
          ((struct ArgusInput *)array[i])->qhdr.nxt = NULL;
          if (i > 0)
-            ((struct ArgusInput *)array[i - 1])->qhdr.nxt = &((struct ArgusInput *)array[i])->qhdr;
+            ((struct ArgusFileInput *)array[i - 1])->qhdr.nxt = &((struct ArgusFileInput *)array[i])->qhdr;
       }
 
       *head = array[0];
@@ -28838,10 +28838,10 @@ int
 ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
 {
    int retn = 0;
-   struct ArgusInput *file;
+   struct ArgusFileInput *file;
 
    if (ptr) {
-      if ((file = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) != NULL) {
+      if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
          if (parser->ArgusInputFileListTail != NULL) {
             parser->ArgusInputFileListTail->qhdr.nxt = (struct ArgusQueueHeader *)file;
             parser->ArgusInputFileListTail = file;
@@ -28850,7 +28850,6 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
             parser->ArgusInputFileListTail = file;
          }
 
-         file->ArgusOriginal = (struct ArgusRecord *)&file->ArgusOriginalBuffer;
          file->type = type;
          file->ostart = ostart;
          file->ostop = ostop;
@@ -28872,13 +28871,13 @@ void
 ArgusDeleteFileList (struct ArgusParserStruct *parser)
 {
    if (parser && parser->ArgusInputFileList) {
-      struct ArgusInput *addr = parser->ArgusInputFileList;
+      struct ArgusFileInput *addr = parser->ArgusInputFileList;
 
       while (addr) {
         if (addr->filename)
            free(addr->filename);
 
-        addr = (struct ArgusInput *)addr->qhdr.nxt;
+        addr = (struct ArgusFileInput *)addr->qhdr.nxt;
         ArgusFree(parser->ArgusInputFileList);
         parser->ArgusInputFileList = addr;
       }
@@ -28893,6 +28892,18 @@ ArgusDeleteFileList (struct ArgusParserStruct *parser)
 #endif
 }
 
+void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi)
+{
+   memset(input, 0, sizeof(*input));
+   input->type = afi->type;
+   input->filename = strdup(afi->filename);
+   input->ostart = afi->ostart;
+   input->ostop = afi->ostop;
+   input->statbuf = afi->statbuf;
+   input->file = afi->file;
+   input->fd = -1;
+   input->ArgusOriginal = (struct ArgusRecord *)&input->ArgusOriginalBuffer;
+}
 
 #include <sys/socket.h>
 #include <netinet/in.h>

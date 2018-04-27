@@ -160,6 +160,16 @@ struct ArgusWirelessStruct {
 
 typedef struct ArgusRecord * (*ArgusNetFlowHandler)(struct ArgusParserStruct *, struct ArgusInput *, uint8_t **, int *);
 
+struct ArgusFileInput {
+   struct ArgusQueueHeader qhdr;
+   char *filename;
+   FILE *file;
+   long long ostart;
+   long long ostop;
+   int type;
+   int fd;
+   struct stat statbuf;
+};
 
 struct ArgusInput {
    struct ArgusQueueHeader qhdr;

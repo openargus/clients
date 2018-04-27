@@ -217,17 +217,21 @@ extern void * ArgusTimeoutProcess (void *);
    ArgusParser->ArgusCurrentInput = NULL;
 
    if (ArgusParser->ArgusInputFileList != NULL) {
-      struct ArgusInput *file; 
+      struct ArgusInput *input;
+      struct ArgusFileInput *file;
+
+      input = ArgusMalloc(sizeof(*input));
+      if (input == NULL)
+         ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
       while (ArgusParser->ArgusPassNum) {
          file = ArgusParser->ArgusInputFileList;
 
-         ArgusParser->ArgusCurrentInput = file;
 
          while (file && ArgusParser->eNflag) {
             if (strcmp (file->filename, "-")) {
                if (strlen(file->filename)) {
-                  if (file->fd < 0) {
+                  if (file->file == NULL) {
                      if ((file->file = fopen(file->filename, "r")) == NULL) 
                         ArgusLog (LOG_ALERT, "open '%s': %s", file->filename, strerror(errno));
 
@@ -235,7 +239,10 @@ extern void * ArgusTimeoutProcess (void *);
                      fseek(file->file, 0, SEEK_SET);
                   }
 
-                  if ((file->file != NULL) && ((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+                  ArgusInputFromFile(input, file);
+                  ArgusParser->ArgusCurrentInput = input;
+
+                  if ((input->file != NULL) && ((ArgusReadConnection (ArgusParser, input, ARGUS_FILE)) >= 0)) {
 #if defined(ARGUS_THREADS)
                      pthread_mutex_lock(&ArgusParser->lock);
 #endif
@@ -245,24 +252,24 @@ extern void * ArgusTimeoutProcess (void *);
                      pthread_mutex_unlock(&ArgusParser->lock);
 #endif
                      if (ArgusParser->RaPollMode) {
-                         ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
-                         ArgusCloseInput(ArgusParser, file);  
+                         ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
+                         ArgusCloseInput(ArgusParser, input);
                      } else {
                         if (file->ostart != -1) {
-                           file->offset = file->ostart;
-                           if (fseek(file->file, file->offset, SEEK_SET) >= 0)
-                              ArgusReadFileStream(ArgusParser, file);
+                           input->offset = file->ostart;
+                           if (fseek(file->file, input->offset, SEEK_SET) >= 0)
+                              ArgusReadFileStream(ArgusParser, input);
                         } else {
-                           ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
-                           ArgusReadFileStream(ArgusParser, file);
+                           ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
+                           ArgusReadFileStream(ArgusParser, input);
                         }
                      }
 
                   } else
                      file->fd = -1;
 
-                  if (file->file != NULL) {
-                     ArgusCloseInput(ArgusParser, file);  
+                  if (input->file != NULL) {
+                     ArgusCloseInput(ArgusParser, input);
                   }
                }
 
@@ -272,7 +279,10 @@ extern void * ArgusTimeoutProcess (void *);
                file->ostart = -1;
                file->ostop = -1;
 
-               if (((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+               ArgusInputFromFile(input, file);
+               ArgusParser->ArgusCurrentInput = input;
+
+               if (((ArgusReadConnection (ArgusParser, input, ARGUS_FILE)) >= 0)) {
 #if defined(ARGUS_THREADS)
                   pthread_mutex_lock(&ArgusParser->lock);
 #endif
@@ -287,26 +297,28 @@ extern void * ArgusTimeoutProcess (void *);
                   if (fcntl(fileno(stdin), F_SETFL, flags | O_NONBLOCK) < 0)
                      ArgusLog (LOG_ERR, "ArgusReadFile: fcntl error %s", strerror(errno));
 
-                  ArgusReadFileStream(ArgusParser, file);
+                  ArgusReadFileStream(ArgusParser, input);
                }
             }
 
 #ifdef ARGUSDEBUG
             ArgusDebug (1, "main: ArgusReadFileStream (%s) done", file->filename);
 #endif
-            RaArgusInputComplete(file);
+            RaArgusInputComplete(input);
+            ArgusParser->ArgusCurrentInput = NULL;
+            ArgusCloseInput(ArgusParser, input);
 
-            if (file->filename != NULL)
-               free(file->filename);
+            file = (struct ArgusFileInput *)file->qhdr.nxt;
 
-            file = (struct ArgusInput *)file->qhdr.nxt;
-
-            ArgusFree(ArgusParser->ArgusInputFileList);
+            ArgusFileFree(ArgusParser->ArgusInputFileList);
             ArgusParser->ArgusInputFileList = file;
          }
 
          ArgusParser->ArgusPassNum--;
       }
+
+      ArgusFree(input);
+      input = NULL;
    }
 
    ArgusParser->ArgusCurrentInput = NULL;

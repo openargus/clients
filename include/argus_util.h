@@ -1561,6 +1561,9 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 extern char *lookup_srcid(const u_char *, struct anamemem *);
 extern char *lookup_alias(const u_char *, struct anamemem *);
 
+void ArgusFileFree(struct ArgusFileInput *afi);
+void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
+
 #else
 #define ARGUSPRINTSTARTDATE		0
 #define ARGUSPRINTLASTDATE		1
@@ -2217,6 +2220,8 @@ extern void ArgusHtoN (struct ArgusRecord *);
 extern void ArgusV2NtoH (struct ArgusV2Record *);
 extern void ArgusV2HtoN (struct ArgusV2Record *);
 
+void ArgusFileFree(struct ArgusFileInput *afi);
+void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 #endif 
 #ifdef __cplusplus
 }
