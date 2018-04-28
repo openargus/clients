@@ -274,7 +274,7 @@ __gzip(const char * const filename, const char * const gzfilename,
    magicbytes = fread(&hdr[0], 1, 3, fp);
    if (magicbytes == 3) {
       if (hdr[0] == 31 && hdr[1] == 139 && hdr[2] == 8) {
-         ArgusLog(LOG_INFO, "skipping gzipped file %s\n", filename);
+         DEBUGLOG(2, "skipping gzipped file %s\n", filename);
          fclose(fp);
          return -1;
       }
