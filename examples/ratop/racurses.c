@@ -5794,8 +5794,8 @@ char *RaTable = NULL;
 char *
 ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
 {
-   size_t len = strlen(RaProgramArgs);
-   size_t remain = sizeof(RaProgramArgs) - len;
+   size_t len = 0;
+   size_t remain = sizeof(RaProgramArgs);
    char *retn = RaProgramArgs;
    struct ArgusModeStruct *mode = NULL;
    struct ArgusInput *input = NULL;
