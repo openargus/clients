@@ -38,6 +38,7 @@
             </Directory>
           </Directory>
           <Directory Id='argus' Name='argus'/>
+          <Directory Id='staging' Name='staging'/>
           <Directory Id='etc' Name='etc'>
             <Component Id='Config' Guid="*">
               <File Id='ra.conf' Name='ra.conf' DiskId='1'
@@ -202,6 +203,21 @@
       </Component>
     </DirectoryRef>
 
+    <DirectoryRef Id='staging'>
+      <Component Id='create_staging_directory'
+                 Guid="d6e38eb1-4a51-4bc9-ae26-a0a0ea6dd98f">
+        <CreateFolder>
+          <util:PermissionEx User="BUILTIN\Administrators"
+                             Delete="yes"
+                             DeleteChild="yes"
+                             Read="yes"
+                             ReadExtendedAttributes="yes"
+                             WriteExtendedAttributes="yes"
+                             Synchronize="yes"/>
+        </CreateFolder>
+      </Component>
+    </DirectoryRef>
+
     <Feature Id='Complete' Level='1'>
       <ComponentRef Id='ra.exe' />
       <ComponentRef Id='rabins.exe' />
@@ -225,6 +241,7 @@
       <ComponentRef Id='REG_MACHINE' />
       <ComponentRef Id='create_var_directory' />
       <ComponentRef Id='create_varlog_directory' />
+      <ComponentRef Id='create_staging_directory' />
     </Feature>
 
   </Product>
