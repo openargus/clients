@@ -961,11 +961,12 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
    if (!(strncmp(parser->ArgusProgramName, "rahisto", 6)))
       getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
-      getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%";
+      getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
 
    while ((op = getopt (argc, argv, getoptStr)) != EOF) {
       switch (op) {
          case '%': ++parser->Pctflag; break;
+         case '3': parser->ver3flag = 1; break;
          case 'a': parser->aflag = atoi (optarg); break;
          case 'A': 
             if (!(strncmp(parser->ArgusProgramName, "radium", 6))) {
