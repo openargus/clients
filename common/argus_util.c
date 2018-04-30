@@ -29272,17 +29272,20 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
    }
 
    if (wfile->firstWrite) {
-      struct ArgusRecord *ns = (struct ArgusRecord *)&parser->ArgusInitCon;
+      unsigned char version = argus->hdr.type & ARGUS_VERSION_MASK;
+      unsigned char initversion = parser->ArgusInitCon.hdr.type & ARGUS_VERSION_MASK;
+      struct ArgusRecord *ns = &parser->ArgusInitCon;
       int len = ntohs(parser->ArgusInitCon.hdr.len) * 4;
-      if (len == 0) {
-         ns->hdr.type   = (ARGUS_MAR | ARGUS_VERSION);
+
+      if (len == 0 || (version != initversion)) {
+         ns->hdr.type   = (ARGUS_MAR | version);
          ns->hdr.cause  = ARGUS_START;
          ns->hdr.len    = (unsigned short) sizeof(struct ArgusRecord)/4;
 
          len = ns->hdr.len * 4;
 
          ns->argus_mar.thisid           = 0;
-         ns->argus_mar.argusid          = ARGUS_COOKIE;
+         ns->argus_mar.argusid          = version == 3 ? ARGUS_V3_COOKIE : ARGUS_COOKIE;
          ns->argus_mar.startime.tv_sec  = parser->ArgusGlobalTime.tv_sec;
          ns->argus_mar.startime.tv_usec = parser->ArgusGlobalTime.tv_usec;
          ns->argus_mar.now              = ns->argus_mar.startime;

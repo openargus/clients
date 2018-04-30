@@ -176,7 +176,7 @@ extern "C" {
 #define ARGUS_VERSION_7				0x07	/* Version 6 */
  
 #define ARGUS_VERSION				ARGUS_VERSION_5	/* Version 5 */
-
+#define ARGUS_VERSION_MASK			0x0f
 
 /*
    Argus Record Header Version Field
