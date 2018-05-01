@@ -173,6 +173,7 @@ extern char *RaRemoteFilter;
 extern char *RaLocalFilter;
 
 extern char RaFilterSQLStatement[];
+extern int argus_version;
 
 char *RaHost = NULL, *RaUser = NULL, *RaPass = NULL;
 int RaPort = 0;
@@ -7220,7 +7221,7 @@ ArgusGenerateSQLQuery (struct ArgusParserStruct *parser, struct ArgusAggregatorS
                if (ArgusSOptionRecord) {
                   int tlen;
 
-                  if ((argus = ArgusGenerateRecord (ns, 0L, rbuf, ARGUS_VERSION)) == NULL)
+                  if ((argus = ArgusGenerateRecord (ns, 0L, rbuf, argus_version)) == NULL)
                      ArgusLog(LOG_ERR, "ArgusGenerateSQLQuery: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(argus);

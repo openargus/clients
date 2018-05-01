@@ -49,6 +49,8 @@
 #include <signal.h>
 #include <ctype.h>
 
+static int argus_version = ARGUS_VERSION;
+
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
@@ -60,6 +62,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
@@ -179,7 +184,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if (retn != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
-                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
 #endif
@@ -283,7 +288,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                if (retn != 0) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

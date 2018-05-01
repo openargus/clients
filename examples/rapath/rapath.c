@@ -145,6 +145,8 @@ char *RaPathAggregationConfig[] = {
 #define ARGUS_RC_STATUS  2
 #define ARGUS_RC_IDLE    3
 
+static int argus_version = ARGUS_VERSION;
+
 extern char *ArgusAggregatorFields[];
 
 void
@@ -155,6 +157,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    parser->RaWriteOut = 0;
  
    if (!(parser->RaInitialized)) {
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
+
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
             if (!(strcasecmp (mode->mode, "think")))
@@ -964,7 +969,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (ArgusParser->RaAgMode)
       argus->dsrs[ARGUS_AGR_INDEX] = NULL;
 
-   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
       ArgusHtoN(argusrec);
 #endif

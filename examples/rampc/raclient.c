@@ -370,6 +370,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          (void) signal (SIGPIPE, SIG_IGN);
          (void) signal (SIGALRM, SIG_IGN);
 
+         if (parser->ver3flag)
+            ArgusLog(LOG_ERR, "rampc does not support version 3 output\n");
+
          parser->timeout.tv_sec  = 60;
          parser->timeout.tv_usec = 0;
 

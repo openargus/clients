@@ -202,7 +202,7 @@ struct RaMySQLProbeTable {
    char *name;
 };
 
-
+static int argus_version = ARGUS_VERSION;
 
 extern int ArgusTotalMarRecords;
 extern int ArgusTotalFarRecords;
@@ -320,7 +320,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
                      static char sbuf[MAXARGUSRECORD];
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf, ARGUS_VERSION)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
@@ -712,11 +712,12 @@ RaSQLQueryTable (char **tables)
    pthread_mutex_init(&ArgusInput->lock, NULL);
 #endif
 
-   ArgusInput->ArgusInitCon.hdr.type  = ARGUS_MAR | ARGUS_VERSION;
+   ArgusInput->ArgusInitCon.hdr.type  = ARGUS_MAR | argus_version;
    ArgusInput->ArgusInitCon.hdr.cause = ARGUS_START;
    ArgusInput->ArgusInitCon.hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
-   ArgusInput->ArgusInitCon.argus_mar.argusid = htonl(ARGUS_COOKIE);
+   ArgusInput->ArgusInitCon.argus_mar.argusid = (argus_version == ARGUS_VERSION_3)
+                                                ? htonl(ARGUS_V3_COOKIE) : htonl(ARGUS_COOKIE);
 
    gettimeofday (&now, 0L);
 
@@ -1151,6 +1152,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
 
       ArgusParseInit(ArgusParser, NULL);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if (ArgusParser->Sflag)
          usage();

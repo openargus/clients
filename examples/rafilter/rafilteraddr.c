@@ -57,6 +57,7 @@
 #include <argus_main.h>
 #include <argus_cluster.h>
 
+static int argus_version = ARGUS_VERSION;
 
 /*
    IANA style address label configuration file syntax is:
@@ -88,6 +89,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       int ArgusLabelerStatus = ARGUS_LABELER_ADDRESS;
 
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
@@ -255,7 +259,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                for (i = 0; i < count; i++) {
                   if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

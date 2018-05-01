@@ -87,6 +87,8 @@
 struct RaPolicyPolicyStruct *RaPolicy = NULL;
 struct RaPolicyPolicyStruct *RaGlobalPolicy = NULL;
 
+static int argus_version = ARGUS_VERSION;
+
 int RaPolicyParseResourceFile (struct ArgusParserStruct *, char *, struct RaPolicyPolicyStruct **);
 int RaReadPolicy (struct ArgusParserStruct *, struct RaPolicyPolicyStruct **, char *);
 int RaParsePolicy (struct ArgusParserStruct *, struct RaPolicyPolicyStruct **, char *);
@@ -104,6 +106,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    if (!(parser->RaInitialized)) {
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       parser->RaInitialized++;
       parser->RaWriteOut = 0;
@@ -306,7 +311,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                if (pass != 0) {
                   if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

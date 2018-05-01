@@ -55,6 +55,7 @@ short ArgusColorHighlight = ARGUS_WHITE;
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
+extern int argus_version;
 
 int
 main(int argc, char **argv)

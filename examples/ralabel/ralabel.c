@@ -58,6 +58,8 @@
 #include <argus_main.h>
 #include <argus_cluster.h>
 
+static int argus_version = ARGUS_VERSION;
+
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -68,6 +70,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    if (!(parser->RaInitialized)) {
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
@@ -302,7 +307,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif

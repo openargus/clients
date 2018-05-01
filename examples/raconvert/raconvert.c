@@ -318,6 +318,8 @@ usage () {
 }
 
 
+static int argus_version = ARGUS_VERSION;
+
 void
 ArgusClientInit(struct ArgusParserStruct *parser)
 {
@@ -403,7 +405,8 @@ struct ArgusMarStruct {
    ArgusParser->ArgusInitCon.hdr.cause                   = ARGUS_START;
    ArgusParser->ArgusInitCon.hdr.len                     = (unsigned short) (sizeof(struct ArgusMarStruct) + 4)/4;
    ArgusParser->ArgusInitCon.argus_mar.thisid            = ArgusSourceId;
-   ArgusParser->ArgusInitCon.argus_mar.argusid           = ARGUS_COOKIE;
+   ArgusParser->ArgusInitCon.argus_mar.argusid           = (argus_version == ARGUS_VERSION_3)
+                                                           ? ARGUS_V3_COOKIE : ARGUS_COOKIE;
  
    ArgusParser->ArgusInitCon.argus_mar.startime.tv_sec   = ArgusParser->ArgusRealTime.tv_sec;
    ArgusParser->ArgusInitCon.argus_mar.startime.tv_usec  = ArgusParser->ArgusRealTime.tv_usec;

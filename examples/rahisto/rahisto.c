@@ -64,6 +64,7 @@ int RaValuesAreIntegers = 1;
 long long RaNumberOfValues  = 0;
 long long RaValueBufferSize = 100000;
 double *RaValueBuffer = NULL;
+static int argus_version = ARGUS_VERSION;
 
 int RaFindModes(double *, long long, double *, int);
 int RaSortValueBuffer (const void *, const void *);
@@ -84,6 +85,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
  
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
@@ -388,7 +392,7 @@ RaParseComplete (int sig)
                                           if (pass != 0) {
                                              if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                                                 struct ArgusRecord *argusrec = NULL;
-                                                if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                                                if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                                                    ArgusHtoN(argusrec);
 #endif

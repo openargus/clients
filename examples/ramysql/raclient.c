@@ -116,6 +116,7 @@ extern struct ArgusRecordStruct *ArgusCheckSQLCache(struct ArgusParserStruct *, 
 
 struct timeval RaCursesUpdateInterval = {5, 0};
 
+int argus_version = ARGUS_VERSION;
 
 void
 ArgusThreadsInit(pthread_attr_t *attr)
@@ -447,6 +448,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          (void) signal (SIGWINCH,SIG_IGN);
          (void) signal (SIGPIPE, SIG_IGN);
          (void) signal (SIGALRM, SIG_IGN);
+
+         if (parser->ver3flag)
+            argus_version = ARGUS_VERSION_3;
 
          if ((parser->ArgusMaskList) == NULL)
             parser->ArgusReverse = 1;

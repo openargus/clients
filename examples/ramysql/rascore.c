@@ -1580,6 +1580,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       ArgusParseInit(ArgusParser, NULL);
 
+      if (parser->ver3flag)
+         ArgusLog(LOG_ERR, "rascore does not support version 3 output\n");
+
       if (ArgusParser->Sflag)
          usage();
 

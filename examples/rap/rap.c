@@ -76,6 +76,7 @@ struct ArgusRecordStruct *RaCurrentControl = NULL;
 int RapSessionIndex = 0;
 struct ArgusAggregatorStruct *sessions[RA_MAXSESSIONS];
 
+static int argus_version = ARGUS_VERSION;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -89,6 +90,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((parser->ArgusMaskList) == NULL)
          parser->ArgusReverse = 1;
@@ -964,7 +968,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (argus->status & ARGUS_RECORD_WRITTEN)
       return (retn);
 
-   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
       ArgusHtoN(argusrec);
 #endif
