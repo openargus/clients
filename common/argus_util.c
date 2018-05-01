@@ -29512,6 +29512,15 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
 
    if (file) {
       if (strcmp (file, "-")) {
+         if (!strncmp(file, "argus-v3:", 9)) {
+#ifdef ARGUSDEBUG
+            ArgusDebug(2, "%s version 3 output flag implicitly set\n",
+                       __func__);
+#endif
+            parser->ver3flag = 1;
+            file += 9; /* skip over the format specifier */
+         }
+
          if (!(strncmp(parser->ArgusProgramName, "radium", 6))  &&
              ((!(strncmp (file, "argus-udp://", 12))) || 
               (!(strncmp (file, "argus-tcp://", 12))) || 
