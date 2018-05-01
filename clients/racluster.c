@@ -57,6 +57,7 @@
 #include <argus_cluster.h>
 #include <netinet/ip_icmp.h>
 
+static int argus_version = ARGUS_VERSION;
 
 void ArgusIdleClientTimeout (void);
 
@@ -72,6 +73,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((parser->ArgusMaskList) == NULL)
          parser->ArgusReverse = 1;
@@ -1034,7 +1038,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
       struct ArgusListObjectStruct *lobj = NULL;
       int i, count = ArgusParser->ArgusWfileList->count;
 
-      if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+      if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
          ArgusHtoN(argusrec);
 #endif

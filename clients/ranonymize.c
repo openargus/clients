@@ -171,6 +171,8 @@ extern char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE];
 
 int ArgusFirstMOptionField = 1;
 
+static int argus_version = ARGUS_VERSION;
+
 void ArgusProcessOptions(struct ArgusModeStruct *);
 
 struct RaMapHashTableHeader *RaMapAllocateEtherAddr (struct ether_header *, int, int);
@@ -198,6 +200,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
 
       parser->RaInitialized++;
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
@@ -748,7 +753,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if (pass != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
-                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
 #endif

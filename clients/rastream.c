@@ -97,6 +97,8 @@ static struct timeval dThisTime = {0, 0};
 
 static long long thisUsec = 0;
 
+static int argus_version = ARGUS_VERSION;
+
 static int ArgusRunFileScript(struct ArgusParserStruct *,
                               struct ArgusWfileStruct *, int);
 static int ArgusRunScript(struct ArgusParserStruct *,
@@ -136,6 +138,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if (parser->dflag) {
          int pid;
@@ -1300,7 +1305,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
       if (pass != 0) {
          if ((ArgusParser->exceptfile == NULL) || strcmp(tfile->filename, ArgusParser->exceptfile)) {
             struct ArgusRecord *argusrec = NULL;
-            if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, ARGUS_VERSION)) != NULL) {
+            if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                ArgusHtoN(argusrec);
 #endif
