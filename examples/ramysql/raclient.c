@@ -505,7 +505,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      nadp = &RaBinProcess->nadp;
 
                      nadp->mode   = -1;
-                     nadp->modify =  0;
+                     nadp->modify =  1;
                      nadp->slen   =  2;
    
                      if (parser->aflag)
@@ -1454,26 +1454,27 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
             offset = (ArgusParser->Bflag * 1000000)/RaBinProcess->nadp.size;
 
-            while (!(ns->status & ARGUS_RECORD_PROCESSED) && ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL)) {
-               if ((tretn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
-                  struct ArgusRecordStruct *rec = NULL;
+            if (!(ns->status & ARGUS_RECORD_PROCESSED)) {
+               while ((tns = ArgusAlignRecord(parser, ns, &RaBinProcess->nadp)) != NULL) {
+                  if ((tretn = ArgusCheckTime (parser, tns, ArgusTimeRangeStrategy)) != 0) {
+                     struct ArgusRecordStruct *rec = NULL;
 
-                  switch (ns->hdr.type & 0xF0) {
-                     case ARGUS_EVENT:
-                     case ARGUS_MAR:
-                        break;
+                     switch (ns->hdr.type & 0xF0) {
+                        case ARGUS_EVENT:
+                        case ARGUS_MAR:
+                           break;
 
-                     case ARGUS_NETFLOW:
-                     case ARGUS_FAR: {
-                        struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
+                        case ARGUS_NETFLOW:
+                        case ARGUS_FAR: {
+                           struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 
-                        if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                           if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) > 0) {
+                           if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
+                              if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) > 0) {
 #if defined(ARGUS_MYSQL)
-                              if (rec != NULL) {
-                                 struct RaBinStruct *bin = rec->bin;
-                                 if (RaSQLCacheDB) {
+                                 if (rec != NULL) {
+                                    struct RaBinStruct *bin = rec->bin;
                                     struct ArgusRecordStruct *cns = NULL;
+
                                     if (bin->table == NULL) {
                                        char *table;
                                        if ((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))) {
@@ -1486,28 +1487,31 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                        } else {
                                           bin->table = strdup(RaSQLSaveTable);
                                        }
-                                    }
-                                    if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
-                                       ArgusMergeRecords (ArgusParser->ArgusAggregator, rec, cns);
-                                       rec->status &= ~ARGUS_SQL_STATUS;
-                                    } else
                                        rec->status |= ARGUS_SQL_INSERT;
-                                 } else
-                                    rec->status |= ARGUS_SQL_INSERT;
-                              }
+
+                                    } else {
+                                       if (RaSQLCacheDB) {
+                                          if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
+                                             ArgusMergeRecords (ArgusParser->ArgusAggregator, rec, cns);
+                                             rec->status &= ~ARGUS_SQL_STATUS;
+                                          } else
+                                             rec->status |= ARGUS_SQL_INSERT;
+                                       } else
+                                          rec->status |= ARGUS_SQL_INSERT;
+                                    }
+                                 }
 #endif
+                              }
                            }
-
+                           break;
                         }
-                        break;
                      }
+
                   }
-
+                  if (tns)
+                     ArgusDeleteRecordStruct(parser, tns);
                }
-               if (tns)
-                  ArgusDeleteRecordStruct(parser, tns);
             }
-
             ArgusDeleteRecordStruct(parser, ns);
             found++;
          }
