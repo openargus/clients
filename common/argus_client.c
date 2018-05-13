@@ -3724,7 +3724,7 @@ ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const src,
                              int srclen, struct ArgusTransportStruct *dst,
                              int major_version)
 {
-   unsigned char subtype;
+   unsigned char subtype = 0;
 
    if (major_version < MAJOR_VERSION_5)
       if (srclen >= 12)
