@@ -86,7 +86,7 @@ SRC =	radump.c print-aodv.c print-arp.c print-beep.c print-bfd.c print-bgp.c \
 	print-lmp.c print-msdp.c print-ntp.c print-pim.c print-pptp.c print-snmp.c \
 	print-syslog.c print-rip.c print-telnet.c print-tftp.c print-isoclns.c \
 	print-ether.c print-timed.c print-radius.c print-rx.c print-smb.c \
-	print-stp.c print-isakmp.c print-igmp.c print-dvmrp.c smbutil.c gmpls.c
+	print-stp.c print-isakmp.c print-igmp.c print-dvmrp.c print-wol.c smbutil.c gmpls.c
 
 PROGS = $(INSTALLBIN)/radump
 

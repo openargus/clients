@@ -73,6 +73,7 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "2055", "xnscp", "XNS Compatability" }, 
    { "2056", "frarp", "Frame Relay ARP" }, 
    { "2076", "symbl", "Symbolics Private" }, 
+   { "2114", "wol", "Wake On Lan" }, 
    { "2184-2186", "xyplx", "Xyplex" }, 
    { "2304", "ubdeb", "Ungermann-Bass net debugr" }, 
    { "2560", "pup.3", "Xerox IEEE802.3 PUP" }, 

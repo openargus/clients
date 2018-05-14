@@ -166,6 +166,7 @@ extern char * isakmp_rfc3948_print(const u_char *, u_int);
 extern char * dvmrp_print(const u_char *, u_int);
 extern char * igmp_print(const u_char *, u_int);
 extern char * pimv1_print(const u_char *, u_int);
+extern char * wol_print(const u_char *, u_int);
 
 extern void print_data(const unsigned char *, int);
 extern const char *nt_errstr(u_int32_t);

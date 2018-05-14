@@ -392,10 +392,18 @@ struct ArgusMacFlow {
 */
 
                case ARGUS_TYPE_ETHER: {
-                  if (flow != NULL)
+                  if (flow != NULL) {
+                     u_short eproto = flow->mac_flow.mac_union.ether.ehdr.ether_type;
+
                      if ((flow->mac_flow.mac_union.ether.ssap == LLCSAP_BPDU) &&
-                         (flow->mac_flow.mac_union.ether.dsap == LLCSAP_BPDU))
+                         (flow->mac_flow.mac_union.ether.dsap == LLCSAP_BPDU)) {
                         stp_print (bp, slen);
+                     } else {
+                        switch (eproto) {
+                           case ETHERTYPE_WOL: wol_print(bp, slen); break;
+                        }
+                     }
+                  }
                   done++;
                   break;
                }

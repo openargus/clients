@@ -66,6 +66,9 @@ extern "C" {
 #ifndef ETHERTYPE_ARP
 #define ETHERTYPE_ARP		0x0806
 #endif
+#ifndef ETHERTYPE_WOL
+#define ETHERTYPE_WOL		0x0842
+#endif
 #ifndef ETHERTYPE_VINES
 #define ETHERTYPE_VINES		0x0bad
 #endif
