@@ -799,7 +799,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
       if (width >= 0) {
          width++;
          wait.tv_sec = 0;
-         wait.tv_usec = 250000;
+         wait.tv_usec = 500000;
 
          started = 1;
 
@@ -868,7 +868,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             ArgusAdjustGlobalTime(ArgusParser, &ArgusParser->ArgusRealTime);
             rtime = parser->ArgusRealTime;
 #if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&parser->lock);
+            pthread_mutex_unlock(&parser->lock);
 #endif
          }
 
