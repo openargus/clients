@@ -977,22 +977,6 @@ ArgusClientTimeout ()
 
                rbps->array[count] = NULL;
                rbps->startpt.tv_sec  += rbps->size;
-
-               if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
-                  struct ArgusWfileStruct *wfile = NULL;
-                  struct ArgusListObjectStruct *lobj = NULL;
-                  int i, cnt = ArgusParser->ArgusWfileList->count;
-
-                  if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
-                     for (i = 0; i < cnt; i++) {
-                        if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
-                           if (wfile->fd != NULL)
-                              fflush(wfile->fd);
-                        }
-                        lobj = lobj->nxt;
-                     }
-                  }
-               }
             }
 
 #ifdef ARGUSDEBUG

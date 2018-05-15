@@ -762,8 +762,6 @@ ArgusClientTimeout ()
                         }
                         ArgusRunFileScript(ArgusParser, wfile, ARGUS_SCHEDULE_SCRIPT);
                      } else {
-                        if (wfile && (wfile->fd != NULL))
-                           fflush(wfile->fd);
                         ArgusPushBackList(fcache->files, (struct ArgusListRecord *)wfile, ARGUS_NOLOCK);
                      }
                   }
