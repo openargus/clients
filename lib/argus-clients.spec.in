@@ -133,6 +133,7 @@ rm -f %{argusbin}/rasplit
 Summary: Argus Client Example Programs
 Group: Applications/Internet
 Requires: cyrus-sasl
+Requires: perl-DBD-MySQL
 
 %description examples
 argus-client-examples contains the compiled examples from the source
@@ -196,6 +197,7 @@ Group: Applications/Internet
 Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.22
 %if 0%{!?_workstation:1}
 Requires: argus-clients-sql
+Requires: perl-DBD-MySQL
 %endif
 
 %description dhcp
