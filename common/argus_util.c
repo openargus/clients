@@ -28742,7 +28742,7 @@ ArgusDump (const u_char *cp, int length, char *prefix)
 
 
 int
-ArgusAddMaskList (struct ArgusParserStruct *parser, char *ptr)
+ArgusAddMaskList (struct ArgusParserStruct *parser, const char * const ptr)
 {
    int retn = 0;
    struct ArgusModeStruct *mode, *list;
