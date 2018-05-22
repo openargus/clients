@@ -244,15 +244,21 @@ void RaArgusInputComplete (struct ArgusInput *input) {
             ArgusLog(LOG_ERR, "file %s is locked", ArgusInput->filename);
 
       } else {
+         struct stat statbuf;
          int size, mtime;
-         size = ArgusInput->statbuf.st_size;
-         mtime = ArgusInput->statbuf.st_mtime;
 
-         sprintf (buf, RaTableQueryString[1], input->filename, size,
-                       mtime, MDFile(ArgusInput->filename), RaStartTime, RaEndTime);
+         if (stat (input->filename, &statbuf) == 0) {
+            ArgusInput->statbuf = statbuf;
 
-         if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0) 
-            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+            size = statbuf.st_size;
+            mtime =statbuf.st_mtime;
+
+            sprintf (buf, RaTableQueryString[1], input->filename, size,
+                          mtime, MDFile(ArgusInput->filename), RaStartTime, RaEndTime);
+
+            if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+         }
       }
 
       sprintf (buf, RaTableQueryString[2], input->filename);
