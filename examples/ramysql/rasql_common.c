@@ -330,13 +330,13 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
 
 /* The array *columns[] must be allocated to hold ncolumns number of
  * char *pointers, but the char* elements should not be allocated before
- * calling RasqlManageGetColumns().  On return, the first *keylen elements
+ * calling RaSQLManageGetColumns().  On return, the first *keylen elements
  * in the array are primary keys according to SQL.  The element following
  * the last column name is always NULL, so really only ncolumns-1 column
  * names can be recorded.
  */
 int
-RasqlManageGetColumns(MYSQL *RaMySQL, const char * const table, char **columns,
+RaSQLManageGetColumns(MYSQL *RaMySQL, const char * const table, char **columns,
                       size_t ncolumns, size_t *keylen)
 {
    unsigned int num_fields;

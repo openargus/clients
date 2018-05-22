@@ -423,7 +423,7 @@ main(int argc, char **argv)
                if (!strcmp("Seconds", RaTables[i]))
                   continue;
 
-               done = RasqlManageGetColumns(RaMySQL+1, RaTables[i], ArgusTableColumnName,
+               done = RaSQLManageGetColumns(RaMySQL+1, RaTables[i], ArgusTableColumnName,
                       sizeof(ArgusTableColumnName)/sizeof(ArgusTableColumnName[0]),
                       &ArgusTableColumnKeys);
             }
