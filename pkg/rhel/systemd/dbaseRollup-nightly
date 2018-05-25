@@ -25,13 +25,103 @@
 use v5.6.0;
 use strict;
 use warnings;
+use Carp;
 
 use POSIX;
 use Time::Local;
+use DBI;
 use File::Temp qw/ :POSIX /;
 use File::Which qw/ which where /;
 
 my $debug       = 0;
+
+# opendb("databasename")
+sub opendb {
+    my ($dbase)  = @_;
+    my %attr     = ( PrintError => $debug, RaiseError => 0 );
+    my $dbuser   = 'root';
+    my $password = q{};
+    my $dsn      = "DBI:mysql:$dbase";
+    my $dbh      = DBI->connect( $dsn, $dbuser, $password, \%attr );
+    return $dbh;                     # undefined on error
+}
+
+sub closedb {
+    my ($dbh) = @_;
+
+    $dbh->disconnect();
+    return 0;
+}
+
+# return the number of rows in table.  return 0 if table is empty
+# or an error ocurred.
+sub row_count {
+    my ($dbh, $table) = @_;
+    my $query = "SELECT COUNT(*) from $table";
+    my $sth = $dbh->prepare($query);
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return 0;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return 0;
+    }
+
+    my $aryref = $sth->fetchrow_arrayref;
+    $sth->finish;
+    if ( $debug > 0 ) {
+        print "DEBUG: table $table has @${aryref[0]} rows\n";
+    }
+    return @$aryref[0];
+}
+
+# return 0 on success, undefined otherwise
+sub drop_table {
+    my ($dbh, $table) = @_;
+    my $query = "DROP TABLE $table";
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return;
+    }
+
+    $sth->finish;
+    return 0;
+}
+
+# return 0 on success, undefined otherwise
+sub rename_table {
+    my ($dbh, $oldname, $newname) = @_;
+    my $query = "RENAME TABLE $oldname TO $newname";
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return;
+    }
+
+    $sth->finish;
+    return 0;
+}
 
 # $dbaref is an array reference containing
 #   (database, base table name, primary key columns, all columns)
@@ -53,17 +143,23 @@ sub score_one_table {
         return;
     }
 
-    my $sqlfile = tmpnam();
-    my $fh;
-    if ( ! open($fh, ">", $sqlfile) ) {
-        warn "Can't open > $sqlfile: $!";
+    my $dbh = opendb($db);
+    if ( ! $dbh ) {
+        warn "Unable to open database $db\n";
         return;
     }
-    print $fh "DROP TABLE ${table};\n";
-    print $fh "RENAME TABLE ${table}_rascore TO ${table};\n";
-    close $fh;
-    system("mysql -u root $db < $sqlfile");
-    unlink $sqlfile;
+
+    if ( row_count( $dbh, "${table}_rascore" ) > 0 ) {
+        drop_table( $dbh, $table );
+        if ( !defined rename_table( $dbh, "${table}_rascore", $table ) ) {
+            closedb($dbh);
+            return;
+        }
+    } else {
+        warn "rascore generated no output\n";
+    }
+
+    closedb($dbh);
     return 1;
 }
 
