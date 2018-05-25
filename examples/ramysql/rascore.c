@@ -486,12 +486,24 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
                   int pass;
 
+		  /* don't output a score if there isn't already
+		   * one present and we have no baseline data
+                   */
+                  if (RaAnnualProcess == NULL &&
+                      RaMonthlyProcess == NULL &&
+                      ns->dsrs[ARGUS_SCORE_INDEX] == NULL)
+                     ns->score = 0;
+
                   for (pass = 0; pass < 2; pass++) {
                      struct ArgusRecordStruct *tns;
                      switch (pass) {
                          case FIRST_PASS: process = RaAnnualProcess; break;
                         case SECOND_PASS: process = RaMonthlyProcess; break;
                      }
+
+                     if (process == NULL)
+                        /* skip this pass if it has no data */
+                        continue;
 
                      if ((tns = ArgusFindRecord(process->htable, hstruct)) == NULL) {
                         struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
@@ -1971,7 +1983,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #ifdef ARGUSDEBUG
          ArgusDebug (1, "No SQL tables found\n");
 #endif
-         exit(-1);
       }
    }
 }
