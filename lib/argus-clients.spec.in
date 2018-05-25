@@ -323,7 +323,9 @@ ln -f -s %{_datarootdir}/argus-clients/emerging-Block-IPs-2018-03-22.conf \
          %{_datarootdir}/argus-clients/emerging-threats-current.conf
 
 %postun sql
-rm -f %{_datarootdir}/argus-clients/emerging-threats-current.conf
+if [ $1 -eq 0 ] ; then
+	rm -f %{_datarootdir}/argus-clients/emerging-threats-current.conf
+fi
 
 %endif
 
