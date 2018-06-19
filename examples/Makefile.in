@@ -54,6 +54,7 @@ DIRS += ./raports
 DIRS += ./rahosts
 DIRS += ./rascanner
 DIRS += ./radbase
+DIRS += ./raup
 endif
 
 .c.o:
@@ -81,6 +82,7 @@ radhcp: ../common
 radump: ../common
 raevent: ../common
 rafilter: ../common
+raup: ../common
 ragraph: ../common
 ragrep: ../common
 rahisto: ../common

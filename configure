@@ -10741,7 +10741,7 @@ if test "$with_examples" != no; then :
 
 fi
 
-   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile"
+   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
 
 
 fi
@@ -11486,6 +11486,7 @@ do
     "./examples/ratop/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratop/Makefile" ;;
     "./examples/ratrace/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratrace/Makefile" ;;
     "./examples/ratree/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratree/Makefile" ;;
+    "./examples/raup/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raup/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

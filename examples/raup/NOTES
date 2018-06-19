@@ -1,0 +1,148 @@
+#
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2018 QoSient, LLC
+#  All rights reserved.
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#
+#   raup - Ra based acceptable use policy client problem.
+#          This program grabs its configuration from the database,
+#          getting its set of acceptable use policies that need to
+#          be evaluated.  These PolicySets will specify a list of
+#          policies, a serviceDesc such as dns, ntp, ldap, a
+#          client list, a server list, which can be referenced,
+#          managed, labeled as 'groups', the action related to
+#          the policy and a time for when the policy is in action.
+#
+#          This is designed to provide service based policy verification,
+#          which maybe in the form of an access control policy,
+#          an acceptable use policy, or as a mitigation verification
+#          statement.
+#
+#   Author: Carter Bullard carter@qosient.com
+#
+#
+#    sample configuration for raup binary.
+#
+#    PolicySetStrategy - this variable set the policy results when there
+#                        are and aren't matches.  Available values are:
+#          Permissive  - Permit when not specified
+#          Restrictive - Non-specified relationships are NoPermit
+#
+
+RAUP_POLICYUUID=5E487EDE-B311-5E80-B69F-967E5E6C7A9F
+RAUP_POLICYNAME="QoSientDNSPolicy"
+RAUP_POLICYSETSTRATEGY="Restrictive"
+
+#
+#    Service Specifications and Definitions
+#
+#    Specification for how a service is defined.  A service keyword can be
+#    used that is found in the /etc/services file, and implies that the
+#    service is identified by a protocol and a service (dst) port number.
+#    An example would be 'http', which is specified as 'udp/80 tcp/80',
+#    which is converted to:
+#
+#       http - '(tcp or udp) and dst port 80'
+#
+#    This may not be appropriate, and so the 'http' keyword can be redefined
+#    in this configuration, to more specific rules.
+#
+#       http - 'tcp and dst port (80 or 8080 or 8088)'
+#
+#    If a Service is not defined in this file, and a mysql database uri is
+#    specified, raup.1 will look for the service definition from the database.
+#    If there is not a match in the database, then the /etc/services file
+#    will be used.
+#
+#    Format is:
+#       Service name and an argus filter list (see ra.1 for specification)
+#       which should represent a port based service filter appropriate
+#       for ra.1.
+#
+#
+
+RAUP_SERVICE="domain:port 53"
+RAUP_SERVICE="ntp:udp and port 123"
+RAUP_SERVICE="http:tcp and port (80 or 8080 or 8088)"
+RAUP_SERVICE="https:tcp and port 443"
+RAUP_SERVICE="imaps:tcp and port 993"
+
+
+#
+#    Service Verification
+#
+#    A service can be verified through captured user data analysis.
+#    For many protocols, such as control plane ISIS, DNS and DHCP,
+#    protocol specific methods are available to parse and verify that the
+#    payloads are of the correct format.
+#
+#    Service verification is available for every service,
+#
+#    Format is:
+#       yes
+#       no
+#
+#
+
+RAUP_VERIFICATION="yes"
+RA_SERVICES_SIGNATURES=/usr/local/argus/std.sig
+
+#
+#    IP-Address Group Definitions
+#
+#    Lists of IP addresses can be specified as dotted notation IP addresses,
+#    IP prefixes (CIDR), Fully Qualified Domain Names (FQDNs), ranges of
+#    addresses, or aliased as group names, in any expression.
+#
+#    Groups can be refined using 'local' and 'remote' to combine a locality
+#    score with the IP addresses specified.  These can be extended to specify
+#    the locality values to match. If no locality information is available,
+#    the rule will generate a syntax error.  When combined with keywords,
+#    or ip-type information, subsets of address pools can be referenced with
+#    specificity.
+#
+#    Format is:
+#           Label = [local[localitySpec]: | remote[localitySpec]:](any | ip-type | ip-list | FQDN-list)
+#
+#    localitySpec = minValue[-maxValue]
+#             any = keyword specifying all IP addresses.
+#         ip-list = ip-prefix[[, ip-prefix] ...]
+#       fqdn-list = fqdn[[, fqdn] ...]
+#
+#    If a group is not defined, and a mysql database uri is specified,
+#    raup.1 will fetch the group definition from the database.
+#
+#
+
+RA_GROUP=/tmp/local.site.groups
+
+RAUP_GROUP="LocalDnsClientsGroup = local:any"
+RAUP_GROUP="RemoteDnsServerGroup = remote: 10.5.10.0/24, 10.8.11.0/24"
+RAUP_GROUP="LocalDnsServerGroup  = local:192.168.0.66,192.168.0.1"
+
+RAUP_POLICYSET="
+   Policy service:domain clients:LocalDnsClientsGroup servers:LocalDnsServerGroup Permit
+   Policy service:domain clients:LocalDnsServerGroup servers:RemoteDnsServerGroup Permit
+   Policy service:domain clients:remote:any servers:LocalDnsServerGroup Permit
+
+   Policy service:mdns clients:local:any servers:local:any Permit
+
+   Policy service:https clients:local:any servers:remote:any Permit
+   Policy service:http  clients:local:any servers:remote:any Permit
+
+   Policy service:ntp clients:local:any servers:10.2.34.2,10.2.243.18 Permit
+   Policy service:ntp clients:10.2.34.2,10.2.243.18 servers:remote:any Permit
+"

@@ -534,6 +534,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/ratop/Makefile
       ./examples/ratrace/Makefile
       ./examples/ratree/Makefile
+      ./examples/raup/Makefile
    ])
 ])
 
