@@ -1,0 +1,26 @@
+# IANA IPv4 Special-Purpose Address Registry
+# Address Block         Name                            RFC             Allocation      Src     Dst     Fwd     Reach   Reserved
+#                                                                       Date
+
+0.0.0.0/8		ThisHost			[RFC1122]	1981-09	   	True	False	False	False	True
+10.0.0.0/8		Private				[RFC1918]	1996-02	   	True	True	True	False	False
+100.64.0.0/10		Shared 				[RFC6598]	2012-04	   	True	True	True	False	False
+127.0.0.0/8		Loopback			[RFC1122]	1981-09	   	False	False	False	False	True
+169.254.0.0/16		LinkLocal			[RFC3927]	2005-05	   	True	True	False	False	True
+172.16.0.0/12		Private				[RFC1918]	1996-02	   	True	True	True	False	False
+192.0.0.0/24   		IETF				[RFC6890]	2010-01	   	False	False	False	False	False
+192.0.0.0/29		Service-Continuity		[RFC7335]	2011-06	   	True	True	True	False	False
+192.0.0.8/32		Dummy				[RFC7600]	2015-03	   	True	False	False	False	False
+192.0.0.9/32		PortControl			[RFC7723]	2015-10	   	True	True	True	True	False
+192.0.0.10/32		RelayTraversal			[RFC8155]	2017-02	   	True	True	True	True	False
+192.0.0.170/31		NAT64/DNS64-Discovery		[RFC7050]	2013-02	   	False	False	False	False	True
+192.0.2.0/24		TEST-NET-1			[RFC5737]	2010-01	   	False	False	False	False	False
+192.31.196.0/24		AS112-V4			[RFC7535]	2014-12	   	True	True	True	True	False
+192.52.193.0/24		AMT				[RFC7450]	2014-12	   	True	True	True	True	False
+192.168.0.0/16		Private				[RFC1918]	1996-02	   	True	True	True	False	False
+192.175.48.0/24		Direct Delegation AS112 Service	[RFC7534]	1996-01	   	True	True	True	True	False
+198.18.0.0/15		Benchmarking			[RFC2544]	1999-03	   	True	True	True	False	False
+198.51.100.0/24		TEST-NET-2			[RFC5737]	2010-01	   	False	False	False	False	False
+203.0.113.0/24		TEST-NET-3			[RFC5737]	2010-01	   	False	False	False	False	False
+240.0.0.0/4		Reserved			[RFC1112]	1989-08	   	False	False	False	False	True
+255.255.255.255/32	Broadcast			[RFC8190] 	1984-10	   	False	True	False	False	True
