@@ -100,9 +100,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
       parser->ArgusLabeler = ArgusLabeler;
 
-      if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
-
+     
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
@@ -116,8 +114,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig error");
                }
             } else
-            if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
-                (!(strncasecmp (mode->mode, "debug", 5)))) {
+            if (!(strncasecmp (mode->mode, "debug.tree", 10))) {
                ArgusDebugTree = 1;
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
                RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
@@ -130,6 +127,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   } else
                      parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_LOCAL;
                }
+            } else
+            if (!(strncasecmp (mode->mode, "debug", 5))) {
+               parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+               RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
             } else
             if (!(strncasecmp (mode->mode, "graph", 5))) {
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_GRAPH;
