@@ -192,8 +192,8 @@ S_EXTGETDPORT2,
 S_TAGS,
 S_NAMACL,
 S_DONE,
-S_FINAL,	// defines the number of rows in the state event table 
-// anything beyond this comment is a valid value (no compiler warning) but is really an in band indicator
+S_FINAL,                // defines the number of rows in the state event table 
+                        // anything beyond this comment is a valid value (no compiler warning) but is really an inband indicator
 S_LOCAL = 1000,		// no chage in the current state
 S_NONE			// the state cannot be determined always an indication of failure
 };
