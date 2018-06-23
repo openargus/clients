@@ -1204,8 +1204,12 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   }
                } else
                if ((tzptr = strstr (optarg, "label=")) != NULL) {
-                  parser->ArgusMatchLabel++;
+                  parser->ArgusMatchLabel = strdup(&optarg[6]);
                   ArgusProcessLabelOptions(parser, &optarg[6]);
+               } else
+               if ((tzptr = strstr (optarg, "group=")) != NULL) {
+                  parser->ArgusMatchGroup = strdup(&optarg[6]);
+                  ArgusProcessGroupOptions(parser, &optarg[6]);
                } else
                if ((tzptr = strstr (optarg, "dsrs=")) != NULL) {
                   parser->ArgusStripFields++;
@@ -2367,7 +2371,7 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
             if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
                ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
-         RaReadAddressConfig (parser, parser->ArgusLocalLabeler, optarg);
+         RaReadLocalityConfig (parser, parser->ArgusLocalLabeler, optarg);
          break;
       }
 
@@ -3231,7 +3235,47 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
                      return (argus->hdr.len * 4);
                }
 
-               if (((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)) {
+               if (parser->ArgusMatchGroup) {
+                  struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+                  if (flow != NULL) {
+                     switch (flow->hdr.subtype & 0x3F) {
+                        case ARGUS_FLOW_CLASSIC5TUPLE:
+                        case ARGUS_FLOW_LAYER_3_MATRIX: {
+                           switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                              case ARGUS_TYPE_IPV4: {
+                                 struct ArgusLabelerStruct *labeler;
+                                 char *labelbuf;
+
+                                 if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                                    if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
+                                       if (regexec(&parser->sgpreg, labelbuf, 0, NULL, 0)) {
+                                          free(labelbuf);
+                                          return (argus->hdr.len * 4);
+                                       }
+                                       free(labelbuf);
+                                    } else
+                                       return (argus->hdr.len * 4);
+
+                                    if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
+                                       if (regexec(&parser->dgpreg, labelbuf, 0, NULL, 0)) {
+                                          free(labelbuf);
+                                          return (argus->hdr.len * 4);
+                                       }
+                                       free(labelbuf);
+                                    } else
+                                       return (argus->hdr.len * 4);
+                                    break;
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+
+               if (!(((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)))
+                  parser->ArgusTotalRecords++;
+               else {
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(ptr);
 #endif
@@ -12686,6 +12730,8 @@ void
 ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
+   struct ArgusLabelerStruct *labeler;
+
    char tmpbuf[128], *ptr = tmpbuf;
    int locValue = -1;
 
@@ -12716,21 +12762,44 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 #endif
 }
 
+
+
 void
 ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
+   struct ArgusLabelerStruct *labeler;
+
    char tmpbuf[128], *ptr = tmpbuf;
    int locValue = -1;
 
    if (argus->hdr.type & ARGUS_MAR) {
       sprintf (ptr, " ");
    } else {
+      sprintf (ptr, " ");
       if (local != NULL) {
          locValue = local->dloc;
          sprintf (ptr, "%d", locValue);
-      } else
-         sprintf (ptr, " ");
+      } else {
+
+         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           sprintf (ptr, "%d", locValue);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
    }
 
    if (parser->ArgusPrintXml) {
@@ -12798,7 +12867,7 @@ ArgusPrintSrcGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
       if (labelbuf) {
          if (parser->ArgusPrintXml) {
-            sprintf (buf, " Label = \"%s\"", labelbuf);
+            sprintf (buf, " SrcGroup = \"%s\"", labelbuf);
          } else {
             if (parser->RaFieldWidth != RA_FIXED_WIDTH)
                len = strlen(labelbuf);
@@ -12820,11 +12889,13 @@ ArgusPrintSrcGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 }
 
 
+
 void
 ArgusPrintDstGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   struct ArgusLabelerStruct *labeler;
    struct ArgusLabelStruct *label;
-   char *labelbuf = "";
+   char *labelbuf = NULL, *lbuf = NULL;
 
    if (argus->hdr.type & ARGUS_MAR) {
       if (parser->ArgusPrintXml) {
@@ -12832,27 +12903,56 @@ ArgusPrintDstGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          sprintf (buf, "%*.*s ", len, len, " ");
 
    } else {
-      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL))
-         labelbuf = label->l_un.label;
+      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+         if ((lbuf= label->l_un.label) != NULL) {
+            char *ptr;
+            if ((ptr = strstr(lbuf, "dloc=")) != NULL) {
+               labelbuf = &lbuf[5];
+            }
+         }
+      }
 
-      if (parser->ArgusPrintXml) {
-         sprintf (buf, " Label = \"%s\"", labelbuf);
-      } else {
-         if (parser->RaFieldWidth != RA_FIXED_WIDTH)
-            len = strlen(labelbuf);
+      if (labelbuf == NULL) {
+         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      if (labelbuf == NULL)
+         labelbuf = "";
 
-         if (len != 0) {
-            if (len < strlen(labelbuf))
-               sprintf (buf, "%*.*s* ", len-1, len-1, labelbuf);
-            else
-               sprintf (buf, "%*.*s ", len, len, labelbuf);
-         } else
-            sprintf (buf, "%s ", labelbuf);
+      if (labelbuf) {
+         if (parser->ArgusPrintXml) {
+            sprintf (buf, " DstGroup = \"%s\"", labelbuf);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH)
+               len = strlen(labelbuf);
+
+            if (len != 0) {
+               if (len < strlen(labelbuf))
+                  sprintf (buf, "%*.*s* ", len-1, len-1, labelbuf);
+               else
+                  sprintf (buf, "%*.*s ", len, len, labelbuf);
+            } else
+               sprintf (buf, "%s ", labelbuf);
+         }
       }
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintSrcGroup (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintDstGroup (%p, %p)", buf, argus);
 #endif
 }
 
@@ -27124,7 +27224,7 @@ ArgusCheckTime(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
       retn++;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (7, "ArgusCheckTIme (%p, %p) returning %d\n", parser, ns, 
+   ArgusDebug (7, "ArgusCheckTime (%p, %p) returning %d\n", parser, ns, 
           (ArgusTimeRangeNegation ? (retn ? 0 : 1) : retn));
 #endif
    return (ArgusTimeRangeNegation ? (retn ? 0 : 1) : retn);
@@ -30661,6 +30761,63 @@ ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)
          char errbuf[MAXSTRLEN];
          if (regerror(retn, &parser->lpreg, errbuf, MAXSTRLEN))
             ArgusLog (LOG_ERR, "ArgusProcessLabelOption: label regex error %s", errbuf);
+      }
+   }
+}
+
+
+void
+ArgusProcessGroupOptions(struct ArgusParserStruct *parser, char *group)
+{
+   if (group != NULL) {
+      char *sgrp = NULL, *dgrp = NULL;
+      char *ptr, *tok;    
+      int retn, options;
+
+      if (*group == '\"') {
+         char *gptr = &group[strlen(group)];
+         while (*gptr != '\"') gptr--;
+         if (gptr != group)
+            *gptr = '\0';
+         group++;
+      }
+
+      ptr = group;
+      while ((tok = strtok(ptr, " ,")) != NULL) {
+         if ((ptr = strstr(tok, "src:")) != NULL) {
+            sgrp = ptr + strlen("src:");
+         } else
+         if ((ptr = strstr(tok, "dst:")) != NULL) {
+            dgrp = ptr + strlen("dst:");
+         }
+         ptr = NULL;
+      }
+      
+
+#if defined(ARGUS_PCRE)
+      options = 0;
+#else
+      options = REG_EXTENDED | REG_NOSUB;
+#if defined(REG_ENHANCED)
+      options |= REG_ENHANCED;
+#endif
+#endif
+      options |= REG_ICASE;
+
+      if (sgrp != NULL) {
+         if ((retn = regcomp(&parser->sgpreg, sgrp, options)) != 0) {
+            char errbuf[256];
+            if (regerror(retn, &parser->sgpreg, errbuf, 256))
+               ArgusLog (LOG_ERR, "ArgusProcessLabelOption: label regex error %s", errbuf);
+         }
+      }
+
+      if (dgrp != NULL) {
+         if ((retn = regcomp(&parser->dgpreg, dgrp, options)) != 0) {
+            char errbuf[256];
+            if (regerror(retn, &parser->dgpreg, errbuf, 256))
+               ArgusLog (LOG_ERR, "ArgusProcessLabelOption: label regex error %s", errbuf);
+         }
       }
    }
 }

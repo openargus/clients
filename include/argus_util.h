@@ -1470,6 +1470,7 @@ void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct
 struct RaAddressStruct *RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int); 
 int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int); 
 char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 
 int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
 int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
@@ -1517,6 +1518,7 @@ void clearArgusWfile(struct ArgusParserStruct *);
 extern unsigned int thisnet, localaddr, localnet, netmask;
 
 void ArgusProcessLabelOptions(struct ArgusParserStruct *, char *);
+void ArgusProcessGroupOptions(struct ArgusParserStruct *, char *);
 
 void (*RaPrintAlgorithms[ARGUS_MAX_PRINT_ALG])(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int) = {
    ArgusPrintStartDate,
@@ -1777,6 +1779,7 @@ extern struct ArgusPrintFieldStruct RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES];
 extern void (*RaPrintAlgorithms[ARGUS_MAX_PRINT_ALG])(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 extern void ArgusProcessLabelOptions(struct ArgusParserStruct *, char *);
+extern void ArgusProcessGroupOptions(struct ArgusParserStruct *, char *);
 
 extern void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
 extern void ArgusInitAddrtoname(struct ArgusParserStruct *, u_int, u_int);
@@ -1855,6 +1858,7 @@ extern void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecor
 extern struct RaAddressStruct *RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int); 
 extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int); 
 extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 
 extern int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
 extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);

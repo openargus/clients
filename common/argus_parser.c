@@ -329,6 +329,13 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
       regfree(&parser->lpreg);
    }
 
+   if (parser->ArgusMatchGroup != NULL) {
+      free(parser->ArgusMatchGroup);
+      parser->ArgusMatchGroup = NULL;
+      regfree(&parser->sgpreg);
+      regfree(&parser->dgpreg);
+   }
+
 /*
    {
       char sbuf[MAXSTRLEN];
