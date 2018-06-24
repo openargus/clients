@@ -21599,6 +21599,53 @@ lookup_alias(const u_char *alias, struct anamemem *table)
    return (retn);
 }
 
+struct gnamemem *
+check_group(struct gnamemem *table, const u_char *np)
+{
+   if (np != NULL) {
+      struct gnamemem *gp;
+      u_int hash;
+
+      hash = getnamehash(np);
+
+      gp = &table[hash % (HASHNAMESIZE-1)];
+      while (gp->g_nxt) {
+         if (!strcmp((char *)np, gp->name))
+            return gp;
+         else
+            gp = gp->g_nxt;
+      }
+   }
+   return NULL;
+}
+
+struct gnamemem *
+lookup_group(struct gnamemem *table, const u_char *group)
+{
+   struct gnamemem *grp = NULL;
+
+   if (group != NULL) {
+      u_int hash;
+
+      hash  = getnamehash(group);
+      hash %= (HASHNAMESIZE - 1);
+
+      grp = &table[hash];
+      while (grp->g_nxt) {
+         if (!strcmp((char *)group, grp->group))
+            return grp;
+         else
+            grp = grp->g_nxt;
+      }
+
+      grp->name = strdup((char *)group);
+      grp->hashval = hash;
+      grp->g_nxt = (struct gnamemem *)calloc(1, sizeof(*grp));
+   }
+
+   return (grp);
+}
+
 /* find the database table that corresponds to name */
 
 struct dbtblmem *
