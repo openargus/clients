@@ -372,14 +372,14 @@ struct snamemem  servicetable[HASHNAMESIZE];
 struct nnamemem    nnametable[HASHNAMESIZE];
 
 struct cnamemem  converttable[HASHNAMESIZE];
-struct h6namemem h6nametable[HASHNAMESIZE];
-struct hnamemem  hnametable[HASHNAMESIZE];
-struct hnamemem  tporttable[HASHNAMESIZE];
-struct hnamemem  uporttable[HASHNAMESIZE];
-struct hnamemem  rporttable[HASHNAMESIZE];
-struct hnamemem  eprototable[HASHNAMESIZE];
-struct hnamemem  llcsaptable[HASHNAMESIZE];
-struct evendmem  ethervendor[HASHNAMESIZE];
+struct h6namemem  h6nametable[HASHNAMESIZE];
+struct hnamemem    hnametable[HASHNAMESIZE];
+struct hnamemem    tporttable[HASHNAMESIZE];
+struct hnamemem    uporttable[HASHNAMESIZE];
+struct hnamemem    rporttable[HASHNAMESIZE];
+struct hnamemem   eprototable[HASHNAMESIZE];
+struct hnamemem   llcsaptable[HASHNAMESIZE];
+struct evendmem   ethervendor[HASHNAMESIZE];
 
 struct evendmem  ethermask[48];
    
@@ -21644,6 +21644,53 @@ lookup_group(struct gnamemem *table, const u_char *group)
    }
 
    return (grp);
+}
+
+struct snamemem *
+check_service(struct snamemem *table, const u_char *np)
+{     
+   if (np != NULL) {
+      struct snamemem *sp;
+      u_int hash;
+      
+      hash = getnamehash(np);
+         
+      sp = &table[hash % (HASHNAMESIZE-1)];
+      while (sp->s_nxt) {
+         if (!strcmp((char *)np, sp->name))
+            return sp;
+         else
+            sp = sp->s_nxt;
+      }
+   }
+   return NULL;
+}
+
+struct snamemem *
+lookup_service(struct snamemem *table, const u_char *service)
+{
+   struct snamemem *srv = NULL;
+
+   if (service != NULL) {
+      u_int hash;
+
+      hash  = getnamehash(service);
+      hash %= (HASHNAMESIZE - 1);
+
+      srv = &table[hash];
+      while (srv->s_nxt) {
+         if (!strcmp((char *)service, srv->name))
+            return srv;
+         else
+            srv = srv->s_nxt;
+      }
+
+      srv->name = strdup((char *)service);
+      srv->hashval = hash;
+      srv->s_nxt = (struct snamemem *)calloc(1, sizeof(*srv));
+   }
+
+   return (srv);
 }
 
 /* find the database table that corresponds to name */
