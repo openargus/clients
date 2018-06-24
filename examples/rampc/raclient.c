@@ -64,13 +64,6 @@ long long thisUsec = 0;
 
 void ArgusThreadsInit(pthread_attr_t *);
 
-void RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerStruct *labeler, char *);
-
-/*
-int RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *, unsigned int *, int, int);
-void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-*/
-
 extern int ArgusCloseDown;
 
 int ArgusProcessQueue (struct ArgusQueueStruct *);
