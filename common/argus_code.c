@@ -523,7 +523,7 @@ ArgusFilterCompile(struct nff_program *program, char *buf, int optimize)
 #endif /* ARGUSFORKFILTER */
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (2, "ArgusFilterCompile () done %d\n", retn);
+   ArgusDebug (2, "ArgusFilterCompile('%s') done %d\n", buf, retn);
 #endif
 
    return (retn);
