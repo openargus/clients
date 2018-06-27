@@ -1533,7 +1533,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusCreateSQLSaveTable(RaDatabase, table);
                                              sprintf (stable, "%s.%s", RaDatabase, table);
                                              bin->table = strdup(stable);
-                                          }
+
+                                          } else
+                                             ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCreateSQLSaveTableName error", strerror(errno));
+
                                        } else {
                                           bin->table = strdup(RaSQLSaveTable);
                                        }
