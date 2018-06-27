@@ -6808,7 +6808,17 @@ RaMySQLInit (int ncons)
         (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0))) {
 
       if (strlen(RaSQLSaveTable) > 0) {
-         if (!((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))))
+         if (strchr(RaSQLSaveTable, '%')) {
+            int err = 1;
+            if (RaBinProcess != NULL) {
+               struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
+               if (nadp->mode == ARGUSSPLITTIME) 
+                  err = 0;
+            }
+            if (err)
+               ArgusLog (LOG_ERR, "RaMySQLInit: mysql save table time subsitution, but time mode not set\n", strerror(errno));
+
+         } else
             if (ArgusCreateSQLSaveTable(RaDatabase, RaSQLSaveTable))
                ArgusLog(LOG_ERR, "mysql create %s.%s returned error", RaDatabase, RaSQLSaveTable);
       }
@@ -6838,7 +6848,11 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
    int timeLabel = 0, objectLabel = 0;
    char *retn = NULL;
 
-   if (strchr(table, '%')) timeLabel = 1;
+   if (strchr(table, '%')) {
+      if (nadp->mode != ARGUSSPLITTIME) 
+         return retn;
+      timeLabel = 1;
+   }
    if (strchr(table, '$')) objectLabel = 1;
 
    if (timeLabel || objectLabel) {
