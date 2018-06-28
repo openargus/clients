@@ -7543,15 +7543,17 @@ ArgusMergeAddress(unsigned int *a1, unsigned int *a2, int type, int dir, unsigne
          for (z = 0; z < 4; z++) {
             if (a1[z] != a2[z]) {
                unsigned int i = 32, value = 0, ind;
+               unsigned int na1 = ntohl(a1[z]);
+               unsigned int na2 = ntohl(a2[z]);
                ind = 0x80000000;
 
-               while (ind && ((*a1 & ind) == (*a2 & ind)) && (i > (32 - *masklen))) {
-                  value |= (*a1 & ind);
-                  ind >>= 1; 
+               while (ind && ((na1 & ind) == (na2 & ind))) {
+                  value |= (na1 & ind);
+                  ind >>= 1;
                   i--;
-               }  
+               }
                *masklen = (z * 32) + (32 - i);
-               a1[z] = value;
+               a1[z] = htonl(value);
                while ((z + 1) < 4) {
                   a1[z + 1] = 0;
                   z++;
