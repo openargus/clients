@@ -2432,6 +2432,10 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
             parser->ArgusPerformCorrection = 0;
          break;
       }
+      case RA_STATUS_EVENT: {
+         setArgusEventDataRecord (parser, optarg);
+         break;
+      }
    }
 
 #ifdef ARGUSDEBUG
@@ -20056,6 +20060,14 @@ ArgusDeleteList (struct ArgusListStruct *list, int type)
                 ArgusFree(list);
                 break;
              }
+             case ARGUS_EVENT_LIST: {
+                struct ArgusListObjectStruct *lobj = (struct ArgusListObjectStruct *) retn;
+                if (lobj->list_obj != NULL) {
+                   ArgusFree(lobj->list_obj);
+                }
+                ArgusFree(retn);
+                break;
+             }
          }
       }
 
@@ -30368,6 +30380,114 @@ ArgusNewEvents ()
 #endif
 
    return (retn);
+}
+
+void
+setArgusEventDataRecord (struct ArgusParserStruct *src, char *ptr)
+{
+   struct ArgusEventRecordStruct *event = NULL;
+   char *sptr = NULL, *method = NULL, *file = NULL;
+   char *tok = NULL, *db = NULL, *tptr = NULL;
+   int ind = 0, interval, elem = 0, status = 0;
+
+   if (src->ArgusEventsTask == NULL)
+      src->ArgusEventsTask = ArgusNewEvents();
+
+   if (src->ArgusEventsTask->ArgusEventsList == NULL)
+      src->ArgusEventsTask->ArgusEventsList = ArgusNewList();
+
+   if (ptr) {
+      int i;
+
+      if ((sptr = strdup(ptr)) != NULL) {
+         tptr = strstr(sptr, "mysql://");
+         if (tptr != NULL) {
+            tptr[5] = '_';
+         }
+         tok = strtok(sptr, ":");
+
+      while (tok != NULL) {
+         switch (ind++) {
+            case 0:
+               method = strdup(tok);
+               if (!((strncmp(method, "file", 4) == 0) || (strncmp(method, "prog", 4) == 0)))
+                  ArgusLog (LOG_ERR, "setArgusEventDataRecord, syntax error %s\n", ptr);
+               elem++;
+               break;
+            case 1:
+               file = strdup(tok); elem++;
+               break;
+            case 2:
+               interval = strtol(tok, (char **)&tptr, 10);
+               if (tptr == tok)
+                  ArgusLog (LOG_ERR, "setArgusEventDataRecord, syntax error %s\n", ptr);
+               i = *tptr;
+               if (strlen(tptr) && (isalpha(i))) {
+                  switch (*tptr) {
+                     case 's': break;
+                     case 'm': interval *= 60; break;
+                     case 'h': interval *= 60 * 60; break;
+                     case 'd': interval *= 60 * 60 * 24; break;
+                     case 'w': interval *= 60 * 60 * 24 * 7; break;
+                     case 'M': interval *= 60 * 60 * 24 * 30; break;
+                     case 'y': interval *= 60 * 60 * 24 * 365; break;
+                  }
+               }
+               elem++;
+               break;
+            case 3:
+               if (strncmp(tok, "return", 6)) {
+                  status |= RA_STATUS_RETURN;
+                  elem++;
+               } else
+               if (strncmp(tok, "delta", 6)) {
+                  status |= RA_STATUS_DELTA;
+                  elem++;
+               }
+               break;
+            case 4:
+               db = strdup(tok);
+               if (strncmp(db, "mysql_//", 8)) {
+                  ArgusLog (LOG_ERR, "setArgusEventDataRecord, syntax error %s\n", ptr);
+               } else {
+                  db[5] = ':';
+               }
+               elem++;
+               break;
+            default:
+               ArgusLog (LOG_ERR, "setArgusEventDataRecord, syntax error %s\n", ptr);
+               break;
+         }
+         tok = strtok(NULL, ":");
+      }
+      }
+
+      if (elem < 4)
+         ArgusLog (LOG_ERR, "setArgusEventDataRecord, syntax error %s\n", ptr);
+
+      if (sptr)
+         free (sptr);
+
+      if ((event = (struct ArgusEventRecordStruct *) ArgusCalloc (1, sizeof (*event))) != NULL) {
+         event->status   = status;
+         event->entry    = strdup(ptr);
+         event->method   = method;
+         event->filename = file;
+         event->interval = interval;
+         event->db = strdup(db);
+
+         ArgusPushFrontList(src->ArgusEventsTask->ArgusEventsList, (struct ArgusListRecord *) event, ARGUS_LOCK);
+
+      } else
+         ArgusLog (LOG_ERR, "setArgusEventDataRecord, ArgusCalloc %s\n", strerror(errno));
+
+      free(db);
+   } else
+      ArgusLog (LOG_ERR, "setArgusEventDataRecord, event is null\n");
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "setArgusEventDataRecord(%s)\n", ptr);
+#endif
 }
 
 void

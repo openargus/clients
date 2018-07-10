@@ -47,6 +47,9 @@ LDFLAGS = @LDFLAGS@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
+# Pathname of preferred perl to use for perl scripts
+PERL = @V_PERL@
+
 #
 # You shouldn't need to edit anything below.
 #
@@ -89,9 +92,13 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 
 
 SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c \
-	rasql_common.c
+	rastatus.c rasql_common.c
 
-PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf
+PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
+	$(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf \
+	$(INSTALLBIN)/rastatus $(INSTALLBIN)/rastatus-cpustats \
+	$(INSTALLBIN)/rastatus-diskstats $(INSTALLBIN)/rastatus-loadavg \
+	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs 
 
 all: $(PROGS)
 
@@ -104,11 +111,35 @@ $(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
 $(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o rasql_common.o $(LIB)
 	$(CC) $(CCOPT) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
 
+$(INSTALLBIN)/rastatus: rastatus.o raclient.o rasql_common.o $(LIB)
+	$(CC) $(CCOPT) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
+
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
 	$(CC) $(CCOPT) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rastatus-cpustats: rastatus-cpustats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-cpustats.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-diskstats: rastatus-diskstats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-diskstats.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-dailylogs: rastatus-dailylogs.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-dailylogs.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-loadavg: rastatus-loadavg.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-loadavg.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-memstats: rastatus-memstats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-memstats.pl > $@
+	chmod +x $@
+
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -126,15 +157,27 @@ install: force all
 	$(INSTALL) $(INSTALLBIN)/rasql $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rascore $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlinsert $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqltimeindex $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlcheckconf $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-cpustats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-dailylogs $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-diskstats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-loadavg $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-memstats $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
 	rm -f $(DESTDIR)$(BINDIR)/rascore
 	rm -f $(DESTDIR)$(BINDIR)/rasqlinsert
+	rm -f $(DESTDIR)$(BINDIR)/rastatus
 	rm -f $(DESTDIR)$(BINDIR)/rasqltimeindex
 	rm -f $(DESTDIR)$(BINDIR)/rasqlcheckconf
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-cpustats
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-dailylogs
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-diskstats
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-loadavg
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-memstats
 
 clean:
 	rm -f $(CLEANFILES)

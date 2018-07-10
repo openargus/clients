@@ -335,6 +335,7 @@ struct ArgusParserStruct {
    struct ArgusLabelerStruct *ArgusColorLabeler;
    struct ArgusLabelerStruct *ArgusLabeler;
    struct RaBinProcessStruct *RaBinProcess;
+   struct ArgusEventsStruct *ArgusEventsTask;
 
 #if defined(ARGUS_THREADS)
    pthread_t thread, remote, output, timer, dns;
