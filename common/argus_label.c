@@ -2764,14 +2764,24 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
                else
                   bcopy ((char *)&scidr, (char *)&dcidr, sizeof (scidr));
 
-               state = ARGUS_PARSING_LOCALITY;
+               state = ARGUS_PARSING_LABEL;
                break;
             }
 
             case ARGUS_PARSING_END_ADDRESS: {
                if (sptr && ((cidr = RaParseCIDRAddr (parser, sptr)) != NULL))
                   bcopy ((char *)cidr, (char *)&dcidr, sizeof (*cidr));
-               state = ARGUS_PARSING_LOCALITY;
+               state = ARGUS_PARSING_LABEL;
+               break;
+            }
+
+            case ARGUS_PARSING_LABEL: {
+               if (*sptr == '-')
+                  state = ARGUS_PARSING_END_ADDRESS;
+               else {
+                  label = sptr;
+                  state = ARGUS_PARSING_LOCALITY;
+               }
                break;
             }
 
