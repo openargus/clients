@@ -94,6 +94,7 @@ install: install-perl force installdirs
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/rarc $(DESTDIR)$(prefix)/argus/rarc
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/delegated-ipv4-latest $(DESTDIR)$(prefix)/argus/delegated-ipv4-latest
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/wireshark.manuf.txt $(DESTDIR)$(prefix)/argus/wireshark.manuf.txt
+	$(INSTALL) -m 0644 $(srcdir)/support/Config/std.sig $(DESTDIR)@datarootdir@/argus-clients/std.sig
 	$(INSTALL) -m 0755 $(srcdir)/bin/argusclientbug $(DESTDIR)@bindir@/argusclientbug
 	[ -d $(DESTDIR)@mandir@ ] || \
 		(mkdir -p $(DESTDIR)@mandir@; chmod 755 $(DESTDIR)@mandir@)

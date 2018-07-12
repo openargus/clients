@@ -108,6 +108,7 @@ rm -f %{argusbin}/rasplit
 %{argussbin}/radium
 %config /etc/ra.conf
 %config /etc/radium.conf
+%{_datarootdir}/argus-clients/std.sig
 %if 0%{!?_workstation:1}
 %config /etc/sasl2/radium.conf
 %config /usr/argus/ralabel.country.conf
