@@ -1927,3 +1927,9 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
    fi
 ])
 
+AC_DEFUN([AC_QOSIENT_LIBUUID],[
+   AC_MSG_CHECKING([whether libuuid is found]);
+   AC_CHECK_LIB([uuid], [uuid_parse],[
+      AC_SUBST([UUID_LIBS],[-luuid])
+   ])
+])

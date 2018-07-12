@@ -444,6 +444,7 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
 
 LIBCURL_CHECK_CONFIG
+AC_QOSIENT_LIBUUID
 
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(PACKAGE_RELEASE)
