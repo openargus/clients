@@ -84,14 +84,7 @@ clients: common
 examples: common
 include: common
 
-install: install-perl force
-	$(MAKE) installdirs
-	[ -d $(DESTDIR)@prefix@ ] || \
-		(mkdir -p $(DESTDIR)@prefix@; chmod 755 $(DESTDIR)@prefix@)
-	[ -d $(DESTDIR)@bindir@ ] || \
-		(mkdir -p $(DESTDIR)@bindir@; chmod 755 $(DESTDIR)@bindir@)
-	[ -d $(DESTDIR)$(exec_prefix)/argus ] || \
-		(mkdir -p $(DESTDIR)$(exec_prefix)/argus; chmod 755 $(DESTDIR)$(exec_prefix)/argus)
+install: install-perl force installdirs
 	@for i in  $(INSTDIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
@@ -237,7 +230,11 @@ ifndef WORKSTATION_BUILD
 endif
 
 installdirs:
-	${srcdir}/config/mkinstalldirs $(bindir) $(infodir)
+	${srcdir}/config/mkinstalldirs \
+	  $(DESTDIR)@sbindir@ \
+	  $(DESTDIR)@bindir@ \
+	  $(DESTDIR)@infodir@ \
+	  $(DESTDIR)@datarootdir@/argus-clients
 
 # build with OSXSIGN="--sign "Developer ID Installer" to generate
 # signed package
