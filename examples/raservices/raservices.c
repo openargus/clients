@@ -383,6 +383,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             if (fprintf (stdout, "%s\n", buf) < 0)
                RaParseComplete (SIGQUIT);
          }
+         fflush(stdout);
       }
    }
 
