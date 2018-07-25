@@ -221,7 +221,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                               if (input->ArgusReadSocketCnt >= length)
                                  rec = (struct ArgusRecord *) ArgusConvertRecord (input, (char *)input->ArgusReadPtr);
                            } else {
-                              ArgusLog (LOG_ALERT,
+                              ArgusLog (LOG_INFO,
                                         "ArgusReadSaslStreamSocket (%p) record length is zero",
                                         input);
                               retn = 1;
@@ -238,7 +238,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                               }
 
                            } else {
-                              ArgusLog (LOG_ALERT,
+                              ArgusLog (LOG_INFO,
                                         "ArgusReadSaslStreamSocket (%p) record length is zero",
                                         input);
                               retn = 1;
@@ -322,6 +322,9 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          fd_set readmask;
          struct timeval wait;
 
+         parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
+         parser->status |=   ARGUS_READING_STDIN;
+
          FD_ZERO (&readmask);
          FD_SET (fileno(stdin), &readmask);
          wait.tv_sec  = 0;
@@ -348,6 +351,9 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
             }
          }
       } else {
+         parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
+         parser->status |=   ARGUS_READING_REMOTE;
+
          if ((cnt = fread (input->ArgusReadPtr + input->ArgusReadSocketCnt, 1, bytes, input->file)) == 0) {
             if ((retn = ferror(input->file))) {
                if ((retn == EAGAIN) || (retn == EINTR))
@@ -546,6 +552,8 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusReadFileStream() starting\n");
 #endif
+   parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
+   parser->status |=   ARGUS_READING_FILES;
       
    timeoutValue.tv_sec = 0;
 
@@ -606,7 +614,7 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusReadFileStream() returning\n");
+   ArgusDebug (1, "ArgusReadFileStream() returning\n");
 #endif
 }
 

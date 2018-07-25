@@ -40,8 +40,9 @@
  *                    first monitor(1) datum.
  *
  *   (void) ArgusClientTimeout ();
- *                    this routine is called every second, when
- *                    argus_parse is connected to a remote data source.
+ *                    this routine is called every ArgusParser->RaClientTimeout
+ *                    period, after reading files and connecting to a remote
+ *                    data source.
  *
  *   (void) RaParseComplete (0);
  *                    this routine will be called after all the
@@ -200,14 +201,6 @@ main (int argc, char **argv)
          if (!(ArgusAddFileList (ArgusParser, "-", ARGUS_DATA_SOURCE, -1, -1)))
             ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
 
-#if defined(ARGUS_THREADS)
-extern void * ArgusTimeoutProcess (void *);
-
-   if (ArgusParser->ArgusTimeoutThread)
-      if ((pthread_create(&ArgusParser->timer, &attr, ArgusTimeoutProcess, ArgusParser)) != 0)
-         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
-#endif
-
 /*
    OK now we're ready.  Read in all the files, for as many passes as
    needed, and then attach to any remote sources as a group until
@@ -347,6 +340,14 @@ extern void * ArgusTimeoutProcess (void *);
          ArgusParser->tflag = 0;
 
       ArgusParser->ArgusPassNum = 1;
+
+#if defined(ARGUS_THREADS)
+extern void * ArgusTimeoutProcess (void *);
+ 
+   if (ArgusParser->ArgusTimeoutThread)
+      if ((pthread_create(&ArgusParser->timer, &attr, ArgusTimeoutProcess, ArgusParser)) != 0)
+         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+#endif
 
       if (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0)) {
          struct ArgusQueueStruct *tqueue = ArgusNewQueue();
