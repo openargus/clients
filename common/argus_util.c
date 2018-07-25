@@ -29688,6 +29688,7 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
          ArgusDebug (7, "ArgusWriteNewLogfile (%s, 0x%x) record len is %d", file, argus, len);
 #endif
       }
+      fflush(wfile->fd);
    }
    
    if (wfile->firstWrite)
