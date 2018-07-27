@@ -9822,7 +9822,6 @@ ArgusAlignConfig(struct ArgusParserStruct *parser, struct ArgusAdjustStruct *nad
 }
 
 
-
 // Load up the ArgusAdjustStruct to deal with this specific record.
 
 
@@ -9977,6 +9976,91 @@ ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, s
          }
       }
    }
+}
+
+int
+ArgusAlignTime(struct ArgusParserStruct *parser, struct ArgusAdjustStruct *nadp, time_t *sec)
+{
+   int retn = 0;
+   time_t tsec = *sec;
+
+   if (nadp->value != 0) {
+      switch (nadp->qual) {
+         case ARGUSSPLITSECOND: {
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+            nadp->size = nadp->value * 1000000LL;
+            break;
+         }
+         case ARGUSSPLITMINUTE: {
+            long long val = tsec / (nadp->value * 60);
+            tsec = val * (nadp->value * 60.0);
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*60.0*1000000;
+            break;
+         }
+         case ARGUSSPLITHOUR: {
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->RaStartTmStruct.tm_sec = 0;
+            nadp->RaStartTmStruct.tm_min = 0;
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*3600.0*1000000LL;
+            break;
+         }
+         case ARGUSSPLITDAY: {
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->RaStartTmStruct.tm_sec = 0;
+            nadp->RaStartTmStruct.tm_min = 0;
+            nadp->RaStartTmStruct.tm_hour = 0;
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*3600.0*24.0*1000000LL;
+            break;
+         }
+
+         case ARGUSSPLITWEEK:   {
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->RaStartTmStruct.tm_sec = 0;
+            nadp->RaStartTmStruct.tm_min = 0;
+            nadp->RaStartTmStruct.tm_hour = 0;
+            nadp->RaStartTmStruct.tm_mday = 1;
+            nadp->RaStartTmStruct.tm_mon = 0;
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*3600.0*24.0*7.0*1000000LL;
+            break;
+         }
+
+         case ARGUSSPLITMONTH:  {
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->RaStartTmStruct.tm_sec = 0;
+            nadp->RaStartTmStruct.tm_min = 0;
+            nadp->RaStartTmStruct.tm_hour = 0;
+            nadp->RaStartTmStruct.tm_mday = 1;
+            nadp->RaStartTmStruct.tm_mon = 0;
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*3600.0*24.0*7.0*4.0*1000000LL;
+            break;
+         }
+
+         case ARGUSSPLITYEAR:   
+            localtime_r(&tsec, &nadp->RaStartTmStruct);
+            nadp->RaStartTmStruct.tm_sec = 0;
+            nadp->RaStartTmStruct.tm_min = 0;
+            nadp->RaStartTmStruct.tm_hour = 0;
+            nadp->RaStartTmStruct.tm_mday = 1;
+            nadp->RaStartTmStruct.tm_mon = 0;
+            nadp->start.tv_sec = mktime(&nadp->RaStartTmStruct);
+
+            nadp->size = nadp->value*3600.0*24.0*7.0*52.0*1000000LL;
+            break;
+      }
+   }
+   return (retn);
 }
 
 struct ArgusRecordStruct *
