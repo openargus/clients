@@ -231,10 +231,10 @@ endif
 
 installdirs:
 	${srcdir}/config/mkinstalldirs \
-	  $(DESTDIR)/usr/argus \
 	  $(DESTDIR)@sbindir@ \
 	  $(DESTDIR)@bindir@ \
 	  $(DESTDIR)@infodir@ \
+          $(DESTDIR)$(prefix)/argus \
 	  $(DESTDIR)@datarootdir@/argus-clients
 
 # build with OSXSIGN="--sign "Developer ID Installer" to generate
