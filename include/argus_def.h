@@ -1738,7 +1738,9 @@ extern "C" {
 
 /* Argus Behavior DSR SubTypes */
 #define ARGUS_BEHAVIOR_KEYSTROKE      	0x00
-#define ARGUS_BEHAVIOR_SCORE		0x01
+#define ARGUS_TCP_KEYSTROKE             0x01
+#define ARGUS_SSH_KEYSTROKE             0x02
+#define ARGUS_BEHAVIOR_SCORE		0x04
 
 /* Argus Correlation DSR Type */
 #define ARGUS_COR_INDEX			18
