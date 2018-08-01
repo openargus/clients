@@ -30348,6 +30348,28 @@ getArgusManInf (struct ArgusParserStruct *src)
    return (src->RaMarInfName);
 }
 
+struct ArgusEventsStruct *
+ArgusNewEvents ()
+{
+   struct ArgusEventsStruct *retn = NULL;
+
+   if ((retn = (struct ArgusEventsStruct *) ArgusCalloc (1, sizeof (struct ArgusEventsStruct))) == NULL)
+     ArgusLog (LOG_ERR, "ArgusNewEvents() ArgusCalloc error %s\n", strerror(errno));
+
+   if ((retn->ArgusEventsList = ArgusNewList()) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewEvents() ArgusNewList %s\n", strerror(errno));
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_init(&retn->lock, NULL);
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusNewEvents() returning retn 0x%x\n", retn);
+#endif
+
+   return (retn);
+}
+
 void
 ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)
 {

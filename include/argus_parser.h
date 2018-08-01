@@ -45,6 +45,7 @@ extern "C" {
 #include <argus_def.h>
 #include <argus_out.h>
 #include <argus_util.h>
+#include <argus_events.h>
 
 #include <net/nff.h>
 

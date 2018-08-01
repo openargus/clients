@@ -365,31 +365,6 @@ struct ArgusModelerStruct {
 #define ARGUS_ZLIB_COMPRESS     0x00000001
 #define ARGUS_ZLIB_COMPRESS2    0x00000002
 
-struct ArgusEventRecordStruct {
-   struct ArgusListObjectStruct *nxt;
-   struct timespec poptime, remaining;
-   char *entry;
-   int status, interval;
-   char *method;
-   char *filename;
-   long long runs;
-};
-
-struct ArgusEventsStruct {
-   int status;
-
-#if defined(ARGUS_THREADS)
-   pthread_t thread;
-   pthread_mutex_t lock;
-#endif
-
-   struct ArgusListStruct *ArgusEventsList;
-   struct ArgusListStruct *ArgusOutputList;
-   struct ArgusModelerStruct *ArgusModel;
-   struct ArgusSourceStruct *ArgusSrc;
-};
-
-
 struct ArgusTimeStats {
    unsigned int n;
    float minval, maxval, sum;

@@ -89,9 +89,6 @@ int ArgusTotalSelectSQLStatements = 0;
 
 #include <mysql.h>
 
-struct ArgusEventsStruct *ArgusNewEvents (void);
-void setArgusEventDataRecord (char *);
-
 char *RaDatabase = NULL;
 char **RaTables = NULL;
 
@@ -1537,29 +1534,6 @@ clearArgusConfiguration (struct ArgusModelerStruct *model)
              interval = %d
              postproc = [ "compress" | "encrypt" | "none" ]
 */
-
-
-struct ArgusEventsStruct *
-ArgusNewEvents ()
-{
-   struct ArgusEventsStruct *retn = NULL;
-
-   if ((retn = (struct ArgusEventsStruct *) ArgusCalloc (1, sizeof (struct ArgusEventsStruct))) == NULL)
-     ArgusLog (LOG_ERR, "ArgusNewEvents() ArgusCalloc error %s\n", strerror(errno));
-
-   if ((retn->ArgusEventsList = ArgusNewList()) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewEvents() ArgusNewList %s\n", strerror(errno));
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&retn->lock, NULL);
-#endif
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (4, "ArgusNewEvents() returning retn 0x%x\n", retn);
-#endif
-
-   return (retn);
-}
 
 
 void
