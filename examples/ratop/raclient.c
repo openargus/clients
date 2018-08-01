@@ -921,7 +921,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if ((input = (void *)parser->ArgusRemoteHosts->start) != NULL)
                parser->RaTasksToDo = RA_ACTIVE;
 
-         if ((ArgusEventAggregator = ArgusNewAggregator(parser, "sid inf saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
+         if ((ArgusEventAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
          if (parser->Hstr != NULL)
@@ -2118,7 +2118,7 @@ RaParseAirportEventRecord (struct ArgusParserStruct *parser, char *dptr, struct 
    tvp->tv_usec = time->src.start.tv_usec;
 
    ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
-   ArgusPrintSourceID(parser, sptr, argus, 24);
+   ArgusPrintSID(parser, sptr, argus, 24);
 
    while (isspace((int)sbuf[strlen(sbuf) - 1]))
       sbuf[strlen(sbuf) - 1] = '\0';
@@ -2225,7 +2225,7 @@ RaParseLsOfEventRecord (struct ArgusParserStruct *parser, char *dptr, struct Arg
    tvp->tv_usec = time->src.start.tv_usec;
  
    ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
-   ArgusPrintSourceID(parser, sptr, argus, 24);
+   ArgusPrintSID(parser, sptr, argus, 48);
 
    while (isspace((int)sbuf[strlen(sbuf) - 1]))
       sbuf[strlen(sbuf) - 1] = '\0';
