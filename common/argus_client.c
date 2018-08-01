@@ -9156,6 +9156,8 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         if (a1 && a2) {
                            if (a1->hdr.subtype == a2->hdr.subtype) {
                               switch (a1->hdr.subtype) {
+                                 case ARGUS_TCP_KEYSTROKE: 
+                                 case ARGUS_SSH_KEYSTROKE: 
                                  case ARGUS_BEHAVIOR_KEYSTROKE: {
                                     a1->keyStroke.src.n_strokes += a2->keyStroke.src.n_strokes;
                                     a1->keyStroke.dst.n_strokes += a2->keyStroke.dst.n_strokes;
