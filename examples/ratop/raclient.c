@@ -2112,6 +2112,8 @@ RaParseAirportEventRecord (struct ArgusParserStruct *parser, char *dptr, struct 
 
    tbuf[0] = '\0';
    bzero (sptr, sizeof(sbuf));
+   bzero (ws, sizeof(wsbuf));
+
    tvp->tv_sec  = time->src.start.tv_sec;
    tvp->tv_usec = time->src.start.tv_usec;
 
