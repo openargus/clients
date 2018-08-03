@@ -8936,6 +8936,116 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 #endif
 }
 
+void
+ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusFlow *flow;
+   char etypeStrBuf[16], *etypeStr = NULL;
+   u_short eetype;
+   u_char etype; 
+ 
+   bzero (etypeStrBuf, sizeof(etypeStrBuf));
+   etypeStr = etypeStrBuf;
+    
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+         sprintf (etypeStrBuf, " ");
+         break;
+         
+      case ARGUS_FAR: {
+         if (((flow = (void *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL)) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE: {
+                  struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
+                     switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                        case ARGUS_TYPE_IPV4:
+                           sprintf (etypeStr, "%s", "0x0800"); 
+                           break;
+
+                        case ARGUS_TYPE_IPV6:
+                           sprintf (etypeStr, "%s", "0x86DD"); 
+                           break;
+
+                        case ARGUS_TYPE_RARP:
+                           etypeStr = (parser->nflag > 2) ? "32821" : "rarp";
+                           break;
+                        case ARGUS_TYPE_ARP:
+                           sprintf (etypeStr, "%s", "0x0806"); 
+                           break;
+    
+                        case ARGUS_TYPE_ISIS:
+                           etypeStr = "isis"; break;
+                           break;
+
+                        case ARGUS_TYPE_WLAN:
+                           etypeStr = "wlan"; break;
+                           break;
+
+                        case ARGUS_TYPE_ETHER:
+                           eetype = flow->mac_flow.mac_union.ether.ehdr.ether_type;
+                           if (parser->nflag > 2) {
+                              sprintf (etypeStr, "%u", eetype); 
+                           }  else { 
+                              char *pstr = ArgusEtherProtoString(parser, eetype);
+                              if (pstr !=  NULL) {
+                                 sprintf (etypeStr, "%s", pstr); 
+                              } else
+                                 sprintf (etypeStr, "%u", eetype); 
+                           }
+                           break;
+                     }
+                  break;
+               }
+
+               case ARGUS_FLOW_ARP: {
+                  sprintf (etypeStr, "%s", "0x0806"); 
+                  break;
+               }
+
+               default:
+                  switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_IPV4: sprintf (etypeStr, "%s", "0x0800"); break;
+                     case ARGUS_TYPE_IPV6: sprintf (etypeStr, "%s", "0x86DD"); break;
+                     case ARGUS_TYPE_RARP:
+                        etypeStr = (parser->nflag > 2) ? "32821" : "rarp";
+                        etypeStr = "rarp";
+                        break;
+                     case ARGUS_TYPE_ARP:
+                        sprintf (etypeStr, "%s", "0x0806"); 
+                        break;
+                     case ARGUS_TYPE_WLAN:
+                        etypeStr = "wlan";
+                        break;
+                     case ARGUS_TYPE_ETHER:
+                        etypeStr = "ether";
+                        break;
+                  }
+                  break;
+            }
+         }
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " Etype = \"%s\"", etypeStr);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(etypeStr);
+      } else {
+         if (strlen(etypeStr) > len) {
+            etypeStr[len - 1] = '*';
+            etypeStr[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, etypeStr);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintEtherType (%p, %p)", buf, argus);
+#endif
+}
 
 void
 ArgusPrintProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -17939,6 +18049,12 @@ void
 ArgusPrintDstOuiLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "DstOui");
+}
+
+void
+ArgusPrintEtherTypeLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "Etype");
 }
 
 void
