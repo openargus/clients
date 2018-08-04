@@ -8939,11 +8939,19 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 void
 ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   struct ArgusMacStruct *mac;
    struct ArgusFlow *flow;
    char etypeStrBuf[16], *etypeStr = NULL;
-   u_short eetype;
-   u_char etype; 
- 
+   u_short etype = 0;
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%u";
+   }
+
    bzero (etypeStrBuf, sizeof(etypeStrBuf));
    etypeStr = etypeStrBuf;
     
@@ -8955,26 +8963,24 @@ ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          break;
          
       case ARGUS_FAR: {
+         if (((mac = (void *)argus->dsrs[ARGUS_MAC_INDEX]) != NULL)) {
+            switch (mac->hdr.subtype & 0x3F) {
+               default:
+               case ARGUS_TYPE_ETHER: {
+                  etype = mac->mac.mac_union.ether.ehdr.ether_type;
+                  break;
+               }
+            }
+         } else
          if (((flow = (void *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL)) {
             switch (flow->hdr.subtype & 0x3F) {
                case ARGUS_FLOW_CLASSIC5TUPLE: {
                   struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
                      switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-                        case ARGUS_TYPE_IPV4:
-                           sprintf (etypeStr, "%s", "0x0800"); 
-                           break;
-
-                        case ARGUS_TYPE_IPV6:
-                           sprintf (etypeStr, "%s", "0x86DD"); 
-                           break;
-
-                        case ARGUS_TYPE_RARP:
-                           etypeStr = (parser->nflag > 2) ? "32821" : "rarp";
-                           break;
-                        case ARGUS_TYPE_ARP:
-                           sprintf (etypeStr, "%s", "0x0806"); 
-                           break;
-    
+                        case ARGUS_TYPE_IPV4: etype = 0x0800; break;
+                        case ARGUS_TYPE_IPV6: etype = 0x86DD; break;
+                        case ARGUS_TYPE_RARP: etype = 32821; break;
+                        case ARGUS_TYPE_ARP:  etype = 0x0806; break; 
                         case ARGUS_TYPE_ISIS:
                            etypeStr = "isis"; break;
                            break;
@@ -8984,45 +8990,43 @@ ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                            break;
 
                         case ARGUS_TYPE_ETHER:
-                           eetype = flow->mac_flow.mac_union.ether.ehdr.ether_type;
-                           if (parser->nflag > 2) {
-                              sprintf (etypeStr, "%u", eetype); 
-                           }  else { 
-                              char *pstr = ArgusEtherProtoString(parser, eetype);
-                              if (pstr !=  NULL) {
-                                 sprintf (etypeStr, "%s", pstr); 
-                              } else
-                                 sprintf (etypeStr, "%u", eetype); 
-                           }
+                           etype = flow->mac_flow.mac_union.ether.ehdr.ether_type;
                            break;
                      }
                   break;
                }
 
-               case ARGUS_FLOW_ARP: {
-                  sprintf (etypeStr, "%s", "0x0806"); 
-                  break;
-               }
+               case ARGUS_FLOW_ARP: { etype = 0x0806; break; }
 
                default:
                   switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-                     case ARGUS_TYPE_IPV4: sprintf (etypeStr, "%s", "0x0800"); break;
-                     case ARGUS_TYPE_IPV6: sprintf (etypeStr, "%s", "0x86DD"); break;
-                     case ARGUS_TYPE_RARP:
-                        etypeStr = (parser->nflag > 2) ? "32821" : "rarp";
-                        etypeStr = "rarp";
-                        break;
-                     case ARGUS_TYPE_ARP:
-                        sprintf (etypeStr, "%s", "0x0806"); 
-                        break;
+                     case ARGUS_TYPE_IPV4: etype = 0x0800; break;
+                     case ARGUS_TYPE_IPV6: etype = 0x86DD; break;
+                     case ARGUS_TYPE_RARP: etype = 32821; break;
+                     case ARGUS_TYPE_ARP:  etype = 0x0806; break; 
+
                      case ARGUS_TYPE_WLAN:
                         etypeStr = "wlan";
                         break;
                      case ARGUS_TYPE_ETHER:
-                        etypeStr = "ether";
+                        etype = flow->mac_flow.mac_union.ether.ehdr.ether_type;
                         break;
                   }
                   break;
+            }
+         }
+
+         if (etype == 0) 
+            snprintf (etypeStr, sizeof(etypeStr), "%s", " ");
+         else {
+            if (parser->nflag > 2) {
+               snprintf (etypeStr, sizeof(etypeStr), format, etype);
+            } else {
+               char *pstr = ArgusEtherProtoString(parser, etype);
+               if (pstr !=  NULL) {
+                  sprintf (etypeStr, "%s", pstr); 
+               } else
+                  sprintf (etypeStr, "%u", etype); 
             }
          }
       }
