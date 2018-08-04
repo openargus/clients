@@ -49,6 +49,7 @@ extern double ArgusFetchSrcMac (struct ArgusRecordStruct *);
 extern double ArgusFetchDstMac (struct ArgusRecordStruct *);
 extern double ArgusFetchSrcAddr (struct ArgusRecordStruct *);
 extern double ArgusFetchDstAddr (struct ArgusRecordStruct *);
+extern double ArgusFetchEtherType (struct ArgusRecordStruct *);
 extern double ArgusFetchProtocol (struct ArgusRecordStruct *);
 extern double ArgusFetchSrcMpls (struct ArgusRecordStruct *);
 extern double ArgusFetchDstMpls (struct ArgusRecordStruct *);
