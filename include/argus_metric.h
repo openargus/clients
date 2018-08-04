@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		124
-#define MAX_METRIC_ALG_TYPES		124
+#define ARGUS_MAX_METRIC_ALG		125
+#define MAX_METRIC_ALG_TYPES		125
 
 
 struct ArgusFetchValueStruct {
@@ -63,6 +63,7 @@ double ArgusFetchSrcMacOui (struct ArgusRecordStruct *ns);
 double ArgusFetchDstMacOui (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcAddr (struct ArgusRecordStruct *ns);
 double ArgusFetchDstAddr (struct ArgusRecordStruct *ns);
+double ArgusFetchEtherType (struct ArgusRecordStruct *ns);
 double ArgusFetchProtocol (struct ArgusRecordStruct *ns);
 double ArgusFetchIpId (struct ArgusRecordStruct *ns);
 
@@ -442,6 +443,8 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"sid", ArgusFetchSID},
 #define ARGUSMETRICINF		   123
    {"inf", ArgusFetchInf},
+#define ARGUSMETRICETHERTYPE       124
+   {"etype", ArgusFetchEtherType},
 };
 
 #else
