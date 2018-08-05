@@ -117,7 +117,7 @@ struct ArgusAggregatorStruct {
 
 #define NLI			-1
 
-#define ARGUS_MAX_MASK_LIST	39
+#define ARGUS_MAX_MASK_LIST	40
 
 #define ARGUS_MASK_SRCID	0
 #define ARGUS_MASK_SID      	1
@@ -167,6 +167,7 @@ struct ArgusAggregatorStruct {
 #define ARGUS_MASK_IAS 		36
 #define ARGUS_MASK_SOUI		37
 #define ARGUS_MASK_DOUI		38
+#define ARGUS_MASK_ETYPE	39
 
 
 #define ARGUS_MASK_SRCID_INDEX	(0x1 << ARGUS_MASK_SRCID)
@@ -211,6 +212,7 @@ struct ArgusAggregatorStruct {
 #define ARGUS_MASK_SOUI_INDEX	(0x1 << ARGUS_MASK_SOUI)
 #define ARGUS_MASK_DOUI_INDEX	(0x1 << ARGUS_MASK_DOUI)
 
+#define ARGUS_MASK_ETYPE_INDEX	(0x1 << ARGUS_MASK_ETYPE)
 
 struct ArgusMaskStruct {
    char *name, slen;
@@ -220,6 +222,7 @@ struct ArgusMaskStruct {
 #if defined(ARGUS_MAIN)
 struct ArgusMaskStruct ArgusSrcIdMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {NULL},
    {NULL},
    {NULL},
    {NULL},
@@ -298,6 +301,7 @@ struct ArgusMaskStruct ArgusIpV4MaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusIpV4RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -340,6 +344,7 @@ struct ArgusMaskStruct ArgusIpV4RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusIpV6MaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -382,6 +387,7 @@ struct ArgusMaskStruct ArgusIpV6MaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
  
 struct ArgusMaskStruct ArgusIpV6RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -424,6 +430,7 @@ struct ArgusMaskStruct ArgusIpV6RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -465,8 +472,9 @@ struct ArgusMaskStruct ArgusIBLocalMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
-   {"doui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {NULL},
+   {NULL},
+   {NULL},
 };
 
 
@@ -508,8 +516,9 @@ struct ArgusMaskStruct ArgusIBGlobalMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {NULL},
+   {NULL},
+   {NULL},
 };
 
 
@@ -549,8 +558,9 @@ struct ArgusMaskStruct ArgusIBGlobalRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sco",   3, ARGUS_COCODE_INDEX,     4,  2, 1},
    {"dco",   3, ARGUS_COCODE_INDEX,     6,  2, 1},
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
-   {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
-   {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
+   {NULL},
+   {NULL},
+   {NULL},
 };
 
 
@@ -594,6 +604,7 @@ struct ArgusMaskStruct ArgusArpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -638,6 +649,7 @@ struct ArgusMaskStruct ArgusArpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -681,6 +693,7 @@ struct ArgusMaskStruct ArgusRarpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -724,6 +737,7 @@ struct ArgusMaskStruct ArgusRarpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -767,6 +781,7 @@ struct ArgusMaskStruct ArgusEtherMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusEtherRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -809,6 +824,7 @@ struct ArgusMaskStruct ArgusEtherRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -850,6 +866,9 @@ struct ArgusMaskStruct ArgusWlanMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
+   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusWlanRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -892,6 +911,7 @@ struct ArgusMaskStruct ArgusWlanRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusIsisMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -934,6 +954,7 @@ struct ArgusMaskStruct ArgusIsisMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -977,6 +998,7 @@ struct ArgusMaskStruct ArgusIsisRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -1020,6 +1042,7 @@ struct ArgusMaskStruct ArgusIsisHelloMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusMaskStruct ArgusIsisLspMaskDefs[ARGUS_MAX_MASK_LIST] = {
@@ -1062,6 +1085,7 @@ struct ArgusMaskStruct ArgusIsisLspMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -1105,6 +1129,7 @@ struct ArgusMaskStruct ArgusIsisCsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 
@@ -1148,6 +1173,7 @@ struct ArgusMaskStruct ArgusIsisPsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
 };
 
 struct ArgusAggregatorStruct *ArgusNewAggregator (struct ArgusParserStruct *, char *, int type);
