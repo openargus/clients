@@ -508,6 +508,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewSorter error %s", strerror(errno));
 
          ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
+         if (RaBinProcess == NULL) {
+            if ((RaBinProcess = RaNewBinProcess(parser, 256)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusClientInit: RaNewBinProcess error %s", strerror(errno));
+         }
 
          if ((mode = parser->ArgusModeList) != NULL) {
             int i, x, ind;
@@ -515,10 +519,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             while (mode) {
                for (i = 0, ind = -1; i < ARGUSSPLITMODENUM; i++) {
                   if (!(strncasecmp (mode->mode, RaSplitModes[i], strlen(RaSplitModes[i])))) {
-                     if (RaBinProcess == NULL) {
-                        if ((RaBinProcess = RaNewBinProcess(parser, 256)) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusClientInit: RaNewBinProcess error %s", strerror(errno));
-                     }
                      nadp = &RaBinProcess->nadp;
 
                      nadp->mode   = -1;
