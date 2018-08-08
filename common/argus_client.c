@@ -10109,6 +10109,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
    struct ArgusAgrStruct *agr;
    long long startusec = 0, endusec = 0;
 
+   if (nadp->size != 0) {
       startusec = ArgusFetchStartuSecTime(ns);
         endusec = ArgusFetchLastuSecTime(ns);
 
@@ -10233,454 +10234,461 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
             agr = (void *)ns->dsrs[ARGUS_AGR_INDEX];
 
             if ((time = (void *)ns->dsrs[ARGUS_TIME_INDEX]) != NULL) {
-            if ((metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
-               if ((metric->src.pkts + metric->dst.pkts) > 0) {
-                  if (!(nadp->modify)) {
-                     retn =  ArgusCopyRecordStruct(ns);
-                     metric->src.pkts = 0;
-                     metric->dst.pkts = 0;
+               if ((metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
+                  if ((metric->src.pkts + metric->dst.pkts) > 0) {
+                     if (!(nadp->modify)) {
+                        retn =  ArgusCopyRecordStruct(ns);
+                        metric->src.pkts = 0;
+                        metric->dst.pkts = 0;
 
-                  } else {
-                     struct ArgusMetricStruct *rmetric = NULL;
-                     struct ArgusTimeObject *rtime = NULL;
-                     struct ArgusAgrStruct *ragr = NULL;
-                     struct timeval sSecs, eSecs;
-                     long long ssecs = 0, esecs = 0;
+                     } else {
+                        struct ArgusMetricStruct *rmetric = NULL;
+                        struct ArgusTimeObject *rtime = NULL;
+                        struct ArgusAgrStruct *ragr = NULL;
+                        struct timeval sSecs, eSecs;
+                        long long ssecs = 0, esecs = 0;
 
-                     long long value = (startusec - nadp->startuSecs) / nadp->size;
+                        long long value = (startusec - nadp->startuSecs) / nadp->size;
 
-                     ssecs = (nadp->startuSecs + (value * nadp->size));
-                     sSecs.tv_sec  = ssecs / 1000000;
-                     sSecs.tv_usec = ssecs % 1000000;
+                        ssecs = (nadp->startuSecs + (value * nadp->size));
+                        sSecs.tv_sec  = ssecs / 1000000;
+                        sSecs.tv_usec = ssecs % 1000000;
 
-                     esecs = (nadp->startuSecs + ((value + 1) * nadp->size));
-                     eSecs.tv_sec  = esecs / 1000000;
-                     eSecs.tv_usec = esecs % 1000000;
+                        esecs = (nadp->startuSecs + ((value + 1) * nadp->size));
+                        eSecs.tv_sec  = esecs / 1000000;
+                        eSecs.tv_usec = esecs % 1000000;
 
-                     if ((metric->src.pkts + metric->dst.pkts) > 1) {
-                        int count = 0, bytes = 0;
+                        if ((metric->src.pkts + metric->dst.pkts) > 1) {
+                           int count = 0, bytes = 0;
 
-                        nadp->turns++;
+                           nadp->turns++;
 
-                        if (nadp->size) {
-                           if ((retn = ArgusCopyRecordStruct (ns)) == NULL)
-                              return(retn);
+                           if (nadp->size) {
+                              if ((retn = ArgusCopyRecordStruct (ns)) == NULL)
+                                 return(retn);
 
-                           rmetric = (void *)retn->dsrs[ARGUS_METRIC_INDEX];
-                           rtime = (void *)retn->dsrs[ARGUS_TIME_INDEX];
-                           ragr = (void *)retn->dsrs[ARGUS_AGR_INDEX];
+                              rmetric = (void *)retn->dsrs[ARGUS_METRIC_INDEX];
+                              rtime = (void *)retn->dsrs[ARGUS_TIME_INDEX];
+                              ragr = (void *)retn->dsrs[ARGUS_AGR_INDEX];
 
 // if this record doesn't extend beyound the boundary, then we're done.
-                           if (endusec > esecs) {
-                              if ((rmetric != NULL) && (rtime != NULL)) {
+                              if (endusec > esecs) {
+                                 if ((rmetric != NULL) && (rtime != NULL)) {
 
 // if pkt count is 2, we split record into 2, with start and end time
 // coming from the original packet so rtime get startime, and time
 // gets endtime.  Need to adjust for whether packets are in the src or dst
 
-                                 if ((count = (metric->src.pkts + metric->dst.pkts)) == 2) {
-                                    if (metric->src.pkts == 1) {
+                                    if ((count = (metric->src.pkts + metric->dst.pkts)) == 2) {
+                                       if (metric->src.pkts == 1) {
 
 // in this record, we will end up with two records, each with one packet each.  we don't
 // worry which one is first, so just prepare the src flow, and leave the dst flow record for
 // the next pass.  the rtime->src.start has the correct timestamp. just need to zero out
 // the other values.  leave the time->dst intact, as that is what is needed for the next record
 
-                                       rtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
-                                       rtime->hdr.subtype |= ARGUS_TIME_SRC_START;
-
-                                       rtime->dst.start.tv_sec  = 0;
-                                       rtime->dst.start.tv_usec = 0;
-                                       rtime->dst.end.tv_sec    = 0;
-                                       rtime->dst.end.tv_usec   = 0;
-
-                                        time->hdr.subtype &= ~(ARGUS_TIME_MASK);
-                                        time->hdr.subtype |= ARGUS_TIME_DST_START;
-
-                                        time->src.start.tv_sec  = 0;
-                                        time->src.start.tv_usec = 0;
-                                        time->src.end.tv_sec    = 0;
-                                        time->src.end.tv_usec   = 0;
-
-                                       rmetric->dst.pkts        = 0;
-                                       rmetric->dst.bytes       = 0;
-                                       rmetric->dst.appbytes    = 0;
-
-                                    } else {
-// in this record, we have either 2 src pkts or 2 dst pkts.
-                                       rtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
-                                        time->hdr.subtype &= ~(ARGUS_TIME_MASK);
-
-                                       if (rmetric->src.pkts) {
+                                          rtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
                                           rtime->hdr.subtype |= ARGUS_TIME_SRC_START;
-                                           time->hdr.subtype |= ARGUS_TIME_SRC_START;
-                                          rmetric->src.pkts = 1;
-                                          bytes = rmetric->src.bytes;
-                                          rmetric->src.bytes /= 2;
-                                          if (bytes & 0x01)
-                                             rmetric->src.bytes += 1;
-                                          bytes = rmetric->src.appbytes;
-                                          rmetric->src.appbytes /= 2;
 
-                                          if (bytes & 0x01)
-                                             rmetric->src.appbytes += 1;
-                                          rmetric->dst.pkts  = 0;
-                                          rmetric->dst.bytes = 0;
-                                          rmetric->dst.appbytes = 0;
+                                          rtime->dst.start.tv_sec  = 0;
+                                          rtime->dst.start.tv_usec = 0;
+                                          rtime->dst.end.tv_sec    = 0;
+                                          rtime->dst.end.tv_usec   = 0;
 
-                                          rtime->src.end  = rtime->src.start;
-                                          time->src.start = time->src.end;
+                                           time->hdr.subtype &= ~(ARGUS_TIME_MASK);
+                                           time->hdr.subtype |= ARGUS_TIME_DST_START;
+
+                                           time->src.start.tv_sec  = 0;
+                                           time->src.start.tv_usec = 0;
+                                           time->src.end.tv_sec    = 0;
+                                           time->src.end.tv_usec   = 0;
+
+                                          rmetric->dst.pkts        = 0;
+                                          rmetric->dst.bytes       = 0;
+                                          rmetric->dst.appbytes    = 0;
 
                                        } else {
-                                          rtime->hdr.subtype |= ARGUS_TIME_DST_START;
-                                           time->hdr.subtype |= ARGUS_TIME_DST_START;
-                                          rmetric->dst.pkts = 1;
-                                          bytes = rmetric->dst.bytes;
-                                          rmetric->dst.bytes /= 2;
-                                          if (bytes & 0x01)
-                                             rmetric->dst.bytes += 1;
-                                          bytes = rmetric->dst.appbytes;
-                                          rmetric->dst.appbytes /= 2;
-                                          if (bytes & 0x01)
-                                             rmetric->dst.appbytes += 1;
+// in this record, we have either 2 src pkts or 2 dst pkts.
+                                          rtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
+                                           time->hdr.subtype &= ~(ARGUS_TIME_MASK);
 
-                                          rtime->dst.end  = rtime->dst.start;
-                                          time->dst.start = time->dst.end;
+                                          if (rmetric->src.pkts) {
+                                             rtime->hdr.subtype |= ARGUS_TIME_SRC_START;
+                                              time->hdr.subtype |= ARGUS_TIME_SRC_START;
+                                             rmetric->src.pkts = 1;
+                                             bytes = rmetric->src.bytes;
+                                             rmetric->src.bytes /= 2;
+                                             if (bytes & 0x01)
+                                                rmetric->src.bytes += 1;
+                                             bytes = rmetric->src.appbytes;
+                                             rmetric->src.appbytes /= 2;
+
+                                             if (bytes & 0x01)
+                                                rmetric->src.appbytes += 1;
+                                             rmetric->dst.pkts  = 0;
+                                             rmetric->dst.bytes = 0;
+                                             rmetric->dst.appbytes = 0;
+
+                                             rtime->src.end  = rtime->src.start;
+                                             time->src.start = time->src.end;
+
+                                          } else {
+                                             rtime->hdr.subtype |= ARGUS_TIME_DST_START;
+                                              time->hdr.subtype |= ARGUS_TIME_DST_START;
+                                             rmetric->dst.pkts = 1;
+                                             bytes = rmetric->dst.bytes;
+                                             rmetric->dst.bytes /= 2;
+                                             if (bytes & 0x01)
+                                                rmetric->dst.bytes += 1;
+                                             bytes = rmetric->dst.appbytes;
+                                             rmetric->dst.appbytes /= 2;
+                                             if (bytes & 0x01)
+                                                rmetric->dst.appbytes += 1;
+
+                                             rtime->dst.end  = rtime->dst.start;
+                                             time->dst.start = time->dst.end;
+                                          }
                                        }
-                                    }
 
-                                    metric->src.pkts     -= rmetric->src.pkts;
-                                    metric->src.bytes    -= rmetric->src.bytes;
-                                    metric->src.appbytes -= rmetric->src.appbytes;
-                                    metric->dst.pkts     -= rmetric->dst.pkts;
-                                    metric->dst.bytes    -= rmetric->dst.bytes;
-                                    metric->dst.appbytes -= rmetric->dst.appbytes;
+                                       metric->src.pkts     -= rmetric->src.pkts;
+                                       metric->src.bytes    -= rmetric->src.bytes;
+                                       metric->src.appbytes -= rmetric->src.appbytes;
+                                       metric->dst.pkts     -= rmetric->dst.pkts;
+                                       metric->dst.bytes    -= rmetric->dst.bytes;
+                                       metric->dst.appbytes -= rmetric->dst.appbytes;
 
-                                    if ((ragr != NULL) && (ragr->count >= 1)) {
-                                       ragr->count = 1;
-                                       agr->count = 1;
-                                    }
+                                       if ((ragr != NULL) && (ragr->count >= 1)) {
+                                          ragr->count = 1;
+                                          agr->count = 1;
+                                       }
 
-                                 } else {
+                                    } else {
 
 // OK, so this isn't a simple split, so we'll need to distributed stats between
 // the two resulting records.  Here we need to pay a lot of attention to the timestamps
 
-                                    long long sstime = (rtime->src.start.tv_sec * 1000000LL) + rtime->src.start.tv_usec;
-                                    long long dstime = (rtime->dst.start.tv_sec* 1000000LL)  + rtime->dst.start.tv_usec;
-                                    long long setime = (rtime->src.end.tv_sec* 1000000LL)  + rtime->src.end.tv_usec;
-                                    long long detime = (rtime->dst.end.tv_sec* 1000000LL)  + rtime->dst.end.tv_usec;
-                                    double agrRatio;
+                                       long long sstime = (rtime->src.start.tv_sec * 1000000LL) + rtime->src.start.tv_usec;
+                                       long long dstime = (rtime->dst.start.tv_sec* 1000000LL)  + rtime->dst.start.tv_usec;
+                                       long long setime = (rtime->src.end.tv_sec* 1000000LL)  + rtime->src.end.tv_usec;
+                                       long long detime = (rtime->dst.end.tv_sec* 1000000LL)  + rtime->dst.end.tv_usec;
+                                       double agrRatio;
 
-                                    if ((nadp->stperiod == 0.0) && (nadp->dtperiod == 0.0)) {
-                                       ArgusCalculatePeriod (ns, nadp);
-                                       if (metric->src.pkts > 1)
-                                          nadp->stduration = (nadp->stperiod)/(metric->src.pkts - 1);
-                                       else
-                                          nadp->stduration = 0.0;
+                                       if ((nadp->stperiod == 0.0) && (nadp->dtperiod == 0.0)) {
+                                          ArgusCalculatePeriod (ns, nadp);
+                                          if (metric->src.pkts > 1)
+                                             nadp->stduration = (nadp->stperiod)/(metric->src.pkts - 1);
+                                          else
+                                             nadp->stduration = 0.0;
 
-                                       if (metric->dst.pkts > 1) 
-                                          nadp->dtduration = (nadp->dtperiod)/(metric->dst.pkts - 1);
-                                       else
-                                          nadp->stduration = 0.0;
+                                          if (metric->dst.pkts > 1) 
+                                             nadp->dtduration = (nadp->dtperiod)/(metric->dst.pkts - 1);
+                                          else
+                                             nadp->stduration = 0.0;
 
-                                       nadp->scpkts = 0.0;
-                                       nadp->dcpkts = 0.0;
-                                    }
+                                          nadp->scpkts = 0.0;
+                                          nadp->dcpkts = 0.0;
+                                       }
 
 // first does this direction need adjustment, if xstime > esecs then we need to pass.
-                                    if (sstime > esecs) {
-                                       rtime->src.start.tv_sec  = 0;
-                                       rtime->src.start.tv_usec = 0;
-                                       rtime->src.end.tv_sec    = 0;
-                                       rtime->src.end.tv_usec   = 0;
-                                       rmetric->src.pkts        = 0;
-                                       rmetric->src.bytes       = 0;
-                                       rmetric->src.appbytes    = 0;
-                                       rtime->hdr.subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-                                    } else {
-                                       if (setime > esecs) {
-                                          rtime->src.end.tv_sec   = eSecs.tv_sec;
-                                          rtime->src.end.tv_usec  = eSecs.tv_usec;
-                                          rtime->hdr.subtype     |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-                                          time->src.start         = rtime->src.end;
-                                          time->hdr.subtype      |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+                                       if (sstime > esecs) {
+                                          rtime->src.start.tv_sec  = 0;
+                                          rtime->src.start.tv_usec = 0;
+                                          rtime->src.end.tv_sec    = 0;
+                                          rtime->src.end.tv_usec   = 0;
+                                          rmetric->src.pkts        = 0;
+                                          rmetric->src.bytes       = 0;
+                                          rmetric->src.appbytes    = 0;
+                                          rtime->hdr.subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
                                        } else {
-                                          time->src.start.tv_sec  = 0;
-                                          time->src.start.tv_usec = 0;
-                                          time->src.end.tv_sec    = 0;
-                                          time->src.end.tv_usec   = 0;
-                                          time->hdr.subtype &=  ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-                                          nadp->stduration = 0;
+                                          if (setime > esecs) {
+                                             rtime->src.end.tv_sec   = eSecs.tv_sec;
+                                             rtime->src.end.tv_usec  = eSecs.tv_usec;
+                                             rtime->hdr.subtype     |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+                                             time->src.start         = rtime->src.end;
+                                             time->hdr.subtype      |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+                                          } else {
+                                             time->src.start.tv_sec  = 0;
+                                             time->src.start.tv_usec = 0;
+                                             time->src.end.tv_sec    = 0;
+                                             time->src.end.tv_usec   = 0;
+                                             time->hdr.subtype &=  ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+                                             nadp->stduration = 0;
+                                          }
                                        }
-                                    }
 
-                                    if (dstime > esecs) {
-                                       rtime->dst.start.tv_sec  = 0;
-                                       rtime->dst.start.tv_usec = 0;
-                                       rtime->dst.end.tv_sec    = 0;
-                                       rtime->dst.end.tv_usec   = 0;
-                                       rmetric->dst.pkts        = 0;
-                                       rmetric->dst.bytes       = 0;
-                                       rmetric->dst.appbytes    = 0;
-                                       rtime->hdr.subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
-
-                                    } else {
-                                       if (detime > esecs) {
-                                          rtime->dst.end.tv_sec   = eSecs.tv_sec;
-                                          rtime->dst.end.tv_usec  = eSecs.tv_usec;
-                                          rtime->hdr.subtype     |= (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
-                                          time->dst.start         = rtime->dst.end;
-                                          time->hdr.subtype      |= (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+                                       if (dstime > esecs) {
+                                          rtime->dst.start.tv_sec  = 0;
+                                          rtime->dst.start.tv_usec = 0;
+                                          rtime->dst.end.tv_sec    = 0;
+                                          rtime->dst.end.tv_usec   = 0;
+                                          rmetric->dst.pkts        = 0;
+                                          rmetric->dst.bytes       = 0;
+                                          rmetric->dst.appbytes    = 0;
+                                          rtime->hdr.subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
 
                                        } else {
-                                          time->dst.start.tv_sec  = 0;
-                                          time->dst.start.tv_usec = 0;
-                                          time->dst.end = time->dst.start;
-                                          time->hdr.subtype &=  ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
-                                          nadp->dtduration = 0;
+                                          if (detime > esecs) {
+                                             rtime->dst.end.tv_sec   = eSecs.tv_sec;
+                                             rtime->dst.end.tv_usec  = eSecs.tv_usec;
+                                             rtime->hdr.subtype     |= (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+                                             time->dst.start         = rtime->dst.end;
+                                             time->hdr.subtype      |= (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+
+                                          } else {
+                                             time->dst.start.tv_sec  = 0;
+                                             time->dst.start.tv_usec = 0;
+                                             time->dst.end = time->dst.start;
+                                             time->hdr.subtype &=  ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
+                                             nadp->dtduration = 0;
+                                          }
                                        }
-                                    }
 
-                                    if (rtime->src.start.tv_sec && rmetric->src.pkts) {
-                                       long long thisBytes = 0, thisAppBytes = 0, thisCount = 0;
-                                       long long tduration, rduration;
-                                       long long tsstime, tsetime;
-                                       double pkts, ratio;
-                                       double iptr;
+                                       if (rtime->src.start.tv_sec && rmetric->src.pkts) {
+                                          long long thisBytes = 0, thisAppBytes = 0, thisCount = 0;
+                                          long long tduration, rduration;
+                                          long long tsstime, tsetime;
+                                          double pkts, ratio;
+                                          double iptr;
 
-                                       tsstime = (rtime->src.start.tv_sec * 1000000LL) + rtime->src.start.tv_usec;
-                                       tsetime = (rtime->src.end.tv_sec * 1000000LL) + rtime->src.end.tv_usec;
+                                          tsstime = (rtime->src.start.tv_sec * 1000000LL) + rtime->src.start.tv_usec;
+                                          tsetime = (rtime->src.end.tv_sec * 1000000LL) + rtime->src.end.tv_usec;
 
-                                       if ((tduration = (tsetime - tsstime)) > nadp->size)
-                                          tduration = nadp->size;
+                                          if ((tduration = (tsetime - tsstime)) > nadp->size)
+                                             tduration = nadp->size;
 
-                                       if ((rduration = (setime - sstime)) > nadp->size)
-                                          rduration = nadp->size;
+                                          if ((rduration = (setime - sstime)) > nadp->size)
+                                             rduration = nadp->size;
 
-                                       pkts = ((nadp->spkts + nadp->scpkts) * (tduration * 1.0))/(rduration * 1.0);
+                                          pkts = ((nadp->spkts + nadp->scpkts) * (tduration * 1.0))/(rduration * 1.0);
 
 // add carry from last accumluation 
-                                       modf(pkts, &iptr);
-                                    
-                                       thisCount = iptr;
+                                          modf(pkts, &iptr);
+                                       
+                                          thisCount = iptr;
 
-                                       if (thisCount > rmetric->src.pkts)
-                                          thisCount = rmetric->src.pkts;
+                                          if (thisCount > rmetric->src.pkts)
+                                             thisCount = rmetric->src.pkts;
 
-                                       if (thisCount < 1)
-                                          thisCount = 1;
-
-                                       if (thisCount == 0) {
-                                          if (nadp->turns == 1) {
+                                          if (thisCount < 1)
                                              thisCount = 1;
-                                             nadp->scpkts += (thisCount * 1.0) - nadp->spkts;
-                                          } else {
-                                             nadp->scpkts += nadp->spkts;
-                                          }
 
-                                       } else 
-                                          nadp->scpkts += ((nadp->spkts * (tduration * 1.0))/(rduration * 1.0)) - (thisCount * 1.0);
+                                          if (thisCount == 0) {
+                                             if (nadp->turns == 1) {
+                                                thisCount = 1;
+                                                nadp->scpkts += (thisCount * 1.0) - nadp->spkts;
+                                             } else {
+                                                nadp->scpkts += nadp->spkts;
+                                             }
 
-                                       ratio        = ((thisCount * 1.0)/nadp->spkts);
-                                       thisBytes    = nadp->sbytes    * ratio;
-                                       thisAppBytes = nadp->sappbytes * ratio;
+                                          } else 
+                                             nadp->scpkts += ((nadp->spkts * (tduration * 1.0))/(rduration * 1.0)) - (thisCount * 1.0);
 
-                                       rmetric->src.pkts     = thisCount;
-                                       rmetric->src.bytes    = thisBytes;
-                                       rmetric->src.appbytes = thisAppBytes;
-                                    }
+                                          ratio        = ((thisCount * 1.0)/nadp->spkts);
+                                          thisBytes    = nadp->sbytes    * ratio;
+                                          thisAppBytes = nadp->sappbytes * ratio;
 
-                                    if (rtime->dst.start.tv_sec && rmetric->dst.pkts) {
-                                       long long thisBytes = 0, thisAppBytes = 0, thisCount = 0;
-                                       long long tduration, rduration;
-                                       long long tdstime, tdetime;
-                                       double ratio, pkts;
-                                       double iptr;
+                                          rmetric->src.pkts     = thisCount;
+                                          rmetric->src.bytes    = thisBytes;
+                                          rmetric->src.appbytes = thisAppBytes;
+                                       }
 
-                                       tdstime = (rtime->dst.start.tv_sec * 1000000LL) + rtime->dst.start.tv_usec;
-                                       tdetime = (rtime->dst.end.tv_sec * 1000000LL) + rtime->dst.end.tv_usec;
+                                       if (rtime->dst.start.tv_sec && rmetric->dst.pkts) {
+                                          long long thisBytes = 0, thisAppBytes = 0, thisCount = 0;
+                                          long long tduration, rduration;
+                                          long long tdstime, tdetime;
+                                          double ratio, pkts;
+                                          double iptr;
 
-                                       if ((tduration = (tdetime - tdstime)) > nadp->size)
-                                          tduration = nadp->size;
+                                          tdstime = (rtime->dst.start.tv_sec * 1000000LL) + rtime->dst.start.tv_usec;
+                                          tdetime = (rtime->dst.end.tv_sec * 1000000LL) + rtime->dst.end.tv_usec;
 
-                                       if ((rduration = (detime - dstime)) > nadp->size)
-                                          rduration = nadp->size;
+                                          if ((tduration = (tdetime - tdstime)) > nadp->size)
+                                             tduration = nadp->size;
+
+                                          if ((rduration = (detime - dstime)) > nadp->size)
+                                             rduration = nadp->size;
 
 
-                                       pkts = ((nadp->dpkts + nadp->dcpkts) * (tduration * 1.0))/(rduration * 1.0);
+                                          pkts = ((nadp->dpkts + nadp->dcpkts) * (tduration * 1.0))/(rduration * 1.0);
 // add carry from last accumluation 
-                                       modf(pkts, &iptr);
+                                          modf(pkts, &iptr);
 
-                                       thisCount = iptr;
+                                          thisCount = iptr;
 
-                                       if (thisCount > rmetric->dst.pkts)
-                                          thisCount = rmetric->dst.pkts;
+                                          if (thisCount > rmetric->dst.pkts)
+                                             thisCount = rmetric->dst.pkts;
 
-                                       if ((thisCount < 1))
-                                          thisCount = 1;
-
-                                       if (thisCount == 0) {
-                                          if (nadp->turns == 1) {
+                                          if ((thisCount < 1))
                                              thisCount = 1;
-                                             nadp->dcpkts += (thisCount * 1.0) - nadp->dpkts;
+
+                                          if (thisCount == 0) {
+                                             if (nadp->turns == 1) {
+                                                thisCount = 1;
+                                                nadp->dcpkts += (thisCount * 1.0) - nadp->dpkts;
+                                             } else {
+                                                nadp->dcpkts += nadp->dpkts;
+                                             }
+
+                                          } else
+                                             nadp->dcpkts += ((nadp->dpkts * (tduration * 1.0))/(rduration * 1.0)) - (thisCount * 1.0);
+
+                                          ratio        = ((thisCount * 1.0)/nadp->dpkts);
+                                          thisBytes    = nadp->dbytes * ratio;
+                                          thisAppBytes = nadp->dappbytes * ratio;
+
+                                          rmetric->dst.pkts     = thisCount;
+                                          rmetric->dst.bytes    = thisBytes;
+                                          rmetric->dst.appbytes = thisAppBytes;
+                                       }
+
+                                       agrRatio = ((rmetric->src.pkts + rmetric->dst.pkts) * 1.0)/((metric->src.pkts + metric->dst.pkts) * 1.0);
+
+                                       if ((ragr != NULL) && (agr != NULL)) {
+                                          if (agr->count > 1) {
+                                             ragr->count = agr->count * agrRatio;
+                                             if (ragr->count == 0) {
+                                                if ((rmetric->src.pkts + rmetric->dst.pkts) > 0)
+                                                   ragr->count = 1;
+                                             }
+                                             agr->count -= ragr->count;
                                           } else {
-                                             nadp->dcpkts += nadp->dpkts;
+                                             ragr->count = agr->count;
+                                          }
+                                       }
+
+                                       metric->src.pkts  -= rmetric->src.pkts;
+                                       metric->src.bytes -= rmetric->src.bytes;
+                                       metric->src.appbytes -= rmetric->src.appbytes;
+
+                                       metric->dst.pkts  -= rmetric->dst.pkts;
+                                       metric->dst.bytes -= rmetric->dst.bytes;
+                                       metric->dst.appbytes -= rmetric->dst.appbytes;
+
+                                       if ((metric->src.pkts == 0) && (metric->src.bytes > 0)) {
+                                          if (rmetric->src.pkts > 1) {
+                                             rmetric->src.pkts--;
+                                             metric->src.pkts++;
+                                          } else {
+                                             rmetric->src.bytes += metric->src.bytes;
+                                             rmetric->src.appbytes += metric->src.appbytes;
+                                          }
+                                       }
+
+                                       if ((metric->dst.pkts == 0) && (metric->dst.bytes > 0)) {
+                                          if (rmetric->dst.pkts > 1) {
+                                             rmetric->dst.pkts--;
+                                             metric->dst.pkts++;
+                                          } else {
+                                             rmetric->dst.bytes += metric->dst.bytes;
+                                             rmetric->dst.appbytes += metric->dst.appbytes;
+                                          }
+                                       }
+
+                                       if ((rmetric->src.pkts + rmetric->dst.pkts) == 1)  {
+                                          rtime->src.end = rtime->src.start;
+                                          rtime->dst.end = rtime->dst.start;
+                                       }
+
+                                       if ((metric->src.pkts > 1) && nadp->stduration) {
+                                          struct timeval dtime, diff;
+                                          long long tratio, useconds;
+
+                                          tratio = (nadp->stduration * rmetric->src.pkts) * nadp->size;
+                                          sstime += tratio;
+                                          dtime.tv_sec  = sstime / 1000000;
+                                          dtime.tv_usec = sstime % 1000000;
+
+                                          RaDiffTime(&dtime, (struct timeval *)&time->src.start, &diff);
+                                          useconds = (diff.tv_sec * 1000000) + diff.tv_usec;
+
+                                          if (useconds >= nadp->size) {
+                                             time->src.start.tv_sec  = dtime.tv_sec;
+                                             time->src.start.tv_usec = dtime.tv_usec;
                                           }
 
-                                       } else
-                                          nadp->dcpkts += ((nadp->dpkts * (tduration * 1.0))/(rduration * 1.0)) - (thisCount * 1.0);
-
-                                       ratio        = ((thisCount * 1.0)/nadp->dpkts);
-                                       thisBytes    = nadp->dbytes * ratio;
-                                       thisAppBytes = nadp->dappbytes * ratio;
-
-                                       rmetric->dst.pkts     = thisCount;
-                                       rmetric->dst.bytes    = thisBytes;
-                                       rmetric->dst.appbytes = thisAppBytes;
-                                    }
-
-                                    agrRatio = ((rmetric->src.pkts + rmetric->dst.pkts) * 1.0)/((metric->src.pkts + metric->dst.pkts) * 1.0);
-
-                                    if ((ragr != NULL) && (agr != NULL)) {
-                                       if (agr->count > 1) {
-                                          ragr->count = agr->count * agrRatio;
-                                          if (ragr->count == 0) {
-                                             if ((rmetric->src.pkts + rmetric->dst.pkts) > 0)
-                                                ragr->count = 1;
+                                       } else {
+                                          if (metric->src.pkts == 1) {
+                                             time->src.start.tv_sec  = time->src.end.tv_sec;
+                                             time->src.start.tv_usec = time->src.end.tv_usec;
                                           }
-                                          agr->count -= ragr->count;
+                                       }
+                                       if ((metric->dst.pkts > 1) && nadp->dtduration) {
+                                          struct timeval dtime, diff;
+                                          long long tratio, useconds;
+
+                                          tratio = (nadp->dtduration * rmetric->dst.pkts) * nadp->size;
+                                          dstime += tratio;
+                                          dtime.tv_sec  = dstime / 1000000;
+                                          dtime.tv_usec = dstime % 1000000;
+
+                                          RaDiffTime(&dtime, (struct timeval *)&time->dst.start, &diff);
+                                          useconds = diff.tv_sec * 1000000 + diff.tv_usec;
+                                          if (useconds >= nadp->size) {
+                                             time->dst.start.tv_sec  = dtime.tv_sec;
+                                             time->dst.start.tv_usec = dtime.tv_usec;
+                                          }
                                        } else {
-                                          ragr->count = agr->count;
-                                       }
-                                    }
-
-                                    metric->src.pkts  -= rmetric->src.pkts;
-                                    metric->src.bytes -= rmetric->src.bytes;
-                                    metric->src.appbytes -= rmetric->src.appbytes;
-
-                                    metric->dst.pkts  -= rmetric->dst.pkts;
-                                    metric->dst.bytes -= rmetric->dst.bytes;
-                                    metric->dst.appbytes -= rmetric->dst.appbytes;
-
-                                    if ((metric->src.pkts == 0) && (metric->src.bytes > 0)) {
-                                       if (rmetric->src.pkts > 1) {
-                                          rmetric->src.pkts--;
-                                          metric->src.pkts++;
-                                       } else {
-                                          rmetric->src.bytes += metric->src.bytes;
-                                          rmetric->src.appbytes += metric->src.appbytes;
-                                       }
-                                    }
-
-                                    if ((metric->dst.pkts == 0) && (metric->dst.bytes > 0)) {
-                                       if (rmetric->dst.pkts > 1) {
-                                          rmetric->dst.pkts--;
-                                          metric->dst.pkts++;
-                                       } else {
-                                          rmetric->dst.bytes += metric->dst.bytes;
-                                          rmetric->dst.appbytes += metric->dst.appbytes;
-                                       }
-                                    }
-
-                                    if ((rmetric->src.pkts + rmetric->dst.pkts) == 1)  {
-                                       rtime->src.end = rtime->src.start;
-                                       rtime->dst.end = rtime->dst.start;
-                                    }
-
-                                    if ((metric->src.pkts > 1) && nadp->stduration) {
-                                       struct timeval dtime, diff;
-                                       long long tratio, useconds;
-
-                                       tratio = (nadp->stduration * rmetric->src.pkts) * nadp->size;
-                                       sstime += tratio;
-                                       dtime.tv_sec  = sstime / 1000000;
-                                       dtime.tv_usec = sstime % 1000000;
-
-                                       RaDiffTime(&dtime, (struct timeval *)&time->src.start, &diff);
-                                       useconds = (diff.tv_sec * 1000000) + diff.tv_usec;
-
-                                       if (useconds >= nadp->size) {
-                                          time->src.start.tv_sec  = dtime.tv_sec;
-                                          time->src.start.tv_usec = dtime.tv_usec;
-                                       }
-
-                                    } else {
-                                       if (metric->src.pkts == 1) {
-                                          time->src.start.tv_sec  = time->src.end.tv_sec;
-                                          time->src.start.tv_usec = time->src.end.tv_usec;
-                                       }
-                                    }
-                                    if ((metric->dst.pkts > 1) && nadp->dtduration) {
-                                       struct timeval dtime, diff;
-                                       long long tratio, useconds;
-
-                                       tratio = (nadp->dtduration * rmetric->dst.pkts) * nadp->size;
-                                       dstime += tratio;
-                                       dtime.tv_sec  = dstime / 1000000;
-                                       dtime.tv_usec = dstime % 1000000;
-
-                                       RaDiffTime(&dtime, (struct timeval *)&time->dst.start, &diff);
-                                       useconds = diff.tv_sec * 1000000 + diff.tv_usec;
-                                       if (useconds >= nadp->size) {
-                                          time->dst.start.tv_sec  = dtime.tv_sec;
-                                          time->dst.start.tv_usec = dtime.tv_usec;
-                                       }
-                                    } else {
-                                       if (metric->dst.pkts == 1) {
-                                          time->dst.start.tv_sec  = time->dst.end.tv_sec;
-                                          time->dst.start.tv_usec = time->dst.end.tv_usec;
+                                          if (metric->dst.pkts == 1) {
+                                             time->dst.start.tv_sec  = time->dst.end.tv_sec;
+                                             time->dst.start.tv_usec = time->dst.end.tv_usec;
+                                          }
                                        }
                                     }
                                  }
-                              }
 
-                           } else {
+                              } else {
+                                 metric->src.pkts = 0;
+                                 metric->dst.pkts = 0;
+                              }
+                           }
+
+                        } else {
+                           if ((metric->src.pkts + metric->dst.pkts) == 1) {
+                              if ((retn = ArgusCopyRecordStruct (ns)) == NULL)
+                                 return(retn);
+
+                              rmetric = (void *)retn->dsrs[ARGUS_METRIC_INDEX];
+                              rtime = (void *)retn->dsrs[ARGUS_TIME_INDEX];
+                              ragr = (void *)retn->dsrs[ARGUS_AGR_INDEX];
+
+                              nadp->turns++;
                               metric->src.pkts = 0;
                               metric->dst.pkts = 0;
                            }
                         }
 
-                     } else {
-                        if ((metric->src.pkts + metric->dst.pkts) == 1) {
-                           if ((retn = ArgusCopyRecordStruct (ns)) == NULL)
-                              return(retn);
+                        if (nadp->hard) {
+                           rtime->src.start.tv_sec  = sSecs.tv_sec;
+                           rtime->src.start.tv_usec = sSecs.tv_usec;
+                           rtime->dst.start         = rtime->src.start;
 
-                           rmetric = (void *)retn->dsrs[ARGUS_METRIC_INDEX];
-                           rtime = (void *)retn->dsrs[ARGUS_TIME_INDEX];
-                           ragr = (void *)retn->dsrs[ARGUS_AGR_INDEX];
+                           rtime->src.end.tv_sec    = eSecs.tv_sec;
+                           rtime->src.end.tv_usec   = eSecs.tv_usec;
+                           rtime->dst.end           = rtime->src.end;
+                           rtime->hdr.argus_dsrvl8.len = (sizeof(*rtime) + 3)/4; 
 
-                           nadp->turns++;
-                           metric->src.pkts = 0;
-                           metric->dst.pkts = 0;
+                           rtime->hdr.subtype |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
                         }
                      }
+                     if (nadp->sploss > 0)
+                        ArgusAdjustSrcLoss(ns, retn, nadp->sploss);
+                     if (nadp->dploss > 0)
+                        ArgusAdjustDstLoss(ns, retn, nadp->dploss);
 
-                     if (nadp->hard) {
-                        rtime->src.start.tv_sec  = sSecs.tv_sec;
-                        rtime->src.start.tv_usec = sSecs.tv_usec;
-                        rtime->dst.start         = rtime->src.start;
-
-                        rtime->src.end.tv_sec    = eSecs.tv_sec;
-                        rtime->src.end.tv_usec   = eSecs.tv_usec;
-                        rtime->dst.end           = rtime->src.end;
-                        rtime->hdr.argus_dsrvl8.len = (sizeof(*rtime) + 3)/4; 
-
-                        rtime->hdr.subtype |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-                     }
-                  }
-                  if (nadp->sploss > 0)
-                     ArgusAdjustSrcLoss(ns, retn, nadp->sploss);
-                  if (nadp->dploss > 0)
-                     ArgusAdjustDstLoss(ns, retn, nadp->dploss);
-
+                  } else
+                     nadp->turns = 0;
                } else
                   nadp->turns = 0;
-            } else
-               nadp->turns = 0;
-         }
+            }
          }
       }
+
+   } else {
+      if (!(ns->status & ARGUS_RECORD_PROCESSED)) {
+         ns->status |= ARGUS_RECORD_PROCESSED;
+         retn = ArgusCopyRecordStruct (ns);
+      }
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusAlignRecord () returning %p\n", retn); 
