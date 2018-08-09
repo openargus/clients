@@ -233,6 +233,13 @@ main (int argc, char **argv)
                   }
 
                   ArgusInputFromFile(input, file);
+
+                  /* input->file now "owns" this pointer.  Setting it
+                   * to NULL prevents ArgusFileFree() from closing the
+                   * file a second time.
+                   */
+                  file->file = NULL;
+
                   ArgusParser->ArgusCurrentInput = input;
 
                   if ((input->file != NULL) && ((ArgusReadConnection (ArgusParser, input, ARGUS_FILE)) >= 0)) {
@@ -303,8 +310,12 @@ main (int argc, char **argv)
 
             file = (struct ArgusFileInput *)file->qhdr.nxt;
 
-            ArgusFileFree(ArgusParser->ArgusInputFileList);
-            ArgusParser->ArgusInputFileList = file;
+            /* Only free items from the file list during the last pass over
+             * the data. */
+            if (ArgusParser->ArgusPassNum <= 1) {
+               ArgusFileFree(ArgusParser->ArgusInputFileList);
+               ArgusParser->ArgusInputFileList = file;
+            }
          }
 
          ArgusParser->ArgusPassNum--;
