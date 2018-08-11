@@ -54,6 +54,9 @@
 #include <signal.h>
 #include <ctype.h>
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
  
 struct RaBinProcessStruct *RaBinProcess = NULL;
 int ArgusProcessOutLayers = 0;
@@ -146,6 +149,46 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 void RaArgusInputComplete (struct ArgusInput *input) { return; }
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
+static int
+writing_records_to_stdout(struct ArgusListStruct *files)
+{
+   struct ArgusWfileStruct *wfile;
+   struct ArgusListObjectStruct *lobj;
+   int have_devstdout = 1;
+   struct stat stat_devstdout;
+   struct stat stat_thisfile;
+
+   if (files == NULL)
+      return 0;
+
+   lobj = files->start;
+   if (stat("/dev/stdout", &stat_devstdout) < 0)
+      have_devstdout = 0;
+
+   while (lobj) {
+      wfile = (struct ArgusWfileStruct *)lobj;
+      if (wfile) {
+         if (wfile->filename &&
+             wfile->filename[0] == '-' &&
+             wfile->filename[1] == 0)
+            return 1;
+
+         if (wfile->fd &&
+             (wfile->fd == stdout ||
+              fileno(wfile->fd) == fileno(stdout)))
+            return 1;
+
+         if (have_devstdout &&
+             wfile->filename &&
+             stat(wfile->filename, &stat_thisfile) == 0 &&
+             stat_devstdout.st_ino == stat_thisfile.st_ino)
+            return 1;
+      }
+      lobj = lobj->nxt;
+   }
+   return 0;
+}
+
 void
 RaParseComplete (int sig)
 {
@@ -156,9 +199,14 @@ RaParseComplete (int sig)
    double bs = 0.0, be = 0.0, bf = 0.0;
    float rel, relcum = 0.0;
    int i, printed = 0;
+   int _writing_records_to_stdout;
 
    if (sig >= 0) {
       if (!parser->RaParseCompleting++) {
+
+         _writing_records_to_stdout =
+          writing_records_to_stdout(parser->ArgusWfileList);
+
          if (parser->RaHistoRecords) {
             for (i = 0; i < parser->RaHistoBins + 2; i++) {
                struct ArgusRecordStruct *argus = parser->RaHistoRecords[i];
@@ -178,7 +226,7 @@ RaParseComplete (int sig)
                double start, bsize;
                char buf[MAXSTRLEN];
                if ((tagr = (void *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-                  if (parser->ArgusWfileList == NULL) {
+                  if (!_writing_records_to_stdout) {
                      int len, tlen, numModes = 0, pflag = parser->pflag;
                      double modeValues[1024];
                      double median = 0.0, percentile = 0.0;
@@ -292,7 +340,7 @@ RaParseComplete (int sig)
                   }
                }
 
-               if (!ArgusParser->ArgusPrintJson && (parser->ArgusWfileList == NULL)) {
+               if (!ArgusParser->ArgusPrintJson && !_writing_records_to_stdout) {
                   if (ArgusParser->RaLabel == NULL) {
                      char rangeval[32], rangebuf[128], c;
                      int size = 0, rblen = 0;
