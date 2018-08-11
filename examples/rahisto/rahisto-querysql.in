@@ -1,0 +1,416 @@
+#!@V_PERL@
+
+use strict;
+use warnings;
+use Carp;
+use JSON;
+use DBI;
+use IPC::System::Simple qw(capture);
+use POSIX qw(strftime);
+use Try::Tiny;
+use Getopt::Std;
+use Time::Local qw(timegm);
+use qosient::util qw(parsetime);
+use qosient::rahisto;
+
+my $debug;
+
+use constant {
+    QUERY_STIMES    => 0,
+    QUERY_AGGREGATE => 1,
+};
+
+# results of prepare() indexed by table name, #prefixes, #times
+# sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $dbh->prepare()
+my $sql_statements = {};
+
+sub find_sql_statement {
+    my ( $tablename, $num_prefixes, $num_times ) = @_;
+    if ( exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} ) {
+        return $sql_statements->{$tablename}->{$num_prefixes}->{$num_times};
+    }
+    return;
+}
+
+sub insert_sql_statement {
+    my ( $tablename, $num_prefixes, $num_times, $stmt ) = @_;
+    if ( !exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} )
+    {
+        $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $stmt;
+    }
+    return;
+}
+
+# from the Perl Maven:
+sub uniq {
+    keys { map { $_ => 1 } @_ };
+}
+
+sub __format_query_histo_values {
+    my ( $querytype, $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    my $query =
+      qq{SELECT class, bin_interval, SUM(freq) as freq from $tablename};
+    my $where   = q{ WHERE model = ?};
+    my $groupby = q{ GROUP BY class WITH ROLLUP};
+    my @params  = ($model);
+    my $addresses;
+
+    if ( $querytype == QUERY_STIMES ) {
+        $query   = qq{SELECT DISTINCT stime from $tablename};
+        $groupby = q{};
+    }
+
+    if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
+        $addresses = strs2prefix_array($prefixstr_aref);
+        if ( defined $addresses ) {
+            my $addresses_str =
+              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
+            push @params, map( $_->ip(), @$addresses );
+            $where .= qq{ AND address IN ($addresses_str)};
+        }
+    }
+
+    if ( defined $times ) {
+        my $cnt    = scalar(@$times);
+        my $clause = q{};
+
+        $clause .= q{ AND};
+
+        if ( $cnt > 0 ) {
+            $clause .= qq{ stime >= ?};
+            push @params, $times->[0];
+            if ( $cnt > 2 ) {
+                $clause .= qq{ AND stime < ?};
+                push @params, $times->[2];
+            }
+            $where .= $clause;
+        }
+    }
+
+    $query .= $where;
+    $query .= $groupby;
+    if ($debug) {
+        print STDERR "$query\n";
+        print STDERR "VALUES " . join( ', ', @params ) . "\n";
+    }
+    return ( $query, \@params );
+}
+
+sub aggregate_histo_values {
+    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    if ( !defined $times ) {
+        $times = [];
+    }
+    if ( !defined $prefixstr_aref ) {
+        $prefixstr_aref = [];
+    }
+
+    my $num_prefixes = scalar( @{$prefixstr_aref} );
+    my $num_times    = scalar( @{$times} );
+
+    my $sth = find_sql_statement( $tablename, $num_prefixes, $num_times );
+    my ( $query, $params ) = __format_query_histo_values( QUERY_AGGREGATE, @_ );
+    if ( !$sth ) {
+        $sth = $dbh->prepare($query);
+        if ( !defined $sth ) {
+            carp "unable to prepare SQL create select statement";
+            return;
+        }
+        insert_sql_statement( $tablename, $num_prefixes, $num_times, $sth );
+    }
+
+    my $res = $sth->execute( @{$params} );
+
+    if ( !defined $res ) {
+        return;
+    }
+    my $hash_ref = $sth->fetchall_hashref('class');
+    $sth->finish;
+
+    return $hash_ref;
+}
+
+sub query_histo_stimes {
+    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    my ( $query, $params ) = __format_query_histo_values( QUERY_STIMES, @_ );
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        carp "unable to prepare SQL create select statement";
+        return;
+    }
+
+    my $res = $sth->execute( @{$params} );
+
+    if ( !defined $res ) {
+        return;
+    }
+    my $aref = $sth->fetchall_arrayref;
+    $sth->finish;
+
+    return $aref;
+}
+
+sub _parsetime_gmseconds {
+    my ($str) = @_;
+    my @tim   = parsetime($str);
+    my $gmsec = timegm(@tim);
+
+    # knock twelve hours off of the time returned by parsetime() since
+    # it always chooses noon of the specified day.
+    return ( $gmsec - 12 * 60 * 60 );
+}
+
+# create an array of time bounds from the -t option to be used by the
+# aggregate function
+sub handle_opt_t {
+    my ($str) = @_;
+    my @bounds = split( /-/x, $str );
+    my $times;
+
+    if ( scalar(@bounds) == 1 ) {
+
+        # not a time range and also no leading "-"
+        # Build an array representing the time from $opt_t until now
+        $times = [ _parsetime_gmseconds($str) ];
+        push $times, "-";
+        push $times, timegm( gmtime() );
+    }
+    elsif ( scalar(@bounds) > 1 ) {
+        if ( length( $bounds[0] ) == 0 ) {
+
+            # time parameters is a relative date.
+            # Build an array representing the time from $opt_t until yesterday
+            $times = [ _parsetime_gmseconds($str) ];
+            push $times, "-";
+            push $times, timegm( gmtime() );
+        }
+        else {
+            $times = [
+                _parsetime_gmseconds( $bounds[0] ),
+                '-',
+                _parsetime_gmseconds( $bounds[1] )
+            ];
+        }
+    }
+    else {
+        carp "No time follows -t";
+        return;
+    }
+
+    if ($debug) {
+        print STDERR "parsed time range " . join( ' ', @$times ) . "\n";
+    }
+    return $times;
+}
+
+# sum up the values from all of the tables
+sub aggregate_histo_results {
+    my ($results_href) = @_;
+    my %agg = ();
+    for my $tbl ( keys $results_href ) {
+        my $href = $results_href->{$tbl};
+        for my $class ( keys $href ) {
+            if ( exists $agg{$class} ) {
+                $agg{$class}->{'freq'} += $href->{$class}->{'freq'};
+            }
+            else {
+                $agg{$class} = { %{ $href->{$class} } };  # shallow copy of hash
+            }
+        }
+    }
+    return \%agg;
+}
+
+sub one_aggregate_query {
+    my ( $dbh, $index_href, $query_prefixes, $query_times, $model ) = @_;
+    my %results_hash = ();
+
+    for my $tbl ( keys $index_href ) {
+        my $results =
+          aggregate_histo_values( $dbh, $query_prefixes, $tbl, $query_times,
+            $model );
+        if ($results) {
+            $results_hash{$tbl} = $results;
+        }
+    }
+    return aggregate_histo_results( \%results_hash );
+}
+
+sub one_stimes_query {
+    my ( $dbh, $index_href, $query_prefixes, $query_times, $model ) = @_;
+    my @results_array = ();
+
+    for my $tbl ( keys $index_href ) {
+        my $results =
+          query_histo_stimes( $dbh, $query_prefixes, $tbl, $query_times,
+            $model );
+        if ($results) {
+
+            # fetchall_arrayref returns an array ref of array refs.
+            # For this query, each inner arrayref has only one element.
+            push @results_array, map( $_->[0], @{$results} );
+        }
+    }
+
+    # pick out the distinct values and sort in ascending numeric order
+    my @uniq_values = sort { $a <=> $b } uniq(@results_array);
+    return \@uniq_values;
+}
+
+my $query_prefixes;
+my $query_times;
+my $query_compare_times;
+my $query_infs;
+my $query_sids;
+my $query_model = rahisto_metric_by_name('dur');
+
+# -D    debug
+# -a    comma or space separated list of addresses
+# -t    time range
+# -i    comma or space separated list of argus "inf"s
+# -s    comma or space separated list of argus "sid"s
+# -c    time range for comparison with the -t time range:
+#       calculates KL divergence.
+# -k    calculate KL divergence for every sequential pair of histograms
+#       found in query time range (divergence as time series).
+#       Output stime[0], ltime[0], stime[1], ltime[1], bins, diverg.
+#       Mutually exclusive with -c.
+
+getopts("Da:t:i:s:C:kH:");
+our ( $opt_D, $opt_a, $opt_t, $opt_i, $opt_s, $opt_C, $opt_k, $opt_H );
+
+if ( $opt_C && $opt_k ) {
+    croak "Cannot specify both -C and -k.";
+}
+if ($opt_D) {
+    $debug = 1;
+}
+if ($opt_a) {
+    @{$query_prefixes} = split( /[ ,]/x, $opt_a );
+}
+if ($opt_t) {
+    $query_times = handle_opt_t($opt_t);
+    if ( !defined $query_times ) {
+        exit(1);
+    }
+}
+if ($opt_i) {
+    @{$query_infs} = split( /[ ,]/x, $opt_i );
+
+    # TODO: validation
+}
+if ($opt_s) {
+    @{$query_sids} = split( /[ ,]/x, lc $opt_s );
+
+    # TODO: validation
+}
+if ($opt_C) {
+    $query_compare_times = handle_opt_t($opt_C);
+    if ( !defined $query_compare_times ) {
+        exit(1);
+    }
+}
+
+if ($opt_H) {
+    $query_model = rahisto_metric_by_name($opt_H);
+    if ( !defined $query_model ) {
+        croak qq{Unknown rahisto metric "$opt_H"};
+    }
+}
+
+my $dbh = rahisto_opendb;
+if ( !defined $dbh ) {
+    croak "Unable to connect to database";
+}
+
+my $index_href =
+  rahisto_index_search_prefixes( $dbh, $query_prefixes, $query_sids,
+    $query_infs );
+if ( !defined $index_href ) {
+    print STDERR "No results found\n";
+    exit(1);
+}
+else {
+    #   use Data::Dumper;
+    #   print Dumper($index_href);
+}
+
+if ( !$opt_k ) {
+    my $grandtotal_href =
+      one_aggregate_query( $dbh, $index_href, $query_prefixes, $query_times,
+        $query_model );
+    if ($opt_C) {
+        my $comparison_grandtotal_href =
+          one_aggregate_query( $dbh, $index_href, $query_prefixes,
+            $query_compare_times, $query_model );
+        my $d = rahisto_kldiv( $grandtotal_href, $comparison_grandtotal_href );
+        if ($d) {
+            print "KL divergence = $d\n";
+        }
+    }
+    else {
+        my $total = $grandtotal_href->{''}->{'freq'};
+        delete $grandtotal_href->{''};
+
+        for my $k ( sort {$a <=> $b} keys $grandtotal_href ) {
+            my $elem = $grandtotal_href->{$k};
+
+            if ( length($k) == 0 ) {
+                next;
+            }
+
+            print $elem->{'class'} . "\t"
+              . $elem->{'bin_interval'} . "\t"
+              . ( $elem->{'freq'} / $total * 100 ) . "\n";
+        }
+    }
+}
+else {
+    my $stimes =
+      one_stimes_query( $dbh, $index_href, $query_prefixes, $query_times,
+        $query_model );
+    if ( scalar( @{$stimes} ) < 2 ) {
+        croak
+          "Need more than one histogram to generate any sort of comparison.";
+    }
+
+    my @divergences = ();   # should only ever have two entries: (last, current)
+    my @histograms  = ();
+    my @one_query_time = ( $stimes->[0], '-', $stimes->[1] );
+    push @histograms,
+      one_aggregate_query( $dbh, $index_href, $query_prefixes,
+        \@one_query_time, $query_model );
+
+    for ( my $i = 1 ; $i < scalar( @{$stimes} ) - 1 ; $i++ ) {
+        shift @one_query_time;    # old value
+        shift @one_query_time;    # hyphen
+        push @one_query_time, ( '-', $stimes->[ $i + 1 ] );
+        push @histograms,
+          one_aggregate_query( $dbh, $index_href, $query_prefixes,
+            \@one_query_time, $query_model );
+        my $kldiv = rahisto_kldiv(@histograms);
+        if ( defined $kldiv ) {
+            push @divergences,
+              {
+                'stime'      => $one_query_time[0],
+                'ltime'      => $one_query_time[2],
+                'divergence' => rahisto_kldiv(@histograms),
+              };
+            shift @histograms;
+        }
+        else {
+            # This histogram could not be used to generate a divergence, so
+            # discard it.
+            pop @histograms;
+        }
+    }
+
+    printf( "# %-25s %-25s %s\n", 'Start time', 'End time', 'Divergence' );
+    for my $x (@divergences) {
+        printf( " %-25s %-25s %f\n",
+            $x->{'stime'}, $x->{'ltime'}, $x->{'divergence'} );
+    }
+}
+
+rahisto_closedb($dbh);

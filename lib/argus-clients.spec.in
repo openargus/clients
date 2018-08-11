@@ -196,6 +196,16 @@ distribution.
 %{_mandir}/man5/ranonymize.5.gz
 %{_mandir}/man5/rarc.5.gz
 
+%if 0%{!?_workstation:1}
+%{_bindir}/rahisto-querysql
+%{_bindir}/rahisto-updatesql
+%{_bindir}/rahisto-delsql
+%{perl_vendorlib}/qosient/rahisto.pm
+%{_unitdir}/rahisto-delsql.timer
+%{_unitdir}/rahisto-delsql.service
+%ghost %{_sysconfdir}/rastream.d/01rahisto-updatesql
+%endif
+
 
 %package arp
 Summary: Argus ARP-tracking Client Software

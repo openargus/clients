@@ -29,6 +29,7 @@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
+perlextlib = @PERL_EXT_LIB@
 
 # Pathname of directory to install the system binaries
 SBINDIR = @sbindir@
@@ -85,27 +86,58 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 
 SRC = rahisto.c
 
-PROGS = $(INSTALLBIN)/rahisto
+PROGS = $(INSTALLBIN)/rahisto \
+	$(INSTALLBIN)/rahisto-querysql \
+	$(INSTALLBIN)/rahisto-updatesql \
+	$(INSTALLBIN)/rahisto-delsql
+
+GENERATED = \
+	rahisto-querysql \
+	rahisto-updatesql \
+	rahisto-delsql
 
 all: $(PROGS)
 
 $(INSTALLBIN)/rahisto: rahisto.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rahisto.o $(LIB) $(COMPATLIB)
+$(INSTALLBIN)/rahisto-querysql: rahisto-querysql
+	$(INSTALL) -m 0755 $^ $@
+$(INSTALLBIN)/rahisto-updatesql: rahisto-updatesql
+	$(INSTALL) -m 0755 $^ $@
+$(INSTALLBIN)/rahisto-delsql: rahisto-delsql
+	$(INSTALL) -m 0755 $^ $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
 
 OBJ =	$(SRC:.c=.o)
 
-CLEANFILES = $(OBJ) $(PROGS)
+CLEANFILES = $(OBJ) $(PROGS) $(GENERATED)
 
-install: force all
+.PHONY: install
+install: force all install-perl
 	[ -d $(DESTDIR)$(BINDIR) ] || \
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/rahisto $(DESTDIR)$(BINDIR)
+ifndef WORKSTATION_BUILD
+	$(INSTALL) $(INSTALLBIN)/rahisto-querysql $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rahisto-updatesql $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rahisto-delsql $(DESTDIR)$(BINDIR)
+endif
 
-uninstall: force all
+install-perl: qosient/rahisto.pm
+ifndef WORKSTATION_BUILD
+	@set -e ; \
+	mkdir -p $(DESTDIR)$(perlextlib)/qosient ; \
+	$(INSTALL) -m 0644 qosient/rahisto.pm \
+		   $(DESTDIR)$(perlextlib)/qosient/rahisto.pm
+endif
+
+uninstall: force all uninstall-perl
 	rm -f $(DESTDIR)$(BINDIR)/rahisto
+
+uninstall-perl:
+	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/rahisto.pm
 
 clean:
 	rm -f $(CLEANFILES)

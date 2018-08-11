@@ -10732,7 +10732,7 @@ ac_config_files="$ac_config_files Makefile ./common/Makefile ./include/Makefile 
 
 
 if test "$with_examples" != no; then :
-  ac_config_files="$ac_config_files ./examples/Makefile ./examples/race/Makefile ./examples/raconvert/Makefile ./examples/radbase/Makefile ./examples/radecode/Makefile ./examples/radns/Makefile ./examples/radhcp/Makefile ./examples/radhcp/radhcp-query ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/rahosts/Makefile ./examples/ralabel/Makefile"
+  ac_config_files="$ac_config_files ./examples/Makefile ./examples/race/Makefile ./examples/raconvert/Makefile ./examples/radbase/Makefile ./examples/radecode/Makefile ./examples/radns/Makefile ./examples/radhcp/Makefile ./examples/radhcp/radhcp-query ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/rahisto/rahisto-querysql ./examples/rahisto/rahisto-updatesql ./examples/rahisto/rahisto-delsql ./examples/rahosts/Makefile ./examples/ralabel/Makefile"
 
 
    if test "$ARGUS_MYSQL_MAKEFILE" != no; then :
@@ -11463,6 +11463,9 @@ do
     "./examples/ragraph/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ragraph/Makefile" ;;
     "./examples/ragrep/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ragrep/Makefile" ;;
     "./examples/rahisto/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/Makefile" ;;
+    "./examples/rahisto/rahisto-querysql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-querysql" ;;
+    "./examples/rahisto/rahisto-updatesql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-updatesql" ;;
+    "./examples/rahisto/rahisto-delsql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-delsql" ;;
     "./examples/rahosts/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rahosts/Makefile" ;;
     "./examples/ralabel/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ralabel/Makefile" ;;
     "./examples/ramysql/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/Makefile" ;;

@@ -503,6 +503,9 @@ AS_IF([test "$with_examples" != no],
       ./examples/ragraph/Makefile
       ./examples/ragrep/Makefile
       ./examples/rahisto/Makefile
+      ./examples/rahisto/rahisto-querysql
+      ./examples/rahisto/rahisto-updatesql
+      ./examples/rahisto/rahisto-delsql
       ./examples/rahosts/Makefile
       ./examples/ralabel/Makefile
    ])

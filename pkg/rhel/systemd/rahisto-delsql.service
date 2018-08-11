@@ -1,0 +1,7 @@
+[Unit]
+Description=Remove old histograms from database
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rahisto-delsql -t -6M
+TimeoutStartSec=1hr

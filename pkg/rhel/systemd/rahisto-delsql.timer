@@ -1,0 +1,11 @@
+[Unit]
+Description=Remove old histograms from database
+
+[Timer]
+# daily at 0015 hrs
+OnCalendar=*-*-* 00:15:00
+Persistent=true
+
+[Install]
+Also=rahisto-delsql.service
+WantedBy=multi-user.target
