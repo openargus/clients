@@ -113,13 +113,13 @@ foreach my $file (@files) {
    if (index($file, "man") == -1) {
       if (index($file, "evt") == -1) {
          if (index($file, "rad") == -1) {
-            my $cmd = $Program . " " . $srcOptions . " -r $file $filter";
+            my $cmd = $Program . " " . $srcOptions . " -R $file $filter";
             print "DEBUG: raportsdaily: $cmd\n" if $debug;
             if (system($cmd) != 0) {
                print "raportsdaily: error: $cmd failed\n";
                exit -1;
             }
-            $cmd = $Program . " " . $dstOptions . " -r $file $filter";
+            $cmd = $Program . " " . $dstOptions . " -R $file $filter";
             print "DEBUG: raportsdaily: $cmd\n" if $debug;
             if (system($cmd) != 0) {
                print "raportsdaily: error: $cmd failed\n";
