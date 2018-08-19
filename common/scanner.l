@@ -134,29 +134,33 @@ recurs   return RECURS;
 req      return REQ;
 rsp      return RSP;
 
-link|ppp|slip  return LINK;
-fddi     return LINK;
-ether    return LINK;
-arp      return ARP;
-rarp     return RARP;
-ip       return IP;
-ipv4     return IPV4;
-ipv6     return IPV6;
-tcp      return TCP;
-udp      return UDP;
-udt      return UDT;
-rtp      return RTP;
-rtcp     return RTCP;
-icmp     return ICMP;
-igmp     return IGMP;
-mpls     return MPLS;
-vlan     return VLAN;
-vid      return VID;
-vpri     return VPRI;
-mid      return MPLSID;
+link    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+slip    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+ppp     { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+fddi    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+ether   { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+arp     { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ARP; }
+rarp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RARP; }
+ip	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IP; }
+ipv4	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPV4; }
+ipv6	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPV6; }
+tcp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return TCP; }
+udp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return UDP; }
+udt	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return UDT; }
+rtp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RTP; }
+rtcp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RTCP; }
+icmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ICMP; }
+igmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IGMP; }
+mpls	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return MPLS; } 
+isis	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ISIS; } 
+
+vlan	 return VLAN;
+vid	 return VID;
+vpri	 return VPRI;
+mid	 return MPLSID;
+
 ipid     return IPID;
 anon     return ANON;
-isis     return ISIS;
 psnp     return PSNP;
 csnp     return CSNP;
 lsp      return LSP;
