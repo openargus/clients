@@ -318,14 +318,15 @@ syntax()
       ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
 #endif
 
+#if defined(ARGUSFORKFILTER)
    if (ArgusParser->ArgusFilterFiledes[1] != -1) {
       if ((len = write (ArgusParser->ArgusFilterFiledes[1], errormsg, strlen(errormsg))) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: write retn %s\n", strerror(errno));
       if ((len = read (ArgusParser->ArgusControlFiledes[0], &response, 1)) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: read retn %s\n", strerror(errno));
    } else
+#endif
       ArgusLog (LOG_ERR, errormsg);
-   exit (1);
 }
 
 
@@ -1005,9 +1006,12 @@ static struct ablock *
 Argusgen_linktype(unsigned int proto)
 {
    struct ablock *b1 = NULL;
-   struct ArgusFlow flow;
-   int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
- 
+   struct ArgusMacStruct mac;
+   int offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
+
+   b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+
+/* 
    switch (proto) {
       default:
          switch (proto) {
@@ -1041,6 +1045,7 @@ Argusgen_linktype(unsigned int proto)
          }
          break;
    }
+*/
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
@@ -2473,6 +2478,7 @@ Arguslookup_proto( char *name, int proto)
             ArgusLog(LOG_ERR, "unknown proto '%s'", name);
          break;
 
+      case Q_ETHER:
       case Q_LINK:
          /* XXX should look up h/w protocol type based on linktype */
          v = argus_nametoeproto(name);
@@ -4513,7 +4519,8 @@ Argusgen_scode(char *name, struct qual q)
       case Q_DEFAULT:
       case Q_HOST:
          switch (proto) {
-            case Q_LINK: {
+            case Q_LINK:
+            case Q_ETHER: {
                eaddr = argus_ether_hostton(name);
                if (eaddr == NULL)
                   ArgusLog(LOG_ERR, "unknown ether host '%s'", name);
