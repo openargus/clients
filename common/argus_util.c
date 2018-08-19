@@ -1674,8 +1674,8 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
    if (parser->bflag) {
       if ((parser->ArgusLocalFilter != NULL) || (parser->ArgusRemoteFilter != NULL)) {
          nff_dump(&parser->ArgusFilterCode, parser->bflag);
-         exit (0);
       }
+      exit (0);
    }
 
    if (parser->ArgusGrepSource || parser->ArgusGrepDestination)
