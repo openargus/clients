@@ -244,6 +244,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
 
                   RaDiffTime (&tname->ltime, &tname->stime, tvp);
 
+                  if (strlen(tname->n_name) > 0) {
                   if (tref++ > 0) {
                      snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
                      len++;
@@ -255,6 +256,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
                   } else {
                      snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
+                  }
                   }
                }
                tdns = tdns->nxt;
@@ -290,6 +292,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
 
                   RaDiffTime (&tname->ltime, &tname->stime, tvp);
 
+                  if (strlen(tname->n_name) > 0) {
                   if (tref++ > 0)
                      sprintf (&resbuf[len++], ",");
 
@@ -299,6 +302,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
                   } else {
                      sprintf (&resbuf[len], "\"%s\"", tname->n_name);
                      len = strlen(resbuf);
+                  }
                   }
                }
                tdns = tdns->nxt;
@@ -333,15 +337,17 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
             for (x = 0; x < cnt; x++) {
                if (tdns->status == ARGUS_DNS_PTR) {
                   struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
-                  if (tref++ > 0) {
-                     int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
-                     len += slen;
-                  }
+                  if (strlen(tname->n_name) > 0) {
+                     if (tref++ > 0) {
+                        int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                        len += slen;
+                     }
 
-                  if (ArgusParser->ArgusPrintJson) {
-                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
-                  } else {
-                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                     if (ArgusParser->ArgusPrintJson) {
+                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                     } else {
+                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                     }
                   }
                   len = strlen(resbuf);
                }
@@ -356,6 +362,9 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
 
          if (ArgusParser->ArgusPrintJson) {
             int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "}");
+            len += slen;
+         } else {
+            int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
             len += slen;
          }
 
@@ -525,17 +534,42 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 
             if (mind > 0) {
                for (i = 0; i < mind; i++) {
-                  int x, resultnum = 0, done = 0;
+                  int x, resultnum = 0, done = 0, multics = 0;
                   char **results = NULL;
                   struct nnamemem *cname = NULL;
                   struct nnamemem *name = matches[i];
+                  char refbuf[16];
 
                   if ((results = ArgusCalloc(0x100000, sizeof(char *))) == NULL)
                      ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
 
                   results[resultnum++] = strdup(name->n_name);
+
+                  if (ArgusParser->ArgusPrintJson) {
+                     snprintf(refbuf, 16, "\"ref\":\"%d\"", name->ref);
+                     results[resultnum++] = strdup(refbuf);
+                  }
                            
                   if (name->cnames != NULL) {
+                     struct ArgusListObjectStruct *list = name->cnames->start;
+                     int cnt = name->cnames->count, count = 0;
+                     char cnamebuf[256];
+
+                     if (cnt > 1) {
+                        multics = 1;
+                     } else {
+                        cname = (struct nnamemem *)list->list_obj;
+                        if ((cname != NULL) && (cname != name)) {
+                           if (cname->cnames != NULL) {
+                              multics = 1;
+                           }
+                        }
+                     }
+                     if (ArgusParser->ArgusPrintJson) {
+                        snprintf(cnamebuf, 256, "\"cname\":");
+                        if (multics) sprintf(&cnamebuf[strlen(cnamebuf)], "[");
+                     }
+                     
 #if defined(ARGUS_THREADS)
                      do {
                         if (name->cnames == NULL) {
@@ -550,9 +584,9 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                               for (x = 0; x < cnt; x++) {
                                  cname = (struct nnamemem *)list->list_obj;
                                  if (ArgusParser->ArgusPrintJson) {
-                                    char cnamebuf[256];
-                                    snprintf(cnamebuf, 256, "\"cname\":\"%s\"", cname->n_name);
-                                    results[resultnum++] = strdup(cnamebuf);
+                                    if (count++ > 0)
+                                       snprintf(&cnamebuf[strlen(cnamebuf)], 128, ",");
+                                    snprintf(&cnamebuf[strlen(cnamebuf)], 128, "\"%s\"", cname->n_name);
                                  } else {
                                     results[resultnum++] = strdup(cname->n_name);
                                  }
@@ -568,6 +602,10 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                         }
                      } while (!done && (resultnum < 2048));
 #endif
+                     if (ArgusParser->ArgusPrintJson) {
+                        if (multics) sprintf(&cnamebuf[strlen(cnamebuf)], "]");
+                        results[resultnum++] = strdup(cnamebuf);
+                     }
                   }
 
                   if (name->cidrs != NULL) {
@@ -605,7 +643,10 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                   }
 
                   if (resultnum > 1) {
-                     sprintf (&resbuf[strlen(resbuf)], ", ");
+                     if (ArgusParser->ArgusPrintJson) {
+                        sprintf (&resbuf[strlen(resbuf)], ", ");
+                     }
+
                      for (x = 1; x < resultnum; x++) {
                         if (x > 1) sprintf (&resbuf[strlen(resbuf)], ", ");
                         sprintf (&resbuf[strlen(resbuf)], "%s", results[x]);
@@ -620,7 +661,11 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                         sprintf (&resbuf[strlen(resbuf)], " }");
                      }
                   } else {
-                     sprintf (&resbuf[strlen(resbuf)], " ]");
+                     if (resultnum > 1) {
+                        sprintf (&resbuf[strlen(resbuf)], " ]]");
+                     } else {
+                        sprintf (&resbuf[strlen(resbuf)], " ]");
+                     }
                   }
                   retn[rind++] = strdup(resbuf);
                   free(results[0]);
@@ -993,10 +1038,10 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name)
 //  That provides back pointers from one data element (name/address) back to the address/name that
 //  is associated.
 //  
-//   The use of the patricia tree indicates that we can seed the tree with the IANA rir database,
-//   delegated-ipv4-*-latest like file, to give us a since of what is allocated and what is not.
-//   The concept is that the domain name, or parts of the domain name should cover CIDR addresses.
-//   And so we can then start to guess what domain a new address may be in.
+//  The use of the patricia tree indicates that we can seed the tree with the IANA rir database,
+//  delegated-ipv4-*-latest like file, to give us a since of what is allocated and what is not.
+//  The concept is that the domain name, or parts of the domain name should cover CIDR addresses.
+//  And so we can then start to guess what domain a new address may be in.
 //   
 //   
 
@@ -1771,20 +1816,20 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if (req->seqnum == res->seqnum) {
                            if (!(strcasecmp(req->name, res->name))) {
                               if (req->qtype != T_SOA) {
-                              if (res->ans)
-                                 RaProcessARecord(parser, res, tvp);
+                                 if (res->ans)
+                                    RaProcessARecord(parser, res, tvp);
 
-                              if (res->soa)
-                                 RaProcessSOARecord(parser, res, tvp);
+                                 if (res->soa)
+                                    RaProcessSOARecord(parser, res, tvp);
 
-                              if (res->ns)
-                                 RaProcessNSRecord(parser, res, tvp);
+                                 if (res->ns)
+                                    RaProcessNSRecord(parser, res, tvp);
 
-                              if (res->cname)
-                                 RaProcessCRecord(parser, res, tvp);
+                                 if (res->cname)
+                                    RaProcessCRecord(parser, res, tvp);
 
-                              if (res->ptr)
-                                 RaProcessPTRRecord(parser, res, tvp);
+                                 if (res->ptr)
+                                    RaProcessPTRRecord(parser, res, tvp);
                               }
 
                               if (!parser->qflag) {
