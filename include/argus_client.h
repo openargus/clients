@@ -1226,8 +1226,6 @@ struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, struct Argu
 
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
-int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
-
 struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
 void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);
 
@@ -1384,8 +1382,6 @@ extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, i
 extern int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
-
-extern int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
 
 extern struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
 extern void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);

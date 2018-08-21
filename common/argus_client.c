@@ -6931,49 +6931,6 @@ RaGetUserDataString (struct ArgusRecordStruct *argus)
    return (retn);
 }
 
-int
-ArgusHistoTallyMetric (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, double value)
-{
-   int retn = 0, i = 0;
-   double start, end, bsize;
-   double iptr;
-
-   if (parser && (ns != NULL)) {
-      bsize = parser->RaHistoBinSize;
-
-      if (parser->RaHistoMetricLog) {
-         value = log10(value);
-         start = parser->RaHistoStartLog;
-           end = parser->RaHistoEndLog;
-      } else {
-         start = parser->RaHistoStart;
-           end = parser->RaHistoEnd;
-      }
-
-      if (value >= start) {
-         modf((value - start)/bsize, &iptr);
-
-         if ((i = iptr) > parser->RaHistoBins)
-            i = parser->RaHistoBins + 1;
-
-         if (value < (end + bsize))
-            i++;
-      } else {
-         i = 0;
-      }
-   }
-
-   if (parser->RaHistoRecords[i] != NULL) {
-      ArgusMergeRecords (parser->ArgusAggregator, parser->RaHistoRecords[i], ns);
-   } else
-      parser->RaHistoRecords[i] = ArgusCopyRecordStruct(ns);
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (3, "ArgusHistoTallyMetric(%p, %p): returning %d\n", parser, ns, retn);
-#endif
-   return (retn);
-}
-
 struct RaPolicyStruct *
 RaFlowModelOverRides(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns)
 {
