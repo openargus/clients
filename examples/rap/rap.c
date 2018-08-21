@@ -177,10 +177,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       bzero(sessions, sizeof(sessions));
       
-      if (parser->Hstr)
-         if (!(ArgusHistoMetricParse (parser, parser->ArgusAggregator)))
-            usage ();
-
       if (parser->vflag)
          ArgusReverseSortDir++;
 

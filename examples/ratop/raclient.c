@@ -934,9 +934,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusEventAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
-         if (parser->Hstr != NULL)
-            ArgusHistoMetricParse(parser, parser->ArgusAggregator);
-
          if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
             ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
 

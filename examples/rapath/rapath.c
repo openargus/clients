@@ -276,12 +276,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
       parser->RaCumulativeMerge = 1;
-
-      if (parser->Hflag) {
-         if (!(ArgusHistoMetricParse (parser, parser->ArgusPathAggregator)))
-            usage();
-      }
-
       parser->RaInitialized++;
       parser->ArgusPrintJson = 0;
    }

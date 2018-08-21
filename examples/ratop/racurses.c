@@ -5851,8 +5851,8 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
       }
    }
 
-   if (parser->Hstr)
-      snprintf_append(retn, &len, &remain, "-H %s ", parser->Hstr);
+   if (parser->Hflag)
+      snprintf_append(retn, &len, &remain, "-H ");
 
    if ((parser->ArgusDisplayFilter) || parser->ArgusLocalFilter || parser->ArgusRemoteFilter) {
       snprintf_append(retn, &len, &remain, "- ");

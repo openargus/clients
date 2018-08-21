@@ -5665,8 +5665,8 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
       }
    }
 
-   if (parser->Hstr)
-      sprintf (&retn[strlen(retn)], "-H %s ", parser->Hstr);
+   if (parser->Hflag)
+      sprintf (&retn[strlen(retn)], "-H ");
 
    if ((parser->ArgusDisplayFilter) || parser->ArgusLocalFilter || parser->ArgusRemoteFilter) {
       sprintf (&retn[strlen(retn)], "- ");

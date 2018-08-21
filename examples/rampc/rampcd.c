@@ -2119,9 +2119,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
          }
 
          if ((parser->ArgusWfileList == NULL) && (parser->Gflag)) {
-            if (parser->Hstr != NULL) {
-
-            } else {
+            if (parser->Hflag == 0) {
                ArgusPrintTime(parser, stimebuf, sizeof(stimebuf), &rbps->startpt);
                ArgusPrintTime(parser, dtimebuf, sizeof(dtimebuf), &rbps->endpt);
                ArgusPrintTime(parser, etimebuf, sizeof(etimebuf), &parser->RaEndTime);
