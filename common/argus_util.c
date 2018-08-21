@@ -2932,7 +2932,6 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
 
    parser->ArgusMinuteUpdate = 1;
    parser->ArgusHourlyUpdate = 1;
-   parser->RaHistoMetricSeries = 1;
    parser->RaSeparateAddrPortWithPeriod = 1;
 
    parser->RaPolicyStatus = ARGUS_POLICY_PERMIT_OTHERS;

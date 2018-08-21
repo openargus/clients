@@ -488,20 +488,10 @@ struct ArgusParserStruct {
 
    int RaPolicyStatus;
 
-   int RaHistoMetricSeries;
-   int RaHistoMetricLog;
-   int RaHistoRangeState;
-
-   double RaHistoLogInterval;
-   double RaHistoBinSize;
-   double RaHistoStart, RaHistoStartLog;
-   double RaHistoEnd, RaHistoEndLog;
-   struct ArgusRecordStruct **RaHistoRecords;
-
    unsigned short ArgusSourcePort, ArgusPortNum;
    unsigned short ArgusControlPort, ArgusV3Port;
 
-   int RaHistoBins, RaCloseInputFd;
+   int RaCloseInputFd;
    int RaPrintIndex;
 
    char *RaFlowModelFile, *exceptfile;
