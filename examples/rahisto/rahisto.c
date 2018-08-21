@@ -72,6 +72,163 @@ static int argus_version = ARGUS_VERSION;
 int RaFindModes(double *, long long, double *, int);
 int RaSortValueBuffer (const void *, const void *);
 
+// Format is "[abs] metric bins[L][:range]" or "[abs] metric bins[:size]"
+// range is value-value and size if just a single number.  Value is 
+// %f[umsMHD] or %f[umKMG] depending on the type of metric used.
+//
+// If the format simply provides the number of bins, the range/size
+// part is determined from the data.  When this occurs the routine returns
+//
+//    ARGUS_HISTO_RANGE_UNSPECIFIED
+//
+// and the program needs to determine its own range.
+//
+// Appropriate metrics are any metrics support for sorting.
+static int
+ArgusHistoMetricParse (struct ArgusParserStruct *parser,
+                       struct ArgusAggregatorStruct *agr)
+{
+   char *ptr, *vptr, tmpbuf[128], *tmp = tmpbuf;
+   char *str = parser->Hstr, *endptr = NULL;
+   char *metric = NULL;
+   int retn = 0, keyword = -1;
+
+   bzero (tmpbuf, 128);
+   snprintf (tmpbuf, 128, "%s", str);
+
+   if ((ptr = strstr (tmp, "abs ")) != NULL) {
+      agr->AbsoluteValue++;
+      tmp = ptr + 4;
+   }
+
+   if ((ptr = strchr (tmp, ' ')) != NULL) {
+      int x, found = 0;
+      metric = tmp;
+      *ptr++ = '\0';
+      tmp = ptr;
+
+         for (x = 0; x < MAX_METRIC_ALG_TYPES; x++) {
+            if (!strncmp(RaFetchAlgorithmTable[x].field, metric, strlen(metric))) {
+               agr->RaMetricFetchAlgorithm = RaFetchAlgorithmTable[x].fetch;
+               agr->ArgusMetricIndex = x;
+               keyword = x;
+               found++;
+               break;
+            }
+         }
+         if (!found)
+            usage();
+
+         if ((ptr = strchr (tmp, ':')) != NULL) {
+            *ptr++ = '\0';
+            vptr = ptr;
+
+            if (strchr (tmp, 'L'))
+               parser->RaHistoMetricLog++;
+
+            if (isdigit((int)*tmp))
+               if ((parser->RaHistoBins = atoi(tmp)) < 0)
+                  return (retn);
+
+// Need to add code to deal with ranges that include negative numbers
+// So parse a number, then check for the -, then parse another number
+// if needed.
+
+            parser->RaHistoStart = strtod(vptr, &endptr);
+            if (endptr == vptr)
+               return (retn);
+
+            vptr = endptr;
+            if ((ptr = strchr (vptr, '-')) != NULL) {
+               *ptr++ = '\0';
+               parser->RaHistoEnd = strtod(ptr, &endptr);
+               if (endptr == ptr)
+                  return (retn);
+            } else {
+               parser->RaHistoBinSize = parser->RaHistoStart;
+               parser->RaHistoStart = 0.0;
+               parser->RaHistoEnd = parser->RaHistoBinSize * (parser->RaHistoBins * 1.0);
+            }
+
+            switch (*endptr) {
+               case 'u': parser->RaHistoStart *= 0.000001;
+                         parser->RaHistoEnd   *= 0.000001; break;
+               case 'm': parser->RaHistoStart *= 0.001;
+                         parser->RaHistoEnd   *= 0.001;    break;
+               case 's': parser->RaHistoStart *= 1.0;
+                         parser->RaHistoEnd   *= 1.0;      break;
+               case 'M': {
+                  switch (keyword) {
+                     case ARGUSMETRICSTARTTIME:
+                     case ARGUSMETRICLASTTIME:
+                     case ARGUSMETRICDURATION:
+                     case ARGUSMETRICMEAN:
+                     case ARGUSMETRICMIN:
+                     case ARGUSMETRICMAX:
+                        parser->RaHistoStart *= 60.0;
+                        parser->RaHistoEnd   *= 60.0;
+                        break;
+
+                     default:
+                        parser->RaHistoStart *= 1000000.0;
+                        parser->RaHistoEnd   *= 1000000.0;
+                        break;
+                  }
+                  break;
+               }
+               case 'H': parser->RaHistoStart *= 3600.0;
+                         parser->RaHistoEnd   *= 3600.0;   break;
+               case 'D': parser->RaHistoStart *= 86400.0;
+                         parser->RaHistoEnd   *= 86400.0;  break;
+               case 'K': parser->RaHistoStart *= 1000.0;
+                         parser->RaHistoEnd   *= 1000.0;  break;
+               case 'G': parser->RaHistoStart *= 1000000000.0;
+                         parser->RaHistoEnd   *= 1000000000.0;  break;
+               case  ' ':
+               case '\0': break;
+
+               default:
+                  return (retn);
+            }
+
+            retn = 1;
+
+         } else {
+            if (isdigit((int)*tmp))
+               if ((parser->RaHistoBins = atoi(tmp)) < 0)
+                  return (retn);
+
+            retn = ARGUS_HISTO_RANGE_UNSPECIFIED;
+         }
+
+         if ((parser->RaHistoRecords = (struct ArgusRecordStruct **) ArgusCalloc (parser->RaHistoBins + 2, sizeof(struct ArgusRecordStruct *))) != NULL) {
+            parser->RaHistoRangeState = retn;
+
+            if (parser->RaHistoMetricLog) {
+               parser->RaHistoEndLog      = log10(parser->RaHistoEnd);
+
+               if (parser->RaHistoStart > 0) {
+                  parser->RaHistoStartLog = log10(parser->RaHistoStart);
+               } else {
+                  parser->RaHistoLogInterval = (parser->RaHistoEndLog/(parser->RaHistoBins * 1.0));
+                  parser->RaHistoStartLog = parser->RaHistoEndLog - (parser->RaHistoLogInterval * parser->RaHistoBins);
+               }
+
+               parser->RaHistoBinSize = (parser->RaHistoEndLog - parser->RaHistoStartLog) / parser->RaHistoBins * 1.0;
+
+            } else
+               parser->RaHistoBinSize = ((parser->RaHistoEnd - parser->RaHistoStart) * 1.0) / parser->RaHistoBins * 1.0;
+
+         } else
+            ArgusLog (LOG_ERR, "%s: ArgusCalloc %s\n", __func__, strerror(errno));
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "%s(%p): returning %d \n", __func__, parser, retn);
+#endif
+   return (retn);
+}
+
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)

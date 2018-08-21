@@ -1226,7 +1226,6 @@ struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, struct Argu
 
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
-int ArgusHistoMetricParse (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
 
 struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
@@ -1386,7 +1385,6 @@ extern int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct A
 extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
-extern int ArgusHistoMetricParse (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 extern int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
 
 extern struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
