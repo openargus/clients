@@ -103,6 +103,19 @@
 #include <sched.h>
 #endif
 
+#ifdef __sun
+# pragma weak RaOnePassComplete
+#endif
+int RaOnePassComplete(void)
+#ifdef __GNUC__
+ __attribute__((weak));
+#endif
+
+int RaOnePassComplete(void)
+{
+    return 1;
+}
+
 
 int
 main (int argc, char **argv)
@@ -319,6 +332,9 @@ main (int argc, char **argv)
          }
 
          ArgusParser->ArgusPassNum--;
+         RaOnePassComplete(); /* let this particular client know we're done
+                               * with this pass
+                               */
       }
 
       ArgusFree(input);

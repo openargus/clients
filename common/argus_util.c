@@ -1118,7 +1118,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                         optind++;
                } while (optarg && (*optarg != '-'));
 
-               parser->Hstr = strdup(str);
+               RaParseOptHStr(str);
             }
             break;
          }

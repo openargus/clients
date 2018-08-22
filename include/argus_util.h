@@ -411,6 +411,8 @@ typedef int (*ResourceCallback)(struct ArgusParserStruct *, int, char *, int, in
 #define ARGUS_SOPTIONS_IGNORE	0
 #define ARGUS_SOPTIONS_PROCESS	1
 
+int RaParseOptHStr(const char * const);
+
 #ifdef ArgusUtil
 
 void ArgusHandleSig (int);

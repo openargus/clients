@@ -5,6 +5,7 @@ struct RaHistoConfigStruct {
    int RaHistoMetricLog;
    int RaHistoRangeState;
    int RaHistoBins;
+   int ArgusPassNum;
    double RaHistoLogInterval;
    double RaHistoBinSize;
    double RaHistoStart;

@@ -136,6 +136,8 @@ struct ArgusWfileStruct {
 
 
 extern int ArgusAuthenticate (struct ArgusInput *);
+int RaOnePassComplete(void);
+
 
 #ifdef ArgusMain
 
