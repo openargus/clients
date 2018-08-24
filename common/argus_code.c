@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -181,6 +181,7 @@ static struct slist *xfer_to_x(struct arth *);
 static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_linktype(unsigned int);
+static struct ablock *Argusgen_flowtype(unsigned int);
 
 #if !defined(CYGWIN)
 static u_int net_mask(u_int *);
@@ -310,9 +311,13 @@ deadman(pid_t pid)
 static void
 syntax()
 {
+   char *errormsg = "ERROR: syntax error in filter expression";
+
+#if defined(ARGUSFORKFILTER)
    extern struct ArgusParserStruct *ArgusParser;
-   char response, *errormsg = "ERROR: syntax error in filter expression";
+   char response;
    int len;
+#endif
 
 #if defined(ARGUSDEBUG)
       ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
@@ -1011,7 +1016,20 @@ Argusgen_linktype(unsigned int proto)
 
    b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
 
-/* 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
+#endif
+
+   return (b1);
+}
+
+
+static struct ablock *
+Argusgen_flowtype(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusFlow flow;
+   int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
    switch (proto) {
       default:
          switch (proto) {
@@ -1045,10 +1063,9 @@ Argusgen_linktype(unsigned int proto)
          }
          break;
    }
-*/
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
+   ArgusDebug (4, "Argusgen_flowtype (0x%x) returns %p\n", proto, b1);
 #endif
 
    return (b1);
@@ -1069,7 +1086,7 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
          switch (proto) {
             case Q_IPV4:
                offset = ((char *)&flow.ip_flow.ip_p - (char *)&flow);
-               b0 = Argusgen_linktype(ETHERTYPE_IP);
+               b0 = Argusgen_flowtype(ETHERTYPE_IP);
                b1 = Argusgen_cmp(ARGUS_FLOW_INDEX, offset, NFF_B, v, Q_EQUAL, Q_DEFAULT);
                Argusgen_and(b0, b1);
                return b1;
@@ -1080,7 +1097,7 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 #else
                offset = ((char *)&flow.ipv6_flow - (char *)&flow) + 32;
 #endif
-               b0 = Argusgen_linktype(ETHERTYPE_IPV6);
+               b0 = Argusgen_flowtype(ETHERTYPE_IPV6);
                b1 = Argusgen_cmp(ARGUS_FLOW_INDEX, offset, NFF_B, v, Q_EQUAL, Q_DEFAULT);
                Argusgen_and(b0, b1);
                return b1;
@@ -2874,7 +2891,6 @@ Argusgen_dsb(int v, int dir, u_int op)
 static struct ablock *
 Argusgen_cocode(char *v, int dir, u_int op)
 {
-   extern struct ArgusParserStruct *ArgusParser;
    struct ablock *b0 = NULL, *b1 = NULL;
    struct ArgusCountryCodeStruct cocode;
    unsigned short val;
