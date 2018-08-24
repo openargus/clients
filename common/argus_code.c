@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-//#define ARGUSFORKFILTER   1
+#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
