@@ -44,8 +44,6 @@ extern u_char *snapend;
 
 extern char ArgusBuf[];
 
-static char tstr[] = " [|wol]";
-
 #ifndef TRUE
 #define TRUE 1
 #endif
