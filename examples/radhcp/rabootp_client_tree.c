@@ -11,6 +11,8 @@
 #include "rabootp_client_tree.h"
 #include "rabootp_memory.h"
 
+#pragma GCC diagnostic ignored "-Wunused-function"
+
 static int
 __dhcp_client_compare(struct ArgusDhcpClientNode *aa,
                       struct ArgusDhcpClientNode *bb)
@@ -54,10 +56,7 @@ __dhcp_client_compare_hwaddr(struct ArgusDhcpClientNode *aa,
    return 0;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
 RB_GENERATE_STATIC(dhcp_client_tree, ArgusDhcpClientNode, tree, __dhcp_client_compare);
-#pragma GCC diagnostic pop
 
 /* Search ONLY by client hardware address and return the first node
  * found.  All entries for a particular mac address can then be iterated
