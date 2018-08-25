@@ -226,9 +226,6 @@ void
 ArgusClientTimeout ()
 {
    if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
-      struct ArgusWfileStruct *wfile = NULL;
-      struct ArgusListObjectStruct *lobj = NULL;
-      int i, count = ArgusParser->ArgusWfileList->count;
    } else
       fflush(stdout);
 
