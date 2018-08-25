@@ -206,15 +206,12 @@ __update_dhcprequest(const struct ArgusDhcpStruct * const parsed,
     * by DHCP clients" in RFC2131.
     */
 
-   struct ArgusDhcpV4LeaseOptsStruct *rep;
    int res = __update_dhcpdiscover(parsed, cached);
 
    /* RFC 2131 Section 3.1 list item (3) - client must include server ID
     * in DHCPREQUEST.  Not many do.
     */
    if (__options_mask_isset(parsed->req.options, DHO_DHCP_SERVER_IDENTIFIER)) {
-      rep = __find_v4_server_by_id(&cached->rep,
-                                   &parsed->req.requested_server_id);
       __update_selected_server_id(parsed, cached);
    } else {
       /* No server ID in DHCPREQUEST.  ALERT?  just take note? */
