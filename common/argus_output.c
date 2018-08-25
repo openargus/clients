@@ -68,8 +68,12 @@ static void *ArgusControlChannelProcess(void *);
 struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 struct ArgusV3Record *ArgusGenerateV3Record (struct ArgusRecordStruct *, unsigned char, char *);
 struct ArgusRecord *ArgusGenerateV5Record (struct ArgusRecordStruct *, unsigned char, char *);
+unsigned int ArgusGenerateV5SrcId(struct ArgusTransportStruct *, unsigned int *);
 static struct ArgusRecord *ArgusGenerateInitialMar (struct ArgusOutputStruct *, char);
 
+#ifdef ARGUS_SASL
+static int ArgusAuthenticateClient (struct ArgusClientData *, int);
+#endif
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -888,7 +892,6 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 {
    if (output != NULL) {
       struct ArgusWfileStruct *wfile;
-      int len = 0;
 
 #if defined(ARGUS_SASL)
       int retn = 0;
@@ -904,7 +907,7 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
          ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusList %s", strerror(errno));
 
       if (output->ArgusWfileList != NULL) {
-         int i, retn, count = output->ArgusWfileList->count;
+         int i, count = output->ArgusWfileList->count;
 
          if (setuid(getuid()) < 0)
             ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
@@ -915,8 +918,6 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 
                if (client == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusCalloc %s", strerror(errno));
-
-               len = ntohs(output->ArgusInitMar->hdr.len) * 4;
 
                if (strcmp (wfile->filename, "-")) {
                   if ((!(strncmp (wfile->filename, "argus-udp://", 12))) ||
@@ -4087,7 +4088,6 @@ ArgusControlChannelProcess(void *arg)
    return __ArgusOutputProcess(arg, portnum, checkmessage, __func__);
 }
 
-static int ArgusAuthenticateClient (struct ArgusClientData *, int);
 static char clienthost[NI_MAXHOST*2+1] = "[local]";
 
 #ifdef ARGUS_SASL
@@ -5717,7 +5717,8 @@ mysasl_secprops(int min_ssf, int max_ssf)
 #endif
  
 
-static int ArgusAuthenticateClient (struct ArgusClientData *, int);
+#ifdef ARGUS_SASL
+
 int ArgusGetSaslString(FILE *, char *, int);
 int ArgusSendSaslString(FILE *, const char *, int, int);
 
@@ -5834,9 +5835,6 @@ no_auth:
 
    return (retn);
 }
-
-
-#ifdef ARGUS_SASL
 
 #include <stdio.h>
 #include <ctype.h>
