@@ -243,7 +243,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
    nff_int64 mem [NFF_MEMWORDS];
    int k, retn;
    u_char *p = (u_char *)argus;
-   float F;
+   float F = -1;
 
    --pc;
    while (1) {
@@ -585,6 +585,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
             pc += ((F == pc->data.f) && (A != -1)) ? pc->jt : pc->jf;
             continue;
 */
+
          case NFF_JMP|NFF_JGT|NFF_F: {
             pc += ((floatisgreaterthan(F, pc->data.f)) && (A != -1)) ? pc->jt : pc->jf;
             continue;
