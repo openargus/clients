@@ -3505,7 +3505,8 @@ void *ArgusListenProcess(void *arg)
 
                   /* If the pipe(2) failed then the notifyfd could be -1. */
                   if (notifyfd[cur] >= 0 && FD_ISSET(notifyfd[cur], &readmask)) {
-                     read(notifyfd[cur], &pchar, 1);
+                     if (read(notifyfd[cur], &pchar, 1) < 0) {
+                     }
 
                      /* Make sure we don't try to read from the
                       * notifyfd a second time since the notifyfd array
@@ -3822,7 +3823,9 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 
 #if defined(ARGUS_THREADS)
                         /* tell ArgusListenProcess() we're done */
-                        write(output->ListenNotify[1], "0", 1);
+                        if (write(output->ListenNotify[1], "0", 1) < 0) {
+                           delete = 1;
+                        }
 #endif
                      }
 
