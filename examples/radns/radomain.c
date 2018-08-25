@@ -132,7 +132,6 @@ struct tok ns_class2str[] = {
 };
 
 extern char ArgusBuf[];
-static const u_char *ns_nparse(struct ArgusDomainQueryStruct *, register const u_char *, register const u_char *, int);
 static const u_char *ns_rparse(struct ArgusDomainQueryStruct *, register u_char *, register const u_char *, int, int);
 
 static const u_char *ns_nprint(register const u_char *, register const u_char *, char *);
@@ -186,7 +185,6 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
          
          if ((cp = ns_nprint((const u_char *)(np + 1), bp, ArgusBuf)) != NULL) {
             query->name = strdup(ArgusBuf);
-//          ns_nparse(query, (const u_char *)(np + 1), bp, ARGUS_UPDATE);
 
             query->qtype = EXTRACT_16BITS(cp);
             cp += 2;
@@ -240,119 +238,6 @@ ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    }
 
    return (retn);
-}
-
-/* parse the domain name */
-static const u_char *
-ns_nparse(struct ArgusDomainQueryStruct *query, register const u_char *cp, register const u_char *bp, int state)
-{
-   register u_int i, l;
-   register const u_char *rp = NULL;
-   register int compress = 0;
-   int chars_processed;
-   int data_size = snapend - cp;
-   int elt;
-
-   char nbuf[1024];
-   bzero(nbuf, sizeof(nbuf));
-
-   if ((l = labellen(cp)) == (u_int)-1)
-      return(NULL);
-   if (!TTEST2(*cp, 1))
-      return(NULL);
-   chars_processed = 1;
-   if (((i = *cp++) & INDIR_MASK) != INDIR_MASK) {
-      compress = 0;
-      rp = cp + l;
-   }
-
-   if (i != 0)
-      while (i && cp < snapend) {
-         if ((i & INDIR_MASK) == INDIR_MASK) {
-            if (!compress) {
-               rp = cp + 1;
-               compress = 1;
-            }
-            if (!TTEST2(*cp, 1))
-               return(NULL);
-            cp = bp + (((i << 8) | *cp) & 0x3fff);
-            if ((l = labellen(cp)) == (u_int)-1)
-               return(NULL);
-            if (!TTEST2(*cp, 1))
-               return(NULL);
-            i = *cp++;
-            chars_processed++;
-
-            /*
-             * If we've looked at every character in
-             * the message, this pointer will make
-             * us look at some character again,
-             * which means we're looping.
-             */
-            if (chars_processed >= data_size) {
-               sprintf(&nbuf[strlen(nbuf)],"<LOOP>");
-               return (NULL);
-            }
-            continue;
-         }
-         if ((i & INDIR_MASK) == EDNS0_MASK) {
-            elt = (i & ~INDIR_MASK);
-            switch(elt) {
-            case EDNS0_ELT_BITLABEL:
-               if (blabel_print(cp) == NULL)
-                  return (NULL);
-               break;
-            default:
-               /* unknown ELT */
-               sprintf(&nbuf[strlen(nbuf)],"<ELT %d>", elt);
-               return(NULL);
-            }
-         } else {
-            if (fn_printn(cp, l, snapend, nbuf) == NULL)
-               return(NULL);
-            else {
-               if (query != NULL) {
-                  switch (state) {
-                     case ARGUS_UPDATE: {
-                        struct ArgusListObjectStruct *list;
-                        if (query->domains == NULL)
-                           query->domains = ArgusNewList();
-
-                        if ((list = ArgusCalloc(1, sizeof(*list))) == NULL)
-                           ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
-
-                        list->list_obj = strdup(nbuf);
-                        ArgusPushFrontList(query->domains, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
-                        break;
-                     }
-
-                     case ARGUS_CHECK: {
-                        if (query->domains) {
-                           int i, count = query->domains->count;
-                           for (i = 0; i < count; i++) {
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
-
-         cp += l;
-         chars_processed += l;
-
-         bzero(nbuf, sizeof(nbuf));
-
-         if ((l = labellen(cp)) == (u_int)-1)
-            return(NULL);
-         if (!TTEST2(*cp, 1))
-            return(NULL);
-         i = *cp++;
-         chars_processed++;
-         if (!compress)
-            rp += l + 1;
-   }
-   return (rp);
 }
 
 static const u_char *
