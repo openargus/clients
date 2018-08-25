@@ -30520,7 +30520,7 @@ setArgusEventDataRecord (struct ArgusParserStruct *src, char *ptr)
    struct ArgusEventRecordStruct *event = NULL;
    char *sptr = NULL, *method = NULL, *file = NULL;
    char *tok = NULL, *db = NULL, *tptr = NULL;
-   int ind = 0, interval, elem = 0, status = 0;
+   int ind = 0, interval = -1, elem = 0, status = 0;
 
    if (src->ArgusEventsTask == NULL)
       src->ArgusEventsTask = ArgusNewEvents();
