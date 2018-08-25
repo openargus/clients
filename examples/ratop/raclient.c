@@ -420,21 +420,31 @@ ArgusHandleDisplayCommand (struct ArgusOutputStruct *output, char *command)
 {
    char *string = &command[10], *sptr;
    struct nff_program lfilter;
-   char *result = NULL;
    int fretn, slen = strlen(string);
    char **retn = NULL;
 
+#ifdef ARGUSDEBUG
+   char *result = NULL;
+#endif
+
    sptr = &string[slen - 1];
    while (isspace((int)*sptr)) {*sptr-- = '\0';}
+   fretn = ArgusFilterCompile (&lfilter, string, 1);
 
-   if ((fretn = ArgusFilterCompile (&lfilter, string, 1)) < 0) {
+   if (fretn < 0) {
+#ifdef ARGUSDEBUG
       result = "syntax error";
+#endif
    } else {
+#ifdef ARGUSDEBUG
       result = "accepted";
+#endif
    }
+
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusHandleDisplay(%s) filter %s", string, result);
 #endif
+
    return retn;
 }
 
