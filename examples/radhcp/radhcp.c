@@ -194,7 +194,6 @@ out:
 char **
 ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 {
-   int res = 0; /* ok */
    char *string = &command[8];
    char **retn = ArgusHandleResponseArray;
    struct ArgusDhcpIntvlNode *invec, *tmp_invec;
@@ -243,7 +242,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    if (RabootpParseQueryString(__query_opts, nqopts, cpy, parsed) < 0) {
       retn[0] = "Invalid query string\n";
       retn[1] = "FAIL\n";
-      res = -1;
       goto out;
    }
    string = parsed[OPT_WHEN];
@@ -271,7 +269,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
       if (__parse_ipv4_prefix(parsed[OPT_ADDR], &addr, &masklen) < 0) {
          retn[0] = "Invalid IP address\n";
          retn[1] = "FAIL\n";
-         res = -1;
          goto out;
       }
       addr.s_addr = ntohl(addr.s_addr);
@@ -287,7 +284,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    if (ArgusParseTime(&wildcarddate, &starttime, &endtime,
                       string, ' ', &frac, 0) <= 0) {
       retn[0] = "FAIL\n";
-      res = -1;
       goto out;
    }
 
@@ -295,7 +291,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
       if (ArgusParseTime(&wildcarddate, &endtime, &starttime,
                          plusminusloc+1, plusminus, &frac, 1) <= 0) {
          retn[0] = "FAIL\n";
-         res = -1;
          goto out;
       }
    } else if (string[0] != '-') {
@@ -323,7 +318,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
       retn[0] = "Not enough memory\n";
       retn[1] = "FAIL\n";
       retn[2] = NULL;
-      res = -1;
       goto out;
    }
 
@@ -334,7 +328,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
       if (tmp_invec_used < 0) {
          retn[0] = "FAIL\n";
          retn[1] = NULL;
-         res = -1;
          ArgusFree(tmp_invec);
          goto out;
       }
@@ -356,7 +349,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
       if (tmp_invec_used < 0) {
          retn[0] = "FAIL\n";
          retn[1] = NULL;
-         res = -1;
          ArgusFree(tmp_invec);
          goto out;
       }
@@ -380,7 +372,6 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 
    if (invec_used < 0) {
          retn[0] = "FAIL\n";
-         res = -1;
          goto out;
    }
 
@@ -474,8 +465,9 @@ out:
          if (t2[i] == '\n')
             t2[i] = '\0';
       }
+
       ArgusDebug (1, "ArgusHandleSearchCommand(%s) search %s 'til %s %s",
-                  string, t1, t2, res ? "FAIL" : "OK");
+                  string, t1, t2, retn[0] ? retn[0] : "(empty)");
    }
 #endif
 
