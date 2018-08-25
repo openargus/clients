@@ -72,12 +72,12 @@ extern char ArgusBuf[];
 
 #if defined(ARGUSDEBUG)
 static char *bootp_print(register const u_char *, u_int);
-#endif
 static void rfc1048_print(const u_char *, const u_char *);
+static char tstr[] = " [|bootp]";
+#endif
 static size_t rfc1048_parse(const u_char *, const u_char *,
                             struct ArgusDhcpStruct *, u_char);
 
-static char tstr[] = " [|bootp]";
 static const u_char vm_rfc1048[4] = VM_RFC1048;
 
 static const struct tok bootp_flag_values[] = {
@@ -583,6 +583,7 @@ trunc:
  *     B - on/off (8 bits)
  *     $ - special (explicit code to handle)
  */
+#if defined(ARGUSDEBUG)
 static struct tok tag2str[] = {
 	{ DHO_PAD, "pad" },
 	{ DHO_SUBNET_MASK, "isubnet_mask" },
@@ -961,6 +962,7 @@ trunc:
    sprintf(&ArgusBuf[strlen(ArgusBuf)],"|[rfc1048]");
    return;
 }
+#endif
 
 static inline char *
 __extract_string(const u_char * const bp, u_char len)
