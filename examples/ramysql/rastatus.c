@@ -1777,7 +1777,6 @@ ArgusEventsProcess(void *arg)
    struct ArgusEventRecordStruct *evtarray[1024];
    struct ArgusEventRecordStruct *evt;
    struct timeval tvpbuf, *tvp = &tvpbuf;
-   char *str;
    void *retn = NULL;
    int cnt, i;
 
