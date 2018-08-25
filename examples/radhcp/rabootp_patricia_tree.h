@@ -41,11 +41,11 @@ RabootpPatriciaTreeFind(const unsigned int * const,
                         struct ArgusParserStruct *);
 
 int
-RabootpPatriciaTreeRemoveLease(const unsigned int * const,
+RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
                                const unsigned char * const,
                                size_t,
-                               const struct timeval * const,
-                               const struct ArgusDhcpStruct * const,
+                               struct timeval *,
+                               struct ArgusDhcpStruct *,
                                struct ArgusParserStruct *);
 
 int

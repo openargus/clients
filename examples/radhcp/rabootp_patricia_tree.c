@@ -218,8 +218,8 @@ int
 RabootpPatriciaTreeRemoveLease(const unsigned int * const yiaddr,
                                const unsigned char * const l2addr,
                                size_t l2len,
-                               const struct timeval * const intlo,
-                               const struct ArgusDhcpStruct * const ads,
+                               struct timeval *intlo,
+                               struct ArgusDhcpStruct *ads,
                                struct ArgusParserStruct *parser)
 {
    struct RaAddressStruct *ras;
