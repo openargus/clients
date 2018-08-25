@@ -1549,7 +1549,7 @@ int RabootpClientRemove(struct ArgusDhcpStruct *ads)
 }
 
 int RabootpIntvlRemove(const struct timeval * const intlo,
-                       const struct ArgusDhcpStruct * const ads)
+                       struct ArgusDhcpStruct *ads)
 {
    return ArgusDhcpIntvlTreeRemove(&interval_tree, intlo, ads);
 }
