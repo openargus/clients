@@ -5801,6 +5801,9 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                         int offset = 0, slen = 0;
 
                         switch (i) {
+                           case ARGUS_MASK_STIME:
+                              break;
+
                            case ARGUS_MASK_SMPLS:
                            case ARGUS_MASK_DMPLS: {
                               unsigned int label  = (*(unsigned int *)&((char *) p)[na->ArgusMaskDefs[i].offset]) >> 12;
