@@ -253,6 +253,8 @@ head:	  pqual dqual aqual	{ QSET($$.q, $1, $2, $3); }
 	| pqual dqual iqual 	{ QSET($$.q, $1, $2, $3); $$.q.type = Q_INTEGER; }
 	| pqual dqual fqual 	{ QSET($$.q, $1, $2, $3); $$.q.type = Q_FLOAT; }
 	| ptype PROTO		{ QSET($$.q, $1, Q_DEFAULT, Q_PROTO); }
+	| ptype dqual		{ QSET($$.q, $1, $2, Q_DEFAULT); }
+	| ptype aqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
 	| pqual ndaqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
 	;
 
