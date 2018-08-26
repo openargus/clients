@@ -1832,18 +1832,21 @@ ArgusEventsProcess(void *arg)
             break;
 
 #ifdef ARGUSDEBUG
-         if ((str = RaFetchStatusData(events, evt, ARGUS_STATUS)) != NULL) {
-            switch (evt->status & (RA_STATUS_RETURN | RA_STATUS_DELTA)) {
-               case RA_STATUS_RETURN:
-               case RA_STATUS_DELTA:
-                  break;
-            }
+         {
+            char *str;
+            if ((str = RaFetchStatusData(events, evt, ARGUS_STATUS)) != NULL) {
+               switch (evt->status & (RA_STATUS_RETURN | RA_STATUS_DELTA)) {
+                  case RA_STATUS_RETURN:
+                  case RA_STATUS_DELTA:
+                     break;
+               }
 
-            if (evt->db && evt->table)
-               RaStatusProcessSQLStatement(evt, str);
-            else 
-               ArgusDebug (3, "ArgusEventsProcess: %s\n", str);
-            free(str);
+               if (evt->db && evt->table)
+                  RaStatusProcessSQLStatement(evt, str);
+               else
+                  ArgusDebug (3, "ArgusEventsProcess: %s\n", str);
+               free(str);
+            }
          }
 #endif
             
