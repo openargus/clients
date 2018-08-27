@@ -46,14 +46,13 @@
 #include <argus_main.h>
 #include <rasplit.h>
 
-static int ArgusCloseDown = 0;
-
 #if defined(ARGUS_MYSQL)
 #include "rabootp_sql.h"
 
 #if defined(CYGWIN)
 #define USE_IPV6
 #endif
+#include "rasql.h"
 
 #define RA_CURSES_MAIN
 
@@ -132,72 +131,6 @@ struct ArgusInput *ArgusInput = NULL;
 
 MYSQL_ROW row;
 MYSQL *RaMySQL = NULL;
-
-int
-ArgusMySQLProcess(int argc, char **argv)
-{
-   struct ArgusParserStruct *parser = NULL;
-   int i, cc;
-
-   for (i = 0, cc = 0; i < argc; i++)
-      cc += strlen(argv[i]);
-
-   if (strchr (argv[0], '/'))
-      argv[0] = strrchr(argv[0], '/') + 1;
-
-   if ((parser = ArgusNewParser(argv[0])) != NULL) {
-      ArgusParser = parser;
-      ArgusMainInit (parser, argc, argv);
-      ArgusClientInit (parser);
-
-#if defined(ARGUS_THREADS)
-      sigset_t blocked_signals;
-
-      sigfillset(&blocked_signals);
-      sigdelset(&blocked_signals, SIGTERM);
-      sigdelset(&blocked_signals, SIGINT);
-      sigdelset(&blocked_signals, SIGWINCH);
-
-      pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
-      if (parser->writeDbstr != NULL) {
-         if (parser->readDbstr != NULL)
-            free(parser->readDbstr);
-         parser->readDbstr = NULL; //if writing we'll need to read the same db
-      }
-
-#if defined(ARGUS_MYSQL)
-
-      if (RaDatabase && RaTable)
-         parser->RaTasksToDo = 1;
-
-      {
-         sigset_t blocked_signals;
-         sigset_t sigs_to_catch;
-
-         sigfillset(&blocked_signals);
-         pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
-         sigemptyset(&sigs_to_catch);
-         sigaddset(&sigs_to_catch, SIGHUP);
-         sigaddset(&sigs_to_catch, SIGTERM);
-         sigaddset(&sigs_to_catch, SIGQUIT);
-         sigaddset(&sigs_to_catch, SIGINT);
-         pthread_sigmask(SIG_UNBLOCK, &sigs_to_catch, NULL);
-      }
-#endif
-
-      ArgusCloseDown = 1;
-      mysql_close(RaMySQL);
-#endif
-   }
-
-#if defined(ARGUS_THREADS)
-   pthread_exit (NULL);
-#else
-   return (NULL);
-#endif
-}
 
 int
 RaProcessSplitOptions(struct ArgusParserStruct *parser, char *str, int len, struct ArgusRecordStruct *ns)
