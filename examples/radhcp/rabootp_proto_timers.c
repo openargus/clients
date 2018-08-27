@@ -41,6 +41,7 @@
 #include "rabootp_client_tree.h"
 #include "rabootp_interval_tree.h"
 #include "rabootp_patricia_tree.h"
+#include "rabootp_proto_timers.h"
 
 static const time_t RABOOTP_PROTO_TIMER_NONLEASE=10;
 static const time_t RABOOTP_PROTO_TIMER_HOLDDOWN=30;
