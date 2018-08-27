@@ -163,7 +163,7 @@ ArgusThreadsInit(pthread_attr_t *attr)
 
    if (stacksize < ARGUS_MIN_STACKSIZE) {
 #ifdef ARGUSDEBUG
-      ArgusDebug (3, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
+      ArgusDebug (5, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
 #endif
       if (pthread_attr_setstacksize(attr, ARGUS_MIN_STACKSIZE))
          ArgusLog (LOG_ERR, "pthreads set stacksize error");
@@ -1934,7 +1934,7 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (2, "RaProcessThisLsOfEventRecord () returning\n"); 
+   ArgusDebug (4, "RaProcessThisLsOfEventRecord () returning\n");
 #endif
 }
 
@@ -2077,7 +2077,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          dptr = ptr;
 #else
 #if defined(ARGUSDEBUG)
-         ArgusDebug (3, "RaProcessEventRecord: unable to decompress payload\n");
+         ArgusDebug (5, "RaProcessEventRecord: unable to decompress payload\n");
 #endif
          return;
 #endif
@@ -2423,7 +2423,7 @@ RaParseLsOfEventRecord (struct ArgusParserStruct *parser, char *dptr, struct Arg
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (1, "RaParseLsOfEventRecord (%p, %p)\n", parser, argus);
+   ArgusDebug (4, "RaParseLsOfEventRecord (%p, %p)\n", parser, argus);
 #endif
 }
 
@@ -2595,7 +2595,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (3, "ArgusProcessQueue (0x%x) returning %d", queue, retn); 
+   ArgusDebug (5, "ArgusProcessQueue (0x%x) returning %d", queue, retn);
 #endif
 
    return (retn);
@@ -2629,7 +2629,7 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
 #endif
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (3, "ArgusCorrelateQueue (0x%x) returning %d", queue, retn); 
+   ArgusDebug (5, "ArgusCorrelateQueue (0x%x) returning %d", queue, retn);
 #endif
 
    return (retn);
@@ -2790,7 +2790,7 @@ RaCursesNewProcess(struct ArgusParserStruct *parser)
       ArgusLog (LOG_ERR, "RaCursesNewProcess: ArgusCalloc error %s\n", strerror(errno));
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (3, "RaCursesNewProcess(0x%x) returns 0x%x\n", parser, retn);
+   ArgusDebug (5, "RaCursesNewProcess(0x%x) returns 0x%x\n", parser, retn);
 #endif
    return (retn);
 }
