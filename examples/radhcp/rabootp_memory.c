@@ -7,6 +7,7 @@
 #include "argus_util.h"
 #include "argus_threads.h"
 #include "rabootp.h"
+#include "rabootp_memory.h"
 
 static pthread_mutex_t __memlock = PTHREAD_MUTEX_INITIALIZER;
 
