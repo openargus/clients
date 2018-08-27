@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include "rabootp_interval_tree.h"
 #include "rabootp_memory.h"
+#include "rabootp_lease_pullup.h"
 
 /* If two similar leases have a gap of __OVERLAP_ALLOWANCE or less
  * between the end of the first and start of the second, consider them
