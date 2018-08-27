@@ -52,11 +52,6 @@ int rabootp_cb_exec(struct rabootp_cblist *l,
    return failed;
 }
 
-void rabootp_cb_init(struct rabootp_cblist *l)
-{
-   SLIST_INIT(l);
-}
-
 void rabootp_cb_cleanup(struct rabootp_cblist *l)
 {
    struct rabootp_cbentry *elm;
