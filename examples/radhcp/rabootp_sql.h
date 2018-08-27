@@ -17,5 +17,8 @@ int
 RabootpSQLInsertOne(const struct ArgusParserStruct * const parser,
                     const struct ArgusDhcpIntvlNode *node,
                     const char * const table);
+int
+RabootpSQLInsert(const struct ArgusParserStruct * const parser,
+                 const struct ArgusDhcpIntvlNode *invec, size_t invec_nitems);
 # endif
 #endif

@@ -14,6 +14,7 @@
 #include "argus_client.h"
 #include "rabootp.h" /* DEBUGLOG */
 #include "rabootp_interval_tree.h"
+#include "rabootp_sql.h"
 #include "rabootp_sql_bind.h"
 
 static char *
@@ -145,7 +146,7 @@ out:
    return rv;
 }
 
-int
+static int
 RabootpSQLNewInsert(const struct ArgusParserStruct * const parser,
                     const char * const table,
                     MYSQL_STMT **statement)
@@ -224,7 +225,7 @@ out:
 /* bindvecp is set on success and is the caller's responsibility to
  * clean up.
  */
-int
+static int
 RabootpSQLBindStatement(const struct ArgusParserStruct * const parser,
                         const struct ArgusDhcpIntvlNode *node,
                         const char * const table,
@@ -269,7 +270,7 @@ err:
    return rv;
 }
 
-int
+static int
 RabootpSQLFreeStatement(MYSQL_STMT *statement)
 {
    my_bool boolrv;
