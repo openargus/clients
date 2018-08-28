@@ -32,6 +32,7 @@
 
 #include "argus_util.h"
 #include "argus_client.h"
+#include "argus_lockfile.h"
 
 #if defined(_WIN32) || defined(_WIN64) || defined(CYGWIN)
 # if defined(CYGWIN)
