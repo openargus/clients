@@ -1232,6 +1232,7 @@ void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);
 void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);
 void ArgusAlignInit(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 struct ArgusRecordStruct *ArgusAlignRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
+int ArgusAlignTime(struct ArgusParserStruct *, struct ArgusAdjustStruct *, time_t *);
 
 int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int, struct ArgusRecordStruct **);
 void ArgusCalculatePeriod (struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
@@ -1389,6 +1390,7 @@ extern void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);
 extern void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);
 extern void ArgusAlignInit(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 extern struct ArgusRecordStruct *ArgusAlignRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
+extern int ArgusAlignTime(struct ArgusParserStruct *, struct ArgusAdjustStruct *, time_t *);
 extern int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int, struct ArgusRecordStruct **);
 extern void ArgusCalculatePeriod (struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 
