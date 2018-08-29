@@ -471,6 +471,8 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
          
          bzero ((char *)&node, sizeof(node));
          bcopy(cidr, &node.addr, sizeof(*cidr));
+         if (node.addr.str != NULL)
+            node.addr.str = strdup(cidr->str);
 
          if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[AF_INET], &node, matchMode)) != NULL) {
             ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen);
@@ -1066,7 +1068,12 @@ RaProcessARecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStruc
                   name->ref++;
 
                   bcopy(cidr, &node.addr, sizeof(*cidr));
+                  if (node.addr.str != NULL)
+                     node.addr.str = strdup(cidr->str);
+
                   bcopy(cidr, &rr->cidr, sizeof(*cidr));
+                  if (cidr->str != NULL)
+                     rr->cidr.str = strdup(cidr->str);
 
                   if (name->cidrs == NULL) {
                      name->cidrs = ArgusNewList();
@@ -1076,6 +1083,9 @@ RaProcessARecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStruc
                   if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
                      if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                         bcopy(&node, raddr, sizeof(node));
+                        if (node.addr.str != NULL)
+                           raddr->addr.str = strdup(node.addr.str);
+
                         RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
                         raddr->label = strdup(rr->name);
                         raddr->addr.str = strdup(rr->data);
@@ -1486,12 +1496,17 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainQueryStr
 
                      bzero ((char *)&node, sizeof(node));
                      bcopy(cidr, &node.addr, sizeof(*cidr));
+                     if (node.addr.str != NULL)
+                        node.addr.str = strdup(cidr->str);
 
                      if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
                         if ((raddr = (struct RaAddressStruct *) ArgusMalloc (sizeof(*raddr))) != NULL) {
                            int ttl = 0, tttl;
 
                            bcopy(&node, raddr, sizeof(node));
+                           if (node.addr.str != NULL)
+                              raddr->addr.str = strdup(node.addr.str);
+
                            RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
                            raddr->label = strdup(rr->data);
                            tttl = ((rr->ttl < ARGUS_DNS_MIN_TTL) ? ARGUS_DNS_MIN_TTL : rr->ttl);
@@ -1735,6 +1750,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                      if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                         bcopy(&node, raddr, sizeof(node));
+                        if (node.addr.str != NULL)
+                           raddr->addr.str = strdup(node.addr.str);
                         RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
                      }
 
@@ -1909,6 +1926,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 #endif
                            if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                               bcopy(&node, raddr, sizeof(node));
+                              if (node.addr.str != NULL)
+                                 raddr->addr.str = strdup(node.addr.str);
                               RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
                            }
 
@@ -2217,6 +2236,8 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
                   if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
                      if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                         bcopy(&node, raddr, sizeof(node));
+                        if (node.addr.str != NULL)
+                           raddr->addr.str = strdup(node.addr.str);
                         RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
                      }
                   }
