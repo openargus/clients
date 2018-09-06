@@ -7840,6 +7840,8 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                               if (t1->src.start.tv_sec == 0) {
                                  bcopy ((char *)t2, (char *)t1, sizeof (*t1));
                               } else {
+                                 struct ArgusTimeObject t2cpy = *t2;
+
                                  if ((t1->src.start.tv_sec  >  t2->src.start.tv_sec) ||
                                     ((t1->src.start.tv_sec  == t2->src.start.tv_sec) &&
                                      (t1->src.start.tv_usec >  t2->src.start.tv_usec)))
@@ -7851,14 +7853,14 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                                     t1->hdr.argus_dsrvl8.len = sizeof(*t1);
                                  }
                                  if ((t2->src.end.tv_sec == 0) || (t2->hdr.subtype == ARGUS_TIME_ABSOLUTE_TIMESTAMP)) {
-                                    t2->src.end = t2->src.start;
-                                    t2->hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
-                                    t2->hdr.argus_dsrvl8.len = sizeof(*t1);
+                                    t2cpy.src.end = t2->src.start;
+                                    t2cpy.hdr.subtype         = ARGUS_TIME_ABSOLUTE_RANGE;
+                                    t2cpy.hdr.argus_dsrvl8.len = sizeof(*t1);
                                  }
-                                 if ((t1->src.end.tv_sec  <  t2->src.end.tv_sec) ||
-                                    ((t1->src.end.tv_sec  == t2->src.end.tv_sec) &&
-                                     (t1->src.end.tv_usec <  t2->src.end.tv_usec)))
-                                    t1->src.end = t2->src.end;
+                                 if ((t1->src.end.tv_sec  <  t2cpy.src.end.tv_sec) ||
+                                    ((t1->src.end.tv_sec  == t2cpy.src.end.tv_sec) &&
+                                     (t1->src.end.tv_usec <  t2cpy.src.end.tv_usec)))
+                                    t1->src.end = t2cpy.src.end;
                               }
                            }
                         }
@@ -8739,13 +8741,14 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                         struct ArgusDataStruct *d2 = (struct ArgusDataStruct *) ns2->dsrs[i];
 
                         if (d1 && d2) {
+                           unsigned short d2count = d2->count;
                            int t1len = d1->size - d1->count;
                            int t2len = d2->size - d2->count;
 
                            if (t1len < 0) { d1->count = d1->size; t1len = 0; }
-                           if (t2len < 0) { d2->count = d2->size; t2len = 0; }
+                           if (t2len < 0) { d2count = d2->size; t2len = 0; }
 
-                           t1len = (t1len > d2->count) ? d2->count : t1len;
+                           t1len = (t1len > d2count) ? d2count : t1len;
 
                            if (t1len > 0) {
                               bcopy(d2->array, &d1->array[d1->count], t1len);
