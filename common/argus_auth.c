@@ -574,7 +574,7 @@ int
 RaSendSaslString (int fd, const char *s, int l, int mode)
 {
    char *buf = NULL, *ptr = NULL;
-   unsigned int al, len;
+   unsigned int al, len = 0;
    int result, tsize;
 
    switch (mode) {
