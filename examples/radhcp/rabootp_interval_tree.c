@@ -226,23 +226,6 @@ IntvlTreeFind(struct ArgusDhcpIntvlTree *head,
    return res;
 }
 
-struct ArgusDhcpIntvlNode *
-IntvlTreeFindByStruct(struct ArgusDhcpIntvlTree *head,
-                       struct ArgusDhcpStruct *exemplar)
-{
-   struct ArgusDhcpIntvlNode node;
-   struct ArgusDhcpIntvlNode *res;
-
-   node.data = exemplar;
-   MUTEX_LOCK(&head->lock);
-   res = RB_FIND(dhcp_intvl_tree, &head->inttree, &node);
-   if (res)
-      ArgusDhcpStructUpRef(res->data);
-   MUTEX_UNLOCK(&head->lock);
-
-   return res;
-}
-
 int
 IntvlTreeForEach(struct ArgusDhcpIntvlTree * const head,
                   IntvlTreeCallback cb, void *cp_arg0)

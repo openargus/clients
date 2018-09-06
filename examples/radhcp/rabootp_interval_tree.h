@@ -68,8 +68,6 @@ int ArgusDhcpIntvlTreeRemove(struct ArgusDhcpIntvlTree *,
 struct ArgusDhcpIntvlNode *IntvlTreeFind(struct ArgusDhcpIntvlTree *head,
                                          struct timeval * ,
                                          struct ArgusDhcpStruct * );
-struct ArgusDhcpIntvlNode *IntvlTreeFindByStruct(struct ArgusDhcpIntvlTree *,
-                                                 struct ArgusDhcpStruct *);
 int IntvlTreeForEach(struct ArgusDhcpIntvlTree * const,
                       IntvlTreeCallback cb, void *);
 int IntvlTreeForEachOverlaps(struct ArgusDhcpIntvlTree * const,
