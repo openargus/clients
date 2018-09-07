@@ -90,7 +90,7 @@ PROGS = $(INSTALLBIN)/rahisto
 all: $(PROGS)
 
 $(INSTALLBIN)/rahisto: rahisto.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rahisto.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rahisto.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

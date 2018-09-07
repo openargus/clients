@@ -107,7 +107,7 @@ OBJ =	$(SRC:.c=.o)
 all: $(PROGS) $(SCRIPTS)
 
 $(INSTALLBIN)/radhcp: $(OBJ) $(LIB)
-	$(CC) $(CCOPT) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/radhcp-query: radhcp-query
 	$(INSTALL) -m 0755 $^ $@

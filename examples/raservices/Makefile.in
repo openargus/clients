@@ -90,10 +90,10 @@ PROGS = $(INSTALLBIN)/raservices $(INSTALLBIN)/rauserdata
 all: $(PROGS)
 
 $(INSTALLBIN)/raservices: raservices.o $(LIB)
-	$(CC) $(CCOPT) -o $@ raservices.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ raservices.o $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rauserdata: rauserdata.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rauserdata.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rauserdata.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

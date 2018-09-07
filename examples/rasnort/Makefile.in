@@ -97,7 +97,7 @@ PROGS = $(INSTALLBIN)/rasnort
 all: $(PROGS)
 
 $(INSTALLBIN)/rasnort: $(OBJ) $(LIB)
-	$(CC) $(CCOPT) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 

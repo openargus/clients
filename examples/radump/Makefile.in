@@ -98,7 +98,7 @@ OBJ =	$(SRC:.c=.o)
 all: $(PROGS)
 
 $(INSTALLBIN)/radump: $(OBJ) $(LIB)
-	$(CC) $(CCOPT) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
 
 
 CLEANFILES = $(OBJ) $(PROGS)

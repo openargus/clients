@@ -103,22 +103,22 @@ PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
 all: $(PROGS)
 
 $(INSTALLBIN)/rascore: rascore.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o rasql_common.o $(LIB)
-	$(CC) $(CCOPT) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
+	$(CC) $(CFLAGS) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rastatus: rastatus.o raclient.o rasql_common.o $(LIB)
-	$(CC) $(CCOPT) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
+	$(CC) $(CFLAGS) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rastatus-cpustats: rastatus-cpustats.pl
 	sed 's+@PERLBIN@+$(PERL)+' rastatus-cpustats.pl > $@

@@ -86,10 +86,10 @@ PROGS = $(INSTALLBIN)/rampc $(INSTALLBIN)/rampcd
 all: $(PROGS)
 
 $(INSTALLBIN)/rampc: racurses.o raclient.o $(LIB)
-	$(CC) $(CCOPT) -o $@ racurses.o raclient.o @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
+	$(CC) $(CFLAGS) -o $@ racurses.o raclient.o @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rampcd: rampcd.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rampcd.o @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) @WRAPLIBS@
+	$(CC) $(CFLAGS) -o $@ rampcd.o @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) @WRAPLIBS@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

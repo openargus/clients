@@ -89,7 +89,7 @@ PROGS = $(INSTALLBIN)/raconvert
 all: $(PROGS)
 
 $(INSTALLBIN)/raconvert: raconvert.o $(LIB)
-	$(CC) $(CCOPT) -o $@ raconvert.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ raconvert.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

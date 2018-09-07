@@ -90,7 +90,7 @@ PROGS = $(INSTALLBIN)/rapolicy
 all: $(PROGS)
 
 $(INSTALLBIN)/rapolicy: rapolicy.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rapolicy.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rapolicy.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

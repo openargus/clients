@@ -90,7 +90,7 @@ PROGS = $(INSTALLBIN)/raqsort
 all: $(PROGS)
 
 $(INSTALLBIN)/raqsort: raqsort.o $(LIB)
-	$(CC) $(CCOPT) -o $@ raqsort.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ raqsort.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

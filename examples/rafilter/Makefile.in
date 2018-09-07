@@ -90,7 +90,7 @@ PROGS = $(INSTALLBIN)/rafilteraddr
 all: $(PROGS)
 
 $(INSTALLBIN)/rafilteraddr: rafilteraddr.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rafilteraddr.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rafilteraddr.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

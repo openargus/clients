@@ -90,7 +90,7 @@ PROGS = $(INSTALLBIN)/rarpwatch
 all: $(PROGS)
 
 $(INSTALLBIN)/rarpwatch: rarpwatch.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rarpwatch.o $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rarpwatch.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection

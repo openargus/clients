@@ -90,7 +90,7 @@ OBJ =	$(SRC:.c=.o)
 all: $(PROGS)
 
 $(INSTALLBIN)/radns: $(OBJ) $(LIB)
-	$(CC) $(CCOPT) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/radnsdb: radnsdb.pl
 	sed 's+@PERLBIN@+$(PERL)+' radnsdb.pl > $@
