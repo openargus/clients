@@ -142,36 +142,59 @@ distribution.
 
 %files examples
 %defattr(-,root,root)
-%{argusbin}/*
-%exclude %{argusbin}/ra
-%exclude %{argusbin}/rabins
-%exclude %{argusbin}/racluster
-%exclude %{argusbin}/racount
-%exclude %{argusbin}/ranonymize
-%exclude %{argusbin}/rasort
-%exclude %{argusbin}/rastream
-%exclude %{argusbin}/ramanage
-%exclude %{argusbin}/ragraph
-%exclude %{argusbin}/rasql*
-%exclude %{argusbin}/radhcp*
-%exclude %{argusbin}/radns
-%exclude %{argusbin}/radnsdb
-%exclude %{argusbin}/raipdbase
-%exclude %{argusbin}/rascanner*
-%exclude %{argusbin}/rascore
-%{argusman}
-%exclude %{argusman}/man1/ra.1.gz
-%exclude %{argusman}/man1/rabins.1.gz
-%exclude %{argusman}/man1/racluster.1.gz
-%exclude %{argusman}/man1/racount.1.gz
-%exclude %{argusman}/man5/radium.conf.5.gz
-%exclude %{argusman}/man8/radium.8.gz
-%exclude %{argusman}/man1/ranonymize.1.gz
-%exclude %{argusman}/man1/rasort.1.gz
-%exclude %{argusman}/man1/rasplit.1.gz
-%exclude %{argusman}/man1/rastream.1.gz
-%exclude %{argusman}/man1/ragraph.1.gz
-%exclude %{argusman}/man1/rasql.1.gz
+%{_bindir}/argusclientbug
+%{_bindir}/raced
+%{_bindir}/raconvert
+%{_bindir}/radark
+%{_bindir}/radecode
+%{_bindir}/radump
+%{_bindir}/raevent
+%{_bindir}/rafilteraddr
+%{_bindir}/ragrep
+%{_bindir}/rahisto
+%{_bindir}/rahosts
+%{_bindir}/rahostsdaily
+%{_bindir}/ralabel
+%{_bindir}/ramatrix
+%{_bindir}/rampc
+%{_bindir}/rampcd
+%{_bindir}/rap
+%{_bindir}/rapath
+%{_bindir}/rapolicy
+%{_bindir}/raports
+%{_bindir}/raportsdaily
+%{_bindir}/raqsort
+%{_bindir}/rarpwatch
+%{_bindir}/rascan
+%{_bindir}/raservices
+%{_bindir}/rastrip
+%{_bindir}/ratemplate
+%{_bindir}/ratimerange
+%{_bindir}/ratod
+%{_bindir}/ratop
+%{_bindir}/ratrace
+%{_bindir}/ratree
+%{_bindir}/rauserdata
+%{_mandir}/man1/raconvert.1.gz
+%{_mandir}/man1/radecode.1.gz
+%{_mandir}/man1/radump.1.gz
+%{_mandir}/man1/raevent.1.gz
+%{_mandir}/man1/rafilteraddr.1.gz
+%{_mandir}/man1/ragrep.1.gz
+%{_mandir}/man1/rahisto.1.gz
+%{_mandir}/man1/ralabel.1.gz
+%{_mandir}/man1/rapath.1.gz
+%{_mandir}/man1/rapolicy.1.gz
+%{_mandir}/man1/rasqlcheckconf.1.gz
+%{_mandir}/man1/rasqlinsert.1.gz
+%{_mandir}/man1/rasqltimeindex.1.gz
+%{_mandir}/man1/rastrip.1.gz
+%{_mandir}/man1/ratop.1.gz
+%{_mandir}/man5/racluster.5.gz
+%{_mandir}/man5/racolor.conf.5.gz
+%{_mandir}/man5/ralabel.conf.5.gz
+%{_mandir}/man5/ranonymize.5.gz
+%{_mandir}/man5/rarc.5.gz
 
 
 %package arp
@@ -295,7 +318,7 @@ Copyright 2000-2016 QoSient, LLC
 %defattr(-,root,root)
 %{argussbin}/rasqlinsert-setup
 %{argusbin}/rasql*
-%{argusbin}/rastatus*
+%{_bindir}/rastatus*
 %{argusbin}/raipdbase
 %{argusbin}/rascore
 %{argusman}/man1/rasql*
