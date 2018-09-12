@@ -2,7 +2,8 @@
 
 source /etc/os-release
 
-if [[ ! ${QOSIENT_SYSTEM_TYPE} = collector ]] ; then
+if [[ ! ( ${QOSIENT_SYSTEM_TYPE} = collector || \
+          ${QOSIENT_SYSTEM_TYPE} = devel ) ]] ; then
 	exit 0
 fi
 
