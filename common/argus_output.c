@@ -1330,12 +1330,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         if (cnt && (dtime->hdr.argus_dsrvl8.qual != ARGUS_TYPE_UTC_NANOSECONDS)) {
                            if (cnt == 1) 
                               subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
-                           else if (dur > 0x7fffffff)
+                           else if (dur > 1000000000)
                               subtype |= ARGUS_TIME_ABSOLUTE_RANGE;
                            else
                               subtype |= ARGUS_TIME_RELATIVE_RANGE;
-                        } else
+                        } else {
+                           subtype &= ~ARGUS_TIME_RELATIVE_TIMESTAMP;
                            subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+                        }
 
                         dtime->hdr.subtype = subtype;
 
@@ -1352,39 +1354,43 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                       
                         if (subtype & ARGUS_TIME_RELATIVE_RANGE) {
                            *dsrptr++ = *(unsigned int *)dsr;
-                                 
+
                            if (subtype & ARGUS_TIME_SRC_START) {         // assume at this point that all indicators are reasonable
+                              long long stime  = (dtime->src.start.tv_sec * 1000000L) + dtime->src.start.tv_usec;
+
                               *dsrptr++ = dtime->src.start.tv_sec;    // if there is not a src start, then there is not a src end
                               *dsrptr++ = dtime->src.start.tv_usec;
                               tlen += 2;
 
                               for (x = 1; x < 4; x++) {
-                                 if (subtype & (ARGUS_TIME_SRC_START << x)) {
-                                    switch (ARGUS_TIME_SRC_START << x) {
+                                 int mask = (ARGUS_TIME_SRC_START << x);
+                                 if (subtype & mask) {
+                                    switch (mask) {
                                        case ARGUS_TIME_SRC_END: {
-                                          int value = ((dtime->src.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->src.end.tv_usec - dtime->src.start.tv_usec);
+                                          long long send = (dtime->src.end.tv_sec * 1000000L) + dtime->src.end.tv_usec;
+                                          int value = send - stime;
                                           *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_START: {
-                                          int value = ((dtime->dst.start.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->dst.start.tv_usec - dtime->src.start.tv_usec);
-                                          *dsrptr++ = value;
+                                          long long dstart = (dtime->dst.start.tv_sec * 1000000L) + dtime->dst.start.tv_usec;
+                                          int value = dstart - stime;
+                                          *dsrptr++ = value - stime;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_END: {
-                                          int value = ((dtime->dst.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->dst.end.tv_usec - dtime->src.start.tv_usec);
-                                          *dsrptr++ = value;
+                                          long long dend = (dtime->dst.end.tv_sec * 1000000L) + dtime->dst.end.tv_usec;
+                                          int value = dend - stime;
+                                          *dsrptr++ = value - stime;
                                           tlen += 1;
                                           break;
                                        }
                                     }
                                  }
                               }
+
                            } else {
                               if (subtype & ARGUS_TIME_DST_START) {         // assume its just dst start and possibly end.
                                  *dsrptr++ = dtime->dst.start.tv_sec;
@@ -2349,8 +2355,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) rec->dsrs[ARGUS_METRIC_INDEX];
                         struct ArgusTimeObject *dtime = (struct ArgusTimeObject *) dsr;
                         struct ArgusTimeObject *dsrtime = (struct ArgusTimeObject *) dsrptr;
-                        unsigned char subtype = 0;
                         long long dur = RaGetuSecDuration(rec);
+                        unsigned char subtype = 0;
                         unsigned char tlen = 1;
                         int cnt = 0;
 
@@ -2389,12 +2395,14 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         if (cnt && (dtime->hdr.argus_dsrvl8.qual != ARGUS_TYPE_UTC_NANOSECONDS)) {
                            if (cnt == 1) 
                               subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
-                           else if (dur > 0x7fffffff)
+                           else if (dur > 1000000000)
                               subtype |= ARGUS_TIME_ABSOLUTE_RANGE;
                            else
                               subtype |= ARGUS_TIME_RELATIVE_RANGE;
-                        } else
+                        } else {
+                           subtype &= ~ARGUS_TIME_RELATIVE_TIMESTAMP;
                            subtype |= ARGUS_TIME_ABSOLUTE_TIMESTAMP;
+                        }
 
                         dtime->hdr.subtype = subtype;
 
@@ -2409,41 +2417,45 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 //#define ARGUS_TIME_RELATIVE_RANGE               0x05    // First timestamp is absolute, only one other value is flow range, uSec or nSec
 
                       
+                        *dsrptr++ = *(unsigned int *)&dtime->hdr;
+
                         if (subtype & ARGUS_TIME_RELATIVE_RANGE) {
-                           *dsrptr++ = *(unsigned int *)dsr;
-                                 
-                           if (subtype & ARGUS_TIME_SRC_START) {         // assume at this point that all indicators are reasonable
+                           if (subtype & ARGUS_TIME_SRC_START) {      // assume at this point that all indicators are reasonable
+                              long long stime  = (dtime->src.start.tv_sec * 1000000L) + dtime->src.start.tv_usec;
+
                               *dsrptr++ = dtime->src.start.tv_sec;    // if there is not a src start, then there is not a src end
                               *dsrptr++ = dtime->src.start.tv_usec;
                               tlen += 2;
 
                               for (x = 1; x < 4; x++) {
-                                 if (subtype & (ARGUS_TIME_SRC_START << x)) {
-                                    switch (ARGUS_TIME_SRC_START << x) {
+                                 int mask = (ARGUS_TIME_SRC_START << x);
+                                 if (subtype & mask) {
+                                    switch (mask) {
                                        case ARGUS_TIME_SRC_END: {
-                                          int value = ((dtime->src.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->src.end.tv_usec - dtime->src.start.tv_usec);
+                                          long long send = (dtime->src.end.tv_sec * 1000000L) + dtime->src.end.tv_usec;
+                                          int value = send - stime;
                                           *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_START: {
-                                          int value = ((dtime->dst.start.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->dst.start.tv_usec - dtime->src.start.tv_usec);
-                                          *dsrptr++ = value;
+                                          long long dstart = (dtime->dst.start.tv_sec * 1000000L) + dtime->dst.start.tv_usec;
+                                          int value = dstart - stime;
+                                          *dsrptr++ = value - stime;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_END: {
-                                          int value = ((dtime->dst.end.tv_sec  - dtime->src.start.tv_sec) * 1000000) +
-                                                       (dtime->dst.end.tv_usec - dtime->src.start.tv_usec);
-                                          *dsrptr++ = value;
+                                          long long dend = (dtime->dst.end.tv_sec * 1000000L) + dtime->dst.end.tv_usec;
+                                          int value = dend - stime;
+                                          *dsrptr++ = value - stime;
                                           tlen += 1;
                                           break;
                                        }
                                     }
                                  }
                               }
+
                            } else {
                               if (subtype & ARGUS_TIME_DST_START) {         // assume its just dst start and possibly end.
                                  *dsrptr++ = dtime->dst.start.tv_sec;
@@ -2458,11 +2470,11 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            }
 
                         } else {
-                           *dsrptr++ = *(unsigned int *)&dtime->hdr;
                            
                            for (x = 0; x < 4; x++) {
-                              if (subtype & (ARGUS_TIME_SRC_START << x)) {
-                                 switch (ARGUS_TIME_SRC_START << x) {
+                              int mask = (ARGUS_TIME_SRC_START << x);
+                              if (subtype & mask) {
+                                 switch (mask) {
                                     case ARGUS_TIME_SRC_START:
                                        *dsrptr++ = dtime->src.start.tv_sec;
                                        *dsrptr++ = dtime->src.start.tv_usec;
