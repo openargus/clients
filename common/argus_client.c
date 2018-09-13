@@ -2280,7 +2280,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         }
 
                         if (ctime->hdr.argus_dsrvl8.qual == ARGUS_TYPE_UTC_NANOSECONDS) {
-                           ctime->hdr.argus_dsrvl8.qual = 0;
+                           ctime->hdr.argus_dsrvl8.qual = ARGUS_TYPE_UTC_MICROSECONDS;
                            ctime->src.start.tv_usec /= 1000;
                            ctime->src.end.tv_usec   /= 1000;
                            ctime->dst.start.tv_usec /= 1000;
