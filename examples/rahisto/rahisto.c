@@ -229,7 +229,6 @@ ArgusHistoMetricParse (const char * const Hstr,
                   RaHistoConfig->RaHistoStartLog = log10(RaHistoConfig->RaHistoStart);
                } else {
                   RaHistoConfig->RaHistoLogInterval = (RaHistoConfig->RaHistoEndLog/(RaHistoConfig->RaHistoBins * 1.0));
-                  RaHistoConfig->RaHistoStartLog = RaHistoConfig->RaHistoEndLog - (RaHistoConfig->RaHistoLogInterval * RaHistoConfig->RaHistoBins);
                }
 
                RaHistoConfig->RaHistoBinSize = (RaHistoConfig->RaHistoEndLog - RaHistoConfig->RaHistoStartLog) / RaHistoConfig->RaHistoBins * 1.0;
@@ -624,10 +623,10 @@ RaParseComplete (int sig)
                   struct ArgusRecordStruct *argus = RaHistoRecords[i];
 
                   if (i == 0) {
-                     bs = 0;
+                     bs = -HUGE_VAL;
                      be = start;
                      if (RaHistoConfig->RaHistoMetricLog)
-                        be = pow(10.0, be);
+                        be = (be > 0 ) ? pow(10.0, be) : 0;
 
                   } else {
                      bs = (start + ((i - 1) * bsize));
@@ -637,7 +636,7 @@ RaParseComplete (int sig)
                         be = (start +  (i * bsize));
                      }
                      if (RaHistoConfig->RaHistoMetricLog) {
-                        bs = pow(10.0, bs);
+                        bs = (bs > 0 ) ? pow(10.0, bs) : 0;
                         be = pow(10.0, be);
                      }
                   }
