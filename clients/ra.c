@@ -431,14 +431,20 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
                         if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank))) {
                            if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
-                              struct ArgusRecord *argusrec = NULL;
 
-                              if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                              if (argus->status & RA_MODIFIED) {
+                                 struct ArgusRecord *ns = NULL;
+
+                                 if ((ns = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) == NULL)
+                                    ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
-                                 ArgusHtoN(argusrec);
+                                 ArgusHtoN(ns);
 #endif
-                                 ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
-                              }
+                                 if (ArgusWriteNewLogfile (parser, argus->input, wfile, ns))
+                                    ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                              } else
+                                 if (ArgusWriteNewLogfile (parser, argus->input, wfile, argus->input->ArgusOriginal))
+                                    ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
                            }
 
                         } else {
