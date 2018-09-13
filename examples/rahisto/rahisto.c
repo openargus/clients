@@ -747,11 +747,7 @@ RaParseComplete (int sig)
                               }
                            } else {
                               if (!ArgusProcessNoZero) {
-                                 if (i == 0) {
-                                    if (be != bs)
-                                       printThis++;
-                                 } else
-                                    printThis++;
+                                 printThis++;
                               }
                            }
 
