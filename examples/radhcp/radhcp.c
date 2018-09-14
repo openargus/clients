@@ -125,8 +125,6 @@ static char *invecstr;
 static char **global_query_strs;
 static const unsigned long INVECSTRLEN = 8*1024*1024; /* 8 MB */
 static const struct ArgusFormatterTable *fmtable = &ArgusJsonFormatterTable;
-
-static const size_t INTVL_NODE_ARRAY_MAX = 64;
 static const size_t RADHCP_MAX_QUERIES = 8;
 
 static int

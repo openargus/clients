@@ -80,6 +80,7 @@ static size_t rfc1048_parse(const u_char *, const u_char *,
 
 static const u_char vm_rfc1048[4] = VM_RFC1048;
 
+#if defined(ARGUSDEBUG)
 static const struct tok bootp_flag_values[] = {
     { 0x8000, "Broadcast" },
     { 0, NULL}
@@ -90,6 +91,7 @@ static const struct tok bootp_op_values[] = {
     { BOOTREPLY,   "Reply" },
     { 0, NULL}
 };
+#endif
 
 static struct ArgusDhcpClientTree client_tree = {
    .lock = PTHREAD_MUTEX_INITIALIZER,
