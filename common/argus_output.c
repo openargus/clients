@@ -1376,14 +1376,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                        case ARGUS_TIME_DST_START: {
                                           long long dstart = (dtime->dst.start.tv_sec * 1000000L) + dtime->dst.start.tv_usec;
                                           int value = dstart - stime;
-                                          *dsrptr++ = value - stime;
+                                          *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_END: {
                                           long long dend = (dtime->dst.end.tv_sec * 1000000L) + dtime->dst.end.tv_usec;
                                           int value = dend - stime;
-                                          *dsrptr++ = value - stime;
+                                          *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
@@ -2441,14 +2441,14 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                        case ARGUS_TIME_DST_START: {
                                           long long dstart = (dtime->dst.start.tv_sec * 1000000L) + dtime->dst.start.tv_usec;
                                           int value = dstart - stime;
-                                          *dsrptr++ = value - stime;
+                                          *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
                                        case ARGUS_TIME_DST_END: {
                                           long long dend = (dtime->dst.end.tv_sec * 1000000L) + dtime->dst.end.tv_usec;
                                           int value = dend - stime;
-                                          *dsrptr++ = value - stime;
+                                          *dsrptr++ = value;
                                           tlen += 1;
                                           break;
                                        }
