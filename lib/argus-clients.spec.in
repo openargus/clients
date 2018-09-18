@@ -145,15 +145,12 @@ distribution.
 %{_bindir}/argusclientbug
 %{_bindir}/raced
 %{_bindir}/raconvert
-%{_bindir}/radark
 %{_bindir}/radecode
 %{_bindir}/radump
 %{_bindir}/raevent
 %{_bindir}/rafilteraddr
 %{_bindir}/ragrep
 %{_bindir}/rahisto
-%{_bindir}/rahosts
-%{_bindir}/rahostsdaily
 %{_bindir}/ralabel
 %{_bindir}/ramatrix
 %{_bindir}/rampc
@@ -161,11 +158,8 @@ distribution.
 %{_bindir}/rap
 %{_bindir}/rapath
 %{_bindir}/rapolicy
-%{_bindir}/raports
-%{_bindir}/raportsdaily
 %{_bindir}/raqsort
 %{_bindir}/rarpwatch
-%{_bindir}/rascan
 %{_bindir}/raservices
 %{_bindir}/rastrip
 %{_bindir}/ratemplate
@@ -185,9 +179,6 @@ distribution.
 %{_mandir}/man1/ralabel.1.gz
 %{_mandir}/man1/rapath.1.gz
 %{_mandir}/man1/rapolicy.1.gz
-%{_mandir}/man1/rasqlcheckconf.1.gz
-%{_mandir}/man1/rasqlinsert.1.gz
-%{_mandir}/man1/rasqltimeindex.1.gz
 %{_mandir}/man1/rastrip.1.gz
 %{_mandir}/man1/ratop.1.gz
 %{_mandir}/man5/racluster.5.gz
@@ -197,6 +188,12 @@ distribution.
 %{_mandir}/man5/rarc.5.gz
 
 %if 0%{!?_workstation:1}
+%{_bindir}/radark
+%{_bindir}/rahosts
+%{_bindir}/rahostsdaily
+%{_bindir}/raports
+%{_bindir}/raportsdaily
+%{_bindir}/rascan
 %{_bindir}/rahisto-querysql
 %{_bindir}/rahisto-updatesql
 %{_bindir}/rahisto-delsql
