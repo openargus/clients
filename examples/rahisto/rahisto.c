@@ -527,7 +527,10 @@ RaParseComplete (int sig)
                            printf ("{\n");
                            printf (" \"N\":\"%d\", \"bins\":\"%d\", \"size\": \"%.*f\", \n \"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\",",
                                         tagr->act.n, RaHistoConfig->RaHistoBins, pflag, RaHistoConfig->RaHistoBinSize, meanStr, stdStr, maxValStr, minValStr);
-                           printf ("\n \"median\": \"%s\", \"95%%\": \"%s\",\n", medianStr, percentStr);
+                           printf ("\n \"median\": \"%s\", \"95%%\": \"%s\", ", medianStr, percentStr);
+                           if (RaHistoConfigCount > 1)
+                              printf ("\"metric\": \"%s\",\n",
+                                      RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field);
                         } else {
                            if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
                               printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
@@ -537,6 +540,9 @@ RaParseComplete (int sig)
                               printf (" N = %-6d  mean = %*s  stddev = %*s  max = %s  min = %s\n",
                                            tagr->act.n, len, meanStr, len, stdStr, maxValStr, minValStr);
                               printf ("           median = %*s     95%% = %s\n", len, medianStr, percentStr);
+                              if (RaHistoConfigCount > 1)
+                                 printf ("           metric = %s\n",
+                                         RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field);
                            }
                         }
 
@@ -789,10 +795,12 @@ RaParseComplete (int sig)
                   }
                }
 
-               if (!ArgusParser->qflag && ArgusParser->ArgusPrintJson) {
-                  printf("\n  ]\n}");
-                  if (RaHistoConfigCount > 1)
-                      printf("%s", cid < (RaHistoConfigCount-1) ? "," : "");
+               if (!ArgusParser->qflag) {
+                  if (ArgusParser->ArgusPrintJson) {
+                     printf("\n  ]\n}");
+                     if (RaHistoConfigCount > 1)
+                         printf("%s", cid < (RaHistoConfigCount-1) ? "," : "");
+                  }
                   printf("\n");
                }
 
