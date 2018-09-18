@@ -434,7 +434,7 @@ struct ArgusParserStruct {
    char Uflag, noflag;
    char ver3flag;
 
-   char *estr, *Hstr, *Mflag;
+   char *estr, *Mflag;
    double Bflag;
 
    signed int RaFieldWidth, RaWriteOut;
