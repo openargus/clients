@@ -743,13 +743,14 @@ RaceInit(struct RaceDaemonStruct *raced)
 
    if (raced != NULL) {
       struct RaceModeStruct *mode = NULL;
-      int i, x, ind, tries;
+      int i, x, ind;
 
 #if defined(ARGUS_MYSQL)
       MYSQL *tsql = NULL;
-#endif
+      int tries;
 #ifdef ARGUSDEBUG
       char sbuf[256];
+#endif
 #endif
 
       if ((mode = raced->RaceModeList) != NULL) {
@@ -1066,7 +1067,7 @@ void
 RaceLoop(struct RaceDaemonStruct *raced)
 {
    struct RaceListStruct *list = NULL;
-   int i, cnt, retn;
+   int i, cnt;
  
    while (!(RaceShutDownFlag)) {
 
@@ -1241,7 +1242,7 @@ RaceLoop(struct RaceDaemonStruct *raced)
                      sprintf (sbuf, "UPDATE Tasks set pid=%d,date=\"%s\",status=1 where id=%d", (int) task->pid, tbuf, task->id);
 
 #if defined(ARGUS_MYSQL)
-                     if ((retn = mysql_real_query(&mysql, sbuf, strlen(sbuf))) != 0)
+                     if (mysql_real_query(&mysql, sbuf, strlen(sbuf)) != 0)
                         ArgusLog(LOG_ERR, "mysql: %s error %s", sbuf, mysql_error(&mysql));
 #endif
                   }
@@ -1385,12 +1386,13 @@ RaceShutDown (int val)
 int
 RaceCheckDatabases(struct RaceDaemonStruct *raced)
 {
-   int retn = 0, i, x;
+   int retn = 0;
+#if defined(ARGUS_MYSQL)
+   int i;
+   int x;
    char sbuf[256];
 
-#if defined(ARGUS_MYSQL)
    bzero(sbuf, sizeof(sbuf));
-
    sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaceDataBase);
 #ifdef ARGUSDEBUG
    ArgusDebug (3, "mysql_real_query() %s\n", sbuf);
