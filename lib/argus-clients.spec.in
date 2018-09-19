@@ -360,6 +360,17 @@ if [ $1 -eq 0 ] ; then
 	rm -f %{_datarootdir}/argus-clients/emerging-threats-current.conf
 fi
 
+
+%package policy
+Summary: Argus Client Software Policy Validation Tools
+Group: Applications/Internet
+Requires: argus-clients, mariadb-libs
+%description policy
+Tools to evaluate argus flow data for policy conformance
+Copyright 2018 QoSient, LLC
+%files policy
+%{_bindir}/raup
+
 %endif
 
 %changelog
