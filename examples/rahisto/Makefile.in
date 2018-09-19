@@ -112,7 +112,7 @@ $(INSTALLBIN)/rahisto-delsql: rahisto-delsql
 
 OBJ =	$(SRC:.c=.o)
 
-CLEANFILES = $(OBJ) $(PROGS) $(GENERATED)
+CLEANFILES = $(OBJ) $(PROGS)
 
 .PHONY: install
 install: force all install-perl
@@ -144,7 +144,8 @@ clean:
 
 distclean:
 	rm -f $(CLEANFILES) Makefile config.cache config.log config.status \
-	    gnuc.h os-proto.h bpf_filter.c net
+	    gnuc.h os-proto.h bpf_filter.c net \
+	    $(GENERATED)
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
