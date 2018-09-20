@@ -353,6 +353,7 @@ if ( !$opt_k ) {
         my $total = $grandtotal_href->{''}->{'freq'};
         delete $grandtotal_href->{''};
 
+        printf("%5s %15s %10s %10s\n", 'Class', 'Interval', 'Freq', 'Rel.Freq');
         for my $k ( sort {$a <=> $b} keys $grandtotal_href ) {
             my $elem = $grandtotal_href->{$k};
 
@@ -360,9 +361,9 @@ if ( !$opt_k ) {
                 next;
             }
 
-            print $elem->{'class'} . "\t"
-              . $elem->{'bin_interval'} . "\t"
-              . ( $elem->{'freq'} / $total * 100 ) . "\n";
+            printf("%5d %15.6e %10u %10.6f%%\n", $elem->{'class'},
+              $elem->{'bin_interval'}, $elem->{'freq'},
+              ( $elem->{'freq'} / $total * 100 ));
         }
     }
 }
