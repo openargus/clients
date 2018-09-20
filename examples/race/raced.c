@@ -1099,10 +1099,10 @@ RaceLoop(struct RaceDaemonStruct *raced)
                RacePopFrontList(raced->tasks);
                if (task->pid > 0) {
                   char strbuf[2048];
-                  pid_t retn;
+                  pid_t pid;
                   int status;
 
-                  if ((retn = waitpid(task->pid, &status, WNOHANG | WUNTRACED)) == task->pid) {
+                  if ((pid = waitpid(task->pid, &status, WNOHANG | WUNTRACED)) == task->pid) {
                      sprintf (strbuf, "pid %d ", (int)task->pid);
 
                      if (WIFSTOPPED(status)) {
@@ -1139,7 +1139,7 @@ RaceLoop(struct RaceDaemonStruct *raced)
                      }
 
                   } else {
-                     if (retn < 0) {
+                     if (pid < 0) {
                         if (errno == ECHILD) {
                            if ((kill (task->pid, 0)) == 0) {
                               char buf[1024], cmd[64], base[64];
@@ -1272,6 +1272,9 @@ RaceLoop(struct RaceDaemonStruct *raced)
                char sbuf[1024], tbuf[64];
                time_t secs;
                int status;
+#if defined(ARGUS_MYSQL)
+               int retn;
+#endif
 #ifdef ARGUSDEBUG
                ArgusDebug (2, "killing pid %d", task->pid);
 #endif
