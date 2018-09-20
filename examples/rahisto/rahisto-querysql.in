@@ -391,12 +391,14 @@ else {
           one_aggregate_query( $dbh, $index_href, $query_prefixes,
             \@one_query_time, $query_model );
         my $kldiv = rahisto_kldiv(@histograms);
-        if ( defined $kldiv ) {
+        my $jsdiv = rahisto_jsdiv(@histograms);
+        if ( defined $kldiv || defined $jsdiv) {
             push @divergences,
               {
                 'stime'      => $one_query_time[0],
                 'ltime'      => $one_query_time[2],
-                'divergence' => rahisto_kldiv(@histograms),
+                'kldiv'      => $kldiv,
+                'jsdiv'      => $jsdiv,
               };
             shift @histograms;
         }
@@ -407,10 +409,20 @@ else {
         }
     }
 
-    printf( "# %-25s %-25s %s\n", 'Start time', 'End time', 'Divergence' );
+    printf( "# %-25s %-25s %-15s %-15s\n", 'Start time', 'End time',
+            'KL-Divergence', 'JS-Divergence' );
     for my $x (@divergences) {
-        printf( " %-25s %-25s %f\n",
-            $x->{'stime'}, $x->{'ltime'}, $x->{'divergence'} );
+        my $kldiv = $x->{'kldiv'};
+        my $jsdiv = $x->{'jsdiv'};
+
+        if ( !defined $kldiv ) {
+            # indicate that the kl-divergence was undefined by printing -1.
+            # This is easy to skip over in gnuplot, etc.
+            $kldiv = -1;
+        }
+
+        printf( "  %-25s %-25s %-15f %-15f\n",
+            $x->{'stime'}, $x->{'ltime'}, $kldiv, $jsdiv );
     }
 }
 
