@@ -65,6 +65,8 @@ $VERSION = "1.00";
   strs2prefix_array
   rahisto_index_search_prefixes
   rahisto_kldiv
+  rahisto_jsdiv
+  rahisto_jsdist
 );
 
 my $debug    = 0;            # print debugging messages (includes DBI messages)
@@ -931,6 +933,53 @@ sub rahisto_index_search_prefixes {
     return $hash_ref;
 }
 
+# equal(NUM1, NUM2, ACCURACY) : returns true if NUM1 and NUM2 are
+# equal to ACCURACY number of decimal places
+# Borrowed from Perl Cookbook by Nathan Torkington, Tom Christiansen
+# Seems like it will be slow.  maybe (abs($A-$B) < .0000001) instead?
+sub float_equal {
+    my ( $A, $B, $dp ) = @_;
+
+    return sprintf( "%.${dp}g", $A ) eq sprintf( "%.${dp}g", $B );
+}
+
+# Determine if the two histograms / frequency distributions have the
+# same number of bins and that each bin in $A represents the same range
+# of values as its corresponding bin in $B.
+my $_rahisto_are_similar = sub {
+    my ( $A, $B ) = @_;
+    my $acount = scalar( keys($A) );
+    my $bcount = scalar( keys($B) );
+
+    if ( $acount != $bcount ) {
+        return;
+    }
+
+    my $i;
+    for ( $i = 1 ; $i <= $acount ; $i++ ) {
+        if ( !exists $A->{$i} ) {
+            if ( !exists $B->{$i} ) {
+
+                # this will skip the "rollup" hash
+                next;
+            }
+
+            # found a mismatch in class values
+            return;
+        }
+        if (
+            !float_equal(
+                $A->{$i}->{'bin_interval'},
+                $B->{$i}->{'bin_interval'}, 6
+            )
+          )
+        {
+            return;
+        }
+    }
+    return 1;
+};
+
 # Calculating the Kullback-Leibler Divergence requires that if there
 # are zero values in the Q(i) frequency distribution, the corresponding
 # frequencies in P(i) must also be zero, else the resulting divergence
@@ -948,7 +997,7 @@ sub rahisto_index_search_prefixes {
 # In the event there are an odd number of bins, the center bin will be
 # carved in twain and, if non-zero, half of its value will be contributed
 # to each of its two neighbors.
-sub rahisto_subsample {
+my $_rahisto_subsample = sub {
     my ( $P, $Q, $lowerlimit_param ) = @_;
     my $lowerlimit = 4;
 
@@ -956,14 +1005,15 @@ sub rahisto_subsample {
         $lowerlimit = $lowerlimit_param;
     }
 
-    my $pcount = scalar( keys($P) );
-    my $qcount = scalar( keys($Q) );
-
-    if ( $pcount != $qcount ) {
-        carp "Q and P must have the same number of bins";
-        return ( undef, undef );
+    if ($debug) {
+        if ( !$_rahisto_are_similar->( $P, $Q ) ) {
+            carp "Q and P must be similar";
+            return ( undef, undef );
+        }
     }
 
+    my $pcount     = scalar( keys($P) );
+    my $qcount     = scalar( keys($Q) );
     my $qzerocount = 0;
 
     for my $val ( values $P ) {
@@ -1044,18 +1094,18 @@ sub rahisto_subsample {
     my $class = ( $i >> 1 ) + $off;
     $Pnew->{''}     = $P->{''};
     $Qnew->{''}     = $Q->{''};
-    $Pnew->{$class} = $P->{ $pcount + 1 };
-    $Qnew->{$class} = $Q->{ $qcount + 1 };
+    $Pnew->{$class} = $P->{$pcount};
+    $Qnew->{$class} = $Q->{$qcount};
 
     return ( $Pnew, $Qnew );
-}
+};
 
 # Kullback-Leibler Divergence
 # Calculates D_{KL}(P||Q)
 # P and Q are references to hashes as returned by aggregate_histo_values()
 #   in rahisto-querysql  (should that function be moved here?)
 # P is assumed to be the "true" distribution.
-sub rahisto_kldiv {
+my $_rahisto_kldiv = sub {
     my ( $P, $Q ) = @_;
     my $diverg = 0;
     my $P_total;
@@ -1083,11 +1133,11 @@ sub rahisto_kldiv {
         my $q    = $Q->{$k}->{'freq'};
         my $term = 0;
 
-        if ( $q == 0.0 && $p != 0 ) {
+        if ( $q == 0 && $p != 0 ) {
 
             # KL Divergence is undefined for this case.  Attempt to
             # sub-sample and try again.
-            my ( $Pss, $Qss ) = rahisto_subsample( $P, $Q );
+            my ( $Pss, $Qss ) = $_rahisto_subsample->( $P, $Q );
             if ( defined $Pss && defined $Qss ) {
                 return rahisto_kldiv( $Pss, $Qss );
             }
@@ -1111,6 +1161,68 @@ sub rahisto_kldiv {
         }
     }
     return $diverg;
+};
+
+sub rahisto_kldiv {
+    my ( $P, $Q ) = @_;
+
+    if ( !$_rahisto_are_similar->( $P, $Q ) ) {
+        carp "Q and P must be similar";
+        return;
+    }
+    return $_rahisto_kldiv->( $P, $Q );
+}
+
+# $A and $B are histograms -- references to hashes as returned by
+# aggregate_histo_values().
+#
+# Returns $scale * ($A + $B)
+my $_rahisto_add = sub {
+    my ( $A, $B, $scale ) = @_;
+    my $res = { %{$A} };
+
+    for my $class ( keys $A ) {
+        $res->{$class} = { %{ $A->{$class} } };    # shallow copy of has
+        $res->{$class}->{'freq'} += $B->{$class}->{'freq'};
+        if ( defined $scale ) {
+            $res->{$class}->{'freq'} *= $scale;
+        }
+    }
+
+    # adjust min, max, times?
+    return $res;
+};
+
+# Jensen–Shannon divergence
+sub rahisto_jsdiv {
+    my ( $P, $Q ) = @_;
+
+    if ( !$_rahisto_are_similar->( $P, $Q ) ) {
+        carp "P and Q must be similar";
+        return;
+    }
+
+    my $M = $_rahisto_add->( $P, $Q, 0.5 );
+    my $P_M = $_rahisto_kldiv->( $P, $M );
+    my $Q_M = $_rahisto_kldiv->( $Q, $M );
+
+    if ( !defined $P_M || !defined $Q_M ) {
+        carp "Jensen-Shannon divergence failed??";
+        return;
+    }
+
+    return ( ( $P_M + $Q_M ) * 0.5 );
+}
+
+# Jensen-Shannon distance
+sub rahisto_jsdist {
+    my ( $P, $Q ) = @_;
+    my $div = rahisto_jsdiv( $P, $Q );
+
+    if ( !defined $div ) {
+        return;
+    }
+    return sqrt($div);
 }
 
 1;
