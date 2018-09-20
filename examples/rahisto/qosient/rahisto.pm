@@ -703,7 +703,6 @@ sub rahisto_create_values_table {
       . q{class INT,                                                 }
       . q{bin_interval DOUBLE,          freq BIGINT,                 }
       . q{min DOUBLE,                   max DOUBLE,                  }
-      . q{cum_freq DOUBLE,              rel_freq DOUBLE,             }
       . q{PRIMARY KEY (address, masklen, class, model, stime),       }
       . q{INDEX start_time (stime))                                  };
     my $sth = $dbh->prepare($query);
@@ -727,9 +726,9 @@ sub rahisto_update_values_table {
     my ( $dbh, $tablename, $data, $model, $address, $masklen, $times ) = @_;
     my $query =
         qq{INSERT INTO $tablename (masklen, address, model, }
-      . q{stime, ltime, class, bin_interval, freq, cum_freq, }
-      . q{rel_freq, samples, min, max) VALUES (?, INET6_ATON(?), }
-      . q{?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)};
+      . q{stime, ltime, class, bin_interval, freq, }
+      . q{samples, min, max) VALUES (?, INET6_ATON(?), }
+      . q{?, ?, ?, ?, ?, ?, ?, ?, ?)};
 
     # +--------------+-----------------------+------+-----+---------+-------+
     # | Field        | Type                  | Null | Key | Default | Extra |
@@ -745,8 +744,6 @@ sub rahisto_update_values_table {
     # | freq         | bigint(20)            | YES  |     | NULL    |       |
     # | min          | double                | YES  |     | NULL    |       |
     # | max          | double                | YES  |     | NULL    |       |
-    # | cum_freq     | double                | YES  |     | NULL    |       |
-    # | rel_freq     | double                | YES  |     | NULL    |       |
     # +--------------+-----------------------+------+-----+---------+-------+
 
     my $sth = $dbh->prepare($query);
@@ -804,8 +801,6 @@ sub rahisto_update_values_table {
                 push @params, $value->{'Class'};
                 push @params, $interval;
                 push @params, $value->{'Freq'};
-                push @params, $value->{'Cum.Freq'};
-                push @params, $value->{'Rel.Freq'};
                 push @params, $datum->{'N'};
                 push @params, $datum->{'min'};
                 push @params, $datum->{'max'};
