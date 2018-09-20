@@ -801,9 +801,20 @@ sub rahisto_update_values_table {
                 push @params, $value->{'Class'};
                 push @params, $interval;
                 push @params, $value->{'Freq'};
-                push @params, $datum->{'N'};
-                push @params, $datum->{'min'};
-                push @params, $datum->{'max'};
+
+                # InnoDB, using the compact row format, uses less space to
+                # store NULL values than non-NULL values.  We only need one
+                # copy of the N, min and max values.
+                if ( $value->{'Class'} == 1 ) {
+                    push @params, $datum->{'N'};
+                    push @params, $datum->{'min'};
+                    push @params, $datum->{'max'};
+                }
+                else {
+                    push @params, undef;
+                    push @params, undef;
+                    push @params, undef;
+                }
                 $sth->execute(@params);
             }
         }
