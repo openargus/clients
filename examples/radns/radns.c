@@ -538,7 +538,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                   char **results = NULL;
                   struct nnamemem *cname = NULL;
                   struct nnamemem *name = matches[i];
-                  char refbuf[16];
+                  char refbuf[16], timebuf[64];
 
                   if ((results = ArgusCalloc(0x100000, sizeof(char *))) == NULL)
                      ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
@@ -548,6 +548,10 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                   if (ArgusParser->ArgusPrintJson) {
                      snprintf(refbuf, 16, "\"ref\":\"%d\"", name->ref);
                      results[resultnum++] = strdup(refbuf);
+                     if (name->ref > 0) {
+                        snprintf(timebuf, 64, "\"stime\":\"%d\",\"ltime\":\"%d\"", (int)name->stime.tv_sec, (int)name->ltime.tv_sec);
+                        results[resultnum++] = strdup(timebuf);
+                     }
                   }
                            
                   if (name->cnames != NULL) {
