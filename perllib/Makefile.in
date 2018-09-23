@@ -1,0 +1,106 @@
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2018 QoSient, LLC
+#  All rights reserved.
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+perlextlib = @PERL_EXT_LIB@
+PERL = @V_PERL@
+PERL_CFLAGS = $(shell $(PERL) -MConfig -e \
+	'print join(" ", @Config{qw(ccflags optimize cccdlflags)}, \
+	"-I$$Config{archlib}/CORE")' )
+perlvendorarch = $(shell $(PERL) -MConfig -e \ 'print $$Config{vendorarch}' )
+perlvendorarch_qosient = $(perlvendorarch)/qosient/XS
+perlvendorarch_auto = $(perlvendorarch)/auto/qosient/XS/util
+
+# Pathname of directory to install the system binaries
+SBINDIR = @sbindir@
+# # Pathname of directory to install the system binaries
+BINDIR = @bindir@
+# Pathname of directory to install the include files
+INCLDEST = @includedir@
+# Pathname of directory to install the library
+LIBDEST =  @libdir@
+# Pathname of directory to install the man page
+MANDEST = @mandir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+CC = @CC@
+CCOPT = @V_CCOPT@
+INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
+DEFS = @DEFS@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+
+MYSQLLIB = @MYSQL_LDFLAGS@ 
+
+# Standard CFLAGS
+ CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
+INSTALL = @INSTALL@
+
+ifeq ($(shell uname),Darwin)
+ SOEXT = .dylib
+else
+ SOEXT = .so
+endif
+
+.PHONY: install install-perl uninstall uninstall-perl TOP all
+
+all: TOP
+
+install: TOP install-perl
+
+TOP: util$(SOEXT) qosient/XS/util.pm
+
+install-perl: util$(SOEXT) qosient/XS/util.pm
+	@set -e ; \
+	mkdir -p $(DESTDIR)$(perlvendorarch_qosient) ; \
+	$(INSTALL) -m 0644 qosient/XS/util.pm \
+	  $(DESTDIR)$(perlvendorarch_qosient)/util.pm ; \
+	mkdir -p $(DESTDIR)$(perlvendorarch_auto) ; \
+	$(INSTALL) -m 0755 util$(SOEXT) $(DESTDIR)$(perlvendorarch_auto)/util$(SOEXT)
+
+uninstall: uninstall-perl
+
+uninstall-perl:
+	rm -f $(DESTDIR)$(perlvendorarch_qosient)/util.pm ; \
+	rm -f $(DESTDIR)$(perlvendorarch)/auto/qosient/XS/util.pm
+	rm -f $(DESTDIR)$(perlvendorarch_auto)/util$(SOEXT)
+
+util$(SOEXT): swig_ArgusParseTime.o swig_ArgusParseTime_wrap.o argus_parse_time.o
+	$(CC) $(CFLAGS) `$(PERL) -MConfig -e 'print $$Config{lddlflags}'` $^ -o $@
+argus_parse_time.o: ../common/argus_parse_time.c
+	$(CC) $(CFLAGS) -I../include -I../common $(PERL_CFLAGS) -c $^
+swig_ArgusParseTime.o: swig_ArgusParseTime.c
+	$(CC) $(CFLAGS) -I../include $(PERL_CFLAGS) -c $^
+swig_ArgusParseTime_wrap.o: swig_ArgusParseTime_wrap.c
+	$(CC) $(CFLAGS) -Wno-unused-variable -I../include $(PERL_CFLAGS) -c $^
+
+# multiple targets (left side of the colon) seems to confuse parallel make.
+# create intermediate file swig.stamp instead.
+swig_ArgusParseTime_wrap.c: swig.stamp
+qosient/XS/util.pm: swig.stamp
+swig.stamp: swig_ArgusParseTime.i
+	mkdir -p qosient/XS
+	swig -perl5 $^
+	mv util.pm qosient/XS
+	touch swig.stamp
+
+distclean: clean
+	rm -f Makefile
+clean:
+	rm -f *.o swig_ArgusParseTime_wrap.c qosient/XS/util.pm util$(SOEXT) swig.stamp

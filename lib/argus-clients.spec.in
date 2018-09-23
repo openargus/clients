@@ -25,6 +25,7 @@ BuildRequires: libuuid-devel
 BuildRequires: autoconf-archive
 BuildRequires: perl-generators
 BuildRequires: libcurl-devel
+BuildRequires: swig > 2.0
 Requires: cyrus-sasl
 Conflicts: argus-clients-misc < 5.0-3.1%{dist}.1
 
@@ -128,6 +129,9 @@ rm -f %{argusbin}/rasplit
 %{_unitdir}/rasplit.service
 %config /etc/sysconfig/rasplit
 %endif
+
+%{perl_vendorarch}/qosient/XS/util.pm
+%{perl_vendorarch}/auto/qosient/XS/util/util.so
 
 %ghost /home/argus
 

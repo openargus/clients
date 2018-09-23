@@ -445,6 +445,10 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
 
 LIBCURL_CHECK_CONFIG
 AC_QOSIENT_LIBUUID
+AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
+if test "$HAVE_SWIG" = "1" ; then
+   DIRS="$DIRS ./perllib"
+fi
 
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(PACKAGE_RELEASE)
@@ -485,6 +489,7 @@ AC_CONFIG_FILES([
    ./pkg/win7/Makefile
    ./pkg/Makefile
    ./lib/argus-clients.spec
+   ./perllib/Makefile
 ])
 
 AS_IF([test "$with_examples" != no],
