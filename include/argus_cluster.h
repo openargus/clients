@@ -1208,7 +1208,8 @@ struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct *, stru
 void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
  
 unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
-void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
+                        struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
@@ -1230,7 +1231,8 @@ extern struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct 
 extern void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
  
 extern unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
-extern void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
+                               struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 

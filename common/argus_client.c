@@ -7400,7 +7400,8 @@ ArgusMergeAddress(unsigned int *a1, unsigned int *a2, int type, int dir, unsigne
 
 
 void
-ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
+ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
+                   struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
 {
    struct ArgusAgrStruct *agr = NULL;
    double seconds;
