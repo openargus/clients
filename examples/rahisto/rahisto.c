@@ -67,19 +67,20 @@
 static struct ArgusRecordStruct **RaHistoRecordsPtrs[RAHISTO_MAX_CONFIGS];
 static struct ArgusAggregatorStruct *RaHistoAggregators[RAHISTO_MAX_CONFIGS];
 static struct RaHistoConfigStruct *RaHistoConfigMem[RAHISTO_MAX_CONFIGS];
-int RaHistoConfigCount;
-int ArgusProcessOutLayers;
-int ArgusProcessNoZero = 0;
-int ArgusPrintInterval = 0;
-int RaValuesAreIntegers[RAHISTO_MAX_CONFIGS];
+static int RaHistoConfigCount;
+static int ArgusProcessOutLayers;
+static int ArgusProcessNoZero = 0;
+static int ArgusPrintInterval = 0;
+static int RaValuesAreIntegers[RAHISTO_MAX_CONFIGS];
+static int ArgusPerAddressHistograms;
 
 long long RaNumberOfValues[RAHISTO_MAX_CONFIGS];
 long long RaValueBufferSize[RAHISTO_MAX_CONFIGS];
 double *RaValueBufferMem[RAHISTO_MAX_CONFIGS];
 static int argus_version = ARGUS_VERSION;
 
-int RaFindModes(double *, long long, double *, int);
-int RaSortValueBuffer (const void *, const void *);
+static int RaFindModes(double *, long long, double *, int);
+static int RaSortValueBuffer (const void *, const void *);
 
 // Format is "[abs] metric bins[L][:range]" or "[abs] metric bins[:size]"
 // range is value-value and size if just a single number.  Value is 
@@ -893,7 +894,7 @@ usage ()
 
 
 
-int
+static int
 RaSortValueBuffer (const void *item1, const void *item2)
 {
    double b1 = *(double *) item1;
@@ -1057,7 +1058,7 @@ void ArgusWindowClose(void) {
 }
 
 
-int
+static int
 RaFindModes(double *buf, long long num, double *modeValues, int len)
 {
    int retn = 0;
