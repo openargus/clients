@@ -64,7 +64,6 @@
  */
 #define RAHISTO_MAX_CONFIGS 16
  
-struct RaBinProcessStruct *RaBinProcess = NULL;
 static struct ArgusRecordStruct **RaHistoRecordsPtrs[RAHISTO_MAX_CONFIGS];
 static struct ArgusAggregatorStruct *RaHistoAggregators[RAHISTO_MAX_CONFIGS];
 static struct RaHistoConfigStruct *RaHistoConfigMem[RAHISTO_MAX_CONFIGS];
