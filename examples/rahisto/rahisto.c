@@ -146,10 +146,6 @@ ArgusHistoMetricParse (const char * const Hstr,
                if ((RaHistoConfig->RaHistoBins = atoi(tmp)) < 0)
                   return (retn);
 
-// Need to add code to deal with ranges that include negative numbers
-// So parse a number, then check for the -, then parse another number
-// if needed.
-
             RaHistoConfig->RaHistoStart = strtod(vptr, &endptr);
             if (endptr == vptr)
                return (retn);
