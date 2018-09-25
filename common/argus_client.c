@@ -6329,6 +6329,35 @@ ArgusEmptyHashTable (struct ArgusHashTable *htbl)
    ArgusEmptyHashTable2(htbl, NULL);
 }
 
+void
+ArgusHashForEach(struct ArgusHashTable *htbl, ArgusHashForEachCallback fcb,
+                 void *user)
+{
+   struct ArgusHashTableHdr *htblhdr;
+   struct ArgusHashTableHdr *first;
+   int i;
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&htbl->lock);
+#endif
+   for (i = 0; i < htbl->size; i++) {
+      if ((htblhdr = htbl->array[i]) != NULL) {
+         first = htblhdr;
+         do {
+            fcb(htblhdr->object, user);
+            htblhdr = htblhdr->nxt;
+         } while (htblhdr != first);
+      }
+   }
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&htbl->lock);
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "%s (%p, %p) returning\n", __func__, htbl, fcb);
+#endif
+}
+
 struct ArgusHashTableHdr *
 ArgusFindHashEntry (struct ArgusHashTable *htable, struct ArgusHashStruct *hstruct)
 {
