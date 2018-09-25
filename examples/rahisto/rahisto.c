@@ -63,8 +63,15 @@
  * per run are enough.  Season to taste.
  */
 #define RAHISTO_MAX_CONFIGS 16
- 
-static struct ArgusRecordStruct **RaHistoRecordsPtrs[RAHISTO_MAX_CONFIGS];
+
+struct PerFlowHistoData {
+   struct ArgusRecordStruct **RaHistoRecordsPtrs[RAHISTO_MAX_CONFIGS];
+   long long RaNumberOfValues[RAHISTO_MAX_CONFIGS];
+   long long RaValueBufferSize[RAHISTO_MAX_CONFIGS];
+   double *RaValueBufferMem[RAHISTO_MAX_CONFIGS];
+};
+
+static struct PerFlowHistoData DefaultHistoData; /* non-per-address mode */
 static struct ArgusAggregatorStruct *RaHistoAggregators[RAHISTO_MAX_CONFIGS];
 static struct RaHistoConfigStruct *RaHistoConfigMem[RAHISTO_MAX_CONFIGS];
 static int RaHistoConfigCount;
@@ -73,10 +80,6 @@ static int ArgusProcessNoZero = 0;
 static int ArgusPrintInterval = 0;
 static int RaValuesAreIntegers[RAHISTO_MAX_CONFIGS];
 static int ArgusPerAddressHistograms;
-
-long long RaNumberOfValues[RAHISTO_MAX_CONFIGS];
-long long RaValueBufferSize[RAHISTO_MAX_CONFIGS];
-double *RaValueBufferMem[RAHISTO_MAX_CONFIGS];
 static int argus_version = ARGUS_VERSION;
 
 static int RaFindModes(double *, long long, double *, int);
@@ -213,7 +216,7 @@ ArgusHistoMetricParse (const char * const Hstr,
             retn = ARGUS_HISTO_RANGE_UNSPECIFIED;
          }
 
-         if ((RaHistoRecordsPtrs[RaHistoConfigIndex] = (struct ArgusRecordStruct **)
+         if ((DefaultHistoData.RaHistoRecordsPtrs[RaHistoConfigIndex] =
               ArgusCalloc (RaHistoConfig->RaHistoBins + 2,
               sizeof(struct ArgusRecordStruct *))) != NULL) {
             RaHistoConfig->RaHistoRangeState = retn;
@@ -258,7 +261,7 @@ ArgusHistoTallyMetric (int RaHistoConfigIndex, struct ArgusRecordStruct *ns,
 
    RaHistoConfig = RaHistoConfigMem[RaHistoConfigIndex];
    agg = RaHistoAggregators[RaHistoConfigIndex];
-   RaHistoRecords = RaHistoRecordsPtrs[RaHistoConfigIndex];
+   RaHistoRecords = DefaultHistoData.RaHistoRecordsPtrs[RaHistoConfigIndex];
 
    if (RaHistoConfig->RaHistoMetricLog) {
       value = log10(value);
@@ -343,7 +346,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
  
       for (i = 0; i < RaHistoConfigCount; i++) {
           RaValuesAreIntegers[i] = 1;
-          RaValueBufferSize[i] = 100000;
+          DefaultHistoData.RaValueBufferSize[i] = 100000;
       }
 
       parser->RaInitialized++;
@@ -420,9 +423,10 @@ RaParseComplete (int sig)
 
          for (cid = 0; cid < RaHistoConfigCount; cid++) {
             struct RaHistoConfigStruct *RaHistoConfig = RaHistoConfigMem[cid];
-            struct ArgusRecordStruct **RaHistoRecords = RaHistoRecordsPtrs[cid];
-            double *RaValueBuffer = RaValueBufferMem[cid];
+            struct ArgusRecordStruct **RaHistoRecords;
+            double *RaValueBuffer = DefaultHistoData.RaValueBufferMem[cid];
 
+            RaHistoRecords = DefaultHistoData.RaHistoRecordsPtrs[cid];
             if (RaHistoRecords == NULL)
                continue;
 
@@ -465,16 +469,17 @@ RaParseComplete (int sig)
                      meanStr = strdup(buf);
 
                      if (RaValueBuffer != NULL) {
-                        qsort (RaValueBuffer, RaNumberOfValues[cid], sizeof(double), RaSortValueBuffer);
+                        qsort (RaValueBuffer, DefaultHistoData.RaNumberOfValues[cid],
+                               sizeof(double), RaSortValueBuffer);
 
-                        if (RaNumberOfValues[cid] % 2) {
-                           median = RaValueBuffer[(RaNumberOfValues[cid] + 1)/2];
+                        if (DefaultHistoData.RaNumberOfValues[cid] % 2) {
+                           median = RaValueBuffer[(DefaultHistoData.RaNumberOfValues[cid] + 1)/2];
 
                            if (RaValuesAreIntegers[cid])
                               pflag = 0;
 
                         } else {
-                           ind = (RaNumberOfValues[cid] / 2) - 1;
+                           ind = (DefaultHistoData.RaNumberOfValues[cid] / 2) - 1;
                            median = (RaValueBuffer[ind] + RaValueBuffer[ind + 1]) / 2.0;
                         }
 
@@ -484,13 +489,15 @@ RaParseComplete (int sig)
                         if (RaValuesAreIntegers[cid])
                            pflag = 0;
 
-                        ind = RaNumberOfValues[cid] * 0.95;
+                        ind = DefaultHistoData.RaNumberOfValues[cid] * 0.95;
                         percentile = RaValueBuffer[ind];
 
                         sprintf (buf, "%-.*f", pflag, percentile);
                         percentStr = strdup(buf);
 
-                        numModes = RaFindModes(RaValueBuffer, RaNumberOfValues[cid], modeValues, 1024);
+                        numModes = RaFindModes(RaValueBuffer,
+                                               DefaultHistoData.RaNumberOfValues[cid],
+                                               modeValues, 1024);
 
                         if (numModes > 0) {
                            bzero(buf, sizeof(buf));
@@ -922,7 +929,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          agg = RaHistoAggregators[i];
          RaHistoConfig = RaHistoConfigMem[i];
-         RaValueBuffer = RaValueBufferMem[i];
+         RaValueBuffer = DefaultHistoData.RaValueBufferMem[i];
 
          switch (RaHistoConfig->ArgusPassNum)  {
             case 2: {
@@ -935,19 +942,21 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if ((frac = modf(value, &inte)) != 0.0)
                          RaValuesAreIntegers[i] = 0;
 
-                     if (RaValueBufferMem[i] == NULL) {
-                        if ((RaValueBufferMem[i] = malloc(sizeof(double) * RaValueBufferSize[i])) == NULL)
+                     if (DefaultHistoData.RaValueBufferMem[i] == NULL) {
+                        if ((DefaultHistoData.RaValueBufferMem[i] =
+                             malloc(sizeof(double) * DefaultHistoData.RaValueBufferSize[i])) == NULL)
                            ArgusLog (LOG_ERR, "RaProcessRecord: malloc error %s", strerror(errno));
                      } else {
-                        if (RaNumberOfValues[i] >= RaValueBufferSize[i]) {
-                           RaValueBufferSize[i] += 100000;
-                           if ((RaValueBufferMem[i] = realloc(RaValueBuffer, sizeof(double) * RaValueBufferSize[i])) == NULL)
+                        if (DefaultHistoData.RaNumberOfValues[i] >= DefaultHistoData.RaValueBufferSize[i]) {
+                           DefaultHistoData.RaValueBufferSize[i] += 100000;
+                           if ((DefaultHistoData.RaValueBufferMem[i] =
+                                realloc(RaValueBuffer, sizeof(double) * DefaultHistoData.RaValueBufferSize[i])) == NULL)
                               ArgusLog (LOG_ERR, "RaProcessRecord: realloc error %s", strerror(errno));
                         }
                      }
 
-                     RaValueBuffer = RaValueBufferMem[i];
-                     RaValueBuffer[RaNumberOfValues[i]++] = value;
+                     RaValueBuffer = DefaultHistoData.RaValueBufferMem[i];
+                     RaValueBuffer[DefaultHistoData.RaNumberOfValues[i]++] = value;
 
                      if (RaHistoConfig->RaHistoStart > value)
                         RaHistoConfig->RaHistoStart = value;
@@ -997,19 +1006,21 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if ((frac = modf(value, &inte)) != 0.0)
                             RaValuesAreIntegers[i] = 0;
 
-                        if (RaValueBufferMem[i] == NULL) {
-                           if ((RaValueBufferMem[i] = malloc(sizeof(double) * RaValueBufferSize[i])) == NULL)
+                        if (DefaultHistoData.RaValueBufferMem[i] == NULL) {
+                           if ((DefaultHistoData.RaValueBufferMem[i] =
+                                malloc(sizeof(double) * DefaultHistoData.RaValueBufferSize[i])) == NULL)
                               ArgusLog (LOG_ERR, "RaProcessRecord: malloc error %s", strerror(errno));
                         } else {
-                           if (RaNumberOfValues[i] >= RaValueBufferSize[i]) {
-                              RaValueBufferSize[i] += 100000;
-                              if ((RaValueBufferMem[i] = realloc(RaValueBuffer, sizeof(double) * RaValueBufferSize[i])) == NULL)
+                           if (DefaultHistoData.RaNumberOfValues[i] >= DefaultHistoData.RaValueBufferSize[i]) {
+                              DefaultHistoData.RaValueBufferSize[i] += 100000;
+                              if ((DefaultHistoData.RaValueBufferMem[i] =
+                                   realloc(RaValueBuffer, sizeof(double) * DefaultHistoData.RaValueBufferSize[i])) == NULL)
                                  ArgusLog (LOG_ERR, "RaProcessRecord: realloc error %s", strerror(errno));
                            }
                         }
 
-                     RaValueBuffer = RaValueBufferMem[i];
-                     RaValueBuffer[RaNumberOfValues[i]++] = value;
+                     RaValueBuffer = DefaultHistoData.RaValueBufferMem[i];
+                     RaValueBuffer[DefaultHistoData.RaNumberOfValues[i]++] = value;
                   }
                }
 
