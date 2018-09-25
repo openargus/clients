@@ -1196,6 +1196,7 @@ struct ArgusHashTableHdr *ArgusAddHashEntry (struct ArgusHashTable *, void *, st
 struct ArgusHashTableHdr *ArgusFindHashEntry (struct ArgusHashTable *, struct ArgusHashStruct *);
 void ArgusRemoveHashEntry (struct ArgusHashTableHdr **);
 void ArgusEmptyHashTable (struct ArgusHashTable *);
+extern void ArgusEmptyHashTable2 (struct ArgusHashTable *, ArgusEmptyHashCallback);
 
 struct ArgusListStruct *ArgusNewList (void);
 void ArgusDeleteList (struct ArgusListStruct *, int);
@@ -1354,6 +1355,7 @@ extern struct ArgusHashTableHdr *ArgusAddHashEntry (struct ArgusHashTable *, str
 extern struct ArgusHashTableHdr *ArgusFindHashEntry (struct ArgusHashTable *, struct ArgusHashStruct *);
 extern void ArgusRemoveHashEntry (struct ArgusHashTableHdr **);
 extern void ArgusEmptyHashTable (struct ArgusHashTable *);
+extern void ArgusEmptyHashTable2 (struct ArgusHashTable *, ArgusEmptyHashCallback);
 
 extern struct ArgusListStruct *ArgusNewList (void);
 extern void ArgusDeleteList (struct ArgusListStruct *, int);

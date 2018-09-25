@@ -6290,7 +6290,7 @@ ArgusDeleteHashTable (struct ArgusHashTable *htbl)
 }
 
 void
-ArgusEmptyHashTable (struct ArgusHashTable *htbl)
+ArgusEmptyHashTable2 (struct ArgusHashTable *htbl, ArgusEmptyHashCallback dcb)
 {
    struct ArgusHashTableHdr *htblhdr = NULL, *tmp;
    int i;
@@ -6304,6 +6304,8 @@ ArgusEmptyHashTable (struct ArgusHashTable *htbl)
             htblhdr->prv->nxt = NULL;
             while ((tmp = htblhdr) != NULL) {
                htblhdr = htblhdr->nxt;
+               if (dcb)
+                  dcb(tmp->object);
                if (tmp->hstruct.buf != NULL)
                   ArgusFree (tmp->hstruct.buf);
                ArgusFree (tmp);
@@ -6321,6 +6323,11 @@ ArgusEmptyHashTable (struct ArgusHashTable *htbl)
 #endif
 }
 
+void
+ArgusEmptyHashTable (struct ArgusHashTable *htbl)
+{
+   ArgusEmptyHashTable2(htbl, NULL);
+}
 
 struct ArgusHashTableHdr *
 ArgusFindHashEntry (struct ArgusHashTable *htable, struct ArgusHashStruct *hstruct)
