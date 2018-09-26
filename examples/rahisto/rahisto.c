@@ -767,6 +767,11 @@ PrintHistograms(struct PerFlowHistoData *data)
                      }
                      modeStr = strdup(buf);
                   }
+               } else if (tagr->act.n > 0) {
+                  /* all values were outliers */
+                  sprintf (buf, "%-.*f", pflag, 0.);
+                  medianStr = strdup(buf);
+                  percentStr = strdup(buf);
                }
 
                sprintf (buf, "%-.*f", pflag, tagr->act.maxval);
