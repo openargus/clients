@@ -725,7 +725,9 @@ PrintHistograms(struct PerFlowHistoData *data)
                   qsort (RaValueBuffer, data->RaNumberOfValues[cid],
                          sizeof(double), RaSortValueBuffer);
 
-                  if (data->RaNumberOfValues[cid] % 2) {
+                  if (data->RaNumberOfValues[cid] == 1) {
+                     median = RaValueBuffer[0];
+                  } else if (data->RaNumberOfValues[cid] % 2) {
                      median = RaValueBuffer[(data->RaNumberOfValues[cid] + 1)/2];
 
                      if (RaValuesAreIntegers[cid])
