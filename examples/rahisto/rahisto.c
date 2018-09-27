@@ -1446,5 +1446,3 @@ RaOnePassComplete(void) {
    }
    return 1;
 }
-
-/**** What to do with binary output file when multiple metrics? *****/
