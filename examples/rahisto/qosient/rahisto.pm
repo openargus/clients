@@ -565,6 +565,30 @@ my $_rahisto_get_config = sub {
     return $href->{$mod};
 };
 
+# $datum is an href containing one json-decoded histogram from rahisto
+my $_rahisto_parse_instance = sub {
+    my ($datum) = @_;
+    my @failure = (undef, undef);
+    my $instance = $datum->{'instance'};
+
+    if ( exists( $instance->{'saddr'} ) ) {
+        my $saddr = $instance->{'saddr'};
+        chomp $saddr;
+        $saddr =~ s/  *$//;
+
+        my $prefix = Net::IP->new($saddr);
+
+        if ( defined $prefix ) {
+            return ($prefix->ip(), $prefix->prefixlen());
+        }
+        else {
+            carp "Invalid IP address '$saddr' found in json data";
+            return @failure;
+        }
+    }
+    return @failure;
+};
+
 # mostly the same as rahisto_metric_by_num
 sub rahisto_get_model {
     my ($mod) = @_;
@@ -639,6 +663,8 @@ sub rahisto_update_index_table {
 
     my $aref   = [$histo_href];    # reference to array of one href element
     my $_model = $model;
+    my $_address = $address;
+    my $_masklen = $masklen;
 
     if ( ref $histo_href eq 'ARRAY' ) {
 
@@ -663,7 +689,16 @@ sub rahisto_update_index_table {
             croak "no model found for histogram";
         }
 
-        my @params = ( $address, $masklen, $_model, $sidinf_href->{'sid'} );
+        if ( exists( $datum->{'instance'} ) ) {
+            ($_address, $_masklen) = $_rahisto_parse_instance->($datum);
+            if ( !defined $_address || !defined $_masklen ) {
+                carp "No address found for histogram";
+                $sth->finish;
+                return;
+            }
+        }
+
+        my @params = ( $_address, $_masklen, $_model, $sidinf_href->{'sid'} );
         push @params, $tablename;
         push @params, ( $sidinf_href->{'inf'}, $times_aref->[0] );
         push @params, ( $datum->{'bins'},      $datum->{'size'} );
@@ -673,7 +708,7 @@ sub rahisto_update_index_table {
 
         $sth->finish;
         if ( !defined $res ) {
-            carp "Unablet to update histograms index";
+            carp "Unable to update histograms index";
             return;
         }
     }
@@ -768,6 +803,8 @@ sub rahisto_update_values_table {
     try {
         my $aref   = [$data];    # reference to array of one href element
         my $_model = $model;
+        my $_address = $address;
+        my $_masklen = $masklen;
 
         if ( ref $data eq 'ARRAY' ) {
 
@@ -792,6 +829,15 @@ sub rahisto_update_values_table {
                 croak "no model found for histogram";
             }
 
+            if ( exists( $datum->{'instance'} ) ) {
+                ($_address, $_masklen) = $_rahisto_parse_instance->($datum);
+                if ( !defined $_address || !defined $_masklen ) {
+                    carp "No address found for histogram";
+                    $sth->finish;
+                    return;
+                }
+            }
+
             for my $value ( @{ $datum->{'values'} } ) {
                 my $interval = $value->{'Interval'};
                 if ( $interval =~ /-inf/ ) {
@@ -799,7 +845,7 @@ sub rahisto_update_values_table {
                 }
 
                 my @params =
-                  ( $masklen, $address, $_model, $times->[0], $times->[2] );
+                  ( $_masklen, $_address, $_model, $times->[0], $times->[2] );
                 push @params, $value->{'Class'};
                 push @params, $interval;
                 push @params, $value->{'Freq'};

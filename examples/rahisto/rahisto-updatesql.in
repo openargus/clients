@@ -48,8 +48,9 @@ sub ratimerange {
 }
 
 sub rahisto {
-    my ( $models_aref, $filename, $outfile, $address ) = @_;
-    my @args = ( 'rahisto', '-X', '-r', $filename, '-Mjson', '-Moutlayer' );
+    my ( $models_aref, $filename, $outfile ) = @_;
+    my @args = ( 'rahisto', '-X', '-r', $filename, '-m', 'saddr', '-Mperflow',
+                 '-Mjson', '-Moutlayer' );
 
     for my $model ( @{$models_aref} ) {
         my $rangestr = rahisto_get_range($model);
@@ -82,9 +83,6 @@ sub rahisto {
     if ( defined $outfile ) {
         push @args, ( '-w', $outfile );
     }
-    if ($address) {
-        push @args, ( '-', 'src', 'host', "$address" );
-    }
     ArgusDebug(@args);
 
     my $jsontext = capture(@args);
@@ -93,17 +91,17 @@ sub rahisto {
 
 sub rmonify {
     my ( $infile, $outfile ) = @_;
-    my @args = ( 'ra', '-X', '-Mrmon', '-r', $infile, '-w', $outfile );
+    my @args = ( 'ra', '-X', '-Mrmon', '-r', $infile, '-w', $outfile, '-', 'ip' );
 
     ArgusDebug( join( ' ', @args ) );
     system(@args);    # IPC::System::Simple::system() dies on erorr
     return 1;
 }
 
-sub racluster_saddr {
+sub racluster_sidinf {
     my ($filename, $filter) = @_;
 
-    my @args = qw(racluster -X -m sid inf saddr -s sid inf saddr -Mjson -r);
+    my @args = qw(racluster -X -m sid inf -s sid inf -Mjson -r);
     push @args, $filename;
     push @args, qw(- ip);
     if ( defined $filter ) {
@@ -150,10 +148,6 @@ sub decode_racluster_sidinf {
             return;
         }
 
-        # Neither the filter compiler nor getaddrinfo can deal with ::
-        if ( $sidinf->{'saddr'} eq '::' ) {
-            $sidinf->{'saddr'} = '::0';
-        }
         push $aref, $sidinf;
     }
     close $fh;
@@ -254,7 +248,7 @@ my $filter;
 if (exists $config_href->{'RAHISTO_UPDATESQL_FILTER'}) {
     $filter = $config_href->{'RAHISTO_UPDATESQL_FILTER'};
 }
-my $sidinf = decode_racluster_sidinf( racluster_saddr($tmprmon, $filter) );
+my $sidinf = decode_racluster_sidinf( racluster_sidinf($tmprmon, $filter) );
 if ( !defined $sidinf ) {
     croak "unable to determine Source ID and/or Interface name";
 }
