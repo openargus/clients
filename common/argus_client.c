@@ -11713,7 +11713,23 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
             ArgusParser->RaCumulativeMerge = 1;
             retn->correct = NULL;
          } else
+         if (!(strncasecmp (sptr, "matrix", 6))) {
+            retn->ArgusMatrixMode++;
+            retn->mask |= (0x01LL << ARGUS_MASK_SADDR);
+            retn->mask |= (0x01LL << ARGUS_MASK_DADDR);
+            if (len > 0) {
+               retn->saddrlen = len;
+               retn->daddrlen = len;
+               bcopy((char *)&mask, (char *)&retn->smask, sizeof(mask));
+               bcopy((char *)&mask, (char *)&retn->dmask, sizeof(mask));
+            }
+            if (retn->correct) free(retn->correct);
+            retn->correct = NULL;
+         } else
          if (!(strncasecmp (sptr, "macmatrix", 9))) {
+            retn->ArgusMatrixMode++;
+            retn->mask |= (0x01LL << ARGUS_MASK_SMAC);
+            retn->mask |= (0x01LL << ARGUS_MASK_DMAC);
             if (len > 0) {
                retn->saddrlen = len;
                retn->daddrlen = len;
@@ -11744,19 +11760,6 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
             parser->RaMonMode++;
             retn->mask |= (0x01LL << ARGUS_MASK_SPORT);
             retn->mask |= (0x01LL << ARGUS_MASK_PROTO);
-            if (retn->correct) free(retn->correct);
-            retn->correct = NULL;
-         } else
-         if (!(strncasecmp (sptr, "matrix", 6))) {
-            retn->ArgusMatrixMode++;
-            retn->mask |= (0x01LL << ARGUS_MASK_SADDR);
-            retn->mask |= (0x01LL << ARGUS_MASK_DADDR);
-            if (len > 0) {
-               retn->saddrlen = len;
-               retn->daddrlen = len;
-               bcopy((char *)&mask, (char *)&retn->smask, sizeof(mask));
-               bcopy((char *)&mask, (char *)&retn->dmask, sizeof(mask));
-            }
             if (retn->correct) free(retn->correct);
             retn->correct = NULL;
 
