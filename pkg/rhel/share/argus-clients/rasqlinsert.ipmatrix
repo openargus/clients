@@ -1,1 +1,1 @@
--B 120s -m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr -w mysql://root@localhost/ipMatrix/ip_%Y_%m_%d -M cache time 1d - ip
+-m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr -w mysql://root@localhost/ipMatrix/ip_%Y_%m_%d -M cache time 1d - ip
