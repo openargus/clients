@@ -110,6 +110,7 @@ install: force all
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/radns
+	rm -f $(DESTDIR)$(BINDIR)/radnsdb
 
 clean:
 	rm -f $(CLEANFILES)

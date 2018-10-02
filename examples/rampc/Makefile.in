@@ -104,6 +104,10 @@ install: force all
 	$(INSTALL) $(INSTALLBIN)/rampc $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rampcd $(DESTDIR)$(BINDIR)
 
+uninstall: force
+	rm -f $(DESTDIR)$(BINDIR)/rampc 
+	rm -f $(DESTDIR)$(BINDIR)/rampcd
+
 clean:
 	rm -f $(CLEANFILES)
 

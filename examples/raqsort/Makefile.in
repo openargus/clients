@@ -104,6 +104,9 @@ install: force all
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/raqsort $(DESTDIR)$(BINDIR)
 
+uninstall: force
+	rm -f $(DESTDIR)$(BINDIR)/raqsort
+
 clean:
 	rm -f $(CLEANFILES)
 

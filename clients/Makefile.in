@@ -149,6 +149,7 @@ uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/ranonymize
 	rm -f $(DESTDIR)$(BINDIR)/rasort
 	rm -f $(DESTDIR)$(BINDIR)/rastream
+	rm -f $(DESTDIR)$(BINDIR)/ramanage
 
 clean:
 	rm -f $(CLEANFILES)

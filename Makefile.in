@@ -78,7 +78,7 @@ all: force
 		fi; \
 	done
 
-.PHONY: all
+.PHONY: all uninstall uninstall-perl
 
 clients: common
 examples: common
@@ -223,13 +223,15 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@mandir@/man5/ralabel.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/radium.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/ranonymize.5
+	rm -f $(DESTDIR)@mandir@/man5/racolor.conf.5
 	rm -f $(DESTDIR)@mandir@/man8/radium.8
 	rm -rf $(DESTDIR)$(docdir)
 	rm -rf $(DESTDIR)$(prefix)/argus
+	rm -f $(DESTDIR)@datarootdir@/argus-clients/std.sig
 
 uninstall-perl:
 ifndef WORKSTATION_BUILD
-	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/util.pm
+	rm -f $(DESTDIR)$(perlextlib)/qosient/util.pm
 endif
 
 installdirs:

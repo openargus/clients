@@ -104,7 +104,8 @@ GLOBAL_CONFIG = ra.conf radium.conf
 
 .PHONY: install installdirs install-sbin-scripts install-unitfiles \
         install-usr-argus install-pkgdata install-sysconfig \
-        install-global-config install-rastreamd install-libexec all
+        install-global-config install-rastreamd install-libexec all \
+	uninstall
 
 all:
 	$(NOOP)
@@ -187,6 +188,8 @@ ifeq ($(target_os),linux-gnu)
 		$(INSTALL) -m 0644 $$i $(LIBEXEC_DIR)/`basename $$i` ; \
 	done
 endif
+
+uninstall::
 
 # Prevent GNU make v3 from overflowing arg limit on SysV.
 .NOEXPORT:

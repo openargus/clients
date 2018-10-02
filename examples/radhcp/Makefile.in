@@ -136,9 +136,10 @@ endif
 
 uninstall: force all uninstall-perl
 	rm -f $(DESTDIR)$(BINDIR)/radhcp
+	rm -f $(DESTDIR)$(BINDIR)/radhcp-query
 
 uninstall-perl:
-	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/radhcp.pm
+	rm -f $(DESTDIR)$(perlextlib)/qosient/radhcp.pm
 
 clean:
 	rm -f $(CLEANFILES)

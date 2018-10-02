@@ -135,9 +135,12 @@ endif
 
 uninstall: force all uninstall-perl
 	rm -f $(DESTDIR)$(BINDIR)/rahisto
+	rm -f $(DESTDIR)$(BINDIR)/rahisto-querysql
+	rm -f $(DESTDIR)$(BINDIR)/rahisto-updatesql
+	rm -f $(DESTDIR)$(BINDIR)/rahisto-delsql
 
 uninstall-perl:
-	@rm -f $(DESTDIR)$(datarootdir)/perl5/qosient/rahisto.pm
+	rm -f $(DESTDIR)$(perlextlib)/qosient/rahisto.pm
 
 clean:
 	rm -f $(CLEANFILES)

@@ -120,6 +120,12 @@ install: force all
 	$(INSTALL) $(INSTALLBIN)/rascannerdaily $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rascan $(DESTDIR)$(BINDIR)
 
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/radark
+	rm -f $(DESTDIR)$(BINDIR)/rascanner
+	rm -f $(DESTDIR)$(BINDIR)/rascannerdaily
+	rm -f $(DESTDIR)$(BINDIR)/rascan
+
 clean:
 	rm -f $(CLEANFILES)
 

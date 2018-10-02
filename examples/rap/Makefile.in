@@ -103,6 +103,9 @@ install: force all
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/rap $(DESTDIR)$(BINDIR)
 
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/rap
+
 clean:
 	rm -f $(CLEANFILES)
 
