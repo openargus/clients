@@ -15,140 +15,9 @@ use qosient::rahisto;
 
 my $debug;
 
-use constant {
-    QUERY_STIMES    => 0,
-    QUERY_AGGREGATE => 1,
-};
-
-# results of prepare() indexed by table name, #prefixes, #times
-# sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $dbh->prepare()
-my $sql_statements = {};
-
-sub find_sql_statement {
-    my ( $tablename, $num_prefixes, $num_times ) = @_;
-    if ( exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} ) {
-        return $sql_statements->{$tablename}->{$num_prefixes}->{$num_times};
-    }
-    return;
-}
-
-sub insert_sql_statement {
-    my ( $tablename, $num_prefixes, $num_times, $stmt ) = @_;
-    if ( !exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} )
-    {
-        $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $stmt;
-    }
-    return;
-}
-
 # from the Perl Maven:
 sub uniq {
     keys { map { $_ => 1 } @_ };
-}
-
-sub __format_query_histo_values {
-    my ( $querytype, $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
-    my $query =
-      qq{SELECT class, bin_interval, SUM(freq) as freq from $tablename};
-    my $where   = q{ WHERE model = ?};
-    my $groupby = q{ GROUP BY class WITH ROLLUP};
-    my @params  = ($model);
-    my $addresses;
-
-    if ( $querytype == QUERY_STIMES ) {
-        $query   = qq{SELECT DISTINCT stime from $tablename};
-        $groupby = q{};
-    }
-
-    if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
-        $addresses = strs2prefix_array($prefixstr_aref);
-        if ( defined $addresses ) {
-            my $addresses_str =
-              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
-            push @params, map( $_->ip(), @$addresses );
-            $where .= qq{ AND address IN ($addresses_str)};
-        }
-    }
-
-    if ( defined $times ) {
-        my $cnt    = scalar(@$times);
-        my $clause = q{};
-
-        $clause .= q{ AND};
-
-        if ( $cnt > 0 ) {
-            $clause .= qq{ stime >= ?};
-            push @params, $times->[0];
-            if ( $cnt > 2 ) {
-                $clause .= qq{ AND stime < ?};
-                push @params, $times->[2];
-            }
-            $where .= $clause;
-        }
-    }
-
-    $query .= $where;
-    $query .= $groupby;
-    if ($debug) {
-        print STDERR "$query\n";
-        print STDERR "VALUES " . join( ', ', @params ) . "\n";
-    }
-    return ( $query, \@params );
-}
-
-sub aggregate_histo_values {
-    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
-    if ( !defined $times ) {
-        $times = [];
-    }
-    if ( !defined $prefixstr_aref ) {
-        $prefixstr_aref = [];
-    }
-
-    my $num_prefixes = scalar( @{$prefixstr_aref} );
-    my $num_times    = scalar( @{$times} );
-
-    my $sth = find_sql_statement( $tablename, $num_prefixes, $num_times );
-    my ( $query, $params ) = __format_query_histo_values( QUERY_AGGREGATE, @_ );
-    if ( !$sth ) {
-        $sth = $dbh->prepare($query);
-        if ( !defined $sth ) {
-            carp "unable to prepare SQL create select statement";
-            return;
-        }
-        insert_sql_statement( $tablename, $num_prefixes, $num_times, $sth );
-    }
-
-    my $res = $sth->execute( @{$params} );
-
-    if ( !defined $res ) {
-        return;
-    }
-    my $hash_ref = $sth->fetchall_hashref('class');
-    $sth->finish;
-
-    return $hash_ref;
-}
-
-sub query_histo_stimes {
-    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
-    my ( $query, $params ) = __format_query_histo_values( QUERY_STIMES, @_ );
-    my $sth = $dbh->prepare($query);
-
-    if ( !defined $sth ) {
-        carp "unable to prepare SQL create select statement";
-        return;
-    }
-
-    my $res = $sth->execute( @{$params} );
-
-    if ( !defined $res ) {
-        return;
-    }
-    my $aref = $sth->fetchall_arrayref;
-    $sth->finish;
-
-    return $aref;
 }
 
 sub _parsetime_gmseconds {
@@ -202,60 +71,6 @@ sub handle_opt_t {
         print STDERR "parsed time range " . join( ' ', @$times ) . "\n";
     }
     return $times;
-}
-
-# sum up the values from all of the tables
-sub aggregate_histo_results {
-    my ($results_href) = @_;
-    my %agg = ();
-    for my $tbl ( keys $results_href ) {
-        my $href = $results_href->{$tbl};
-        for my $class ( keys $href ) {
-            if ( exists $agg{$class} ) {
-                $agg{$class}->{'freq'} += $href->{$class}->{'freq'};
-            }
-            else {
-                $agg{$class} = { %{ $href->{$class} } };  # shallow copy of hash
-            }
-        }
-    }
-    return \%agg;
-}
-
-sub one_aggregate_query {
-    my ( $dbh, $index_href, $query_prefixes, $query_times, $model ) = @_;
-    my %results_hash = ();
-
-    for my $tbl ( keys $index_href ) {
-        my $results =
-          aggregate_histo_values( $dbh, $query_prefixes, $tbl, $query_times,
-            $model );
-        if ($results) {
-            $results_hash{$tbl} = $results;
-        }
-    }
-    return aggregate_histo_results( \%results_hash );
-}
-
-sub one_stimes_query {
-    my ( $dbh, $index_href, $query_prefixes, $query_times, $model ) = @_;
-    my @results_array = ();
-
-    for my $tbl ( keys $index_href ) {
-        my $results =
-          query_histo_stimes( $dbh, $query_prefixes, $tbl, $query_times,
-            $model );
-        if ($results) {
-
-            # fetchall_arrayref returns an array ref of array refs.
-            # For this query, each inner arrayref has only one element.
-            push @results_array, map( $_->[0], @{$results} );
-        }
-    }
-
-    # pick out the distinct values and sort in ascending numeric order
-    my @uniq_values = sort { $a <=> $b } uniq(@results_array);
-    return \@uniq_values;
 }
 
 my $query_prefixes;
@@ -338,11 +153,11 @@ else {
 
 if ( !$opt_k ) {
     my $grandtotal_href =
-      one_aggregate_query( $dbh, $index_href, $query_prefixes, $query_times,
+      rahisto_aggregate_query( $dbh, $index_href, $query_prefixes, $query_times,
         $query_model );
     if ($opt_C) {
         my $comparison_grandtotal_href =
-          one_aggregate_query( $dbh, $index_href, $query_prefixes,
+          rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
             $query_compare_times, $query_model );
         my $d = rahisto_kldiv( $grandtotal_href, $comparison_grandtotal_href );
         if ($d) {
@@ -369,7 +184,7 @@ if ( !$opt_k ) {
 }
 else {
     my $stimes =
-      one_stimes_query( $dbh, $index_href, $query_prefixes, $query_times,
+      rahisto_stimes_query( $dbh, $index_href, $query_prefixes, $query_times,
         $query_model );
     if ( scalar( @{$stimes} ) < 2 ) {
         croak
@@ -380,7 +195,7 @@ else {
     my @histograms  = ();
     my @one_query_time = ( $stimes->[0], '-', $stimes->[1] );
     push @histograms,
-      one_aggregate_query( $dbh, $index_href, $query_prefixes,
+      rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
         \@one_query_time, $query_model );
 
     for ( my $i = 1 ; $i < scalar( @{$stimes} ) - 1 ; $i++ ) {
@@ -388,7 +203,7 @@ else {
         shift @one_query_time;    # hyphen
         push @one_query_time, ( '-', $stimes->[ $i + 1 ] );
         push @histograms,
-          one_aggregate_query( $dbh, $index_href, $query_prefixes,
+          rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
             \@one_query_time, $query_model );
         my $kldiv = rahisto_kldiv(@histograms);
         my $jsdiv = rahisto_jsdiv(@histograms);

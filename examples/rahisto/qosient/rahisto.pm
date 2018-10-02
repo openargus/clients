@@ -64,6 +64,8 @@ $VERSION = "1.00";
   rahisto_update_values_table
   strs2prefix_array
   rahisto_index_search_prefixes
+  rahisto_aggregate_query
+  rahisto_stimes_query
   rahisto_kldiv
   rahisto_jsdiv
   rahisto_jsdist
@@ -979,6 +981,218 @@ sub rahisto_index_search_prefixes {
     return $hash_ref;
 }
 
+use constant {
+    QUERY_STIMES    => 0,
+    QUERY_AGGREGATE => 1,
+};
+
+# results of prepare() indexed by table name, #prefixes, #times
+# sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $dbh->prepare()
+my $sql_statements = {};
+
+my $find_sql_statement = sub {
+    my ( $tablename, $num_prefixes, $num_times ) = @_;
+    if ( exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} ) {
+        return $sql_statements->{$tablename}->{$num_prefixes}->{$num_times};
+    }
+    return;
+};
+
+my $insert_sql_statement = sub {
+    my ( $tablename, $num_prefixes, $num_times, $stmt ) = @_;
+    if ( !exists $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} )
+    {
+        $sql_statements->{$tablename}->{$num_prefixes}->{$num_times} = $stmt;
+    }
+    return;
+};
+
+
+my $_format_query_histo_values = sub {
+    my ( $querytype, $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    my $query =
+      qq{SELECT class, bin_interval, SUM(freq) as freq from $tablename};
+    my $where   = q{ WHERE model = ?};
+    my $groupby = q{ GROUP BY class WITH ROLLUP};
+    my @params  = ($model);
+    my $addresses;
+
+    if ( $querytype == QUERY_STIMES ) {
+        $query   = qq{SELECT DISTINCT stime from $tablename};
+        $groupby = q{};
+    }
+
+    if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
+        $addresses = strs2prefix_array($prefixstr_aref);
+        if ( defined $addresses ) {
+            my $addresses_str =
+              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
+            push @params, map( $_->ip(), @$addresses );
+            $where .= qq{ AND address IN ($addresses_str)};
+        }
+    }
+
+    if ( defined $times ) {
+        my $cnt    = scalar(@$times);
+        my $clause = q{};
+
+        $clause .= q{ AND};
+
+        if ( $cnt > 0 ) {
+            $clause .= qq{ stime >= ?};
+            push @params, $times->[0];
+            if ( $cnt > 2 ) {
+                $clause .= qq{ AND stime < ?};
+                push @params, $times->[2];
+            }
+            $where .= $clause;
+        }
+    }
+
+    $query .= $where;
+    $query .= $groupby;
+    if ($debug) {
+        print STDERR "$query\n";
+        print STDERR "VALUES " . join( ', ', @params ) . "\n";
+    }
+    return ( $query, \@params );
+};
+
+my $_aggregate_histo_values = sub {
+    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    if ( !defined $times ) {
+        $times = [];
+    }
+    if ( !defined $prefixstr_aref ) {
+        $prefixstr_aref = [];
+    }
+
+    my $num_prefixes = scalar( @{$prefixstr_aref} );
+    my $num_times    = scalar( @{$times} );
+
+    my $sth = $find_sql_statement->( $tablename, $num_prefixes, $num_times );
+    my ( $query, $params ) = $_format_query_histo_values->( QUERY_AGGREGATE, @_ );
+    if ( !$sth ) {
+        $sth = $dbh->prepare($query);
+        if ( !defined $sth ) {
+            carp "unable to prepare SQL create select statement";
+            return;
+        }
+        $insert_sql_statement->( $tablename, $num_prefixes, $num_times, $sth );
+    }
+
+    my $res = $sth->execute( @{$params} );
+
+    if ( !defined $res ) {
+        return;
+    }
+    my $hash_ref = $sth->fetchall_hashref('class');
+    $sth->finish;
+
+    return $hash_ref;
+};
+
+my $_query_histo_stimes = sub {
+    my ( $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
+    my ( $query, $params ) = $_format_query_histo_values->( QUERY_STIMES, @_ );
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        carp "unable to prepare SQL create select statement";
+        return;
+    }
+
+    my $res = $sth->execute( @{$params} );
+
+    if ( !defined $res ) {
+        return;
+    }
+    my $aref = $sth->fetchall_arrayref;
+    $sth->finish;
+
+    return $aref;
+};
+
+
+
+# aggregate_histo_results: sum up the values from all of the tables
+#
+# $results_href         a hash reference containing one or more histograms
+#                       (which are, in turn, also hash refs) keyed by SQL
+#                       table name, although any unique value will do.
+#
+# returns a hash reference containing a single histogram
+my $aggregate_histo_results = sub {
+    my ($results_href) = @_;
+    my %agg = ();
+    for my $tbl ( keys $results_href ) {
+        my $href = $results_href->{$tbl};
+        for my $class ( keys $href ) {
+            if ( exists $agg{$class} ) {
+                $agg{$class}->{'freq'} += $href->{$class}->{'freq'};
+            }
+            else {
+                $agg{$class} = { %{ $href->{$class} } };  # shallow copy of hash
+            }
+        }
+    }
+    return \%agg;
+};
+
+# rahisto_aggregate_query parameters:
+#   $dbh                DBI handle as returned by rahisto_opendb()
+#   $index_href         hash reference returned by rahisto_index_search_prefixes()
+#   $query_prefixes     array reference to IP address prefixes
+#   $query_times        array reference to start and stop times in seconds GMT.
+#                       Second element is '-'.
+#   $metric             hash table metric specified with -H on rahisto commandline
+#
+# returns a hash ref containing a single histogram that represents the aggregate
+# of all histograms found for the requested prefixes during the requested times
+# in all of the tables listed in $index_href.
+sub rahisto_aggregate_query {
+    my ( $dbh, $index_href, $query_prefixes, $query_times, $metric ) = @_;
+    my %results_hash = ();
+
+    for my $tbl ( keys $index_href ) {
+        my $results =
+          $_aggregate_histo_values->( $dbh, $query_prefixes, $tbl, $query_times,
+            $metric );
+        if ($results) {
+            $results_hash{$tbl} = $results;
+        }
+    }
+    return $aggregate_histo_results->( \%results_hash );
+}
+
+#   $dbh                DBI handle as returned by rahisto_opendb()
+#   $index_href         hash reference returned by rahisto_index_search_prefixes()
+#   $query_prefixes     array reference to IP address prefixes
+#   $query_times        array reference to start and stop times in seconds GMT.
+#                       Second element is '-'.
+#   $metric             hash table metric specified with -H on rahisto commandline
+sub rahisto_stimes_query {
+    my ( $dbh, $index_href, $query_prefixes, $query_times, $metric ) = @_;
+    my @results_array = ();
+
+    for my $tbl ( keys $index_href ) {
+        my $results =
+          $_query_histo_stimes->( $dbh, $query_prefixes, $tbl, $query_times,
+            $metric );
+        if ($results) {
+
+            # fetchall_arrayref returns an array ref of array refs.
+            # For this query, each inner arrayref has only one element.
+            push @results_array, map( $_->[0], @{$results} );
+        }
+    }
+
+    # pick out the distinct values and sort in ascending numeric order
+    my @uniq_values = sort { $a <=> $b } uniq(@results_array);
+    return \@uniq_values;
+}
+
+
 # equal(NUM1, NUM2, ACCURACY) : returns true if NUM1 and NUM2 are
 # equal to ACCURACY number of decimal places
 # Borrowed from Perl Cookbook by Nathan Torkington, Tom Christiansen
@@ -1148,7 +1362,7 @@ my $_rahisto_subsample = sub {
 
 # Kullback-Leibler Divergence
 # Calculates D_{KL}(P||Q)
-# P and Q are references to hashes as returned by aggregate_histo_values()
+# P and Q are references to hashes as returned by $_aggregate_histo_values()
 #   in rahisto-querysql  (should that function be moved here?)
 # P is assumed to be the "true" distribution.
 my $_rahisto_kldiv = sub {
@@ -1220,7 +1434,7 @@ sub rahisto_kldiv {
 }
 
 # $A and $B are histograms -- references to hashes as returned by
-# aggregate_histo_values().
+# $_aggregate_histo_values().
 #
 # Returns $scale * ($A + $B)
 my $_rahisto_add = sub {
