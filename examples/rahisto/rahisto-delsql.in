@@ -21,7 +21,7 @@ use POSIX qw(strftime);
 use Try::Tiny;
 use Getopt::Std;
 use Time::Local qw(timegm);
-use qosient::util qw(parsetime);
+use qosient::XS::util;
 use qosient::rahisto;
 
 my $debug;
@@ -201,21 +201,17 @@ sub one_query {
     return 1;
 }
 
-sub _parsetime_gmseconds {
-    my ($str) = @_;
-    my @tim   = parsetime($str);
-    my $gmsec = timegm(@tim);
-
-    # knock twelve hours off of the time returned by parsetime() since
-    # it always chooses noon of the specified day.
-    return ( $gmsec - 12 * 60 * 60 );
-}
-
 # create an array of time bounds from the -t option
 sub handle_opt_t {
     my ($str) = @_;
     my @bounds = split( /-/x, $str );
     my $times;
+    my @timary = qosient::XS::util::ArgusParseTime($str);
+
+    if ($timary[0] == 0) {
+        carp "Invalid time string";
+        return;
+    }
 
     if ( scalar(@bounds) == 1 ) {
         # not a time range and also no leading "-"
@@ -223,7 +219,7 @@ sub handle_opt_t {
         # $opt_t.  NOTE: this is different than the query utility's
         # interpretation of a single time parameter.  Should rahisto-query
         # do the same???
-        $times = [ 0, '-', _parsetime_gmseconds( $bounds[0] ) ];
+        $times = [ 0, '-', $timary[1] ];
     }
     elsif ( scalar(@bounds) > 1 ) {
         if ( length( $bounds[0] ) == 0 ) {
@@ -232,19 +228,11 @@ sub handle_opt_t {
             # $opt_t.  NOTE: this is different than the query utility's
             # interpretation of a single time parameter.  Should rahisto-query
             # do the same???
-            $times = [ 0, '-', _parsetime_gmseconds($str) ];
+            $times = [ 0, '-', $timary[1] ];
         }
         else {
-            $times = [
-                _parsetime_gmseconds( $bounds[0] ),
-                '-',
-                _parsetime_gmseconds( $bounds[1] )
-            ];
+            $times = [ $timary[1], '-', $timary[2] ];
         }
-    }
-    else {
-        carp "No time follows -t";
-        return;
     }
 
     if ($debug) {
