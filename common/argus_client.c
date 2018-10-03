@@ -12745,6 +12745,21 @@ ArgusFetchMean (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchIdleMean (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      struct ArgusAgrStruct *agr;
+
+      if ((agr = (struct ArgusAgrStruct *) ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
+         retn = agr->idle.meanval;
+   }
+   return retn;
+}
+
+double
 ArgusFetchMin (struct ArgusRecordStruct *ns)
 {
    double retn = 0;
@@ -12760,6 +12775,21 @@ ArgusFetchMin (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchIdleMin (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      struct ArgusAgrStruct *agr;
+
+      if ((agr = (struct ArgusAgrStruct *) ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
+         retn = agr->idle.minval;
+   }
+   return retn;
+}
+
+double
 ArgusFetchMax (struct ArgusRecordStruct *ns)
 {
    double retn = 0;
@@ -12770,6 +12800,21 @@ ArgusFetchMax (struct ArgusRecordStruct *ns)
 
       if ((agr = (struct ArgusAgrStruct *) ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
          retn = agr->act.maxval;
+   }
+   return (retn);
+}
+
+double
+ArgusFetchIdleMax (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      struct ArgusAgrStruct *agr;
+
+      if ((agr = (struct ArgusAgrStruct *) ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
+         retn = agr->idle.maxval;
    }
    return (retn);
 }
