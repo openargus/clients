@@ -42,7 +42,7 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
+INCLS = -I. -I../include -I../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
 DEFS = @DEFS@
 COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
 
@@ -58,7 +58,10 @@ else
  SOEXT = .so
 endif
 
-.PHONY: install install-perl uninstall uninstall-perl TOP all
+SRC = ../common/argus_parse_time.c swig_ArgusParseTime.c \
+      swig_ArgusParseTime_wrap.c
+
+.PHONY: install install-perl uninstall uninstall-perl TOP all depend
 
 all: TOP
 
@@ -84,11 +87,12 @@ uninstall-perl:
 util$(SOEXT): swig_ArgusParseTime.o swig_ArgusParseTime_wrap.o argus_parse_time.o
 	$(CC) $(CFLAGS) `$(PERL) -MConfig -e 'print $$Config{lddlflags}'` $^ -o $@
 argus_parse_time.o: ../common/argus_parse_time.c
-	$(CC) $(CFLAGS) -I../include -I../common $(PERL_CFLAGS) -c $^
+	$(CC) $(CFLAGS) -I../include -I../common $(PERL_CFLAGS) -c $(filter %.c, $^)
 swig_ArgusParseTime.o: swig_ArgusParseTime.c
-	$(CC) $(CFLAGS) -I../include $(PERL_CFLAGS) -c $^
+	$(CC) $(CFLAGS) -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 swig_ArgusParseTime_wrap.o: swig_ArgusParseTime_wrap.c
-	$(CC) $(CFLAGS) -Wno-unused-variable -I../include $(PERL_CFLAGS) -c $^
+	$(CC) $(CFLAGS) -Wno-unused-variable -Wno-missing-prototypes \
+	  -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 
 # multiple targets (left side of the colon) seems to confuse parallel make.
 # create intermediate file swig.stamp instead.
@@ -104,3 +108,7 @@ distclean: clean
 	rm -f Makefile
 clean:
 	rm -f *.o swig_ArgusParseTime_wrap.c qosient/XS/util.pm util$(SOEXT) swig.stamp
+
+depend: $(SRC)
+	../bin/mkdep -c $(CC) $(CFLAGS) $(PERL_CFLAGS) $(SRC)
+
