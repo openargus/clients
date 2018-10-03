@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	222
-#define MAX_PRINT_ALG_TYPES     	222
+#define ARGUS_MAX_PRINT_ALG     	227
+#define MAX_PRINT_ALG_TYPES     	227
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -643,6 +643,10 @@ void ArgusPrintMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruc
 void ArgusPrintMin (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintMax (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintStdDeviation (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleMin (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleMax (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleStdDeviation (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintStartRange (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintEndRange (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcDuration (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -880,6 +884,13 @@ void ArgusPrintMeanLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintMinLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintMaxLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintStdDeviationLabel (struct ArgusParserStruct *, char *, int);
+
+void ArgusPrintIdleMeanLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintIdleMinLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintIdleMaxLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintIdleSumLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintIdleStdDeviationLabel (struct ArgusParserStruct *, char *, int);
+
 void ArgusPrintStartRangeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintEndRangeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcDurationLabel (struct ArgusParserStruct *, char *, int);
@@ -2062,6 +2073,10 @@ extern void ArgusPrintDstWindow (struct ArgusParserStruct *, char *, struct Argu
 extern void ArgusPrintJoinDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintLeaveDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintIdleMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintIdleMin (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintIdleMax (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintIdleStdDeviation (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintStartRange (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintEndRange (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSrcDuration (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
