@@ -31,9 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		125
-#define MAX_METRIC_ALG_TYPES		125
-
+#define ARGUS_MAX_METRIC_ALG		128
+#define MAX_METRIC_ALG_TYPES		128
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -445,6 +444,13 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"inf", ArgusFetchInf},
 #define ARGUSMETRICETHERTYPE       124
    {"etype", ArgusFetchEtherType},
+
+#define ARGUSMETRICMEANIDLE        125
+   {"idlmean", ArgusFetchIdleMean},
+#define ARGUSMETRICMINIDLE         126
+   {"idlmin", ArgusFetchIdleMin},
+#define ARGUSMETRICMAXIDLE         127
+   {"idlmax", ArgusFetchIdleMax},
 };
 
 #else
