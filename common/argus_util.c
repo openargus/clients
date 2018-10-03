@@ -7101,6 +7101,13 @@ void ArgusPrintMax (struct ArgusParserStruct *parser, char *, struct ArgusRecord
 void ArgusPrintSum (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintRunTime (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+
+void ArgusPrintIdleMean (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleMin (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleMax (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleSum (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintIdleStdDeviation (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+
 void ArgusPrintStartRange (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintEndRange (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintTransactions (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
@@ -7314,6 +7321,56 @@ ArgusPrintMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
 #endif
 }
 
+
+void
+ArgusPrintIdleMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL;
+   char avg[32];
+ 
+   bzero (avg, 32);
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: 
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (agr->count > 0) {
+               if (parser->Hflag) {
+                  ArgusAbbreviateMetric(parser, avg, 32, agr->idle.meanval);
+               } else {
+                 sprintf (avg, "%.*f", parser->pflag, agr->idle.meanval);
+               }
+            } else 
+               sprintf (avg, "%.*f", parser->pflag, 0.0);
+         } else
+            sprintf (avg, "%.*f", parser->pflag, 0.0);
+         break;
+      }
+   }
+ 
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " IdleMean = \"%s\"", avg);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(avg);
+      } else {
+         if (strlen(avg) > len) {
+            avg[len - 1] = '*';
+            avg[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, avg);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleMean (%p, %p)", buf, argus);
+#endif
+}
+
 void
 ArgusPrintSum (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -7357,6 +7414,51 @@ ArgusPrintSum (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintSum (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleSum (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL;
+   char sum[32];
+
+   bzero (sum, 32);
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (agr->count > 0) {
+               sprintf (sum, "%.*f", parser->pflag, agr->idle.meanval * agr->idle.n);
+            } else
+               sprintf (sum, "%.*f", parser->pflag, 0.0);
+         } else
+            sprintf (sum, "%.*f", parser->pflag, 0.0);
+         break;
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " Sum = \"%s\"", sum);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(sum);
+      } else {
+         if (strlen(sum) > len) {
+            sum[len - 1] = '*';
+            sum[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, sum);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleSum (%p, %p)", buf, argus);
 #endif
 }
 
@@ -7446,7 +7548,50 @@ ArgusPrintMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
    }
  
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintMinDuration (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL;
+   char minval[32];
+
+   bzero (minval, 32);
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR:
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, minval, 32, agr->idle.minval);
+            } else {
+              sprintf (minval, "%.*f", parser->pflag, agr->idle.minval);
+            }
+         }
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " IdleMin = \"%s\"", minval);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(minval);
+      } else {
+         if (strlen(minval) > len) {
+            minval[len - 1] = '*';
+            minval[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, minval);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleMin (%p, %p)", buf, argus);
 #endif
 }
 
@@ -7496,6 +7641,50 @@ ArgusPrintMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
 }
 
 void
+ArgusPrintIdleMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL;
+   char maxval[32];
+
+   bzero (maxval, 32);
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR:
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, maxval, 32, agr->idle.maxval);
+            } else {
+                  sprintf (maxval, "%.*f", parser->pflag, agr->idle.maxval);
+            }
+         }
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " IdleMax = \"%s\"", maxval);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(maxval);
+      } else {
+         if (strlen(maxval) > len) {
+            maxval[len - 1] = '*';
+            maxval[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, maxval);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleMax (%p, %p)", buf, argus);
+#endif
+}
+
+void
 ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusAgrStruct *agr = NULL;
@@ -7539,6 +7728,52 @@ ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct Argu
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintStdDeviation (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleStdDeviation (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL;
+   char stddev[32];
+
+   bzero (stddev, 32);
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+
+         if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if (parser->Hflag) {
+               ArgusAbbreviateMetric(parser, stddev, 32, agr->idle.stdev);
+            } else {
+               sprintf (stddev, "%.*f", parser->pflag, agr->idle.stdev);
+            }
+         }
+         break;
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " IdleStdDev = \"%s\"", stddev);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(stddev);
+      } else {
+         if (strlen(stddev) > len) {
+            stddev[len - 1] = '*';
+            stddev[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, stddev);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleStdDeviation (%p, %p)", buf, argus);
 #endif
 }
 
@@ -19362,7 +19597,6 @@ ArgusPrintDstVIDLabel (struct ArgusParserStruct *parser, char *buf, int len)
    sprintf (buf, "%*.*s ", len, len, "dVid");
 }
 
-
 void
 ArgusPrintSrcVPRILabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
@@ -19425,9 +19659,21 @@ ArgusPrintMeanLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintIdleMeanLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlMean");
+}
+
+void
 ArgusPrintSumLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Sum");
+}
+
+void
+ArgusPrintIdleSumLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlSum");
 }
 
 void
@@ -19449,15 +19695,33 @@ ArgusPrintMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintIdleMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlMin");
+}
+
+void
 ArgusPrintMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Max");
 }
 
 void
+ArgusPrintIdleMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlMax");
+}
+
+void
 ArgusPrintStdDeviationLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "StdDev");
+}
+
+void
+ArgusPrintIdleStdDeviationLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlStdDev");
 }
 
 void
@@ -20416,7 +20680,6 @@ ArgusPushBackList(struct ArgusListStruct *list, struct ArgusListRecord *rec, int
 }
 
 void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
-
 
 void
 ArgusLoadList(struct ArgusListStruct *l1, struct ArgusListStruct *l2)
