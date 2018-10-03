@@ -24,6 +24,7 @@
 #  include "argus_config.h"
 # endif
 
+void ArgusDebug (int d, char *fmt, ...);
 int swig_ArgusParseTime (char *time_string, int *start, int *end);
 
 #endif

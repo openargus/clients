@@ -31,6 +31,13 @@
 
 #include "swig_ArgusParseTime.h"
 
+void
+ArgusDebug (int d, char *fmt, ...)
+{
+   return;
+}
+
+
 int
 swig_ArgusParseTime (char *time_string, int *start, int *end)
 {
