@@ -29,6 +29,8 @@
 #include "argus_threads.h"
 #include <ctype.h>
 
+#include "swig_ArgusParseTime.h"
+
 int
 swig_ArgusParseTime (char *time_string, int *start, int *end)
 {
