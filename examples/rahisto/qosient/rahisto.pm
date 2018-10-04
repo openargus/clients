@@ -26,6 +26,7 @@ use DBI;
 use POSIX qw(strftime);
 use Try::Tiny;
 use Net::IP;
+use Math::BigInt;
 use Exporter;
 use vars qw($VERSION @ISA @EXPORT);
 $VERSION = "1.00";
@@ -591,6 +592,11 @@ my $_rahisto_parse_instance = sub {
     return @failure;
 };
 
+# from the Perl Maven:
+sub uniq {
+    keys { map { $_ => 1 } @_ };
+}
+
 # mostly the same as rahisto_metric_by_num
 sub rahisto_get_model {
     my ($mod) = @_;
@@ -904,7 +910,73 @@ sub strs2prefix_array {
     return $prefixes;
 }
 
-# NOTE: This only looks for the address WITHOUT mask computations for now
+my $_format_query_address_clause = sub {
+    my ($prefixstr_aref) = @_;
+    my $addresses = strs2prefix_array($prefixstr_aref);
+    my $hostonly = 1;
+    my @result = ();
+
+    if ( !defined $addresses ) {
+        return;
+    }
+
+    for my $pfx (@{ $addresses }) {
+        if (($pfx->version == 4 && $pfx->prefixlen < 32)
+            || ($pfx->version == 6 && $pfx->prefixlen < 128)) {
+            $hostonly = undef;
+            last;
+        }
+    }
+
+    if ($hostonly) {
+        my $addresses_str = 'address IN ('
+          . join( ',', map( 'INET6_ATON(?)', @$addresses ) )
+          . ')';
+        push @result, $addresses_str;
+        push @result, map( $_->ip(), @$addresses );
+        return @result;
+    }
+
+    # Only ipv4 prefixes are handled, for now.
+    my $pfxcount = 0;
+    my $where = q{};
+    for my $pfx (@{ $addresses }) {
+        if ($pfxcount > 0) {
+            $where .= ' OR ';
+        }
+
+        if ($pfx->version == 6) {
+           # Carve up the 128-bit address into 64-bit chunks so that MariaDB
+           # deal with it as VARBINARY.  MySQL 8 doesn't have this problem. . .
+           my $mask_upper = Math::BigInt->new($pfx->hexmask)->brsft(64);
+           my $mask_lower = Math::BigInt->new($pfx->hexmask)
+                              ->band(Math::BigInt->new('0xffffffffffffffff'));
+           my $prefix_upper = $pfx->intip()->copy()->brsft(64);
+           my $prefix_lower = $pfx->intip()->copy()
+                                ->band(Math::BigInt->new('0xffffffffffffffff'));
+
+           $where .= '(LENGTH(address) = 16 AND ('
+                  .  '(CAST(CONV(HEX(SUBSTRING(address, 1, 8)), 16, 10) AS UNSIGNED) '
+                  .  ' & ' . $mask_upper->as_hex . ' = (0 | ' . $prefix_upper->as_hex . '))'
+                  .  ' AND '
+                  .  '(CAST(CONV(HEX(SUBSTRING(address, 9, 8)), 16, 10) AS UNSIGNED) '
+                  .  ' & ' . $mask_lower->as_hex . ' = (0 | ' . $prefix_lower->as_hex . '))'
+                  .  '))';
+        } else {
+           $where .= '(LENGTH(address) = 4 AND '
+                  .  '(CAST(conv(HEX(address), 16, 10) AS UNSIGNED) & '
+                  .  $pfx->hexmask . ') = (0 | ' . $pfx->hexip . '))';
+        }
+        $pfxcount++;
+    }
+
+    if ($pfxcount > 0) {
+        $where = "($where" . ')';
+    }
+
+    return ($where, ());
+};
+
 # $dbh                  DBI handle
 # $prefixstr_aref       reference to array of IP prefix strings
 # $sidstr_aref          reference to array of Argus SIDs (UUIDs)
@@ -920,13 +992,15 @@ sub rahisto_index_search_prefixes {
     my @params = ();
 
     if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
-        $addresses = strs2prefix_array($prefixstr_aref);
-        if ($addresses) {
-            my $addresses_str =
-              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
-            push @params, map( $_->ip(), @$addresses );
+        my ($addresses_str, my @aparams) =
+          $_format_query_address_clause->( $prefixstr_aref );
+
+        if (length($addresses_str) > 0) {
+            $where = " $addresses_str";
             $usewhere = 1;
-            $where .= qq{ address IN ($addresses_str)};
+            if (@aparams) {
+                push @params, @aparams;
+            }
         }
     }
 
@@ -956,11 +1030,12 @@ sub rahisto_index_search_prefixes {
 
     my $query = qq{SELECT tablename, sid, inf FROM  histograms};
     if ($usewhere) {
-        $query .= $where;
+        $query .= " WHERE $where";
     }
     $query .= qq{ GROUP BY tablename};
     if ($debug) {
         print STDERR "$query\n";
+        print STDERR "VALUES @params\n";
     }
 
     my $sth = $dbh->prepare($query);
@@ -1007,7 +1082,6 @@ my $insert_sql_statement = sub {
     return;
 };
 
-
 my $_format_query_histo_values = sub {
     my ( $querytype, $dbh, $prefixstr_aref, $tablename, $times, $model ) = @_;
     my $query =
@@ -1023,12 +1097,12 @@ my $_format_query_histo_values = sub {
     }
 
     if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
-        $addresses = strs2prefix_array($prefixstr_aref);
-        if ( defined $addresses ) {
-            my $addresses_str =
-              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
-            push @params, map( $_->ip(), @$addresses );
-            $where .= qq{ AND address IN ($addresses_str)};
+        my ($addresses_str, @aparams) = $_format_query_address_clause->( $prefixstr_aref );
+        if (length($addresses_str) > 0) {
+            $where .= " AND $addresses_str";
+            if (@aparams) {
+                push @params, @aparams;
+            }
         }
     }
 
@@ -1071,6 +1145,7 @@ my $_aggregate_histo_values = sub {
     my $num_times    = scalar( @{$times} );
 
     my $sth = $find_sql_statement->( $tablename, $num_prefixes, $num_times );
+my $sth;
     my ( $query, $params ) = $_format_query_histo_values->( QUERY_AGGREGATE, @_ );
     if ( !$sth ) {
         $sth = $dbh->prepare($query);

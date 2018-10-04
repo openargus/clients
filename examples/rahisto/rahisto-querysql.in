@@ -15,11 +15,6 @@ use qosient::rahisto;
 
 my $debug;
 
-# from the Perl Maven:
-sub uniq {
-    keys { map { $_ => 1 } @_ };
-}
-
 # create an array of time bounds from the -t option to be used by the
 # aggregate function
 sub handle_opt_t {
