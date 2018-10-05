@@ -72,7 +72,6 @@ pthread_attr_t RaTopAttr;
 pthread_t RaMySQLThread = 0;
 pthread_t RaMySQLUpdateThread = 0;
 pthread_mutex_t RaMySQLlock;
-
 #endif
 
 #if defined(ARGUS_MYSQL)
@@ -225,16 +224,6 @@ main(int argc, char **argv)
 
       ArgusClientInit (parser);
 
-#if defined(ARGUS_THREADS)
-      sigset_t blocked_signals;
-
-      sigfillset(&blocked_signals);
-      sigdelset(&blocked_signals, SIGTERM);
-      sigdelset(&blocked_signals, SIGINT);
-      sigdelset(&blocked_signals, SIGWINCH);
-
-      pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
       if (parser->writeDbstr != NULL) {
          if (parser->readDbstr != NULL)
             free(parser->readDbstr);
@@ -257,70 +246,18 @@ main(int argc, char **argv)
 
       if (RaDatabase && RaTable)
          parser->RaTasksToDo = 1;
-
-      {
-         sigset_t blocked_signals;
-         sigset_t sigs_to_catch;
-
-         sigfillset(&blocked_signals);
-         pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
-         sigemptyset(&sigs_to_catch);
-         sigaddset(&sigs_to_catch, SIGHUP);
-         sigaddset(&sigs_to_catch, SIGTERM);
-         sigaddset(&sigs_to_catch, SIGQUIT);
-         sigaddset(&sigs_to_catch, SIGINT);
-         pthread_sigmask(SIG_UNBLOCK, &sigs_to_catch, NULL);
-      }
 #endif
       ArgusInitEvents (parser->ArgusEventsTask);
-
-      if (parser->dflag) {
-         int pid;
-
-         if (parser->Sflag)
-            parser->ArgusReliableConnection++;
-
-         ArgusLog(LOG_WARNING, "started");
-         if (chdir ("/") < 0)
-            ArgusLog (LOG_ERR, "Can't chdir to / %s", strerror(errno));
-
-         if ((pid = fork ()) < 0) {
-            ArgusLog (LOG_ERR, "Can't fork daemon %s", strerror(errno));
-         } else {
-            if (pid) {
-               struct timespec ts = {0, 20000000};
-               int status;
-               nanosleep(&ts, NULL);
-               waitpid(pid, &status, WNOHANG);
-               if (kill(pid, 0) < 0) {
-                  exit (1);
-               } else
-                  exit (0);
-            } else {
-               FILE *tmpfile;
-
-               parser->ArgusSessionId = setsid();
-               if ((tmpfile = freopen ("/dev/null", "r", stdin)) == NULL)
-                  ArgusLog (LOG_ERR, "Cannot map stdout to /dev/null");
-
-               if ((tmpfile = freopen ("/dev/null", "a+", stdout)) == NULL)
-                  ArgusLog (LOG_ERR, "Cannot map stdout to /dev/null");
-
-               if ((tmpfile = freopen ("/dev/null", "a+", stderr)) == NULL)
-                  ArgusLog (LOG_ERR, "Cannot map stderr to /dev/null");
-            }
-         }
-      }
 
 #if defined(ARGUS_THREADS)
       if ((events = parser->ArgusEventsTask) != NULL) {
          pthread_join(events->thread, NULL);
          ArgusCloseEvents (events);
+      } else {
+         ArgusLog (LOG_ERR, "No events\n");
       }
 #endif /* ARGUS_THREADS */
       mysql_close(RaMySQL);
-#endif
    }
 
    exit (0);
