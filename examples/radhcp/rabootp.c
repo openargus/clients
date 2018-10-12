@@ -966,14 +966,21 @@ trunc:
 }
 #endif
 
+/* Create a null-terminated string from the value encoded in the dhcp
+ * message.  This is used only for host and domain names, so convert
+ * to lowercase.  DNS is case insensitive and this will make name
+ * searches faster.
+ */
 static inline char *
-__extract_string(const u_char * const bp, u_char len)
+__extract_string_lc(const u_char * const bp, u_char len)
 {
    u_char *s;
+   int i;
 
    s = malloc(len+1);
    if (s) {
-      memcpy(s, bp, len);
+      for (i = 0; i < len; i++)
+          *(s+i) = tolower(*(bp+i));
       *(s+len) = '\0';
    }
    return (char *)s;
@@ -1130,11 +1137,11 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
             if (op == BOOTREPLY) {
                if (ads->rep.hostname)
                   free(ads->rep.hostname);
-               ads->rep.hostname = __extract_string(bp, lenchar);
+               ads->rep.hostname = __extract_string_lc(bp, lenchar);
             } else if (op == BOOTREQUEST) {
                if (ads->req.requested_hostname)
                   free(ads->req.requested_hostname);
-               ads->req.requested_hostname = __extract_string(bp, lenchar);
+               ads->req.requested_hostname = __extract_string_lc(bp, lenchar);
             }
             bp += len;
          }
@@ -1144,7 +1151,7 @@ rfc1048_parse(const u_char *bp, const u_char *endp,
       /* 15 */
       if (tag == DHO_DOMAIN_NAME && op == BOOTREPLY) {
          if (len > 0) {
-            ads->rep.domainname = __extract_string(bp, (u_char)(len & 0xff));
+            ads->rep.domainname = __extract_string_lc(bp, (u_char)(len & 0xff));
             bp += len;
          }
          continue;
