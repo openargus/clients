@@ -416,6 +416,686 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
    *found = _found;
    return 1;
 }
+# elif !defined(ARGUS_GEOIP) && defined(ARGUS_GEOIP2)
+#  include <maxminddb.h>
+#  include "maxminddb-compat-util.h"
+
+typedef int (*geoip2_fmt_dsr_func)(struct ArgusParserStruct *,
+                                   struct ArgusRecordStruct *,
+                                   MMDB_entry_data_list_s *const, void *, int);
+
+/* arg: pointer to integer with direction information.  Can be
+ * ARGUS_INODE_ADDR, ARGUS_DST_ADDR or ARGUS_SRC_ADDR.
+ */
+static int
+ArgusFormatDSR_GEO(struct ArgusParserStruct *parser,
+                   struct ArgusRecordStruct *argus,
+                   MMDB_entry_data_list_s *const value,
+                   void *user,
+                   int dir)
+{
+   struct ArgusGeoLocationStruct *geo = NULL;
+
+   geo = (struct ArgusGeoLocationStruct *)argus->dsrs[ARGUS_GEO_INDEX];
+   if (geo == NULL) {
+      geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo));
+      geo->hdr.type = ARGUS_GEO_DSR;
+      geo->hdr.argus_dsrvl8.len = (sizeof(*geo) + 3) / 4;
+      argus->dsrs[ARGUS_GEO_INDEX] = &geo->hdr;
+      argus->dsrindex |= (0x1 << ARGUS_GEO_INDEX);
+   }
+
+   geo->hdr.argus_dsrvl8.qual |= ARGUS_DST_GEO;
+   if (!strcmp(user, "latitude")) {
+      if (dir & ARGUS_DST_ADDR)
+         geo->dst.lat = (float)value->entry_data.double_value;
+      else if (dir & ARGUS_SRC_ADDR)
+         geo->src.lat = (float)value->entry_data.double_value;
+      else if (dir == ARGUS_INODE_ADDR)
+         geo->inode.lat = (float)value->entry_data.double_value;
+   } else if (!strcmp(user, "longitude")) {
+      if (dir & ARGUS_DST_ADDR)
+         geo->dst.lon = (float)value->entry_data.double_value;
+      else if (dir & ARGUS_SRC_ADDR)
+         geo->src.lon = (float)value->entry_data.double_value;
+      else if (dir == ARGUS_INODE_ADDR)
+         geo->inode.lon = (float)value->entry_data.double_value;
+   }
+
+   return 1;
+}
+
+/* arg: pointer to integer with direction information.  Can be
+ * ARGUS_INODE_ADDR, ARGUS_DST_ADDR or ARGUS_SRC_ADDR.
+ */
+static int
+ArgusFormatDSR_ASN(struct ArgusParserStruct *parser,
+                   struct ArgusRecordStruct *argus,
+                   MMDB_entry_data_list_s *const value,
+                   void *user,
+                   int dir)
+{
+   uint32_t vasn = value->entry_data.uint32;
+   struct ArgusAsnStruct *asn = (struct ArgusAsnStruct *) argus->dsrs[ARGUS_ASN_INDEX];
+   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+   struct ArgusIcmpStruct *icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+
+   if (value->entry_data.type != MMDB_DATA_TYPE_UINT32) {
+      ArgusLog(LOG_WARNING, "%s: unexpected libmaxminddb type %d\n",
+               __func__, value->entry_data.type);
+      return -1;
+   }
+
+   if (!labeler->RaLabelGeoIPAsn)
+      return 0;
+
+   if (flow == NULL)
+      return 0;
+
+   if (asn == NULL) {
+      if ((asn = ArgusCalloc(1, sizeof(*asn))) == NULL)
+         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s", strerror(errno));
+
+      asn->hdr.type              = ARGUS_ASN_DSR;
+      asn->hdr.subtype           = ARGUS_ASN_ORIGIN;
+      asn->hdr.argus_dsrvl8.qual = 0;
+      asn->hdr.argus_dsrvl8.len  = 3;
+
+      argus->dsrs[ARGUS_ASN_INDEX] = (struct ArgusDSRHeader *) asn;
+      argus->dsrindex |= (0x01 << ARGUS_ASN_INDEX);
+   }
+
+   switch (flow->hdr.subtype & 0x3F) {
+      case ARGUS_FLOW_CLASSIC5TUPLE:
+      case ARGUS_FLOW_LAYER_3_MATRIX:
+         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+            case ARGUS_TYPE_IPV4:
+            case ARGUS_TYPE_IPV6:
+
+               if (dir & ARGUS_SRC_ADDR)
+                  asn->src_as = asn->src_as ? asn->src_as : vasn;
+               else if (dir & ARGUS_DST_ADDR)
+                  asn->dst_as = asn->dst_as ? asn->dst_as : vasn;
+               else if (dir == ARGUS_INODE_ADDR && icmp) {
+                  if (icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) {
+                     asn->inode_as = vasn;
+                     asn->hdr.argus_dsrvl8.len  = 4;
+                  }
+               }
+               break;
+            }
+         break;
+   }
+   return 1;
+}
+
+static int _geoip2_to_argus_names_sorted = 0;
+typedef struct _geoip2_to_argus_names {
+   char *geoip2_path;
+   char *argus_name;
+   int item;
+   geoip2_fmt_dsr_func fmt_dsr_func;
+} geoip2_to_argus_names_t;
+
+static geoip2_to_argus_names_t geoip2_to_argus_names[] = {
+   { "country iso_code", "cco", ARGUS_GEOIP_COUNTRY_CODE, NULL },
+   { "country names en", "cname", ARGUS_GEOIP_COUNTRY_NAME, NULL },
+   { "subdivisions iso_code", "region", ARGUS_GEOIP_REGION, NULL },
+   { "city names en", "city", ARGUS_GEOIP_CITY_NAME, NULL },
+   { "postal code", "pcode", ARGUS_GEOIP_POSTAL_CODE, NULL },
+   { "location latitude", "lat", ARGUS_GEOIP_LATITUDE, ArgusFormatDSR_GEO },
+   { "location longitude", "lon", ARGUS_GEOIP_LONGITUDE, ArgusFormatDSR_GEO },
+   { "location metro_code", "metro", ARGUS_GEOIP_METRO_CODE, NULL },
+   { "continent code", "cont", ARGUS_GEOIP_CONTINENT_CODE, NULL },
+   { "autonomous_system_number", NULL, ARGUS_GEOIP_ASN, ArgusFormatDSR_ASN },
+};
+static const size_t geoip2_to_argus_names_len =
+   sizeof(geoip2_to_argus_names)/sizeof(geoip2_to_argus_names[0]);
+
+/* used to sort and search the translation table by geoip2 path string */
+int geoip2_path_compare(const void *a, const void *b) {
+   const geoip2_to_argus_names_t *aa = a;
+   const geoip2_to_argus_names_t *bb = b;
+
+   return strcmp(aa->geoip2_path, bb->geoip2_path);
+}
+
+static const size_t ARGUS_GEOIP2_MAX_PATH = 128;
+
+/* look through the configured city label types for @item and return 1
+ * if found
+ */
+static int
+is_item_enabled(struct ArgusParserStruct *parser, int item)
+{
+    int ena = 0;
+    int ind;
+    static const int maxlabels =
+       sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels)/
+       sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels[0]);
+    for (ind = 0; ind < maxlabels && !ena; ind++) {
+       int i = parser->ArgusLabeler->RaLabelGeoIPCityLabels[ind];
+
+       if (geoip2_to_argus_names[i].item == item)
+          ena = 1;
+    }
+    return ena;
+}
+
+static MMDB_entry_data_list_s *
+dump_entry_data_list(
+    struct ArgusParserStruct *parser,
+    struct ArgusRecordStruct *argus,
+    MMDB_entry_data_list_s *entry_data_list,
+    const char * const path, /* where we are in the data structure, e.g.
+                              * "country names"
+                              */
+    char *str,               /* output string */
+    size_t *str_offset,      /* string end pointer (IN/OUT) */
+    size_t *str_remain,      /* remaining bytes allocated for string (IN/OUT) */
+    int dir,
+    int *status)
+{
+    geoip2_to_argus_names_t gkey = {NULL, };
+    geoip2_to_argus_names_t *xlate;
+    char dirprefix = ' ';
+    int skip = 1;
+
+    switch (entry_data_list->entry_data.type) {
+    case MMDB_DATA_TYPE_MAP:
+        {
+            uint32_t size = entry_data_list->entry_data.data_size;
+            char *nextpath;
+
+            for (entry_data_list = entry_data_list->next;
+                 size && entry_data_list; size--) {
+
+                if (MMDB_DATA_TYPE_UTF8_STRING !=
+                    entry_data_list->entry_data.type) {
+                    *status = MMDB_INVALID_DATA_ERROR;
+                    return NULL;
+                }
+                char *key =
+                    mmdb_strndup(
+                        (char *)entry_data_list->entry_data.utf8_string,
+                        entry_data_list->entry_data.data_size);
+                if (NULL == key) {
+                    *status = MMDB_OUT_OF_MEMORY_ERROR;
+                    return NULL;
+                }
+
+                nextpath = ArgusMalloc(ARGUS_GEOIP2_MAX_PATH);
+                if (nextpath == NULL)
+                    ArgusLog(LOG_ERR, "%s: unable to allocate path buffer",
+                             __func__);
+
+                snprintf(nextpath, ARGUS_GEOIP2_MAX_PATH, "%s%s%s", path,
+                         *path == 0 ? "" : " ", key);
+                free(key);
+
+                entry_data_list = entry_data_list->next;
+                entry_data_list =
+                    dump_entry_data_list(parser, argus, entry_data_list, nextpath, str,
+                                         str_offset, str_remain, dir, status);
+
+                ArgusFree(nextpath);
+
+                if (MMDB_SUCCESS != *status) {
+                    return NULL;
+                }
+            }
+        }
+        goto out;
+        break;
+    case MMDB_DATA_TYPE_ARRAY:
+        {
+            uint32_t size = entry_data_list->entry_data.data_size;
+
+            for (entry_data_list = entry_data_list->next;
+                 size && entry_data_list; size--) {
+                entry_data_list =
+                    dump_entry_data_list(parser, argus, entry_data_list, path, str,
+                                         str_offset, str_remain, dir, status);
+                if (MMDB_SUCCESS != *status) {
+                    return NULL;
+                }
+            }
+        }
+        goto out;
+        break;
+    }
+
+
+    /* Check if Argus knows anything about the current datum */
+    gkey.geoip2_path = strdup(path);
+    if (gkey.geoip2_path == NULL)
+        ArgusLog(LOG_ERR, "%s: unable to duplicate path string");
+
+#ifdef ARGUSDEBUG
+    ArgusDebug(4, "looking for \"%s\"\n", path);
+#endif
+
+    xlate = bsearch(&gkey, geoip2_to_argus_names, geoip2_to_argus_names_len,
+                    sizeof(geoip2_to_argus_names[0]), geoip2_path_compare);
+
+    if (xlate == NULL) {
+        free(gkey.geoip2_path);
+        gkey.geoip2_path = NULL;
+
+        /* skip to the next key/map/list */
+        if (entry_data_list)
+           entry_data_list = entry_data_list->next;
+        goto out;
+    }
+
+    if (dir == ARGUS_SRC_ADDR)
+       dirprefix = 's';
+    else if (dir == ARGUS_DST_ADDR)
+       dirprefix = 'd';
+    else if (dir == ARGUS_INODE_ADDR)
+       dirprefix = 'i';
+
+    if (xlate->fmt_dsr_func) {
+        int res;
+        char *key = strrchr(gkey.geoip2_path, ' ');
+
+        if (key == NULL)
+           key = gkey.geoip2_path;
+        else
+           key++;
+
+        res = xlate->fmt_dsr_func(parser, argus, entry_data_list, key, dir);
+        if (res < 0)
+            ArgusLog(LOG_WARNING,
+                     "%s: path=\"%s\": DSR formatting function failed\n",
+                     __func__, path);
+    }
+    free(gkey.geoip2_path);
+    gkey.geoip2_path = NULL;
+
+    if (is_item_enabled(parser, xlate->item))
+       skip = 0;
+
+    /* if no label key or field not requested, continue on to the next
+     * list item
+     */
+    if (skip || xlate->argus_name == NULL) {
+        if (entry_data_list)
+           entry_data_list = entry_data_list->next;
+        goto out;
+    }
+
+    switch (entry_data_list->entry_data.type) {
+    case MMDB_DATA_TYPE_UTF8_STRING:
+        {
+            char *string =
+                mmdb_strndup((char *)entry_data_list->entry_data.utf8_string,
+                             entry_data_list->entry_data.data_size);
+            if (NULL == string) {
+                *status = MMDB_OUT_OF_MEMORY_ERROR;
+                return NULL;
+            }
+            (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                                  dirprefix, xlate->argus_name, string);
+            free(string);
+            entry_data_list = entry_data_list->next;
+        }
+        break;
+    case MMDB_DATA_TYPE_BYTES:
+        {
+#if 0
+            char *hex_string =
+                bytes_to_hex((uint8_t *)entry_data_list->entry_data.bytes,
+                             entry_data_list->entry_data.data_size);
+            if (NULL == hex_string) {
+                *status = MMDB_OUT_OF_MEMORY_ERROR;
+                return NULL;
+            }
+            (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                                  dirprefix, key.argus_name, hex_string);
+            free(hex_string);
+#endif
+            entry_data_list = entry_data_list->next;
+        }
+        break;
+    case MMDB_DATA_TYPE_DOUBLE:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.double_value);
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_FLOAT:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.float_value);
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_UINT16:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.uint16);
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_UINT32:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.uint32);
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_BOOLEAN:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.boolean ? "true" : "false");
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_UINT64:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%" PRIu64,
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.uint64);
+        entry_data_list = entry_data_list->next;
+        break;
+    case MMDB_DATA_TYPE_UINT128: {
+#if MMDB_UINT128_IS_BYTE_ARRAY
+# if 0
+        char *hex_string =
+            bytes_to_hex((uint8_t *)entry_data_list->entry_data.uint128, 16);
+        if (NULL == hex_string) {
+            *status = MMDB_OUT_OF_MEMORY_ERROR;
+            return NULL;
+        }
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                              dirprefix, xlate->argus_name, hex_string);
+        free(hex_string);
+# endif
+#else
+        uint64_t high = entry_data_list->entry_data.uint128 >> 64;
+        uint64_t low = (uint64_t)entry_data_list->entry_data.uint128;
+        (void)snprintf_append(str, str_offset, str_remain,
+                              "%c%s=0x%016" PRIX64 "%016" PRIX64,
+                              dirprefix, xlate->argus_name, high, low);
+#endif
+        entry_data_list = entry_data_list->next;
+        break;
+    }
+    case MMDB_DATA_TYPE_INT32:
+        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%d",
+                              dirprefix, xlate->argus_name,
+                              entry_data_list->entry_data.int32);
+        entry_data_list = entry_data_list->next;
+        break;
+    default:
+        *status = MMDB_INVALID_DATA_ERROR;
+        return NULL;
+    }
+    (void)snprintf_append(str, str_offset, str_remain, ",");
+
+out:
+    *status = MMDB_SUCCESS;
+    return entry_data_list;
+}
+
+static MMDB_entry_data_list_s *
+dump_result_entry_data_list(
+    struct ArgusParserStruct *parser,
+    struct ArgusRecordStruct *argus,
+    MMDB_lookup_result_s *result,
+    const char * const path, /* where we are in the data structure, e.g.
+                              * "country names"
+                              */
+    char *str,               /* output string */
+    size_t *str_offset,      /* string end pointer (IN/OUT) */
+    size_t *str_remain,      /* remaining bytes allocated for string (IN/OUT) */
+    int dir,
+    int *status)
+{
+    MMDB_entry_data_list_s *entry_data_list = NULL;
+    MMDB_entry_data_list_s *rv = NULL;
+
+   *status = MMDB_get_entry_data_list(&result->entry,
+                                     &entry_data_list);
+   if (*status != MMDB_SUCCESS) {
+       ArgusLog(LOG_WARNING, "%s: MMDB_get_entry_data_list(): %s\n",
+                __func__, MMDB_strerror(*status));
+       if (entry_data_list)
+          MMDB_free_entry_data_list(entry_data_list);
+       return NULL;
+   }
+
+   if (!entry_data_list) {
+       ArgusLog(LOG_WARNING, "%s: entry_data_list is NULL\n",
+                __func__);
+       return NULL;
+   }
+
+   rv = dump_entry_data_list(parser, argus, entry_data_list, path,
+                        str, str_offset, str_remain,
+                        dir, status);
+
+#ifdef ARGUSDEBUG
+   if (*status != MMDB_SUCCESS)
+      ArgusDebug(1, "dump_entry_data_list failed, status %d\n", *status);
+#endif
+
+   MMDB_free_entry_data_list(entry_data_list);
+   return rv;
+}
+
+static int
+lookup_city(
+    struct ArgusParserStruct *parser,
+    struct ArgusRecordStruct *argus,
+    const char * const path, /* where we are in the data structure, e.g.
+                              * "country names"
+                              */
+    struct sockaddr *sa,
+    char *str,               /* output string */
+    size_t *str_offset,      /* string end pointer (IN/OUT) */
+    size_t *str_remain,      /* remaining bytes allocated for string (IN/OUT) */
+    int dir)
+{
+   int status;
+   int mmdb_error;
+   MMDB_lookup_result_s result;
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+
+   result = MMDB_lookup_sockaddr(&labeler->RaGeoIPCityObject, sa, &mmdb_error);
+   if (result.found_entry) {
+      dump_result_entry_data_list(parser, argus, &result, path, str,
+                                  str_offset, str_remain, dir, &status);
+      return 1;
+   }
+   return 0;
+}
+
+static int
+lookup_asn(
+    struct ArgusParserStruct *parser,
+    struct ArgusRecordStruct *argus,
+    const char * const path, /* where we are in the data structure, e.g.
+                              * "country names"
+                              */
+    struct sockaddr *sa,
+    char *str,               /* output string */
+    size_t *str_offset,      /* string end pointer (IN/OUT) */
+    size_t *str_remain,      /* remaining bytes allocated for string (IN/OUT) */
+    int dir)
+{
+   int status;
+   int mmdb_error;
+   MMDB_lookup_result_s result;
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+
+   result = MMDB_lookup_sockaddr(&labeler->RaGeoIPAsnObject, sa, &mmdb_error);
+   if (result.found_entry) {
+      dump_result_entry_data_list(parser, argus, &result, path, str,
+                                  str_offset, str_remain, dir, &status);
+      return 1;
+   }
+   return 0;
+}
+
+int
+ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
+                       struct ArgusRecordStruct *argus,
+                       char *label, size_t len,
+                       int *found)
+{
+   size_t str_offset = 0;
+   size_t str_remain = len;
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+
+   if (flow == NULL)
+      return 0;
+
+   switch (flow->hdr.subtype & 0x3F) {
+      case ARGUS_FLOW_CLASSIC5TUPLE:
+      case ARGUS_FLOW_LAYER_3_MATRIX:
+         break;
+      default:
+         return 0;
+   }
+
+   /* This array must be sorted so we can use bsearch() */
+   if (!_geoip2_to_argus_names_sorted) {
+      qsort(geoip2_to_argus_names, geoip2_to_argus_names_len,
+            sizeof(geoip2_to_argus_names[0]), geoip2_path_compare);
+      _geoip2_to_argus_names_sorted = 1;
+   }
+
+   /* iterate through the structure returned by libmaxminddb and add the
+    * values we find to the label string.  This is based on the function
+    * dump_entry_data_list() in the libmaxminddb source.
+    */
+
+   *label = 0;
+
+   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+      case ARGUS_TYPE_IPV4: {
+         struct sockaddr_in addr;
+
+         addr.sin_family = AF_INET;
+         addr.sin_port = 0;
+
+         if (labeler->RaLabelGeoIPCity & ARGUS_SRC_ADDR) {
+            addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_src);
+            lookup_city(parser, argus, "", (struct sockaddr *)&addr,
+                        label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
+
+         }
+         if (labeler->RaLabelGeoIPAsn) {
+            addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_src);
+            lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
+                       label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
+         }
+
+         if (labeler->RaLabelGeoIPCity & ARGUS_DST_ADDR) {
+            addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_dst);
+            lookup_city(parser, argus, "", (struct sockaddr *)&addr,
+                        label, &str_offset, &str_remain, ARGUS_DST_ADDR);
+
+         }
+         if (labeler->RaLabelGeoIPAsn) {
+            addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_dst);
+            lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
+                       label, &str_offset, &str_remain, ARGUS_DST_ADDR);
+         }
+         if (labeler->RaLabelGeoIPCity & ARGUS_INODE_ADDR) {
+            struct ArgusIcmpStruct *icmp;
+
+            icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
+            if (icmp != NULL &&
+                icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) {
+               addr.sin_addr.s_addr = htonl(icmp->osrcaddr);
+               lookup_city(parser, argus, "", (struct sockaddr *)&addr,
+                           label, &str_offset, &str_remain, ARGUS_INODE_ADDR);
+            }
+         }
+         if (labeler->RaLabelGeoIPAsn) {
+            struct ArgusIcmpStruct *icmp;
+
+            icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
+            if (icmp != NULL &&
+                icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) {
+               addr.sin_addr.s_addr = htonl(icmp->osrcaddr);
+               lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
+                          label, &str_offset, &str_remain, ARGUS_INODE_ADDR);
+            }
+         }
+         break;
+      }
+
+      case ARGUS_TYPE_IPV6: {
+         struct sockaddr_in6 addr;
+
+         addr.sin6_family = AF_INET6;
+         addr.sin6_port = 0;
+
+         if (labeler->RaLabelGeoIPCity & ARGUS_SRC_ADDR) {
+            memcpy(addr.sin6_addr.s6_addr, flow->ipv6_flow.ip_src,
+                   sizeof(addr.sin6_addr.s6_addr));
+            lookup_city(parser, argus, "", (struct sockaddr *)&addr,
+                        label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
+         }
+         if (labeler->RaLabelGeoIPAsn) {
+            memcpy(addr.sin6_addr.s6_addr, flow->ipv6_flow.ip_src,
+                   sizeof(addr.sin6_addr.s6_addr));
+            lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
+                       label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
+         }
+         if (labeler->RaLabelGeoIPCity & ARGUS_DST_ADDR) {
+            memcpy(addr.sin6_addr.s6_addr, flow->ipv6_flow.ip_dst,
+                   sizeof(addr.sin6_addr.s6_addr));
+            lookup_city(parser, argus, "", (struct sockaddr *)&addr,
+                        label, &str_offset, &str_remain, ARGUS_DST_ADDR);
+         }
+         if (labeler->RaLabelGeoIPAsn) {
+            memcpy(addr.sin6_addr.s6_addr, flow->ipv6_flow.ip_dst,
+                   sizeof(addr.sin6_addr.s6_addr));
+            lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
+                       label, &str_offset, &str_remain, ARGUS_DST_ADDR);
+         }
+         break;
+      }
+   }
+
+   if (*label != 0) {
+      /* knock off the trailing comma */
+      if (str_offset > 0) {
+         if (label[str_offset-1] == ',')
+            label[str_offset-1] = 0;
+      }
+
+      *found = 1;
+   }
+   return 1;
+}
+
+/* return an index into geoip2_to_argus_names[] that holds the entry
+ * with name (const char * const)name
+ */
+int
+ArgusGeoIP2FindObject(const char * const name)
+{
+   size_t i;
+
+   if (!_geoip2_to_argus_names_sorted) {
+      qsort(geoip2_to_argus_names, geoip2_to_argus_names_len,
+            sizeof(geoip2_to_argus_names[0]), geoip2_path_compare);
+      _geoip2_to_argus_names_sorted = 1;
+   }
+
+   for (i = 0; i < geoip2_to_argus_names_len; i++) {
+      if (!geoip2_to_argus_names[i].argus_name)
+         continue;
+      if (!strcmp(name, geoip2_to_argus_names[i].argus_name))
+         return i;
+   }
+   return -1;
+}
+
+# endif
 
 #elif !defined(ARGUS_GEOIP) && defined(ARGUS_GEOIP2)
 #include <maxminddb.h>
