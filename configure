@@ -647,6 +647,8 @@ V_CCOPT
 INCLS
 DIRS
 PACKAGE_RELEASE
+LIBMAXMINDDB_LIBS
+LIBMAXMINDDB_CFLAGS
 HAVE_SWIG
 UUID_LIBS
 LIBCURL
@@ -767,6 +769,7 @@ with_threads
 with_GeoIP
 with_systemdsystemunitdir
 with_libcurl
+with_libmaxminddb
 '
       ac_precious_vars='build_alias
 host_alias
@@ -787,7 +790,9 @@ YFLAGS
 CPP
 PKG_CONFIG
 PKG_CONFIG_PATH
-PKG_CONFIG_LIBDIR'
+PKG_CONFIG_LIBDIR
+LIBMAXMINDDB_CFLAGS
+LIBMAXMINDDB_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1423,6 +1428,7 @@ Optional Packages:
                           Directory for systemd service files
   --with-libcurl=PREFIX   look for the curl library in PREFIX/lib and headers
                           in PREFIX/include
+  --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
 
 Some influential environment variables:
   PERL_EXT_PREFIX
@@ -1456,6 +1462,10 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
+  LIBMAXMINDDB_CFLAGS
+              C compiler flags for LIBMAXMINDDB, overriding pkg-config
+  LIBMAXMINDDB_LIBS
+              linker flags for LIBMAXMINDDB, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -10742,6 +10752,117 @@ fi
 if test "$HAVE_SWIG" = "1" ; then
    DIRS="$DIRS ./perllib"
 fi
+
+
+# Check whether --with-libmaxminddb was given.
+if test "${with_libmaxminddb+set}" = set; then :
+  withval=$with_libmaxminddb; with_libmaxminddb="$withval"
+else
+  with_libmaxminddb="no"
+fi
+
+
+   if test x$with_geoip = "xyes"; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: cannot compile with both libmaxminddb and GeoIP" >&5
+$as_echo "cannot compile with both libmaxminddb and GeoIP" >&6; }
+   else
+      if test "x$with_libmaxminddb" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBMAXMINDDB" >&5
+$as_echo_n "checking for LIBMAXMINDDB... " >&6; }
+
+if test -n "$LIBMAXMINDDB_CFLAGS"; then
+    pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBMAXMINDDB_CFLAGS=`$PKG_CONFIG --cflags "libmaxminddb >= 1.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBMAXMINDDB_LIBS"; then
+    pkg_cv_LIBMAXMINDDB_LIBS="$LIBMAXMINDDB_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBMAXMINDDB_LIBS=`$PKG_CONFIG --libs "libmaxminddb >= 1.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
+        else
+	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBMAXMINDDB_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (libmaxminddb >= 1.2.0) were not met:
+
+$LIBMAXMINDDB_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
+and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
+and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	LIBMAXMINDDB_CFLAGS=$pkg_cv_LIBMAXMINDDB_CFLAGS
+	LIBMAXMINDDB_LIBS=$pkg_cv_LIBMAXMINDDB_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define ARGUS_GEOIP2 /**/" >>confdefs.h
+
+fi
+      fi
+   fi
+
 
 
 

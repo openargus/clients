@@ -18,6 +18,9 @@
 /* Description */
 #undef ARGUS_GEOIP
 
+/* Description */
+#undef ARGUS_GEOIP2
+
 /* Using System history routines */
 #undef ARGUS_HISTORY
 
