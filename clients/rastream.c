@@ -731,7 +731,11 @@ ArgusClientTimeout ()
 #ifdef ARGUSDEBUG
                ArgusDebug (1, "ArgusRunScript calling %s", script->cmd);
 #endif
-               exit(execv(script->script, script->args));
+               execv(script->script, script->args);
+               /* If execv() returned, it failed.  Make sure we
+                * exit __without__ flushing open (FILE *)s.
+                */
+               kill(getpid(), SIGKILL);
             }
          }
       }
