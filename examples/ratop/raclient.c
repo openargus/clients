@@ -836,6 +836,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      parser->RaMonMode++;
                      correct = 0;
                   } else
+                  if (!(strncasecmp (mode->mode, "baseline:", 9))) {
+                     if (strlen(mode->mode) > 9) {
+                        char *ptr = &mode->mode[9];
+                        parser->ArgusBaseLineFile = strdup(ptr);
+                     }
+                  } else
                   if (!(strncasecmp (mode->mode, "control:", 8))) {
                      char *ptr = &mode->mode[8];
                      double value = 0.0;
@@ -925,6 +931,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             bzero(parser->RaSortOptionStrings, sizeof(parser->RaSortOptionStrings));
             parser->RaSortOptionIndex = 0;
             parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "stime";
+         }
+
+         if (parser->ArgusBaseLineFile) {
+#ifdef ARGUSDEBUG
+            ArgusDebug (1, "ArgusClientInit baseline file %s\n", parser->ArgusBaseLineFile);
+#endif
          }
 
          if (parser->ArgusRemoteHosts)
