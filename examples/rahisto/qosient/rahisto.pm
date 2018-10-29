@@ -1145,7 +1145,7 @@ my $_aggregate_histo_values = sub {
     my $num_times    = scalar( @{$times} );
 
     my $sth = $find_sql_statement->( $tablename, $num_prefixes, $num_times );
-my $sth;
+
     my ( $query, $params ) = $_format_query_histo_values->( QUERY_AGGREGATE, @_ );
     if ( !$sth ) {
         $sth = $dbh->prepare($query);
