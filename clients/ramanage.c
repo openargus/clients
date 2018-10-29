@@ -570,6 +570,7 @@ __upload_move_to_staging(const char * const filename,
    char *bn;
    char *newname;
    char *filename_cpy;
+   char *dirname_cpy;
    int slen;
    int ret = 0;
    size_t path_archive_len;
@@ -586,6 +587,9 @@ __upload_move_to_staging(const char * const filename,
       ArgusLog(LOG_ERR, "unable to copy filename\n");
 
    bn = filename_cpy + path_archive_len;
+   /* skip over any leading path separators */
+   while (*bn == '/')
+      bn++;
 
    newname = ArgusMalloc(PATH_MAX);
    if (newname == NULL)
@@ -599,7 +603,13 @@ __upload_move_to_staging(const char * const filename,
       goto out;
    }
 
-   ArgusMkdirPath(dirname(newname));
+   dirname_cpy = strdup(newname);
+   if (dirname_cpy == NULL) {
+      ArgusLog(LOG_ERR, "unable to copy directory name\n");
+   }
+   /* ArgusMkdirPath() removes the filename from the path */
+   ArgusMkdirPath(dirname_cpy);
+   free(dirname_cpy);
 
    ret = rename(filename, newname);
    if (ret < 0) {
