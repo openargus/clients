@@ -365,6 +365,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
             RaProcessThisRecord(parser, argus);
             ArgusReverseRecord(tns);
+            tns->status |= ARGUS_RECORD_MODIFIED;
 
             if ((flow = (void *)tns->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
                flow->hdr.subtype &= ~ARGUS_REVERSE;
@@ -432,7 +433,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank))) {
                            if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
 
-                              if (argus->status & RA_MODIFIED) {
+                              if (argus->status & ARGUS_RECORD_MODIFIED) {
                                  struct ArgusRecord *ns = NULL;
 
                                  if ((ns = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) == NULL)

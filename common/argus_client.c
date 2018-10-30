@@ -9596,6 +9596,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
             }
          }
       }
+      ns1->status |= ARGUS_RECORD_MODIFIED;
    }
 
    return;
@@ -9786,6 +9787,7 @@ ArgusSubtractRecord (struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns
                break;
          }
       }
+      ns1->status |= ARGUS_RECORD_MODIFIED;
    }
 
 #ifdef ARGUSDEBUG
@@ -10206,6 +10208,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
 
                      ar2->argus_mar.now        = eSecs;
                      ar1->argus_mar.startime   = eSecs;
+                     retn->status |= ARGUS_RECORD_MODIFIED;
 
                   } else {
                      ns->status |= ARGUS_RECORD_PROCESSED;
@@ -10217,13 +10220,11 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                   }
                }
             }
-
             break;
          }
 
          case ARGUS_EVENT: {
             ns->status |= ARGUS_RECORD_PROCESSED;
-
             retn = ArgusCopyRecordStruct(ns);
             break;
          }
@@ -10634,11 +10635,13 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                                           }
                                        }
                                     }
+                                    retn->status |= ARGUS_RECORD_MODIFIED;
                                  }
 
                               } else {
                                  metric->src.pkts = 0;
                                  metric->dst.pkts = 0;
+                                 retn->status |= ARGUS_RECORD_MODIFIED;
                               }
                            }
 
@@ -10654,6 +10657,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                               nadp->turns++;
                               metric->src.pkts = 0;
                               metric->dst.pkts = 0;
+                              retn->status |= ARGUS_RECORD_MODIFIED;
                            }
                         }
 
@@ -10668,6 +10672,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                            rtime->hdr.argus_dsrvl8.len = (sizeof(*rtime) + 3)/4; 
 
                            rtime->hdr.subtype |= (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
+                           retn->status |= ARGUS_RECORD_MODIFIED;
                         }
                      }
                      if (nadp->sploss > 0)
