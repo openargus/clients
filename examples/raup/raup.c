@@ -66,11 +66,14 @@
 #include <argus_filter.h>
 #include <argus_main.h>
 #include <argus_cluster.h>
+#include "rasplit.h"
 
-#include <mysql.h>
+#ifdef ARGUS_MYSQL
+# include <mysql.h>
+# include "rasql_common.h"
+#endif
 
 #include <argus_threads.h>
-#include "rasql_common.h"
 #include <time.h>
 
 
@@ -117,8 +120,9 @@ char *RaHost = NULL, *RaUser = NULL, *RaPass = NULL;
 int RaPort = 0;
 
 struct ArgusInput *ArgusInput = NULL;
-void RaMySQLInit (int);
 
+#ifdef ARGUS_MYSQL
+void RaMySQLInit (int);
 MYSQL_ROW row;
 MYSQL *RaMySQL = NULL;
 
@@ -142,6 +146,8 @@ size_t ArgusTableColumnKeys;
 int MySQLVersionMajor = 0;
 int MySQLVersionMinor = 0;
 int MySQLVersionSub = 0;
+
+#endif /* ARGUS_MYSQL */
 
 extern int ArgusSOptionRecord;
 int ArgusDeleteTable = 0;
@@ -1256,9 +1262,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if (RaLastDatabaseTimeInterval == 0)
          RaLastDatabaseTimeInterval = RaBinProcess->nadp.start.tv_sec;
-
+#ifdef ARGUS_MYSQL
       if (ArgusParser->writeDbstr != NULL)
          RaMySQLInit(1);
+#endif /* ARGUS_MYSQL */
 
       parser->RaInitialized++;
 
@@ -1626,6 +1633,7 @@ RaPrintAup (struct ArgusParserStruct *parser, struct RaAupStruct *aup)
                   if ((ruleSet = (struct RaAupRuleSetStruct *) robj) != NULL) {
                      if (ruleSet->status & RAUP_POLICY_DIRTY) {
                         if (ArgusParser->writeDbstr != NULL) {
+#ifdef ARGUS_MYSQL
                            sprintf (sbuf, "INSERT INTO %s (`stime`,`ltime`,`status`, `policy`, `name`, `version`, `match`,`conform`,`nonconform`,`client`,`server`,`verify`,`replies`)", RaTable);
                            slen = strlen(sbuf);
                            sprintf (&sbuf[slen], " VALUES (%ld, %ld, %d, \"%s\", \"%s\", %d, %d, %d, %d, %d, %d, %d, %d) ", 
@@ -1642,8 +1650,9 @@ RaPrintAup (struct ArgusParserStruct *parser, struct RaAupStruct *aup)
                            ArgusDebug (3, "RaPrintAup (%p, %p) sql: %s\n", parser, aup, sbuf);
 #endif
                            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-                              ArgusLog(LOG_ERR, "MySQLInit: %s, mysql_real_query error %s", sbuf, mysql_error(RaMySQL));
-
+                              ArgusLog(LOG_ERR, "%s: %s, mysql_real_query error %s",
+                                       __func__, sbuf, mysql_error(RaMySQL));
+#endif /* ARGUS_MYSQL */
                         } else {
                            if (ArgusParser->ArgusPrintJson) {
                               sprintf (sbuf, "{\"policy\": \"%s_%s\", \"stime\" : %ld, \"ltime\" : %ld, \"match\" : %d, \"conform\" : %d, \"nonconform\" : %d, \"client\" : %d, \"server\" : %d, \"verify\" : %d, \"replies\" : %d}\n", 
@@ -1891,7 +1900,7 @@ RaProcessAddressGroup (struct ArgusParserStruct *parser, struct ArgusLabelerStru
 
 
 
-
+#ifdef ARGUS_MYSQL
 void
 RaMySQLInit (int ncons)
 {
@@ -2160,6 +2169,7 @@ RaMySQLInit (int ncons)
    ArgusDebug (1, "RaMySQLInit () RaSource %s RaArchive %s RaFormat %s", RaSource, RaArchive, RaFormat);
 #endif
 }
+#endif /* ARGUS_MYSQL */
 
 
 /*
@@ -2291,6 +2301,7 @@ ArgusCreateSQLSaveTableName (struct ArgusParserStruct *parser, struct ArgusRecor
 
 extern struct dbtblmem dbtables[];
 
+#ifdef ARGUS_MYSQL
 int
 ArgusCreateSQLSaveTable(char *db, char *table)
 {
@@ -2386,6 +2397,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
 #endif
    return (retn);
 }
+#endif /* ARGUS_MYSQL */
 
 int
 RaProcessSplitOptions(struct ArgusParserStruct *parser, char *str, int len, struct ArgusRecordStruct *ns)
