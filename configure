@@ -651,6 +651,7 @@ LIBMAXMINDDB_LIBS
 LIBMAXMINDDB_CFLAGS
 HAVE_SWIG
 UUID_LIBS
+ARGUS_CURLEXE
 LIBCURL
 LIBCURL_CPPFLAGS
 _libcurl_config
@@ -769,6 +770,7 @@ with_threads
 with_GeoIP
 with_systemdsystemunitdir
 with_libcurl
+with_curlexe
 with_libmaxminddb
 '
       ac_precious_vars='build_alias
@@ -1428,6 +1430,7 @@ Optional Packages:
                           Directory for systemd service files
   --with-libcurl=PREFIX   look for the curl library in PREFIX/lib and headers
                           in PREFIX/include
+  --with-curlexe=PATH     location of the curl binary to be run from ramanage
   --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
 
 Some influential environment variables:
@@ -10663,6 +10666,29 @@ _ACEOF
   fi
 
   unset _libcurl_with
+
+
+# Check whether --with-curlexe was given.
+if test "${with_curlexe+set}" = set; then :
+  withval=$with_curlexe;
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl binary" >&5
+$as_echo_n "checking for curl binary... " >&6; }
+      if ! test -f "$withval" ; then
+         as_fn_error $? "cannot find file $withval" "$LINENO" 5
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      with_flexlm="$withval"
+
+cat >>confdefs.h <<_ACEOF
+#define ARGUS_CURLEXE "$withval"
+_ACEOF
+
+      ARGUS_CURLEXE=$withval
+
+
+
+fi
 
 
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether libuuid is found" >&5

@@ -424,6 +424,13 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    curl_easy_setopt(*hnd, CURLOPT_DEBUGFUNCTION, __trace);
 #else	/* HAVE_LIBCURL */
    ramanage_str_t *rstr;
+   const char * const curlexe =
+# ifdef ARGUS_CURLEXE
+      ARGUS_CURLEXE
+# else
+      "curl"
+# endif
+   ;
 
    *hnd = rstr = ArgusMalloc(sizeof(*rstr));
    if (rstr == NULL)
@@ -442,7 +449,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
 
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
-                          "curl --silent -k -u %s %s", userpwd,
+                          "%s --silent -k -u %s %s", curlexe, userpwd,
                           auth ? "--negotiate" : "");
    if (slen >= PATH_MAX) {
       ArgusFree(userpwd);

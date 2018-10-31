@@ -6,6 +6,9 @@
 /* Using Argus memory */
 #undef ARGUSMEMDEBUG
 
+/* Path to curl executable */
+#undef ARGUS_CURLEXE
+
 /* Using curses */
 #undef ARGUS_CURSES
 

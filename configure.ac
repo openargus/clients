@@ -444,6 +444,7 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
 
 LIBCURL_CHECK_CONFIG
+AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
 AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
 if test "$HAVE_SWIG" = "1" ; then

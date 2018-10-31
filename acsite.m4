@@ -1951,3 +1951,30 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
       fi
    fi
 ])
+
+dnl
+dnl Option to provide location of a curl.exe executable to package
+dnl with the windows software.  @ARGUS_CURLEXE@ will be replaced
+dnl with the value provided to --with-curlexe.  Additionally, the
+dnl C preprocessor macro ARGUS_CURLEXE will be defined as a string
+dnl containing the path.
+dnl
+dnl usage:
+dnl
+dnl   AC_QOSIENT_CURLEXE
+dnl
+
+AC_DEFUN([AC_QOSIENT_CURLEXE],
+  [AC_ARG_WITH(curlexe,
+    [AC_HELP_STRING([--with-curlexe=PATH],[location of the curl binary to be run from ramanage])],
+    [
+      AC_MSG_CHECKING([for curl binary])
+      if ! test -f "$withval" ; then
+         AC_MSG_ERROR([cannot find file $withval])
+      fi
+      AC_MSG_RESULT([found])
+      with_flexlm="$withval"
+      AC_DEFINE_UNQUOTED([ARGUS_CURLEXE], ["$withval"], [Path to curl executable])
+      AC_SUBST([ARGUS_CURLEXE], [$withval])
+    ]
+)])
