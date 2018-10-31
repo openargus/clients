@@ -2495,15 +2495,29 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
                   continue;		/* soff remains greater than zero */
                }
             }
+
+            /* handle backslash line continuation with DOS-style newlines */
+            if (soff >= 3) {
+               if ((str[soff - 3] == '\\') && (str[soff - 2] == '\r') &&
+                   (str[soff - 1] == '\n')) {
+                  soff -= 3;		/* backup to the backslash */
+                  str[soff] = 0;	/* replace backslash with null */
+                  continue;		/* soff remains greater than zero */
+               }
+            }
+
             soff = 0;
 
             done = 0;
-            if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+            if (*str && (*str != '#') && (*str != '\r') && (*str != '\n') &&
+                (*str != '!')) {
                for (i = 0; i < items && !done; i++) {
                   len = strlen(directives[i]);
                   if (!(strncmp (str, directives[i], len))) {
                      char *qptr = NULL;
                      int quoted = 0;
+                     size_t optarglen;
+
                      optarg = &str[len];
                      if (*optarg == '\"') {
                         optarg++;
@@ -2522,8 +2536,11 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
                            *qptr++ = '\0';
                      }
 
-                     if (optarg[strlen(optarg) - 1] == '\n')
-                        optarg[strlen(optarg) - 1] = '\0';
+                     optarglen = strlen(optarg);
+                     if (optarglen > 1 && optarg[optarglen - 1] == '\n')
+                        optarg[optarglen - 1] = '\0';
+                     if (optarglen > 2 && optarg[optarglen - 2] == '\r')
+                        optarg[optarglen - 2] = '\0';
 
                      cb(parser, linenum, optarg, quoted, i);
                      done = 1;
