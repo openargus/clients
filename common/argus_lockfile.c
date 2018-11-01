@@ -47,7 +47,7 @@ typedef struct _argus_lock_context {
 } *ArgusLockContext;
 
 # if defined(CYGWIN)
-static char *
+char *
 ArgusCygwinConvPath2Win(const char * const posix)
 {
    ssize_t size;
