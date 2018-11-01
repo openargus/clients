@@ -602,9 +602,19 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
 #else
    ramanage_str_t *rstr = hnd;
    size_t rem = rstr->remain;
+# ifdef CYGWIN
+   char *winpath = ArgusCygwinConvPath2Win(filename);
+# else
+   char *escaped = __shell_escape(filename);
+# endif /* CYGWIN */
 
-   slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain, " -T %s %s",
-                          filename, url);
+   slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain, " -T \"%s\" %s",
+# ifdef CYGWIN
+                          winpath,
+# else
+                          escaped,
+#endif
+                          url);
    if (slen >= rstr->remain) {
       ArgusLog(LOG_WARNING, "curl commandline too long\n");
       ret = -1;
@@ -615,7 +625,12 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
       ArgusLog(LOG_WARNING, "curl command failed, returned %d\n", ret);
       ret = -ret; /* child process failed */
    }
-#endif
+# ifdef CYGWIN
+   ArgusFree(winpath);
+# else
+   free(escaped);
+# endif /* CYGWIN */
+#endif /* HAVE_LIBCURL */
 
 out:
    ArgusFree(url);
