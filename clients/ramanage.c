@@ -158,6 +158,58 @@ static configuration_t global_config;
 struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
 
+#ifdef ARGUS_CURLEXE
+static int
+__is_metacharacter(char c)
+{
+   if (c == '|' || c == '&' || c == ';' || c == '(' || c == ')' ||
+       c == '<' || c == '>' || c == ' ' || c == 9 /* tab */ ||
+       c == '\\')
+      return 1;
+   return 0;
+}
+
+/* Prepend each bourne shell "metacharacter" with a backslash.
+ * Caller is responsible for freeing memory (wth free(), not ArgusFree()).
+ */
+static char *
+__shell_escape(const char * const str)
+{
+   size_t metacount = 0;  /* number of metacharacters in string */
+   size_t orig_strlen = strlen(str);
+   size_t i = 0;
+   char *newstr;
+   char *tmp;
+
+   while (*(str+i) != 0) {
+      char c = *(str+i);
+
+      if (__is_metacharacter(c))
+         metacount++;
+      i++;
+   }
+
+   if (metacount == 0) {
+      newstr = strdup(str);
+      ArgusLog(LOG_ERR, "%s: failed to duplicate string\n", __func__);
+      return newstr;
+   }
+
+   newstr = malloc(orig_strlen + metacount + 1);
+   if (newstr == NULL)
+      ArgusLog(LOG_ERR, "%s: failed to allocate new string\n", __func__);
+
+   for (i = 0, tmp = newstr; i < orig_strlen; i++) {
+      if (__is_metacharacter(*(str+i)))
+         *tmp++ = '\\';
+      *tmp++ = *(str+i);
+   }
+   *tmp = 0;
+
+   return newstr;
+}
+#endif /* ARGUS_CURLEXE */
+
 static inline int
 __file_older_than(const struct ArgusFileInput * const file, time_t when)
 {
@@ -426,11 +478,14 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    ramanage_str_t *rstr;
    const char * const curlexe =
 # ifdef ARGUS_CURLEXE
-      ARGUS_CURLEXE
+      __shell_escape(ARGUS_CURLEXE)
 # else
-      "curl"
+      strdup("curl")
 # endif
    ;
+
+   if (curlexe == NULL)
+      ArgusLog(LOG_ERR, "unable to copy curl executable name\n");
 
    *hnd = rstr = ArgusMalloc(sizeof(*rstr));
    if (rstr == NULL)
@@ -451,6 +506,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
                           "%s --silent -k -u %s %s", curlexe, userpwd,
                           auth ? "--negotiate" : "");
+   free(curlexe);
    if (slen >= PATH_MAX) {
       ArgusFree(userpwd);
       ArgusLog(LOG_WARNING, "curl commandline (partial) too long\n");
