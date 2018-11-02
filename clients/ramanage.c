@@ -615,7 +615,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
                           escaped,
 #endif
                           url);
-   if (slen >= rstr->remain) {
+   if (slen >= rem) {
       ArgusLog(LOG_WARNING, "curl commandline too long\n");
       ret = -1;
    }
