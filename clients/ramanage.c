@@ -615,15 +615,21 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
                           escaped,
 #endif
                           url);
-   if (slen >= rem) {
-      ArgusLog(LOG_WARNING, "curl commandline too long\n");
+   if (slen < 0) {
+      ArgusLog(LOG_WARNING,
+               "failed to add upload option to curl commandline\n");
       ret = -1;
-   }
-   DEBUGLOG(4, "cmd: %s\n", rstr->str);
-   ret = system(rstr->str);
-   if (ret > 0) {
-      ArgusLog(LOG_WARNING, "curl command failed, returned %d\n", ret);
-      ret = -ret; /* child process failed */
+   } else if ((size_t)slen >= rem) {
+      ArgusLog(LOG_WARNING, "curl commandline too long (%d > %u)\n",
+               slen, rem);
+      ret = -1;
+   } else {
+      DEBUGLOG(4, "cmd: %s\n", rstr->str);
+      ret = system(rstr->str);
+      if (ret > 0) {
+         ArgusLog(LOG_WARNING, "curl command failed, returned %d\n", ret);
+         ret = -ret; /* child process failed */
+      }
    }
 # ifdef CYGWIN
    ArgusFree(winpath);
