@@ -431,6 +431,12 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    long auth = 0;
    int slen;
 
+#ifdef HAVE_LIBCURL
+   /* with libcurl we don't need to re-initialize anything */
+   if (*hnd != NULL)
+      return 0;
+#endif
+
    userpwd = ArgusMalloc(NAME_MAX);
    if (userpwd == NULL)
       ArgusLog(LOG_ERR,
@@ -487,13 +493,17 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    if (curlexe == NULL)
       ArgusLog(LOG_ERR, "unable to copy curl executable name\n");
 
-   *hnd = rstr = ArgusMalloc(sizeof(*rstr));
-   if (rstr == NULL)
-      ArgusLog(LOG_ERR, "unable to allocate curl commandline string struct\n");
+   rstr = *hnd;
+   if (rstr == NULL) {
+      *hnd = rstr = ArgusMalloc(sizeof(*rstr));
+      if (rstr == NULL)
+         ArgusLog(LOG_ERR,
+                  "unable to allocate curl commandline string struct\n");
 
-   rstr->str = ArgusMalloc(PATH_MAX);
-   if (rstr == NULL)
-      ArgusLog(LOG_ERR, "unable to allocate curl commandline string\n");
+      rstr->str = ArgusMalloc(PATH_MAX);
+      if (rstr == NULL)
+         ArgusLog(LOG_ERR, "unable to allocate curl commandline string\n");
+   }
 
    rstr->remain = PATH_MAX;
    rstr->len = 0;
@@ -627,7 +637,8 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
       DEBUGLOG(4, "cmd: %s\n", rstr->str);
       ret = system(rstr->str);
       if (ret > 0) {
-         ArgusLog(LOG_WARNING, "curl command failed, returned %d\n", ret);
+         ArgusLog(LOG_WARNING, "curl command failed, returned %d.  (%s)\n",
+                  rstr->str, ret);
          ret = -ret; /* child process failed */
       }
    }
@@ -945,13 +956,14 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
       return 0;
    }
 
-   if (__upload_init(&hnd, config) < 0) {
-      ArgusLog(LOG_WARNING, "unable to initialize libcurl\n");
-      return -1;
-   }
-
    i = 0;
+   hnd = NULL;
    while (i < filcount && upload_kb <= config->upload_max_kb) {
+      if (__upload_init(&hnd, config) < 0) {
+         ArgusLog(LOG_WARNING, "unable to initialize libcurl\n");
+         return -1;
+      }
+
       file = filvec[i];
       DEBUGLOG(4, "upload file %s size %u\n", file->filename,
                file->statbuf.st_size);
