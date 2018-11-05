@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <stdio.h> /* NULL */
-#include <stdlib.h> /* strtoul, realpath */
+#include <stdlib.h> /* strtoul, realpath, rand */
 #include <sys/syslog.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -85,6 +85,7 @@ typedef struct _configuration_t {
    struct sockaddr_storage upload_server;
    char *upload_auth;
    unsigned int upload_max_kb;
+   unsigned int upload_delay_usec;
 
    unsigned int rpolicy_delete_after;
    unsigned int rpolicy_compress_after;
@@ -115,6 +116,7 @@ enum RamanageOpts {
    RAMANAGE_UPLOAD_PASS,
    RAMANAGE_UPLOAD_AUTH,
    RAMANAGE_UPLOAD_MAX_KB,
+   RAMANAGE_UPLOAD_DELAY_USEC,
    RAMANAGE_PATH_ARCHIVE,
    RAMANAGE_PATH_STAGING,
    RAMANAGE_RPOLICY_DELETE_AFTER,
@@ -139,6 +141,7 @@ static char *RamanageResourceFileStr[] = {
    "RAMANAGE_UPLOAD_PASS=",
    "RAMANAGE_UPLOAD_AUTH=",
    "RAMANAGE_UPLOAD_MAX_KB=",
+   "RAMANAGE_UPLOAD_DELAY_USEC=",
    "RAMANAGE_PATH_ARCHIVE=",
    "RAMANAGE_PATH_STAGING=",
    "RAMANAGE_RPOLICY_DELETE_AFTER=",
@@ -157,6 +160,49 @@ static const size_t RAMANAGE_RCITEMS =
 static configuration_t global_config;
 struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
+
+#if !defined(CYGWIN)
+# if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#  include <windows.h>
+typedef unsigned long useconds_t;
+int usleep(useconds_t usec)
+{
+   HANDLE timer;
+   LARGE_INTEGER ft;
+
+   ft.QuadPart = -(10 * (__int64)usec);
+
+   timer = CreateWaitableTimer(NULL, TRUE, NULL);
+   SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+   WaitForSingleObject(timer, INFINITE);
+   CloseHandle(timer);
+   return 0;
+}
+# endif /* _MSC_VER... */
+#endif /* CYGWIN */
+
+static void
+__random_delay_init(void)
+{
+   struct timeval t;
+
+   gettimeofday(&t, NULL);
+   srand(t.tv_usec & (-1U));
+}
+
+static int
+__random_delay(unsigned int min, unsigned int max /* usec */)
+{
+   unsigned int u;
+
+   if (max == 0)
+      return 0;
+
+   u = (unsigned int)rand();
+   u = (u + min) % max;
+   DEBUGLOG(1, "%s sleeping %u usec\n", __func__, u);
+   return usleep(u);
+}
 
 #ifdef ARGUS_CURLEXE
 static int
@@ -790,6 +836,9 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
       case RAMANAGE_UPLOAD_MAX_KB:
          retn = __parse_uint(optarg, &global_config.upload_max_kb);
          break;
+      case RAMANAGE_UPLOAD_DELAY_USEC:
+         retn = __parse_uint(optarg, &global_config.upload_delay_usec);
+         break;
       case RAMANAGE_PATH_ARCHIVE:
          retn = __parse_str(optarg, &global_config.path_archive, PATH_MAX);
          break;
@@ -955,6 +1004,9 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
       DEBUGLOG(1, "will not upload now.\n");
       return 0;
    }
+
+   __random_delay_init();
+   __random_delay(0, config->upload_delay_usec);
 
    i = 0;
    hnd = NULL;
