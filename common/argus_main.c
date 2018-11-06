@@ -270,7 +270,7 @@ main (int argc, char **argv)
                      } else {
                         if (file->ostart != -1) {
                            input->offset = file->ostart;
-                           if (fseek(file->file, input->offset, SEEK_SET) >= 0)
+                           if (fseek(input->file, input->offset, SEEK_SET) >= 0)
                               ArgusReadFileStream(ArgusParser, input);
                         } else {
                            ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
