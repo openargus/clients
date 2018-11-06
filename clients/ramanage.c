@@ -47,6 +47,7 @@
 #include "argus_client.h"
 #include "argus_lockfile.h"
 #include "argus_main.h"
+#include "argus_windows_registry.h"
 
 #if defined(CYGWIN)
 # include <sys/cygwin.h>
@@ -103,6 +104,13 @@ typedef struct _ramanage_str_t {
    size_t len;		/* bytes used */
    size_t remain;	/* bytes remaining */
 } ramanage_str_t;
+
+typedef enum _RamanageOptTypes {
+   RAMANAGE_TYPE_YESNO,
+   RAMANAGE_TYPE_UINT,
+   RAMANAGE_TYPE_STR,
+   RAMANAGE_TYPE_INET,
+} RamanageOptTypes;
 
 enum RamanageOpts {
    RAMANAGE_LOCK_FILE = 0,
@@ -161,9 +169,124 @@ static configuration_t global_config;
 struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
 
+#if defined(CYGWIN) || defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+#  include <windows.h>
+# define REG_INIT(resstr, v, fieldname)				\
+   { .valuename = (resstr),					\
+     .valuetype = (v),						\
+     .offset = offsetof(struct _configuration_t, fieldname),	\
+   }
+
+static int __parse_str(const char * const src, char **dst, size_t max);
+static int __parse_uint(const char * const src, unsigned int *dst);
+static int __parse_yesno(const char * const src, unsigned char *dst);
+static int __parse_network_address(const char * const src,
+                                   struct sockaddr_storage *dst);
+struct {
+   const char * const valuename;
+   RamanageOptTypes valuetype;
+   size_t offset;
+} RamanageWindowsRegistryValues[] = {
+   REG_INIT("RAMANAGE_LOCK_FILE", RAMANAGE_TYPE_STR, lockfile),
+   REG_INIT("RAMANAGE_COMPRESS_EFFORT", RAMANAGE_TYPE_UINT, compress_effort),
+   REG_INIT("RAMANAGE_COMPRESS_METHOD", RAMANAGE_TYPE_UINT, compress_method),
+   REG_INIT("RAMANAGE_COMPRESS_MAX_KB", RAMANAGE_TYPE_UINT, compress_max_kb),
+   REG_INIT("RAMANAGE_UPLOAD_USE_DNS", RAMANAGE_TYPE_YESNO, upload_use_dns),
+   REG_INIT("RAMANAGE_UPLOAD_SERVER", RAMANAGE_TYPE_INET, upload_server),
+   REG_INIT("RAMANAGE_UPLOAD_DIR", RAMANAGE_TYPE_STR, upload_dir),
+   REG_INIT("RAMANAGE_UPLOAD_USER", RAMANAGE_TYPE_STR, upload_user),
+   REG_INIT("RAMANAGE_UPLOAD_PASS", RAMANAGE_TYPE_STR, upload_pass),
+   REG_INIT("RAMANAGE_UPLOAD_AUTH", RAMANAGE_TYPE_STR, upload_auth),
+   REG_INIT("RAMANAGE_UPLOAD_MAX_KB", RAMANAGE_TYPE_UINT, upload_max_kb),
+   REG_INIT("RAMANAGE_UPLOAD_DELAY_USEC", RAMANAGE_TYPE_UINT, upload_delay_usec),
+   REG_INIT("RAMANAGE_PATH_ARCHIVE", RAMANAGE_TYPE_STR, path_archive),
+   REG_INIT("RAMANAGE_PATH_STAGING", RAMANAGE_TYPE_STR, path_staging),
+   REG_INIT("RAMANAGE_RPOLICY_DELETE_AFTER", RAMANAGE_TYPE_UINT, rpolicy_delete_after),
+   REG_INIT("RAMANAGE_RPOLICY_COMPRESS_AFTER", RAMANAGE_TYPE_UINT, rpolicy_compress_after),
+   REG_INIT("RAMANAGE_RPOLICY_MAX_KB", RAMANAGE_TYPE_UINT, rpolicy_max_kb),
+   REG_INIT("RAMANAGE_RPOLICY_MIN_DAYS", RAMANAGE_TYPE_UINT, rpolicy_min_days),
+   REG_INIT("RAMANAGE_RPOLICY_IGNORE_ARCHIVE", RAMANAGE_TYPE_YESNO, rpolicy_ignore_archive),
+   REG_INIT("RAMANAGE_CMD_COMPRESS", RAMANAGE_TYPE_YESNO, cmd_compress),
+   REG_INIT("RAMANAGE_CMD_DELETE", RAMANAGE_TYPE_YESNO, cmd_remove),
+   REG_INIT("RAMANAGE_CMD_UPLOAD", RAMANAGE_TYPE_YESNO, cmd_upload),
+};
+static const size_t RAMANAGE_REGITEMS =
+   sizeof(RamanageWindowsRegistryValues)/
+   sizeof(RamanageWindowsRegistryValues[0]);
+
+/* must have valid hkey */
+static int
+__fetch_registry_value(HKEY hkey, int index, configuration_t *config)
+{
+   int rv;
+   char *tmp;
+   const char * const valuename =
+    RamanageWindowsRegistryValues[index].valuename;
+   char **strval = (char **)(((char *)config) +
+    RamanageWindowsRegistryValues[index].offset);
+   unsigned int *intval = (unsigned int *)(((char *)config) +
+    RamanageWindowsRegistryValues[index].offset);
+   unsigned char *ucval = (unsigned char *)(((char *)config) +
+    RamanageWindowsRegistryValues[index].offset);
+   struct sockaddr_storage *addrval =
+    (struct sockaddr_storage *)(((char *)config) +
+    RamanageWindowsRegistryValues[index].offset);
+
+   switch (RamanageWindowsRegistryValues[index].valuetype) {
+      case RAMANAGE_TYPE_STR:
+         tmp = ArgusMalloc(PATH_MAX);
+         rv = ArgusWindowsRegistryGetSZ(hkey, valuename, tmp, PATH_MAX-1);
+         if (rv == 0)
+            rv = __parse_str(tmp, strval, PATH_MAX);
+
+         ArgusFree(tmp);
+         break;
+
+      case RAMANAGE_TYPE_UINT:
+         {
+         long long tmpll;
+
+         rv = ArgusWindowsRegistryGetQWORD(hkey, valuename, &tmpll);
+         if (rv == 0)
+            *intval = (unsigned int)tmpll;
+         }
+         break;
+
+      case RAMANAGE_TYPE_YESNO:
+         tmp = ArgusMalloc(5);
+         rv = ArgusWindowsRegistryGetSZ(hkey, valuename, tmp, 4);
+         if (rv == 0)
+            rv = __parse_yesno(tmp, ucval);
+
+         ArgusFree(tmp);
+         break;
+
+      case RAMANAGE_TYPE_INET:
+         tmp = ArgusMalloc(PATH_MAX);
+         rv = ArgusWindowsRegistryGetSZ(hkey, valuename, tmp, PATH_MAX-1);
+         if (rv == 0)
+            rv = __parse_network_address(tmp, addrval);
+
+         ArgusFree(tmp);
+         break;
+   }
+   return rv;
+}
+
+static void __fetch_registry_values(HKEY hkey, configuration_t *config)
+{
+   size_t i;
+
+   for (i = 0; i < RAMANAGE_REGITEMS; i++)
+      if (__fetch_registry_value(hkey, i, config) == 0)
+         DEBUGLOG(2, "updated config from registry item %s\n",
+                  RamanageWindowsRegistryValues[i].valuename)
+         ;
+}
+#endif
+
 #if !defined(CYGWIN)
 # if defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
-#  include <windows.h>
 typedef unsigned long useconds_t;
 int usleep(useconds_t usec)
 {
@@ -528,7 +651,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    curl_easy_setopt(*hnd, CURLOPT_DEBUGFUNCTION, __trace);
 #else	/* HAVE_LIBCURL */
    ramanage_str_t *rstr;
-   const char * const curlexe =
+   char * const curlexe =
 # ifdef ARGUS_CURLEXE
       __shell_escape(ARGUS_CURLEXE)
 # else
@@ -882,6 +1005,10 @@ RamanageConfigure(struct ArgusParserStruct * const parser,
                   configuration_t *config)
 {
    struct stat statbuf;
+#if defined(CYGWIN) || defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+   HKEY hkey; /* used by Windows systems to read config values */
+#endif
+
    if (noconf == 0 && stat(SYSCONFDIR "/ramanage.conf", &statbuf) == 0) {
       RaParseResourceFile(parser, SYSCONFDIR "/ramanage.conf",
                           ARGUS_SOPTIONS_IGNORE, RamanageResourceFileStr,
@@ -894,6 +1021,17 @@ RamanageConfigure(struct ArgusParserStruct * const parser,
                           RAMANAGE_RCITEMS, RamanageConfigureParse);
 
    }
+
+#if defined(CYGWIN) || defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
+   if (noconf == 0 &&
+       ArgusWindowsRegistryOpenKey(ARGUS_CLIENTS_REGISTRY_HKEY,
+                                   ARGUS_CLIENTS_REGISTRY_KEYNAME "\\ramanage",
+                                   &hkey) == 0) {
+      __fetch_registry_values(hkey, config);
+      ArgusWindowsRegistryCloseKey(hkey);
+   }
+#endif
+
    return 0;
 }
 
