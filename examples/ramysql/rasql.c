@@ -73,6 +73,7 @@ int ArgusAutoId = 0;
 int ArgusDropTable = 0;
 int ArgusCreateTable = 0;
 
+char *RaTempFilePath = "/tmp";
 char *RaRoleString = NULL;
 char *RaProbeString = NULL;
 char *RaSQLSaveTable = NULL;
@@ -916,13 +917,22 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                               if ((fstruct->ostart >= 0) || (fstruct->ostop > 0)) {
                                  sprintf (command, "gunzip %s", compressbuf);
 #ifdef ARGUSDEBUG
-                                 ArgusDebug (2, "RaSQLProcessQueue: local decomression command %s\n", command);
+                                    ArgusDebug (2, "RaSQLProcessQueue: local decomression command %s\n", command);
 #endif
-                                 if (system(command) < 0)
-                                    ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
+                                    if (system(command) < 0)
+                                       ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
+
+                                    sprintf (filenamebuf, "%s", filepath);
+                                    ArgusFree(command);
+
+                                 } else {
+                                    sprintf (filenamebuf, "%s", compressbuf);
+                                 }
+
                               } else {
-                                 sprintf (filenamebuf, "%s", compressbuf);
-                              }
+                                 if (RaHost) {
+                                    int RaPort = ArgusParser->ArgusPortNum ?  ArgusParser->ArgusPortNum : ARGUS_DEFAULTPORT;
+                                    char *command =  NULL;
 
                            } else {
                               if (RaHost) {
@@ -933,7 +943,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                                  else
                                     sprintf (command, "/usr/local/bin/ra -nnS %s:%d%s/%s -w %s", RaHost, RaPort, RaArchive, file, filenamebuf);
 #ifdef ARGUSDEBUG
-                                 ArgusDebug (2, "RaSQLProcessQueue: remote file caching command  %s\n", command);
+                                    ArgusDebug (2, "RaSQLProcessQueue: remote file caching command  %s\n", command);
 #endif
                                  if (system(command) < 0)
                                     ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
@@ -941,6 +951,9 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                                  if (command != NULL)
                                     ArgusFree(command);
                               }
+
+                           } else {
+                              sprintf (filenamebuf, "%s", filepath);
                            }
                            if (command != NULL)
                               ArgusFree(command);
@@ -949,6 +962,9 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                         }
 
                         fstruct->filename = strdup (filenamebuf);
+                        ArgusFree(file);
+                        ArgusFree(filenamebuf);
+                        ArgusFree(directorypath);
                      }
                      if (file != NULL) ArgusFree(file);
                      if (filenamebuf) ArgusFree(filenamebuf);
@@ -958,10 +974,12 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                   mysql_free_result(mysqlRes);
                }
             }
-
             ArgusAddToQueue(ArgusFileQueue, &fstruct->qhdr, ARGUS_LOCK);
          }
       }
+
+      ArgusFree(buf);
+      ArgusFree(sbuf);
    }
 
    if (ArgusFileQueue->count) {
