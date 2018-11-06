@@ -73,6 +73,7 @@ int ArgusAutoId = 0;
 int ArgusDropTable = 0;
 int ArgusCreateTable = 0;
 
+char *RaProgramPath = RABINPATH;
 char *RaTempFilePath = "/tmp";
 char *RaRoleString = NULL;
 char *RaProbeString = NULL;

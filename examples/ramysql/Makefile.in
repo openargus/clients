@@ -86,7 +86,7 @@ YACC = @V_YACC@
 # problem if you don't own the file but can write to the directory.
 .c.o:
 	@rm -f $@
-	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+	$(CC) $(CFLAGS) -DRABINPATH=\"$(BINDIR)\" -c $(srcdir)/$*.c
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
