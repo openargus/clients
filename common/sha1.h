@@ -59,7 +59,6 @@ typedef struct sha1_ctxt SHA1_CTX;
 
 #define	SHA1_RESULTLEN	(160/8)
 
-#ifdef _KERNEL
 extern void sha1_init(struct sha1_ctxt *);
 extern void sha1_pad(struct sha1_ctxt *);
 extern void sha1_loop(struct sha1_ctxt *, const u_int8_t *, size_t);
@@ -69,6 +68,5 @@ extern void sha1_result(struct sha1_ctxt *, char[__min_size(SHA1_RESULTLEN)]);
 #define SHA1Init(x)		sha1_init((x))
 #define SHA1Update(x, y, z)	sha1_loop((x), (y), (z))
 #define SHA1Final(x, y)		sha1_result((y), (x))
-#endif /* _KERNEL */
 
 #endif /*_CRYPTO_SHA1_H_*/

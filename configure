@@ -6554,6 +6554,18 @@ fi
 
 done
 
+for ac_header in sys/systm.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "sys/systm.h" "ac_cv_header_sys_systm_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_systm_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_SYS_SYSTM_H 1
+_ACEOF
+
+fi
+
+done
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5

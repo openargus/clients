@@ -96,6 +96,7 @@ AC_CHECK_HEADERS([stdlib.h stddef.h string.h strings.h sys/file.h sys/ioctl.h sy
 
 AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h dns_sd.h])
 AC_CHECK_HEADERS([uuid/uuid.h uuid.h])
+AC_CHECK_HEADERS([sys/systm.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

@@ -36,15 +36,25 @@
  * implemented by Jun-ichiro itojun Itoh <itojun@itojun.org>
  */
 
+#include "argus_config.h"
+
 #include <sys/cdefs.h>
+#if defined(__FreeBSD__)
 __FBSDID("$FreeBSD$");
+#endif
 
 #include <sys/types.h>
 #include <sys/cdefs.h>
 #include <sys/time.h>
-#include <sys/systm.h>
+#ifdef HAVE_SYS_SYSTM_H
+# include <sys/systm.h>
+#endif
+#include <string.h> /* bcopy, bzero */
 
-#include <crypto/sha1.h>
+#ifndef __min_size
+# define __min_size(x) (x)
+#endif
+#include "sha1.h"
 
 /* sanity check */
 #if BYTE_ORDER != BIG_ENDIAN
