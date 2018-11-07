@@ -115,8 +115,11 @@ all: $(PROGS)
 @INSTALL_BIN@/rastream: rastream.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rastream.o $(LIB) $(COMPATLIB)
 
-@INSTALL_BIN@/ramanage: ramanage.o $(LIB)
-	$(CC) $(CFLAGS) -o $@ ramanage.o $(LIB) $(COMPATLIB) @LIBCURL@
+@INSTALL_BIN@/ramanage: ramanage.o ramanage_sha1.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ ramanage.o ramanage_sha1.o $(LIB) $(COMPATLIB) @LIBCURL@
+
+ramanage_sha1.o: ../common/sha1.c
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -162,4 +165,4 @@ tags: $(TAGFILES)
 
 force:	/tmp
 depend:	$(GENSRC) force
-	../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
+	../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC) ../common/sha1.c

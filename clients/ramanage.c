@@ -48,6 +48,7 @@
 #include "argus_lockfile.h"
 #include "argus_main.h"
 #include "argus_windows_registry.h"
+#include "sha1.h"
 
 #if defined(CYGWIN)
 # include <sys/cygwin.h>
@@ -168,6 +169,7 @@ static const size_t RAMANAGE_RCITEMS =
 static configuration_t global_config;
 struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
+static const int SHA1_INPUT_BUFLEN = 32*1024;
 
 #if defined(CYGWIN) || defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
 #  include <windows.h>
@@ -582,6 +584,40 @@ __trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
 }
 #endif
 
+/* hash must have 20 bytes allocated */
+static int
+__sha1(const char * const filename, char *hash)
+{
+   struct sha1_ctxt ctx;
+   FILE *fp = fopen(filename, "r");
+   size_t len;
+   u_int8_t *buf;
+
+   buf = ArgusMalloc(SHA1_INPUT_BUFLEN);
+   if (buf == NULL)
+      ArgusLog(LOG_ERR,
+               "unable to allocate input buffer for sha1 calculation\n");
+
+   if (fp == NULL)
+      return -1;
+
+   SHA1Init(&ctx);
+   do {
+      len = fread(buf, 1, SHA1_INPUT_BUFLEN, fp);
+      SHA1Update(&ctx, buf, len);
+   } while (len > 0);
+   ArgusFree(buf);
+
+   if (ferror(fp)) {
+      fclose(fp);
+      return -1;
+   }
+
+   fclose(fp);
+   SHA1Final(hash, &ctx);
+   return 0;
+}
+
 static int
 __should_upload(const configuration_t * const config)
 {
@@ -707,7 +743,6 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    int ret;
 #endif
    FILE *fp;
-   char *fncopy;
    char *upload_dir;
    char *url;
    char ipstr[INET6_ADDRSTRLEN];
@@ -716,6 +751,17 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    struct sockaddr_in *addr4;
    struct sockaddr_in6 *addr6;
    void *src;
+   char sha1hash[SHA1_RESULTLEN];
+   char sha1txt[SHA1_RESULTLEN*2];
+   int i;
+
+   if (__sha1(filename, sha1hash) < 0) {
+      ArgusLog(LOG_WARNING, "Unable to calculate SHA1 for file %s\n",
+               filename);
+      return -1;
+   }
+   for (i = 0; i < 20; i++)
+      sprintf(&sha1txt[i*2], "%02x", sha1hash[i] & 0xff);
 
    fp = fopen(filename, "rb");
    if (fp == NULL) {
@@ -749,16 +795,12 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    while (upload_dir && *upload_dir == '/')
       upload_dir++;
 
-   fncopy = strdup(filename);
-   if (fncopy == NULL)
-      ArgusLog(LOG_ERR, "unable to allocate memory for filename copy\n");
    slen = snprintf(url, PATH_MAX, "https://%s%s%s/%s/%s",
                    af == AF_INET6 ? "[" : "",
                    ipstr,
                    af == AF_INET6 ? "]" : "",
                    upload_dir ? upload_dir : "",
-                   basename(fncopy));
-   free(fncopy);
+                   sha1txt);
    if (slen >= PATH_MAX) {
       ArgusLog(LOG_WARNING, "upload URL too long\n");
       ret = -1;
