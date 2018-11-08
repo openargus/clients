@@ -94,6 +94,7 @@ typedef struct _configuration_t {
    unsigned int rpolicy_max_kb;
    unsigned int rpolicy_min_days;
    unsigned char rpolicy_ignore_archive; /* only process the -r file */
+   unsigned int process_archive_period; /* minimum time between archive runs (sec) */
 
    unsigned char cmd_compress;
    unsigned char cmd_upload;
@@ -133,6 +134,7 @@ enum RamanageOpts {
    RAMANAGE_RPOLICY_MAX_KB,
    RAMANAGE_RPOLICY_MIN_DAYS,
    RAMANAGE_RPOLICY_IGNORE_ARCHIVE,
+   RAMANAGE_PROCESS_ARCHIVE_PERIOD,
    RAMANAGE_CMD_COMPRESS,
    RAMANAGE_CMD_DELETE,
    RAMANAGE_CMD_UPLOAD,
@@ -158,6 +160,7 @@ static char *RamanageResourceFileStr[] = {
    "RAMANAGE_RPOLICY_MAX_KB=",
    "RAMANAGE_RPOLICY_MIN_DAYS=",
    "RAMANAGE_RPOLICY_IGNORE_ARCHIVE=",
+   "RAMANAGE_PROCESS_ARCHIVE_PERIOD=",
    "RAMANAGE_CMD_COMPRESS=",
    "RAMANAGE_CMD_DELETE=",
    "RAMANAGE_CMD_UPLOAD=",
@@ -170,6 +173,7 @@ static configuration_t global_config;
 struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
 static const int SHA1_INPUT_BUFLEN = 32*1024;
+static const char * const state_filename = SHAREDSTATEDIR"/ramanage/timestamp";
 
 #if defined(CYGWIN) || defined(_MSC_VER) || defined(__MINGW32__) || defined(__MINGW64__)
 #  include <windows.h>
@@ -208,6 +212,7 @@ struct {
    REG_INIT("RAMANAGE_RPOLICY_MAX_KB", RAMANAGE_TYPE_UINT, rpolicy_max_kb),
    REG_INIT("RAMANAGE_RPOLICY_MIN_DAYS", RAMANAGE_TYPE_UINT, rpolicy_min_days),
    REG_INIT("RAMANAGE_RPOLICY_IGNORE_ARCHIVE", RAMANAGE_TYPE_YESNO, rpolicy_ignore_archive),
+   REG_INIT("RAMANAGE_PROCESS_ARCHIVE_PERIOD", RAMANAGE_TYPE_UINT, process_archive_period),
    REG_INIT("RAMANAGE_CMD_COMPRESS", RAMANAGE_TYPE_YESNO, cmd_compress),
    REG_INIT("RAMANAGE_CMD_DELETE", RAMANAGE_TYPE_YESNO, cmd_remove),
    REG_INIT("RAMANAGE_CMD_UPLOAD", RAMANAGE_TYPE_YESNO, cmd_upload),
@@ -305,6 +310,82 @@ int usleep(useconds_t usec)
 }
 # endif /* _MSC_VER... */
 #endif /* CYGWIN */
+
+/* While we don't lock the state file, it should only be written to or
+ * read while the lockfile is in our possesion
+ */
+
+/* write the current time to a file in ... */
+static int
+__save_state(void) {
+   struct stat statbuf;
+   struct timeval now;
+   FILE *fp;
+
+   if (stat(state_filename, &statbuf) != 0)
+      ArgusMkdirPath(state_filename);
+
+   fp = fopen(state_filename, "w");
+   if (fp == NULL) {
+      DEBUGLOG(2, "Failed to save state in %s\n", state_filename);
+      return -1;
+   }
+
+   gettimeofday(&now, NULL);
+   fprintf(fp, "%ld\n", now.tv_sec);
+   fclose(fp);
+   DEBUGLOG(2, "Saved state state in %s\n", state_filename);
+
+   return 0;
+}
+
+/* read the time of the previous archive run and compare it to the
+ * current time.  Return 1 if ok to process archive again.
+ */
+static int
+__should_process_archive(configuration_t *config) {
+   struct timeval then;
+   struct timeval now;
+   FILE *fp = NULL;
+   int res = 0;
+
+   /* no configured period.  just go. */
+   if (config->process_archive_period == 0) {
+      res = 1;
+      goto out;
+   }
+
+   fp = fopen(state_filename, "r");
+   if (fp == NULL) {
+      /* If the file isn't there, assume we have never processed the
+       * archive data and that it's ok to do so now
+       */
+      res = 1;
+      goto out;
+   }
+
+   if (fscanf(fp, "%ld\n", &then.tv_sec) != 1) {
+      /* can't make sense of the time, process the archive and replace
+       * the state file.
+       */
+      res = 1;
+      goto out;
+   }
+
+   then.tv_usec = 0;
+   gettimeofday(&now, NULL);
+   if (now.tv_usec >= 5000000) /* round up to nearest second */
+      now.tv_sec++;
+
+   if ((now.tv_sec - then.tv_sec) >= config->process_archive_period)
+      res = 1;
+
+out:
+   DEBUGLOG(2, "Should%s process archive\n", res ? "" : " not");
+   if (fp)
+      fclose(fp);
+   return res;
+}
 
 static void
 __random_delay_init(void)
@@ -1025,6 +1106,9 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
       case RAMANAGE_RPOLICY_IGNORE_ARCHIVE:
          retn = __parse_yesno(optarg, &global_config.rpolicy_ignore_archive);
          break;
+      case RAMANAGE_PROCESS_ARCHIVE_PERIOD:
+         retn = __parse_uint(optarg, &global_config.process_archive_period);
+         break;
       case RAMANAGE_CMD_COMPRESS:
          retn = __parse_yesno(optarg, &global_config.cmd_compress);
          break;
@@ -1543,15 +1627,14 @@ main(int argc, char **argv)
       }
    }
 
-   /* NOTE: there should probably be a limit on how many files are
-    * added to the list
-    */
-   if (global_config.rpolicy_ignore_archive == 0) {
+   if (global_config.rpolicy_ignore_archive == 0 &&
+       __should_process_archive(&global_config) == 1) {
       DEBUGLOG(1, "%s: adding files from archive directory\n", __func__);
       if (RaProcessRecursiveFiles(global_config.path_archive) == 0) {
          cmdres = 1;
          goto out;
       }
+      __save_state();
    }
 
    if (RamanageStat(parser) < 0) {
