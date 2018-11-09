@@ -392,14 +392,15 @@ RaParseComplete (int sig)
       ArgusShutDown(sig);
 
       if (!(RaParseCompleteInd++)) {
-      printf (" Totalrecords %-8lld  TotalManRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
+         printf (" Totalrecords %-8lld  TotalManRecords %-8lld  TotalFarRecords %-8lld TotalPkts %-8lld TotalBytes %-8lld\n",
                        ArgusParser->ArgusTotalRecords,
                        ArgusParser->ArgusTotalMarRecords, ArgusParser->ArgusTotalFarRecords,
                        ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalBytes);
+
+         mysql_close(RaMySQL);
       }
    }
    fflush(stdout);
-   mysql_close(RaMySQL);
 
    if (sig == SIGINT)
       exit(0);
