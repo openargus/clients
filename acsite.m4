@@ -1952,6 +1952,20 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
    fi
 ])
 
+AC_DEFUN([AC_QOSIENT_LIBCARES],[
+   AC_ARG_WITH([c-ares],
+               [AS_HELP_STRING([--with-c-ares],
+                               [Build with c-ares for name resolution])],
+               [with_c_ares="$withval"],
+               [with_c_ares="no"])
+
+      if test "x$with_c_ares" = "xyes"; then
+         PKG_CHECK_MODULES([LIBCARES],
+                           [libcares >= 1.10.0],
+                           AC_DEFINE([HAVE_LIBCARES], [], [Description]))
+      fi
+])
+
 dnl
 dnl Option to provide location of a curl.exe executable to package
 dnl with the windows software.  @ARGUS_CURLEXE@ will be replaced

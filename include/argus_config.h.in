@@ -208,6 +208,9 @@
 /* Define to 1 if you have the `isascii' function. */
 #undef HAVE_ISASCII
 
+/* Description */
+#undef HAVE_LIBCARES
+
 /* Define to 1 if you have a functional curl library. */
 #undef HAVE_LIBCURL
 

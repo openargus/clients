@@ -647,6 +647,8 @@ V_CCOPT
 INCLS
 DIRS
 PACKAGE_RELEASE
+LIBCARES_LIBS
+LIBCARES_CFLAGS
 LIBMAXMINDDB_LIBS
 LIBMAXMINDDB_CFLAGS
 HAVE_SWIG
@@ -772,6 +774,7 @@ with_systemdsystemunitdir
 with_libcurl
 with_curlexe
 with_libmaxminddb
+with_c_ares
 '
       ac_precious_vars='build_alias
 host_alias
@@ -794,7 +797,9 @@ PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 LIBMAXMINDDB_CFLAGS
-LIBMAXMINDDB_LIBS'
+LIBMAXMINDDB_LIBS
+LIBCARES_CFLAGS
+LIBCARES_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1432,6 +1437,7 @@ Optional Packages:
                           in PREFIX/include
   --with-curlexe=PATH     location of the curl binary to be run from ramanage
   --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
+  --with-c-ares           Build with c-ares for name resolution
 
 Some influential environment variables:
   PERL_EXT_PREFIX
@@ -1469,6 +1475,10 @@ Some influential environment variables:
               C compiler flags for LIBMAXMINDDB, overriding pkg-config
   LIBMAXMINDDB_LIBS
               linker flags for LIBMAXMINDDB, overriding pkg-config
+  LIBCARES_CFLAGS
+              C compiler flags for LIBCARES, overriding pkg-config
+  LIBCARES_LIBS
+              linker flags for LIBCARES, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -10900,6 +10910,112 @@ $as_echo "#define ARGUS_GEOIP2 /**/" >>confdefs.h
 fi
       fi
    fi
+
+
+
+# Check whether --with-c-ares was given.
+if test "${with_c_ares+set}" = set; then :
+  withval=$with_c_ares; with_c_ares="$withval"
+else
+  with_c_ares="no"
+fi
+
+
+      if test "x$with_c_ares" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBCARES" >&5
+$as_echo_n "checking for LIBCARES... " >&6; }
+
+if test -n "$LIBCARES_CFLAGS"; then
+    pkg_cv_LIBCARES_CFLAGS="$LIBCARES_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcares >= 1.10.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libcares >= 1.10.0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBCARES_CFLAGS=`$PKG_CONFIG --cflags "libcares >= 1.10.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBCARES_LIBS"; then
+    pkg_cv_LIBCARES_LIBS="$LIBCARES_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libcares >= 1.10.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libcares >= 1.10.0") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBCARES_LIBS=`$PKG_CONFIG --libs "libcares >= 1.10.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBCARES_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libcares >= 1.10.0" 2>&1`
+        else
+	        LIBCARES_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libcares >= 1.10.0" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBCARES_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (libcares >= 1.10.0) were not met:
+
+$LIBCARES_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBCARES_CFLAGS
+and LIBCARES_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LIBCARES_CFLAGS
+and LIBCARES_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	LIBCARES_CFLAGS=$pkg_cv_LIBCARES_CFLAGS
+	LIBCARES_LIBS=$pkg_cv_LIBCARES_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_LIBCARES /**/" >>confdefs.h
+
+fi
+      fi
 
 
 
