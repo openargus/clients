@@ -6576,6 +6576,30 @@ fi
 
 done
 
+for ac_header in arpa/nameser.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "arpa/nameser.h" "ac_cv_header_arpa_nameser_h" "$ac_includes_default"
+if test "x$ac_cv_header_arpa_nameser_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ARPA_NAMESER_H 1
+_ACEOF
+
+fi
+
+done
+
+for ac_header in arpa/nameser_compat.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "arpa/nameser_compat.h" "ac_cv_header_arpa_nameser_compat_h" "$ac_includes_default"
+if test "x$ac_cv_header_arpa_nameser_compat_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ARPA_NAMESER_COMPAT_H 1
+_ACEOF
+
+fi
+
+done
+
 
 # Checks for typedefs, structures, and compiler characteristics.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5

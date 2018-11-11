@@ -43,6 +43,32 @@
 #include <libgen.h>
 #include <unistd.h>
 
+#ifdef HAVE_LIBCARES
+# ifdef HAVE_NETDB_H
+#  include <netdb.h>
+# endif
+# ifdef HAVE_ARPA_NAMESER_H
+#  include <arpa/nameser.h>
+# endif
+# ifdef HAVE_ARPA_NAMESER_COMPAT_H
+#  include <arpa/nameser_compat.h>
+# endif
+# include <ares.h>
+# include <ares_dns.h>
+static ares_channel channel;
+static struct timeval ares_query_sent;
+typedef enum _ares_state_e {
+   LIBCARES_WAIT_SRV = 0,	/* first we lookup a service record */
+   LIBCARES_DONE,		/* all answers received */
+   LIBCARES_FAILED,		/* lack of answer or library error */
+} ares_state_e;
+ares_state_e ares_state;
+static char *ares_srv_hostname;	/* the results of the SRV record lookup */
+static unsigned short ares_srv_port;
+static const char * const srvname = "_argus_upload._tcp";
+static int ares_query_started;
+#endif
+
 #include "argus_util.h"
 #include "argus_client.h"
 #include "argus_lockfile.h"
@@ -65,6 +91,7 @@
 # define DEBUGLOG(lvl, fmt...)
 #endif
 
+
 enum {
    RAMANAGE_CMDMASK_COMPRESS = 0x1,
    RAMANAGE_CMDMASK_UPLOAD = 0x2,
@@ -81,6 +108,7 @@ typedef struct _configuration_t {
    unsigned int compress_max_kb;
 
    unsigned char upload_use_dns;
+   char *upload_use_dns_domain; /* look for DNS SRV record in this domain */
    char *upload_user;
    char *upload_pass;
    char *upload_dir;
@@ -120,6 +148,7 @@ enum RamanageOpts {
    RAMANAGE_COMPRESS_METHOD,
    RAMANAGE_COMPRESS_MAX_KB,
    RAMANAGE_UPLOAD_USE_DNS,
+   RAMANAGE_UPLOAD_USE_DNS_DOMAIN,
    RAMANAGE_UPLOAD_SERVER,
    RAMANAGE_UPLOAD_DIR,
    RAMANAGE_UPLOAD_USER,
@@ -146,6 +175,7 @@ static char *RamanageResourceFileStr[] = {
    "RAMANAGE_COMPRESS_METHOD=",
    "RAMANAGE_COMPRESS_MAX_KB=",
    "RAMANAGE_UPLOAD_USE_DNS=",
+   "RAMANAGE_UPLOAD_USE_DNS_DOMAIN=",
    "RAMANAGE_UPLOAD_SERVER=",
    "RAMANAGE_UPLOAD_DIR=",
    "RAMANAGE_UPLOAD_USER=",
@@ -198,6 +228,7 @@ struct {
    REG_INIT("RAMANAGE_COMPRESS_METHOD", RAMANAGE_TYPE_UINT, compress_method),
    REG_INIT("RAMANAGE_COMPRESS_MAX_KB", RAMANAGE_TYPE_UINT, compress_max_kb),
    REG_INIT("RAMANAGE_UPLOAD_USE_DNS", RAMANAGE_TYPE_YESNO, upload_use_dns),
+   REG_INIT("RAMANAGE_UPLOAD_USE_DNS_DOMAIN", RAMANAGE_TYPE_STR, upload_use_dns_domain),
    REG_INIT("RAMANAGE_UPLOAD_SERVER", RAMANAGE_TYPE_INET, upload_server),
    REG_INIT("RAMANAGE_UPLOAD_DIR", RAMANAGE_TYPE_STR, upload_dir),
    REG_INIT("RAMANAGE_UPLOAD_USER", RAMANAGE_TYPE_STR, upload_user),
@@ -310,6 +341,152 @@ int usleep(useconds_t usec)
 }
 # endif /* _MSC_VER... */
 #endif /* CYGWIN */
+
+#ifdef HAVE_LIBCARES
+static void
+RamanageLibcaresCallback(void *arg, int status, int timeouts,
+                         unsigned char *abuf, int alen)
+{
+   unsigned int ancount;
+
+   (void) timeouts; /* not used here */
+
+   if (ares_state == LIBCARES_FAILED || ares_state == LIBCARES_DONE)
+      return;
+
+   /* Display an error message if there was an error, but only stop if
+    * we actually didn't get an answer buffer.
+    */
+   if (status != ARES_SUCCESS) {
+      printf("%s\n", ares_strerror(status));
+       if (!abuf) {
+          ares_state = LIBCARES_FAILED;
+          return;
+       }
+   }
+
+   /* Won't happen, but check anyway, for safety. */
+   if (alen < HFIXEDSZ) {
+      ares_state = LIBCARES_FAILED;
+      return;
+   }
+
+   ancount = DNS_HEADER_ANCOUNT(abuf);
+
+   if (ancount < 1) {
+      ares_state = LIBCARES_FAILED;
+      return;
+   }
+
+   if (ares_state == LIBCARES_WAIT_SRV) {
+      struct ares_srv_reply *srv_out = NULL;
+
+      status = ares_parse_srv_reply(abuf, alen, &srv_out);
+      if (status != ARES_SUCCESS) {
+         ares_state = LIBCARES_FAILED;
+         return;
+      }
+
+      if (srv_out) {
+         ares_srv_hostname = strdup(srv_out->host);
+         ares_srv_port = srv_out->port;
+         /*
+         while (tmp) {
+            compare priority?  weight?
+            tmp = tmp->next;
+         }
+         */
+         ares_free_data(srv_out);
+         ares_state = LIBCARES_DONE;
+      }
+   }
+}
+
+static int
+RamanageInitLibcares(const configuration_t * const config)
+{
+   struct ares_options options;
+   char *fq_srvname; /* srvname with domain */
+   int status;
+   int slen;
+
+   if (!config->upload_use_dns || !config->upload_use_dns_domain ||
+       !config->cmd_upload)
+      return 0;
+
+   slen = snprintf(NULL, 0, "%s.%s", srvname, config->upload_use_dns_domain);
+   if (slen < 0)
+      return -1;
+
+   fq_srvname = ArgusMalloc(slen+1);
+   if (fq_srvname == NULL)
+      ArgusLog(LOG_ERR, "unable to allocate memory for service name\n");
+   sprintf(fq_srvname, "%s.%s", srvname, config->upload_use_dns_domain);
+
+   options.flags = ARES_FLAG_NOCHECKRESP;
+   options.servers = NULL;
+   options.nservers = 0;
+
+   status = ares_library_init(ARES_LIB_INIT_ALL);
+   if (status != ARES_SUCCESS)
+      ArgusLog(LOG_ERR, "ares_library_init: %s\n", ares_strerror(status));
+
+   status = ares_init_options(&channel, &options, ARES_OPT_FLAGS);
+   if (status != ARES_SUCCESS)
+      ArgusLog(LOG_ERR, "ares_init_options: %s\n", ares_strerror(status));
+
+   gettimeofday(&ares_query_sent, NULL); /* remember when this was sent */
+   ares_query(channel, fq_srvname, C_IN, T_SRV, RamanageLibcaresCallback,
+              (char *) NULL);
+   ares_query_started = 1;
+
+   return 0;
+}
+
+static int
+RamanageLibcaresProcess(const configuration_t * const config)
+{
+   struct timeval tv;
+   struct timeval *tvp;
+   fd_set read_fds;
+   fd_set write_fds;
+   int rv = 0;
+   int nfds;
+   int count;
+
+   if (ares_query_started == 0)
+      return rv;
+
+   for (;;) {
+      FD_ZERO(&read_fds);
+      FD_ZERO(&write_fds);
+      nfds = ares_fds(channel, &read_fds, &write_fds);
+      if (nfds == 0)
+        break;
+
+      tvp = ares_timeout(channel, NULL, &tv);
+      count = select(nfds, &read_fds, &write_fds, NULL, tvp);
+      if (count < 0 && (errno != EINVAL)) {
+          rv = -1;
+          break;
+      }
+      ares_process(channel, &read_fds, &write_fds);
+    }
+    return rv;
+}
+
+static void
+RamanageCleanupLibcares(void)
+{
+   if (ares_query_started)
+      ares_destroy(channel);
+   ares_library_cleanup();
+   if (ares_srv_hostname) {
+      free(ares_srv_hostname); /* allocated by strdup */
+      ares_srv_hostname = NULL;
+   }
+}
+#endif
 
 /* While we don't lock the state file, it should only be written to or
  * read while the lockfile is in our possesion
@@ -826,7 +1003,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    FILE *fp;
    char *upload_dir;
    char *url;
-   char ipstr[INET6_ADDRSTRLEN];
+   char *dest;
    int slen;
    int af;
    struct sockaddr_in *addr4;
@@ -855,21 +1032,41 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    if (url == NULL)
       ArgusLog(LOG_ERR, "unable to allocate memory for url\n");
 
-   /* TODO: fetch name/addr from DNS service record if so configured */
+   if (!config->upload_use_dns || !config->upload_use_dns_domain) {
+      dest = ArgusMalloc(INET6_ADDRSTRLEN);
+      if (dest == NULL)
+         ArgusLog(LOG_ERR, "unable to allocate memory for destination name\n");
+      af = config->upload_server.ss_family;
+      addr4 = (struct sockaddr_in *)&config->upload_server;
+      addr6 = (struct sockaddr_in6 *)&config->upload_server;
 
-   af = config->upload_server.ss_family;
-   addr4 = (struct sockaddr_in *)&config->upload_server;
-   addr6 = (struct sockaddr_in6 *)&config->upload_server;
+      if (af == AF_INET)
+         src = &addr4->sin_addr;
+      else
+         src = &addr6->sin6_addr;
 
-   if (af == AF_INET)
-      src = &addr4->sin_addr;
-   else
-      src = &addr6->sin6_addr;
-
-   if (!inet_ntop(config->upload_server.ss_family, src, ipstr, sizeof(ipstr))) {
-      ArgusLog(LOG_WARNING, "unable to format string from IP address\n");
+      if (!inet_ntop(config->upload_server.ss_family, src, dest, INET6_ADDRSTRLEN)) {
+         ArgusLog(LOG_WARNING, "unable to format string from IP address\n");
+         ret = -1;
+         goto out;
+      }
+   } else {
+#ifdef HAVE_LIBCARES
+      af = 0;
+      slen = snprintf(NULL, 0, "%s:%u", ares_srv_hostname, ares_srv_port);
+      if (slen <= 0) {
+         ArgusLog(LOG_WARNING, "unable for format string from SRV record\n");
+         ret = -1;
+         goto out;
+      }
+      dest = ArgusMalloc(slen+1);
+      if (dest == NULL)
+         ArgusLog(LOG_ERR, "unable to allocate memory for destination name\n");
+      sprintf(dest, "%s:%u", ares_srv_hostname, ares_srv_port);
+#else
       ret = -1;
       goto out;
+#endif
    }
 
    upload_dir = config->upload_dir;
@@ -878,10 +1075,11 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
 
    slen = snprintf(url, PATH_MAX, "https://%s%s%s/%s/%s",
                    af == AF_INET6 ? "[" : "",
-                   ipstr,
+                   dest,
                    af == AF_INET6 ? "]" : "",
                    upload_dir ? upload_dir : "",
                    sha1txt);
+   ArgusFree(dest);
    if (slen >= PATH_MAX) {
       ArgusLog(LOG_WARNING, "upload URL too long\n");
       ret = -1;
@@ -1059,6 +1257,9 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
       case RAMANAGE_UPLOAD_USE_DNS:
          retn = __parse_yesno(optarg, &global_config.upload_use_dns);
          break;
+      case RAMANAGE_UPLOAD_USE_DNS_DOMAIN:
+         retn = __parse_str(optarg, &global_config.upload_use_dns_domain, PATH_MAX);
+         break;
       case RAMANAGE_UPLOAD_SERVER:
          retn = __parse_network_address(optarg, &global_config.upload_server);
          break;
@@ -1156,6 +1357,12 @@ RamanageConfigure(struct ArgusParserStruct * const parser,
       __fetch_registry_values(hkey, config);
       ArgusWindowsRegistryCloseKey(hkey);
    }
+#endif
+
+#ifndef HAVE_LIBCARES
+   if (config->upload_use_dns)
+      ArgusLog(LOG_WARNING,
+               "RAMANAGE_UPLOAD_USE_DNS=yes, but no c-ares support.\n");
 #endif
 
    return 0;
@@ -1618,7 +1825,6 @@ main(int argc, char **argv)
    if (cmdmask == 0)
       ArgusLog(LOG_ERR, "need at least one command\n");
 
-
    if (global_config.lockfile) {
       if (ArgusCreateLockFile(global_config.lockfile, 0, &lockctx) < 0) {
          cmdres = 1;
@@ -1626,6 +1832,11 @@ main(int argc, char **argv)
          goto out;
       }
    }
+
+#ifdef HAVE_LIBCARES
+   if (RamanageInitLibcares(&global_config) < 0)
+      ArgusLog(LOG_ERR, "failed to initialize query for service record\n");
+#endif
 
    if (global_config.rpolicy_ignore_archive == 0 &&
        __should_process_archive(&global_config) == 1) {
@@ -1695,6 +1906,16 @@ main(int argc, char **argv)
     }
 #endif
 
+#ifdef HAVE_LIBCARES
+   if (global_config.upload_use_dns) {
+      cmdres = RamanageLibcaresProcess(&global_config);
+      if (ares_state != LIBCARES_DONE) {
+         ArgusLog(LOG_WARNING, "failed to look up service record\n");
+         goto out;
+      }
+   }
+#endif
+
    if (cmdmask & RAMANAGE_CMDMASK_COMPRESS) {
       cmdres = RamanageCompress(parser, filvec, filcount, &global_config);
       if (cmdres)
@@ -1719,6 +1940,9 @@ main(int argc, char **argv)
    }
 
 out:
+#ifdef HAVE_LIBCARES
+   RamanageCleanupLibcares();
+#endif
    if (filvec)
       ArgusFree(filvec);
    return cmdres;

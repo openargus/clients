@@ -116,7 +116,7 @@ all: $(PROGS)
 	$(CC) $(CFLAGS) -o $@ rastream.o $(LIB) $(COMPATLIB)
 
 @INSTALL_BIN@/ramanage: ramanage.o ramanage_sha1.o $(LIB)
-	$(CC) $(CFLAGS) -o $@ ramanage.o ramanage_sha1.o $(LIB) $(COMPATLIB) @LIBCURL@
+	$(CC) $(CFLAGS) -o $@ ramanage.o ramanage_sha1.o $(LIB) $(COMPATLIB) @LIBCURL@ @LIBCARES_LIBS@
 
 ramanage_sha1.o: ../common/sha1.c
 	$(CC) $(CFLAGS) -c $^ -o $@
