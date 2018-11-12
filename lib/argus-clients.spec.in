@@ -25,6 +25,7 @@ BuildRequires: libuuid-devel
 BuildRequires: autoconf-archive
 BuildRequires: perl-generators
 BuildRequires: libcurl-devel
+BuildRequires: c-ares-devel
 BuildRequires: swig > 2.0
 BuildRequires: perl-devel
 Requires: cyrus-sasl
@@ -45,7 +46,7 @@ Copyright: 2000-2022 QoSient, LLC
 %prep
 %setup -n %{srcname}-%{ver}.%{rel}
 %build
-%configure --with-sasl %{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
+%configure --with-sasl --with-c-ares %{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
 make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 
 %install
