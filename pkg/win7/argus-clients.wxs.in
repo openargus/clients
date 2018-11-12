@@ -146,6 +146,10 @@
               <File Id='LibSasl2' Name='cygsasl2-3.dll' DiskId='1'
               Source='C:\Cygwin\bin\cygsasl2-3.dll' KeyPath='yes'></File>
             </Component>
+            <Component Id='Libcares' Guid="*">
+              <File Id='Libcares' Name='cygcares-2.dll' DiskId='1'
+              Source='C:\Cygwin\bin\cygcares-2.dll' KeyPath='yes'></File>
+            </Component>
           </Directory>
         </Directory>
       </Directory>
@@ -234,6 +238,7 @@
       <ComponentRef Id='LibCygwin1' />
       <ComponentRef Id='LibCygz' />
       <ComponentRef Id='LibSasl2' />
+      <ComponentRef Id='Libcares' />
       <ComponentRef Id='ProgramMenuDir' />
       <ComponentRef Id='Config' />
       <ComponentRef Id='RamanageConfig' />
