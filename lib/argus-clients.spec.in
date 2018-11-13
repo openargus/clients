@@ -98,6 +98,8 @@ rm -f %{argusbin}/rasplit
 %{argusman}/man1/rasort.1.gz
 %{argusman}/man1/rasplit.1.gz
 %{argusman}/man1/rastream.1.gz
+%{argusman}/man1/ramanage.1.gz
+%{argusman}/man5/ramanage.conf.5.gz
 
 %{argusbin}/ra
 %{argusbin}/rabins

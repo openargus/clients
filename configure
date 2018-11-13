@@ -11791,6 +11791,7 @@ do
     "./pkg/Makefile") CONFIG_FILES="$CONFIG_FILES ./pkg/Makefile" ;;
     "./lib/argus-clients.spec") CONFIG_FILES="$CONFIG_FILES ./lib/argus-clients.spec" ;;
     "./perllib/Makefile") CONFIG_FILES="$CONFIG_FILES ./perllib/Makefile" ;;
+    "man/man5/ramanage.conf.5") CONFIG_FILES="$CONFIG_FILES man/man5/ramanage.conf.5" ;;
     "./examples/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/Makefile" ;;
     "./examples/race/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/race/Makefile" ;;
     "./examples/raconvert/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raconvert/Makefile" ;;

@@ -496,6 +496,7 @@ AC_CONFIG_FILES([
    ./pkg/Makefile
    ./lib/argus-clients.spec
    ./perllib/Makefile
+   man/man5/ramanage.conf.5
 ])
 
 AS_IF([test "$with_examples" != no],

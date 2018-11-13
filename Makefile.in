@@ -136,6 +136,8 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/rasort.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasplit.1 \
 		$(DESTDIR)@mandir@/man1/rasplit.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/ramanage.1 \
+		$(DESTDIR)@mandir@/man1/ramanage.1
 ifndef WORKSTATION_BUILD
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasql.1 \
 		$(DESTDIR)@mandir@/man1/rasql.1
@@ -168,6 +170,8 @@ endif
 		$(DESTDIR)@mandir@/man5/radium.conf.5
 	$(INSTALL) -m 0644 $(srcdir)/man/man5/ranonymize.5 \
 		$(DESTDIR)@mandir@/man5/ranonymize.5
+	$(INSTALL) -m 0644 $(srcdir)/man/man5/ramanage.conf.5 \
+		$(DESTDIR)@mandir@/man5/ramanage.conf.5
 	$(INSTALL) -m 0644 $(srcdir)/man/man8/radium.8 \
 		$(DESTDIR)@mandir@/man8/radium.8
 
