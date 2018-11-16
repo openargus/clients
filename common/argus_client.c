@@ -768,7 +768,7 @@ void
 ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queue)
 {
    struct ArgusInput *input = NULL;
-   struct timeval wait, timeoutValue;
+   struct timeval wait, timeoutValue = {0, };
    int retn = 0, started = 0;
    struct timeval rtime;
 
@@ -781,8 +781,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    ArgusDebug (3, "ArgusReadStream(%p) starting", parser);
 #endif
       
-   timeoutValue.tv_sec = 0;
-
    while (!(parser->RaParseDone)) {
       int width = -1, i;
       fd_set readmask;
