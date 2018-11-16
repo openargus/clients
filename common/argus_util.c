@@ -4548,7 +4548,7 @@ ArgusReverseLabel(struct ArgusLabelStruct *l)
             snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s=%s", obj, label);
 
          } else
-            snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s", obj);
+            snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s", label);
          ptr = NULL;
       }
 
