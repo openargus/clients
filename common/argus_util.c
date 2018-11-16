@@ -936,8 +936,6 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
 static void
 ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 {
-   extern char *optarg;
-   extern int optind, opterr;
    int op, retn = 0, rcmdline = 0, Scmdline = 0;
    char *cmdbuf = NULL, *str = NULL;
    char *getoptStr = NULL;
