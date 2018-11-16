@@ -419,8 +419,6 @@ main (int argc, char **argv)
    char path[MAXPATHNAMELEN];
    char *envstr = NULL;
    struct stat statbuf;
-   extern char *optarg;
-   extern int opterr;
    pid_t pid;
 
 #if defined(ARGUS_THREADS)
