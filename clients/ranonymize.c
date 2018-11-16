@@ -1798,6 +1798,11 @@ RaNonParseResourceFile (char *file)
                                  ArgusLog (LOG_ERR, "RaNonParseResourceFile: gethostbyname(%s) error %s",
                                                 optarg, strerror(errno));
 
+                              /* gcc doesn't know that ArgusLog will not return.
+                               * Initialize to avoid warnings.
+                               */
+                              naddr->s_addr = 0;
+
                               if ((hp = gethostbyname(ptr)) != NULL) {
                                  for (p = (unsigned int **)hp->h_addr_list; *p; ++p)
                                     **p = ntohl(**p);
