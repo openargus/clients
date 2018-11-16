@@ -2,6 +2,8 @@
 # include "argus_config.h"
 #endif
 
+#if defined(ARGUS_MYSQL)
+
 #define _GNU_SOURCE
 #include <stdio.h> /* asprintf */
 #undef _GNU_SOURCE
@@ -16,6 +18,8 @@
 #include "rabootp_interval_tree.h"
 #include "rabootp_sql.h"
 #include "rabootp_sql_bind.h"
+
+extern MYSQL *RaMySQL;
 
 static char *
 __create_columns_str(size_t ncols, const char **namevec)
@@ -75,9 +79,6 @@ __create_values_str(size_t ncols)
 
    return str;
 }
-
-#if defined(ARGUS_MYSQL)
-extern MYSQL *RaMySQL;
 
 int
 RabootpSQLCreateTable(const struct ArgusParserStruct * const parser,
