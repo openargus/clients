@@ -3229,6 +3229,8 @@ nff_image(struct nff_insn *p, int n)
      f = p->data.f;
      s = p->data.s;
 
+   fmt = "";
+
    switch (p->code) {
 
    default:
