@@ -1620,7 +1620,6 @@ RaPrintAup (struct ArgusParserStruct *parser, struct RaAupStruct *aup)
       struct RaAupPolicySetStruct *policySet = aup->ArgusPolicySet;
       struct RaAupRuleSetStruct *ruleSet;
       char sbuf[512];
-      int slen = 0;
 
       if (policySet != NULL) {
          struct ArgusListStruct *ruleList = policySet->ruleSet;
@@ -1634,6 +1633,8 @@ RaPrintAup (struct ArgusParserStruct *parser, struct RaAupStruct *aup)
                      if (ruleSet->status & RAUP_POLICY_DIRTY) {
                         if (ArgusParser->writeDbstr != NULL) {
 #ifdef ARGUS_MYSQL
+                           int slen = 0;
+
                            sprintf (sbuf, "INSERT INTO %s (`stime`,`ltime`,`status`, `policy`, `name`, `version`, `match`,`conform`,`nonconform`,`client`,`server`,`verify`,`replies`)", RaTable);
                            slen = strlen(sbuf);
                            sprintf (&sbuf[slen], " VALUES (%ld, %ld, %d, \"%s\", \"%s\", %d, %d, %d, %d, %d, %d, %d, %d) ", 
