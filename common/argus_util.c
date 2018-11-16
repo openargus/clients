@@ -7235,7 +7235,7 @@ ArgusPrintCor (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
                      }
                   }
                }
-               sprintf(cbuf, "%s", value);
+               snprintf(cbuf, sizeof(cbuf), "%s", value ? value : "");
                cmets++;
                len -= sizeof(*cmets);
 
