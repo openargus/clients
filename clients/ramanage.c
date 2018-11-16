@@ -818,7 +818,7 @@ __gzip(const char * const filename, const char * const gzfilename,
 #ifdef HAVE_LIBCURL
 # include <curl/curl.h>
 #else
-typedef void CURL;
+typedef ramanage_str_t CURL;
 #endif
 
 #ifdef HAVE_LIBCURL
