@@ -1507,7 +1507,7 @@ RaProcessAup (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus,
                                              if (sig != NULL) {
                                                 if (!(strcmp(sig->name, srv->name)))
                                                    policy->value |= RAUP_SERVICE_VALIDATED;
-                                                   policy->verify++;
+                                                policy->verify++;
                                              }
                                           }
                                        } else {
