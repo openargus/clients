@@ -879,11 +879,22 @@ __sha1(const char * const filename, char *hash)
 static int
 __should_upload(const configuration_t * const config)
 {
-   /* TODO: apply policy here to determine if this is the right time
-    * to push data onto the collector.  Look for SRV record in DNS,
-    * examine contents of managed files to look for particular context
-    * (broadcast sources, next hop, dhcp requests, etc.)
+   /* If an authentication type is specified (only SPNEGO supported now),
+    * then no username or password is required because it's integral to
+    * the authentication method.  Otherwise, those are required.
     */
+   if (!config->upload_auth && (!config->upload_user || !config->upload_pass))
+      return 0;
+
+#ifdef HAVE_LIBCARES
+   /* If configured to look up a service record in DNS, make sure
+    * we got one.
+    */
+   if (config->upload_use_dns && config->upload_use_dns_domain)
+      if (ares_state != LIBCARES_DONE || !ares_srv_hostname)
+         return 0;
+#endif
+
    return 1;
 }
 
@@ -1907,7 +1918,7 @@ main(int argc, char **argv)
 #endif
 
 #ifdef HAVE_LIBCARES
-   if (global_config.upload_use_dns) {
+   if (global_config.cmd_upload && global_config.upload_use_dns) {
       cmdres = RamanageLibcaresProcess(&global_config);
       if (ares_state != LIBCARES_DONE) {
          ArgusLog(LOG_WARNING, "failed to look up service record\n");
