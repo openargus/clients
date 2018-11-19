@@ -225,6 +225,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             } else
             if (isdigit((int) *mode->mode)) {
                ind = 0;
+            } else if (!strcmp(mode->mode, "lock")) {
+               /* This is handled in ArgusParseArgs() but check for
+               "lock" here so rastream doesn't exit if it's specified */
             } else {
                   int done = 0;
                   for (i = 0, ind = -1; (i < ARGUSSPLITMODENUM) && !done; i++) {

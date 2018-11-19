@@ -67,7 +67,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
-#include <fcntl.h>
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 
@@ -1280,6 +1282,13 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   parser->ArgusDSCodePoints = ARGUS_DISA_DSCODES;
                   RaPrintAlgorithmTable[ARGUSPRINTSRCDSBYTE].length = 8;
                   RaPrintAlgorithmTable[ARGUSPRINTDSTDSBYTE].length = 8;
+               } else
+               if (!strcmp (optarg, "lock")) {
+#ifdef HAVE_FCNTL_H
+                  parser->ArgusLockWriteFiles = ARGUS_FILE_LCK;
+#else
+                  ArgusLog(LOG_ERR, "no file locking support available\n");
+#endif
                } else
                if ((tzptr = strstr (optarg, "TZ="))) {
                   if (parser->RaTimeZone != NULL)
@@ -29436,7 +29445,6 @@ ArgusDeleteHostList (struct ArgusParserStruct *parser)
 #endif
 }
 
-
 int
 ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input, struct ArgusWfileStruct *wfile, struct ArgusRecord *argus)
 {
@@ -29476,9 +29484,53 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
          if ((wfile->fd = fopen (file, "a+")) == NULL)
             ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, 0x%x) fopen %s", file, argus, strerror(errno));
          else {
-            fstat (fileno(wfile->fd), &wfile->statbuf);
-            if (wfile->statbuf.st_size == 0)
-               wfile->firstWrite++;
+#ifdef HAVE_FCNTL_H
+            /* Locks are dropped when the file is closed or the process
+             * terminates, so there is no need to providea special
+             * "close" function.
+             *
+             * Some details are provided by the linux man page:
+             *
+             *  "As well as being removed by an explicit F_UNLCK,
+             *   record locks are automatically released when the process
+             *   terminates or if it  closes any file descriptor referring
+             *   to a file on which locks are held.  This is bad: it
+             *   means that a process can lose the locks on a file like
+             *   /etc/passwd or /etc/mtab when for some reason a library
+             *   function decides to open, read  and close it."
+             */
+
+            if (parser->ArgusLockWriteFiles) {
+               int rv;
+               int op;
+
+               op = parser->ArgusLockWriteFiles == ARGUS_FILE_LCK_NONBLOCKING
+                    ? F_SETLK : F_SETLKW;
+               wfile->lock.l_type = F_WRLCK;
+               wfile->lock.l_whence = SEEK_SET;
+               wfile->lock.l_start = 0;
+               wfile->lock.l_len = 0; /* entire file */
+               rv = fcntl(fileno(wfile->fd), op, &wfile->lock);
+               if (rv < 0) {
+                  if (op == F_SETLKW)
+                     /* This is only warn-worthy if blocking requested */
+                     ArgusLog(LOG_WARNING, "unable to lock file %s\n", file);
+                  fclose(wfile->fd);
+                  wfile->fd = NULL;
+                  retn = -1;
+               } else {
+                  /* the previous lock owner may have written to the
+                   * file while we were waiting.
+                   */
+                  fseek(wfile->fd, 0, SEEK_END);
+               }
+            }
+#endif
+            if (retn == 0) {
+               fstat (fileno(wfile->fd), &wfile->statbuf); if
+               (wfile->statbuf.st_size == 0)
+                  wfile->firstWrite++;
+            }
          }
       }
 

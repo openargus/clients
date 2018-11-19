@@ -297,6 +297,12 @@ struct ArgusCIDRAddr {
 #define ARGUS_OMIT_EMPTY_STRING         0x04
 
 
+enum ArgusLockFilesEnum {
+   ARGUS_FILE_NOLCK = 0,
+   ARGUS_FILE_LCK,
+   ARGUS_FILE_LCK_NONBLOCKING,
+};
+
 struct ArgusParserStruct {
    int status;
    uid_t uid;
@@ -542,6 +548,7 @@ struct ArgusParserStruct {
    DNSServiceRef dnsSrvRef;
 #endif
 
+   char ArgusLockWriteFiles;	/* enforce exclusive access to output files */
    char RaDebugString[MAXSTRLEN];
 
    struct ArgusRecordStruct argus;

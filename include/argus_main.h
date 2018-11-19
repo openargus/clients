@@ -35,6 +35,9 @@ extern "C" {
 #include <stdlib.h>
 #include <stdio.h>
 #include <syslog.h>
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -116,6 +119,9 @@ struct ArgusWfileStruct {
    int firstWrite, startSecs, endSecs;
    struct timeval laststat;
    struct timeval stime, etime;
+#ifdef HAVE_FCNTL_H
+   struct flock lock;
+#endif
 };
 
 

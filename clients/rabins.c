@@ -183,6 +183,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                else
                if (!(strncasecmp (mode->mode, "noman", 5)))
                   parser->ArgusPrintMan = 0;
+               else
+               if (!(strcmp (mode->mode, "lock")));
                else {
                   int done = 0;
                   for (i = 0, ind = -1; !(done) && (i < ARGUSSPLITMODENUM); i++) {
