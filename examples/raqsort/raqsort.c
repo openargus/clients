@@ -579,11 +579,17 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                      if (retn != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
+                           int rv;
+
                            if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
       #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
       #endif
-                              ArgusWriteNewLogfile (parser, ns->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, ns->input,
+                                                         wfile, argusrec);
+                              if (rv < 0)
+                                 ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                          __func__);
                            }
                         }
                      }
@@ -699,11 +705,17 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                if (pass != 0) {
                   if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
+                     int rv;
+
                      if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                    __func__);
                      }
                   }
                }

@@ -1284,7 +1284,13 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                   if (pass != 0) {
                      if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
-                        ArgusWriteNewLogfile (ArgusParser, argus->input, wfile, argusrec);
+                        int rv;
+
+                        rv = ArgusWriteNewLogfile (ArgusParser, argus->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                    __func__);
                      }
                   }
 

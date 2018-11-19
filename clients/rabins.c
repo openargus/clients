@@ -1135,10 +1135,15 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                      struct ArgusRecord *argusrec = NULL;
 
                      if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                        int rv;
+
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        ArgusWriteNewLogfile (ArgusParser, argus->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (ArgusParser, argus->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                      }
                   }
                }

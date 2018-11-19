@@ -1349,7 +1349,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
-                           ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
+                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                      wfile, argusrec);
+                           if (rv < 0)
+                              ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                       __func__);
 
                         }
                      }
@@ -4590,8 +4594,11 @@ argus_command_string(void)
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
-                           ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
-
+                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                      wfile, argusrec);
+                           if (rv < 0)
+                              ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                       __func__);
                         }
                      }
                   }

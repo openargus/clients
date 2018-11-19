@@ -342,18 +342,24 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                struct ArgusRecord *argusrec = NULL;
 
                if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                  int rv = 0;
+
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(argusrec);
 #endif
                   if (parser->exceptfile != NULL) {
                      if (strlen (name) && strcmp(wfile->filename, parser->exceptfile))
-                        ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                      else
                         if (!strlen (name) && !strcmp(wfile->filename, parser->exceptfile))
-                           ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                           rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
 
                   } else
-                     ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                     rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+
+                  if (rv < 0)
+                     ArgusLog(LOG_ERR, "%s unable to open file\n",
+                              __func__);
                }
             }
             lobj = lobj->nxt;

@@ -754,10 +754,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
                            if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                              int rv;
+
 #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
 #endif
-                              ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, argus->input,
+                                                         wfile, argusrec);
+                              if (rv < 0)
+                                 ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                            }
                         }
                      }
