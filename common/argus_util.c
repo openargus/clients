@@ -1290,6 +1290,13 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   ArgusLog(LOG_ERR, "no file locking support available\n");
 #endif
                } else
+               if (!strncmp (optarg, "lock=nonblock", 13)) {
+#ifdef HAVE_FCNTL_H
+                  parser->ArgusLockWriteFiles = ARGUS_FILE_LCK_NONBLOCKING;
+#else
+                  ArgusLog(LOG_ERR, "no file locking support available\n");
+#endif
+               } else
                if ((tzptr = strstr (optarg, "TZ="))) {
                   if (parser->RaTimeZone != NULL)
                      free (parser->RaTimeZone);
@@ -29512,12 +29519,12 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
                wfile->lock.l_len = 0; /* entire file */
                rv = fcntl(fileno(wfile->fd), op, &wfile->lock);
                if (rv < 0) {
+                  retn = -1 * errno;
+                  fclose(wfile->fd);
+                  wfile->fd = NULL;
                   if (op == F_SETLKW)
                      /* This is only warn-worthy if blocking requested */
                      ArgusLog(LOG_WARNING, "unable to lock file %s\n", file);
-                  fclose(wfile->fd);
-                  wfile->fd = NULL;
-                  retn = -1;
                } else {
                   /* the previous lock owner may have written to the
                    * file while we were waiting.
@@ -29527,8 +29534,8 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
             }
 #endif
             if (retn == 0) {
-               fstat (fileno(wfile->fd), &wfile->statbuf); if
-               (wfile->statbuf.st_size == 0)
+               fstat (fileno(wfile->fd), &wfile->statbuf);
+               if (wfile->statbuf.st_size == 0)
                   wfile->firstWrite++;
             }
          }
@@ -29575,7 +29582,8 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
       fflush(wfile->fd);
    }
 
-   if ((argus != NULL) && (!(wfile->firstWrite && (argus == &input->ArgusInitCon)))) {
+   if (retn == 0 && (argus != NULL) && (!(wfile->firstWrite &&
+       (argus == &input->ArgusInitCon)))) {
       int cnt, len = ntohs(argus->hdr.len) * 4;
 
       if (len > 0) {
