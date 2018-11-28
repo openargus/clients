@@ -99,6 +99,7 @@ AC_CHECK_HEADERS([uuid/uuid.h uuid.h])
 AC_CHECK_HEADERS([sys/systm.h])
 AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([arpa/nameser_compat.h])
+AC_CHECK_HEADERS([stdbool.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
