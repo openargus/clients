@@ -65,7 +65,7 @@
 #include "rabootp_querystr.h"
 
 #if defined(ARGUS_MYSQL)
-#include <mysql.h>
+# include "argus_mysql.h"
 
 extern pthread_mutex_t RaMySQLlock;
 extern MYSQL *RaMySQL;

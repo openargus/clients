@@ -14,6 +14,7 @@
 #include "argus_parser.h"
 #include "argus_print.h"
 #include "argus_client.h"
+#include "argus_mysql.h"
 #include "rabootp.h" /* DEBUGLOG */
 #include "rabootp_interval_tree.h"
 #include "rabootp_sql.h"

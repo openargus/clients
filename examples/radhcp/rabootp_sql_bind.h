@@ -2,8 +2,8 @@
 # define __RABOOTP_SQL_BIND_H
 
 # if defined(ARGUS_MYSQL)
-#  include <mysql.h>
 #  include <sys/time.h>
+#  include "argus_mysql.h"
 #  include "argus_print.h"
 #  include "rabootp_print.h"
 

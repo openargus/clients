@@ -69,7 +69,7 @@
 #include "rasplit.h"
 
 #ifdef ARGUS_MYSQL
-# include <mysql.h>
+# include "argus_mysql.h"
 # include "rasql_common.h"
 #endif
 

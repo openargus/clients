@@ -55,7 +55,7 @@
 #include <rabins.h>
 #include <rasplit.h>
  
-#include <mysql.h>
+#include "argus_mysql.h"
 #include <mysqld_error.h>
 
 char *RaDatabase = NULL;

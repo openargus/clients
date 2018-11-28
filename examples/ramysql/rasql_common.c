@@ -8,7 +8,7 @@
 #include <strings.h>
 #include <sys/syslog.h>
 
-#include <mysql.h>
+#include "argus_mysql.h"
 #include <mysqld_error.h>
 
 #include "argus_util.h"

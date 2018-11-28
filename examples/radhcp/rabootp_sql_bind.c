@@ -2,7 +2,7 @@
 #include "argus_config.h"
 #endif
 #if defined(ARGUS_MYSQL)
-# include <mysql.h>
+# include "argus_mysql.h"
 # include <sys/time.h>
 # include "argus_print.h"
 # include "rabootp_print.h"

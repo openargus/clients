@@ -116,7 +116,7 @@ int RaceShutDownFlag = 0;
 extern char *RaHomePath;
 
 #if defined(ARGUS_MYSQL)
-#include <mysql.h>
+# include "argus_mysql.h"
 #endif
 
 

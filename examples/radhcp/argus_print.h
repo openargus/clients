@@ -34,7 +34,7 @@ struct ArgusFormatterTable {
 
 
 # if defined(ARGUS_MYSQL)
-#  include <mysql.h>
+#  include "argus_mysql.h"
 #  define ASSIGN_ARGUS_SQL_BIND(b) .sql_bind = (b)
 struct ArgusPrinterTable;
 typedef int (*ArgusSQLBind)(MYSQL_BIND *b, 

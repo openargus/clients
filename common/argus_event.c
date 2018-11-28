@@ -55,7 +55,7 @@
 #include <pwd.h>
 
 #if defined(ARGUSMYSQL)
-#include <mysql.h>
+# include "argus_mysql.h"
 #endif
 
 #include <argus_util.h>
