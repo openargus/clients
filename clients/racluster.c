@@ -192,7 +192,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (parser->Sflag)
             parser->ArgusReliableConnection++;
 
-         ArgusLog(LOG_WARNING, "started");
+         ArgusLog(LOG_INFO, "started");
          if (chdir ("/") < 0)
             ArgusLog (LOG_ERR, "Can't chdir to / %s", strerror(errno));
 

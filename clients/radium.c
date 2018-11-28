@@ -229,7 +229,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
                   umask(0);
     
-                  ArgusLog(LOG_WARNING, "started");
+                  ArgusLog(LOG_INFO, "started");
 
                   if ((tmpfile = freopen ("/dev/null", "r", stdin)) == NULL)
                      ArgusLog (LOG_ERR, "Cannot map stdout to /dev/null");
