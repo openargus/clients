@@ -4489,9 +4489,9 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
             }
             case RADIUM_DONE:  {
                if (client->hostname != NULL)
-                  ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
+                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
                else
-                  ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: received DONE");
+                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received DONE");
                retn = -4;
                break; 
             }
@@ -4537,9 +4537,9 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
 
             default:
                if (client->hostname)
-                  ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: client %s sent %s",  client->hostname, ptr);
+                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s",  client->hostname, ptr);
                else
-                  ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: received %s",  ptr);
+                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received %s",  ptr);
                break;
          }
 
@@ -4549,9 +4549,9 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
 
    if (!found) {
       if (client->hostname)
-         ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: client %s sent %s",  client->hostname, ptr);
+         ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s",  client->hostname, ptr);
       else
-         ArgusLog (LOG_WARNING, "ArgusCheckClientMessage: received %s",  ptr);
+         ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received %s",  ptr);
    }
 
 #ifdef ARGUSDEBUG
