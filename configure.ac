@@ -153,6 +153,7 @@ AC_CHECK_FUNCS(setlinebuf)
 AC_CHECK_FUNCS(strerror strtof)
 AC_CHECK_FUNCS(floorf remainderf)
 AC_CHECK_FUNCS(timegm)
+AC_CHECK_FUNCS(isatty)
 
 needsnprintf=no
 AC_CHECK_FUNCS(vsnprintf snprintf,, [needsnprintf=yes])

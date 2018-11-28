@@ -26461,6 +26461,16 @@ struct ArgusLogPriorityStruct ArgusPriorityStr[ARGUSPRIORITYSTR] =
 
 extern char *print_time(struct timeval *);
 
+static int
+ArgusIsatty(void)
+{
+#ifdef HAVE_ISATTY
+   return isatty(STDIN_FILENO);
+#else
+   return 0;
+#endif
+}
+
 void
 ArgusLog (int priority, char *fmt, ...)
 {
@@ -26575,13 +26585,15 @@ ArgusLog (int priority, char *fmt, ...)
          strncpy(buf, tbuf, MAXSTRLEN);
       }
  
-      openlog (ArgusParser->ArgusProgramName, LOG_PID | LOG_PERROR, LOG_DAEMON);
-      syslog (priority, "%s", buf);
-      closelog ();
-
-#if defined(ARGUS_SOLARIS)
-      fprintf (stderr, "%s: %s", label, buf);
-#endif
+      if (!ArgusIsatty()) {
+         openlog (ArgusParser->ArgusProgramName, LOG_PID | LOG_PERROR,
+                  LOG_DAEMON);
+         syslog (priority, "%s", buf);
+         closelog ();
+      }
+      else {
+         fprintf (stderr, "%s: %s", label, buf);
+      }
 #else
       fprintf (stderr, "%s: %s", label, buf);
 #endif
