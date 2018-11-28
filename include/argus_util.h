@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	227
-#define MAX_PRINT_ALG_TYPES     	227
+#define ARGUS_MAX_PRINT_ALG     	226
+#define MAX_PRINT_ALG_TYPES     	226
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
