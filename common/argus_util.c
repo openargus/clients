@@ -3230,7 +3230,6 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
          if (parser->sNflag && (parser->sNflag >= parser->ArgusTotalRecords))
             return (ptr->hdr.len * 4);
 
-
          if ((argus = ArgusGenerateRecordStruct (parser, input, (struct ArgusRecord *) ptr)) != NULL) {
 
             ArgusProcessDirection(parser, argus);
@@ -3288,9 +3287,7 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
                   }
                }
 
-               if (!(((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)))
-                  parser->ArgusTotalRecords++;
-               else {
+               if (((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)) {
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(ptr);
 #endif
