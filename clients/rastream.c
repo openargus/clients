@@ -33,6 +33,7 @@
 #define _REENTRANT
 #endif
 
+#include "argus_threads.h"
 #include <argus_compat.h>
 #include <sys/wait.h>
 
@@ -70,6 +71,24 @@ struct ArgusFileCacheStruct {
    struct ArgusHashStruct hstruct;
 };
 
+struct RastreamFileMap {
+   struct ArgusQueueHeader qhdr;
+   char *filename;
+   char *filename_orig;
+   int nodelete;
+};
+
+#ifdef HAVE_FCNTL_H
+# include <limits.h>
+static struct RastreamFileMap *RastreamRetryListHead;
+static struct RastreamFileMap *RastreamRetryListTail;
+
+/* list of files we couldn't lock without blocking */
+static int RastreamWriteNewLogfile(struct ArgusParserStruct *,
+                                   struct ArgusInput *,
+                                   struct ArgusWfileStruct *,
+                                   struct ArgusRecord *);
+#endif
 static struct ArgusFileCacheStruct *ArgusThisFileCache = NULL;
 static struct timeval ArgusLastFileTime = {0, 0};
 
@@ -82,6 +101,7 @@ static struct ArgusFileCacheStruct *
 static void ArgusProcessFileCache(struct ArgusFileCacheStruct *);
 static struct ArgusFileCacheStruct *ArgusNewFileCache(void);
 static void ArgusDeleteFileCache(struct ArgusFileCacheStruct *);
+static void RastreamProcessAllFileCaches(struct ArgusQueueStruct *);
 
 static struct ArgusWfileStruct *
    ArgusFindTimeInFileCache(struct ArgusFileCacheStruct *, time_t);
@@ -118,6 +138,115 @@ static struct ArgusHashStruct *ArgusGenerateFileHash(struct ArgusParserStruct *,
 static struct ArgusWfileStruct *ArgusAddFilename(struct ArgusParserStruct *,
                                                  struct ArgusFileCacheStruct *,
                                                  char *);
+static void RastreamCloseAllWfiles(void);
+
+static int
+RastreamAddFileRetryList(const char * const filename,
+                         const char * const filename_orig)
+{
+   struct RastreamFileMap *file;
+
+   file = ArgusCalloc(1, sizeof(*file));
+   if (file == NULL)
+      return 0;
+
+   file->filename = strdup(filename);
+   if (file->filename == NULL) {
+      ArgusFree(file);
+      return 0;
+   }
+
+   file->filename_orig = strdup(filename_orig);
+   if (file->filename_orig == NULL) {
+      free(file->filename);
+      ArgusFree(file);
+      return 0;
+   }
+
+   if (RastreamRetryListTail != NULL) {
+      RastreamRetryListTail->qhdr.nxt = (struct ArgusQueueHeader *)file;
+      RastreamRetryListTail = file;
+   } else {
+      RastreamRetryListHead = file;
+      RastreamRetryListTail = file;
+   }
+   return 1;
+}
+
+static void
+RastreamFreeFileRetryList(void)
+{
+   struct RastreamFileMap *file = RastreamRetryListHead;
+
+   while (file) {
+      RastreamRetryListHead = (struct RastreamFileMap *)
+                              RastreamRetryListHead->qhdr.nxt;
+      if (file->filename)
+         free(file->filename);
+      if (file->filename_orig)
+         free(file->filename_orig);
+      ArgusFree(file);
+      file = RastreamRetryListHead;
+   }
+
+   RastreamRetryListTail = NULL;
+}
+
+/* use ra(1) to append temporary output to intended target file with
+ * locking.  Could just open the files ourselves . . .
+ */
+static int
+RastreamProcessFileRetryList(void)
+{
+   FILE *pipe;
+   struct RastreamFileMap *file = RastreamRetryListHead;
+   char *cmd;
+   static const char * const fmt = "ra -X -Mlock -r %s -w %s";
+   int rv = 1;
+
+   cmd = ArgusMalloc(2*PATH_MAX);
+   if (cmd == NULL)
+      return 0;
+
+   while (file) {
+      int slen;
+      int pres;
+
+      if (file->filename == NULL)
+         goto next;
+
+      slen = snprintf(cmd, 2*PATH_MAX, fmt, file->filename, file->filename_orig);
+      if (slen >= 2*PATH_MAX) {
+         ArgusLog(LOG_WARNING, "%s command too long: skipping %s\n",
+                  file->filename);
+         file->nodelete = 1;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug(2, "%s running command: %s\n", __func__, cmd);
+#endif
+      pipe = popen(cmd, "r");
+      if (pipe == NULL) {
+         ArgusLog(LOG_WARNING, "%s unable to run command: %s\n", __func__, cmd);
+         goto next;
+      }
+      pres = pclose(pipe);
+      if (pres == 0) {
+         /* we are done with the temporary file.  clean up. */
+#ifdef ARGUSDEBUG
+         ArgusDebug(2, "%s removing temporary file %s\n", __func__,
+                    file->filename);
+#endif
+         unlink(file->filename);
+      }
+
+next:
+      file = (struct RastreamFileMap *)RastreamRetryListHead->qhdr.nxt;
+   }
+
+   ArgusFree(cmd);
+   return rv;
+}
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -225,7 +354,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             } else
             if (isdigit((int) *mode->mode)) {
                ind = 0;
-            } else if (!strcmp(mode->mode, "lock")) {
+            } else if (!strncmp(mode->mode, "lock", 4)) {
                /* This is handled in ArgusParseArgs() but check for
                "lock" here so rastream doesn't exit if it's specified */
             } else {
@@ -590,61 +719,19 @@ RaParseComplete (int sig)
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
          struct ArgusAggregatorStruct *agg;
-         struct ArgusFileCacheStruct *fcache;
+
+         RastreamProcessFileRetryList();
+         RastreamFreeFileRetryList();
 
          ArgusProcessScripts();
 
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
-         if ((agg = ArgusParser->ArgusAggregator) != NULL) {
-            struct ArgusQueueStruct *queue = agg->queue;
 
-#if defined(ARGUS_THREADS)
-            pthread_mutex_lock(&queue->lock);
-#endif
-            while ((fcache = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
-#ifdef ARGUSDEBUG
-               ArgusDebug (1, "RaParseComplete: processing file cache: %s\n", fcache->wfile.filename);
-#endif
-               ArgusProcessFileCache(fcache);
-               ArgusDeleteFileCache(fcache);
-            }
-#if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&queue->lock);
-#endif
-         } else {
-            if ((fcache = ArgusThisFileCache) != NULL) {
-#ifdef ARGUSDEBUG
-               ArgusDebug (1, "RaParseComplete: processing file cache: %s\n", fcache->wfile.filename);
-#endif
-               ArgusProcessFileCache(fcache);
-               ArgusDeleteFileCache(fcache);
-               ArgusThisFileCache = NULL;
-            }
-         }
-
-         if (ArgusParser->ArgusWfileList != NULL) {
-            struct ArgusWfileStruct *wfile = NULL;
-            struct ArgusListObjectStruct *lobj = NULL;
-            int i, count = ArgusParser->ArgusWfileList->count;
-
-            if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
-               for (i = 0; i < count; i++) {
-                  if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
-                     if (wfile->fd != NULL) {
-#ifdef ARGUSDEBUG
-                        ArgusDebug (2, "RaParseComplete: closing %s\n", wfile->filename);
-#endif
-                        fflush (wfile->fd);
-                        fclose (wfile->fd);
-                        wfile->fd = NULL;
-                     }
-                  }
-                  lobj = lobj->nxt;
-               }
-            }
-         }
+         agg = ArgusParser->ArgusAggregator;
+         RastreamProcessAllFileCaches(agg ? agg->queue : NULL);
+         RastreamCloseAllWfiles();
 
          switch (sig) {
             case SIGHUP:
@@ -1316,8 +1403,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 #ifdef _LITTLE_ENDIAN
                ArgusHtoN(argusrec);
 #endif
-               rv = ArgusWriteNewLogfile (ArgusParser, argus->input, tfile,
-                                          argusrec);
+               rv = RastreamWriteNewLogfile (ArgusParser, argus->input, tfile,
+                                             argusrec);
                if (rv < 0)
                   ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
             }
@@ -1339,6 +1426,81 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    return (retn);
 }
 
+static int
+RastreamWriteNewLogfile(struct ArgusParserStruct *parser,
+                        struct ArgusInput *input,
+                        struct ArgusWfileStruct *wfile,
+                        struct ArgusRecord *argusrec)
+{
+   int retn = 0;
+   int rv;
+
+   rv = ArgusWriteNewLogfile(ArgusParser, input, wfile, argusrec);
+
+   if (rv == 0)
+      return 0;
+
+#ifdef HAVE_FCNTL_H
+   if (rv != -EAGAIN && rv != -EACCES)
+      return rv * -1;
+
+   /* A non-blocking lock failed because the file is already locked.
+    * Generate a temporary name and open that file.
+    */
+   char *template;
+   int slen;
+
+   template = ArgusMalloc(PATH_MAX);
+   if (template == NULL) {
+      ArgusLog(LOG_WARNING,
+               "%s: unable to allocate memory for filename template\n",
+               __func__);
+      retn = -1;
+      goto out;
+   }
+
+   slen = snprintf(template, PATH_MAX, "%s.XXXXXX", wfile->filename);
+   if (slen >= PATH_MAX) {
+      retn = -1;
+      ArgusLog(LOG_WARNING, "%s: filename template too long\n", __func__);
+      goto out;
+   }
+
+   mktemp(template);
+   if (*template == 0) {
+      retn = -1;
+      ArgusLog(LOG_WARNING, "%s: unable to generate unique filename\n",
+               __func__);
+      goto out;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug(2, "%s opening temporary file %s\n", __func__, template);
+#endif
+   wfile->fd = fopen(template, "a+");
+   if (wfile->fd == NULL) {
+      retn = -1;
+      ArgusLog(LOG_WARNING, "%s: unable to open temporary file\n",
+               __func__);
+      goto out;
+   }
+   wfile->firstWrite = 1;
+
+   if (RastreamAddFileRetryList(template, wfile->filename) != 1) {
+      retn = -1;
+      ArgusLog(LOG_WARNING,
+               "%s: unable to add temporary file to retry list\n",
+               __func__);
+      goto out;
+   }
+
+out:
+   if (template)
+      ArgusFree(template);
+
+#endif
+   return retn;
+}
 
 void ArgusWindowClose(void);
 
@@ -1612,6 +1774,35 @@ ArgusProcessFileCache(struct ArgusFileCacheStruct *fcache)
 #endif
 }
 
+static void
+RastreamProcessAllFileCaches(struct ArgusQueueStruct *queue)
+{
+   struct ArgusFileCacheStruct *fcache;
+
+   if (queue) {
+      MUTEX_LOCK(&queue->lock);
+      while ((fcache = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: processing file cache: %s\n", __func__,
+                     fcache->wfile.filename);
+#endif
+         ArgusProcessFileCache(fcache);
+         ArgusDeleteFileCache(fcache);
+      }
+      MUTEX_UNLOCK(&queue->lock);
+   } else {
+      if ((fcache = ArgusThisFileCache) != NULL) {
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: processing file cache: %s\n", __func__,
+                     fcache->wfile.filename);
+#endif
+         ArgusProcessFileCache(fcache);
+         ArgusDeleteFileCache(fcache);
+         ArgusThisFileCache = NULL;
+      }
+   }
+}
+
 static
 void
 ArgusDeleteFileCache(struct ArgusFileCacheStruct *fcache)
@@ -1742,4 +1933,30 @@ ArgusRunScript (struct ArgusParserStruct *parser, struct ArgusScriptStruct *scri
    }
 
    return (retn);
+}
+
+static void
+RastreamCloseAllWfiles(void) {
+   struct ArgusWfileStruct *wfile = NULL;
+   struct ArgusListObjectStruct *lobj = NULL;
+   int i, count = ArgusParser->ArgusWfileList->count;
+
+   if (ArgusParser->ArgusWfileList == NULL)
+      return;
+
+   if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
+      for (i = 0; i < count; i++) {
+         if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+            if (wfile->fd != NULL) {
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "%s: closing %s\n", __func__, wfile->filename);
+#endif
+               fflush (wfile->fd);
+               fclose (wfile->fd);
+               wfile->fd = NULL;
+            }
+         }
+         lobj = lobj->nxt;
+      }
+   }
 }
