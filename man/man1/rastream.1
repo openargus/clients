@@ -136,6 +136,25 @@ Supported spliting modes are:
    \fB     flow "filter-expression"\fP
 .fi
 .TP 4 4
+.BI \-M "\| lock[=nonblock]\^"
+\fBRastream\fP has additional functionality for file locking.
+If the lock mode is "nonblock", a failed lock results in rastream writing
+to a temporary file, instead.
+When all input has been processed the temporary files are addressed.
+For each temporary file rastream again attempts to lock the intended
+output file, but this time it blocks until the file is available.
+The contents of the temporary file are appended to the target file and
+the temporary file removed.
+No guarantees are made that the resulting output file contains all
+records in start-time order and additional processing may be required.
+
+Multiple instances of rastream can concurrently request locks for the
+same set of files, but in different orders, resulting in deadlock.
+Non-blocking locks address the deadlock scenario.
+The blocking locks used during cleanup are aquired singly, avoiding
+any opportunity for deadlock, and in the vast majority of cases will be
+aquired for a small subset of output files.
+.TP 4 4
 .BI \-w "\| filename\^"
 \fBRastream\fP supports an extended \fI-w\fP option that allows for
 output record contents to be inserted into the output filename.
