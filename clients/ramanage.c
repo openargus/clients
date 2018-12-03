@@ -620,7 +620,8 @@ __shell_escape(const char * const str)
 
    if (metacount == 0) {
       newstr = strdup(str);
-      ArgusLog(LOG_ERR, "%s: failed to duplicate string\n", __func__);
+      if (newstr == NULL)
+         ArgusLog(LOG_ERR, "%s: failed to duplicate string\n", __func__);
       return newstr;
    }
 
