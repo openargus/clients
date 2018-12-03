@@ -989,7 +989,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
 
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
-                          "%s --silent -k -u %s %s", curlexe, userpwd,
+                          "%s --fail --silent -k -u %s %s", curlexe, userpwd,
                           auth ? "--negotiate" : "");
    free(curlexe);
    if (slen >= PATH_MAX) {
