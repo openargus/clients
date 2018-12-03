@@ -652,6 +652,26 @@ __days_ago(const struct timeval * const now, unsigned int n)
    return (now->tv_sec - n*86400);
 }
 
+/* remove all occurrances of character "ch" from the end of string "str" */
+static void
+__chomp(char *str, char ch)
+{
+   char *tmp = str;
+
+   /* find the end of this string */
+   while (*tmp != 0)
+      tmp++;
+
+   /* back up one */
+   if (tmp > str)
+      tmp--;
+
+   while (*tmp == ch && tmp > str) {
+      *tmp = 0;
+      tmp--;
+   }
+}
+
 static int
 __parse_str(const char * const src, char **dst, size_t max)
 {
@@ -1313,9 +1333,13 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
          break;
       case RAMANAGE_PATH_ARCHIVE:
          retn = __parse_str(optarg, &global_config.path_archive, PATH_MAX);
+         if (retn == 0)
+            __chomp(global_config.path_archive, '/');
          break;
       case RAMANAGE_PATH_STAGING:
          retn = __parse_str(optarg, &global_config.path_staging, PATH_MAX);
+         if (retn == 0)
+            __chomp(global_config.path_archive, '/');
          break;
       case RAMANAGE_RPOLICY_DELETE_AFTER:
          retn = __parse_uint(optarg, &global_config.rpolicy_delete_after);
