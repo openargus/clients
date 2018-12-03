@@ -1002,12 +1002,18 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    return 0;
 }
 
+/* returns:
+ *   0 on success
+ *   > 0 if failure reported by libcurl (CURLcode)
+ *   < 0 if web server response indicates failure
+ */
 static int
 __upload(CURL *hnd, const char * const filename, off_t filesz,
          const configuration_t * const config)
 {
 #ifdef HAVE_LIBCURL
    CURLcode ret;
+   long response_code;
 #else
    int ret;
 #endif
@@ -1110,6 +1116,13 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    curl_easy_setopt(hnd, CURLOPT_INFILESIZE_LARGE, (curl_off_t)filesz);
    curl_easy_setopt(hnd, CURLOPT_URL, url);
    ret = curl_easy_perform(hnd);
+   if (ret != CURLE_OK)
+      goto out;
+
+   curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &response_code);
+   if (response_code < 200 || response_code >= 300)
+      ret = -1 * response_code;
+   DEBUGLOG(4, "http response code %d\n", response_code);
 #else
    ramanage_str_t *rstr = hnd;
    size_t rem = rstr->remain;
@@ -1513,6 +1526,9 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
 #else
          ArgusLog(LOG_WARNING, "error: %s", strerror(errno));
 #endif
+      } else {
+         ArgusLog(LOG_WARNING, "received non-success code from server (%d)\n",
+                  -1 * res);
       }
       i++;
    }
@@ -1844,6 +1860,9 @@ main(int argc, char **argv)
       }
    }
 
+#ifdef HAVE_LIBCURL
+   curl_global_init(CURL_GLOBAL_ALL);
+#endif
 #ifdef HAVE_LIBCARES
    if (RamanageInitLibcares(&global_config) < 0)
       ArgusLog(LOG_ERR, "failed to initialize query for service record\n");
