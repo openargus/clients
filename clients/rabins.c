@@ -620,32 +620,6 @@ ArgusClientTimeout ()
    struct RaBinStruct *bin = NULL;
    int i = 0, count, nflag = 0;
 
-   if (RaRealTime) {  /* establish value for time comparison */
-      gettimeofday(&ArgusParser->ArgusRealTime, 0);
-      ArgusAdjustGlobalTime(ArgusParser, &ArgusParser->ArgusRealTime);
-
-      if (ArgusLastTime.tv_sec != 0) {
-         if (ArgusLastRealTime.tv_sec > 0) {
-            RaDiffTime(&ArgusParser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-            thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-            dRealTime.tv_sec  = thisUsec / 1000000;
-            dRealTime.tv_usec = thisUsec % 1000000;
-
-
-            ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-            ArgusLastTime.tv_usec += dRealTime.tv_usec;
-
-            if (ArgusLastTime.tv_usec > 1000000) {
-               ArgusLastTime.tv_sec++;
-               ArgusLastTime.tv_usec -= 1000000;
-            }
-         }
-
-         ArgusLastRealTime = ArgusParser->ArgusRealTime;
-      }
-   }
-
-
    if ((ArgusParser->Bflag > 0) && rbps->rtime.tv_sec) {
       struct timeval diffTimeBuf, *diffTime = &diffTimeBuf;
       long long dtime;
