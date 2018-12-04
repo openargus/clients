@@ -75,6 +75,8 @@ int RaPrintCounter = 0;
 int RaRealTime = 0;
 float RaUpdateRate = 1.0;
 
+static struct timeval RabinsTimeoutB;	/* -B option as timeval */
+static struct timeval RabinsTimeoutAbs;	/* time of next expiry */
 struct timeval ArgusLastRealTime = {0, 0};
 struct timeval ArgusLastTime     = {0, 0};
 struct timeval ArgusThisTime     = {0, 0};
@@ -445,6 +447,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
+      RabinsTimeoutB.tv_sec = parser->Bflag;
+
       if (parser->Gflag) {
          parser->uflag++;
          parser->RaFieldDelimiter = ',';
@@ -611,6 +615,65 @@ RaParseComplete (int sig)
 #endif
 }
 
+/* timeout functions:
+ *
+ * If the source of argus data is a socket, then ArgusCurrentInput is
+ * always non-null.  If it's a file, then ArgusCurrentInput _might_
+ * be non-null; a compressed file causes the ArgusCurrentInput to be
+ * cleared because the records come from a child process via popen().
+ *
+ * Try to take into account that we could read some files first and
+ * then connect to a socket.
+ */
+static void
+RabinsSetTimeout(struct ArgusParserStruct *parser, struct timeval *timer,
+                 const struct timeval * const interval)
+{
+   if (parser->Sflag && parser->ArgusCurrentInput) {
+      timeradd(&parser->ArgusRealTime, interval, timer);
+      return;
+   }
+
+   timeradd(&parser->ArgusCurrentTime, interval, timer);
+}
+
+static int
+RabinsCheckTimeout(const struct ArgusParserStruct * const parser,
+                   const struct timeval * const timer)
+{
+   if (timer->tv_sec == 0)
+      return 0;
+
+   if (parser->Sflag && parser->ArgusCurrentInput)
+      return !!timercmp(&parser->ArgusRealTime, timer, >);
+
+   return !!timercmp(&parser->ArgusCurrentTime, timer, >);
+}
+
+/* return the next index into rbps->array that is non-null */
+static int
+RabinsAdvanceIndex(struct RaBinProcessStruct *rbps, int curindex)
+{
+   if (rbps->array[curindex] == NULL) {
+      /* advance rbps->index to the next usable entry */
+      if (rbps->count > 0) {
+         int i = curindex+1;
+         int found = 0;
+
+         while (i != curindex && i < rbps->arraylen && !found) {
+            if (rbps->array[i] != NULL)
+               found = i;
+            i++;
+         }
+         if (found)
+            curindex = found;
+      }
+   }
+   return curindex;
+}
+
+/* index into rbps->array of oldest location with data */
+static int RabinsOldestIndex;
 
 void
 ArgusClientTimeout ()
@@ -618,22 +681,27 @@ ArgusClientTimeout ()
    struct ArgusRecordStruct *ns = NULL, *argus = NULL;
    struct RaBinProcessStruct *rbps = RaBinProcess;
    struct RaBinStruct *bin = NULL;
-   int i = 0, count, nflag = 0;
+   int i = 0, nflag = 0;
 
-   if ((ArgusParser->Bflag > 0) && rbps->rtime.tv_sec) {
-      struct timeval diffTimeBuf, *diffTime = &diffTimeBuf;
-      long long dtime;
+   if ((ArgusParser->Bflag > 0) && RabinsTimeoutAbs.tv_sec > 0) {
+      int ind = RabinsOldestIndex ? RabinsOldestIndex : rbps->index;
 
-      RaDiffTime(&ArgusParser->ArgusRealTime, &rbps->rtime, diffTime);
-      dtime = (diffTime->tv_sec * 1000000LL) + diffTime->tv_usec;
+     /* track the previous value of the array index.
+      * The last call to RabinsAdvanceIndex will
+      * (almost) always push the index past the range
+      * of times we're ready to flush.
+      */
 
-      if (dtime >= ((ArgusParser->Bflag * 1000000LL) + rbps->size)) {
-         long long rtime = (rbps->rtime.tv_sec * 1000000LL) + rbps->rtime.tv_usec;
-
-         count = (rbps->end - rbps->start)/rbps->size;
+      if (RabinsCheckTimeout(ArgusParser, &RabinsTimeoutAbs)) {
+         RabinsSetTimeout(ArgusParser, &RabinsTimeoutAbs, &RabinsTimeoutB);
 
          if (rbps->array != NULL) {
-            if ((bin = rbps->array[rbps->index]) != NULL) {
+
+            ind = RabinsAdvanceIndex(rbps, ind);
+            bin = rbps->array[ind];
+            RabinsOldestIndex = ind;
+
+            while (bin && timercmp(&bin->stime, &RabinsTimeoutAbs, <)) {
                struct ArgusAggregatorStruct *agg = bin->agg;
                int tcnt = 0;
 
@@ -695,27 +763,14 @@ ArgusClientTimeout ()
                }
 
 #ifdef ARGUSDEBUG
-               ArgusDebug (2, "ArgusClientTimeout() RaBinProcess: Bflag %f rtime %lld start %d.%06d size %.06f arraylen %d count %d index %d\n",
-                  ArgusParser->Bflag, rtime, bin->stime.tv_sec, bin->stime.tv_usec, bin->size/1000000.0, rbps->arraylen, tcnt, rbps->index);
+               ArgusDebug (2, "ArgusClientTimeout() RaBinProcess: Bflag %f start %d.%06d size %.06f arraylen %d count %d index %d\n",
+                  ArgusParser->Bflag, bin->stime.tv_sec, bin->stime.tv_usec, bin->size/1000000.0, rbps->arraylen, tcnt, rbps->index);
 #endif
-               RaDeleteBin(ArgusParser, rbps, rbps->index);
-
-               /* advance rbps->index to the next usable entry */
-               if (rbps->count > 0) {
-                  int i = rbps->index+1;
-                  int found = 0;
-
-                  while (i != rbps->index && !found) {
-                     if (i == rbps->arraylen)
-                        i = 0;
-                     if (rbps->array[i] != NULL)
-                        found = i;
-                     i++;
-                  }
-                  if (found)
-                     rbps->index = found;
-               }
-            } else {
+               RaDeleteBin(ArgusParser, rbps, ind);
+               ind = RabinsAdvanceIndex(rbps, ind);
+               bin = rbps->array[ind];
+            }
+            if (bin == NULL) {
                if (RaBinProcess->nadp.zero) {
                   long long tval = RaBinProcess->start + (RaBinProcess->size * RaBinProcess->index);
                   struct ArgusTimeObject *btime = NULL;
@@ -733,8 +788,8 @@ ArgusClientTimeout ()
                   RaSendArgusRecord (ns);
 
 #ifdef ARGUSDEBUG
-               ArgusDebug (2, "ArgusClientTimeout() RaBinProcess: Bflag %f rtime %lld start %d.%06d size %.06f arraylen %d count %d index %d\n",
-                  ArgusParser->Bflag, rtime, btime->src.start.tv_sec, btime->src.start.tv_usec, rbps->size/1000000.0, rbps->arraylen, 0, rbps->index);
+               ArgusDebug (2, "ArgusClientTimeout() RaBinProcess: Bflag %f start %d.%06d size %.06f arraylen %d count %d index %d\n",
+                  ArgusParser->Bflag, btime->src.start.tv_sec, btime->src.start.tv_usec, rbps->size/1000000.0, rbps->arraylen, 0, rbps->index);
 #endif
 
 /*
@@ -745,21 +800,17 @@ ArgusClientTimeout ()
 #endif
                }
             }
-
-            for (i = 0; i < count; i++)
-               rbps->array[i] = rbps->array[(i + 1)];
-    
-            rbps->start += rbps->size;
-            rbps->end   += rbps->size;
-
-            rbps->array[count] = NULL;
-            rbps->startpt.tv_sec  += rbps->size;
          }
-
-         rtime += rbps->size;
-         rbps->rtime.tv_sec  = rtime / 1000000;
-         rbps->rtime.tv_usec = rtime % 1000000;
       }
+
+      /* shift the array to the left */
+      if (RabinsOldestIndex > rbps->index) {
+         ArgusShiftArray(ArgusParser, rbps, RabinsOldestIndex-rbps->index, 0);
+         RabinsOldestIndex = rbps->index;
+      }
+
+   } else {
+      RabinsSetTimeout(ArgusParser, &RabinsTimeoutAbs, &RabinsTimeoutB);
    }
 
    if ((rbps->size > 0) && (rbps->rtime.tv_sec == 0)) {
