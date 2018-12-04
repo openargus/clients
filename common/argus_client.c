@@ -139,9 +139,33 @@ static int
 ArgusSortTransportStruct(const struct ArgusTransportStruct * const,
                          const struct ArgusTransportStruct * const, int);
 
+
+void
+ArgusSetTimeout(struct ArgusParserStruct *parser, struct ArgusInput *input)
+{
+   if (input == NULL)
+      return;
+   if (input->file || input->pipe)
+      timeradd(&parser->ArgusCurrentTime, &parser->RaClientTimeout,
+               &parser->RaClientTimeoutAbs);
+   else
+      timeradd(&parser->ArgusRealTime, &parser->RaClientTimeout,
+               &parser->RaClientTimeoutAbs);
+}
+
+int
+ArgusCheckTimeout(struct ArgusParserStruct *parser, struct ArgusInput *input)
+{
+   if (input == NULL)
+      return 0;
+   if (input->file || input->pipe)
+      return !!timercmp(&parser->ArgusCurrentTime, &parser->RaClientTimeoutAbs, >);
+   return !!timercmp(&parser->ArgusRealTime, &parser->RaClientTimeoutAbs, >);
+}
+
+
 #ifdef ARGUS_SASL
 #include <argus/saslint.h>
-
 
 // ArgusReadSaslStreamSocket() - this routine needs to keep reading data from the
 //                               socket, decrypt it and then copy it into the
@@ -542,12 +566,10 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
    return (retn);
 }
 
-
 void
 ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
 {
    int retn = 0, done = 0;
-   struct timeval timeoutValue;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusReadFileStream() starting\n");
@@ -555,8 +577,6 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
    parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
    parser->status |=   ARGUS_READING_FILES;
       
-   timeoutValue.tv_sec = 0;
-
    while (input && !done) {
       
       switch (input->type) {
@@ -577,22 +597,8 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
       }
 
-      if (timeoutValue.tv_sec == 0) {
-         timeoutValue = ArgusParser->ArgusRealTime;
-
-         timeoutValue.tv_sec  += ArgusParser->RaClientTimeout.tv_sec;
-         timeoutValue.tv_usec += ArgusParser->RaClientTimeout.tv_usec;
-
-         while (timeoutValue.tv_usec >= 1000000) {
-            timeoutValue.tv_sec  += 1;
-            timeoutValue.tv_usec -= 1000000;
-         }
-      }
-
-      if ((ArgusParser->ArgusRealTime.tv_sec  > timeoutValue.tv_sec) ||
-         ((ArgusParser->ArgusRealTime.tv_sec == timeoutValue.tv_sec) &&
-          (ArgusParser->ArgusRealTime.tv_usec > timeoutValue.tv_usec))) {
-
+      if (parser->RaClientTimeoutAbs.tv_sec > 0 &&
+               ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
 
          if (ArgusParser->Tflag) {
@@ -601,16 +607,8 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
             }
             ArgusParser->Tflag--;
          }
-
-         timeoutValue = ArgusParser->ArgusRealTime;
-         timeoutValue.tv_sec  += ArgusParser->RaClientTimeout.tv_sec;
-         timeoutValue.tv_usec += ArgusParser->RaClientTimeout.tv_usec;
-
-         while (timeoutValue.tv_usec >= 1000000) {
-            timeoutValue.tv_sec  += 1;
-            timeoutValue.tv_usec -= 1000000;
-         }
       }
+      ArgusSetTimeout(parser, input);
    }
 
 #ifdef ARGUSDEBUG
@@ -768,7 +766,7 @@ void
 ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queue)
 {
    struct ArgusInput *input = NULL;
-   struct timeval wait, timeoutValue = {0, };
+   struct timeval wait;
    int retn = 0, started = 0;
    struct timeval rtime;
 
@@ -902,7 +900,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 #endif
       }
 
-      if (timeoutValue.tv_sec == 0) {
+      if (parser->RaClientTimeoutAbs.tv_sec == 0) {
 #if defined(ARGUS_THREADS)
          pthread_mutex_lock(&parser->lock);
 #endif
@@ -911,20 +909,12 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 #if defined(ARGUS_THREADS)
          pthread_mutex_unlock(&parser->lock);
 #endif
-         timeoutValue = rtime;
-         timeoutValue.tv_sec  += parser->RaClientTimeout.tv_sec;
-         timeoutValue.tv_usec += parser->RaClientTimeout.tv_usec;
-         while (timeoutValue.tv_usec >= 1000000) {
-            timeoutValue.tv_sec  += 1;
-            timeoutValue.tv_usec -= 1000000;
-         }
+         ArgusSetTimeout(parser, input);
       }
 
-      if ((rtime.tv_sec  > timeoutValue.tv_sec) ||
-         ((rtime.tv_sec == timeoutValue.tv_sec) &&
-          (rtime.tv_usec > timeoutValue.tv_usec))) {
-
+      if (ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
+         ArgusSetTimeout(parser, input);
 
          if (parser->Tflag) {
             struct timeval diff;
@@ -980,17 +970,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
          }
 #endif
 
-         timeoutValue = parser->ArgusRealTime;
-         timeoutValue.tv_sec  += parser->RaClientTimeout.tv_sec;
-         timeoutValue.tv_usec += parser->RaClientTimeout.tv_usec;
-
-         if (timeoutValue.tv_usec >= 1000000) {
-            timeoutValue.tv_sec  += 1;
-            timeoutValue.tv_usec -= 1000000;
-         }
-         if (timeoutValue.tv_usec < 0) {
-            timeoutValue.tv_usec = 0;
-         }
       }
 
    }
@@ -6499,79 +6478,6 @@ ArgusRemoveHashEntry (struct ArgusHashTableHdr **htblhdr)
    }
 }
 
-
-int
-ArgusCheckTimeout (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
-{
-   int retn = 0, lapseTime;
-   struct timeval *tvp = &parser->ArgusGlobalTime;
-
-   int lapseTimeSecs, lapseTimeuSecs;
-   int starTimeSecs, starTimeuSecs;
-   int lastTimeSecs, lastTimeuSecs;
-
-   if (ns1->timeout > 0) {
-      lapseTime = ns1->qhdr.lasttime.tv_sec + ns1->timeout;
-
-      if ((tvp->tv_sec > lapseTime) || ((tvp->tv_sec == lapseTime) &&
-              (tvp->tv_usec > ns1->qhdr.lasttime.tv_usec))) {
-         ns1->status |= ARGUS_STATUS;
-         RaSendArgusRecord(ns1);
-
-      } else {
-         starTimeSecs  = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.start.tv_sec;
-         starTimeuSecs = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.start.tv_usec;
-         
-         if ((((struct ArgusTimeObject *)ns2->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec  >
-              ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec) ||
-            ((((struct ArgusTimeObject *)ns2->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec  ==
-              ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec) &&
-             (((struct ArgusTimeObject *)ns2->dsrs[ARGUS_TIME_INDEX])->src.end.tv_usec >
-              ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.end.tv_usec))) {
-            lastTimeSecs  = ((struct ArgusTimeObject *)ns2->dsrs[ARGUS_TIME_INDEX])->src.start.tv_sec;
-            lastTimeuSecs = ((struct ArgusTimeObject *)ns2->dsrs[ARGUS_TIME_INDEX])->src.start.tv_usec;
-
-         } else {
-            lastTimeSecs  = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.start.tv_sec;
-            lastTimeuSecs = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.start.tv_usec;
-         }
-
-         lapseTimeSecs  = (lastTimeSecs  - starTimeSecs);
-         lapseTimeuSecs = (lastTimeuSecs - starTimeuSecs);
-
-         if (lapseTimeuSecs < 0) {
-            lapseTimeSecs--;
-            lapseTimeuSecs += 1000000;
-         }
-
-         if (lapseTimeSecs >= ns1->timeout) {
-            ns1->status |= ARGUS_STATUS;
-            RaSendArgusRecord(ns1);
-         }
-      }
-   }
-
-   if (ns1->idle > 0) {
-      lastTimeSecs  = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.end.tv_sec;
-      lastTimeuSecs = ((struct ArgusTimeObject *)ns1->dsrs[ARGUS_TIME_INDEX])->src.end.tv_usec;
-
-      if (lastTimeSecs > 0) {
-         lapseTimeSecs  = (tvp->tv_sec  - lastTimeSecs);
-         lapseTimeuSecs = (tvp->tv_usec - lastTimeuSecs);
-
-         if (lapseTimeSecs >= ns1->idle) {
-            ns1->status |= ARGUS_TIMEOUT;
-            retn++;
-         }
-      }
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (8, "RaCheckTimeout: returning %d \n", retn);
-#endif
-
-   return (retn);
-}
 
 int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusProcessTCPAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);

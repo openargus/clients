@@ -3440,6 +3440,10 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
          if (retn >= 0)
             retn = argus->hdr.len * 4;
       }
+      if (ArgusCheckTimeout(parser, input)) {
+          ArgusClientTimeout();
+          ArgusSetTimeout(parser, input);
+      }
    }
 
 #ifdef ARGUSDEBUG

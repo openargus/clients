@@ -1213,7 +1213,8 @@ struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
 
 int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
-int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusInput *);
+void ArgusSetTimeout (struct ArgusParserStruct *, struct ArgusInput *);
 
 int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *, int);
 void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -1388,7 +1389,8 @@ extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, i
 
 extern int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
-extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusInput *);
+extern void ArgusSetTimeout (struct ArgusParserStruct *, struct ArgusInput *);
 
 extern struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
 extern void RaDeleteBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, int);

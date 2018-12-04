@@ -324,7 +324,9 @@ struct ArgusParserStruct {
 
    struct timeval ArgusRealTime, ArgusGlobalTime;
    struct timeval ArgusStartRealTime, ArgusEndRealTime;
-   struct timeval RaClientTimeout, RaClientUpdate;
+   struct timeval RaClientTimeout;		/* timeout interval */
+   struct timeval RaClientTimeoutAbs;		/* when current timeout interval ends */
+   struct timeval RaClientUpdate;
    struct timeval RaStartTime, RaEndTime;
    struct timeval ArgusStartTimeVal;
    struct timeval ArgusTimeDelta;
