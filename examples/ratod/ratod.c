@@ -661,7 +661,7 @@ ArgusClientTimeout ()
                ArgusDebug (2, "ArgusClientTimeout() RaBinProcess: Bflag %f rtime %lld start %d.%06d size %.06f arraylen %d count %d index %d\n",
                   ArgusParser->Bflag, rtime, bin->stime.tv_sec, bin->stime.tv_usec, bin->size/1000000.0, rbps->arraylen, count, rbps->index);
 #endif
-               RaDeleteBin(ArgusParser, bin);
+               RaDeleteBin(ArgusParser, rbps, rbps->index);
                rbps->array[rbps->index] = NULL;
 
             } else {
@@ -1323,7 +1323,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
                ArgusDeleteRecordStruct(ArgusParser, man);
             }
 
-            RaDeleteBin(parser, bin);
+            RaDeleteBin(parser, rbps, i);
             rbps->array[i] = NULL;
 
          } else {

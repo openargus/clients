@@ -1061,8 +1061,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
       for (i = rbps->index; i < max; i++) {
          if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
             ArgusProcessQueue(bin, bin->agg->queue, ARGUS_STOP);
-            RaDeleteBin(parser, bin);
-            rbps->array[i] = NULL;
+            RaDeleteBin(parser, rbps, i);
          }
       }
       MUTEX_UNLOCK(&rbps->lock);
@@ -1188,8 +1187,7 @@ ArgusClientTimeout ()
 #ifdef ARGUSDEBUG
                            ArgusDebug (2, "ArgusClientTimeout: deleting time bin %p\n", bin);
 #endif
-                           RaDeleteBin(ArgusParser, bin);
-                           RaBinProcess->array[i] = NULL;
+                           RaDeleteBin(ArgusParser, RaBinProcess, i);
                            deleted++;
                         }
                      }

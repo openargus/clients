@@ -726,7 +726,7 @@ RaParseComplete (int sig)
 
                      agg = agg->nxt;
                   }
-                  RaDeleteBin(ArgusParser, bin);
+                  RaDeleteBin(ArgusParser, rbps, i);
                   rbps->array[i] = NULL;
                }
             }
@@ -919,8 +919,7 @@ ArgusClientTimeout ()
                      agg = agg->nxt;
                   }
 
-                  RaDeleteBin(ArgusParser, bin);
-                  rbps->array[rbps->index] = NULL;
+                  RaDeleteBin(ArgusParser, rbps, rbps->index);
 
                   if (ArgusParser->ArgusGenerateManRecords) {
                      struct ArgusRecordStruct *man =
@@ -2154,8 +2153,7 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
                agg = agg->nxt;
             }
 
-            RaDeleteBin(parser, bin);
-            rbps->array[i] = NULL;
+            RaDeleteBin(parser, rbps, i);
 
          } else {
             if (rbps->nadp.zero && ((i >= rbps->index) && 

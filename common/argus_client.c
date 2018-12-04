@@ -4014,7 +4014,7 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
          if (ns->bins->array != NULL) {
             for (i = 0; i < ns->bins->len; i++)
                if (ns->bins->array[i] != NULL) {
-                  RaDeleteBin (parser, ns->bins->array[i]);
+                  RaDeleteBin (parser, ns->bins, i);
                   ns->bins->array[i] = NULL;
                }
 
@@ -5443,7 +5443,7 @@ RaDeleteBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *
 
       for (i = rbps->index; i < max; i++) {
          if ((rbps->array != NULL) && ((bin = rbps->array[i]) != NULL)) {
-            RaDeleteBin(parser, bin);
+            RaDeleteBin(parser, rbps, i);
          }
       }
 
@@ -5499,9 +5499,29 @@ RaNewBin (struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps, str
 }
 
 void
-RaDeleteBin (struct ArgusParserStruct *parser, struct RaBinStruct *bin)
+RaDeleteBin (struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps,
+             int index)
 {
+   struct RaBinStruct *bin;
+
+   if (rbps == NULL) {
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "%s: rbps is NULL\n", __func__);
+#endif
+      return;
+   }
+
+   if (rbps->array == NULL) {
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "%s: rbps array is NULL\n", __func__);
+#endif
+      return;
+   }
+
+   bin = rbps->array[index];
    if (bin != NULL) {
+      rbps->array[index] = NULL;
+      rbps->count--;
       if (bin->agg != NULL)
          ArgusDeleteAggregator (parser, bin->agg);
       if (bin->table != NULL)
@@ -5511,7 +5531,7 @@ RaDeleteBin (struct ArgusParserStruct *parser, struct RaBinStruct *bin)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaDeleteBin(%p)\n", bin);
+   ArgusDebug (2, "%s(%p, %p, %d)\n", __func__, parser, rbps, index);
 #endif
    return;
 }
@@ -10743,7 +10763,7 @@ ArgusShiftArray (struct ArgusParserStruct *parser, struct RaBinProcessStruct *rb
 
       for (i = 0; i < num; i++)
          if ((bin = rbps->array[rbps->index + i]) != NULL)
-            RaDeleteBin(parser, (struct RaBinStruct *) bin);
+            RaDeleteBin(parser, rbps, rbps->index);
  
       for (i = rbps->index, step = (rbps->arraylen - num); i < step; i++)
          rbps->array[i] = rbps->array[i + num];
@@ -11025,6 +11045,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
             if ((rbps->array[ind] = RaNewBin(parser, rbps, argus, (rbps->start + (ind * rbps->size)), RATOPSTARTINGINDEX)) == NULL) 
                ArgusLog (LOG_ERR, "ArgusInsertRecord: RaNewBin error %s", strerror(errno));
 
+            rbps->count++; /* the number of used array entries */
             bin = rbps->array[ind];
 
             if (rbps->end < bin->value) {

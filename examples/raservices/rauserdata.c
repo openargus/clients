@@ -363,7 +363,7 @@ ArgusPruneSignatures (struct ArgusParserStruct *parser, struct ArgusRecordStruct
             if (tns->bins->array[i] == bin) {
                tns->bins->array[i] = NULL;
                tns->bins->count--;
-               RaDeleteBin(parser, bin);
+               RaDeleteBin(parser, tns->bins, i);
                break;
             }
          }
