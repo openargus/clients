@@ -1052,7 +1052,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   case ARGUS_EVENT:
                   case ARGUS_MAR:
                      if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
-                        ArgusDeleteRecordStruct(parser, tns);
+#ifdef ARGUSDEBUG
+                        ArgusDebug(2, "%s: failed to insert EVENT or MAR\n")
+#endif
+                        ;
                      break;
 
                   case ARGUS_NETFLOW:
@@ -1061,15 +1064,20 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
                      if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
                         if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
-                           ArgusDeleteRecordStruct(parser, tns);
-                     } else 
-                        ArgusDeleteRecordStruct(parser, tns);
+#ifdef ARGUSDEBUG
+                        ArgusDebug(2, "%s: failed to insert FAR\n")
+#endif
+                           ;
+                     }
                      break;
                   }
                }
 
-            } else
-               ArgusDeleteRecordStruct(parser, tns);
+            }
+            /* ArgusInsertRecord() makes a copy of the source record so we
+             * should always free tns here.
+             */
+            ArgusDeleteRecordStruct(parser, tns);
          }
 
          ArgusDeleteRecordStruct(parser, ns);
