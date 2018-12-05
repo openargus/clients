@@ -94,6 +94,7 @@ ArgusNewParser(char *progname)
 // retn->RaTimeFormat = strdup("%T.%f");
    retn->ArgusFractionalDate = 1;
 
+   retn->ArgusHashTableSize = RA_HASHTABLESIZE;
    retn->RaFilterTimeout = 1.5;
 
    retn->RaClientTimeout.tv_sec = 1;

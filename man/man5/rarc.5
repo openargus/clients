@@ -375,6 +375,18 @@ is record start time "stime".
 .fi
 
 
+.SH RA_HASHTABLE_SIZE
+
+ra* clients that match flow attributes, such as aggregators, use
+hash tables to hold data for processing.  This variable can change
+the size of hash tables to help control memory, or increase
+processing speed.  The default is 262144 (0x40000).
+
+.nf
+\fBRA_HASHTABLE_SIZE=\fP262144
+.fi
+
+
 .SH RA_TIMEOUT_INTERVAL
 
 Some ra* clients have a timeout based function.  Ratop, as an

@@ -440,6 +440,13 @@ RA_USERDATA_ENCODE=Ascii
 RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 
 
+# ra* clients that match flow attributes such as aggregators, use
+# hash table to hold data for processing.  This variable can change
+# the size of hash tables to help control memory, or increase
+# processing speed.  The default is 262144 (0x40000).
+#
+#RA_HASHTABLE_SIZE=262144
+
 
 # Some ra* clients have a timeout based function.  Ratop, as an
 # example, times out flows and removes them from  screen at a fixed

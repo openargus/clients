@@ -2466,6 +2466,10 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
          setArgusEventDataRecord (parser, optarg);
          break;
       }
+      case RA_HASHTABLE_SIZE: {
+         setArgusHashTableSize (parser, atoi(optarg));
+         break;
+      }
    }
 
 #ifdef ARGUSDEBUG
@@ -30753,6 +30757,15 @@ setArgusEventDataRecord (struct ArgusParserStruct *src, char *ptr)
    ArgusDebug (2, "setArgusEventDataRecord(%s)\n", ptr);
 #endif
 }
+
+void
+setArgusHashTableSize (struct ArgusParserStruct *src, int value)
+{
+   if (src != NULL) {
+      src->ArgusHashTableSize = value;
+   }
+}
+
 
 void
 ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)
