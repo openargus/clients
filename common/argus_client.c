@@ -10948,7 +10948,11 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
             if (ind > rbps->max)
                rbps->max = ind;
 
-            if ((rbps->array[ind] = RaNewBin(parser, rbps, argus, (rbps->start + (ind * rbps->size)), RATOPSTARTINGINDEX)) == NULL) 
+            if ((rbps->array[ind] = RaNewBin(parser, rbps, argus,
+                                             /* knock rbps->index off of ind so that the record
+                                              * falls within the bin boundaries. */
+                                             (rbps->start + ((ind - rbps->index) * rbps->size)),
+                                             RATOPSTARTINGINDEX)) == NULL)
                ArgusLog (LOG_ERR, "ArgusInsertRecord: RaNewBin error %s", strerror(errno));
 
             rbps->count++; /* the number of used array entries */
