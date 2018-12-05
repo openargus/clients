@@ -26604,10 +26604,10 @@ ArgusLog (int priority, char *fmt, ...)
          closelog ();
       }
       else {
-         fprintf (stderr, "%s: %s", label, buf);
+         fprintf (stderr, "%s: %s\n", label, buf);
       }
 #else
-      fprintf (stderr, "%s: %s", label, buf);
+      fprintf (stderr, "%s: %s\n", label, buf);
 #endif
    }
 
