@@ -183,6 +183,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
+      parser->ArgusPassNum = 2;
       parser->RaParseCompleting = 0;
       parser->RaInitialized++;
    }
@@ -311,12 +312,10 @@ ArgusQsortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queu
 void
 RaParseComplete (int sig)
 {
-   struct ArgusInput *input;
+   struct ArgusInput *input = NULL;
    struct ArgusFileInput *file = NULL;
-   char buf[MAXSTRLEN];
-   int label;
-   int have_input = 0;
-   int alloc_input = 0;
+   int label, have_input = 0, alloc_input = 0;
+   char *buf = ArgusCalloc(1, MAXSTRLEN);
 
    if ((input = ArgusParser->ArgusCurrentFile) == NULL) {
       file = ArgusParser->ArgusInputFileList;
@@ -350,7 +349,6 @@ RaParseComplete (int sig)
             srandom (ArgusParser->ArgusRealTime.tv_usec);
             label = random() % 100000;
 
-            bzero(buf, sizeof(buf));
             snprintf (buf, MAXSTRLEN, "%s.tmp%d", input->filename, label);
 
             setArgusWfile(ArgusParser, buf, NULL);
@@ -444,6 +442,7 @@ RaParseComplete (int sig)
       }
    }
 
+   ArgusFree(buf);
    if (alloc_input)
       ArgusFree(input);
 }
@@ -758,4 +757,33 @@ void ArgusWindowClose(void) {
 #endif
 }
 
+/*
+ * raqsort.1 is a 2-pass program that collects the field values that are used
+ * for sorting in pass 1, calculates the offset and lengths of records that need
+ * to be moved, and then in pass 2, it seeks and reads the input files, to
+ * create a sorted output stream.
+ *
+ * The core library supports multi-pass processing, through the use of the
+ * counter ArgusParser->ArgusPassNum, which is 1 by default.  When the core is
+ * done with the last pass of the input sources, as indicated by ArgusPassNum,
+ * the core library closes all the inputs, and de-allocates all the structs.
+ *
+ * raqsort.1, wants to process its input files in the routine, RaParseComplete(),
+ * which normally comes after processing all the input files, and any streaming
+ * data input.  Because the core library currently deallocates all the input
+ * file information before this routine, raqsort.1 needs to bypass this
+ * core library cleanup.
+ *
+ * To do this, rasqsort.1 needs to provide a RaOnePassComplete() routine, which
+ * is called at the end of the first pass, and set the ArgusPassNum to 0.
+ * This will cause the core library to jump past the file input cleanup routines 
+ * and call RaParseComplete(), leaving ArgusParser->ArgusInputFileList intact.
+ *
+ */
+
+int
+RaOnePassComplete(void) {
+   ArgusParser->ArgusPassNum = 0;
+   return 1;
+}
 
