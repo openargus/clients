@@ -956,12 +956,12 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
       parser->ArgusProgramOptions = ArgusCopyArgv (&argv[optind]);
 
    if (!(strncmp(parser->ArgusProgramName, "radium", 6)))
-      getoptStr = "a:A:bB:c:C:dD:E:e:f:F:g:GhH:iJlL:m:M:nN:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
+      getoptStr = "a:A:bB:c:C:dD:E:e:f:F:g:GhH:iJlL:m:M:nN:o:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
    if (!(strncmp(parser->ArgusProgramName, "rahisto", 6)))
-      getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
+      getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
-      getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
+      getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:o:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
 
    while ((op = getopt (argc, argv, getoptStr)) != EOF) {
       switch (op) {
@@ -1379,6 +1379,11 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                parser->sNflag = sNflag;
                parser->eNflag = eNflag;
             }
+            break;
+         }
+         case 'o': {
+            if (!(RaParseResourceStr (parser, optarg, 1, ArgusResourceFileStr, ARGUS_RCITEMS, RaParseResourceLine)))
+               ArgusLog(LOG_ERR, "RaParseResourceStr: -o \"%s\" %s", optarg, "syntax error");
             break;
          }
          case 'O': parser->Oflag = 0; break;
@@ -2471,6 +2476,59 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
    return 0;
 }
 
+int
+RaParseResourceStr (struct ArgusParserStruct *parser, char *str,
+                     int linenum, char *directives[], size_t items,
+                     ResourceCallback cb)
+{
+   int retn = 0, i, done = 0, len;
+
+   if (*str && (*str != '#') && (*str != '\r') && (*str != '\n') && (*str != '!')) {
+      for (i = 0; i < items && !done; i++) {
+         len = strlen(directives[i]);
+         if (!(strncmp (str, directives[i], len))) {
+            char *qptr = NULL;
+            int quoted = 0;
+            size_t optarglen;
+
+            optarg = &str[len];
+            if (*optarg == '\"') {
+               optarg++;
+               if ((qptr = strchr(optarg, '"')) != NULL)
+                  *qptr++ = '\0';
+               else
+                  ArgusLog (LOG_ERR, "%s() string unterminated\n", __func__);
+               quoted = 1;
+            }
+
+            /* deal with potential embedded comments */
+            if (!quoted) {
+               if (((qptr = strstr(optarg, " //")) != NULL) ||
+                   ((qptr = strstr(optarg, "\t//")) != NULL))
+                  *qptr++ = '\0';
+            }
+
+            optarglen = strlen(optarg);
+            if (optarglen > 1 && optarg[optarglen - 1] == '\n')
+               optarg[optarglen - 1] = '\0';
+            if (optarglen > 2 && optarg[optarglen - 2] == '\r')
+               optarg[optarglen - 2] = '\0';
+
+            cb(parser, linenum, optarg, quoted, i);
+            done = 1;
+            retn = 1;
+            break;
+         }
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s () returning %d\n", __func__, retn);
+#endif
+
+   return (retn);
+}
+
 
 int
 RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
@@ -2478,8 +2536,8 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
                      ResourceCallback cb)
 {
    int retn = 0;
-   int i, len, done = 0, linenum = 0;
-   char strbuf[MAXSTRLEN], *str = strbuf, *optarg;
+   int i, linenum = 0;
+   char strbuf[MAXSTRLEN], *str = strbuf;
    FILE *fd;
 
    roption = 0;
@@ -2521,48 +2579,7 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
             }
 
             soff = 0;
-
-            done = 0;
-            if (*str && (*str != '#') && (*str != '\r') && (*str != '\n') &&
-                (*str != '!')) {
-               for (i = 0; i < items && !done; i++) {
-                  len = strlen(directives[i]);
-                  if (!(strncmp (str, directives[i], len))) {
-                     char *qptr = NULL;
-                     int quoted = 0;
-                     size_t optarglen;
-
-                     optarg = &str[len];
-                     if (*optarg == '\"') {
-                        optarg++;
-                        if ((qptr = strchr(optarg, '"')) != NULL)
-                           *qptr++ = '\0';
-                        else
-                           ArgusLog (LOG_ERR, "%s(%s) string unterminated at line %d\n",
-                                     __func__, file, linenum);
-                        quoted = 1;
-                     }
-
-                     /* deal with potential embedded comments */
-                     if (!quoted) {
-                        if (((qptr = strstr(optarg, " //")) != NULL) ||
-                            ((qptr = strstr(optarg, "\t//")) != NULL))
-                           *qptr++ = '\0';
-                     }
-
-                     optarglen = strlen(optarg);
-                     if (optarglen > 1 && optarg[optarglen - 1] == '\n')
-                        optarg[optarglen - 1] = '\0';
-                     if (optarglen > 2 && optarg[optarglen - 2] == '\r')
-                        optarg[optarglen - 2] = '\0';
-
-                     cb(parser, linenum, optarg, quoted, i);
-                     done = 1;
-                     retn = 1;
-                     break;
-                  }
-               }
-            }
+            retn = RaParseResourceStr (parser, str, linenum, directives, items, cb);
          }
 
          fclose(fd);
@@ -2577,6 +2594,7 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
             }
             parser->RaPrintOptionIndex = 0;
          }
+
       } else {
          retn++;
 #ifdef ARGUSDEBUG

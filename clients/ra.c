@@ -283,6 +283,7 @@ usage ()
    fprintf (stdout, "            [io]<start-end>     process this inclusive range of matching records.\n");
    fprintf (stdout, "            [io]<start+num>     process this number of matching records, starting at start.\n");
    fprintf (stdout, "         -p <digits>            print fractional time with <digits> precision.\n");
+   fprintf (stdout, "         -o option              provide option in the format used in the rarc.5 conf file.\n");
    fprintf (stdout, "         -q                     quiet mode. don't print record outputs.\n");
    fprintf (stdout, "         -r <[type:]file[::ostart[:ostop]] ...>\n");
    fprintf (stdout, "                                read <type> data from <file>. '-' denotes stdin.\n");
