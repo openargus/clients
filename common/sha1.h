@@ -40,6 +40,38 @@
 #ifndef _CRYPTO_SHA1_H_
 #define _CRYPTO_SHA1_H_
 
+
+#ifndef __GNUC_PREREQ__
+/* borrowed from FreeBSD sys/cdefs.h */
+/*
+ * Macro to test if we're using a specific version of gcc or later.
+ */
+#if defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#define	__GNUC_PREREQ__(ma, mi)	\
+	(__GNUC__ > (ma) || __GNUC__ == (ma) && __GNUC_MINOR__ >= (mi))
+#else
+#define	__GNUC_PREREQ__(ma, mi)	0
+#endif
+#endif
+
+#ifndef __min_size
+/* borrowed from FreeBSD sys/cdefs.h */
+/*
+ * C99 Static array indices in function parameter declarations.  Syntax such as:
+ * void bar(int myArray[static 10]);
+ * is allowed in C99 but not in C++.  Define __min_size appropriately so
+ * headers using it can be compiled in either language.  Use like this:
+ * void bar(int myArray[__min_size(10)]);
+ */
+#if !defined(__cplusplus) && \
+    (defined(__clang__) || __GNUC_PREREQ__(4, 6)) && \
+    (!defined(__STDC_VERSION__) || (__STDC_VERSION__ >= 199901))
+#define __min_size(x)	static (x)
+#else
+#define __min_size(x)	(x)
+#endif
+#endif /* __min_size */
+
 struct sha1_ctxt {
 	union {
 		u_int8_t	b8[20];

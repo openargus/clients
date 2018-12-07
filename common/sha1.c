@@ -50,10 +50,6 @@ __FBSDID("$FreeBSD$");
 # include <sys/systm.h>
 #endif
 #include <string.h> /* bcopy, bzero */
-
-#ifndef __min_size
-# define __min_size(x) (x)
-#endif
 #include "sha1.h"
 
 /* sanity check */
