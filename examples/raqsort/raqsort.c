@@ -514,11 +514,11 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    static char buf[MAXSTRLEN];
 
    switch (ns->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-      case ARGUS_EVENT: {
+      case ARGUS_MAR: {
          break;
       }
 
+      case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
          if (!(ArgusSecondPass)) {
