@@ -1252,6 +1252,7 @@ int ArgusReadSflowDatagramSocket (struct ArgusParserStruct *, struct ArgusInput 
 int ArgusReadCiscoStreamSocket (struct ArgusParserStruct *, struct ArgusInput *);
 int ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *, struct ArgusInput *);
 
+void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #else /* ArgusClient */
 
@@ -1411,6 +1412,7 @@ extern int ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *, struct Argu
 extern int ArgusReadSflowStreamSocket (struct ArgusParserStruct *, struct ArgusInput *);
 extern int ArgusReadSflowDatagramSocket (struct ArgusParserStruct *, struct ArgusInput *);
 
+extern void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #endif
 #ifdef __cplusplus

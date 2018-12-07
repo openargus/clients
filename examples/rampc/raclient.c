@@ -1852,8 +1852,6 @@ ArgusNewRateBins (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns
 
 
 
-void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *);
-
 int
 ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
 {
@@ -1866,7 +1864,7 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
       rtime = ((((ArgusParser->ArgusGlobalTime.tv_sec * 1000000LL) /rbps->size)) * rbps->size)/1000000LL;;
 
       if ((rbps->startpt.tv_sec + dtime) < rtime) {
-         ArgusShiftArray(ArgusParser, rbps);
+         ArgusShiftArray(ArgusParser, rbps, 1, ARGUS_NOLOCK);  /* FIXME: how many bins to shift??? */
          ArgusUpdateScreen();
 
          rbps->status |= RA_DIRTYBINS;
