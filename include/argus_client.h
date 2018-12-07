@@ -105,7 +105,7 @@ extern "C" {
 #define RA_CON			1
 #define RA_DONE			2
 
-#define RA_HASHTABLESIZE	0x40000
+#define RA_HASHTABLESIZE	0x1000
 #define RA_SVCPASSED		0x0100000
 #define RA_SVCFAILED		0x0200000
 #define RA_SVCINCOMPLETE        0x0400000
