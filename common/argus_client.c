@@ -3281,58 +3281,34 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                            if (dtime->src.start.tv_sec == 0) {
                               if (dtime->dst.start.tv_sec != 0) {
                                  dtime->src = dtime->dst;
-//                               bzero ((char *)&dtime->dst, sizeof(dtime->dst));
-                                 dtime->hdr.subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
-                                 dtime->hdr.subtype |=  (ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
                               }
                            }
+                           bzero ((char *)&dtime->dst, sizeof(dtime->dst));
                         } else
                         if (canon->metric.dst.pkts > 0) {
                            if (dtime->dst.start.tv_sec == 0) {
                               if (dtime->src.start.tv_sec != 0) {
                                  dtime->dst = dtime->src;
-//                               bzero ((char *)&dtime->src, sizeof(dtime->src));
-                                 dtime->hdr.subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-                                 dtime->hdr.subtype |=  (ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
                               }
                            }
+                           bzero ((char *)&dtime->src, sizeof(dtime->src));
                         }
                      }
-
-                     if (!(dtime->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START))) {
-                        dtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
-                        if (dtime->src.start.tv_sec)
-                           dtime->hdr.subtype |= ARGUS_TIME_SRC_START;
-                        if (dtime->src.end.tv_sec)
-                           dtime->hdr.subtype |= ARGUS_TIME_SRC_END;
-                        if (dtime->dst.start.tv_sec)
-                           dtime->hdr.subtype |= ARGUS_TIME_DST_START;
-                        if (dtime->dst.end.tv_sec)
-                           dtime->hdr.subtype |= ARGUS_TIME_DST_END;
-                     }
-
-                     if ((dtime->hdr.subtype & ARGUS_TIME_SRC_START) && (dtime->hdr.subtype & ARGUS_TIME_SRC_END)) {
-                        if ((dtime->src.start.tv_sec  == dtime->src.end.tv_sec) &&
-                            (dtime->src.start.tv_usec == dtime->src.end.tv_usec))
-                           dtime->hdr.subtype &= ~ARGUS_TIME_SRC_END;
-                     }
-
-                     if ((dtime->hdr.subtype & ARGUS_TIME_DST_START) && (dtime->hdr.subtype & ARGUS_TIME_DST_END)) {
-                        if ((dtime->dst.start.tv_sec  == dtime->dst.end.tv_sec) &&
-                            (dtime->dst.start.tv_usec == dtime->dst.end.tv_usec))
-                           dtime->hdr.subtype &= ~ARGUS_TIME_DST_END;
-                     }
-
-                     if (canon->metric.src.pkts == 0)
-                        dtime->hdr.subtype &= ~(ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END);
-
-                     if (canon->metric.dst.pkts == 0)
-                        dtime->hdr.subtype &= ~(ARGUS_TIME_DST_START | ARGUS_TIME_DST_END);
 
                      if ((dtime->src.start.tv_sec != 0) && (dtime->src.end.tv_sec == 0))
                         dtime->src.end = dtime->src.start;
                      if ((dtime->dst.start.tv_sec != 0) && (dtime->dst.end.tv_sec == 0))
                         dtime->dst.end = dtime->dst.start;
+
+                     dtime->hdr.subtype &= ~(ARGUS_TIME_MASK);
+                     if (dtime->src.start.tv_sec)
+                        dtime->hdr.subtype |= ARGUS_TIME_SRC_START;
+                     if (dtime->src.end.tv_sec)
+                        dtime->hdr.subtype |= ARGUS_TIME_SRC_END;
+                     if (dtime->dst.start.tv_sec)
+                        dtime->hdr.subtype |= ARGUS_TIME_DST_START;
+                     if (dtime->dst.end.tv_sec)
+                        dtime->hdr.subtype |= ARGUS_TIME_DST_END;
 
                      stime = RaGetFloatSrcDuration(retn);
                      ltime = RaGetFloatDstDuration(retn);
@@ -12672,46 +12648,16 @@ ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns)
       struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
 
       if (dtime != NULL) {
-         unsigned int subtype = dtime->hdr.subtype & (ARGUS_TIME_SRC_END | ARGUS_TIME_DST_END);
          struct timeval stimebuf, *st = &stimebuf;
          struct timeval etimebuf, *et = &etimebuf;
          struct timeval *stime = NULL;
 
-         if (subtype) {
-            switch (subtype) {
-               case ARGUS_TIME_SRC_END | ARGUS_TIME_DST_END: {
-                  st->tv_sec  = dtime->src.end.tv_sec;
-                  st->tv_usec = dtime->src.end.tv_usec;
-                  et->tv_sec  = dtime->dst.end.tv_sec;
-                  et->tv_usec = dtime->dst.end.tv_usec;
+         st->tv_sec  = dtime->src.end.tv_sec;
+         st->tv_usec = dtime->src.end.tv_usec;
+         et->tv_sec  = dtime->dst.end.tv_sec;
+         et->tv_usec = dtime->dst.end.tv_usec;
 
-                  stime = RaMaxTime(st, et);
-                  break;
-               }
-
-               case ARGUS_TIME_SRC_END: {
-                  st->tv_sec  = dtime->src.end.tv_sec;
-                  st->tv_usec = dtime->src.end.tv_usec;
-                  stime = st;
-                  break;
-               }
-
-               case ARGUS_TIME_DST_END: {
-                  st->tv_sec  = dtime->dst.end.tv_sec;
-                  st->tv_usec = dtime->dst.end.tv_usec;
-                  stime = st;
-                  break;
-               }
-            }
-
-         } else {
-            st->tv_sec  = dtime->src.end.tv_sec;
-            st->tv_usec = dtime->src.end.tv_usec;
-            et->tv_sec  = dtime->dst.end.tv_sec;
-            et->tv_usec = dtime->dst.end.tv_usec;
-
-            stime = RaMaxTime(st, et);
-         }
+         stime = RaMaxTime(st, et);
 
          sec  = stime->tv_sec;
          usec = stime->tv_usec;
