@@ -1709,7 +1709,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      case ARGUS_FLOW_DSR: {
                         struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 
-//                      bzero ((char *)&canon->flow, sizeof(canon->flow));
+                        bzero ((char *)&canon->flow, sizeof(canon->flow));
                         switch (subtype & 0x3F) {
                            case ARGUS_FLOW_LAYER_3_MATRIX:
                            case ARGUS_FLOW_CLASSIC5TUPLE: {
