@@ -75,6 +75,9 @@ int RaPrintCounter = 0;
 int RaRealTime = 0;
 float RaUpdateRate = 1.0;
 
+/* index into rbps->array of oldest location with data */
+static int RabinsOldestIndex;
+
 static struct timeval RabinsTimeoutB;	/* -B option as timeval */
 static struct timeval RabinsTimeoutAbs;	/* time of next expiry */
 struct timeval ArgusLastRealTime = {0, 0};
@@ -626,15 +629,17 @@ RaParseComplete (int sig)
  * then connect to a socket.
  */
 static void
-RabinsSetTimeout(struct ArgusParserStruct *parser, struct timeval *timer,
+RabinsSetTimeout(struct RaBinProcessStruct *rbps, struct timeval *timer,
                  const struct timeval * const interval)
 {
-   if (parser->Sflag && parser->ArgusCurrentInput) {
-      timeradd(&parser->ArgusRealTime, interval, timer);
-      return;
-   }
+   int ind = RabinsOldestIndex ? RabinsOldestIndex : rbps->index;
 
-   timeradd(&parser->ArgusCurrentTime, interval, timer);
+   if (rbps->array && rbps->array[ind])
+      timeradd(&rbps->array[ind]->etime, interval, timer);
+   else {
+      timer->tv_sec = 0;
+      timer->tv_usec = 0;
+   }
 }
 
 static int
@@ -672,9 +677,6 @@ RabinsAdvanceIndex(struct RaBinProcessStruct *rbps, int curindex)
    return curindex;
 }
 
-/* index into rbps->array of oldest location with data */
-static int RabinsOldestIndex;
-
 void
 ArgusClientTimeout ()
 {
@@ -693,7 +695,7 @@ ArgusClientTimeout ()
       */
 
       if (RabinsCheckTimeout(ArgusParser, &RabinsTimeoutAbs)) {
-         RabinsSetTimeout(ArgusParser, &RabinsTimeoutAbs, &RabinsTimeoutB);
+         RabinsSetTimeout(rbps, &RabinsTimeoutAbs, &RabinsTimeoutB);
 
          if (rbps->array != NULL) {
 
@@ -701,7 +703,7 @@ ArgusClientTimeout ()
             bin = rbps->array[ind];
             RabinsOldestIndex = ind;
 
-            while (bin && timercmp(&bin->stime, &RabinsTimeoutAbs, <)) {
+            while (bin && timercmp(&bin->etime, &RabinsTimeoutAbs, <)) {
                struct ArgusAggregatorStruct *agg = bin->agg;
                int tcnt = 0;
 
@@ -810,7 +812,7 @@ ArgusClientTimeout ()
       }
 
    } else {
-      RabinsSetTimeout(ArgusParser, &RabinsTimeoutAbs, &RabinsTimeoutB);
+      RabinsSetTimeout(rbps, &RabinsTimeoutAbs, &RabinsTimeoutB);
    }
 
    if ((rbps->size > 0) && (rbps->rtime.tv_sec == 0)) {
