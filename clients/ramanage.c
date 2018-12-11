@@ -1173,7 +1173,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
       ret = system(rstr->str);
       if (ret > 0) {
          ArgusLog(LOG_WARNING, "curl command failed, returned %d.  (%s)\n",
-                  rstr->str, ret);
+                  ret, rstr->str);
          ret = -ret; /* child process failed */
       }
    }
