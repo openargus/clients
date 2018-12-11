@@ -1691,11 +1691,21 @@ RamanageCheckPaths(const struct ArgusParserStruct * const parser,
 
    file = (struct ArgusFileInput *)parser->ArgusInputFileList;
    while (file && rv == 0) {
-      rv = __check_filename(file->filename, path_archive_len, path_staging_len,
-                            config);
-      if (rv < 0)
-         ArgusLog(LOG_WARNING, "%s: not processing file %s; wrong directory\n",
-                  __func__, file->filename);
+      if (file->statbuf.st_mtime == 0) {
+         /* If the modification time is zero, we were unable to stat the
+          * file.  The most likely cause is that another instance of
+          * ramange already compressed/uploaded/deleted this file.
+          * Mention this in the debug log and keep going.
+          */
+         DEBUGLOG(2, "%s skip missing file \"%s\"\n", __func__, file->filename);
+      } else {
+         rv = __check_filename(file->filename, path_archive_len,
+                               path_staging_len, config);
+         if (rv < 0)
+            ArgusLog(LOG_WARNING,
+                     "%s: not processing file %s; wrong directory\n", __func__,
+                     file->filename);
+      }
       file = (struct ArgusFileInput *)file->qhdr.nxt;
    }
 
@@ -1716,8 +1726,8 @@ RamanageStat(const struct ArgusParserStruct * const parser)
        */
       if (file->statbuf.st_mtime == 0
           && stat(file->filename, &file->statbuf) < 0) {
-         ArgusLog(LOG_WARNING, "unable to stat file %s\n", file->filename);
-         return -1;
+         DEBUGLOG(1, "unable to stat file \"%s\": %s\n", file->filename,
+                  strerror(errno));
       }
       file = (struct ArgusFileInput *)file->qhdr.nxt;
    }
@@ -1824,6 +1834,7 @@ main(int argc, char **argv)
    struct ArgusFileInput *exemplar;
    size_t trimmed;
    size_t filcount;
+   size_t filindex; /* index into filvec[] of first existing file */
 
    int cmdmask = 0;
    int cmdres = 0;
@@ -1953,11 +1964,22 @@ main(int argc, char **argv)
    filvec[filcount] = NULL;
    filvec[0] = exemplar;
 
+   /* Since the files are sorted by st_mtime, any files for which stat()
+    * failed will be at the front of the array.  Figure out how many
+    * of the entries are unusable (if any).
+    */
+   filindex = 0;
+   while (filindex < filcount && filvec[filindex]->statbuf.st_mtime == 0) {
+      filindex++;
+      filcount--;
+   }
+   DEBUGLOG(2, "The first %d files of filvec[] are missing\n", filindex);
+
 #ifdef ARGUSDEBUG
    {
       size_t i;
       for (i = 0; i < filcount; i++)
-         DEBUGLOG(6, "FILE[%4zu]: %s\n", i, filvec[i]->filename);
+         DEBUGLOG(6, "FILE[%4zu]: %s\n", i, filvec[i+filindex]->filename);
     }
 #endif
 
@@ -1972,17 +1994,20 @@ main(int argc, char **argv)
 #endif
 
    if (cmdmask & RAMANAGE_CMDMASK_COMPRESS) {
-      cmdres = RamanageCompress(parser, filvec, filcount, &global_config);
+      cmdres = RamanageCompress(parser, &filvec[filindex], filcount,
+                                &global_config);
       if (cmdres)
          goto out;
    }
    if (cmdmask & RAMANAGE_CMDMASK_UPLOAD) {
-      cmdres = RamanageUpload(parser, filvec, filcount, &global_config);
+      cmdres = RamanageUpload(parser, &filvec[filindex], filcount,
+                              &global_config);
       if (cmdres)
          goto out;
    }
    if (cmdmask & RAMANAGE_CMDMASK_REMOVE) {
-      cmdres = RamanageRemove(parser, filvec, filcount, &global_config);
+      cmdres = RamanageRemove(parser, &filvec[filindex], filcount,
+                              &global_config);
       if (cmdres)
          goto out;
    }
