@@ -1525,9 +1525,6 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
       return 0;
    }
 
-   __random_delay_init();
-   __random_delay(0, config->upload_delay_usec);
-
    i = 0;
    hnd = NULL;
    while (i < filcount && upload_kb <= config->upload_max_kb) {
@@ -1888,14 +1885,6 @@ main(int argc, char **argv)
    if (cmdmask == 0)
       ArgusLog(LOG_ERR, "need at least one command\n");
 
-   if (global_config.lockfile) {
-      if (ArgusCreateLockFile(global_config.lockfile, 0, &lockctx) < 0) {
-         cmdres = 1;
-         ArgusLog(LOG_WARNING, "unable to create lock file\n");
-         goto out;
-      }
-   }
-
 #ifdef HAVE_LIBCURL
    curl_global_init(CURL_GLOBAL_ALL);
 #endif
@@ -1903,6 +1892,17 @@ main(int argc, char **argv)
    if (RamanageInitLibcares(&global_config) < 0)
       ArgusLog(LOG_ERR, "failed to initialize query for service record\n");
 #endif
+
+   __random_delay_init();
+   __random_delay(0, global_config.upload_delay_usec);
+
+   if (global_config.lockfile) {
+      if (ArgusCreateLockFile(global_config.lockfile, 0, &lockctx) < 0) {
+         cmdres = 1;
+         ArgusLog(LOG_WARNING, "unable to create lock file\n");
+         goto out;
+      }
+   }
 
    if (global_config.rpolicy_ignore_archive == 0 &&
        __should_process_archive(&global_config) == 1) {
