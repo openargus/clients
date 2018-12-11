@@ -1048,7 +1048,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    struct sockaddr_in6 *addr6;
    void *src;
    char sha1hash[SHA1_RESULTLEN];
-   char sha1txt[SHA1_RESULTLEN*2];
+   char sha1txt[SHA1_RESULTLEN*2+1];
    int i;
 
    if (__sha1(filename, sha1hash) < 0) {
