@@ -1449,6 +1449,7 @@ RastreamWriteNewLogfile(struct ArgusParserStruct *parser,
     */
    char *template;
    int slen;
+   int fd;
 
    template = ArgusMalloc(PATH_MAX);
    if (template == NULL) {
@@ -1466,18 +1467,18 @@ RastreamWriteNewLogfile(struct ArgusParserStruct *parser,
       goto out;
    }
 
-   mktemp(template);
-   if (*template == 0) {
+   fd = mkstemp(template);
+   if (fd < 0) {
       retn = -1;
-      ArgusLog(LOG_WARNING, "%s: unable to generate unique filename\n",
-               __func__);
+      ArgusLog(LOG_WARNING, "%s: unable to open temp file: %s\n",
+               __func__, strerror(errno));
       goto out;
    }
 
 #ifdef ARGUSDEBUG
    ArgusDebug(2, "%s opening temporary file %s\n", __func__, template);
 #endif
-   wfile->fd = fopen(template, "a+");
+   wfile->fd = fdopen(fd, "a+");
    if (wfile->fd == NULL) {
       retn = -1;
       ArgusLog(LOG_WARNING, "%s: unable to open temporary file\n",
