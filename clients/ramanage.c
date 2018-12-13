@@ -1786,13 +1786,13 @@ RamanageTrimFiles(struct ArgusParserStruct *parser,
    /* while filvec[i] is newer than, or the same as, the file
     * specified on the command line
     */
-   while (i > 0 && __compare_argus_input_file_mtime(filvec[i], exemplar) == 1) {
+   while (i > 0 && __compare_argus_input_file_mtime(&filvec[i], &exemplar) == 1) {
       filvec[i] = NULL;
       trimmed++;
       i--;
    }
 
-   if (i == 0 && __compare_argus_input_file_mtime(filvec[i], exemplar) == 1) {
+   if (i == 0 && __compare_argus_input_file_mtime(&filvec[i], &exemplar) == 1) {
       filvec[0] = NULL;
       trimmed++;
    }
