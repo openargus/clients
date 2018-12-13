@@ -1770,43 +1770,38 @@ RamanageSortFiles(const struct ArgusParserStruct * const parser,
    return filvec;
 }
 
-/* prereq: (1) filvec must be sorted in order of increasing
- * modification time (2) exemplar must reside in the archive
- * directory, and therefor may appear in the list twice.
+/* prereq: filvec must be sorted in order of increasing
+ * modification time.
  * returns: the number of files trimmed from the array
  */
 static size_t
-RamanageTrimFiles(struct ArgusParserStruct *parser,
+RamanageTrimFiles(size_t filcount,
                   struct ArgusFileInput *exemplar,
                   struct ArgusFileInput **filvec)
 {
-   size_t i = parser->ArgusInputFileCount - 1;
+   size_t i;
    size_t trimmed = 0;
+
+   if (filcount <= 1)
+      return 0;
+
+   i = filcount - 1;
 
    /* while filvec[i] is newer than, or the same as, the file
     * specified on the command line
     */
    while (i > 0 && __compare_argus_input_file_mtime(&filvec[i], &exemplar) == 1) {
+      DEBUGLOG(6, "trimming %s\n", filvec[i]->filename);
       filvec[i] = NULL;
       trimmed++;
       i--;
    }
 
    if (i == 0 && __compare_argus_input_file_mtime(&filvec[i], &exemplar) == 1) {
+      DEBUGLOG(6, "trimming 0-file %s\n", filvec[0]->filename);
       filvec[0] = NULL;
       trimmed++;
    }
-
-   /* put the exemplar back since it was removed in the loop above */
-   if (i > 0)
-      filvec[i+1] = exemplar;
-   else
-      filvec[0] = exemplar;
-#ifdef ARGUGDEBUG
-   if (trimmed == 0)
-      abort();
-#endif
-   trimmed--;
 
    return trimmed;
 }
@@ -1949,18 +1944,16 @@ main(int argc, char **argv)
     * This will avoid monkeying with the files that rastream still
     * has open.
     */
-   trimmed = RamanageTrimFiles(parser, exemplar, filvec+1);
+   trimmed = RamanageTrimFiles(parser->ArgusInputFileCount-1, exemplar,
+                               filvec+1);
    DEBUGLOG(1, "Trimmed %zu files from the array\n", trimmed);
    filcount = parser->ArgusInputFileCount - trimmed;
 
-   /* swap the first and last files in the array so that the compress,
-    * upload and delete commands first process the file specified on
-    * the command line.
+   /* The zeroeth element of the array has been left unused, so
+    * let's put the file specified by the -r option there
+    * and remove it from the last entry in the array where
+    * the recursive directory search put it.
     */
-#ifdef ARGUSDEBUG
-   if (filvec[filcount] != exemplar)
-      abort();
-#endif
    filvec[filcount] = NULL;
    filvec[0] = exemplar;
 
