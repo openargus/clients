@@ -1185,8 +1185,8 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
       DEBUGLOG(4, "cmd: %s\n", rstr->str);
       ret = system(rstr->str);
       if (ret > 0) {
-         ArgusLog(LOG_WARNING, "curl command failed, returned %d.  (%s)\n",
-                  ret, rstr->str);
+         DEBUGLOG(1, "curl command failed, returned %d.  (%s)\n", ret,
+                  rstr->str);
          ret = -ret; /* child process failed */
       }
    }
