@@ -1795,7 +1795,7 @@ RamanageTrimFiles(size_t filcount,
    size_t i;
    size_t trimmed = 0;
 
-   if (filcount <= 1)
+   if (filcount < 1)
       return 0;
 
    i = filcount - 1;
