@@ -843,6 +843,12 @@ typedef ramanage_str_t CURL;
 #endif
 
 #ifdef HAVE_LIBCURL
+static size_t
+RamanageLibcurlWriteCallback(char *ptr, size_t size, size_t nmemb, void *user)
+{
+   return size*nmemb;
+}
+
 static int
 __trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
 {
@@ -853,7 +859,10 @@ __trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
 
    switch (type) {
       case CURLINFO_TEXT:
-         ArgusLog(LOG_INFO, "libcurl: %s", data);
+      case CURLINFO_HEADER_IN:
+      case CURLINFO_HEADER_OUT:
+      case CURLINFO_DATA_IN:
+         DEBUGLOG(2, "libcurl: %s", data);
          break;
       default: /* in case a new one is introduced to shock us */
          break;
@@ -974,7 +983,11 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    curl_easy_setopt(*hnd, CURLOPT_SSL_VERIFYPEER, 0L);
    curl_easy_setopt(*hnd, CURLOPT_SSL_VERIFYHOST, 0L);
    curl_easy_setopt(*hnd, CURLOPT_TCP_KEEPALIVE, 1L);
+   curl_easy_setopt(*hnd, CURLOPT_WRITEFUNCTION, RamanageLibcurlWriteCallback);
+# ifdef ARGUSDEBUG
    curl_easy_setopt(*hnd, CURLOPT_DEBUGFUNCTION, __trace);
+   curl_easy_setopt(*hnd, CURLOPT_VERBOSE, 1L);
+# endif /* ARGUSDEBUG */
 #else	/* HAVE_LIBCURL */
    ramanage_str_t *rstr;
    char * const curlexe =
