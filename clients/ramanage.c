@@ -1009,8 +1009,8 @@ __upload_init(CURL **hnd, const configuration_t * const config)
 
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
-                          "%s --fail --silent -k -u %s %s", curlexe, userpwd,
-                          auth ? "--negotiate" : "");
+                          "%s --fail --silent --show-error -k -u %s %s > /dev/null",
+                          curlexe, userpwd, auth ? "--negotiate" : "");
    free(curlexe);
    if (slen >= PATH_MAX) {
       ArgusFree(userpwd);
