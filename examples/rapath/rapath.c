@@ -267,9 +267,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((ArgusHashTable = ArgusNewHashTable(RABINS_HASHTABLESIZE)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s\n", strerror(errno));
 
-      if ((RaMapAddrTable.array = (struct RaMapHashTableHeader **) ArgusCalloc (RA_HASHTABLESIZE,
+      if ((RaMapAddrTable.array = (struct RaMapHashTableHeader **) ArgusCalloc (parser->ArgusHashTableSize,
                                     sizeof (struct RaMapHashTableHeader *))) != NULL) {
-         RaMapAddrTable.size = RA_HASHTABLESIZE;
+         RaMapAddrTable.size = parser->ArgusHashTableSize;
       }
 
       parser->RaCumulativeMerge = 1;
