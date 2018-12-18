@@ -31435,14 +31435,6 @@ ArgusParseInit (struct ArgusParserStruct *parser, struct ArgusInput *input)
       input->ArgusConvPtr = input->ArgusConvBuffer;
    }
 
-   if (!(ArgusParseInited)) {
-      if (input)
-         ArgusInitAddrtoname (parser, input->ArgusLocalNet, input->ArgusNetMask);
-      else
-         ArgusInitAddrtoname (parser, 0L, 0L);
-      ArgusParseInited = 1;
-   }
-
 #ifdef ARGUSDEBUG
    if (input) {
       ArgusDebug (2, "ArgusParseInit(%p %p\n", parser, input);
