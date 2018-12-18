@@ -133,7 +133,7 @@ extern "C" {
 
 
 #define TSEQ_HASHSIZE		0x10000
-#define HASHNAMESIZE		0x10000
+#define HASHNAMESIZE		1024
 
 #define RASIGLENGTH		32
    
