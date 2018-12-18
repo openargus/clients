@@ -633,9 +633,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       bzero(&ArgusFileTable, sizeof(ArgusFileTable));
 
-      ArgusFileTable.size  = 1024;
+      ArgusFileTable.size  = parser->ArgusHashTableSize;
+
       if ((ArgusFileTable.array = (struct ArgusHashTableHdr **)
-                  ArgusCalloc (1024, sizeof (struct ArgusHashTableHdr))) == NULL)
+                  ArgusCalloc (parser->ArgusHashTableSize, sizeof (struct ArgusHashTableHdr))) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s\n", strerror(errno));
 
       ArgusNadp->filename = strdup(outputfile);
@@ -1283,7 +1284,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
             ArgusFileStartSecs = fileSecs;
 
             if (strftime(ArgusCurrentFileName, MAXSTRLEN, ArgusNadp->filename, &tmval) <= 0)
-               ArgusLog (LOG_ERR, "RaSendArgusRecord () ArgusCalloc %s\n", strerror(errno));
+               ArgusLog (LOG_ERR, "RaSendArgusRecord () strftime %s\n", strerror(errno));
 
             switch (ArgusNadp->qual) {
                case ARGUSSPLITYEAR:  
@@ -1734,10 +1735,10 @@ ArgusNewFileCache(void)
    if ((retn->files = ArgusNewList()) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewFileCache: ArgusNewList error %s\n", strerror(errno));
 
-   if ((retn->htable.array = (struct ArgusHashTableHdr **) ArgusCalloc (RA_HASHTABLESIZE, sizeof(void *))) == NULL)
+   if ((retn->htable.array = (struct ArgusHashTableHdr **) ArgusCalloc (ArgusParser->ArgusHashTableSize, sizeof(void *))) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewLabeler: ArgusCalloc error %s", strerror(errno));
 
-   retn->htable.size = RA_HASHTABLESIZE;
+   retn->htable.size = ArgusParser->ArgusHashTableSize;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (3, "ArgusNewFileCache () return %p", retn);
