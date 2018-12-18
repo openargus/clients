@@ -401,6 +401,8 @@ static void ArgusSortFileList (struct ArgusFileInput **,
                                struct ArgusFileInput **, size_t);
 static int RaDescend(char *, size_t, size_t);
 
+int ArgusParseInited = 0;
+
 #if !defined(HAVE_TIMEGM)
 time_t timegm (struct tm *);
 #endif
@@ -5467,7 +5469,6 @@ ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser)
 void ArgusPrintRecordHeader (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintRecordCloser (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
-int ArgusParseInited = 0;
 
 #define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
 #define ARGUS_TEMP_BUF_SIZE             0x400
@@ -22297,6 +22298,7 @@ ArgusFreeServarray(struct ArgusParserStruct *parser)
          }
       }
    }
+   parser->ArgusSrvInit = 0;
 }
 
 void
@@ -22575,7 +22577,9 @@ ArgusInitAddrtoname(struct ArgusParserStruct *parser, u_int localnet, u_int mask
       f_netmask = mask;
    }
 
-   ArgusInitEtherarray();
+   if (ArgusEtherArrayInited == 0)
+      ArgusInitEtherarray();
+
    if (parser->nflag > 2)
       return;
 
