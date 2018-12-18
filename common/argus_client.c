@@ -3439,6 +3439,10 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                           u_int sfnd = 0, i;
                                           extern struct hnamemem tporttable[];
                                           struct hnamemem *tp;
+
+                                          if (parser->ArgusSrvInit == 0)
+                                             ArgusInitServarray(parser);
+
                                           i  = flow->ip_flow.sport;
                                           for (tp = &tporttable[i % (HASHNAMESIZE-1)]; tp->nxt; tp = tp->nxt)
                                              if (tp->addr == i)
