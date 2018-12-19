@@ -410,7 +410,7 @@ time_t timegm (struct tm *);
 void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 int
-RaProcessRecursiveFiles (char *path)
+RaProcessRecursiveFiles (char *path, int sort)
 {
    int retn = 1;
    struct stat statbuf;
@@ -451,9 +451,10 @@ RaProcessRecursiveFiles (char *path)
    }
 
    ArgusFree(name);
-   ArgusSortFileList (&ArgusParser->ArgusInputFileList,
-                      &ArgusParser->ArgusInputFileListTail,
-                      ArgusParser->ArgusInputFileCount);
+   if (sort)
+      ArgusSortFileList (&ArgusParser->ArgusInputFileList,
+                         &ArgusParser->ArgusInputFileListTail,
+                         ArgusParser->ArgusInputFileCount);
    return (retn);
 }
 
@@ -1511,7 +1512,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                ArgusDeleteFileList(parser);
 
             do {
-               RaProcessRecursiveFiles (optarg);
+               RaProcessRecursiveFiles (optarg, ARGUS_FILES_SORT);
                if ((optarg = argv[optind]) != NULL)
                   if (*optarg != '-')
                      optind++;

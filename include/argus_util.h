@@ -297,6 +297,11 @@ struct evendmem {
    char *name;
 };
 
+enum argus_file_sort_e {
+   ARGUS_FILES_NOSORT = 0,
+   ARGUS_FILES_SORT = 1,
+};
+
 
 #define Version1        1
 #define Version5        5
@@ -433,7 +438,7 @@ int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
 
 
 int ArgusMkdirPath(const char * const);
-int RaProcessRecursiveFiles (char *);
+int RaProcessRecursiveFiles (char *, int);
 
 #define RAENVITEMS      2
 

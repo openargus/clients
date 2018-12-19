@@ -1915,7 +1915,8 @@ main(int argc, char **argv)
    if (global_config.rpolicy_ignore_archive == 0 &&
        __should_process_archive(&global_config) == 1) {
       DEBUGLOG(1, "%s: adding files from archive directory\n", __func__);
-      if (RaProcessRecursiveFiles(global_config.path_archive) == 0) {
+      if (RaProcessRecursiveFiles(global_config.path_archive,
+                                  ARGUS_FILES_NOSORT) == 0) {
          cmdres = 1;
          goto out;
       }
@@ -1932,13 +1933,7 @@ main(int argc, char **argv)
       goto out;
    }
 
-   /* RaProcessRecursiveFiles() sorts *all* files in the list, not
-    * just the files it added.  So the file specified on the command
-    * line with -r will almost certainly not be the first file in
-    * the list any more.  Sort the files again based on modification
-    * timestamp.  If this program is run from rastream, the target
-    * file will end up somewhere near the end of the list.
-    *
+   /*
     * Allocate one extra entry in the file array so that the zeroeth
     * entry can remain empty until after the files are sorted and
     * the array trimmed.  Then the file specified on the command
