@@ -1723,28 +1723,6 @@ RamanageCheckPaths(const struct ArgusParserStruct * const parser,
 }
 
 static int
-RamanageStat(const struct ArgusParserStruct * const parser)
-{
-   struct ArgusFileInput *file;
-
-   file = (struct ArgusFileInput *)parser->ArgusInputFileList;
-   while (file) {
-      /* ArgusFileInput structures are zero-filled at creation.  If the
-       * stat buffer holds a modification time of the unix epoch
-       * (0), assume that it hasn't already been filled in and we
-       * need to call stat().
-       */
-      if (file->statbuf.st_mtime == 0
-          && stat(file->filename, &file->statbuf) < 0) {
-         DEBUGLOG(1, "unable to stat file \"%s\": %s\n", file->filename,
-                  strerror(errno));
-      }
-      file = (struct ArgusFileInput *)file->qhdr.nxt;
-   }
-   return 0;
-}
-
-static int
 __compare_argus_input_file_mtime(const void *a, const void *b)
 {
    const struct ArgusFileInput * const *aa = a;
@@ -1966,7 +1944,7 @@ main(int argc, char **argv)
       if (ArgusCreateLockFile(global_config.lockfile, 0, &lockctx) < 0) {
          cmdres = 1;
          ArgusLog(LOG_WARNING, "unable to create lock file\n");
-         goto out;
+         goto out_nolock;
       }
    }
 
@@ -1983,11 +1961,6 @@ main(int argc, char **argv)
       process_archive = 1;
 
       __save_state();
-   }
-
-   if (RamanageStat(parser) < 0) {
-      cmdres = 1;
-      goto out;
    }
 
    if (RamanageCheckPaths(parser, &global_config) < 0) {
@@ -2013,6 +1986,14 @@ main(int argc, char **argv)
     */
    filvec[0] = exemplar;
    filcount++;
+
+   /* It is possible that another process already dealt with our primary
+    * input file.  Update the statbuf for this one file here.
+    */
+   memset(&exemplar->statbuf, 0, sizeof(exemplar->statbuf));
+   if (stat(exemplar->filename, &exemplar->statbuf) < 0)
+      /* the file no longer exists - we're done */
+      goto out;
 
    /* remove files newer than the file we were asked to process.
     * Also remove the duplicate of that file in the list, which will be there
@@ -2072,14 +2053,15 @@ main(int argc, char **argv)
          goto out;
    }
 
+out:
    if (global_config.lockfile) {
       if (ArgusReleaseLockFile(&lockctx) < 0) {
          cmdres = 1;
-         goto out;
+         goto out_nolock;
       }
    }
 
-out:
+out_nolock:
 #ifdef HAVE_LIBCARES
    RamanageCleanupLibcares();
 #endif
