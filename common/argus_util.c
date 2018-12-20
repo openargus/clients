@@ -495,6 +495,10 @@ RaDescend(char *name, size_t len, size_t end)
                      if (!(ArgusAddFileList (ArgusParser, name, ARGUS_DATA_SOURCE, -1, -1)))
                         ArgusLog (LOG_ERR, "error: -R file arg %s\n", name);
 
+                     /* Copy the stat() results since we already have them. */
+                     ((struct ArgusFileInput *)
+                      ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
+
                      retn++;
                   }
                }
@@ -1496,6 +1500,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
                      if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
                         ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+
+                     stat(optarg, &((struct ArgusFileInput *)
+                                    ArgusParser->ArgusInputFileListTail)->statbuf);
 
                      if ((optarg = argv[optind]) != NULL)
                         if (*optarg != '-')
