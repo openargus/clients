@@ -1795,6 +1795,51 @@ RamanageSortFiles(const struct ArgusParserStruct * const parser,
    return off;
 }
 
+/* Append whatever files we found in the staging directory to the filvec,
+ * but DO NOT sort the resulting array since the only thing done after
+ * this is removal of old files.  RamanageRemove() does not assume the
+ * array is sorted and will walk the entire contents.
+ */
+static struct ArgusFileInput **
+RamanageAppendStagingFiles(const struct ArgusParserStruct * const parser,
+                           struct ArgusFileInput **filvec,
+                           size_t *filcount, size_t filindex,
+                           const configuration_t * const config)
+{
+   struct ArgusFileInput *tmp;
+   struct ArgusFileInput **newvec = filvec;
+   size_t prev_length = *filcount;
+   size_t i;
+   size_t off;
+
+   DEBUGLOG(1, "%s: adding files from staging directory\n", __func__);
+   if (RaProcessRecursiveFiles(config->path_staging, ARGUS_FILES_NOSORT) == 0) {
+      DEBUGLOG(1, "%s: unable to add files from staging directory (%s)\n",
+               __func__, config->path_staging);
+   }
+
+   newvec = ArgusRealloc(filvec,
+                         (parser->ArgusInputFileCount+1) * sizeof(*filvec));
+   if (newvec == NULL) {
+      ArgusLog(LOG_INFO, "unable to allocate memory for file array\n");
+      return NULL;
+   }
+
+   tmp = parser->ArgusInputFileList;
+   for (i = 0, off = filindex; i < parser->ArgusInputFileCount; i++) {
+      if (i >= prev_length)           /* if past the existing file structures . . . */
+         *(newvec+i+filindex) = tmp;  /* array data is offset by "filindex" entries */
+      tmp = (struct ArgusFileInput *)tmp->qhdr.nxt;
+   }
+
+   DEBUGLOG(2, "%s: added %u files\n", __func__,
+            (size_t)parser->ArgusInputFileCount - prev_length);
+
+   /* NOTE: filevec/newvec is NOT sorted after appending the staged files */
+   *filcount += (parser->ArgusInputFileCount - prev_length);
+   return newvec;
+}
+
 /* prereq: filvec must be sorted in order of increasing
  * modification time.
  * returns: the number of files trimmed from the array
@@ -1853,6 +1898,7 @@ main(int argc, char **argv)
    size_t filcount;
    size_t filindex = 0; /* index into filvec[] of first existing file */
 
+   int process_archive = 0;
    int cmdmask = 0;
    int cmdres = 0;
    int i;
@@ -1932,6 +1978,10 @@ main(int argc, char **argv)
          cmdres = 1;
          goto out;
       }
+
+      /* used later to decide if we should also process staged files */
+      process_archive = 1;
+
       __save_state();
    }
 
@@ -2005,6 +2055,17 @@ main(int argc, char **argv)
          goto out;
    }
    if (cmdmask & RAMANAGE_CMDMASK_REMOVE) {
+      if (process_archive) {
+         struct ArgusFileInput **tmp;
+
+         /* RamanageAppendStagingFiles needs filvec, not &filvec[filindex]
+          * because it will re-allocate the file array.
+          */
+         tmp = RamanageAppendStagingFiles(parser, filvec, &filcount,
+                                          filindex, &global_config);
+         if (tmp)
+            filvec = tmp;
+      }
       cmdres = RamanageRemove(parser, &filvec[filindex], filcount,
                               &global_config);
       if (cmdres)
