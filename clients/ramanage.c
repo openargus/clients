@@ -849,6 +849,7 @@ RamanageLibcurlWriteCallback(char *ptr, size_t size, size_t nmemb, void *user)
    return size*nmemb;
 }
 
+# ifdef ARGUSDEBUG
 static int
 __trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
 {
@@ -870,7 +871,8 @@ __trace(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
 
   return 0;
 }
-#endif
+# endif /* ARGUSDEBUG */
+#endif /* HAVE_LIBCURL */
 
 /* hash must have 20 bytes allocated */
 static int
