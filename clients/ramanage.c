@@ -1761,26 +1761,38 @@ __compare_argus_input_file_mtime(const void *a, const void *b)
    return 1;
 }
 
-/* return an array of pointers into the file list, sorted by
- * modification time.
+/* Return an array of pointers into the file list, sorted by
+ * modification time.  Do not add files to the array that
+ * are missing (stat failed) or that are the file given to
+ * the -r parameter.
 */
-static struct ArgusFileInput **
+static size_t
 RamanageSortFiles(const struct ArgusParserStruct * const parser,
+                  struct ArgusFileInput *exemplar,
                   struct ArgusFileInput **filvec)
 {
    struct ArgusFileInput *tmp;
    size_t i;
+   size_t off;
+
+   if (parser->ArgusInputFileCount == 0)
+      return 0;
 
    tmp = parser->ArgusInputFileList;
-   for (i = 0; i < parser->ArgusInputFileCount; i++) {
-      *(filvec+i) = tmp;
+   for (i = 0, off = 0; i < parser->ArgusInputFileCount; i++) {
+      if (tmp->statbuf.st_mtime != 0
+          && tmp->statbuf.st_ino != exemplar->statbuf.st_ino) {
+         *(filvec+off) = tmp;
+         off++;
+      } else {
+         DEBUGLOG(2, "%s skipping file %s\n", __func__, tmp->filename);
+      }
       tmp = (struct ArgusFileInput *)tmp->qhdr.nxt;
    }
 
-   qsort(filvec, parser->ArgusInputFileCount, sizeof(*filvec),
-         __compare_argus_input_file_mtime);
+   qsort(filvec, off, sizeof(*filvec), __compare_argus_input_file_mtime);
 
-   return filvec;
+   return off;
 }
 
 /* prereq: filvec must be sorted in order of increasing
@@ -1839,7 +1851,7 @@ main(int argc, char **argv)
    struct ArgusFileInput *exemplar;
    size_t trimmed;
    size_t filcount;
-   size_t filindex; /* index into filvec[] of first existing file */
+   size_t filindex = 0; /* index into filvec[] of first existing file */
 
    int cmdmask = 0;
    int cmdres = 0;
@@ -1944,7 +1956,13 @@ main(int argc, char **argv)
    if (filvec == NULL)
       ArgusLog(LOG_ERR, "unable to allocate memory for file array\n");
 
-   RamanageSortFiles(parser, filvec+1);
+   filcount = RamanageSortFiles(parser, exemplar, filvec+1);
+
+   /* The zeroeth element of the array has been left unused, so
+    * let's put the file specified by the -r option there.
+    */
+   filvec[0] = exemplar;
+   filcount++;
 
    /* remove files newer than the file we were asked to process.
     * Also remove the duplicate of that file in the list, which will be there
@@ -1952,29 +1970,9 @@ main(int argc, char **argv)
     * This will avoid monkeying with the files that rastream still
     * has open.
     */
-   trimmed = RamanageTrimFiles(parser->ArgusInputFileCount-1, exemplar,
-                               filvec+1);
+   trimmed = RamanageTrimFiles(filcount-1, exemplar, filvec+1);
    DEBUGLOG(1, "Trimmed %zu files from the array\n", trimmed);
-   filcount = parser->ArgusInputFileCount - trimmed;
-
-   /* The zeroeth element of the array has been left unused, so
-    * let's put the file specified by the -r option there
-    * and remove it from the last entry in the array where
-    * the recursive directory search put it.
-    */
-   filvec[filcount] = NULL;
-   filvec[0] = exemplar;
-
-   /* Since the files are sorted by st_mtime, any files for which stat()
-    * failed will be at the front of the array.  Figure out how many
-    * of the entries are unusable (if any).
-    */
-   filindex = 0;
-   while (filindex < filcount && filvec[filindex]->statbuf.st_mtime == 0) {
-      filindex++;
-      filcount--;
-   }
-   DEBUGLOG(2, "The first %d files of filvec[] are missing\n", filindex);
+   filcount -= trimmed;
 
 #ifdef ARGUSDEBUG
    {
