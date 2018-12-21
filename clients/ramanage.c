@@ -1761,7 +1761,8 @@ RamanageSortFiles(const struct ArgusParserStruct * const parser,
    tmp = parser->ArgusInputFileList;
    for (i = 0, off = 0; i < parser->ArgusInputFileCount; i++) {
       if (tmp->statbuf.st_mtime != 0
-          && tmp->statbuf.st_ino != exemplar->statbuf.st_ino) {
+          && (exemplar == NULL
+              || tmp->statbuf.st_ino != exemplar->statbuf.st_ino)) {
          *(filvec+off) = tmp;
          off++;
       } else {
@@ -1832,7 +1833,7 @@ RamanageTrimFiles(size_t filcount,
    size_t i;
    size_t trimmed = 0;
 
-   if (filcount < 1)
+   if (exemplar == NULL || filcount < 1)
       return 0;
 
    i = filcount - 1;
@@ -1876,7 +1877,11 @@ main(int argc, char **argv)
    struct ArgusFileInput *exemplar;
    size_t trimmed;
    size_t filcount;
-   size_t filindex = 0; /* index into filvec[] of first existing file */
+
+   /* index into filvec[] of first existing file: assume no -r option
+    * given and therefor filvec[0] == NULL
+    */
+   size_t filindex = 1;
 
    int process_archive = 0;
    int cmdmask = 0;
@@ -1895,8 +1900,8 @@ main(int argc, char **argv)
       ArgusMainInit (parser, argc, argv);
    }
 
-   if (parser->ArgusInputFileCount != 1)
-      ArgusLog(LOG_ERR, "Need exactly *one* source file (-r)\n");
+   if (parser->ArgusInputFileCount > 1)
+      ArgusLog(LOG_ERR, "Need at most *one* source file (-r)\n");
    exemplar = (struct ArgusFileInput *)parser->ArgusInputFileList;
 
    if ((mode = parser->ArgusModeList) != NULL) {
@@ -1913,9 +1918,6 @@ main(int argc, char **argv)
          mode = mode->nxt;
       }
    }
-
-   if (parser->ArgusInputFileList == NULL)
-      goto out;
 
    cmdres = RamanageConfigure(parser, &global_config);
    if (cmdres)
@@ -1986,16 +1988,19 @@ main(int argc, char **argv)
    /* The zeroeth element of the array has been left unused, so
     * let's put the file specified by the -r option there.
     */
-   filvec[0] = exemplar;
-   filcount++;
+   if (exemplar) {
+      filvec[0] = exemplar;
+      filcount++;
+      filindex = 0;
 
-   /* It is possible that another process already dealt with our primary
-    * input file.  Update the statbuf for this one file here.
-    */
-   memset(&exemplar->statbuf, 0, sizeof(exemplar->statbuf));
-   if (stat(exemplar->filename, &exemplar->statbuf) < 0)
-      /* the file no longer exists - we're done */
-      goto out;
+      /* It is possible that another process already dealt with our primary
+       * input file.  Update the statbuf for this one file here.
+       */
+      memset(&exemplar->statbuf, 0, sizeof(exemplar->statbuf));
+      if (stat(exemplar->filename, &exemplar->statbuf) < 0)
+         /* the file no longer exists - we're done */
+         goto out;
+   }
 
    /* remove files newer than the file we were asked to process.
     * Also remove the duplicate of that file in the list, which will be there
@@ -2003,7 +2008,8 @@ main(int argc, char **argv)
     * This will avoid monkeying with the files that rastream still
     * has open.
     */
-   trimmed = RamanageTrimFiles(filcount-1, exemplar, filvec+1);
+   trimmed = RamanageTrimFiles(exemplar ? filcount-1 : filcount, exemplar,
+                               filvec+1);
    DEBUGLOG(1, "Trimmed %zu files from the array\n", trimmed);
    filcount -= trimmed;
 
