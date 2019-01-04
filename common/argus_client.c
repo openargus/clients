@@ -3677,8 +3677,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
             retn = NULL;
             break;
       }
-      if (retn != NULL)
-         retn->status |= ARGUS_RECORD_MODIFIED;
    }
 
    return (retn);
