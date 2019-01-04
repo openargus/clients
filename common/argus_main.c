@@ -337,6 +337,7 @@ main (int argc, char **argv)
                                */
       }
 
+      ArgusSetLocalNet(input->ArgusLocalNet, input->ArgusNetMask);
       ArgusFree(input);
       input = NULL;
    }

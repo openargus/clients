@@ -1450,7 +1450,6 @@ struct ArgusTokenStruct llcsap_db[] = {
 };
 
 void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
-void ArgusInitAddrtoname(struct ArgusParserStruct *, u_int, u_int);
 
 void ArgusInitServarray(struct ArgusParserStruct *);
 void ArgusInitEprotoarray(void);
@@ -1462,6 +1461,8 @@ void ArgusFreeServarray(struct ArgusParserStruct *);
 void ArgusFreeProtoidarray(void);
 void ArgusFreeEtherarray(void);
 void ArgusFreeLlcsaparray(void);
+void ArgusSetLocalNet(u_int localnet, u_int mask);
+
 
 unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
@@ -1818,7 +1819,6 @@ extern void ArgusProcessLabelOptions(struct ArgusParserStruct *, char *);
 extern void ArgusProcessGroupOptions(struct ArgusParserStruct *, char *);
 
 extern void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
-extern void ArgusInitAddrtoname(struct ArgusParserStruct *, u_int, u_int);
 
 extern void ArgusInitServarray(struct ArgusParserStruct *);
 extern void ArgusInitEprotoarray(void);
@@ -1830,6 +1830,7 @@ extern void ArgusFreeServarray(struct ArgusParserStruct *);
 extern void ArgusFreeProtoidarray(void);
 extern void ArgusFreeEtherarray(void);
 extern void ArgusFreeLlcsaparray(void);
+extern void ArgusSetLocalNet(u_int localnet, u_int mask);
 
 extern char *ip_proto_string [];
 extern char *icmptypestr[];
