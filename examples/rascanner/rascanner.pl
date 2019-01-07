@@ -124,7 +124,7 @@ sub RaStatusProcessParameters {
    if (! $database) {
       $database = "hostsInventory";
    }
-   $cmd = "mysql -u root $database -NBe \"select addr,count from $hosttable where count > $thresh order by count desc;\"";
+   $cmd = "mysql -u root $database -NBe \"select saddr,count from $hosttable where count > $thresh order by count desc;\"";
    return;
 }
 
