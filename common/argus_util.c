@@ -28755,7 +28755,7 @@ ArgusWriteConnection (struct ArgusParserStruct *parser, struct ArgusInput *input
 
    if (input != NULL) {
       fd = input->fd;
-      if ((fd > 2) || (parser->dflag && (fd >= 0))) {
+      if (fd != fileno(stdin) && fd != fileno(stdout) && fd != fileno(stderr)) {
 #ifdef ARGUS_SASL
          u_char outputbuf[MAXARGUSRECORD];
          output = outputbuf;
