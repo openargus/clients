@@ -26,7 +26,7 @@ Type=simple
 Restart=always
 RestartSec=5
 ExecStartPre=/sbin/radhcp-setup start
-ExecStart=/usr/bin/radhcp -X -F /run/argus/radhcp.conf -S localhost -M control:9999
+ExecStart=/usr/bin/radhcp -X -F /run/argus/radhcp.conf -r /run/argus/radhcp.cache -S localhost -M control:9999
 ExecStopPost=/sbin/radhcp-setup stop
 
 [Install]
