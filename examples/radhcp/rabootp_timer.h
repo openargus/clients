@@ -10,6 +10,8 @@ void *RabootpTimer(void *);
 struct argus_timer *RabootpTimerStart(struct RabootpTimerStruct *rts,
                                       struct timespec *exp,
                                       callback_t callback, void *arg);
+struct argus_timer *RabootpTimerStartRealclock(struct RabootpTimerStruct *,
+                                      struct timespec *, callback_t , void *);
 void RabootpTimerStop(struct RabootpTimerStruct *rts, struct argus_timer *tim);
 struct RabootpTimerStruct *RabootpTimerInit(gettimefunc, sleepfunc);
 void RabootpTimerCleanup(struct RabootpTimerStruct *);

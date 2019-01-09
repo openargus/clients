@@ -111,6 +111,35 @@ RabootpTimerStart(struct RabootpTimerStruct *rts, struct timespec *exp,
    return tim;
 }
 
+/* Start a timer with the expiry described as an absolute time of day
+ * in seconds after the unix epoch (wall-clock time).
+ */
+struct argus_timer *
+RabootpTimerStartRealclock(struct RabootpTimerStruct *rts,
+                           struct timespec *exp_realabs,
+                           callback_t callback, void *arg)
+{
+   struct argus_timer *tim;
+   struct timeval nowtv;
+   struct timespec now;
+   struct timespec diff;
+
+   gettimeofday(&nowtv, NULL);
+   now.tv_sec = nowtv.tv_sec;
+   now.tv_nsec = nowtv.tv_usec * 1000;
+   __timespec_sub(exp_realabs, &now, &diff);
+
+   /* If the time has already passed, just wait a second and process the
+    * timer when the wheel is next advanced.
+    */
+   if (diff.tv_sec < 0 || diff.tv_nsec < 0) {
+      diff.tv_sec = 1;
+      diff.tv_nsec = 0;
+   }
+   tim = ArgusTimerStartRelative(rts->w, &diff, callback, NULL, arg);
+   return tim;
+}
+
 void
 RabootpTimerStop(struct RabootpTimerStruct *rts, struct argus_timer *tim)
 {

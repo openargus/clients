@@ -195,6 +195,22 @@ cleanup:
    return FINISHED;
 }
 
+/* Convert the duration in *exp to a time of day and start the timer */
+static struct argus_timer *
+RabootpProtoTimerStart(struct RabootpTimerStruct *rts,
+                       struct timeval *lasttime, struct timespec *exp,
+                       callback_t callback, void *arg)
+{
+   struct timespec exp_abs;
+   struct timespec lasttime_ts;
+
+   lasttime_ts.tv_sec = lasttime->tv_sec;
+   lasttime_ts.tv_nsec = lasttime->tv_usec * 1000;
+
+   __timespec_add(exp, &lasttime_ts, &exp_abs);
+   return RabootpTimerStartRealclock(rts, &exp_abs, callback, arg);
+}
+
 /* This function changes the contents of the cached transaction and should
  * only be called from the main/parse thread
  *
@@ -230,8 +246,9 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
       } else {
          ArgusDhcpStructUpRef(cached); /* up once for the lease timer */
       }
-      cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
-                                               cached);
+      cached->timers.lease = RabootpProtoTimerStart(rts, &cached->last_bind,
+                                                    &exp_lease, __lease_exp_cb,
+                                                    cached);
 
       intvlnode = ArgusCalloc(1, sizeof(*intvlnode));
       if (intvlnode) {
@@ -244,8 +261,10 @@ RabootpProtoTimersLeaseSet(const void * const v_parsed,
          }
          intvlnode->data = cached;
          intvlnode->intlo = cached->first_bind;
-         cached->timers.intvl = RabootpTimerStart(rts, &exp_intvl, __intvl_exp_cb,
-                                                  intvlnode);
+         cached->timers.intvl = RabootpProtoTimerStart(rts, &cached->last_bind,
+                                                       &exp_intvl,
+                                                       __intvl_exp_cb,
+                                                       intvlnode);
       }
    }
 
@@ -294,8 +313,9 @@ RabootpProtoTimersHolddownSet(const void * const v_parsed,
    }
 
    cached->flags |= ARGUS_DHCP_LEASEREL;
-   cached->timers.lease = RabootpTimerStart(rts, &exp_lease, __lease_exp_cb,
-                                            cached);
+   cached->timers.lease = RabootpProtoTimerStart(rts, &cached->last_bind,
+                                                  &exp_lease, __lease_exp_cb,
+                                                  cached);
 
    intvlnode = ArgusCalloc(1, sizeof(*intvlnode));
    if (intvlnode) {
@@ -308,8 +328,10 @@ RabootpProtoTimersHolddownSet(const void * const v_parsed,
       }
       intvlnode->data = cached;
       intvlnode->intlo = cached->first_bind;
-      cached->timers.intvl = RabootpTimerStart(rts, &exp_intvl,
-                                               __intvl_exp_cb, intvlnode);
+      cached->timers.intvl = RabootpProtoTimerStart(rts, &cached->last_bind,
+                                                    &exp_intvl,
+                                                    __intvl_exp_cb,
+                                                    intvlnode);
    }
    return 0;
 }
@@ -402,6 +424,9 @@ static int RabootpProtoTimersNonleaseSet(const void * const v_parsed,
       } else {
          ArgusDhcpStructUpRef(cached);
       }
+      /* Do not base this timer on the flow record end time.  Wait exactly
+       * RABOOTP_PROTO_TIMER_NONLEASE seconds from now.
+       */
       cached->timers.non_lease = RabootpTimerStart(rts, &exp, __discover_exp_cb,
                                                    cached);
    }
