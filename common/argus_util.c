@@ -24251,8 +24251,14 @@ ArgusDebug (int d, char *fmt, ...)
 
       c = vsnprintf (&buf[len], remain, fmt, ap);
       if (c > 0) {
-         len += c;
-         remain -= c;
+         if (c < remain) {
+            len += c;
+            remain -= c;
+         } else {
+            len += remain;
+            remain = 0;
+            buf[MAXSTRLEN-1] = 0;
+         }
       }
       va_end (ap);
 
