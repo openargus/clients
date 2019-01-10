@@ -380,18 +380,34 @@ IntvlTreeDump(struct ArgusDhcpIntvlTree *it, char *str, size_t strlen)
    return 0;
 }
 
+struct invecAddrFilterStruct {
+   unsigned char chaddr[16];
+   struct invecStruct x;
+   uint8_t hlen;
+};
+
 static int
 __cb_intvl_tree_build_array(void *arg, struct ArgusDhcpIntvlNode *node)
 {
-   struct invecStruct *x = arg;
+   struct invecAddrFilterStruct *filt = arg;
 
-   if (x->used == x->nitems)
+   if (filt->x.used == filt->x.nitems)
       return 0;
 
-   x->invec[x->used].data = node->data;
-   x->invec[x->used].intlo = node->intlo;
-   x->invec[x->used].inthi = node->inthi;
-   x->used++;
+   if (filt->hlen > 0) {
+      if (node->data->hlen != filt->hlen)
+         /* hardware address lengths are different - no match */
+         return 0;
+
+      if (memcmp(filt->chaddr, node->data->chaddr, filt->hlen))
+         /* hardware address contents differ - no match */
+         return 0;
+   }
+
+   filt->x.invec[filt->x.used].data = node->data;
+   filt->x.invec[filt->x.used].intlo = node->intlo;
+   filt->x.invec[filt->x.used].inthi = node->inthi;
+   filt->x.used++;
    return 0;
 }
 
@@ -401,25 +417,44 @@ __cb_intvl_tree_build_array(void *arg, struct ArgusDhcpIntvlNode *node)
  * caller to decrement the refcounts when finished with the array.
  */
 ssize_t
-IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
-                       const struct timeval * const start,
-                       const struct timeval * const stop,
-                       struct ArgusDhcpIntvlNode *invec, size_t nitems)
+IntvlTreeOverlapsRangeWithFilter(struct ArgusDhcpIntvlTree *in,
+                                 const struct timeval * const start,
+                                 const struct timeval * const stop,
+                                 struct ArgusDhcpIntvlNode *invec,
+                                 size_t nitems,
+                                 const unsigned char * const chaddr,
+                                 uint8_t hlen)
 {
-   struct invecStruct x = {
-      .nitems = nitems,
-      .used = 0,
-      .invec = invec,
-   };
    int rv;
+   struct invecAddrFilterStruct filt = {
+      .x = {
+         .nitems = nitems,
+         .used = 0,
+         .invec = invec,
+      },
+      .hlen = hlen,
+   };
 
-   rv =  IntvlTreeForEachOverlaps(in, __cb_intvl_tree_build_array, &x,
+   if (hlen)
+      memcpy(filt.chaddr, chaddr, hlen);
+
+   rv =  IntvlTreeForEachOverlaps(in, __cb_intvl_tree_build_array, &filt,
                                   start, stop);
 
    if (rv < 0)
       return rv;
 
-   return x.used;
+   return filt.x.used;
+}
+
+ssize_t
+IntvlTreeOverlapsRange(struct ArgusDhcpIntvlTree *in,
+                       const struct timeval * const start,
+                       const struct timeval * const stop,
+                       struct ArgusDhcpIntvlNode *invec, size_t nitems)
+{
+   return IntvlTreeOverlapsRangeWithFilter(in, start, stop, invec, nitems,
+                                           NULL, 0);
 }
 
 size_t
