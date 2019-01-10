@@ -1442,9 +1442,11 @@ void RabootpIntvlTreeDump(char *str, size_t strlen)
 ssize_t
 RabootpIntvlTreeOverlapsRange(const struct timeval * const start,
                               const struct timeval * const stop,
-                              struct ArgusDhcpIntvlNode *invec, size_t nitems)
+                              struct ArgusDhcpIntvlNode *invec, size_t nitems,
+                              const unsigned char * const chaddr, uint8_t hlen)
 {
-   return IntvlTreeOverlapsRange(&interval_tree, start, stop, invec, nitems);
+   return IntvlTreeOverlapsRangeWithFilter(&interval_tree, start, stop, invec,
+                                           nitems, chaddr, hlen);
 }
 
 /* cached lock must be held by caller.

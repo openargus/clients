@@ -136,6 +136,26 @@ __is_oneshot_query(void)
 }
 
 static int
+__ether_aton(const char * const etherstr, unsigned char *addr)
+{
+   int i;
+   unsigned int o0, o1, o2, o3, o4, o5;
+
+   i = sscanf(etherstr, "%x:%x:%x:%x:%x:%x", &o0, &o1, &o2, &o3, &o4, &o5);
+   if (i != 6)
+      return -1;
+
+   addr[0] = o0;
+   addr[1] = o1;
+   addr[2] = o2;
+   addr[3] = o3;
+   addr[4] = o4;
+   addr[5] = o5;
+
+   return 0;
+}
+
+static int
 __parse_ipv4_prefix(const char * const prefixstr, struct in_addr *addr,
                     unsigned char *masklen)
 {
@@ -207,21 +227,24 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    struct timeval endtime_tv;
    struct in_addr addr = {0, };
    unsigned char masklen = 32; /* prefix length */
+   unsigned char chaddr[16];
 
    enum QueryOptsEnum {
       OPT_WHEN = 0,
       OPT_ADDR = 1,
       OPT_PULLUP = 2,
       OPT_DB = 3,
+      OPT_CHADDR = 4,
    };
    static const struct QueryOptsStruct __query_opts[] = {
       { "when", 1 },
       { "addr", 1 },
       { "pullup", 0 },
       { "table", 1},      /* output database for this response */
+      { "chaddr", 1},     /* client hardware address (only oui48 supported here) */
    };
    static const size_t nqopts = sizeof(__query_opts)/sizeof(__query_opts[0]);
-   char *parsed[4] = {NULL, };
+   char *parsed[5] = {NULL, };
    char *cpy = NULL;
 
    /* Also remember where in the string the separator was. */
@@ -277,6 +300,14 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    if (parsed[OPT_PULLUP])
       pullup = 1;
 
+   if (parsed[OPT_CHADDR]) {
+      if (__ether_aton(parsed[OPT_CHADDR], chaddr) < 0) {
+         retn[0] = "Invalid Ethernet address\n";
+         retn[1] = "FAIL\n";
+         goto out;
+      }
+   }
+
    localtime_r(&tsec, &endtime);
 
    if (ArgusParseTime(&wildcarddate, &starttime, &endtime,
@@ -320,8 +351,10 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    }
 
    if (addr.s_addr == 0) {
-      tmp_invec_used = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv,
-                                                     tmp_invec, invec_nitems);
+      tmp_invec_used
+       = RabootpIntvlTreeOverlapsRange(&starttime_tv, &endtime_tv,
+                                       tmp_invec, invec_nitems, chaddr,
+                                       parsed[OPT_CHADDR] ? 6 : 0);
 
       if (tmp_invec_used < 0) {
          retn[0] = "FAIL\n";

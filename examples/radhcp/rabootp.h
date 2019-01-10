@@ -233,7 +233,9 @@ void RabootpIntvlTreeDump(char *, size_t);
 struct ArgusDhcpIntvlNode;
 ssize_t RabootpIntvlTreeOverlapsRange(const struct timeval * const,
                                       const struct timeval * const,
-                                      struct ArgusDhcpIntvlNode *, size_t);
+                                      struct ArgusDhcpIntvlNode *, size_t,
+                                      const unsigned char * const, uint8_t);
+
 
 enum rabootp_callback_trigger {
    CALLBACK_STATECHANGE = 0,
