@@ -126,31 +126,26 @@ if ( scalar @$lres < 1 ) {
 }
 
 dhcp_insert_fqdn( $lres );
-if ( !$args{v} ) {
-    time_to_string( $lres, \@timecols );
-    display( $lres, $_colwidth, \@cols, $header );
-    goto CLOSE;
-}
 
-my $lresexp = qosient::radhcp::dhcp_lease_expand( $dbh, $lres );
 my $rescount = 0;
-if ( defined $lresexp && ( scalar @$lresexp > 0 ) ) {
-    for my $aref (@$lresexp) {
-        $rescount += scalar @$aref;
-        dhcp_insert_fqdn( $aref );
-        time_to_string( $aref, \@timecols );
-        display( $aref, $_colwidth, \@cols, $header );
-        if ( $header > 0 ) {
-            $header = 0;
+if ( $args{v} ) {
+    my $lresexp = qosient::radhcp::dhcp_lease_expand( $dbh, $lres );
+    if ( defined $lresexp && ( scalar @{ $lresexp } > 0 ) ) {
+        for my $aref (@$lresexp) {
+            $rescount += scalar @$aref;
+            dhcp_insert_fqdn( $aref );
+            time_to_string( $aref, \@timecols );
+            display( $aref, $_colwidth, \@cols, $header );
+            if ( $header > 0 ) {
+                $header = 0;
+            }
         }
     }
-    if ( $rescount == 0 ) {
-        $empty = 1;
-    }
 }
-else {
+
+if ( $rescount == 0 ) {
     time_to_string( $lres, \@timecols );
-    display( $lres, $_colwidth, \@cols, $header );
+    display( $lres, $_colwidth, \@cols, 1 );
 }
 
 CLOSE: if ( $empty > 0 ) {
