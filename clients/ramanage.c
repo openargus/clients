@@ -1791,7 +1791,6 @@ RamanageAppendStagingFiles(const struct ArgusParserStruct * const parser,
    struct ArgusFileInput **newvec = filvec;
    size_t prev_length = *filcount;
    size_t i;
-   size_t off;
 
    DEBUGLOG(1, "%s: adding files from staging directory\n", __func__);
    if (RaProcessRecursiveFiles(config->path_staging, ARGUS_FILES_NOSORT) == 0) {
@@ -1807,7 +1806,7 @@ RamanageAppendStagingFiles(const struct ArgusParserStruct * const parser,
    }
 
    tmp = parser->ArgusInputFileList;
-   for (i = 0, off = filindex; i < parser->ArgusInputFileCount; i++) {
+   for (i = 0; i < parser->ArgusInputFileCount; i++) {
       if (i >= prev_length)           /* if past the existing file structures . . . */
          *(newvec+i+filindex) = tmp;  /* array data is offset by "filindex" entries */
       tmp = (struct ArgusFileInput *)tmp->qhdr.nxt;
