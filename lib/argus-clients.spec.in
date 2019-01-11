@@ -257,6 +257,7 @@ Argus DHCP-tracking Client Software
 %{_unitdir}/radhcp-nightly.service
 %{_datarootdir}/argus-clients/rasqlinsert.dhcp
 %{_libexecdir}/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp
+%{_libexecdir}/argus-clients/migration_from_5.0-3.4.rhel.23_dhcp
 %{perl_vendorlib}/qosient/radhcp.pm
 %endif
 

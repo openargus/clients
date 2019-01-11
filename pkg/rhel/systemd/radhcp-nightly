@@ -20,8 +20,8 @@ rasql -r mysql://root@localhost/dhcpFlows/dhcp_%Y_%m_%d \
       -t -3d+2d \
       -w - \
    | radhcp -r - \
-            -Mquery:SEARCH:\ when=-1d,table=detail_%Y_%m_%d \
-            -Mquery:SEARCH:\ when=-1d,table=summary_%Y_%m_%d,pullup \
+            -Mquery:SEARCH:\ when=-1d,table=dhcp_detail_%Y_%m_%d \
+            -Mquery:SEARCH:\ when=-1d,table=dhcp_summary_%Y_%m_%d,pullup \
             -w mysql://root@localhost/dhcpFlows/ \
             -Mtime 1d \
 ) 2>&1

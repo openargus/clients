@@ -92,7 +92,8 @@ ifndef WORKSTATION_BUILD
                 rhel/sysconfig/rastream
     RASTREAMD = rhel/rastream.d/00rasqltimeindex
  SASL2_CONFIG = rhel/sasl2/radium.conf
-      LIBEXEC = rhel/libexec/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp
+      LIBEXEC = rhel/libexec/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp \
+                rhel/libexec/argus-clients/migration_from_5.0-3.4.rhel.23_dhcp
 else
  SBIN_SCRIPTS = rhel/systemd/radhcp-setup
     UNITFILES = rhel/systemd/radhcp.service \

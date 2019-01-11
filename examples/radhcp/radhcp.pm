@@ -54,10 +54,10 @@ my $time  = q{};    # "yesterday" according to parsetime()
 my @time;
 my $dbase         = q{dhcpFlows};
 my $dbase_matrix  = q{dhcpMatrix};
-my $table_summary = q{summary_%Y_%m_%d};
-my $table_detail  = q{detail_%Y_%m_%d};
+my $table_summary = q{dhcp_summary_%Y_%m_%d};
+my $table_detail  = q{dhcp_detail_%Y_%m_%d};
 my $table_matrix  = q{matrix_%Y_%m_%d};
-my $table_ethers  = q{ethers_%Y_%m_%d};
+my $table_ethers  = q{dhcp_ethers_%Y_%m_%d};
 my $dsn;
 my $dbuser   = 'root';
 my $password = q{};
