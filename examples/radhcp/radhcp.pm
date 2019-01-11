@@ -47,8 +47,7 @@ $VERSION = "1.00";
   dhcp_opendb
   dhcp_closedb
   dhcp_opensocket
-  dhcp_closesocket
-  dhcp_getleasebyaddr_from_socket);
+  dhcp_closesocket);
 
 my $debug = 0;
 my $time  = q{};    # "yesterday" according to parsetime()
@@ -85,6 +84,29 @@ my %addr_search_field = (
     'n' => q{requested_hostname},    # although q{hostname} should
                                      # also be checked.  Maybe
                                      # qw(hostname requested_hostname)
+);
+
+my %addr_socket_search_field = (
+    '4' => q{addr},
+    '6' => undef,
+    'h' => q{chaddr},
+    'n' => undef,
+);
+
+my $canonicalize_oui48 = sub {
+    my ($str) = @_;
+    my @bytes = split(/:/, $str);
+
+    if (scalar(@bytes) != 6) {
+        return;
+    }
+
+    my @num = map { hex($_) } @bytes;
+    return sprintf('%02x:%02x:%02x:%02x:%02x:%02x', @num);
+};
+
+my %addr_canon_func = (
+    'h' => $canonicalize_oui48,
 );
 
 sub dhcp_opensocket {
@@ -187,10 +209,11 @@ my $_read_response = sub {
     return $resp;
 };
 
-sub dhcp_getleasebyaddr_from_socket {
+my $dhcp_getleasebyaddr_from_socket = sub {
     my $socket     = shift(@_);
     my $when       = shift(@_);
     my $summary    = shift(@_);
+    my $addrtype   = shift(@_);
     my $paramcount = @_;
     my @results;
 
@@ -207,8 +230,13 @@ sub dhcp_getleasebyaddr_from_socket {
         $when .= '+1d';
     }
 
+    my $addrfield = $addr_socket_search_field{$addrtype};
+    if ( !$addrfield ) {
+        return;
+    }
+
     foreach my $addr (@_) {
-        my $query = "SEARCH: when=$when,addr=$addr";
+        my $query = "SEARCH: when=$when,$addrfield=$addr";
 
         if ( defined($summary) && $summary != 0 ) {
             $query .= ',pullup';
@@ -249,7 +277,7 @@ sub dhcp_getleasebyaddr_from_socket {
     }
 
     return \@results;
-}
+};
 
 sub dhcp_opendb {
     @time = parsetime(q{});
@@ -507,24 +535,32 @@ sub dhcp_getleasebyaddr {
     my $when       = shift(@_);
     my $addrtype   = shift(@_);
     my $paramcount = @_;
+    my $func       = $addr_canon_func{$addrtype};
+    my @addrs;
+
+    if ( $func ) {
+        # canonicalize the address strings
+        @addrs = map { $func->($_) } @_;
+    } else {
+        @addrs = @_;
+    }
 
     my @whenary = parsetime($when);
-    my $table = strftime $table_summary, @whenary;
-
     my $whensec        = timelocal(@whenary);
     my $now            = timelocal( localtime() );
     my $seconds_in_day = 86400;
     if ( $whensec > $now || ( $now - $whensec ) <= $seconds_in_day ) {
         my $socket = dhcp_opensocket;
         if ( defined($socket) ) {
-            my $rv = dhcp_getleasebyaddr_from_socket( $socket, $when, 1, @_ );
+            my $rv = $dhcp_getleasebyaddr_from_socket->( $socket, $when, 1, $addrtype, @addrs );
 
             dhcp_closesocket($socket);
             return $rv;
         }
     }
 
-    return $_dhcp_getlease_from_table->( $dbh, "$dbase.$table", $addrtype, @_ );
+    my $table = strftime $table_summary, @whenary;
+    return $_dhcp_getlease_from_table->( $dbh, "$dbase.$table", $addrtype, @addrs );
 }
 
 # args: <database-handle> <table> <name> [<name> [<name> ...] ...]

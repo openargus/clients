@@ -1,6 +1,6 @@
 #!@V_PERL@
 
-# usage: radhcp-query [-v] <date> [<address>]
+# usage: radhcp-query [-v] [<address> [<date>]]
 #
 # example: radhcp-query -v 172.20.2.160 2017/01/04
 
@@ -88,7 +88,7 @@ sub time_to_string {
 
 # Call getopts before using ARGV
 my %args;
-getopts( 'v', \%args );
+getopts( 'mv', \%args );
 
 my $addr   = "";
 
@@ -103,8 +103,13 @@ my $empty  = 0;
 my $header = 1;
 my $undef;
 my $_colwidth = 35;
+my $addrtype  = '4';
 
-my $lres = dhcp_getleasebyaddr( $dbh, $date, '4', $addr );
+if ( $args{m} ) {
+   $addrtype = 'h';
+}
+
+my $lres = dhcp_getleasebyaddr( $dbh, $date, $addrtype, $addr );
 my @cols =
   qw(fqdn clientaddr stime ltime);
 my @timecols =
