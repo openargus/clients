@@ -186,7 +186,7 @@ ifeq ($(target_os),linux-gnu)
 	@set -e ; \
 	mkdir -p $(LIBEXEC_DIR) ; \
 	for i in  $^ ; do \
-		$(INSTALL) -m 0644 $$i $(LIBEXEC_DIR)/`basename $$i` ; \
+		$(INSTALL) -m 0755 $$i $(LIBEXEC_DIR)/`basename $$i` ; \
 	done
 endif
 
