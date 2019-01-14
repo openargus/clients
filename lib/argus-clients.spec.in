@@ -28,6 +28,8 @@ BuildRequires: libcurl-devel
 BuildRequires: c-ares-devel
 BuildRequires: swig > 2.0
 BuildRequires: perl-devel
+BuildRequires: flex
+BuildRequires: bison
 Requires: cyrus-sasl
 Conflicts: argus-clients-misc < 5.0-3.1%{dist}.1
 
