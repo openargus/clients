@@ -1358,7 +1358,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #ifdef ARGUSDEBUG
             ArgusDebug (1, "No SQL tables found\n");
 #endif
-            exit(-1);
+            RaParseComplete (SIGINT);
          }
       }
    }
