@@ -55,8 +55,6 @@
 
 #if defined(ARGUS_TILERA)
 #include <argus_tilera.h>
-#else
-#include <pcap.h>
 #endif
 
 #include <argus_def.h>
