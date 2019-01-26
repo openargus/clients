@@ -291,7 +291,6 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
                      unsigned long *lengths = mysql_fetch_lengths(mysqlRes);
                      int autoid = 0;
 
-                     bzero(sbuf, MAXARGUSRECORD);
                      if (ArgusAutoId && (retn > 1)) {
                         char *endptr;
                         autoid = strtol(row[0], &endptr, 10);
