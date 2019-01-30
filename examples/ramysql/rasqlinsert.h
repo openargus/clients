@@ -28,8 +28,8 @@
  */
 
 
-#if !defined(RaCurses_h)
-#define RaCurses_h
+#ifndef __RAMYSQL_RASQLINSERT_H
+#define __RAMYSQL_RASQLINSERT_H
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -84,25 +84,13 @@
 #else
 #include <term.h>
 #endif // NetBSD || CYGWIN 
+#endif /* ARGUS_CURSES */
  
-#if defined(ARGUS_READLINE)
-#include <readline/readline.h>
-
 struct ArgusSQLQueryStruct {
    struct ArgusListObjectStruct *nxt;
    char *tbl, *sptr, *dptr;
 };
 
-
-void argus_redisplay_function(void);
-int argus_readline_timeout(void);
-int argus_getch_function(FILE *);
-void argus_getsearch_string(int);
-void argus_command_string(void);
- 
-int argus_process_command (struct ArgusParserStruct *, int);
-#endif
-#endif
 
 void RaProcessRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 void RaProcessThisRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
@@ -580,4 +568,4 @@ extern int RaFilterIndex;
 extern int ArgusPrintTotals;
 
 #endif  // RA_CURSES_MAIN
-#endif  // RaCurses_h
+#endif
