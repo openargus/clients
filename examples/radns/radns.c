@@ -729,9 +729,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
       parser->ArgusLabeler = ArgusLabeler;
 
-      ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
-      parser->ArgusLabeler = ArgusLabeler;
-
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
@@ -809,7 +806,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((ArgusDNSNameSpace = (struct ArgusNameSpace *)ArgusCalloc(1, sizeof(*ArgusDNSNameSpace))) != NULL)
          if ((ArgusDNSNameSpace->tlds = ArgusNewQueue()) != NULL)
-            ArgusDNSNameSpace->table = ArgusNewHashTable(0x100000);
+            ArgusDNSNameSpace->table = ArgusNewHashTable(0x1000);
 
       parser->RaInitialized++;
 
@@ -1677,16 +1674,22 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          unsigned short proto = 0, sport = 0, dport = 0;
          int type, process = 0, dnsTransaction = 0;
-         unsigned int dnsAddrType = 0;
          struct RaAddressStruct *dnsNode = NULL;
+
+         unsigned int srcAddrType = 0;
+         unsigned int dstAddrType = 0;
          void *dnsServer = NULL;
+
+         void *addr = NULL;
          void *daddr = NULL;
+         void *saddr = NULL;
 
          if (flow != NULL) {
             switch (flow->hdr.subtype & 0x3F) {
                case ARGUS_FLOW_CLASSIC5TUPLE: {
                   switch ((type = flow->hdr.argus_dsrvl8.qual & 0x1F)) {
                      case ARGUS_TYPE_IPV4: {
+                        saddr = &flow->ip_flow.ip_src;
                         daddr = &flow->ip_flow.ip_dst;
                         proto = flow->ip_flow.ip_p;
                         process++;
@@ -1709,7 +1712,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               break;
                            }
                         }
-                        dnsAddrType = RaIPv4AddressType(parser, *(unsigned int *)daddr);
+                        srcAddrType = RaIPv4AddressType(parser, *(unsigned int *)saddr);
+                        dstAddrType = RaIPv4AddressType(parser, *(unsigned int *)daddr);
                         break;
                      }
 
@@ -1732,14 +1736,47 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             }
          }
 
+
          if (process) {
+            addr = daddr;
             switch (proto) {
                case IPPROTO_UDP: 
                case IPPROTO_TCP: {
                   if (ISPORT(NAMESERVER_PORT) || ISPORT(MULTICASTDNS_PORT)) {
                      dnsTransaction++;
+                  }
+                  break;
+               }
+            }
 
-                     switch (dnsAddrType) {
+            if (dnsTransaction) {
+               struct ArgusDomainStruct dnsbuf, *dns = NULL;
+               bzero (&dnsbuf, sizeof(dnsbuf));
+
+               if ((dns = ArgusParseDNSRecord(parser, argus, &dnsbuf)) != NULL) {
+                  struct ArgusDomainQueryStruct *req = dns->request;
+                  struct ArgusDomainQueryStruct *res = dns->response;
+                  unsigned int dnsAddrType = 0;
+
+                  if (dns->status & ARGUS_ERROR) {
+#if defined(ARGUSDEBUG)
+                     ArgusDebug (1, "RaProcessRecord: ArgusParseDNSRecord error\n");
+#endif
+                     return;
+                  }
+                  if (dns->status & ARGUS_REVERSE) {
+                     addr = saddr;
+                  }
+                  if (req && res) {
+                     dnsAddrType = dstAddrType;
+                  } else
+                  if (req) {
+                     dnsAddrType = dstAddrType;
+                  } else {
+                     dnsAddrType = srcAddrType;
+                  }
+
+                  switch (dnsAddrType) {
                         case ARGUS_IPV4_UNICAST: 
                         case ARGUS_IPV4_UNICAST_THIS_NET: 
                         case ARGUS_IPV4_UNICAST_PRIVATE: 
@@ -1747,9 +1784,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         case ARGUS_IPV4_UNICAST_LOOPBACK: 
                         case ARGUS_IPV4_UNICAST_TESTNET: 
                         case ARGUS_IPV4_UNICAST_RESERVED: 
-                           dnsServer = daddr;
+                           dnsServer = addr;
                            break;
- 
+  
                         case ARGUS_IPV4_MULTICAST:
                         case ARGUS_IPV4_MULTICAST_LOCAL:
                         case ARGUS_IPV4_MULTICAST_INTERNETWORK:
@@ -1772,47 +1809,33 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         case ARGUS_IPV4_MULTICAST_ADHOC_BLK2:
                         case ARGUS_IPV4_MULTICAST_ADHOC_BLK3:
                            break;
-                     }
                   }
-                  break;
-               }
-            }
 
-            if (dnsTransaction) {
-               struct ArgusDomainStruct dnsbuf, *dns = NULL;
-               bzero (&dnsbuf, sizeof(dnsbuf));
-
-               if (dnsServer != NULL) {
-                  struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
-                  struct RaAddressStruct *raddr = NULL, node;
-
-                  bzero ((char *)&node, sizeof(node));
-                  node.addr.type = AF_INET;
-                  node.addr.addr[0] = *(unsigned int *)dnsServer;
-                  node.addr.mask[0] = 0xFFFFFFFF;
-                  node.addr.masklen = 32;
-                  node.addr.len = 4;
-
-                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-                     if (!parser->qflag)
-                        fprintf (stdout, "%s: RaProcessRecord: new DNS server %s\n", tptr, intoa(node.addr.addr[0]));
-
-                     if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
-                        bcopy(&node, raddr, sizeof(node));
-                        if (node.addr.str != NULL)
-                           raddr->addr.str = strdup(node.addr.str);
-                        RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
+                  if (dnsServer != NULL) {
+                     struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+                     struct RaAddressStruct *raddr = NULL, node;
+  
+                     bzero ((char *)&node, sizeof(node));
+                     node.addr.type = AF_INET;
+                     node.addr.addr[0] = *(unsigned int *)dnsServer;
+                     node.addr.mask[0] = 0xFFFFFFFF;
+                     node.addr.masklen = 32;
+                     node.addr.len = 4;
+ 
+                     if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
+                        if (!parser->qflag)
+                           fprintf (stdout, "%s: RaProcessRecord: new DNS server %s\n", tptr, intoa(node.addr.addr[0]));
+ 
+                        if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
+                           bcopy(&node, raddr, sizeof(node));
+                           if (node.addr.str != NULL)
+                              raddr->addr.str = strdup(node.addr.str);
+                           RaInsertAddress (parser, labeler, NULL, raddr, ARGUS_VISITED);
+                        }
                      }
-
+                     dnsNode = raddr;
+                     dns->server = dnsNode;
                   }
-                  dnsNode = raddr;
-               }
-
-               if ((dns = ArgusParseDNSRecord(parser, argus, &dnsbuf)) != NULL) {
-                  struct ArgusDomainQueryStruct *req = dns->request;
-                  struct ArgusDomainQueryStruct *res = dns->response;
-
-                  dns->server = dnsNode;
 
                   bzero (buf, MAXSTRLEN);
                   if (req && res) {
@@ -1957,14 +1980,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                if (labeler != NULL) {
                   extern int ArgusTestMulticast( struct ArgusInput *input, unsigned int);
-                  unsigned int addr;
 
-                  if ((daddr != NULL) && (addr = *(unsigned int *)daddr)) {
-                     if (!(ArgusTestMulticast(argus->input, addr))) {
+                  if (addr != NULL) {
+                     if (!(ArgusTestMulticast(argus->input, *(unsigned int *)addr))) {
                         bzero ((char *)&node, sizeof(node));
 
                         node.addr.type = AF_INET;
-                        node.addr.addr[0] = addr;
+                        node.addr.addr[0] = *(unsigned int *)addr;
                         node.addr.mask[0] = 0xFFFFFFFF;
                         node.addr.masklen = 32;
                         node.addr.len = 4;

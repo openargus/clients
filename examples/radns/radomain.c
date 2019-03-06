@@ -192,8 +192,10 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
             cp += 2;
 
             if (!(DNS_QR(np))) {      // a request
+               query->qr = 0;
             } else {                  // a response
                int cnt;
+               query->qr = 1;
                query->rcode   = DNS_RCODE(np);
                if (cp && ((cnt = query->ancount) > 0)) {
                   do {
@@ -218,6 +220,7 @@ struct ArgusDomainStruct *
 ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, struct ArgusDomainStruct *dns)
 {
    struct ArgusDomainStruct *retn = NULL;
+   bzero(dns, sizeof(*dns));
 
    if (argus != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
@@ -225,13 +228,35 @@ ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       struct ArgusDomainQueryStruct *query = NULL;
 
       if (suser != NULL) {
-         if ((query = ArgusParseDNSBuffer (parser, suser)) != NULL)
-            dns->request = query;
+         if ((query = ArgusParseDNSBuffer (parser, suser)) != NULL) {
+            if (query->qr == 0) {
+               dns->request = query;
+            } else {
+               dns->response = query;
+               dns->status |= ARGUS_REVERSE;
+            }
+         }
       }
 
       if (duser != NULL) {
-         if ((query = ArgusParseDNSBuffer (parser, duser)) != NULL)
-            dns->response = query;
+         if ((query = ArgusParseDNSBuffer (parser, duser)) != NULL) {
+            if (query->qr == 1) {
+               if (dns->response == NULL) {
+                  dns->response = query;
+               } else {
+                  dns->status |= ARGUS_ERROR;
+                  dns->request = query;
+               }
+            } else {
+               if (dns->request == NULL) {
+                  dns->request = query;
+                  dns->status |= ARGUS_REVERSE;
+               } else {
+                  dns->response = query;
+                  dns->status |= ARGUS_ERROR;
+               }
+            }
+         }
       }
 
       retn = dns;
