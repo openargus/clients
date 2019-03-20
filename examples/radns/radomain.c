@@ -42,6 +42,8 @@
 #include <argus_main.h>
 #include <argus_filter.h>
 
+#include <stdio.h>
+#include <string.h>
 #include <signal.h>
 #include <ctype.h>
 #include <argus/extract.h>
@@ -406,11 +408,10 @@ struct ArgusDomainResourceRecord {
             rr->data = strdup(ArgusBuf);
             break;
 
-#ifdef INET6
          case T_AAAA:
             if (!TTEST2(*cp, sizeof(struct in6_addr)))
                return(NULL);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ip6addr_string(cp));
+            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ArgusGetV6Name(ArgusParser, (unsigned char *)cp));
             rr->data = strdup(ArgusBuf);
             break;
 
@@ -430,7 +431,7 @@ struct ArgusDomainResourceRecord {
                   return(NULL);
                memset(&a, 0, sizeof(a));
                memcpy(&a.s6_addr[pbyte], cp + 1, sizeof(a) - pbyte);
-               sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %s", pbit, ip6addr_string(&a));
+               sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %s", pbit, ArgusGetV6Name(ArgusParser, (unsigned char *)&a));
             }
             if (pbit > 0) {
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
@@ -440,8 +441,6 @@ struct ArgusDomainResourceRecord {
             rr->data = strdup(ArgusBuf);
             break;
          }
-
-#endif // INET6
 
          case T_OPT:
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," UDPsize=%u", rr->class);
@@ -492,7 +491,8 @@ struct ArgusDomainResourceRecord {
          struct ArgusListObjectStruct *list;
 
          switch (rr->type) {
-            case T_A: {
+            case T_A:
+            case T_AAAA: {
                if (query->ans == NULL)
                   query->ans = ArgusNewList();
 
@@ -546,6 +546,13 @@ struct ArgusDomainResourceRecord {
 
                list->list_obj = rr;
                ArgusPushBackList(query->soa, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
+               break;
+            }
+            default: {
+               if (rr->name != NULL) free(rr->name);
+               if (rr->data != NULL) free(rr->data);
+
+               ArgusFree(rr);
                break;
             }
          }
@@ -934,7 +941,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    case T_AAAA:
       if (!TTEST2(*cp, sizeof(struct in6_addr)))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ip6addr_string(cp));
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ArgusGetV6Name(ArgusParser, cp));
       break;
 
    case T_A6:
@@ -954,7 +961,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
             return(NULL);
          memset(&a, 0, sizeof(a));
          memcpy(&a.s6_addr[pbyte], cp + 1, sizeof(a) - pbyte);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %s", pbit, ip6addr_string(&a));
+         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %s", pbit, ArgusGetV6Name(ArgusParser, &a));
       }
       if (pbit > 0) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
@@ -1197,3 +1204,166 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|domain]");
    return ArgusBuf;
 }
+
+
+
+/*
+ * Print out a null-terminated filename (or other ascii string).
+ * If ep is NULL, assume no truncation check is needed.
+ * Return true if truncated.
+ */
+int
+fn_print(register const u_char *s, register const u_char *ep, char *buf)
+{
+   register int ret;
+   register u_char c;
+
+   ret = 1;                        /* assume truncated */
+   while (ep == NULL || s < ep) {
+      c = *s++;
+      if (c == '\0') {
+         ret = 0;
+         break;
+      }
+      if (!isascii(c)) {
+         c = toascii(c);
+         sprintf(&buf[strlen(buf)], "%c", 'M');
+         sprintf(&buf[strlen(buf)], "%c", '-');
+      }
+      if (!isprint(c)) {
+         c ^= 0x40;      /* DEL to ?, others to alpha */
+         sprintf(&buf[strlen(buf)], "%c", '^');
+      }
+      sprintf(&buf[strlen(buf)], "%c", c);
+   }
+   return(ret);
+}
+
+/*                      
+ * Print out a counted filename (or other ascii string).
+ * If ep is NULL, assume no truncation check is needed.
+ * Return true if truncated.
+ */                     
+
+char *
+fn_printn(register const u_char *s, register u_int n,
+          register const u_char *ep, char *buf)
+{
+   register u_char c;
+   int len = strlen(buf);
+   char *ebuf = &buf[len];
+
+   while ((n > 0) && (ep == NULL || s < ep)) {
+      n--;
+      c = *s++;
+      if (!isascii(c)) {
+         c = toascii(c);
+         *ebuf++ = 'M';
+         *ebuf++ = '-';
+      }
+      if (!isprint(c)) {
+         c ^= 0x40;      /* DEL to ?, others to alpha */
+         *ebuf++ = '^';
+      }
+      *ebuf++ = c;
+   }
+   return (n == 0) ? ebuf : NULL;
+}
+
+/*
+ * Copyright (c) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997
+ *   The Regents of the University of California.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that: (1) source code distributions
+ * retain the above copyright notice and this paragraph in its entirety, (2)
+ * distributions including binary code include the above copyright notice and
+ * this paragraph in its entirety in the documentation or other materials
+ * provided with the distribution, and (3) all advertising materials mentioning
+ * features or use of this software display the following acknowledgement:
+ * ``This product includes software developed by the University of California,
+ * Lawrence Berkeley Laboratory and its contributors.'' Neither the name of
+ * the University nor the names of its contributors may be used to endorse
+ * or promote products derived from this software without specific prior
+ * written permission.
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
+
+
+
+/*
+ * Convert a token value to a string; use "fmt" if not found.
+const char *
+tok2str(const struct tok *lp, const char *fmt, int v)
+{
+   static char buf[128];
+
+   while (lp->s != NULL) {
+      if (lp->v == v)
+         return (lp->s);
+      ++lp;
+   }
+   if (fmt == NULL)
+      fmt = "#%d";
+   (void)snprintf(buf, sizeof(buf), fmt, v);
+   return (buf);
+}   
+ */
+
+/*
+ * Convert a token value to a string; use "fmt" if not found.
+ */
+
+const char *
+tok2strbuf(register const struct tok *lp, register const char *fmt,
+           register int v, char *buf, size_t bufsize)
+{
+   if (lp != NULL) {
+      while (lp->s != NULL) {
+         if (lp->v == v)
+            return (lp->s);
+         ++lp;
+      }
+   }
+   if (fmt == NULL)                
+      fmt = "#%d"; 
+                
+   (void)snprintf(buf, bufsize, fmt, v);
+   return (const char *)buf;
+}  
+
+/*
+ * Convert a 32-bit netmask to prefixlen if possible
+ * the function returns the prefix-len; if plen == -1
+ * then conversion was not possible;
+ */
+int mask2plen (u_int32_t);
+
+int
+mask2plen (u_int32_t mask)
+{
+   u_int32_t bitmasks[33] = {
+                0x00000000,
+                0x80000000, 0xc0000000, 0xe0000000, 0xf0000000,
+                0xf8000000, 0xfc000000, 0xfe000000, 0xff000000,
+                0xff800000, 0xffc00000, 0xffe00000, 0xfff00000,
+                0xfff80000, 0xfffc0000, 0xfffe0000, 0xffff0000,
+                0xffff8000, 0xffffc000, 0xffffe000, 0xfffff000,
+                0xfffff800, 0xfffffc00, 0xfffffe00, 0xffffff00,
+                0xffffff80, 0xffffffc0, 0xffffffe0, 0xfffffff0,
+                0xfffffff8, 0xfffffffc, 0xfffffffe, 0xffffffff
+   };
+   int prefix_len = 32;
+
+   /* let's see if we can transform the mask into a prefixlen */
+   while (prefix_len >= 0) {
+      if (bitmasks[prefix_len] == mask)
+         break;
+      prefix_len--;
+   }
+   return (prefix_len);
+}
+
