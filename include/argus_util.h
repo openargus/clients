@@ -217,6 +217,7 @@ struct ArgusFileEntry {
 #define ARGUS_STRING_LIST       6
 #define ARGUS_RR_LIST           7
 #define ARGUS_EVENT_LIST        8
+#define ARGUS_OBJECT_LIST       9
 
 struct ArgusListObjectStruct {
    struct ArgusListObjectStruct *nxt, *prv;

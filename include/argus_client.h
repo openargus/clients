@@ -1204,12 +1204,18 @@ struct ArgusListStruct *ArgusNewList (void);
 void ArgusDeleteList (struct ArgusListStruct *, int);
 int ArgusListEmpty (struct ArgusListStruct *);
 int ArgusGetListCount(struct ArgusListStruct *);
+
+int ArgusAddObjectToList(struct ArgusListStruct *, void *, int);
+int ArgusRemoveObjectFromList(struct ArgusListStruct *, void *, int);
+
 int ArgusPushFrontList(struct ArgusListStruct *, struct ArgusListRecord *, int);
 int ArgusPushBackList(struct ArgusListStruct *, struct ArgusListRecord *, int);
+
 struct ArgusListRecord *ArgusFrontList(struct ArgusListStruct *);
 struct ArgusListRecord *ArgusBackList(struct ArgusListStruct *);
 struct ArgusListRecord *ArgusPopBackList(struct ArgusListStruct *, int);
 struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
+struct ArgusListRecord *ArgusPopList(struct ArgusListStruct *, int);
 
 int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
@@ -1367,12 +1373,18 @@ extern struct ArgusListStruct *ArgusNewList (void);
 extern void ArgusDeleteList (struct ArgusListStruct *, int);
 extern int ArgusListEmpty (struct ArgusListStruct *);
 extern int ArgusGetListCount(struct ArgusListStruct *);
+
+extern int ArgusAddObjectToList(struct ArgusListStruct *, void *, int);
+extern int ArgusRemoveObjectFromList(struct ArgusListStruct *, void *, int);
+
 extern int ArgusPushFrontList(struct ArgusListStruct *, struct ArgusListRecord *, int);
 extern int ArgusPushBackList(struct ArgusListStruct *, struct ArgusListRecord *, int);
+
 extern struct ArgusListRecord *ArgusFrontList(struct ArgusListStruct *);
 extern struct ArgusListRecord *ArgusBackList(struct ArgusListStruct *);
 extern struct ArgusListRecord *ArgusPopBackList(struct ArgusListStruct *, int);
 extern struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
+extern struct ArgusListRecord *ArgusPopList(struct ArgusListStruct *, int);
 
 extern int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *, int);
 extern void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
