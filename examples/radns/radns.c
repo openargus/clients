@@ -90,6 +90,7 @@ extern MYSQL *RaMySQL;
 
 const u_char *snapend = NULL;
 
+
 char ArgusBuf[MAXSTRLEN];
 int ArgusThisEflag = 0;
 int ArgusDebugTree = 0;
@@ -770,6 +771,9 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
    return retn;
 }
 
+int RaPrintCounter = 1;
+static int argus_version = ARGUS_VERSION;
+
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -777,7 +781,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    struct RaAddressStruct **ArgusAddrTree;
    struct ArgusModeStruct *mode = NULL;
 
-   parser->RaWriteOut  = 1;
+   parser->RaWriteOut  = 0;
    parser->RaPruneMode = 0;
 
    if (!(parser->RaInitialized)) {
@@ -1838,6 +1842,8 @@ void RaProcessEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct 
 void RaProcessThisEventRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 void RaProcessManRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -1929,7 +1935,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             }
          }
 
-
          if (process) {
             dnsServer = saddr;
             dnsClient = daddr;
@@ -1954,7 +1959,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   struct ArgusDomainQueryStruct *res = dns->response;
                   unsigned int dnsAddrType = 0;
 
-                  if (dns->status & ARGUS_ERROR) {
+                  if ((dns->status & ARGUS_ERROR) || (!(req || res))) {
 #if defined(ARGUSDEBUG)
                      ArgusDebug (1, "RaProcessRecord: ArgusParseDNSRecord error\n");
 #endif
@@ -2183,6 +2188,53 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      }
                   }
 
+                  if (parser->ArgusWfileList != NULL) {
+                     struct ArgusWfileStruct *wfile = NULL;
+                     struct ArgusListObjectStruct *lobj = NULL;
+                     int i, count = parser->ArgusWfileList->count;
+ 
+                     if ((lobj = parser->ArgusWfileList->start) != NULL) {
+                        for (i = 0; i < count; i++) {
+                           if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+                              int retn = 1;
+                              if (wfile->filterstr) {
+                                 struct nff_insn *wfcode = wfile->filter.bf_insns;
+                                 retn = ArgusFilterRecord (wfcode, argus);
+                              }
+ 
+                              if (retn != 0) {
+                                 argus->rank = RaPrintCounter++;
+ 
+                                 if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= argus->rank) && (ArgusParser->sNoflag <= argus->rank))) {
+                                    if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
+ 
+                                       if (argus->status & ARGUS_RECORD_MODIFIED) {
+                                          struct ArgusRecord *ns = NULL;
+ 
+                                          if ((ns = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) == NULL)
+                                             ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
+#ifdef _LITTLE_ENDIAN
+                                          ArgusHtoN(ns);
+#endif
+                                          if (ArgusWriteNewLogfile (parser, argus->input, wfile, ns))
+                                             ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                                       } else
+                                          if (ArgusWriteNewLogfile (parser, argus->input, wfile, argus->input->ArgusOriginal))
+                                             ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                                    }
+ 
+                                 } else {
+                                    if (ArgusParser->eNoflag < argus->rank)
+                                       break;
+                                 }
+                              }
+                           }
+ 
+                           lobj = lobj->nxt;
+                        }
+                     }
+                  }
+
                   if (dns->request != NULL) {
                      struct ArgusDomainQueryStruct *query = dns->request;
                      if (query != NULL) {
@@ -2202,6 +2254,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if (query->ns    != NULL) ArgusDeleteList(query->ns,    ARGUS_RR_LIST);
                      }
                   }
+
                }
 
             } else {
