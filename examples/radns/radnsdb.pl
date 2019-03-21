@@ -39,6 +39,7 @@ use DBI;
 use Switch;
 use File::Which qw/ which where /;;
 use Time::Local;
+use Data::Dumper;
 
 # Global variables
 my $VERSION = "5.0.3";
@@ -93,6 +94,7 @@ my @results     = ();
 my $results_ref = \@results;
 
 my $rasql       = which 'rasql';
+my $ra          = which 'ra';
 my $radns       = which 'radns';
 
 my $Program;
@@ -164,8 +166,19 @@ if ($uri) {
 
          # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
-         print "DEBUG: RaDnsDB: CREATE TABLE $table (name VARCHAR(128) NOT NULL, addrs TEXT, PRIMARY KEY ( name ))\n" if $debug;
-         $dbh->do("CREATE TABLE $table (name VARCHAR(128) NOT NULL, addrs TEXT, PRIMARY KEY ( name ))");
+         my $SQL  = "CREATE TABLE $table (";
+            $SQL .= "`name` varchar(128) NOT NULL,";
+            $SQL .= "`ref` INT,";
+            $SQL .= "`addrs` TEXT,";
+            $SQL .= "`client` TEXT,";
+            $SQL .= "`server` TEXT,";
+            $SQL .= "`cname` TEXT,";
+            $SQL .= "`ptr` TEXT,";
+            $SQL .= "`ns` TEXT,";
+            $SQL .= "PRIMARY KEY (`name`))";
+
+         print "DEBUG: RaDnsDB: $SQL\n" if $debug;
+         $dbh->do($SQL);
       }
    }
 
@@ -192,7 +205,7 @@ if ($uri) {
       case /^dnsNames/ {
          if ((length @results) > 0) {
             foreach my $n (@$results_ref) {
-               my $addr = $n->{'addr'};
+               my $addrs = $n->{'addr'};
                my $data = JSON->new->utf8->space_after->encode($n);
  
                my $sql = "INSERT INTO $table VALUE('$addr', '$data')";
@@ -206,12 +219,56 @@ if ($uri) {
       case /^dnsAddrs/ {
          if ((length @results) > 0) {
             foreach my $n (@$results_ref) {
-               my $name = $n->{'name'};
-               my $data = JSON->new->utf8->space_after->encode($n);
+               my ($name,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
 
-               my $sql = "INSERT INTO $table VALUE('$name', '$data')";
-               print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
-               $dbh->do($sql);
+               if (defined $n->{'name'}) { $name   = '"' . $n->{'name'} . '"'};
+               if (defined $n->{'ref'})  { $ref    = $n->{'ref'}};
+
+               if (defined $n->{'addr'}) { 
+                  my $array = $n->{'addr'}; 
+                  $addrs = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+               if (defined $n->{'client'}) {
+                  my $array = $n->{'client'};
+                  $client = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+               if (defined $n->{'server'}) { 
+                  my $array = $n->{'server'};
+                  $server = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+               if (defined $n->{'cname'}) { 
+                  my $array = $n->{'cname'};
+                  $cname = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+               if (defined $n->{'ptr'}) { 
+                  my $array = $n->{'ptr'};
+                  $ptr = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+               if (defined $n->{'ns'}) { 
+                  my $array = $n->{'ns'};
+                  $ns = "'" . JSON->new->utf8->encode($array) . "'";
+               };
+
+               my @fields = ();
+               my @values = ();
+               my $str = "";
+
+               if (defined $name)   { push(@fields,"name");   push(@values, $name); }
+               if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
+               if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
+               if (defined $client) { push(@fields,"client"); push(@values, $client); }
+               if (defined $server) { push(@fields,"server"); push(@values, $server); }
+               if (defined $cname)  { push(@fields,"cname");  push(@values, $cname); }
+               if (defined $ptr)    { push(@fields,"ptr");    push(@values, $ptr); }
+               if (defined $ns)     { push(@fields,"ns");     push(@values, $ns); }
+
+               my $cols = join(",", @fields);
+               my $vals = join(",", @values);
+
+               my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals);";
+               print "DEBUG: results: sql: '$SQL'\n" if $debug;
+
+               $dbh->do($SQL);
             }
          } else {
             print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;

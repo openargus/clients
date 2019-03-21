@@ -223,6 +223,8 @@ struct ArgusDomainStruct {
    struct timeval stime, ltime;
 
    struct RaAddressStruct *server;
+   struct RaAddressStruct *client;
+
    struct ArgusDomainQueryStruct *request;
    struct ArgusDomainQueryStruct *response;
 };
