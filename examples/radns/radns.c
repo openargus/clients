@@ -900,6 +900,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusDNSNameSpace->tlds = ArgusNewQueue()) != NULL)
             ArgusDNSNameSpace->table = ArgusNewHashTable(0x1000);
 
+      parser->ArgusGrepSource = 0;
+      parser->ArgusGrepDestination = 0;
+
       parser->RaInitialized++;
 
       if (parser->ArgusControlPort != 0) {
@@ -2050,6 +2053,20 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if ((req->name && strlen(req->name)) && (res->name && strlen(res->name))) {
                         if (req->seqnum == res->seqnum) {
                            if (!(strcasecmp(req->name, res->name))) {
+                              if (parser->estr != NULL) {
+                                 char *buf = req->name;
+                                 int slen = strlen(buf);
+                                 int retn, i, found = 0;
+
+                                 for (i = 0; i < parser->ArgusRegExItems; i++) {
+                                    if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[slen]))) {
+                                       found++;
+                                       break;
+                                    }
+                                 }
+                                 if (!found)
+                                    return;
+                              }
 
                               if (req->qtype != T_SOA) {
                                  if (res->ans)
