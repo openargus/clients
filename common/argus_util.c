@@ -20631,6 +20631,10 @@ ArgusDeleteList (struct ArgusListStruct *list, int type)
                 ArgusFree(retn);
                 break;
              }
+             case ARGUS_OBJECT_LIST: {
+                ArgusFree(retn);
+                break;
+             }
          }
       }
 
@@ -20658,6 +20662,99 @@ ArgusGetListCount(struct ArgusListStruct *list)
    return (list->count);
 }
 
+int
+ArgusAddObjectToList(struct ArgusListStruct *list, void *obj, int type)
+{
+   int retn = 0, found = 0;
+
+   if (list && obj) {
+      struct ArgusListObjectStruct *lobj;
+
+#if defined(ARGUS_THREADS)
+      if (type == ARGUS_LOCK)
+         pthread_mutex_lock(&list->lock);
+#endif
+      if ((lobj = list->start) != NULL) {
+         do {
+            if (lobj->list_obj == obj) {
+               found = 1;
+               break;
+            }
+            lobj = lobj->nxt;
+         } while (!found && (lobj != NULL));
+      }
+#if defined(ARGUS_THREADS)
+      if (type == ARGUS_LOCK)
+         pthread_mutex_unlock(&list->lock);
+#endif
+
+      if (!(found)) {
+         if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
+            ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+         lobj->list_obj = obj;
+         ArgusPushBackList(list, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+      }
+      retn++;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusAddToList (%p, %p, %d) returning 0x%x\n", list, obj, type);
+#endif
+
+   return (retn);
+}
+
+int
+ArgusRemoveObjectFromList(struct ArgusListStruct *list, void *obj, int type)
+{
+   int retn = 0, found = 0;
+
+   if (list && obj) {
+      struct ArgusListObjectStruct *lobj;
+
+#if defined(ARGUS_THREADS)
+      if (type == ARGUS_LOCK)
+         pthread_mutex_lock(&list->lock);
+#endif
+      if ((lobj = list->start) != NULL) {
+         struct ArgusListObjectStruct *prv = NULL;
+         do {
+            if (lobj->list_obj == obj) {
+               found = 1;
+               if (prv != NULL) {
+                  prv->nxt = lobj->nxt;
+                  if (lobj == list->end) {
+                     list->end = prv;
+                  }
+               }
+
+               if (lobj == list->start) 
+                  list->start = lobj->nxt;
+
+               if (lobj == list->end) 
+                  list->end = prv;
+
+               ArgusFree(lobj);
+               break;
+            }
+            prv = lobj;
+            lobj = lobj->nxt;
+         } while (!found && (lobj != NULL));
+      }
+#if defined(ARGUS_THREADS)
+      if (type == ARGUS_LOCK)
+         pthread_mutex_unlock(&list->lock);
+#endif
+      retn++;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusAddToList (%p, %p, %d) returning 0x%x\n", list, obj, type);
+#endif
+
+   return (retn);
+}
 
 int
 ArgusPushFrontList(struct ArgusListStruct *list, struct ArgusListRecord *rec, int type)
@@ -20758,6 +20855,12 @@ struct ArgusListRecord *
 ArgusFrontList(struct ArgusListStruct *list)
 {
    return ((struct ArgusListRecord *) list->start);
+}
+
+struct ArgusListRecord *
+ArgusPopList(struct ArgusListStruct *list, int type)
+{
+   return (ArgusPopFrontList(list, type));
 }
 
 struct ArgusListRecord *
