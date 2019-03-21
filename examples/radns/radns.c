@@ -2048,25 +2048,29 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      dns->client = dnsClnt = raddr;
                   }
 
+// test if there is a regex expression and match against the query/response name.
+
+                  if (parser->estr != NULL) {
+                     char *buf = (req && req->name) ? req->name : (res && res->name) ? res->name : NULL;
+                     if (buf != NULL) {
+                        int slen = strlen(buf);
+                        int retn, i, found = 0;
+                        for (i = 0; i < parser->ArgusRegExItems; i++) {
+                           if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[slen]))) {
+                              found++;
+                              break;
+                           }
+                        }
+                        if (!found)
+                           return;
+                     }
+                  }
+
                   bzero (buf, MAXSTRLEN);
                   if (req && res) {
                      if ((req->name && strlen(req->name)) && (res->name && strlen(res->name))) {
                         if (req->seqnum == res->seqnum) {
                            if (!(strcasecmp(req->name, res->name))) {
-                              if (parser->estr != NULL) {
-                                 char *buf = req->name;
-                                 int slen = strlen(buf);
-                                 int retn, i, found = 0;
-
-                                 for (i = 0; i < parser->ArgusRegExItems; i++) {
-                                    if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[slen]))) {
-                                       found++;
-                                       break;
-                                    }
-                                 }
-                                 if (!found)
-                                    return;
-                              }
 
                               if (req->qtype != T_SOA) {
                                  if (res->ans)
