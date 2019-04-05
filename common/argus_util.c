@@ -10816,8 +10816,7 @@ ArgusPrintPort (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
             break; 
          }
          case IPPROTO_ICMP: {
-            char upbuf[32], *upstr = upbuf;
-            sprintf(upstr, "0x%4.4x", port);
+            char *upstr = (port > 0) ? icmpport_string(argus, dir) : " ";
 
             if (parser->ArgusPrintXml) {
                sprintf (buf, " %sPort = \"%s\"", dirstr, upstr);
@@ -22332,6 +22331,144 @@ udpport_string(u_short port)
       return ("*");
 }
 
+
+char *
+icmpport_string(struct ArgusRecordStruct *argus, int dir)
+{
+   char *retn = "  ";
+   struct ArgusFlow *flow;
+   int code = -1, type = -1;
+
+   if (((flow = (void *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL)) {
+      switch (flow->hdr.subtype & 0x3F) {
+         case ARGUS_FLOW_CLASSIC5TUPLE: {
+            switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+               case ARGUS_TYPE_IPV4:
+                  code = flow->icmp_flow.code;
+                  type = flow->icmp_flow.type;
+                  break;
+
+               case ARGUS_TYPE_IPV6:
+                  code = flow->icmpv6_flow.code;
+                  type = flow->icmpv6_flow.type;
+                  break;
+            }
+         }
+      }
+   }
+
+   if ((code >= 0) && (type >= 0)) {
+      switch (dir) {
+         case ARGUS_SRC: {
+            if (type < ICMP_MAXTYPE) 
+               retn = icmptypelongstr[type];
+            else
+               retn = "unassigned";
+            break;
+         }
+         case ARGUS_DST: {
+            switch (type) {
+               case ICMP_UNREACH:
+                  switch (code) {
+                     case ICMP_UNREACH_NET:               retn = "unrnet"; break;
+                     case ICMP_UNREACH_HOST:              retn = "unrhost"; break;
+                     case ICMP_UNREACH_PROTOCOL:          retn = "unrproto"; break;
+                     case ICMP_UNREACH_PORT:              retn = "unrport"; break;
+                     case ICMP_UNREACH_NEEDFRAG:          retn = "unrfrag"; break;
+                     case ICMP_UNREACH_SRCFAIL:           retn = "unrsrc"; break;
+
+#ifndef ICMP_UNREACH_NET_UNKNOWN
+#define ICMP_UNREACH_NET_UNKNOWN        6
+#endif
+                     case ICMP_UNREACH_NET_UNKNOWN:       retn = "unrnunk"; break;
+                     
+#ifndef ICMP_UNREACH_HOST_UNKNOWN
+#define ICMP_UNREACH_HOST_UNKNOWN       7
+#endif
+                     case ICMP_UNREACH_HOST_UNKNOWN:      retn = "unrhunk"; break;
+
+#ifndef ICMP_UNREACH_ISOLATED
+#define ICMP_UNREACH_ISOLATED           8
+#endif
+                     case ICMP_UNREACH_ISOLATED:          retn = "unriso"; break;
+
+#ifndef ICMP_UNREACH_NET_PROHIB
+#define ICMP_UNREACH_NET_PROHIB         9
+#endif
+                     case ICMP_UNREACH_NET_PROHIB:        retn = "unrnpro"; break;
+
+#ifndef ICMP_UNREACH_HOST_PROHIB
+#define ICMP_UNREACH_HOST_PROHIB        10
+#endif
+                     case ICMP_UNREACH_HOST_PROHIB:       retn = "unrhpro"; break;
+
+#ifndef ICMP_UNREACH_TOSNET
+#define ICMP_UNREACH_TOSNET             11
+#endif
+                     case ICMP_UNREACH_TOSNET:            retn = "unrtosnet"; break;
+
+#ifndef ICMP_UNREACH_TOSHOST
+#define ICMP_UNREACH_TOSHOST            12
+#endif
+                     case ICMP_UNREACH_TOSHOST:           retn = "unrtoshost"; break;
+          
+#ifndef ICMP_UNREACH_FILTER_PROHIB
+#define ICMP_UNREACH_FILTER_PROHIB      13
+#endif
+                     case ICMP_UNREACH_FILTER_PROHIB:     retn = "unrfilter"; break;
+
+#ifndef ICMP_UNREACH_HOST_PRECEDENCE
+#define ICMP_UNREACH_HOST_PRECEDENCE    14
+#endif
+                     case ICMP_UNREACH_HOST_PRECEDENCE:   retn = "unrpre"; break;
+
+#ifndef ICMP_UNREACH_PRECEDENCE_CUTOFF
+#define ICMP_UNREACH_PRECEDENCE_CUTOFF  15
+#endif
+                     case ICMP_UNREACH_PRECEDENCE_CUTOFF: retn = "unrcut"; break;
+                  }
+                  break;
+
+               case ICMP_MASKREPLY:
+                  break;
+
+               case ICMP_REDIRECT:
+                  switch (code) {
+                     case ICMP_REDIRECT_NET:                retn = "rednet"; break;
+                     case ICMP_REDIRECT_HOST:               retn = "redhost"; break;
+                     case ICMP_REDIRECT_TOSNET:             retn = "redtosnet"; break;
+                     case ICMP_REDIRECT_TOSHOST:             retn = "redtoshost"; break;
+                  }
+                  break;
+
+#ifndef ICMP_ROUTERADVERT
+#define ICMP_ROUTERADVERT               9       
+#endif
+#ifndef ICMP_ROUTERSOLICIT
+#define ICMP_ROUTERSOLICIT              10     
+#endif
+               case ICMP_ROUTERADVERT:
+               case ICMP_ROUTERSOLICIT:
+               case ICMP_ECHOREPLY:
+               case ICMP_TSTAMPREPLY:
+               case ICMP_IREQREPLY:
+               case ICMP_TIMXCEED:
+               case ICMP_PARAMPROB:
+               case ICMP_SOURCEQUENCH:
+               case ICMP_ECHO:
+               case ICMP_TSTAMP:
+               case ICMP_IREQ:
+               case ICMP_MASKREQ:
+               default: 
+                  break;
+            }
+            break;
+         }
+      }
+   }
+   return(retn);
+}
+
 void
 ArgusInitServarray(struct ArgusParserStruct *parser)
 {
@@ -22370,7 +22507,6 @@ ArgusInitServarray(struct ArgusParserStruct *parser)
       }
    }
    endservent();
-
    parser->ArgusSrvInit = 1;
 #endif
 }

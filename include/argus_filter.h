@@ -167,6 +167,7 @@ char *llcsap_string(unsigned char);
 char *isonsap_string(const unsigned char *, int);
 char *tcpport_string(unsigned short);
 char *udpport_string(unsigned short);
+char *icmpport_string(struct ArgusRecordStruct *, int);
 
 extern void init_servarray(void);
 extern void init_eprotoarray(void);
@@ -245,6 +246,7 @@ extern char *llcsap_string(unsigned char);
 extern char *isonsap_string(const unsigned char *, int);
 extern char *tcpport_string(unsigned short);
 extern char *udpport_string(unsigned short);
+extern char *icmpport_string(struct ArgusRecordStruct *, int);
 
 extern void init_addrtoname(int, unsigned int, unsigned int);
 extern unsigned int **argus_nametoaddr(char *);
