@@ -22820,7 +22820,7 @@ ArgusSetLocalNet(u_int localnet, u_int mask)
    }
 }
 
-static void
+void
 ArgusInitAddrtoname(struct ArgusParserStruct *parser)
 {
    if (ArgusEtherArrayInited == 0)

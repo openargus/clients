@@ -1476,6 +1476,7 @@ void ArgusFreeProtoidarray(void);
 void ArgusFreeEtherarray(void);
 void ArgusFreeLlcsaparray(void);
 void ArgusSetLocalNet(u_int localnet, u_int mask);
+void ArgusInitAddrtoname(struct ArgusParserStruct *);
 
 
 unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
@@ -1845,6 +1846,7 @@ extern void ArgusFreeProtoidarray(void);
 extern void ArgusFreeEtherarray(void);
 extern void ArgusFreeLlcsaparray(void);
 extern void ArgusSetLocalNet(u_int localnet, u_int mask);
+extern void ArgusInitAddrtoname(struct ArgusParserStruct *);
 
 extern char *ip_proto_string [];
 extern char *icmptypestr[];
