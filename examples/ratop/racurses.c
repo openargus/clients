@@ -4308,6 +4308,24 @@ argus_command_string(void)
                      }
 
                   } else {
+                  if (!(strncasecmp (mode->mode, "printer=", 8))) {
+                     char *option = &mode->mode[8];
+                     if (!(strncasecmp(option, "hex", 3))) {
+                        ArgusParser->eflag = ARGUS_HEXDUMP;
+                     } else
+                     if (!(strncasecmp(option, "ascii", 5))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_ASCII;
+                     } else
+                     if (!(strncasecmp(option, "obfuscate", 2))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_OBFUSCATE;
+                     } else
+                     if (!(strncasecmp(option, "encode64", 8))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_64;
+                     } else
+                     if (!(strncasecmp(option, "encode32", 8))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_32;
+                     }
+                  } else
                      if (!(strncasecmp (mode->mode, "nomerge", 7))) {
                         ArgusParser->RaCumulativeMerge = 0;
                      } else
