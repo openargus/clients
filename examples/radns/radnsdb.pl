@@ -154,31 +154,10 @@ if ($uri) {
       case /^dnsNames/ {
          $options = "-qM json search:0.0.0.0/0";
          $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
-
-         # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-
-         print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
-         $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
       }
       case /^dnsAddrs/ {
          $options = "-qM json search:'.'";
          $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
-
-         # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-
-         my $SQL  = "CREATE TABLE $table (";
-            $SQL .= "`name` varchar(128) NOT NULL,";
-            $SQL .= "`ref` INT,";
-            $SQL .= "`addrs` TEXT,";
-            $SQL .= "`client` TEXT,";
-            $SQL .= "`server` TEXT,";
-            $SQL .= "`cname` TEXT,";
-            $SQL .= "`ptr` TEXT,";
-            $SQL .= "`ns` TEXT,";
-            $SQL .= "PRIMARY KEY (`name`))";
-
-         print "DEBUG: RaDnsDB: $SQL\n" if $debug;
-         $dbh->do($SQL);
       }
    }
 
@@ -203,9 +182,14 @@ if ($uri) {
 
    switch ($db) {
       case /^dnsNames/ {
-         if ((length @results) > 0) {
+         if (scalar(@{$results_ref}) > 0) {
+            # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+
+            print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
+            $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
+
             foreach my $n (@$results_ref) {
-               my $addrs = $n->{'addr'};
+               my $addr = $n->{'addr'};
                my $data = JSON->new->utf8->space_after->encode($n);
  
                my $sql = "INSERT INTO $table VALUE('$addr', '$data')";
@@ -217,7 +201,23 @@ if ($uri) {
          }
       }
       case /^dnsAddrs/ {
-         if ((length @results) > 0) {
+         if (scalar(@{$results_ref}) > 0) {
+            # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+
+            my $SQL  = "CREATE TABLE $table (";
+               $SQL .= "`name` varchar(128) NOT NULL,";
+               $SQL .= "`ref` INT,";
+               $SQL .= "`addrs` TEXT,";
+               $SQL .= "`client` TEXT,";
+               $SQL .= "`server` TEXT,";
+               $SQL .= "`cname` TEXT,";
+               $SQL .= "`ptr` TEXT,";
+               $SQL .= "`ns` TEXT,";
+               $SQL .= "PRIMARY KEY (`name`))";
+
+            print "DEBUG: RaDnsDB: $SQL\n" if $debug;
+            $dbh->do($SQL);
+
             foreach my $n (@$results_ref) {
                my ($name,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
 
@@ -249,26 +249,28 @@ if ($uri) {
                   $ns = "'" . JSON->new->utf8->encode($array) . "'";
                };
 
-               my @fields = ();
-               my @values = ();
-               my $str = "";
+               if (defined $addrs) { 
+                  my @fields = ();
+                  my @values = ();
+                  my $str = "";
 
-               if (defined $name)   { push(@fields,"name");   push(@values, $name); }
-               if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
-               if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
-               if (defined $client) { push(@fields,"client"); push(@values, $client); }
-               if (defined $server) { push(@fields,"server"); push(@values, $server); }
-               if (defined $cname)  { push(@fields,"cname");  push(@values, $cname); }
-               if (defined $ptr)    { push(@fields,"ptr");    push(@values, $ptr); }
-               if (defined $ns)     { push(@fields,"ns");     push(@values, $ns); }
+                  if (defined $name)   { push(@fields,"name");   push(@values, $name); }
+                  if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
+                  if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
+                  if (defined $client) { push(@fields,"client"); push(@values, $client); }
+                  if (defined $server) { push(@fields,"server"); push(@values, $server); }
+                  if (defined $cname)  { push(@fields,"cname");  push(@values, $cname); }
+                  if (defined $ptr)    { push(@fields,"ptr");    push(@values, $ptr); }
+                  if (defined $ns)     { push(@fields,"ns");     push(@values, $ns); }
 
-               my $cols = join(",", @fields);
-               my $vals = join(",", @values);
+                  my $cols = join(",", @fields);
+                  my $vals = join(",", @values);
 
-               my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals);";
-               print "DEBUG: results: sql: '$SQL'\n" if $debug;
+                  my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals);";
+                  print "DEBUG: results: sql: '$SQL'\n" if $debug;
 
-               $dbh->do($SQL);
+                  $dbh->do($SQL);
+               }
             }
          } else {
             print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
