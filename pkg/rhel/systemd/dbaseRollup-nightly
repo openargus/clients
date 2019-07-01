@@ -215,17 +215,18 @@ my $rasql        = which 'rasql';
 my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
-my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state");
-my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
-my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
-my @db4 = ( "etherMatrix", "ether", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
-my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
-my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr");
+my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state trans");
+my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db4 = ( "etherMatrix", "ether", "sid inf dmac smac", "stime ltime sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
+my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db7 = ( "arpMatrix", "arg", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db8 = ( "ether", "ether", "sid inf smac etype", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
 
-my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6);
+my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
 
 # first add score DSR to the daily table
-
 score_one_table(\@db1, $dtime) or die;
 
 # Now update the monthly and yearly caches
