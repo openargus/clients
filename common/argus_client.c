@@ -9784,6 +9784,8 @@ ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, s
    nadp->sploss = ArgusFetchPercentSrcLoss(ns);
    nadp->dploss = ArgusFetchPercentDstLoss(ns);
 
+   startusec = nadp->startuSecs;
+
    if (start->tv_sec == 0) {
       if (parser->tflag) {
          start->tv_sec  = parser->startime_t.tv_sec;
