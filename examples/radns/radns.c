@@ -1951,7 +1951,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
             if (dnsTransaction) {
                struct ArgusDomainStruct dnsbuf, *dns = NULL;
-               int unicast = 0;
+               int unicast = 0, multicast = 0;
                bzero (&dnsbuf, sizeof(dnsbuf));
 
                if ((dns = ArgusParseDNSRecord(parser, argus, &dnsbuf)) != NULL) {
@@ -1986,6 +1986,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         case ARGUS_IPV4_UNICAST_LOOPBACK: 
                         case ARGUS_IPV4_UNICAST_TESTNET: 
                         case ARGUS_IPV4_UNICAST_RESERVED: 
+
+                        case ARGUS_IPV6_UNICAST:
+                        case ARGUS_IPV6_UNICAST_UNSPECIFIED:
+                        case ARGUS_IPV6_UNICAST_LOOPBACK:
+                        case ARGUS_IPV6_UNICAST_V4COMPAT:
+                        case ARGUS_IPV6_UNICAST_V4MAPPED:
+                        case ARGUS_IPV6_UNICAST_LINKLOCAL:
+                        case ARGUS_IPV6_UNICAST_SITELOCAL:
                            unicast = 1;
                            break;
   
@@ -2010,6 +2018,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         case ARGUS_IPV4_MULTICAST_ADHOC_BLK1:
                         case ARGUS_IPV4_MULTICAST_ADHOC_BLK2:
                         case ARGUS_IPV4_MULTICAST_ADHOC_BLK3:
+
+                        case ARGUS_IPV6_MULTICAST:
+                        case ARGUS_IPV6_MULTICAST_NODELOCAL:
+                        case ARGUS_IPV6_MULTICAST_LINKLOCAL:
+                        case ARGUS_IPV6_MULTICAST_SITELOCAL:
+                        case ARGUS_IPV6_MULTICAST_ORGLOCAL:
+                        case ARGUS_IPV6_MULTICAST_GLOBAL:
+                           multicast = 1;
                            break;
                   }
 
@@ -2051,6 +2067,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         }
                      }
                      dns->client = dnsClnt = raddr;
+
+                  } else 
+
+                  if (multicast) {
                   }
 
 // test if there is a regex expression and match against the query/response name.
@@ -2235,26 +2255,19 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      }
                   }
 
-                  if (dns->request != NULL) {
-                     struct ArgusDomainQueryStruct *query = dns->request;
-                     if (query != NULL) {
-                        if (query->name  != NULL) free(query->name);
-                        if (query->ans   != NULL) ArgusDeleteList(query->ans,   ARGUS_RR_LIST);
-                        if (query->cname != NULL) ArgusDeleteList(query->cname, ARGUS_RR_LIST);
-                        if (query->ns    != NULL) ArgusDeleteList(query->ns,    ARGUS_RR_LIST);
-                     }
+                  if (req != NULL) {
+                     if (req->name  != NULL) free(req->name);
+                     if (req->ans   != NULL) ArgusDeleteList(req->ans,   ARGUS_RR_LIST);
+                     if (req->cname != NULL) ArgusDeleteList(req->cname, ARGUS_RR_LIST);
+                     if (req->ns    != NULL) ArgusDeleteList(req->ns,    ARGUS_RR_LIST);
                   }
 
-                  if (dns->response != NULL) {
-                     struct ArgusDomainQueryStruct *query = dns->response;
-                     if (query != NULL) {
-                        if (query->name  != NULL) free(query->name);
-                        if (query->ans   != NULL) ArgusDeleteList(query->ans,   ARGUS_RR_LIST);
-                        if (query->cname != NULL) ArgusDeleteList(query->cname, ARGUS_RR_LIST);
-                        if (query->ns    != NULL) ArgusDeleteList(query->ns,    ARGUS_RR_LIST);
-                     }
+                  if (res != NULL) {
+                     if (res->name  != NULL) free(res->name);
+                     if (res->ans   != NULL) ArgusDeleteList(res->ans,   ARGUS_RR_LIST);
+                     if (res->cname != NULL) ArgusDeleteList(res->cname, ARGUS_RR_LIST);
+                     if (res->ns    != NULL) ArgusDeleteList(res->ns,    ARGUS_RR_LIST);
                   }
-
                }
 
             } else {
