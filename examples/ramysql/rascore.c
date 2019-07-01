@@ -328,7 +328,7 @@ RaProcessBaselineData (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 
          }
 #if defined(ARGUSDEBUG)
-         ArgusDebug (3, "ArgusProcessBaselineData () returning\n"); 
+         ArgusDebug (3, "RaProcessBaselineData () returning\n"); 
 #endif
       }
    }
@@ -2266,11 +2266,15 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
          }
       }
 
-      snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year);
-      snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
+      if (year != NULL)  { 
+         snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year); 
+         retn[0] = strdup(RaAnnualBaseLineTable);
+      }
 
-      retn[0] = strdup(RaAnnualBaseLineTable);
-      retn[1] = strdup(RaMonthlyBaseLineTable);
+      if (month != NULL) {
+         snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
+         retn[1] = strdup(RaMonthlyBaseLineTable);
+      }
 
       if (str != NULL) free(str);
       if (base != NULL) free(base);
