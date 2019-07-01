@@ -64,6 +64,7 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "1632", "dlog", "DLOG" }, 
    { "1633", "dlog", "DLOG" }, 
    { "2048", "ip", "Internet IP (IPv4)" }, 
+   { "2048", "ipv4", "Internet IP (IPv4)" }, 
    { "2049", "x75", "X.75 Internet" }, 
    { "2050", "nbs", "NBS Internet" }, 
    { "2051", "ecma", "ECMA Internet" }, 

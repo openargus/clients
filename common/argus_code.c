@@ -1011,10 +1011,16 @@ static struct ablock *
 Argusgen_linktype(unsigned int proto)
 {
    struct ablock *b1 = NULL;
-   struct ArgusMacStruct mac;
-   int offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
 
-   b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+   if (proto == 0) {
+      b1 = Argusgen_flowtype(proto);
+
+   } else {
+      struct ArgusMacStruct mac;
+      int offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
+
+      b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+   }
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
