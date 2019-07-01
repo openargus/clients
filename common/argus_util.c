@@ -1645,8 +1645,12 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
    }
 
    if (rcmdline)
-      if (parser->ArgusInputFileList == NULL)
-         ArgusLog (LOG_ERR, "no input files");
+      if (parser->ArgusInputFileList == NULL) {
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: no input files", __func__);
+#endif
+         exit(0);
+      }
  
    if ((str = argv[optind]) != NULL) {
       if ((strcmp(str, "-") == 0) || (strcmp(str, "--") == 0))
