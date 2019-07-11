@@ -1936,8 +1936,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          }
 
          if (process) {
-            dnsServer = saddr;
-            dnsClient = daddr;
+            dnsServer = daddr;
+            dnsClient = saddr;
 
             switch (proto) {
                case IPPROTO_UDP: 
