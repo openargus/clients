@@ -278,7 +278,6 @@ rterm:	  head id		{ $$ = $2; }
 /* protocol level qualifiers */
 ptype:	  LINK			{ $$ = Q_LINK; }
 	| ETHER			{ $$ = Q_ETHER; }
-	| IP			{ $$ = Q_IP; }
 	;
 pqual:	  pname
 	|			{ $$ = Q_DEFAULT; }

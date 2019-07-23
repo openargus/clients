@@ -320,15 +320,17 @@ syntax()
 #endif
 
 #if defined(ARGUSDEBUG)
-      ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
+   ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
 #endif
 
 #if defined(ARGUSFORKFILTER)
    if (ArgusParser->ArgusFilterFiledes[1] != -1) {
       if ((len = write (ArgusParser->ArgusFilterFiledes[1], errormsg, strlen(errormsg))) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: write retn %s\n", strerror(errno));
+/*
       if ((len = read (ArgusParser->ArgusControlFiledes[0], &response, 1)) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: read retn %s\n", strerror(errno));
+*/
    } else
 #endif
       ArgusLog (LOG_ERR, errormsg);
@@ -1016,12 +1018,33 @@ Argusgen_linktype(unsigned int proto)
       b1 = Argusgen_flowtype(proto);
 
    } else {
-      struct ArgusMacStruct mac;
-      int offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
+      struct ArgusFlow flow;
+      int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
+      switch (proto) {
+         case ETHERTYPE_REVARP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ARP, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_ARP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ARP, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_IP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_IPV4, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_IPV6:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_IPV6, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_ISIS:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ISIS, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
 
-      b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+         default: {
+            struct ArgusMacStruct mac;
+            offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
+            b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+            break;
+         }
+      }
    }
-
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
 #endif
@@ -2504,6 +2527,10 @@ Arguslookup_proto( char *name, int proto)
       case Q_ETHER:
       case Q_LINK:
          /* XXX should look up h/w protocol type based on linktype */
+         if (!(strcmp(name, "ipv4"))) {
+            name = "ip";
+         }
+
          v = argus_nametoeproto(name);
          if (v == PROTO_UNDEF)
             ArgusLog(LOG_ERR, "unknown ether proto '%s'", name);

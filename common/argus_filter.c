@@ -1091,6 +1091,7 @@ argus_strerror(int errnum)
 #define X_ATOM (NFF_MEMWORDS+1)
 
 #define NOP -1
+#define TST  1
 
 /*#define BDEBUG*/
 #if defined(BDEBUG)
