@@ -854,6 +854,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   }
                }
             } else
+            if (!(strncasecmp (mode->mode, "label", 5))) {
+               parser->labelflag = 1;
+            } else
             if (!(strncasecmp (mode->mode, "nocontrol", 9))) {
                parser->ArgusControlPort = 0;
             } else
@@ -907,6 +910,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->ArgusGrepSource = 0;
       parser->ArgusGrepDestination = 0;
 
+      if (parser->ArgusWfileList != NULL) {
+         parser->qflag = 1;
+      }
+
       parser->RaInitialized++;
 
       if (parser->ArgusControlPort != 0) {
@@ -927,6 +934,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusControlCommands[CONTROL_TREE].handler   = ArgusHandleTreeCommand;
          ArgusControlCommands[CONTROL_SEARCH].handler = ArgusHandleSearchCommand;
       }
+
    }
 }
 
@@ -1847,9 +1855,14 @@ char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-   char buf[MAXSTRLEN], tbuf[64], *tptr;
+   char *buf, *label, tbuf[64], *tptr;
 
-   bzero (buf, MAXSTRLEN);
+   if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
+   if ((label = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
    bzero (tbuf, 64);
    ArgusPrintStartDate(parser, tbuf, argus, 32);
    tptr = ArgusTrimString(tbuf);
@@ -2076,12 +2089,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 // test if there is a regex expression and match against the query/response name.
 
                   if (parser->estr != NULL) {
-                     char *buf = (req && req->name) ? req->name : (res && res->name) ? res->name : NULL;
-                     if (buf != NULL) {
-                        int slen = strlen(buf);
+                     char *tbuf = (req && req->name) ? req->name : (res && res->name) ? res->name : NULL;
+                     if (tbuf != NULL) {
+                        int slen = strlen(tbuf);
                         int retn, i, found = 0;
                         for (i = 0; i < parser->ArgusRegExItems; i++) {
-                           if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[slen]))) {
+                           if ((retn = ArgusGrepBuf (&parser->upreg[i], tbuf, &tbuf[slen]))) {
                               found++;
                               break;
                            }
@@ -2092,6 +2105,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   }
 
                   bzero (buf, MAXSTRLEN);
+
                   if (req && res) {
                      if ((req->name && strlen(req->name)) && (res->name && strlen(res->name))) {
                         if (req->seqnum == res->seqnum) {
@@ -2114,10 +2128,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                     RaProcessPTRRecord(parser, dns, tvp);
                               }
 
-                              if (!parser->qflag) {
+                              if (!parser->qflag || parser->labelflag) {
                                  char *type = (char *)tok2str(ns_type2str, "Type%d", req->qtype);
 
-                                 fprintf (stdout, "%s: %s? %s : ", tptr, type, res->name);
+                                 sprintf (&buf[strlen(buf)], "%s: %s? %s : ", tptr, type, res->name);
 
                                  if (res->ans) {
                                     int i, count = res->ans->count;
@@ -2128,8 +2142,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                        struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
-                                       if (i == 0) fprintf (stdout, " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
-                                       else fprintf (stdout, ",%s[%d]", rr->data, rr->ttl);
+                                       if (i == 0) sprintf (&buf[strlen(buf)], " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
+                                       else sprintf (&buf[strlen(buf)], ",%s[%d]", rr->data, rr->ttl);
                                        ArgusPushBackList(res->ans, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }
                                  }
@@ -2141,7 +2155,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                        struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
-                                       fprintf (stdout, " %s %s %s", type, rr->name, rr->data);
+                                       sprintf (&buf[strlen(buf)], " %s %s %s", type, rr->name, rr->data);
                                        ArgusPushBackList(res->cname, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }
                                  }
@@ -2155,9 +2169,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
 
-                                       if (i == 0) fprintf (stdout, " %s %s %s %s %d %d %d %d %d", type, rr->name,
+                                       if (i == 0) sprintf (&buf[strlen(buf)], " %s %s %s %s %d %d %d %d %d", type, rr->name,
                                           rr->mname, rr->rname, rr->serial, rr->refresh, rr->retry, rr->expire, rr->minimum);
-                                       else fprintf (stdout, ",%s", rr->mname);
+                                       else sprintf (&buf[strlen(buf)], ",%s", rr->mname);
                                        ArgusPushBackList(res->soa, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }
                                  }
@@ -2170,8 +2184,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                        struct ArgusDomainResourceRecord *rr = list->list_union.obj;
                                        
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
-                                       if (i == 0) fprintf (stdout, " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
-                                       else fprintf (stdout, ",%s[%d]", rr->data, rr->ttl);
+                                       if (i == 0) sprintf (&buf[strlen(buf)], " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
+                                       else sprintf (&buf[strlen(buf)], ",%s[%d]", rr->data, rr->ttl);
                                        ArgusPushBackList(res->ns, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }  
                                  }
@@ -2183,14 +2197,24 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                        struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
                                        type = (char *)tok2str(ns_type2str, "Type%d", rr->type);
-                                       if (i == 0) fprintf (stdout, " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
-                                       else fprintf (stdout, ",%s[%d]", rr->data, rr->ttl);
+                                       if (i == 0) sprintf (&buf[strlen(buf)], " %s %s %s[%d]", type, rr->name, rr->data, rr->ttl);
+                                       else sprintf (&buf[strlen(buf)], ",%s[%d]", rr->data, rr->ttl);
                                        ArgusPushBackList(res->ptr, (struct ArgusListRecord *)list, ARGUS_NOLOCK);
                                     }
                                  }
 
-                                 fprintf (stdout, "\n");
-                                 fflush(stdout);
+                                 if (parser->labelflag) {
+                                    if (strlen(buf) > 0) {
+                                       snprintf (label, MAXSTRLEN, "dns='%s'", buf);
+                                       ArgusAddToRecordLabel (parser, argus, label);
+                                       argus->status |= ARGUS_RECORD_MODIFIED;
+                                    }
+                                 }
+
+                                 if (!parser->qflag) {
+                                    fprintf (stdout, "%s\n", buf);
+                                    fflush(stdout);
+                                 }
                               }
 
                            } else
@@ -2316,6 +2340,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          break;
       }
    }
+   ArgusFree(label);
+   ArgusFree(buf);
 }
 
 

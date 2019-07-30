@@ -2968,6 +2968,8 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
    parser->zflag = 0;
    parser->Zflag = 0;
 
+   parser->labelflag = 0;
+
    parser->ArgusPortNum = 0;
 
    parser->RaCumulativeMerge = 1;
