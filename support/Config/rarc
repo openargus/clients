@@ -336,7 +336,7 @@ RA_PRINT_UNIX_TIME=no
 # For ra() like clients, the format that is used to print
 # timestamps, is based on the strftime() library call, with
 # an extension to print fractions of a sec "%f".  The
-# default is "%T.%f".  You can overide this default time
+# default is "%T.%f" (%H:%M:%S.fsecs).  You can overide this default time
 # format by setting this variable.  This string must conform
 # to the format specified in strftime().  Malformed strings can
 # generate interesting output, so be aware with this one, and
@@ -482,7 +482,7 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 #
 # No Commandline equivalent
 #
-RA_DELEGATED_IP="/usr/local/argus/delegated-ipv4-latest"
+#RA_DELEGATED_IP="/usr/local/argus/delegated-ipv4-latest"
 
 
 # All ra* clients can reliably connect to remote data sources.
@@ -580,7 +580,7 @@ RA_PORT_DIRECTION="services,wellknown"
 # Currently, you can identify a collection of IP addresses that represent RA_LOCAL,
 # and are specified using an iana-address-file formatted file.  (See ralabel.conf)
 
-RA_LOCAL=/usr/local/argus/local.addrs
+#RA_LOCAL=/usr/local/argus/local.addrs
 
 # When locality information is available, programs like ra(), and
 # as the assignement of source when there is ambiguity in the
