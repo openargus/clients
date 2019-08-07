@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!@PERLBIN@
 # 
 #   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
 #   Copyright (c) 2000-2017 QoSient, LLC

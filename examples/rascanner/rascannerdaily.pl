@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!@PERLBIN@
 # 
 #   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
 #   Copyright (c) 2000-2017 QoSient, LLC
@@ -157,12 +157,12 @@ sub RaScannerProcessParameters {
 
   if (defined $time) {
     ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
-    print "DEBUG: RaScannerProcessParameters: time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
   }
 
   if (not defined ($database)) {
      $database = "hostsInventory";
   }
+  print "DEBUG: RaScannerProcessParameters: dbase:'$database' time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
 }
 
 
@@ -200,8 +200,6 @@ sub RaScannerGetTables {
       else                     { $dates = 0; }
    }
 
-   print "DEBUG: RaScannerGetTables: db $dbase table $tableFormat stime $stime etime $etime\n" if $debug;
-
    if ($dates) {
       while ($stime < $etime) {
          my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($stime);
@@ -216,7 +214,8 @@ sub RaScannerGetTables {
          $stime += 86400;
       }
    }
-
+   my $count = scalar @tables;
+   print "DEBUG: RaScannerGetTables: db:$dbase table:$tableFormat stime:$stime etime:$etime found ($count) tables\n" if $debug;
    return @tables;
 }
 
