@@ -206,6 +206,13 @@ main (int argc, char **argv)
    ArgusMainInit (ArgusParser, argc, argv);
    ArgusClientInit (ArgusParser);
 
+   if (ArgusParser->ArgusLocalLabeler != NULL) {
+      struct ArgusLabelerStruct *labeler = ArgusParser->ArgusLocalLabeler;
+      if (labeler->RaLabelLocalityInterfaceIsMe == 1) {
+         ArgusGetInterfaceAddresses(ArgusParser);
+      }
+   }
+
    if (ArgusParser->pidflag)
       ArgusCreatePIDFile (ArgusParser, ArgusParser->ArgusProgramName);
  

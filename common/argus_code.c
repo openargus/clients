@@ -3426,44 +3426,36 @@ Argusgen_lon(float v, int dir, u_int op)
 static struct ablock *
 Argusgen_loc(int v, int dir, u_int op)
 {
-   struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
+   struct ablock *b1 = NULL, *b2 = NULL;
    struct ArgusNetspatialStruct local;
-   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+   int offset;
 
    switch (dir) {
    case Q_SRC:
-      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_SRC_LOCAL, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
       b1 = Argusgen_locatom(offset, v, op);
-      Argusgen_and(b0, b1);
       break;
 
    case Q_DST:
-      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_DST_LOCAL, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.dloc - (char *)&local);
       b1 = Argusgen_locatom(offset, v, op);
-      Argusgen_and(b0, b1);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
       b1 = Argusgen_locatom(offset, v, op);
       offset = ((char *)&local.dloc - (char *)&local);
       b2 = Argusgen_locatom(offset, v, op);
       Argusgen_or(b2, b1);
-      Argusgen_and(b0, b1);
       break;
 
    case Q_AND:
-      b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
       offset = ((char *)&local.sloc - (char *)&local);
       b1 = Argusgen_locatom(offset, v, op);
       offset = ((char *)&local.dloc - (char *)&local);
       b2 = Argusgen_locatom(offset, v, op);
       Argusgen_and(b2, b1);
-      Argusgen_and(b0, b1);
       break;
 
    default:
