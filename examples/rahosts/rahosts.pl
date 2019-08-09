@@ -55,7 +55,7 @@ my $obj;
 
 my $VERSION = "5.0";                
 
-our ($mode, %items, %addrs, %loc, $local, $sid, $inf, $saddr, $daddr, $taddr, $baddr, $proto, $stype, $sloc, $dloc);
+my ($mode, %items, %addrs, %loc, $local, $sid, $inf, $saddr, $daddr, $taddr, $baddr, $proto, $stype, $sloc, $dloc);
 
 my $quiet = 0;
 my $done = 0;
@@ -209,9 +209,9 @@ sub RaHostsFetchData {
 
    while (my $data = <SESAME>) {
       chomp $data;
-      ($sid, $inf, $saddr, $daddr, $proto, $sloc, $dloc) = split (/,/, $data);
+      ($sid, $inf, $saddr, $daddr, $proto, $sloc, $dloc) = split (/,/, $data, 7);
 
-      if (!($proto eq "man")) {
+      if ($proto && !($proto eq "man")) {
          if ($saddr =~ /$etherRegex/) {
             $stype = "ether";
          } else {
