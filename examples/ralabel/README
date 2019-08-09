@@ -21,3 +21,16 @@
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+
+NOTES
+
+To repair / update existing database tables, read the table, ralabel with 'replace' and reinsert table.
+
+for i in {01..31}; \
+do echo 2019/07/$i; \
+ rasql -r mysql://root@localhost/ipMatrix/ip_%Y_%m_%d -M time 1d -t 2019/07/$i -w /tmp/ipMatrix.2019.07.$i.out; \
+ ralabel -f /usr/argus/*local*conf -r /tmp/ipMatrix.2019.07.$i.out -M replace; \
+ rasqlinsert -M drop -r /tmp/ipMatrix.2019.07.$i.out -w  mysql://root@localhost/ipMatrix/ip_2019_07_$i -m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr; \
+done
+

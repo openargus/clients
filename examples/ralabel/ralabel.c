@@ -86,6 +86,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
+            if (!(strcmp ("replace", mode->mode))) {
+               ArgusProcessFileIndependantly = 1;
+               parser->ArgusReplaceMode |= ARGUS_REPLACE_MODE_TRUE;
+
+               if ((parser->ArgusWfileList != NULL) && (!(ArgusListEmpty(parser->ArgusWfileList)))) {
+                  ArgusLog (LOG_ERR, "replace mode and -w option are incompatible\n");
+               }
+            } else
             if (!(strncasecmp (mode->mode, "noprune", 7))) {
                if (parser->ArgusLabeler) parser->ArgusLabeler->prune = 0;
                if (parser->ArgusLocalLabeler) parser->ArgusLocalLabeler->prune = 0;
@@ -145,7 +153,41 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    }
 }
 
-void RaArgusInputComplete (struct ArgusInput *input) { return; }
+void
+RaArgusInputComplete (struct ArgusInput *input) 
+{
+   if (ArgusProcessFileIndependantly) {
+      ArgusParser->ArgusCurrentInput = input;
+
+      RaParseComplete (0);
+
+      if (ArgusParser->ArgusReplaceMode && input) {
+         if (ArgusParser->ArgusWfileList != NULL) {
+            struct ArgusWfileStruct *wfile = NULL;
+
+            if ((wfile = (void *)ArgusParser->ArgusWfileList->start) != NULL) {
+               fflush (wfile->fd);
+               rename (wfile->filename, input->filename);
+               fclose (wfile->fd);
+               wfile->fd = NULL;
+            }
+
+            ArgusDeleteList(ArgusParser->ArgusWfileList, ARGUS_WFILE_LIST);
+            ArgusParser->ArgusWfileList = NULL;
+
+            if (ArgusParser->Vflag)
+               ArgusLog(LOG_INFO, "file %s labeled", input->filename);
+         }
+      }
+      ArgusParser->RaInitialized = 0;
+      ArgusParser->ArgusCurrentInput = NULL;
+      ArgusClientInit(ArgusParser);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (7, "RaArgusInputComplete(0x%x) done", input);
+#endif
+}
 
 
 void
@@ -153,25 +195,38 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
-         if (!(ArgusParser->ArgusPrintJson))
-            fprintf (stdout, "\n");
+         switch (sig) {
+            case SIGHUP:
+            case SIGINT:
+            case SIGTERM:
+            case SIGQUIT: {
+               struct ArgusWfileStruct *wfile = NULL;
+               ArgusShutDown(sig);
 
-         ArgusShutDown(sig);
+               if (ArgusParser->ArgusWfileList != NULL) {
+                  struct ArgusListObjectStruct *lobj = NULL;
+                  int i, count = ArgusParser->ArgusWfileList->count;
 
-         if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
-            struct ArgusWfileStruct *wfile = NULL, *start = NULL;
- 
-            if ((wfile = (struct ArgusWfileStruct *) ArgusFrontList(ArgusParser->ArgusWfileList)) != NULL) {
-               start = wfile;
-               fflush(wfile->fd);
-               ArgusPopFrontList(ArgusParser->ArgusWfileList, ARGUS_NOLOCK);
-               ArgusPushBackList(ArgusParser->ArgusWfileList, (struct ArgusListRecord *) wfile, ARGUS_NOLOCK);
-               wfile = (struct ArgusWfileStruct *) ArgusFrontList(ArgusParser->ArgusWfileList);
-            } while (wfile != start);
-         } 
-
-         fflush(stdout);
-         exit(0);
+                  if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
+                     for (i = 0; i < count; i++) {
+                        if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+                           if (wfile->fd != NULL) {
+#ifdef ARGUSDEBUG
+                              ArgusDebug (2, "RaParseComplete: closing %s\n", wfile->filename);
+#endif
+                              fflush (wfile->fd);
+                              fclose (wfile->fd);
+                              wfile->fd = NULL;
+                           }
+                        }
+                        lobj = lobj->nxt;
+                     }
+                  }
+               }
+               exit(0);
+               break;
+            }
+         }
       }
    }
 
@@ -292,8 +347,25 @@ char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
+   struct ArgusInput *input = argus->input;
    struct ArgusRecordStruct *ns = NULL;
-   char buf[MAXSTRLEN];
+   static char buf[MAXSTRLEN];
+   int label;
+
+   if (ArgusParser->ArgusReplaceMode && input) {
+      if (parser->ArgusWfileList == NULL) {
+         if (!(ArgusParser->ArgusRandomSeed))
+            srandom(ArgusParser->ArgusRandomSeed);
+
+         srandom (ArgusParser->ArgusRealTime.tv_usec);
+         label = random() % 100000;
+
+         bzero(buf, sizeof(buf));
+         snprintf (buf, MAXSTRLEN, "%s.tmp%d", input->filename, label);
+
+         setArgusWfile(ArgusParser, buf, NULL);
+      }
+   }
 
    if ((ns = ArgusCopyRecordStruct(argus)) != NULL) {
       ArgusLabelRecord(parser, ns);
@@ -314,11 +386,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        rv = ArgusWriteNewLogfile (parser, ns->input, wfile,
-                                                   argusrec);
+                        rv = ArgusWriteNewLogfile (parser, ns->input, wfile, argusrec);
                         if (rv < 0)
-                           ArgusLog(LOG_ERR, "%s unable to open file\n",
-                                    __func__);
+                           ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                      }
                   }
                }
