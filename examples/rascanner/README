@@ -37,8 +37,8 @@ rascanner.pl is an example of a straight forward  AIS database processor using p
 rascanner uses the hostsInventory table for a given day to generate a list of addresses,
 both local and remote that have touched a "thresh"old of addresses during the day.
 From that list, rascanner uses the locality descriptions to label the ipMatrix
-table addresses that match th hostsInventory list as local or remote, and uses
-this information to report on the number of class C subnets that have been touch,
+table addresses that match the hostsInventory list as local or remote, and uses
+this information to report on the number of class C subnets that have been touched,
 along with the number of hosts touched within that subnet.
 
 rascanner.pl suports a number of options, but most importantly it offers:

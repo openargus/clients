@@ -17,10 +17,12 @@
 #  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 #  THIS SOFTWARE.
 # 
-#   scanner - 
+#   rascanner - process hostsInventory data for a specific day, and
+#               load data into remote, and local databases for
+#               hosts that touch a thresh'old' of hosts in a given
+#               subnet.
 #
-#
-# % scanner.pl -time -1d -thresh 64
+# % rascanner.pl -time -1d -thresh 8
 #
 #
 
@@ -34,6 +36,7 @@ $ENV{'PATH'} = '/bin:/usr/bin:/usr/local/bin:/opt/local/lib/mariadb/bin';
 # Used modules
 use POSIX;
 
+use Switch;
 use File::Temp qw/ tempfile tempdir /;
 use Time::Local;
 use qosient::util;  # parsetime
@@ -72,9 +75,8 @@ ARG: while (my $arg = shift(@ARGV)) {
 
          s/^-local$//      && do { $mode = "local"; $filter = "src loc gte 3 and dst loc gte 3"; next ARG; };
          s/^-remote$//     && do { $mode = "remote"; $filter = "src loc lt 3 and dst loc lt 3"; next ARG; };
-         s/^-outsidein$//  && do { $mode = "outside"; $filter = "src loc lt 3 and dst loc gte 3"; next ARG; };
-         s/^-insideout$//  && do { $mode = "inside"; $filter = "src loc gte 3 and dst loc lt 3"; next ARG; };
-
+         s/^-outside//     && do { $mode = "outside"; $filter = "src loc lt 3 and dst loc gte 3"; next ARG; };
+         s/^-inside//      && do { $mode = "inside"; $filter = "src loc gte 3 and dst loc lt 3"; next ARG; };
       }
     } else {
       for ($arg) {
@@ -89,7 +91,7 @@ my $dburl  = "mysql://root\@localhost/scanners/".$mode."_%Y_%m_%d -M time 1d";
 
   print "DEBUG: dburl is: '$dburl' arglist is: '@arglist'\n" if $debug;
 
-  if (not defined $time) {
+  if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
      $time = RaTodaysDate();
   }
 
@@ -106,29 +108,37 @@ my  $tabletime = strftime '%Y_%m_%d', @time;
      $filter = "src loc lt 3 and dst loc gte 3";
   }
   if (not defined $thresh) {
-     $thresh = 128;
+     $thresh = 64;
   }
   $filter = $filter." and trans gte ".$thresh;
   if ($hosttable eq "") {
      $hosttable = "host_$tabletime";
   }
 
-
   my $cmd = "";
 
-  RaStatusProcessParameters();
-  RaStatusFetchData($fname);
-  RaStatusCleanUp($fname);
+  RaScannerProcessParameters();
+  RaScannerFetchData($fname);
+  RaScannerCleanUp($fname);
 
-sub RaStatusProcessParameters {
+sub RaScannerProcessParameters {
+   my $region;
+
    if (! $database) {
       $database = "hostsInventory";
    }
-   $cmd = "mysql -u root $database -NBe \"select saddr,count from $hosttable where count > $thresh order by count desc;\"";
+   switch ($mode) {
+      case "local"   { $region = "local"; }
+      case "remote"  { $region = "remote"; }
+      case "outside" { $region = "remote"; }
+      case "inside"  { $region = "remote"; }
+      else           { $region = "local"; }
+   }
+   $cmd = "mysql -u root $database -NBe \"select saddr,count,region from $hosttable where ((region = '$region') and (count > $thresh)) order by count desc;\"";
    return;
 }
 
-sub RaStatusFetchData {
+sub RaScannerFetchData {
    my $file = shift;
    my ($i, $k, $v, $data);
    chomp($file);
@@ -137,19 +147,24 @@ sub RaStatusFetchData {
 
    $cmd  = "$cmd > $ips";
 
-   print "DEBUG: RaStatusFetchData: cmd: $cmd\n" if $debug;
+#  Fetch data from hostsInventory for the table in question.
+
+   print "DEBUG: RaScannerFetchData: cmd: $cmd\n" if $debug;
    system($cmd);
 
    chmod 0644, $ips;
 
+
+#  Fetch data from the ipMatrix table for the day in question.
+
    $qcmd = "rasql -r mysql://root\@localhost/ipMatrix/ip_$tabletime -w - @arglist | rafilteraddr -f $ips -m saddr -w - | racluster -m saddr daddr -w - | ralabel -f /usr/argus/ralabel.local.conf -w - | racluster -m saddr daddr/$cidr -M dsrs='-agr' -w - | rasort -w $file -m saddr trans daddr - $filter; rasqlinsert -r $file  -w $dburl -t $time -m saddr daddr/$cidr -M drop -s stime dur saddr daddr spkts dpkts trans -p3";
 
-   print "DEBUG: RaStatusFetchData: query: $qcmd\n" if $debug;
+   print "DEBUG: RaScannerFetchData: query: $qcmd\n" if $debug;
    system($qcmd);
    return;
 }
 
-sub RaStatusCleanUp {
+sub RaScannerCleanUp {
    my $file = shift;
    my $ips = $file.".ips";
    print "DEBUG: deleting '$file $ips'\n" if $debug;
@@ -158,7 +173,7 @@ sub RaStatusCleanUp {
    exit 0;
 }
 
-sub RaStatusError {
+sub RaScannerError {
    my $msg = shift;
    my $file = shift;
    my $ips = $file.".ips";
