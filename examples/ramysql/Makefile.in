@@ -98,7 +98,8 @@ PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
 	$(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf \
 	$(INSTALLBIN)/rastatus $(INSTALLBIN)/rastatus-cpustats \
 	$(INSTALLBIN)/rastatus-diskstats $(INSTALLBIN)/rastatus-loadavg \
-	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs 
+	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs \
+	$(INSTALLBIN)/radbaserollup
 
 all: $(PROGS)
 
@@ -140,6 +141,10 @@ $(INSTALLBIN)/rastatus-memstats: rastatus-memstats.pl
 	sed 's+@PERLBIN@+$(PERL)+' rastatus-memstats.pl > $@
 	chmod +x $@
 
+$(INSTALLBIN)/radaserollup: radbaserollup.pl
+	sed 's+@PERLBIN@+$(PERL)+' radbaserollup.pl > $@
+	chmod +x $@
+
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -165,6 +170,7 @@ install: force all
 	$(INSTALL) $(INSTALLBIN)/rastatus-diskstats $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rastatus-loadavg $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rastatus-memstats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/radbaserollup $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
@@ -178,6 +184,7 @@ uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rastatus-diskstats
 	rm -f $(DESTDIR)$(BINDIR)/rastatus-loadavg
 	rm -f $(DESTDIR)$(BINDIR)/rastatus-memstats
+	rm -f $(DESTDIR)$(BINDIR)/radbaserollup
 
 clean:
 	rm -f $(CLEANFILES)
