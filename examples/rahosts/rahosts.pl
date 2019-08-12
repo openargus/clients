@@ -197,9 +197,9 @@ sub RaHostsFetchData {
 # Start the program
 
    my $Options = "-L -1 -n -s sid:42 inf saddr:32 daddr:32 proto sloc dloc -c , ";
-   $RA = "$rasql -t $time -r 'mysql://root\@localhost/ipMatrix/ip_%Y_%m_%d' -M time 1d  -w - | $ralabel -f $ralabelconf $Options";
+   $RA = "$rasql -t $time -r 'mysql://root\@localhost/ipMatrix/ip_%Y_%m_%d' -M time 1d  -w - - ip | $ralabel -f $ralabelconf $Options";
 
-   print "DEBUG: RaStatusFetchData: cmd: $RA\n" if $debug;
+   print "DEBUG: RaHostsFetchData: cmd: $RA\n" if $debug;
 
    my $etherRegex = '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$';
    my $ipv4Regex  = '\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}\b';
@@ -228,11 +228,11 @@ sub RaHostsFetchData {
          if (!(length ($sloc))) { $sloc = 4; }
          if (!(length ($dloc))) { $dloc = 4; }
 
-         if (($sloc >= 4) && ($dloc >= 4)) {
-            print "DEBUG: RaStatusFetchData: data: ($sid,$inf,$saddr,$daddr,$proto,$sloc,$dloc) local \n" if $debug;
+         if (($sloc >= 3) && ($dloc >= 3)) {
+            print "DEBUG: RaHostsFetchData: data: ($sid,$inf,$saddr,$daddr,$proto,$sloc,$dloc) local \n" if $debug;
             $local = 'local';
          } else {
-            print "DEBUG: RaStatusFetchData: data: ($sid,$inf,$saddr,$daddr,$proto,$sloc,$dloc) remote \n" if $debug;
+            print "DEBUG: RaHostsFetchData: data: ($sid,$inf,$saddr,$daddr,$proto,$sloc,$dloc) remote \n" if $debug;
             $local = 'remote';
          }
 
@@ -263,6 +263,7 @@ sub RaHostsFetchData {
 }
 
 sub RaHostsGenerateOutput {
+   print "DEBUG: RaHostsGenerateOutput starting\n" if $debug;
    if ($uri) {
       for $local ( sort keys(%items) ) {
       for $stype ( sort keys(%{$items{$local}}) ) {
@@ -288,6 +289,7 @@ sub RaHostsGenerateOutput {
                            if (!(defined $loc{$saddr})) {
                               $loc{$saddr} = 4;
                            }
+                           print "DEBUG: INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?), $local, $sid, $inf, $saddr, $loc{$saddr}, $count, $hoststring\n" if $debug;
                            $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?)", undef, $local, $sid, $inf, $saddr, $loc{$saddr}, $count, $hoststring);
                         }
                      }
@@ -362,6 +364,7 @@ sub RaHostsGenerateOutput {
                            if (!(defined $loc{$saddr})) {
                               $loc{$saddr} = 4;
                            }
+                           print "DEBUG: INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?), $local, $sid, $inf, $saddr, $loc{$saddr}, $count, $hoststring\n" if $debug;
                            $dbh->do("INSERT INTO $table VALUES(?, ?, ?, ?, ?, ?, ?)", undef, $local, $sid, $inf, $saddr, $loc{$saddr}, $count, $hoststring);
                         }
                      }
