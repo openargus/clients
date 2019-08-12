@@ -5955,13 +5955,13 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                            if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                               int status;
 
-                              status = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
                               }
 
-                              status = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusDstAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusDstAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
@@ -5992,13 +5992,13 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                            if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                               int status;
 
-                              status = RaProcessAddressLocality (parser, labeler, &flow->arp_flow.arp_spa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->arp_flow.arp_spa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
                               }
 
-                              status = RaProcessAddressLocality (parser, labeler, &flow->arp_flow.arp_tpa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->arp_flow.arp_tpa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusDstAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusDstAddrPair = COLOR_PAIR(ARGUS_CYAN); break;

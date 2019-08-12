@@ -1279,6 +1279,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   parser->ArgusPrintHashZero = 1;
                   ArgusAddMode = 0;
                } else
+               if (!(strcmp (optarg, "label"))) {
+                  parser->ArgusLabelRecord = 1;
+               } else
                if (!(strcmp (optarg, "correct"))) {
                   parser->ArgusPerformCorrection = 1;
                } else
@@ -3659,11 +3662,29 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
    return (retn);
 }
 
+
+// The mode bitmap passed to RaProcessAddressLocality indicates the type of match to be done,
+// but also it passes an indication of the routine should add to the label, information
+// regarding the match.
+
 int
-RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
+RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
 {
    struct RaAddressStruct *raddr;
-   int retn = 0;
+   int retn = 0, label = 0, src = 0, dst = 0;
+
+   if (mode & ARGUS_LABEL_RECORD) {
+      label = 1;
+      mode &= ~ARGUS_LABEL_RECORD;
+   }
+   if (mode & ARGUS_MASK_SADDR_INDEX) {
+      src = 1;
+      mode &= ~ARGUS_MASK_SADDR_INDEX;
+   }
+   if (mode & ARGUS_MASK_DADDR_INDEX) {
+      dst = 1;
+      mode &= ~ARGUS_MASK_DADDR_INDEX;
+   }
 
    if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
       switch (type) {
@@ -3681,8 +3702,24 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
                retn = ARGUS_MY_ADDRESS;
             else if (mode != ARGUS_EXACT_MATCH)
-                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL)
-                     retn = ARGUS_MY_NETWORK;
+               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL)
+                  retn = ARGUS_MY_NETWORK;
+
+            if (raddr != NULL) {
+               if (label && (src || dst)) {
+                  char buf[128];
+                  if (raddr->label != NULL) {
+                     if (src) {
+                        snprintf (buf, 128, "saddr=%s", raddr->label);
+                     }
+                     if (dst) {
+                        snprintf (buf, 128, "daddr=%s", raddr->label);
+                     }
+                     ArgusAddToRecordLabel (parser, argus, buf);
+                     argus->status |= ARGUS_RECORD_MODIFIED;
+                  }
+               }
+            }
             break;
          }
 
@@ -3691,7 +3728,7 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddressLocality (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
 #endif
    }
 
@@ -4159,8 +4196,8 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                               switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                                  case ARGUS_TYPE_IPV4: {
                                     if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                                       dst = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                                       src = RaProcessAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                       dst = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                       src = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                                        break;
                                     }
                                  }

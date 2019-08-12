@@ -214,6 +214,11 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
 
    int retn = 0;
+   int mode = ARGUS_SUPER_MATCH;
+
+   if (parser->ArgusLabelRecord > 0) {
+      mode |= ARGUS_LABEL_RECORD;
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
@@ -229,18 +234,20 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                case ARGUS_FLOW_CLASSIC5TUPLE:
                case ARGUS_FLOW_LAYER_3_MATRIX: {
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4:
+                     case ARGUS_TYPE_IPV4: {
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddressLocality(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
                         break;
-                     case ARGUS_TYPE_IPV6:
+                     }
+                     case ARGUS_TYPE_IPV6: {
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_SADDR_INDEX);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddressLocality(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_SADDR_INDEX);
                         break;
+                     }
                   }
                   break; 
                }

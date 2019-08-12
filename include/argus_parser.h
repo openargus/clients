@@ -312,7 +312,7 @@ struct ArgusParserStruct {
    char RaDonePending, RaShutDown, RaSortedInput;
    char RaTasksToDo, ArgusReliableConnection, ArgusPrintWarnings;
    char ArgusCorrelateEvents, ArgusPerformCorrection;
-   char ArgusExitStatus, ArgusPassNum;
+   char ArgusExitStatus, ArgusPassNum, ArgusLabelRecord;
    char ArgusLoadingData, ArgusFractionalDate;
 
    char *ArgusProgramName, *RaTimeFormat, *RaTimeZone;
