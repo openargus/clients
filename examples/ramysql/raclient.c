@@ -1535,18 +1535,16 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                        } else {
                                           bin->table = strdup(RaSQLSaveTable);
                                        }
-                                       rec->status |= ARGUS_SQL_INSERT;
 
-                                    } else {
-                                       if (RaSQLCacheDB) {
-                                          if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
-                                             ArgusMergeRecords (ArgusParser->ArgusAggregator, rec, cns);
-                                             rec->status &= ~ARGUS_SQL_STATUS;
-                                          } else
-                                             rec->status |= ARGUS_SQL_INSERT;
+                                    }
+                                    if (RaSQLCacheDB) {
+                                       if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
+                                          ArgusMergeRecords (ArgusParser->ArgusAggregator, rec, cns);
+                                          rec->status &= ~ARGUS_SQL_STATUS;
                                        } else
                                           rec->status |= ARGUS_SQL_INSERT;
-                                    }
+                                    } else
+                                       rec->status |= ARGUS_SQL_INSERT;
                                  }
 #endif
                               }
