@@ -60,8 +60,6 @@ my $path;
 
 my @arglist = ();
 
-print "DEBUG: RaDNSDb: starting @ARGV\n" if $debug;
-
 ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-debug//         && do { $debug++; next ARG; };
@@ -87,6 +85,7 @@ ARG: while (my $arg = shift(@ARGV)) {
    $arglist[@arglist + 0] = $arg;
 }
 
+print "DEBUG: RaDNSDb: starting\n" if $debug;
 
 # Start the program
 
@@ -206,6 +205,7 @@ if ($uri) {
 
             my $SQL  = "CREATE TABLE $table (";
                $SQL .= "`name` varchar(128) NOT NULL,";
+               $SQL .= "`tld` varchar(64) NOT NULL,";
                $SQL .= "`ref` INT,";
                $SQL .= "`addrs` TEXT,";
                $SQL .= "`client` TEXT,";
@@ -219,10 +219,18 @@ if ($uri) {
             $dbh->do($SQL);
 
             foreach my $n (@$results_ref) {
-               my ($name,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
+               my ($name,$tld,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
 
-               if (defined $n->{'name'}) { $name   = '"' . $n->{'name'} . '"'};
-               if (defined $n->{'ref'})  { $ref    = $n->{'ref'}};
+               if (defined $n->{'name'}) { 
+                  var $tld = substr( $n->{'name'}, rindex( $n->{'name'}, '.' ) + 1 );
+                  if (defined $tld) {
+                     $n->{'tld'} = $tld;
+                     $tld   = '"' . $n->{'tld'} . '"';
+                  }
+                  $name  = '"' . $n->{'name'} . '"'
+               };
+
+               if (defined $n->{'ref'})  { $ref   = $n->{'ref'}};
 
                if (defined $n->{'addr'}) { 
                   my $array = $n->{'addr'}; 
@@ -255,6 +263,7 @@ if ($uri) {
                   my $str = "";
 
                   if (defined $name)   { push(@fields,"name");   push(@values, $name); }
+                  if (defined $tld)    { push(@fields,"tld");   push(@values, $name); }
                   if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
                   if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
                   if (defined $client) { push(@fields,"client"); push(@values, $client); }

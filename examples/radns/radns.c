@@ -41,6 +41,8 @@
 #include <arpa/inet.h>
 #endif
 
+#include <netinet/tlds.h>
+
 #include <argus_compat.h>
 
 #include <rabins.h>
@@ -425,7 +427,6 @@ extern int ArgusGrepBuf (regex_t *, char *, char *);
  *   The syntax of the response is:
  *      Ascii - IPAddrRequest: A: FQDN... REF: FQDN... PTR: FQDN...
  *        23.50.75.27: A: e8218.dscb1.akamaiedge.net. REF: sr.symcd.com. s2.symcb.com. PTR: a23-50-75-27.deploy.static.akamaitechnologies.com. 
-
  *      JSON  - {
  *                "query" : "IPAddrRequest", 
  *                 "auth" : ["FQDN", ...], 
@@ -438,8 +439,6 @@ extern int ArgusGrepBuf (regex_t *, char *, char *);
  *   which should be the 'struct nnamemem *' for the Authoritative address.
  *
  */
-
-
 
 char **
 ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
@@ -903,9 +902,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((ArgusDNSNameTable = ArgusNewHashTable(0x40000)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewHashTable error");
 
-      if ((ArgusDNSNameSpace = (struct ArgusNameSpace *)ArgusCalloc(1, sizeof(*ArgusDNSNameSpace))) != NULL)
+      if ((ArgusDNSNameSpace = (struct ArgusNameSpace *)ArgusCalloc(1, sizeof(*ArgusDNSNameSpace))) != NULL) {
          if ((ArgusDNSNameSpace->tlds = ArgusNewQueue()) != NULL)
             ArgusDNSNameSpace->table = ArgusNewHashTable(0x1000);
+
+         char **tld = ArgusIanaTopLevelDomains;
+         do {
+            ArgusNameEntry(ArgusDNSNameSpace->table, *tld);
+            tld++;
+         } while (*tld != NULL);
+      }
 
       parser->ArgusGrepSource = 0;
       parser->ArgusGrepDestination = 0;
@@ -970,6 +976,10 @@ RaParseComplete (int sig)
 #ifdef ARGUSDEBUG
          ArgusDebug (1, "RaParseComplete processed %d DNS names\n", ArgusDNSNameTable->count);
 #endif
+
+         ArgusDeleteQueue(ArgusDNSNameSpace->tlds);
+         ArgusDeleteHashTable(ArgusDNSNameSpace->table);
+         ArgusFree(ArgusDNSNameSpace);
 
          ArgusDeleteHashTable(ArgusDNSNameTable);
          ArgusExitStatus = ArgusParser->ArgusExitStatus;
@@ -1090,7 +1100,6 @@ extern int RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerS
 // name into a namespace tree.
 
 
-
 struct nnamemem *
 ArgusFindNameEntry (struct ArgusHashTable *table, char *name)
 {
@@ -1149,10 +1158,16 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name)
          else
             retn->d_name = strchr(retn->n_name, '.') + 1;
 
-         ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
+         if (retn->d_name && (strlen(retn->d_name) > 0)) {
+            if (ArgusFindNameEntry (ArgusDNSNameSpace->table, retn->d_name)) {
+               ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
+            }
+         } else {
+            ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
+         }
 
 #ifdef ARGUSDEBUG
-         ArgusDebug (2, "ArgusNameEntry() adding DNS name %s[%d] total %d\n", retn->n_name, (retn->hashval % table->size), table->count);
+         ArgusDebug (2, "ArgusNameEntry() adding DNS name %s[%d] tld %s total %d\n", retn->n_name, (retn->hashval % table->size), retn->d_name, table->count);
 #endif
 
       } else {
