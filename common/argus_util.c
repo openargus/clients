@@ -4672,13 +4672,13 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
 
                if (flags || (flow->hdr.subtype & ARGUS_REVERSE))
                   flow->hdr.subtype &= ~ARGUS_REVERSE;
-//             else
-//                flow->hdr.subtype |= ARGUS_REVERSE;
+               else
+                  flow->hdr.subtype |= ARGUS_REVERSE;
 
                if (flow->hdr.argus_dsrvl8.qual & ARGUS_DIRECTION)
                   flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
-//              else
-//                flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
+                else
+                  flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
 
                switch (flow->hdr.subtype & 0x3F) {
                   case ARGUS_FLOW_CLASSIC5TUPLE: {
