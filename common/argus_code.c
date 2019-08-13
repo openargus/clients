@@ -315,7 +315,7 @@ syntax()
 
 #if defined(ARGUSFORKFILTER)
    extern struct ArgusParserStruct *ArgusParser;
-   char response;
+// char response;
    int len;
 #endif
 
