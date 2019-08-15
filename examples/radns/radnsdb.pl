@@ -205,7 +205,7 @@ if ($uri) {
 
             my $SQL  = "CREATE TABLE $table (";
                $SQL .= "`name` varchar(128) NOT NULL,";
-               $SQL .= "`tld` varchar(64) NOT NULL,";
+               $SQL .= "`tld` varchar(64),";
                $SQL .= "`ref` INT,";
                $SQL .= "`addrs` TEXT,";
                $SQL .= "`client` TEXT,";
@@ -222,7 +222,7 @@ if ($uri) {
                my ($name,$tld,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
 
                if (defined $n->{'name'}) { 
-                  var $tld = substr( $n->{'name'}, rindex( $n->{'name'}, '.' ) + 1 );
+                  my $tld = substr( $n->{'name'}, rindex( $n->{'name'}, '.' ) + 1 );
                   if (defined $tld) {
                      $n->{'tld'} = $tld;
                      $tld   = '"' . $n->{'tld'} . '"';
