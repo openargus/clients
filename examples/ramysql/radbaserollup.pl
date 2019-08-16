@@ -22,10 +22,11 @@
 #        Need to be passed a range of days, and the routine will drop the
 #        rollup databases, if they exist, then for each database, it will
 #        create the rollup datatbases, (yearly, monthly) and then merge
-#        them in.
+#        the daily tables into them.
 #        
-#        use will then use daseRollup-nightly to merge a days data into
-#        the rollups.
+#        These will then be used by daseRollup-nightly to merge a new
+#        day's data into the rollup tables.
+#
 #
 # Complain about undeclared variables
 use v5.6.0;
