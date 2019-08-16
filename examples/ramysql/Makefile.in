@@ -141,7 +141,7 @@ $(INSTALLBIN)/rastatus-memstats: rastatus-memstats.pl
 	sed 's+@PERLBIN@+$(PERL)+' rastatus-memstats.pl > $@
 	chmod +x $@
 
-$(INSTALLBIN)/radaserollup: radbaserollup.pl
+$(INSTALLBIN)/radbaserollup: radbaserollup.pl
 	sed 's+@PERLBIN@+$(PERL)+' radbaserollup.pl > $@
 	chmod +x $@
 
