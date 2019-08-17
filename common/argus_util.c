@@ -1070,12 +1070,17 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             setArgusWfile (parser, optarg, NULL);
             break;
 
-         case 'f': {
-            if (parser->ArgusFlowModelFile != NULL)
-               free (parser->ArgusFlowModelFile);
-            parser->ArgusFlowModelFile = strdup(optarg);
+         case 'f':
+            if (!(strncmp(parser->ArgusProgramName,  "rascore", 7)) ||
+                !(strncmp(parser->ArgusProgramName, "ralabel", 7))) {
+               setArgusLfile (parser, optarg);
+
+            } else {
+               if (parser->ArgusFlowModelFile != NULL)
+                  free (parser->ArgusFlowModelFile);
+               parser->ArgusFlowModelFile = strdup(optarg);
+            }
             break;
-         }
          case 'F': 
             if (!(RaParseResourceFile (parser, optarg, ARGUS_SOPTIONS_PROCESS,
                                        ArgusResourceFileStr, ARGUS_RCITEMS,
@@ -30102,6 +30107,30 @@ clearArgusWfile(struct ArgusParserStruct *parser)
 #if !defined(PATH_MAX)
 #define PATH_MAX	4098
 #endif
+
+void
+setArgusLfile(struct ArgusParserStruct *parser, char *file)
+{
+   struct ArgusLfileStruct *lfile = NULL;
+   char *ptr = NULL;
+
+   if (parser->ArgusLabelerFileList == NULL)
+      parser->ArgusLabelerFileList = ArgusNewList();
+
+   if (file) {
+      ptr = strdup(file);
+
+      if ((lfile = (struct ArgusLfileStruct *) ArgusCalloc (1, sizeof (*lfile))) != NULL) {
+         ArgusPushFrontList(parser->ArgusLabelerFileList, (struct ArgusListRecord *)lfile, ARGUS_LOCK);
+
+         lfile->filename  = ptr;
+
+      } else
+         ArgusLog (LOG_ERR, "setArgusLfile, ArgusCalloc %s", strerror(errno));
+
+   } else
+      ArgusLog (LOG_ERR, "setArgusLfile, file is null");
+}
 
 void
 setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)

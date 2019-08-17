@@ -1622,9 +1622,37 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
-      if (parser->ArgusFlowModelFile)
-         if ((parser->ArgusLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+      if (parser->ArgusLabelerFileList) {
+         struct ArgusLfileStruct *lfile = NULL, *start = NULL;
+
+         if (parser->ArgusLabeler == NULL)
+            if ((parser->ArgusLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+         if ((lfile = (struct ArgusLfileStruct *)ArgusFrontList(parser->ArgusLabelerFileList)) != NULL) {
+            start = lfile;
+            do {
+               if (!(RaReadAddressConfig (parser, parser->ArgusLabeler, lfile->filename) > 0))
+                  ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig %s error", lfile->filename);
+
+               ArgusPopFrontList(parser->ArgusLabelerFileList, ARGUS_LOCK);
+               ArgusPushBackList(parser->ArgusLabelerFileList, (struct ArgusListRecord *)lfile, ARGUS_LOCK);
+               lfile = (struct ArgusLfileStruct *)ArgusFrontList(parser->ArgusLabelerFileList);
+
+            } while (lfile != start);
+         }
+      }
+
+      if (parser->ArgusFlowModelFile) {
+         if (parser->ArgusLabeler == NULL) {
+            if ((parser->ArgusLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+         } else {
+            if (!(RaReadAddressConfig (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile) > 0))
+               ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig error");
+         }
+      }
 
       parser->ArgusDirectionFunction = 0;
       if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
@@ -1794,11 +1822,21 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                } else
                if (!strncasecmp (mode->mode, "nocreate", 8)) {
                   RaSQLNoCreate = 1;
+               } else
+               if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
+                   (!(strncasecmp (mode->mode, "debug", 5)))) {
+                  parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+                  parser->ArgusLabeler->status |= ARGUS_LABELER_DEBUG;
                }
             }
 
             mode = mode->nxt;
          }
+      }
+
+      if (parser->ArgusLabeler && (parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG)) {
+         RaPrintLabelTree (parser->ArgusLabeler, parser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         exit(0);
       }
 
       RaBinProcess->size = nadp->size;

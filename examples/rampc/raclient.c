@@ -2093,7 +2093,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                char buf[MAXSTRLEN];
                bzero(buf, sizeof(buf));
 
-               if ((ArgusMergeLabel(l1, l2, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
+               if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
                   free(l1->l_un.label);
                   l1->l_un.label = strdup(buf);
                }

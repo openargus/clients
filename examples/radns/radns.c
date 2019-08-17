@@ -1140,9 +1140,6 @@ int RaProcessSOARecord (struct ArgusParserStruct *, struct ArgusDomainStruct *, 
 int RaProcessNSRecord (struct ArgusParserStruct *, struct ArgusDomainStruct *, struct timeval *);
 int RaProcessPTRRecord (struct ArgusParserStruct *, struct ArgusDomainStruct *, struct timeval *);
 
-extern int RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
-
-
 // ArgusNameEntry will take a FQDN and insert it into a hash table, as well as insert the
 // name into a namespace tree.
 

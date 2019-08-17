@@ -8861,7 +8861,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                               if (strcmp(l1->l_un.label, l2->l_un.label)) {
                                  char *buf = calloc(1, MAXBUFFERLEN);
 
-                                 if ((ArgusMergeLabel(l1, l2, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
+                                 if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
                                     free(l1->l_un.label);
                                     l1->l_un.label = strdup(buf);
                                  }

@@ -100,6 +100,13 @@ struct ArgusRfileStruct {
    char *name;
 };
 
+struct ArgusLfileStruct {
+   struct ArgusListObjectStruct *nxt;
+   char *filename;
+   FILE *fd;
+
+   struct stat statbuf;
+};
 
 #define ARGUS_DATA		0x01
 #define ARGUS_CISCO_V5_DATA	0x02
@@ -165,6 +172,7 @@ extern void RaClearConfiguration (struct ArgusParserStruct *);
  
 void ArgusMainInit (struct ArgusParserStruct *, int, char **);
 void setArgusArchive(struct ArgusParserStruct *, char *);
+void setArgusLfile(struct ArgusParserStruct *, char *);
 void setArgusWfile(struct ArgusParserStruct *, char *, char *);
 void ArgusInitStructs (struct ArgusParserStruct *);
 void setArguspidflag (struct ArgusParserStruct *, int);
@@ -294,6 +302,7 @@ extern void setArgusRank(struct ArgusParserStruct *, int);
 extern int getArgusRank(struct ArgusParserStruct *);
 
 extern void setArgusArchive(struct ArgusParserStruct *, char *);
+extern void setArgusLfile(struct ArgusParserStruct *, char *);
 extern void setArgusWfile(struct ArgusParserStruct *, char *, char *);
 extern int RaProcessRecursiveFiles (char *, int);
 extern int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
