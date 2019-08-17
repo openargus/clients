@@ -1823,6 +1823,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                if (!strncasecmp (mode->mode, "nocreate", 8)) {
                   RaSQLNoCreate = 1;
                } else
+               if (!(strncasecmp (mode->mode, "dump.tree", 9))) {
+                  parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_LABEL;
+                  parser->ArgusLabeler->status |= ARGUS_LABELER_DUMP;
+               } else
                if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                    (!(strncasecmp (mode->mode, "debug", 5)))) {
                   parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
@@ -1834,7 +1838,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if (parser->ArgusLabeler && (parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG)) {
+      if (parser->ArgusLabeler && ((parser->ArgusLabeler->status & ARGUS_LABELER_DEBUG) ||
+                                   (parser->ArgusLabeler->status & ARGUS_LABELER_DUMP))) {
          RaPrintLabelTree (parser->ArgusLabeler, parser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
          exit(0);
       }
