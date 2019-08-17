@@ -3669,7 +3669,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 
 
 // The mode bitmap passed to RaProcessAddressLocality indicates the type of match to be done,
-// but also it passes an indication of the routine should add to the label, information
+// but also it passes an indication if the routine should add to the label, information
 // regarding the match.
 
 int
