@@ -785,6 +785,90 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    return (retn);
 }
 
+char *
+ArgusUpgradeLabel(char *label)
+{
+   char *retn = NULL;
+   char lbuf[1024];
+   int slen;
+
+// First is to correct key '=' value to key ':' value.
+// If we find '=', we'll assume legacy label format and
+// convert ':' object delimiters as well.
+
+   bzero(lbuf, sizeof(lbuf));
+
+   if (!(strchr(label, '{'))) {
+      if (strchr(label, '=')) {
+         char *tlabel = strdup(label);
+         char tvalue[1024];
+
+         char *tptr, *sptr = tlabel;
+         char *key = NULL, *value = NULL;
+         int cnt = 0;
+
+         while ((tptr = strtok(sptr, ":")) != NULL) {
+            char *nptr;
+            if ((nptr = strchr(tptr, '=')) != NULL) {
+               *nptr++ = '\0';
+               key = tptr;
+               value = nptr;
+
+               if (strchr(value, ',')) {
+                  if (!(strchr(value, '['))) {
+                     snprintf(tvalue, 1024, "[%s]", value);
+                     value = tvalue;
+                  }
+               }
+
+               slen = strlen(lbuf);
+               if (*key != '\"') {
+                  snprintf (&lbuf[slen], 1024 - slen, "\"%s\":%s", key, value);
+               } else {
+                  snprintf (&lbuf[slen], 1024 - slen, "%s:%s", key, value);
+               }
+            }
+            sptr = NULL;
+            cnt++;
+         }
+         free(tlabel);
+      }
+
+      if (strchr(label, '{')) {
+         if (strchr(label, ':')) {
+         }
+      } else {
+         char *tlabel = strdup(label);
+         char tvalue[1024];
+
+         char *tptr, *sptr = tlabel;
+         char *key = NULL, *value = NULL;
+
+         if ((sptr = strchr(tlabel, ':')) != NULL) {
+            *sptr++ = '\0';
+            key = tlabel;
+            value = sptr;
+
+            if (strchr(value, ',')) {
+               if (!(strchr(value, '['))) {
+                  snprintf(tvalue, 1024, "[%s]", value);
+                  value = tvalue;
+               }
+            }
+
+            slen = strlen(lbuf);
+            if (*key != '\"') {
+               snprintf (&lbuf[slen], 1024 - slen, "\"%s\":%s", key, value);
+            } else {
+               snprintf (&lbuf[slen], 1024 - slen, "%s:%s", key, value);
+            }
+         }
+         free(tlabel);
+      }
+   }
+   return retn;
+}
+
 
 // 
 // Labels are metadata, and use metadata conventions for format, syntax, etc... 

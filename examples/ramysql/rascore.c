@@ -358,11 +358,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
          struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
-         int mode = 0;
-
-         if (parser->ArgusLabelRecord) {
-            mode = ARGUS_LABEL_RECORD;
-         }
 
          if (metric != NULL) {
             parser->ArgusTotalPkts  += metric->src.pkts;
@@ -379,41 +374,35 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      case ARGUS_TYPE_IPV4:
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
                            if (flow->ip_flow.smask == 32) {
-                              argus->score = RASCORE_LIMIT_MIN;
-                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
-                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
-
-                                 } else {
-                                    argus->score = 11;
+                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
                                  }
-                              } else {
-                                 argus->score = 15;
+                              }
+                              if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
+                                 }
                               }
                            }
                         }
-                        if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                        if ((parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
                            if (flow->ip_flow.dmask == 32) {
-                              argus->score = RASCORE_LIMIT_MIN;
-                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
-                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
-
-                                 } else {
-                                    argus->score = 11;
+                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
                                  }
-                              } else {
-                                 argus->score = 15;
+                              }
+                              if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
+                                 }
                               }
                            }
                         }
                         break;
                      case ARGUS_TYPE_IPV6:
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
-                           argus->score = RASCORE_LIMIT_MIN;
-                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, mode | ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, local, argus, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, ARGUS_SUPER_MATCH);
                         }
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
-                           argus->score = RASCORE_LIMIT_MIN;
-                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, mode | ARGUS_SUPER_MATCH);
+                           retn = RaProcessAddressLocality(parser, local, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, ARGUS_SUPER_MATCH);
                         }
                         break;
                   }

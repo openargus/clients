@@ -3668,6 +3668,81 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 }
 
 
+int
+RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   int retn = 0, label = 1, src = 0, dst = 0;
+
+   if (mode & ARGUS_LABEL_RECORD) {
+      label = 1;
+      mode &= ~ARGUS_LABEL_RECORD;
+   }
+   if (mode & ARGUS_MASK_SADDR_INDEX) {
+      src = 1;
+      mode &= ~ARGUS_MASK_SADDR_INDEX;
+   }
+   if (mode & ARGUS_MASK_DADDR_INDEX) {
+      dst = 1;
+      mode &= ~ARGUS_MASK_DADDR_INDEX;
+   }
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct node;
+            bzero ((char *)&node, sizeof(node));
+
+            node.addr.type = AF_INET;
+            node.addr.len = 4;
+            node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+            node.addr.masklen = mask;
+
+            /* always try exact match first? */
+            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
+               if (mode != ARGUS_EXACT_MATCH)
+                  raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode);
+
+            if (raddr != NULL) {
+               if (label && (src || dst)) {
+                  char buf[256];
+                  if (raddr->label != NULL) {
+                     char *clabel = ArgusUpgradeLabel(raddr->label);
+
+                     if (clabel != NULL) {
+                        free(raddr->label);
+                        raddr->label = clabel;
+                     }
+
+                     if (src) {
+                        snprintf (buf, 256, "\"saddr\":{ %s }", raddr->label);
+                     }
+                     if (dst) {
+                        snprintf (buf, 256, "\"daddr\":{ %s }", raddr->label);
+                     }
+                     ArgusAddToRecordLabel (parser, argus, buf);
+                     argus->status |= ARGUS_RECORD_MODIFIED;
+                  }
+               }
+               retn = 1;
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaProcessAddressLabel (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+
 // The mode bitmap passed to RaProcessAddressLocality indicates the type of match to be done,
 // but also it passes an indication if the routine should add to the label, information
 // regarding the match.
@@ -3715,10 +3790,10 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
                   char buf[128];
                   if (raddr->label != NULL) {
                      if (src) {
-                        snprintf (buf, 128, "{ saddr:%s }", raddr->label);
+                        snprintf (buf, 128, "{ sloc:%s }", raddr->label);
                      }
                      if (dst) {
-                        snprintf (buf, 128, "{ daddr:%s }", raddr->label);
+                        snprintf (buf, 128, "{ dloc:%s }", raddr->label);
                      }
                      ArgusAddToRecordLabel (parser, argus, buf);
                      argus->status |= ARGUS_RECORD_MODIFIED;
@@ -3727,7 +3802,6 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
             }
             break;
          }
-
          case ARGUS_TYPE_IPV6:
             break;
       }
