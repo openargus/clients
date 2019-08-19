@@ -72,6 +72,7 @@
 #include <argus_metric.h>
 #include <argus_histo.h>
 #include <argus_label.h>
+#include <argus_json.h>
 
 #include <rasplit.h>
 

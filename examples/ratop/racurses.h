@@ -201,10 +201,6 @@ struct ArgusWindowStruct *RaDebugWindowStruct  = NULL;
 struct ArgusWindowStruct *RaStatusWindowStruct = NULL;
 struct ArgusWindowStruct *RaDataWindowStruct   = NULL;
 
-#define ARGUS_LIGHT     230
-#define ARGUS_DARK      234
-
-int ArgusBackGround = ARGUS_DARK;
 #if defined(ARGUS_THREADS)
 pthread_mutex_t RaCursesLock;
 #endif
@@ -230,6 +226,7 @@ struct ArgusAttributeStruct *RaColorArray = NULL;
 #define ARGUS_MAGENTA   5
 #define ARGUS_CYAN      6
 #define ARGUS_WHITE     7
+
 #define ARGUS_ORANGE    8
 #define ARGUS_VIOLET    9
 
@@ -239,8 +236,14 @@ struct ArgusAttributeStruct *RaColorArray = NULL;
 #define ARGUS_BASE00	13
 #define ARGUS_BASE0	14
 #define ARGUS_BASE1	15
+
 #define ARGUS_BASE2	16
 #define ARGUS_BASE3	17
+
+#define ARGUS_LIGHT     230
+#define ARGUS_DARK      234
+ 
+int ArgusBackGround = ARGUS_DARK;
 
 #if defined(ARGUS_CURSES)
 int ArgusGetDisplayLineColor(struct ArgusParserStruct *, WINDOW *, struct ArgusRecordStruct *, struct ArgusAttributeStruct *);

@@ -343,6 +343,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 {
    struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+   struct ArgusLabelerStruct *local = parser->ArgusLocalLabeler;
    int retn = 0;
 
    switch (argus->hdr.type & 0xF0) {
@@ -379,8 +380,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
                            if (flow->ip_flow.smask == 32) {
                               argus->score = RASCORE_LIMIT_MIN;
-                              if ((retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
-                                 if ((retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
+                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
 
                                  } else {
                                     argus->score = 11;
@@ -393,8 +394,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
                            if (flow->ip_flow.dmask == 32) {
                               argus->score = RASCORE_LIMIT_MIN;
-                              if ((retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
-                                 if ((retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
+                              if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
+                                 if ((retn = RaProcessAddressLocality(parser, local, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
 
                                  } else {
                                     argus->score = 11;

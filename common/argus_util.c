@@ -3715,10 +3715,10 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
                   char buf[128];
                   if (raddr->label != NULL) {
                      if (src) {
-                        snprintf (buf, 128, "saddr=%s", raddr->label);
+                        snprintf (buf, 128, "{ saddr:%s }", raddr->label);
                      }
                      if (dst) {
-                        snprintf (buf, 128, "daddr=%s", raddr->label);
+                        snprintf (buf, 128, "{ daddr:%s }", raddr->label);
                      }
                      ArgusAddToRecordLabel (parser, argus, buf);
                      argus->status |= ARGUS_RECORD_MODIFIED;
