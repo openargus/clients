@@ -120,7 +120,7 @@ vector_push_back(vector* v, void* data) {
 
 void
 vector_foreach_data(const vector* v, vector_foreach_data_t fp, void* data) {
-   if (v == NULL) return;
+   if ((v == NULL) || (((ArgusJsonValue *)v)->type != ARGUS_JSON_NULL)) return;
    char* item = v->data;
    size_t i;
 

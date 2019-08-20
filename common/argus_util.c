@@ -3716,10 +3716,10 @@ RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStru
                      }
 
                      if (src) {
-                        snprintf (buf, 256, "\"saddr\":{ %s }", raddr->label);
+                        snprintf (buf, 256, "\"saddr\":%s", raddr->label);
                      }
                      if (dst) {
-                        snprintf (buf, 256, "\"daddr\":{ %s }", raddr->label);
+                        snprintf (buf, 256, "\"daddr\":%s", raddr->label);
                      }
                      ArgusAddToRecordLabel (parser, argus, buf);
                      argus->status |= ARGUS_RECORD_MODIFIED;

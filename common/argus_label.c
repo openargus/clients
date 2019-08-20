@@ -807,6 +807,8 @@ ArgusUpgradeLabel(char *label)
          char *key = NULL, *value = NULL;
          int cnt = 0;
 
+         lbuf[0] = '{';
+
          while ((tptr = strtok(sptr, ":")) != NULL) {
             char *nptr;
             if ((nptr = strchr(tptr, '=')) != NULL) {
@@ -831,17 +833,18 @@ ArgusUpgradeLabel(char *label)
             sptr = NULL;
             cnt++;
          }
+         lbuf[strlen(lbuf)] = '}';
          free(tlabel);
       }
 
-      if (strchr(label, '{')) {
-         if (strchr(label, ':')) {
+      if (strchr(lbuf, '{')) {
+         if (strchr(lbuf, ':')) {
          }
       } else {
          char *tlabel = strdup(label);
          char tvalue[1024];
 
-         char *tptr, *sptr = tlabel;
+         char *sptr = tlabel;
          char *key = NULL, *value = NULL;
 
          if ((sptr = strchr(tlabel, ':')) != NULL) {
@@ -858,12 +861,16 @@ ArgusUpgradeLabel(char *label)
 
             slen = strlen(lbuf);
             if (*key != '\"') {
-               snprintf (&lbuf[slen], 1024 - slen, "\"%s\":%s", key, value);
+               snprintf (&lbuf[slen], 1024 - slen, "{ \"%s\":%s }", key, value);
             } else {
-               snprintf (&lbuf[slen], 1024 - slen, "%s:%s", key, value);
+               snprintf (&lbuf[slen], 1024 - slen, "{ %s:%s }", key, value);
             }
          }
          free(tlabel);
+      }
+
+      if (strlen(lbuf) > 0) {
+         retn = strdup(lbuf);
       }
    }
    return retn;
