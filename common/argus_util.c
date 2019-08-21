@@ -30195,7 +30195,7 @@ setArgusLfile(struct ArgusParserStruct *parser, char *file)
       ptr = strdup(file);
 
       if ((lfile = (struct ArgusLfileStruct *) ArgusCalloc (1, sizeof (*lfile))) != NULL) {
-         ArgusPushFrontList(parser->ArgusLabelerFileList, (struct ArgusListRecord *)lfile, ARGUS_LOCK);
+         ArgusPushBackList(parser->ArgusLabelerFileList, (struct ArgusListRecord *)lfile, ARGUS_LOCK);
 
          lfile->filename  = ptr;
 

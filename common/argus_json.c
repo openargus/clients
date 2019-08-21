@@ -304,6 +304,24 @@ json_zero_value(ArgusJsonValue *val) {
    val->type = ARGUS_JSON_NULL;
 }
 
+
+void
+json_zero_value(ArgusJsonValue *val) {
+   if (!val) return;
+
+   switch (val->type) {
+      case ARGUS_JSON_STRING:
+         val->value.string = NULL;
+         break;
+      case ARGUS_JSON_ARRAY:
+      case ARGUS_JSON_OBJECT:
+         vector_foreach(&(val->value.array), val, (void(*)(void*))json_zero_value);
+         vector_zero(&(val->value.array));
+         break;
+   }
+   val->type = ARGUS_JSON_NULL;
+}
+
 int
 json_is_literal(const char** cursor, const char* literal) {
    size_t cnt = strlen(literal);
@@ -490,6 +508,8 @@ json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
       vector_init(&p1->value.object, sizeof(ArgusJsonValue));
       vector_push_back(&p1->value.array, &v1);
       vector_push_back(&p1->value.array, &v2);
+      p1->status |= ARGUS_JSON_MODIFIED;
+
       p1->status |= ARGUS_JSON_MODIFIED;
 
    } else {
