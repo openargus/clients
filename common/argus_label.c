@@ -785,29 +785,222 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    return (retn);
 }
 
+
+// 
+// Labels are metadata, and use metadata conventions for format, syntax, etc... 
+// 
+// Historically, label metadata was a string of colon separated fields.  This proved
+// to be somewhat limiting, and so JSON style formats were adopted in late 2019.
+// To distinquish one from the other, is the occurence of a '{', a JSON object delimimter,
+// as the first char, if not there, then it is consider a legacy format and parsed.
+// 
+// Merging the label object is either an intersection of the label objects in
+// the two records,  or a union of the two labels.
+//
+// OK, the label syntax is:
+//    label[:label]
+//    label :: [object=]word[,word[;[object=]word[,word]]]
+//    word  :: value,array
+//    value :: value,array
+//    array :: [value, ...]
+//
+// So when we merge these together, we'd like to preserve the labels and the object
+// specification, and by default we'll do the union, to see that that goes.
+
+
+#define ARGUS_MAX_LABEL_VALUES		32
+struct ArgusLabelObject {
+   char *object;
+   int count;
+   char *values[ARGUS_MAX_LABEL_VALUES]; 
+};
+
+
+char *ArgusMergeLabel(char *, char *, char *, int, int);
+char *ArgusConvertLabelToJson(char *, char *, int);
+
+// char *ArgusMergeLabel(struct ArgusLabelStruct *l1, struct ArgusLabelStruct *l2, char *buf, int len, int type)
+//
+// This routine merges argus label meta-data.  The types of merging possible are:
+//    ARGUS_UNION    Union - Where all the attributes and values are simple added to the label
+//    ARGUS_INTER    Intersection - Where only the attributes that are in common are retained
+//    ARGUS_REPLACE  Replace - When the attributes are in common, the values are replaced.
+
 char *
-ArgusUpgradeLabel(char *label)
+ArgusConvertLabelToJson(char *label, char *buf, int len)
+{
+   char *retn = NULL, *ptr, *sptr, *obj;
+   int llen, slen, format = 0;
+   int i, x; 
+   
+// first parse all the attributes and values. This system limits the 
+// number of attributes to 256 and ARGUS_MAX_LABEL_VALUES per attribute.
+
+#define ARGUS_LEGACY_LABEL	1
+#define ARGUS_JSON_LABEL	2
+
+   if (label != NULL) {
+      sptr = ptr = strdup(label);
+
+      while (*sptr && isspace((int)*sptr)) sptr++;
+      if ((strchr(sptr, '{')) || (strchr(sptr, '"'))) {
+         format = ARGUS_JSON_LABEL;
+      } else {
+         format = ARGUS_LEGACY_LABEL;
+      }
+
+      switch (format) {
+         case ARGUS_LEGACY_LABEL: {
+            struct ArgusLabelObject *llabs = NULL;
+            int llabsindex = 0;
+
+            if ((llabs = ArgusCalloc(256, sizeof(struct ArgusLabelObject))) == NULL)
+               ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
+
+            while ((obj = strtok(sptr, ":")) != NULL) {
+               if (llabsindex < 256) {
+                  llabs[llabsindex].object = strdup(obj);
+                  llabsindex++;
+               }     
+               sptr = NULL; 
+            }
+
+            for (i = 0; i < llabsindex; i++) {
+               if ((obj = llabs[i].object) != NULL) {
+                  if ((sptr = strchr(obj, '=')) != NULL) {
+                     int vind = 0;
+                     char *val;
+
+                     *sptr++ = '\0';
+                     while ((val = strtok(sptr, ",")) != NULL) {
+                        llabs[i].values[vind++] = strdup(val);
+                        sptr = NULL;
+                     }
+                     llabs[i].count = vind;
+                  }
+               }
+            }
+
+            sprintf(buf, "{ ");
+            for (i = 0; i < llabsindex; i++) {
+               int slen = strlen(buf);
+               if (i > 0) {
+                  snprintf(&buf[slen], 1024, ",");
+                  slen++;
+               }
+
+               if ((obj =  llabs[i].object) != NULL) {
+                  snprintf(&buf[slen], 1024, "\"%s\":",llabs[i].object);
+
+                  if (llabs[i].count > 1) {
+                     slen = strlen(buf);
+                     snprintf(&buf[slen], 1024, "[");
+                  }
+                  for (x = 0; x < llabs[i].count; x++) {
+                     slen = strlen(buf);
+                     if (x > 0) {
+                        snprintf(&buf[slen], 1024, ",");
+                        slen++;
+                     }
+                     snprintf(&buf[slen], 1024, "%s",llabs[i].values[x]);
+                  }
+                  if (llabs[i].count > 1) {
+                     slen = strlen(buf);
+                     snprintf(&buf[slen], 1024, "]");
+                  }
+               }
+            }
+            slen = strlen(buf);
+            snprintf(&buf[slen], 1024, " }");
+            retn = buf;
+
+            if (llabs != NULL) ArgusFree(llabs);
+            break;
+         }
+
+         case ARGUS_JSON_LABEL: {
+            if (*sptr != '{') {
+               snprintf(buf, 1024, "{ %s }", label);
+            } else {
+               snprintf(buf, 1024, "%s", label);
+            }
+            retn = buf;
+            break;
+         }
+      }
+      if (ptr != NULL) free(ptr);
+   }
+   return (retn);
+}
+
+
+char *
+ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
+{
+   ArgusJsonValue l1root, l2root, *res1 = NULL, *res2 = NULL;
+   char *l1str = NULL, *l2str = NULL, *retn = NULL;
+   char *l1buf, *l2buf;
+
+   if ((l1 != NULL) && (l2 != NULL)) {
+      if (strcmp(l1, l2) == 0) 
+         return retn;
+   }
+
+   if (l1 != NULL) {
+      if ((l1buf = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusMergeLabel: ArgusCalloc error %s\n", strerror(errno));
+
+      if ((l1str = ArgusConvertLabelToJson(l1, l1buf, MAXSTRLEN)) != NULL)
+         res1 = ArgusJsonParse(l1str, &l1root);
+   }
+
+   if (l2 != NULL) {
+      if ((l2buf = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusMergeLabel: ArgusCalloc error %s\n", strerror(errno));
+
+      if ((l2str = ArgusConvertLabelToJson(l2, l2buf, MAXSTRLEN)) != NULL) 
+         res2 = ArgusJsonParse(l2str, &l2root);
+   }
+
+// OK, at this point were ready to go, just go through all the attributes
+// first in l1 and then in l2, and create the actual label string.
+
+   if (res1 && res2) {
+      ArgusJsonValue *result;
+      if ((result = ArgusJsonMergeValues(res1, res2)) != NULL) {
+         retn = ArgusJsonPrint(result, buf, len);
+      }
+   }
+
+   ArgusFree(l1buf);
+   ArgusFree(l2buf);
+   return (retn);
+}
+
+char *
+ArgusUpgradeLabel(char *label, char *buf, int len)
 {
    char *retn = NULL;
-   char lbuf[1024];
    int slen;
 
 // First is to correct key '=' value to key ':' value.
 // If we find '=', we'll assume legacy label format and
 // convert ':' object delimiters as well.
 
-   bzero(lbuf, sizeof(lbuf));
-
    if (!(strchr(label, '{'))) {
       if (strchr(label, '=')) {
          char *tlabel = strdup(label);
-         char tvalue[1024];
+         char *tvalue;
+
+         if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
 
          char *tptr, *sptr = tlabel;
          char *key = NULL, *value = NULL;
          int cnt = 0;
 
-         lbuf[0] = '{';
+         snprintf(buf, len, "{");
+         slen = 1;
 
          while ((tptr = strtok(sptr, ":")) != NULL) {
             char *nptr;
@@ -823,26 +1016,30 @@ ArgusUpgradeLabel(char *label)
                   }
                }
 
-               slen = strlen(lbuf);
+               slen = strlen(buf);
                if (*key != '\"') {
-                  snprintf (&lbuf[slen], 1024 - slen, "\"%s\":%s", key, value);
+                  snprintf (&buf[slen], MAXSTRLEN - slen, "\"%s\":%s", key, value);
                } else {
-                  snprintf (&lbuf[slen], 1024 - slen, "%s:%s", key, value);
+                  snprintf (&buf[slen], MAXSTRLEN - slen, "%s:%s", key, value);
                }
             }
             sptr = NULL;
             cnt++;
          }
-         lbuf[strlen(lbuf)] = '}';
+
+         slen = strlen(buf);
+         snprintf(buf, (len - slen), "}");
          free(tlabel);
+         ArgusFree(tvalue);
       }
 
-      if (strchr(lbuf, '{')) {
-         if (strchr(lbuf, ':')) {
-         }
+      if (strchr(buf, '{')) {
       } else {
          char *tlabel = strdup(label);
-         char tvalue[1024];
+         char *tvalue;
+
+         if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
 
          char *sptr = tlabel;
          char *key = NULL, *value = NULL;
@@ -859,18 +1056,19 @@ ArgusUpgradeLabel(char *label)
                }
             }
 
-            slen = strlen(lbuf);
+            slen = strlen(buf);
             if (*key != '\"') {
-               snprintf (&lbuf[slen], 1024 - slen, "{ \"%s\":%s }", key, value);
+               snprintf (&buf[slen], 1024 - slen, "{ \"%s\":%s }", key, value);
             } else {
-               snprintf (&lbuf[slen], 1024 - slen, "{ %s:%s }", key, value);
+               snprintf (&buf[slen], 1024 - slen, "{ %s:%s }", key, value);
             }
          }
          free(tlabel);
+         ArgusFree(tvalue);
       }
 
-      if (strlen(lbuf) > 0) {
-         retn = strdup(lbuf);
+      if (strlen(buf) > 0) {
+         retn = buf;
       }
    }
    return retn;

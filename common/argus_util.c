@@ -3706,24 +3706,28 @@ RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStru
 
             if (raddr != NULL) {
                if (label && (src || dst)) {
-                  char buf[256];
+                  char *buf;
+                  if ((buf = (char *) ArgusCalloc (1, 2048)) == NULL)
+                     ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
                   if (raddr->label != NULL) {
-                     char *clabel = ArgusUpgradeLabel(raddr->label);
+                     char *clabel = ArgusUpgradeLabel(raddr->label, buf, 2048);
 
                      if (clabel != NULL) {
                         free(raddr->label);
-                        raddr->label = clabel;
+                        raddr->label = strdup(clabel);
                      }
 
                      if (src) {
-                        snprintf (buf, 256, "\"saddr\":%s", raddr->label);
+                        snprintf (buf, 2048, "\"saddr\":%s", raddr->label);
                      }
                      if (dst) {
-                        snprintf (buf, 256, "\"daddr\":%s", raddr->label);
+                        snprintf (buf, 2048, "\"daddr\":%s", raddr->label);
                      }
                      ArgusAddToRecordLabel (parser, argus, buf);
                      argus->status |= ARGUS_RECORD_MODIFIED;
                   }
+                  ArgusFree(buf);
                }
                retn = 1;
             }
@@ -13256,7 +13260,7 @@ ArgusPrintSrcGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
    } else {
       if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
-         if ((lbuf= label->l_un.label) != NULL) {
+         if ((lbuf = label->l_un.label) != NULL) {
             char *ptr;
             if ((ptr = strstr(lbuf, "sloc=")) != NULL) {
                labelbuf = &lbuf[5];
@@ -13324,7 +13328,7 @@ ArgusPrintDstGroup (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
    } else {
       if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
-         if ((lbuf= label->l_un.label) != NULL) {
+         if ((lbuf = label->l_un.label) != NULL) {
             char *ptr;
             if ((ptr = strstr(lbuf, "dloc=")) != NULL) {
                labelbuf = &lbuf[5];

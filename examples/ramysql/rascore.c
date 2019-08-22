@@ -339,12 +339,15 @@ RaProcessBaselineData (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 }
 
 void
-RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
+RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
-   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
    struct ArgusLabelerStruct *local = parser->ArgusLocalLabeler;
+   struct ArgusFlow *flow;
    int retn = 0;
+
+   struct ArgusRecordStruct *argus = ArgusCopyRecordStruct(ns);
+   flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
@@ -380,6 +383,28 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               }
                               if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
                                  if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_src, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
+                                 } else {
+                                    struct ArgusLabelStruct *label;
+                                    if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+                                       char *slabel = label->l_un.label;
+                                       if (strlen(slabel)) {
+                                          if (strstr(slabel, "esoc")) argus->score = 8;
+                                       }
+                                    }
+                                 }
+                              } else {
+                                 struct ArgusLabelStruct *label;
+                                 if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+                                    char *slabel = label->l_un.label;
+                                    if (strlen(slabel)) {
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level1")) argus->score = 9;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level4")) argus->score = 10;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level3")) argus->score = 11;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level2")) argus->score = 12;
+                                       if (strstr(slabel, "esoc")) argus->score = 12;
+                                    }
+                                 } else {
+                                    argus->score = 12;
                                  }
                               }
                            }
@@ -392,8 +417,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               }
                               if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_SUPER_MATCH)) == 0) {
                                  if ((retn = RaProcessAddressLabel(parser, labeler, argus, &flow->ip_flow.ip_dst, 24, ARGUS_TYPE_IPV4, ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_MATCH)) == 0) {
-                                 }
-                              }
+                                 } else {
+                                    argus->score = 9;
+                                 } 
+                              } else {
+                                 argus->score = 12;
+                              } 
                            }
                         }
                         break;
@@ -436,6 +465,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          }
       }
    }
+   ArgusDeleteRecordStruct(parser, argus);
 }
 
 void
@@ -467,33 +497,27 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
 
          if (retn != 0) {
-            struct ArgusRecordStruct *ns;
-
-            ns = ArgusCopyRecordStruct(argus);
-
             if (agg->labelstr)
-               ArgusAddToRecordLabel(parser, ns, agg->labelstr);
+               ArgusAddToRecordLabel(parser, argus, agg->labelstr);
 
             if (agg->mask) {
-               if ((agg->rap = RaFlowModelOverRides(agg, ns)) == NULL)
+               if ((agg->rap = RaFlowModelOverRides(agg, argus)) == NULL)
                   agg->rap = agg->drap;
 
-               ArgusGenerateNewFlow(agg, ns);
+               ArgusGenerateNewFlow(agg, argus);
                agg->ArgusMaskDefs = NULL;
 
 #define FIRST_PASS	0
 #define SECOND_PASS	1
 
-               if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+               if ((hstruct = ArgusGenerateHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
                   int pass;
 
 		  /* don't output a score if there isn't already
 		   * one present and we have no baseline data
                    */
-                  if (RaAnnualProcess == NULL &&
-                      RaMonthlyProcess == NULL &&
-                      ns->dsrs[ARGUS_SCORE_INDEX] == NULL)
-                     ns->score = 0;
+                  if ((RaAnnualProcess == NULL) && (RaMonthlyProcess == NULL) && (argus->dsrs[ARGUS_SCORE_INDEX] == NULL)) {
+                  }
 
                   for (pass = 0; pass < 2; pass++) {
                      struct ArgusRecordStruct *tns;
@@ -507,7 +531,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         continue;
 
                      if ((tns = ArgusFindRecord(process->htable, hstruct)) == NULL) {
-                        struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
+                        struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
                         if (!parser->RaMonMode && parser->ArgusReverse) {
                            int tryreverse = 0;
 
@@ -537,7 +561,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               tryreverse = 0;
 
                            if (tryreverse) {
-                              if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+                              if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
 
                               if ((tns = ArgusFindRecord(process->htable, hstruct)) == NULL) {
                                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
@@ -551,51 +575,51 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                                    case ICMP_ECHO:
                                                    case ICMP_ECHOREPLY:
                                                       icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
-                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
                                                          tns = ArgusFindRecord(process->htable, hstruct);
                                                       icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
                                                       if (tns)
-                                                         ArgusReverseRecord (ns);
+                                                         ArgusReverseRecord (argus);
                                                       break;
 
                                                    case ICMP_ROUTERADVERT:
                                                    case ICMP_ROUTERSOLICIT:
                                                       icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
-                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
                                                          tns = ArgusFindRecord(process->htable, hstruct);
                                                       icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
                                                       if (tns)
-                                                         ArgusReverseRecord (ns);
+                                                         ArgusReverseRecord (argus);
                                                       break;
 
                                                    case ICMP_TSTAMP:
                                                    case ICMP_TSTAMPREPLY:
                                                       icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
-                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
                                                          tns = ArgusFindRecord(process->htable, hstruct);
                                                       icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
                                                       if (tns)
-                                                         ArgusReverseRecord (ns);
+                                                         ArgusReverseRecord (argus);
                                                       break;
 
                                                    case ICMP_IREQ:
                                                    case ICMP_IREQREPLY:
                                                       icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
-                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
                                                          tns = ArgusFindRecord(process->htable, hstruct);
                                                       icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
                                                       if (tns)
-                                                         ArgusReverseRecord (ns);
+                                                         ArgusReverseRecord (argus);
                                                       break;
 
                                                    case ICMP_MASKREQ:
                                                    case ICMP_MASKREPLY:
                                                       icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
-                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      if ((hstruct = ArgusGenerateReverseHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct)) != NULL)
                                                          tns = ArgusFindRecord(process->htable, hstruct);
                                                       icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
                                                       if (tns)
-                                                         ArgusReverseRecord (ns);
+                                                         ArgusReverseRecord (argus);
                                                       break;
                                                 }
                                              }
@@ -605,12 +629,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                     }
                                  }
 
-                                 hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct);
+                                 hstruct = ArgusGenerateHashStruct(agg, argus, (struct ArgusFlow *)&agg->fstruct);
 
                               } else {    // OK, so we have a match (tns) that is the reverse of the current flow (ns)
                                           // Need to decide which direction wins.
 
-                                 struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
+                                 struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
                                  struct ArgusNetworkStruct *tnet = (struct ArgusNetworkStruct *)tns->dsrs[ARGUS_NETWORK_INDEX];
 
                                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
@@ -637,14 +661,14 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                                       hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
                                                       tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
                                                    } else
-                                                      ArgusReverseRecord (ns);
+                                                      ArgusReverseRecord (argus);
                                                 }
                                              }
                                              break;
                                           }
 
                                           default:
-                                             ArgusReverseRecord (ns);
+                                             ArgusReverseRecord (argus);
                                              break;
                                        }
                                     }
@@ -673,21 +697,21 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                                       hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
                                                       tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
                                                    } else
-                                                      ArgusReverseRecord (ns);
+                                                      ArgusReverseRecord (argus);
                                                 }
                                              }
                                              break;
                                           }
 
                                           default:
-                                             ArgusReverseRecord (ns);
+                                             ArgusReverseRecord (argus);
                                              break;
                                        }
                                     }
                                     break;
 
                                     default:
-                                       ArgusReverseRecord (ns);
+                                       ArgusReverseRecord (argus);
                                  }
                               }
                               }
@@ -698,7 +722,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         struct timeval nstvbuf, tstvbuf, *nstvp = &nstvbuf, *tstvp = &tstvbuf;
                         float tdur = RaGetFloatDuration (tns);
 
-                        RaGetStartTime(ns,  nstvp);
+                        RaGetStartTime(argus,  nstvp);
                         RaGetStartTime(tns, tstvp);
 
 #define	SECONDS_IN_DAY		86400
@@ -709,11 +733,11 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
                         if (nstvp->tv_sec > tstvp->tv_sec) {
                            int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_MONTH) ? 4 : ((tdur > SECONDS_IN_WEEK) ? 4 : 0)) : ((tdur > SECONDS_IN_WEEK) ? 4 : 0);
-                           ns->score = ns->score > score ? ns->score : score;
+                           argus->score = argus->score > score ? argus->score : score;
                         }
                      }
                   }
-                  RaSendArgusRecord(ns);
+                  RaSendArgusRecord(argus);
                }
             }
 
@@ -722,7 +746,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             else
                found++;
 
-            ArgusDeleteRecordStruct(parser, ns);
          } else
             agg = agg->nxt;
       }

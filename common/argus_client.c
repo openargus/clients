@@ -72,7 +72,6 @@
 #include <argus_metric.h>
 #include <argus_histo.h>
 #include <argus_label.h>
-#include <argus_json.h>
 
 #include <rasplit.h>
 
@@ -3906,8 +3905,10 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                     tlabel->l_un.label = calloc(1, blen + 1);
                                     bcopy((char *)label->l_un.label, tlabel->l_un.label, (blen > slen) ? slen : blen);
 
-                                 } else 
+                                 } else {
+                                    free(tlabel->l_un.label);
                                     tlabel->l_un.label = NULL;
+                                 }
                               }
                               break;
                            }
