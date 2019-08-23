@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -172,6 +172,8 @@ static struct ablock *Argusgen_deltastart(int, int, u_int);
 static struct ablock *Argusgen_deltalast(int, int, u_int);
 static struct ablock *Argusgen_rate(float, int, u_int);
 static struct ablock *Argusgen_load(float, int, u_int);
+//static struct ablock *Argusgen_gap(float, int, u_int);
+static struct ablock *Argusgen_loss(float, int, u_int);
 static struct ablock *Argusgen_inter(float, int, int, u_int);
 static struct ablock *Argusgen_jitter(float, int, int, u_int);
 static struct ablock *Argusgen_dur(float, int, u_int);
@@ -2163,6 +2165,19 @@ Argusgen_byteatom( int off, long v, int op)
 }
 
 static struct ablock *
+Argusgen_lossatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_L, (u_int)v, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_byteatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_nstrokeatom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -3261,7 +3276,6 @@ Argusgen_load(float v, int dir, u_int op)
    return b1;
 }
 
-/*
 static struct ablock *
 Argusgen_loss(float v, int dir, u_int op)
 {
@@ -3307,7 +3321,6 @@ Argusgen_loss(float v, int dir, u_int op)
 
    return b1;
 }
-*/
 
 static struct ablock *
 Argusgen_ploss(float v, int dir, u_int op)
@@ -3354,8 +3367,6 @@ Argusgen_ploss(float v, int dir, u_int op)
 
    return b1;
 }
-
-
 
 static struct ablock *
 Argusgen_lat(float v, int dir, u_int op)
@@ -5253,24 +5264,22 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
       case Q_RATE:
          b = Argusgen_rate(v, dir, op);
          break;
-/*
+
       case Q_LOSS:
          b = Argusgen_loss(v, dir, op);
          break;
-*/
+
       case Q_PLOSS:
          b = Argusgen_ploss(v, dir, op);
          break;
 
-/*
       case Q_GAP:
-         b = Argusgen_gap(v, dir, op);
+//       b = Argusgen_gap(v, dir, op);
          break;
 
       case Q_DUP:
-         b = Argusgen_dup(v, dir, op);
+//       b = Argusgen_dup(v, dir, op);
          break;
-*/
 
       case Q_PCR:
          b = Argusgen_pcr(v, dir, op);
