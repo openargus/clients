@@ -196,7 +196,7 @@ struct protoidmem {
 
 #include <netinet/ip_icmp.h>
 #undef ICMP_MAXTYPE
-#define ICMP_MAXTYPE	44
+#define ICMP_MAXTYPE	46
 
  
 struct ArgusFileEntry {

@@ -830,7 +830,7 @@ char *
 ArgusConvertLabelToJson(char *label, char *buf, int len)
 {
    char *retn = NULL, *ptr, *sptr, *obj;
-   int llen, slen, format = 0;
+   int slen, format = 0;
    int i, x; 
    
 // first parse all the attributes and values. This system limits the 
@@ -939,7 +939,7 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
 {
    ArgusJsonValue l1root, l2root, *res1 = NULL, *res2 = NULL;
    char *l1str = NULL, *l2str = NULL, *retn = NULL;
-   char *l1buf, *l2buf;
+   char *l1buf = NULL, *l2buf = NULL;
 
    if ((l1 != NULL) && (l2 != NULL)) {
       if (strcmp(l1, l2) == 0) 
@@ -972,8 +972,8 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
       }
    }
 
-   ArgusFree(l1buf);
-   ArgusFree(l2buf);
+   if (l1buf != NULL) ArgusFree(l1buf);
+   if (l2buf != NULL) ArgusFree(l2buf);
    return (retn);
 }
 
