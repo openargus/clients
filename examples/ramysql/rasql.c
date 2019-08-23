@@ -1037,7 +1037,7 @@ void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
    struct ArgusAdjustStruct *nadp = NULL;
-   int x, retn, found = 0, tableIndex;
+   int x, retn = 0, found = 0, tableIndex;
    struct ArgusModeStruct *mode;
    char *table = NULL;
 

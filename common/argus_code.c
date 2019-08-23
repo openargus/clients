@@ -5093,7 +5093,7 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 {
    int dir = q.dir, vlen = -1, proto = q.proto, type = q.type;
    u_int *addr = NULL, maskbuf[4], *mask = maskbuf;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    bzero(mask, sizeof(maskbuf));
    switch (type) {

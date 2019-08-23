@@ -2815,8 +2815,8 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                      if ((ns = (struct ArgusRecordStruct *) queue->array[i]) != NULL) {
 #if defined(ARGUS_COLOR_SUPPORT)
                         int z, sz = -1, ez = 0;
-                        attr_t attr, tattr;
-                        short pair, tpair;
+                        attr_t attr = 0, tattr = 0;
+                        short pair = 0, tpair = 0;
 #endif
 
                         if (firstRow) {
