@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-//#define ARGUSFORKFILTER   1
+#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -2169,7 +2169,7 @@ Argusgen_lossatom( int off, long v, int op)
 {
    struct ablock *b0;
 
-   b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_L, (u_int)v, op, Q_DEFAULT);
+   b0 = Argusgen_cmp(-1, off, NFF_L, (u_int)v, op, Q_DEFAULT);
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_byteatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
