@@ -63,12 +63,34 @@
 #define ARGUS_MIN       5
 #define ARGUS_SEC       6
 
-/* The "continued" parameter should be != 0 when parsing the second
+static int RaDaysInAMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+/* 
+ * ArgusParseTime takes the buf, and decodes the time format and fills 
+ * in the start and end 'struct tm' to represent the start and end times
+ * for the range specified in the date buffer.
+ * 
+ * The format for the time string is pretty complex, wanting to provide as
+ * much support as possible.
+ *    [[[yyyy/]mm/]dd].]hh[:mm[:ss]]
+ *    yyyy                       returns the range from yyyy+1y
+ *    yyyy/mm                    returns the range from yyyy/mm+1m
+ *    yyyy/mm/dd                 returns the range from yyyy/mm/dd+1d
+ *    yyyy/mm/dd.hh              returns the range from yyyy/mm/dd.hh+1h
+ *    yyyy/mm/dd.hh.mm           returns the range from yyyy/mm/dd.hh+1M
+ *    yyyy/mm/dd.hh.mm.ss        returns the range from yyyy/mm/dd.hh:mm:ss+1S
+ *
+ *    %d[yMdhms] 
+ *    %d[yMdhms][[+]%d[yMdhms]] explict time range 
+ *    -%d[yMdhms] explicit time range ending with now time in the range 
+ * 
+ * The "continued" parameter should be != 0 when parsing the second
  * part (that after a +/-).  Or can we determine that just from the
  * mode parameter???
  */
+
 int
-ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
+ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *buf,
                 char mode, int *frac, int continued)
 {
    char *hptr = NULL, *dptr = NULL, *mptr = NULL, *yptr = NULL, *pptr = NULL;
@@ -96,11 +118,11 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
 
          if (mode == ' ') {
             if (!continued)
-               bcopy ((u_char *) ctm, (u_char *) tm, sizeof (struct tm));
+               bcopy ((u_char *) endtm, (u_char *) startm, sizeof (struct tm));
          } else
-            bcopy ((u_char *) ctm, (u_char *) tm, sizeof (struct tm));
+            bcopy ((u_char *) endtm, (u_char *) startm, sizeof (struct tm));
 
-         thistime = mktime (tm);
+         thistime = mktime (startm);
 
          do {
             int wildcard = 0;
@@ -129,12 +151,12 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
 
             if ((i >= 0) && (mode == ' ')) {
                switch (*ptr) {
-                  case 'y': tm->tm_year = (i - 1900); retn = ARGUS_YEAR; break;
-                  case 'M': tm->tm_mon = (i - 1); retn = ARGUS_MONTH; break;
-                  case 'd': tm->tm_mday = i; retn = ARGUS_DAY; break;
-                  case 'h': tm->tm_hour = i; retn = ARGUS_HOUR; break;
-                  case 'm': tm->tm_min = i; retn = ARGUS_MIN; break;
-                  case 's': tm->tm_sec = i; retn = ARGUS_SEC; break;
+                  case 'y': startm->tm_year = (i - 1900); retn = ARGUS_YEAR; break;
+                  case 'M': startm->tm_mon = (i - 1); retn = ARGUS_MONTH; break;
+                  case 'd': startm->tm_mday = i; retn = ARGUS_DAY; break;
+                  case 'h': startm->tm_hour = i; retn = ARGUS_HOUR; break;
+                  case 'm': startm->tm_min = i; retn = ARGUS_MIN; break;
+                  case 's': startm->tm_sec = i; retn = ARGUS_SEC; break;
                }
 
             } else {
@@ -153,40 +175,40 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
                }
 
                switch (*ptr) {
-                  case 'y': tm->tm_year += (i * sign); retn = ARGUS_YEAR; break;
+                  case 'y': startm->tm_year += (i * sign); retn = ARGUS_YEAR; break;
 
                   case 'M': {
-                     while (i > tm->tm_mon) {
-                        tm->tm_year += 1 * sign;
+                     while (i > startm->tm_mon) {
+                        startm->tm_year += 1 * sign;
                         i -= 12;
                      }
-                     tm->tm_mon += i * sign;
-                     thistime = mktime (tm);
+                     startm->tm_mon += i * sign;
+                     thistime = mktime (startm);
                      retn = ARGUS_MONTH;
                      break;
                   }
 
                   case 'd':
                      thistime += (i * ((60 * 60) * 24)) * sign;
-                     localtime_r (&thistime, tm);
+                     localtime_r (&thistime, startm);
                      retn = ARGUS_DAY;
                      break;
 
                   case 'h':
                      thistime += (i * (60 * 60)) * sign;
-                     localtime_r (&thistime, tm);
+                     localtime_r (&thistime, startm);
                      retn = ARGUS_HOUR;
                      break;
 
                   case 'm':
                      thistime += (i * 60) * sign;
-                     localtime_r (&thistime, tm);
+                     localtime_r (&thistime, startm);
                      retn = ARGUS_MIN;
                      break;
 
                   case 's':
                      thistime += i * sign;
-                     localtime_r (&thistime, tm);
+                     localtime_r (&thistime, startm);
                      retn = ARGUS_SEC;
                      break;
 
@@ -206,37 +228,46 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
          } while ((ptr = strpbrk (str, "yMdhms")) != NULL);
 
          switch (retn) {
-            case ARGUS_YEAR:   tm->tm_mon  = 0;
-            case ARGUS_MONTH:  tm->tm_mday = 1;
-            case ARGUS_DAY:    tm->tm_hour = 0;
-            case ARGUS_HOUR:   tm->tm_min  = 0;
-            case ARGUS_MIN:    tm->tm_sec  = 0;
+            case ARGUS_YEAR:   startm->tm_mon  = 0;
+            case ARGUS_MONTH:  startm->tm_mday = 1;
+            case ARGUS_DAY:    startm->tm_hour = 0;
+            case ARGUS_HOUR:   startm->tm_min  = 0;
+            case ARGUS_MIN:    startm->tm_sec  = 0;
+            case ARGUS_SEC:    break;
+         }
+
+         switch (retn) {
+            case ARGUS_YEAR:   startm->tm_mon  = 0;
+            case ARGUS_MONTH:  startm->tm_mday = 1;
+            case ARGUS_DAY:    startm->tm_hour = 0;
+            case ARGUS_HOUR:   startm->tm_min  = 0;
+            case ARGUS_MIN:    startm->tm_sec  = 0;
             case ARGUS_SEC:    break;
          }
 
          if ((retn >= 0) && (sign < 0)) {
             struct tm tmbuf;
-            bcopy ((u_char *) ctm, (u_char *)&tmbuf, sizeof (struct tm));
-            bcopy ((u_char *) tm, (u_char *) ctm, sizeof (struct tm));
-            bcopy ((u_char *)&tmbuf, (u_char *) tm, sizeof (struct tm));
+            bcopy ((u_char *) endtm, (u_char *)&tmbuf, sizeof (struct tm));
+            bcopy ((u_char *) startm, (u_char *) endtm, sizeof (struct tm));
+            bcopy ((u_char *)&tmbuf, (u_char *) startm, sizeof (struct tm));
          }
          
       } else {
          int status = *wildcarddate;
 
-         bcopy ((u_char *) ctm, (u_char *) tm, sizeof (struct tm));
-         year  = tm->tm_year;
-         month = tm->tm_mon;
-         day   = tm->tm_mday;
-         hour  = tm->tm_hour;
-         mins  = tm->tm_min;
-         sec   = tm->tm_sec;
+         bcopy ((u_char *) endtm, (u_char *) startm, sizeof (struct tm));
+         year  = startm->tm_year;
+         month = startm->tm_mon;
+         day   = startm->tm_mday;
+         hour  = startm->tm_hour;
+         mins  = startm->tm_min;
+         sec   = startm->tm_sec;
 
 #if HAVE_STRUCT_TM_TM_ZONE
-         tm->tm_zone = NULL;
-         tm->tm_gmtoff = 0;
+         startm->tm_zone = NULL;
+         startm->tm_gmtoff = 0;
 #endif
-         thistime = mktime (tm);
+         thistime = mktime (startm);
 
          if ((hptr = strchr (str, '.')) != NULL) {
             if ((hptr - str) != (strlen(str) - 1)) {
@@ -262,7 +293,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
                   yptr = str;
                   mptr = dptr;
                   dptr =  NULL;
-                  tm->tm_mday = 1;
+                  startm->tm_mday = 1;
                } else
                   mptr = str;
             }
@@ -272,7 +303,7 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
                dptr = str;
             else {
                int value = atoi(str);
-               if ((value > 1900) && (value <= (tm->tm_year + 1900))) {
+               if ((value > 1900) && (value <= (startm->tm_year + 1900))) {
                   yptr = str;
                   hour = 0;
                } else
@@ -294,11 +325,11 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
             }
 
             if (!(status & (1 << RAWILDCARDYEAR))) {
-               tm->tm_year = atoi(yptr) - 1900;
+               startm->tm_year = atoi(yptr) - 1900;
             } else
-               tm->tm_year = 70;
+               startm->tm_year = 70;
             retn = ARGUS_YEAR;
-            year = tm->tm_year;
+            year = startm->tm_year;
          }
 
          if (mptr) {
@@ -313,11 +344,11 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
                   return -1;
             }
             if (!(status & (1 << RAWILDCARDMONTH))) {
-               tm->tm_mon  = atoi(mptr) - 1;
+               startm->tm_mon  = atoi(mptr) - 1;
             } else 
-               tm->tm_mon  = 0;
+               startm->tm_mon  = 0;
             retn = ARGUS_MONTH;
-            month = tm->tm_mon;
+            month = startm->tm_mon;
          }
       
          if (dptr) {
@@ -332,11 +363,11 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
                   return -1;
             }
             if (!(status & (1 << RAWILDCARDDAY))) {
-               tm->tm_mday = atoi(dptr);
+               startm->tm_mday = atoi(dptr);
             } else
-               tm->tm_mday = 1;
+               startm->tm_mday = 1;
             retn = ARGUS_DAY;
-            day = tm->tm_mday;
+            day = startm->tm_mday;
          }
       
          if (hptr) {
@@ -408,43 +439,43 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
          }
 
          switch (retn) {
-            case ARGUS_YEAR:   tm->tm_mon  = month = 0;
-            case ARGUS_MONTH:  tm->tm_mday = day = 1;
-            case ARGUS_DAY:    tm->tm_hour = hour = 0;
-            case ARGUS_HOUR:   tm->tm_min  = mins = 0;
-            case ARGUS_MIN:    tm->tm_sec  = sec = 0;
+            case ARGUS_YEAR:   startm->tm_mon  = month = 0;
+            case ARGUS_MONTH:  startm->tm_mday = day = 1;
+            case ARGUS_DAY:    startm->tm_hour = hour = 0;
+            case ARGUS_HOUR:   startm->tm_min  = mins = 0;
+            case ARGUS_MIN:    startm->tm_sec  = sec = 0;
             case ARGUS_SEC:    break;
          }
 
          if (hour > 24) {
             time_t value = hour;
-            bzero(tm, sizeof(*tm));
-            localtime_r (&value, tm);
-            year  = tm->tm_year;
-            month = tm->tm_mon;
-            day   = tm->tm_mday;
-            hour  = tm->tm_hour;
-            mins  = tm->tm_min;
-            sec   = tm->tm_sec;
+            bzero(startm, sizeof(*startm));
+            localtime_r (&value, startm);
+            year  = startm->tm_year;
+            month = startm->tm_mon;
+            day   = startm->tm_mday;
+            hour  = startm->tm_hour;
+            mins  = startm->tm_min;
+            sec   = startm->tm_sec;
             retn  = 1;
             status = 0;
 
          } else {
-            tm->tm_hour = hour;
-            tm->tm_min  = mins;
-            tm->tm_sec  = sec;
+            startm->tm_hour = hour;
+            startm->tm_min  = mins;
+            startm->tm_sec  = sec;
       
-            if (tm->tm_year < 0)
+            if (startm->tm_year < 0)
                retn = -1;
-            if ((tm->tm_mon > 11) || (tm->tm_mon < 0))
+            if ((startm->tm_mon > 11) || (startm->tm_mon < 0))
                retn = -1;
-            if ((tm->tm_mday > 31) || (tm->tm_mday < 1))
+            if ((startm->tm_mday > 31) || (startm->tm_mday < 1))
                retn = -1;
-            if ((tm->tm_hour > 23) || (tm->tm_hour < 0))
+            if ((startm->tm_hour > 23) || (startm->tm_hour < 0))
                retn = -1;
-            if ((tm->tm_min > 60) || (tm->tm_min < 0))
+            if ((startm->tm_min > 60) || (startm->tm_min < 0))
                retn = -1;
-            if ((tm->tm_sec > 60) || (tm->tm_sec < 0))
+            if ((startm->tm_sec > 60) || (startm->tm_sec < 0))
                retn = -1;
          }
 
@@ -452,26 +483,63 @@ ArgusParseTime (char *wildcarddate, struct tm *tm, struct tm *ctm, char *buf,
 
          if (retn >= 0) {
 #if HAVE_STRUCT_TM_TM_ZONE
-            tm->tm_isdst  = 0;
-            tm->tm_gmtoff = 0;
-            tm->tm_zone   = 0;
+            startm->tm_isdst  = 0;
+            startm->tm_gmtoff = 0;
+            startm->tm_zone   = 0;
 #endif
-            thistime = mktime (tm);
+            thistime = mktime (startm);
 
 #if HAVE_STRUCT_TM_TM_ZONE
-            if (tm->tm_zone != NULL) {
-               char *tmzone = strdup(tm->tm_zone);
-               localtime_r (&thistime, tm);
-               if (strncpy(tmzone, tm->tm_zone, strlen(tmzone))) {
-                  tm->tm_year = year;
-                  tm->tm_mon  = month;
-                  tm->tm_mday = day;
-                  tm->tm_hour = hour;
-                  thistime    = mktime (tm);
+            if (startm->tm_zone != NULL) {
+               char *tmzone = strdup(startm->tm_zone);
+               localtime_r (&thistime, startm);
+               if (strncpy(tmzone, startm->tm_zone, strlen(tmzone))) {
+                  startm->tm_year = year;
+                  startm->tm_mon  = month;
+                  startm->tm_mday = day;
+                  startm->tm_hour = hour;
+                  thistime    = mktime (startm);
                }
                free(tmzone);
             }
 #endif
+
+         bcopy ((char *)startm, (char *)endtm, sizeof(struct tm));
+            switch (retn) {
+               case ARGUS_YEAR:  endtm->tm_year++; year++; break;
+               case ARGUS_MONTH: endtm->tm_mon++; month++; break;
+               case ARGUS_DAY:   endtm->tm_mday++; day++; break;
+               case ARGUS_HOUR:  endtm->tm_hour++; hour++; break;
+               case ARGUS_MIN:   endtm->tm_min++; mins++; break;
+               case ARGUS_SEC:   endtm->tm_sec++; sec++; break;
+               default: break;
+            }
+
+            while (endtm->tm_sec  > 59) {endtm->tm_min++;  endtm->tm_sec -= 60;}
+            while (endtm->tm_min  > 59) {endtm->tm_hour++; endtm->tm_min  -= 60;}
+            while (endtm->tm_hour > 23) {endtm->tm_mday++; endtm->tm_hour -= 24;}
+            while (endtm->tm_mday > RaDaysInAMonth[endtm->tm_mon]) {endtm->tm_mday -= RaDaysInAMonth[endtm->tm_mon]; endtm->tm_mon++;}
+            while (endtm->tm_mon  > 11) {endtm->tm_year++; endtm->tm_mon  -= 12;}
+
+#if HAVE_STRUCT_TM_TM_ZONE
+            endtm->tm_isdst  = 0;
+            endtm->tm_gmtoff = 0;
+            endtm->tm_zone   = 0;
+#endif
+            thistime = mktime (endtm);
+            localtime_r (&thistime, endtm);
+            if (endtm->tm_zone != NULL) {
+               char *tmzone = strdup(endtm->tm_zone);
+               localtime_r (&thistime, endtm);
+               if (strncpy(tmzone, endtm->tm_zone, strlen(tmzone))) {
+                  endtm->tm_year = year;
+                  endtm->tm_mon  = month;
+                  endtm->tm_mday = day;
+                  endtm->tm_hour = hour;
+                  thistime    = mktime (endtm);
+               }
+               free(tmzone);
+            }
          }
 
          if (pptr != NULL)
@@ -493,7 +561,7 @@ out:
       }
 
       ArgusDebug (3, "ArgusParseTime (%p, %p, %p, \"%s\", '%c', 0.%06d, %d) retn %s(%d)\n",
-                  wildcarddate, tm, ctm, buf, mode, *frac, continued, rstr,
+                  wildcarddate, startm, endtm, buf, mode, *frac, continued, rstr,
                   thistime);
    }
 #endif

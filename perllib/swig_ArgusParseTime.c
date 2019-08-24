@@ -83,21 +83,19 @@ swig_ArgusParseTime (char *time_string, int *start, int *end)
    tsec = now.tv_sec;
    localtime_r(&tsec, &endtime);
 
-   if (ArgusParseTime(&wildcarddate, &starttime, &endtime,
-                      string, ' ', &frac, 0) <= 0) {
+   if (ArgusParseTime(&wildcarddate, &starttime, &endtime, string, ' ', &frac, 0) <= 0) {
       retn = 0;
       goto out;
    }
 
    if (plusminusloc) {
-      if (ArgusParseTime(&wildcarddate, &endtime, &starttime,
-                         plusminusloc+1, plusminus, &frac, 1) <= 0) {
+      if (ArgusParseTime(&wildcarddate, &endtime, &starttime, plusminusloc+1, plusminus, &frac, 1) <= 0) {
          retn = 0;
          goto out;
       }
    } else if (string[0] != '-') {
       /* Not a time relative to "now" AND not a time range */
-      endtime = starttime;
+      /* endtime = starttime; */
    }
 
 out:
