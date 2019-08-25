@@ -1071,8 +1071,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             break;
 
          case 'f':
-            if (!(strncmp(parser->ArgusProgramName,  "rascore", 7)) ||
-                !(strncmp(parser->ArgusProgramName, "ralabel", 7))) {
+            if (!(strncmp(parser->ArgusProgramName,  "rascore", 7))) {
                setArgusLfile (parser, optarg);
 
             } else {

@@ -105,15 +105,15 @@ struct ArgusNameSpace {
    struct ArgusHashTable *table;
 };
 
-struct ArgusNameSpace *ArgusDNSNameSpace = NULL;
 struct ArgusHashTable *ArgusDNSNameTable = NULL;
 struct ArgusHashTable *ArgusDNSServerTable = NULL;
-struct ArgusHashTable *ArgusTLDNameTable = NULL;
-struct ArgusHashTable *ArgusDomainNameTable = NULL;
 struct ArgusHashTable *ArgusHostNameTable = NULL;
 
 struct ArgusAggregatorStruct *ArgusEventAggregator = NULL;
 
+struct ArgusNameSpace *ArgusDNSNameSpace = NULL;
+
+struct ArgusLabelerStruct *ArgusDnsNames = NULL;
 struct ArgusLabelerStruct *ArgusDnsServers = NULL;
 struct ArgusLabelerStruct *ArgusDnsClients = NULL;
 
@@ -776,11 +776,12 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
 int RaPrintCounter = 1;
 static int argus_version = ARGUS_VERSION;
 
-int ArgusParseIanaTlds(struct ArgusHashTable *, char **);
+int ArgusParseIanaTlds(struct ArgusLabelerStruct *, char **);
 
 int
-ArgusParseIanaTlds(struct ArgusHashTable *table, char **tlds)
+ArgusParseIanaTlds(struct ArgusLabelerStruct *labeler, char **tlds)
 {
+   struct ArgusHashTable *table = labeler->htable;
    int retn = 0, slen;
 
    while (*tlds != NULL) {
@@ -844,6 +845,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ArgusThisEflag = parser->eflag;
       parser->eflag = ARGUS_HEXDUMP;
 
+
+// 
+// The ArgusLabeler struct holds the addresses returned in DNS queries.
+// 
+
       if ((ArgusLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
@@ -854,15 +860,20 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       ArgusAddrTree = ArgusLabeler->ArgusAddrTree;
       parser->ArgusLabeler = ArgusLabeler;
 
+      if ((ArgusDnsNames = ArgusNewLabeler(parser, ARGUS_LABELER_NAMES)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusDnsNames ArgusNewLabeler error");
+
+      ArgusParseIanaTlds(ArgusDnsNames, ArgusIanaTopLevelDomains);
+
       if ((ArgusDnsServers = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusDnsServers ArgusNewLabeler error");
 
       if (ArgusDnsServers->ArgusAddrTree == NULL)
          if ((ArgusDnsServers->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
             ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
 
       if ((ArgusDnsClients = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusDnsClients ArgusNewLabeler error");
 
       if (ArgusDnsClients->ArgusAddrTree == NULL)
          if ((ArgusDnsClients->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
@@ -883,6 +894,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          while (mode) {
             if ((!(strncasecmp (mode->mode, "debug.tree", 10))) ||
                 (!(strncasecmp (mode->mode, "debug", 5)))) {
+               ArgusDebugTree = 1;
+               parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+               RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
+            } else
+            if (!(strncasecmp (mode->mode, "debug.names", 11))) {
                ArgusDebugTree = 1;
                parser->ArgusLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
                RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
@@ -949,14 +965,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((ArgusDNSServerTable = ArgusNewHashTable(0x1000)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewHashTable error");
 
-      if ((ArgusTLDNameTable = ArgusNewHashTable(0x1000)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewHashTable error");
-
-      ArgusParseIanaTlds(ArgusTLDNameTable, ArgusIanaTopLevelDomains);
-
-      if ((ArgusDomainNameTable = ArgusNewHashTable(0x1000)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewHashTable error");
-
       if ((ArgusDNSNameSpace = (struct ArgusNameSpace *)ArgusCalloc(1, sizeof(*ArgusDNSNameSpace))) != NULL)
          if ((ArgusDNSNameSpace->tlds = ArgusNewQueue()) != NULL)
             ArgusDNSNameSpace->table = ArgusNewHashTable(0x10000);
@@ -1014,6 +1022,7 @@ RaParseComplete (int sig)
                if (labeler && labeler->ArgusAddrTree) {
                   if (ArgusParser->RaPruneMode)
                      RaPruneAddressTree(labeler, labeler->ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_LABEL | ARGUS_TREE_DNS_SLD, RaPruneLevel);
+
                   RaPrintLabelTree (ArgusParser->ArgusLabeler, ArgusParser->ArgusLabeler->ArgusAddrTree[AF_INET], 0, 0);
                   printf("\n");
                }
@@ -1156,12 +1165,13 @@ ArgusFindNameEntry (struct ArgusHashTable *table, char *name)
       int i;
 
       bzero(&ArgusHash, sizeof(ArgusHash));
-      ArgusHash.len = strlen(name);
-      ArgusHash.hash = getnamehash((const u_char *)lname);
       ArgusHash.buf = (unsigned int *)lname;
+      ArgusHash.len = strlen(lname);
 
       for (i = 0; i < ArgusHash.len; i++)
         lname[i] = tolower((int)lname[i]);
+
+      ArgusHash.hash = getnamehash((const u_char *)lname);
 
       if ((htbl = ArgusFindHashEntry(table, &ArgusHash)) != NULL) {
          retn = (struct nnamemem *) htbl->object;
@@ -1203,8 +1213,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name)
             retn->d_name = strchr(retn->n_name, '.') + 1;
 
          if (retn->d_name && (strlen(retn->d_name) > 0)) {
-            if (ArgusFindNameEntry (ArgusDNSNameSpace->table, retn->d_name)) {
-               ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
+            if (ArgusNameEntry (ArgusDNSNameSpace->table, retn->d_name) != NULL) {
             }
          }
 
@@ -2722,7 +2731,7 @@ RaNewProcess(struct ArgusParserStruct *parser)
       if ((retn->delqueue = ArgusNewQueue()) == NULL)
          ArgusLog (LOG_ERR, "RaNewProcess: ArgusNewQueue error %s\n", strerror(errno));
 
-      if ((retn->htable = ArgusNewHashTable(0x100000)) == NULL)
+      if ((retn->htable = ArgusNewHashTable(ArgusParser->ArgusHashTableSize)) == NULL)
          ArgusLog (LOG_ERR, "RaNewProcess: ArgusCalloc error %s\n", strerror(errno));
 
    } else

@@ -261,6 +261,9 @@ ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          }
       }
 
+      RaGetStartTime(argus, &dns->stime);
+      RaGetLastTime(argus, &dns->ltime);
+
       retn = dns;
    }
 
