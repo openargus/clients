@@ -206,6 +206,7 @@ if ($uri) {
             my $SQL  = "CREATE TABLE $table (";
                $SQL .= "`name` varchar(128) NOT NULL,";
                $SQL .= "`tld` varchar(64),";
+               $SQL .= "`nld` varchar(64),";
                $SQL .= "`ref` INT,";
                $SQL .= "`addrs` TEXT,";
                $SQL .= "`client` TEXT,";
@@ -219,16 +220,34 @@ if ($uri) {
             $dbh->do($SQL);
 
             foreach my $n (@$results_ref) {
-               my ($name,$tld,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
+               my ($name,$tld,$nld,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
+               my ($tind,$nind);
 
-               if (defined $n->{'name'}) { 
-                  my $tld = substr( $n->{'name'}, rindex( $n->{'name'}, '.' ) + 1 );
-                  if (defined $tld) {
-                     $n->{'tld'} = $tld;
-                     $tld   = '"' . $n->{'tld'} . '"';
+               if (defined $n->{'name'}) {
+                  $name = $n->{'name'};
+                  my $slen = length($name);
+
+                  $tind = rindex( $name, '.', $slen - 2 );
+                  if ($tind > 0) {
+                     $tld = substr( $name, $tind + 1);
+                     if (defined $tld) {
+                        $n->{'tld'} = $tld;
+                        $tld   = '"' . $n->{'tld'} . '"';
+                     }
+
+                     $nind = rindex( $name, '.', $tind - 1);
+                     if ($nind > 0) {
+                        $nld = substr( $name, $nind + 1 );
+
+                        if (defined $nld) {
+                           $n->{'nld'} = $nld;
+                           $nld   = '"' . $n->{'nld'} . '"';
+                        }
+                     }
                   }
+                  print "DEBUG: RaDnsDB: name:$name length:$slen tind:$tind tld:$tld nind:$nind nld:$nld\n" if $debug;
                   $name  = '"' . $n->{'name'} . '"'
-               };
+               }
 
                if (defined $n->{'ref'})  { $ref   = $n->{'ref'}};
 
@@ -263,7 +282,8 @@ if ($uri) {
                   my $str = "";
 
                   if (defined $name)   { push(@fields,"name");   push(@values, $name); }
-                  if (defined $tld)    { push(@fields,"tld");   push(@values, $name); }
+                  if (defined $tld)    { push(@fields,"tld");    push(@values, $tld); }
+                  if (defined $nld)    { push(@fields,"nld");    push(@values, $nld); }
                   if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
                   if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
                   if (defined $client) { push(@fields,"client"); push(@values, $client); }
