@@ -245,6 +245,10 @@ if ($uri) {
                         }
                      }
                   }
+
+                  if ((not defined $tld) || (length($tld) == 0)) { $tld = '"' . $name . '"'; $n->{'tld'} = $name; }
+                  if ((not defined $nld) || (length($nld) == 0)) { $nld = '"' . $name . '"'; $n->{'nld'} = $name; }
+
                   print "DEBUG: RaDnsDB: name:$name length:$slen tind:$tind tld:$tld nind:$nind nld:$nld\n" if $debug;
                   $name  = '"' . $n->{'name'} . '"'
                }
