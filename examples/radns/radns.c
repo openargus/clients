@@ -92,8 +92,7 @@ extern MYSQL *RaMySQL;
 
 const u_char *snapend = NULL;
 
-
-char ArgusBuf[MAXSTRLEN];
+char ArgusBuf[0x8000];
 int ArgusThisEflag = 0;
 int ArgusDebugTree = 0;
 
@@ -1918,16 +1917,17 @@ void RaProcessThisEventRecord (struct ArgusParserStruct *, struct ArgusRecordStr
 void RaProcessManRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+#define ARGUS_MAX_DNS_BUFFER	0x4000
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    char *buf, *label, tbuf[64], *tptr;
 
-   if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+   if ((buf = ArgusCalloc(1, ARGUS_MAX_DNS_BUFFER)) == NULL)
       ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
 
-   if ((label = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+   if ((label = ArgusCalloc(1, ARGUS_MAX_DNS_BUFFER)) == NULL)
       ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
 
    bzero (tbuf, 64);
@@ -2137,7 +2137,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                      if ((raddr = RaFindAddress (parser, ArgusDnsClients->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
                         if (!parser->qflag)
-                           fprintf (stdout, "%s: RaProcessRecord: new DNS server %s\n", tptr, intoa(node.addr.addr[0]));
+                           fprintf (stdout, "%s: RaProcessRecord: new DNS client %s\n", tptr, intoa(node.addr.addr[0]));
  
                         if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                            bcopy(&node, raddr, sizeof(node));
@@ -2171,7 +2171,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      }
                   }
 
-                  bzero (buf, MAXSTRLEN);
+                  bzero (buf, ARGUS_MAX_DNS_BUFFER);
 
                   if (req && res) {
                      if ((req->name && strlen(req->name)) && (res->name && strlen(res->name))) {
@@ -2272,7 +2272,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                                  if (parser->labelflag) {
                                     if (strlen(buf) > 0) {
-                                       snprintf (label, MAXSTRLEN, "dns='%s'", buf);
+                                       snprintf (label, ARGUS_MAX_DNS_BUFFER, "dns='%s'", buf);
                                        ArgusAddToRecordLabel (parser, argus, label);
                                        argus->status |= ARGUS_RECORD_MODIFIED;
                                     }

@@ -183,7 +183,7 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
          query->flags[0] = np->flags1;
          query->flags[1] = np->flags2;
 
-         bzero(ArgusBuf, 256);
+         bzero(ArgusBuf, 0x4000);
          
          if ((cp = ns_nprint((const u_char *)(np + 1), bp, ArgusBuf)) != NULL) {
             query->name = strdup(ArgusBuf);
@@ -279,7 +279,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
    struct ArgusDomainResourceRecord *rr;
 
    if ((rr = ArgusCalloc(1, sizeof(*rr))) != NULL) {
-      bzero(ArgusBuf, 128);
+      bzero(ArgusBuf, 0x4000);
       if ((cp = ns_nprint(cp, bp, ArgusBuf)) == NULL)
          return NULL;
       
@@ -326,7 +326,7 @@ ns_rparse(struct ArgusDomainQueryStruct *query, register u_char *bp, register co
          case T_NS:
          case T_CNAME:
          case T_PTR: {
-            bzero(ArgusBuf, 256);
+            bzero(ArgusBuf, 0x4000);
             if (ns_nprint(cp, bp, ArgusBuf) == NULL)
                return(NULL);
             rr->data = strdup(ArgusBuf);
@@ -355,12 +355,12 @@ struct ArgusDomainResourceRecord {
 };
 */
 
-            bzero(ArgusBuf, 128);
+            bzero(ArgusBuf, 0x4000);
             if ((cp = ns_nprint(cp, bp, ArgusBuf)) == NULL)
                return(NULL);
             rr->mname = strdup(ArgusBuf);
 
-            bzero(ArgusBuf, 128);
+            bzero(ArgusBuf, 0x4000);
             if ((cp = ns_nprint(cp, bp, ArgusBuf)) == NULL)
                return(NULL);
             rr->rname = strdup(ArgusBuf);
