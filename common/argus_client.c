@@ -3692,7 +3692,8 @@ ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const src,
                              int srclen, struct ArgusTransportStruct *dst,
                              int major_version)
 {
-   unsigned char subtype = 0;
+   unsigned char subtype = src->hdr.subtype;
+   char *iptr = (char *)&src->hdr + 4;
 
    if (major_version < MAJOR_VERSION_5)
       if (srclen >= 12)
@@ -3703,7 +3704,6 @@ ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const src,
    dst->hdr.argus_dsrvl8.len = (sizeof(struct ArgusTransportStruct) + 3) / 4;
 
    if (src->hdr.subtype & ARGUS_SRCID) {
-      char *iptr = NULL;
       switch (src->hdr.argus_dsrvl8.qual & ~ARGUS_TYPE_INTERFACE) {
          case ARGUS_TYPE_INT: {
             dst->srcid.a_un.value = src->srcid.a_un.value;
@@ -3741,11 +3741,12 @@ ArgusGenerateTransportStruct(const struct ArgusTransportStruct * const src,
       }
       if (src->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
          bcopy (iptr, &dst->srcid.inf, 4);
+         iptr += 4;
       }
    }
 
    if (subtype & ARGUS_SEQ)
-      dst->seqnum = src->seqnum;
+      bcopy (iptr, &dst->seqnum, 4);
 }
 
 struct ArgusRecordStruct *
