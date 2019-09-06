@@ -77,10 +77,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if (parser->ver3flag)
          argus_version = ARGUS_VERSION_3;
 
-      if ((parser->ArgusMaskList) == NULL)
-         parser->ArgusReverse = 1;
-      else
-         parser->ArgusReverse = 0;
+      parser->ArgusReverse = 1;
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
