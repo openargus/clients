@@ -579,32 +579,44 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                }
                         
                if (name->cnames != NULL) {
+                  char *cnamebuf;
                   int count = 0;
-                  char cnamebuf[256];
+
+                  if ((cnamebuf = ArgusMalloc(0x4000)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
 
                   if (ArgusParser->ArgusPrintJson) {
-                     snprintf(cnamebuf, 256, "\"cname\":[");
+                     snprintf(cnamebuf, 0x4000, "\"cname\":[");
                   }
                   
 #if defined(ARGUS_THREADS)
                   do {
+                     int cnt = 0, slen = 0;
                      if (name->cnames == NULL) {
                         done = 1;
                      } else {
                         if (pthread_mutex_lock(&name->cnames->lock) == 0) {
 #endif
-                           int cnt = name->cnames->count;
+                           cnt = name->cnames->count;
                            cnt = (cnt >= (0x10000 - resultnum)) ? (0x10000 - resultnum) : cnt;
                            struct ArgusListObjectStruct *list = name->cnames->start;
 
                            for (x = 0; x < cnt; x++) {
                               cname = (struct nnamemem *)list->list_obj;
-                              if (ArgusParser->ArgusPrintJson) {
-                                 if (count++ > 0)
-                                    snprintf(&cnamebuf[strlen(cnamebuf)], 128, ",");
-                                 snprintf(&cnamebuf[strlen(cnamebuf)], 128, "\"%s\"", cname->n_name);
+                              if (!(cname->status & ARGUS_VISITED)) {
+                                 slen = strlen(cnamebuf);
+                                 if (ArgusParser->ArgusPrintJson) {
+                                    if (count++ > 0) {
+                                       snprintf (&cnamebuf[slen], 0x4000 - slen, ",");
+                                       slen++;
+                                    }
+                                    snprintf (&cnamebuf[slen], 0x4000 - slen, "\"%s\"", cname->n_name);
+                                 } else {
+                                    results[resultnum++] = strdup(cname->n_name);
+                                 }
+                                 cname->status |= ARGUS_VISITED;
                               } else {
-                                 results[resultnum++] = strdup(cname->n_name);
+                                 done = 1;
                               }
                               list = list->nxt;
                            }
@@ -613,14 +625,34 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                         }
                         if ((cname != NULL) && (cname != name))
                            name = cname;
-                       else
+                        else
                            done = 1;
                      }
                   } while (!done && (resultnum < 2048));
 #endif
                   if (ArgusParser->ArgusPrintJson) {
-                     sprintf(&cnamebuf[strlen(cnamebuf)], "]");
+                     slen = strlen(cnamebuf);
+                     snprintf (&cnamebuf[slen], 0x4000 - slen, "]");
                      results[resultnum++] = strdup(cnamebuf);
+                  }
+                  ArgusFree(cnamebuf);
+
+                  if (name->cnames) {
+#if defined(ARGUS_THREADS)
+                     if (pthread_mutex_lock(&name->cnames->lock) == 0) {
+#endif
+                        struct ArgusListObjectStruct *list = name->cnames->start;
+                        int cnt = name->cnames->count;
+
+                        for (x = 0; x < cnt; x++) {
+                           cname = (struct nnamemem *)list->list_obj;
+                           cname->status &= ~ARGUS_VISITED;
+                           list = list->nxt;
+                        }
+#if defined(ARGUS_THREADS)
+                        pthread_mutex_unlock(&name->cnames->lock);
+                     }
+#endif
                   }
                }
 
