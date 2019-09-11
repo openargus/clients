@@ -106,6 +106,7 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
    /* %d[yMdhms] */
    /* %d[yMdhms][[+]%d[yMdhms]] explict time range */
    /* -%d[yMdhms] explicit time range ending with now time in the range */
+   /* if %d is > 1000000, then assume its a unix timestamp */
 
    bzero(str, sizeof(strbuf));
    strncpy(str, buf, sizeof(strbuf));
@@ -254,296 +255,310 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
          
       } else {
          int status = *wildcarddate;
+         int unixt = 0;
 
          bcopy ((u_char *) endtm, (u_char *) startm, sizeof (struct tm));
-         year  = startm->tm_year;
-         month = startm->tm_mon;
-         day   = startm->tm_mday;
-         hour  = startm->tm_hour;
-         mins  = startm->tm_min;
-         sec   = startm->tm_sec;
 
-#if HAVE_STRUCT_TM_TM_ZONE
-         startm->tm_zone = NULL;
-         startm->tm_gmtoff = 0;
-#endif
-         thistime = mktime (startm);
-
-         if ((hptr = strchr (str, '.')) != NULL) {
-            if ((hptr - str) != (strlen(str) - 1)) {
-               *hptr++ = '\0';
-               if (!(isdigit((int)*hptr)) && !(*hptr == '*'))
-                  return -1;
-            } else {
-               *hptr = '\0';
-               pptr = hptr;
-               hptr = NULL;
+         if (!(strpbrk(str, "./:"))) {
+            int value = atoi(str);
+            if (value > 1000000) {
+               thistime = value;
+               unixt = 1;
+               retn = 1;
             }
          }
-      
-         if ((dptr = strrchr (str, '/')) != NULL) {  /* mm/dd  || yyyy/mm  || yyyy/mm/dd */
-                                                     /*   ^   */
-            *dptr++ = '\0';
-            if ((mptr = strrchr (str, '/')) != NULL) {  /* yyyy/mm/dd */
-               *mptr++ = '\0';
-               yptr = str;
-
-            } else {
-               if (strlen(str) == 4) {
-                  yptr = str;
-                  mptr = dptr;
-                  dptr =  NULL;
-                  startm->tm_mday = 1;
-               } else
-                  mptr = str;
-            }
-
+         if (unixt) {
+            localtime_r (&thistime, startm);
          } else {
-            if (hptr != NULL)
-               dptr = str;
-            else {
-               int value = atoi(str);
-               if ((value > 1900) && (value <= (startm->tm_year + 1900))) {
-                  yptr = str;
-                  hour = 0;
-               } else
-                  hptr = str;
-            }
-         }
-      
-         if (yptr) {
-            if (strlen(yptr) != 4)
-               return -1;
-
-            for (ptr = yptr, i = 0; i < strlen(yptr); i++) {
-               if (*ptr == '*') {
-                  status |= 1 << RAWILDCARDYEAR;
-                  break;
-               }
-               if (!(isdigit((int)*ptr++)))
-                  return -1;
-            }
-
-            if (!(status & (1 << RAWILDCARDYEAR))) {
-               startm->tm_year = atoi(yptr) - 1900;
-            } else
-               startm->tm_year = 70;
-            retn = ARGUS_YEAR;
-            year = startm->tm_year;
-         }
-
-         if (mptr) {
-            if (strlen(mptr) != 2)
-               return -1;
-            for (ptr = mptr, i = 0; i < strlen(mptr); i++) {
-               if (*ptr == '*') {
-                  status |= 1 << RAWILDCARDMONTH;
-                  break;
-               }
-               if (!(isdigit((int)*ptr++)))
-                  return -1;
-            }
-            if (!(status & (1 << RAWILDCARDMONTH))) {
-               startm->tm_mon  = atoi(mptr) - 1;
-            } else 
-               startm->tm_mon  = 0;
-            retn = ARGUS_MONTH;
-            month = startm->tm_mon;
-         }
-      
-         if (dptr) {
-            if (strlen(dptr) != 2)
-               return -1;
-            for (ptr = dptr, i = 0; i < strlen(dptr); i++) {
-               if (*ptr == '*') {
-                  status |= 1 << RAWILDCARDDAY;
-                  break;
-               }
-               if (!(isdigit((int)*ptr++)))
-                  return -1;
-            }
-            if (!(status & (1 << RAWILDCARDDAY))) {
-               startm->tm_mday = atoi(dptr);
-            } else
-               startm->tm_mday = 1;
-            retn = ARGUS_DAY;
-            day = startm->tm_mday;
-         }
-      
-         if (hptr) {
-            if ((pptr = strchr (hptr, '.')) != NULL) {
-               char *tptr = pptr + 1;
-               float scale = 1000000.0;
-               *pptr = '\0';
-
-                while(isdigit((int)*tptr++)) scale /= 10.0;
-               *frac = atoi(&pptr[1]) * scale;
-            }
-            if ((minptr = strchr (hptr, ':')) != NULL) {
-               *minptr++ = '\0';
-               if ((secptr = strchr (minptr, ':')) != NULL) {
-                  *secptr++ = '\0';
-               }
-            }
-
-            for (ptr = hptr, i = 0; i < strlen(hptr); i++) {
-               if (*ptr == '*') {
-                  status |= 1 << RAWILDCARDHOUR;
-                  break;
-               }
-               if (!(isdigit((int)*ptr++)))
-                  return -1;
-            }
-      
-            if (!(status & (1 << RAWILDCARDHOUR))) {
-               hour = atoi(hptr);
-               if (hour < 24) {
-                  retn = ARGUS_HOUR;
-               }
-            } else
-               hour = 0;
-
-            if (minptr != NULL) {
-               for (ptr = minptr, i = 0; i < strlen(minptr); i++) {
-                  if (*ptr == '*') {
-                     status |= 1 << RAWILDCARDMIN;
-                     break;
-                  }
-                  if (!(isdigit((int)*ptr++)))
-                     return -1;
-               }
-      
-               if (!(status & (1 << RAWILDCARDMIN))) {
-                  mins = atoi(minptr);
-                  retn = ARGUS_MIN;
-               } else
-                  mins = 0;
-            }
-      
-            if (secptr != NULL) {
-               for (ptr = secptr, i = 0; i < strlen(secptr); i++) {
-                  if (*ptr == '*') {
-                     status |= 1 << RAWILDCARDSEC;
-                     break;
-                  }
-                  if (!(isdigit((int)*ptr++)))
-                     return -1;
-               }
-
-               if (!(status & (1 << RAWILDCARDSEC))) {
-                  sec = atoi(secptr);
-                  retn = ARGUS_SEC;
-               } else
-                  sec = 0;
-            }
-         }
-
-         switch (retn) {
-            case ARGUS_YEAR:   startm->tm_mon  = month = 0;
-            case ARGUS_MONTH:  startm->tm_mday = day = 1;
-            case ARGUS_DAY:    startm->tm_hour = hour = 0;
-            case ARGUS_HOUR:   startm->tm_min  = mins = 0;
-            case ARGUS_MIN:    startm->tm_sec  = sec = 0;
-            case ARGUS_SEC:    break;
-         }
-
-         if (hour > 24) {
-            time_t value = hour;
-            bzero(startm, sizeof(*startm));
-            localtime_r (&value, startm);
             year  = startm->tm_year;
             month = startm->tm_mon;
             day   = startm->tm_mday;
             hour  = startm->tm_hour;
             mins  = startm->tm_min;
             sec   = startm->tm_sec;
-            retn  = 1;
-            status = 0;
 
-         } else {
-            startm->tm_hour = hour;
-            startm->tm_min  = mins;
-            startm->tm_sec  = sec;
-      
-            if (startm->tm_year < 0)
-               retn = -1;
-            if ((startm->tm_mon > 11) || (startm->tm_mon < 0))
-               retn = -1;
-            if ((startm->tm_mday > 31) || (startm->tm_mday < 1))
-               retn = -1;
-            if ((startm->tm_hour > 23) || (startm->tm_hour < 0))
-               retn = -1;
-            if ((startm->tm_min > 60) || (startm->tm_min < 0))
-               retn = -1;
-            if ((startm->tm_sec > 60) || (startm->tm_sec < 0))
-               retn = -1;
-         }
-
-         *wildcarddate = status;
-
-         if (retn >= 0) {
 #if HAVE_STRUCT_TM_TM_ZONE
-            startm->tm_isdst  = 0;
+            startm->tm_zone = NULL;
             startm->tm_gmtoff = 0;
-            startm->tm_zone   = 0;
 #endif
             thistime = mktime (startm);
 
-#if HAVE_STRUCT_TM_TM_ZONE
-            if (startm->tm_zone != NULL) {
-               char *tmzone = strdup(startm->tm_zone);
-               localtime_r (&thistime, startm);
-               if (strncpy(tmzone, startm->tm_zone, strlen(tmzone))) {
-                  startm->tm_year = year;
-                  startm->tm_mon  = month;
-                  startm->tm_mday = day;
-                  startm->tm_hour = hour;
-                  thistime    = mktime (startm);
+            if ((hptr = strchr (str, '.')) != NULL) {
+               if ((hptr - str) != (strlen(str) - 1)) {
+                  *hptr++ = '\0';
+                  if (!(isdigit((int)*hptr)) && !(*hptr == '*'))
+                     return -1;
+               } else {
+                  *hptr = '\0';
+                  pptr = hptr;
+                  hptr = NULL;
                }
-               free(tmzone);
             }
-#endif
+         
+            if ((dptr = strrchr (str, '/')) != NULL) {  /* mm/dd  || yyyy/mm  || yyyy/mm/dd */
+                                                        /*   ^   */
+               *dptr++ = '\0';
+               if ((mptr = strrchr (str, '/')) != NULL) {  /* yyyy/mm/dd */
+                  *mptr++ = '\0';
+                  yptr = str;
 
-         bcopy ((char *)startm, (char *)endtm, sizeof(struct tm));
+               } else {
+                  if (strlen(str) == 4) {
+                     yptr = str;
+                     mptr = dptr;
+                     dptr =  NULL;
+                     startm->tm_mday = 1;
+                  } else
+                     mptr = str;
+               }
+
+            } else {
+               if (hptr != NULL)
+                  dptr = str;
+               else {
+                  int value = atoi(str);
+                  if ((value > 1900) && (value <= (startm->tm_year + 1900))) {
+                     yptr = str;
+                     hour = 0;
+                  } else
+                     hptr = str;
+               }
+            }
+         
+            if (yptr) {
+               if (strlen(yptr) != 4)
+                  return -1;
+
+               for (ptr = yptr, i = 0; i < strlen(yptr); i++) {
+                  if (*ptr == '*') {
+                     status |= 1 << RAWILDCARDYEAR;
+                     break;
+                  }
+                  if (!(isdigit((int)*ptr++)))
+                     return -1;
+               }
+
+               if (!(status & (1 << RAWILDCARDYEAR))) {
+                  startm->tm_year = atoi(yptr) - 1900;
+               } else
+                  startm->tm_year = 70;
+               retn = ARGUS_YEAR;
+               year = startm->tm_year;
+            }
+
+            if (mptr) {
+               if (strlen(mptr) != 2)
+                  return -1;
+               for (ptr = mptr, i = 0; i < strlen(mptr); i++) {
+                  if (*ptr == '*') {
+                     status |= 1 << RAWILDCARDMONTH;
+                     break;
+                  }
+                  if (!(isdigit((int)*ptr++)))
+                     return -1;
+               }
+               if (!(status & (1 << RAWILDCARDMONTH))) {
+                  startm->tm_mon  = atoi(mptr) - 1;
+               } else 
+                  startm->tm_mon  = 0;
+               retn = ARGUS_MONTH;
+               month = startm->tm_mon;
+            }
+         
+            if (dptr) {
+               if (strlen(dptr) != 2)
+                  return -1;
+               for (ptr = dptr, i = 0; i < strlen(dptr); i++) {
+                  if (*ptr == '*') {
+                     status |= 1 << RAWILDCARDDAY;
+                     break;
+                  }
+                  if (!(isdigit((int)*ptr++)))
+                     return -1;
+               }
+               if (!(status & (1 << RAWILDCARDDAY))) {
+                  startm->tm_mday = atoi(dptr);
+               } else
+                  startm->tm_mday = 1;
+               retn = ARGUS_DAY;
+               day = startm->tm_mday;
+            }
+         
+            if (hptr) {
+               if ((pptr = strchr (hptr, '.')) != NULL) {
+                  char *tptr = pptr + 1;
+                  float scale = 1000000.0;
+                  *pptr = '\0';
+
+                   while(isdigit((int)*tptr++)) scale /= 10.0;
+                  *frac = atoi(&pptr[1]) * scale;
+               }
+               if ((minptr = strchr (hptr, ':')) != NULL) {
+                  *minptr++ = '\0';
+                  if ((secptr = strchr (minptr, ':')) != NULL) {
+                     *secptr++ = '\0';
+                  }
+               }
+
+               for (ptr = hptr, i = 0; i < strlen(hptr); i++) {
+                  if (*ptr == '*') {
+                     status |= 1 << RAWILDCARDHOUR;
+                     break;
+                  }
+                  if (!(isdigit((int)*ptr++)))
+                     return -1;
+               }
+         
+               if (!(status & (1 << RAWILDCARDHOUR))) {
+                  hour = atoi(hptr);
+                  if (hour < 24) {
+                     retn = ARGUS_HOUR;
+                  }
+               } else
+                  hour = 0;
+
+               if (minptr != NULL) {
+                  for (ptr = minptr, i = 0; i < strlen(minptr); i++) {
+                     if (*ptr == '*') {
+                        status |= 1 << RAWILDCARDMIN;
+                        break;
+                     }
+                     if (!(isdigit((int)*ptr++)))
+                        return -1;
+                  }
+         
+                  if (!(status & (1 << RAWILDCARDMIN))) {
+                     mins = atoi(minptr);
+                     retn = ARGUS_MIN;
+                  } else
+                     mins = 0;
+               }
+         
+               if (secptr != NULL) {
+                  for (ptr = secptr, i = 0; i < strlen(secptr); i++) {
+                     if (*ptr == '*') {
+                        status |= 1 << RAWILDCARDSEC;
+                        break;
+                     }
+                     if (!(isdigit((int)*ptr++)))
+                        return -1;
+                  }
+
+                  if (!(status & (1 << RAWILDCARDSEC))) {
+                     sec = atoi(secptr);
+                     retn = ARGUS_SEC;
+                  } else
+                     sec = 0;
+               }
+            }
+
             switch (retn) {
-               case ARGUS_YEAR:  endtm->tm_year++; year++; break;
-               case ARGUS_MONTH: endtm->tm_mon++; month++; break;
-               case ARGUS_DAY:   endtm->tm_mday++; day++; break;
-               case ARGUS_HOUR:  endtm->tm_hour++; hour++; break;
-               case ARGUS_MIN:   endtm->tm_min++; mins++; break;
-               case ARGUS_SEC:   endtm->tm_sec++; sec++; break;
-               default: break;
+               case ARGUS_YEAR:   startm->tm_mon  = month = 0;
+               case ARGUS_MONTH:  startm->tm_mday = day = 1;
+               case ARGUS_DAY:    startm->tm_hour = hour = 0;
+               case ARGUS_HOUR:   startm->tm_min  = mins = 0;
+               case ARGUS_MIN:    startm->tm_sec  = sec = 0;
+               case ARGUS_SEC:    break;
             }
 
-            while (endtm->tm_sec  > 59) {endtm->tm_min++;  endtm->tm_sec -= 60;}
-            while (endtm->tm_min  > 59) {endtm->tm_hour++; endtm->tm_min  -= 60;}
-            while (endtm->tm_hour > 23) {endtm->tm_mday++; endtm->tm_hour -= 24;}
-            while (endtm->tm_mday > RaDaysInAMonth[endtm->tm_mon]) {endtm->tm_mday -= RaDaysInAMonth[endtm->tm_mon]; endtm->tm_mon++;}
-            while (endtm->tm_mon  > 11) {endtm->tm_year++; endtm->tm_mon  -= 12;}
+            if (hour > 24) {
+               time_t value = hour;
+               bzero(startm, sizeof(*startm));
+               localtime_r (&value, startm);
+               year  = startm->tm_year;
+               month = startm->tm_mon;
+               day   = startm->tm_mday;
+               hour  = startm->tm_hour;
+               mins  = startm->tm_min;
+               sec   = startm->tm_sec;
+               retn  = 1;
+               status = 0;
+
+            } else {
+               startm->tm_hour = hour;
+               startm->tm_min  = mins;
+               startm->tm_sec  = sec;
+         
+               if (startm->tm_year < 0)
+                  retn = -1;
+               if ((startm->tm_mon > 11) || (startm->tm_mon < 0))
+                  retn = -1;
+               if ((startm->tm_mday > 31) || (startm->tm_mday < 1))
+                  retn = -1;
+               if ((startm->tm_hour > 23) || (startm->tm_hour < 0))
+                  retn = -1;
+               if ((startm->tm_min > 60) || (startm->tm_min < 0))
+                  retn = -1;
+               if ((startm->tm_sec > 60) || (startm->tm_sec < 0))
+                  retn = -1;
+            }
+
+            *wildcarddate = status;
+
+            if (retn >= 0) {
+#if HAVE_STRUCT_TM_TM_ZONE
+               startm->tm_isdst  = 0;
+               startm->tm_gmtoff = 0;
+               startm->tm_zone   = 0;
+#endif
+               thistime = mktime (startm);
 
 #if HAVE_STRUCT_TM_TM_ZONE
-            endtm->tm_isdst  = 0;
-            endtm->tm_gmtoff = 0;
-            endtm->tm_zone   = 0;
-#endif
-            thistime = mktime (endtm);
-            localtime_r (&thistime, endtm);
-            if (endtm->tm_zone != NULL) {
-               char *tmzone = strdup(endtm->tm_zone);
-               localtime_r (&thistime, endtm);
-               if (strncpy(tmzone, endtm->tm_zone, strlen(tmzone))) {
-                  endtm->tm_year = year;
-                  endtm->tm_mon  = month;
-                  endtm->tm_mday = day;
-                  endtm->tm_hour = hour;
-                  thistime    = mktime (endtm);
+               if (startm->tm_zone != NULL) {
+                  char *tmzone = strdup(startm->tm_zone);
+                  localtime_r (&thistime, startm);
+                  if (strncpy(tmzone, startm->tm_zone, strlen(tmzone))) {
+                     startm->tm_year = year;
+                     startm->tm_mon  = month;
+                     startm->tm_mday = day;
+                     startm->tm_hour = hour;
+                     thistime    = mktime (startm);
+                  }
+                  free(tmzone);
                }
-               free(tmzone);
-            }
-         }
+#endif
 
-         if (pptr != NULL)
-            *pptr = '.';
+            bcopy ((char *)startm, (char *)endtm, sizeof(struct tm));
+               switch (retn) {
+                  case ARGUS_YEAR:  endtm->tm_year++; year++; break;
+                  case ARGUS_MONTH: endtm->tm_mon++; month++; break;
+                  case ARGUS_DAY:   endtm->tm_mday++; day++; break;
+                  case ARGUS_HOUR:  endtm->tm_hour++; hour++; break;
+                  case ARGUS_MIN:   endtm->tm_min++; mins++; break;
+                  case ARGUS_SEC:   endtm->tm_sec++; sec++; break;
+                  default: break;
+               }
+
+               while (endtm->tm_sec  > 59) {endtm->tm_min++;  endtm->tm_sec -= 60;}
+               while (endtm->tm_min  > 59) {endtm->tm_hour++; endtm->tm_min  -= 60;}
+               while (endtm->tm_hour > 23) {endtm->tm_mday++; endtm->tm_hour -= 24;}
+               while (endtm->tm_mday > RaDaysInAMonth[endtm->tm_mon]) {endtm->tm_mday -= RaDaysInAMonth[endtm->tm_mon]; endtm->tm_mon++;}
+               while (endtm->tm_mon  > 11) {endtm->tm_year++; endtm->tm_mon  -= 12;}
+
+#if HAVE_STRUCT_TM_TM_ZONE
+               endtm->tm_isdst  = 0;
+               endtm->tm_gmtoff = 0;
+               endtm->tm_zone   = 0;
+#endif
+               thistime = mktime (endtm);
+               localtime_r (&thistime, endtm);
+               if (endtm->tm_zone != NULL) {
+                  char *tmzone = strdup(endtm->tm_zone);
+                  localtime_r (&thistime, endtm);
+                  if (strncpy(tmzone, endtm->tm_zone, strlen(tmzone))) {
+                     endtm->tm_year = year;
+                     endtm->tm_mon  = month;
+                     endtm->tm_mday = day;
+                     endtm->tm_hour = hour;
+                     thistime    = mktime (endtm);
+                  }
+                  free(tmzone);
+               }
+            }
+
+            if (pptr != NULL)
+               *pptr = '.';
+         }
       }
    }
 
