@@ -233,6 +233,9 @@ void RaArgusInputComplete (struct ArgusInput *input) {};
 void
 RaParseComplete (int sig)
 {
+   if (!ArgusParser->RaParseCompleting++) {
+      mysql_close(RaMySQL);
+   }
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "RaParseComplete done\n");
 #endif

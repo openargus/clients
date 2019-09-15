@@ -224,6 +224,7 @@ int   RaSQLDBUpdates = 0;
 int   RaSQLDBDeletes = 1;
 int   RaFirstManRec  = 1;
 
+int  ArgusMySQLConnections = 1;
 
 #define RAUP_POLICY_STRATEGY_INDEX	0x0100
 #define RAUP_PERMISSIVE_POLICY		0x0000
@@ -1264,7 +1265,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          RaLastDatabaseTimeInterval = RaBinProcess->nadp.start.tv_sec;
 #ifdef ARGUS_MYSQL
       if (ArgusParser->writeDbstr != NULL)
-         RaMySQLInit(1);
+         RaMySQLInit(ArgusMySQLConnections);
 #endif /* ARGUS_MYSQL */
 
       parser->RaInitialized++;
@@ -1339,6 +1340,7 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         int con;
          if (ArgusParser->ArgusPrintJson)
             fprintf (stdout, "\n");
 
@@ -1356,6 +1358,9 @@ RaParseComplete (int sig)
 
          while ((ArgusAupStruct = (struct RaAupStruct *) ArgusPopQueue(ArgusAupQueue, ARGUS_LOCK)) != NULL)
             RaPrintAup (ArgusParser, ArgusAupStruct);
+
+         for (con = 0; con < ArgusMySQLConnections; con++)
+            mysql_close(RaMySQL+con);
 
          fflush(stdout);
          ArgusShutDown(sig);
