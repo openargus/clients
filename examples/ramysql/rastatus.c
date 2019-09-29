@@ -138,6 +138,7 @@ void RaMySQLDeleteRecords(struct ArgusParserStruct *, struct ArgusRecordStruct *
 void RaSQLQueryNetworksTable (unsigned int, unsigned int, unsigned int);
 void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
+void RaSQLQueryDatabaseTable (char *, unsigned int, unsigned int);
 
 char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, char *, int);
 struct RaBinProcessStruct *ArgusNewRateBins (struct ArgusParserStruct *, struct ArgusRecordStruct *);
@@ -273,6 +274,7 @@ RaClearArgusEventRecord(void)
 
 void ArgusWindowClose(void) { };
 void RaSQLQuerySecondsTable (unsigned int start, unsigned int stop) { };
+void RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop) { };
 
 void
 ArgusProcessSqlData(struct RaBinStruct *bin)

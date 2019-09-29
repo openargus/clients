@@ -21,6 +21,7 @@
 
 extern int RaDaysInAMonth[12];
 extern void RaSQLQuerySecondsTable (unsigned int, unsigned int); /* temporary */
+extern void RaSQLQueryDatabaseTable (char *table, unsigned int, unsigned int); /* temporary */
 
 char **
 ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
@@ -187,21 +188,17 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
                  int ArgusAutoId, int argus_version,
                  const char **ArgusTableColumnName)
 {
-   char *ArgusSQLStatement;
+   unsigned int start, stop;
    char *buf, *sbuf;
    const char *table;
-   MYSQL_ROW row;
-   MYSQL_RES *mysqlRes;
    struct timeval now;
-   int retn, x, i;
+   int i;
+
+   start = ArgusParser->startime_t.tv_sec;
+   stop  = ArgusParser->lasttime_t.tv_sec;
 
    if ((ArgusInput = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) == NULL)
       ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
-
-   ArgusSQLStatement = ArgusMalloc(MAXSTRLEN);
-   if (ArgusSQLStatement == NULL)
-      ArgusLog(LOG_ERR, "unable to allocate ArgusSQLStatement: %s", strerror(errno));
-   *ArgusSQLStatement = 0;
 
    buf = ArgusMalloc(MAXARGUSRECORD);
    if (buf == NULL)
@@ -241,90 +238,17 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
 
    bcopy((char *)&ArgusInput->ArgusInitCon, (char *)&ArgusParser->ArgusInitCon, sizeof (ArgusParser->ArgusInitCon));
 
-   if (ArgusParser->ArgusSQLStatement != NULL)
-      strcpy(ArgusSQLStatement, ArgusParser->ArgusSQLStatement);
-
-   if (ArgusParser->tflag) {
-      char *timeField = NULL;
-      int i, slen = 0;
-
-      for (i = 0; (ArgusTableColumnName[i] != NULL) && (i < ARGUSSQLMAXCOLUMNS); i++) {
-         if (!(strcmp("ltime", ArgusTableColumnName[i]))) {
-            timeField = "ltime";
-            break;
-         }
-         if (!(strcmp("stime", ArgusTableColumnName[i])))
-            timeField = "stime";
-      }
-
-      if (timeField == NULL) 
-         timeField = "second";
-
-      if ((slen = strlen(ArgusSQLStatement)) > 0) {
-         snprintf (&ArgusSQLStatement[strlen(ArgusSQLStatement)], MAXSTRLEN - slen, " and ");
-         slen = strlen(ArgusSQLStatement);
-      }
-
-      snprintf (&ArgusSQLStatement[slen], MAXSTRLEN - slen, "%s >= %d and %s <= %d", timeField, (int)ArgusParser->startime_t.tv_sec, timeField, (int)ArgusParser->lasttime_t.tv_sec);
-   }
-
    for (i = 0; ((table = tables[i]) != NULL); i++) {
       if (!(strcmp ("Seconds", table))) {
-         RaSQLQuerySecondsTable (ArgusParser->startime_t.tv_sec, ArgusParser->lasttime_t.tv_sec);
+         RaSQLQuerySecondsTable (start, stop);
 
       } else {
-         if (ArgusAutoId)
-            sprintf (buf, "SELECT autoid,record from %s", table);
-         else
-            sprintf (buf, "SELECT record from %s", table);
-
-         if (strlen(ArgusSQLStatement) > 0)
-            sprintf (&buf[strlen(buf)], " WHERE %s", ArgusSQLStatement);
-
-#ifdef ARGUSDEBUG
-         ArgusDebug (1, "SQL Query %s\n", buf);
-#endif
-         if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) == 0) {
-            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-                  while ((row = mysql_fetch_row(mysqlRes))) {
-                     unsigned long *lengths = mysql_fetch_lengths(mysqlRes);
-                     int autoid = 0;
-
-                     if (ArgusAutoId && (retn > 1)) {
-                        char *endptr;
-                        autoid = strtol(row[0], &endptr, 10);
-                        if (row[0] == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: autoid returned %s", row[0]);
-                        x = 1;
-                     } else
-                        x = 0;
-
-                     ArgusParser->ArgusAutoId = autoid;
-                     bcopy (row[x], sbuf, (int) lengths[x]);
-
-                     ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)sbuf, lengths[x], &ArgusParser->ArgusFilterCode);
-                  }
-               }
-
-               mysql_free_result(mysqlRes);
-            }
-
-         } else {
-            if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
-               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-#ifdef ARGUSDEBUG
-            } else {
-               ArgusDebug (4, "%s: skip missing table %s", __func__, table);
-#endif
-            }
-         }
+         RaSQLQueryDatabaseTable ((char *)table, start, stop);
       }
    }
 
    ArgusFree(buf);
    ArgusFree(sbuf);
-   ArgusFree(ArgusSQLStatement);
 }
 
 /* The array *columns[] must be allocated to hold ncolumns number of

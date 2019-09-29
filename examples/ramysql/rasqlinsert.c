@@ -135,6 +135,7 @@ void RaMySQLDeleteRecords(struct ArgusParserStruct *, struct ArgusRecordStruct *
 void RaSQLQueryNetworksTable (unsigned int, unsigned int, unsigned int);
 void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
+void RaSQLQueryDatabaseTable (char *, unsigned int, unsigned int);
 
 char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, char *, int);
 struct RaBinProcessStruct *ArgusNewRateBins (struct ArgusParserStruct *, struct ArgusRecordStruct *);
@@ -5951,7 +5952,6 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
    char *endptr, *str;
    int retn, x;
 
-
    if (RaRoleString) {
       str = "SELECT * from %s_Seconds WHERE second >= %u and second <= %u",
       sprintf (buf, str, RaRoleString, start, stop);
@@ -6028,6 +6028,11 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
       }
       MUTEX_UNLOCK(&RaMySQLlock);
    }
+}
+
+void
+RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
+{
 }
 
 
