@@ -121,7 +121,9 @@ char  *RaTableCreateNames[RA_MINTABLES];
 char *RaTableCreateString[RA_MINTABLES];
 char *RaTableDeleteString[RA_MINTABLES];
 
-#define ARGUSSQLMAXCOLUMNS	256
+#define ARGUSSQLMAXQUERYTIMESPAN	300
+#define ARGUSSQLMAXCOLUMNS		256
+
 char *ArgusTableColumnName[ARGUSSQLMAXCOLUMNS];
 
 char ArgusSQLTableNameBuf[MAXSTRLEN];
@@ -701,77 +703,91 @@ void
 RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
 {
    struct RaMySQLSecondsTable *sqry = NULL;
-   char buf[2048], sbuf[2048];
    MYSQL_RES *mysqlRes;
    char *endptr, *str;
+   char *buf, *sbuf;
+
+   unsigned int t1, t2;
    int retn, x;
 
-   str = "SELECT * from Seconds WHERE second >= %u and second <= %u",
-   sprintf (buf, str, start, stop);
+   if ((buf = (char *)ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+   if ((sbuf = (char *)ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+   for (t1 = start; t1 <= stop; t1 += ARGUSSQLMAXQUERYTIMESPAN) {
+      t2 = ((t1 + ARGUSSQLMAXQUERYTIMESPAN) > stop) ? stop : (t1 + ARGUSSQLMAXQUERYTIMESPAN);
+
+      str = "SELECT * from Seconds WHERE second >= %u and second <= %u",
+      sprintf (buf, str, start, stop);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "SQL Query %s\n", buf);
+      ArgusDebug (2, "SQL Query %s\n", buf);
 #endif
 
-   if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+      if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
+         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
-   else {
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-    
-               lengths = mysql_fetch_lengths(mysqlRes);
-               bzero(sbuf, sizeof(sbuf));
+      else {
+         if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+            if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+               while ((row = mysql_fetch_row(mysqlRes))) {
+                  unsigned long *lengths;
+       
+                  lengths = mysql_fetch_lengths(mysqlRes);
+                  bzero(sbuf, MAXSTRLEN);
 
-               if ((sqry = (void *) ArgusCalloc (1, sizeof(*sqry))) == NULL)
-                  ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+                  if ((sqry = (void *) ArgusCalloc (1, sizeof(*sqry))) == NULL)
+                     ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
 
-               for (x = 0; x < retn; x++) {
-                  int y = x;
-                  snprintf(sbuf, 2048, "%.*s ", (int) lengths[x], row[x] ? row[x] : "NULL");
-                  
-                  switch (y) {
-                     case RAMYSQL_SECONDTABLE_PROBE:
-                        sqry->probe = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                  for (x = 0; x < retn; x++) {
+                     int y = x;
+                     snprintf(sbuf, MAXSTRLEN, "%.*s ", (int) lengths[x], row[x] ? row[x] : "NULL");
+                     
+                     switch (y) {
+                        case RAMYSQL_SECONDTABLE_PROBE:
+                           sqry->probe = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
 
-                     case RAMYSQL_SECONDTABLE_SECOND:
-                        sqry->second = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                        case RAMYSQL_SECONDTABLE_SECOND:
+                           sqry->second = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
 
-                     case RAMYSQL_SECONDTABLE_FILEINDEX:
-                        sqry->fileindex = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                        case RAMYSQL_SECONDTABLE_FILEINDEX:
+                           sqry->fileindex = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
 
-                     case RAMYSQL_SECONDTABLE_OSTART:
-                        sqry->ostart = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                        case RAMYSQL_SECONDTABLE_OSTART:
+                           sqry->ostart = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
 
-                     case RAMYSQL_SECONDTABLE_OSTOP:
-                        sqry->ostop = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                        case RAMYSQL_SECONDTABLE_OSTOP:
+                           sqry->ostop = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
+                     }
                   }
+
+                  ArgusAddToQueue (ArgusModelerQueue, &sqry->qhdr, ARGUS_LOCK);
                }
-
-               ArgusAddToQueue (ArgusModelerQueue, &sqry->qhdr, ARGUS_LOCK);
             }
-         }
 
-         mysql_free_result(mysqlRes);
+            mysql_free_result(mysqlRes);
+         }
       }
    }
+   ArgusFree(sbuf);
+   ArgusFree(buf);
 }
 
 void RaSQLProcessQueue (struct ArgusQueueStruct *);
@@ -888,7 +904,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                         }
 
                         for (x = 0; x < retn; x++)
-                           snprintf(sbuf, 2048, "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
+                           snprintf(sbuf, MAXSTRLEN, "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
 
                         if ((ptr = strchr(sbuf, '.')) == NULL)
                            ArgusLog(LOG_ERR, "RaSQLProcessQueue: Filename format error %s", sbuf);
