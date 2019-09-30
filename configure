@@ -9374,108 +9374,30 @@ $as_echo "no" >&6; }
     esac
   fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for local tcp_wrappers library" >&5
-$as_echo_n "checking for local tcp_wrappers library... " >&6; }
-   libwrap=FAIL
-   lastdir=FAIL
-   pwdir=`pwd`
-   places=`ls .. | sed -e 's,/$,,' -e 's,^,../,' | egrep 'tcp_wrappers'`
-   for dir in $places; do
-      if test $lastdir = $dir ; then
-                  continue;
-      fi
-      lastdir=$dir
-      if test -r $dir/libwrap.a ; then
-         libwrap=$dir/libwrap.a
-         d=$dir
-               fi
-   done
 
-   if test $libwrap = FAIL ; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
-$as_echo "not found" >&6; }
-      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for system tcp_wrappers library" >&5
-$as_echo_n "checking for system tcp_wrappers library... " >&6; }
-      if ${ac_cv_qosient_wrapper+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_save_LIBS="$LIBS"
-         LIBS="-lwrap"
-         INCS=$V_INCLS
-         V_INCLS=" "
-         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <tcpd.h>
-             int deny_severity = 0, allow_severity = 0;
-int
-main ()
-{
-struct request_info request;
-             fromhost(&request);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  ac_cv_qosient_wrapper=yes
-else
-  ac_cv_qosient_wrapper=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-         LIBS="$ac_save_LIBS"
-         V_INCLS=$INCS
-fi
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_qosient_wrapper" >&5
-$as_echo "$ac_cv_qosient_wrapper" >&6; }
-      if ! test $ac_cv_qosient_wrapper = no ; then
-         libwrap="-lwrap"
-      fi
-   fi
-
-   if ! test $libwrap = FAIL ; then
-      V_WRAPDEP=$libwrap
-      if test -r $d/tcpd.h; then
-         V_INCLS="-I$d $V_INCLS"
-      elif test -r $srcdir/../libwrap/tcpd.h; then
-         V_INCLS="-I$srcdir/../libwrap $V_INCLS"
-      elif test -r /usr/local/include/tcpd.h; then
-         V_INCLS="-I/usr/local/include $V_INCLS"
-      elif test -r /opt/local/include/tcpd.h; then
-         V_INCLS="-I/opt/local/include $V_INCLS"
-         V_WRAPDEP="-L/opt/local/lib $V_WRAPDEP"
-      elif test -r /usr/include/tcpd.h; then
-         V_INCLS="-I$d -I$srcdir/../libwrap $V_INCLS"
-      else
-         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: cannot find tcpd.h" >&5
-$as_echo "$as_me: WARNING: cannot find tcpd.h" >&2;}
-         libwrap=FAIL
-      fi
-   fi
-if test ! -z "$V_WRAPDEP"; then
-   if test -f "$V_WRAPDEP"; then
-      if test -f lib/libwrap.a; then
-         rm -rf lib/libwrap.a
-      fi
-      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
-      ln -s $wrapdir lib/libwrap.a
-      V_WRAPDEP="../lib/libwrap.a"
-   else
-      if test "$V_WRAPDEP" = "-lwrap" ; then
-         if test -f lib/libwrap.a; then
-            rm -rf lib/libwrap.a
-         fi
-         case "$target_os" in
-         linux*)
-            V_WRAPDEP="$V_WRAPDEP -lnsl";;
-         esac
-      fi
-   fi
-
-$as_echo "#define HAVE_TCP_WRAPPER /**/" >>confdefs.h
-
-   WRAPLIBS="$V_WRAPDEP"
-fi
+#AC_QOSIENT_TCPWRAP(V_WRAPDEP, V_INCLS)
+#if test ! -z "$V_WRAPDEP"; then
+#   if test -f "$V_WRAPDEP"; then
+#      if test -f lib/libwrap.a; then
+#         rm -rf lib/libwrap.a
+#      fi
+#      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
+#      ln -s $wrapdir lib/libwrap.a
+#      V_WRAPDEP="../lib/libwrap.a"
+#   else
+#      if test "$V_WRAPDEP" = "-lwrap" ; then
+#         if test -f lib/libwrap.a; then
+#            rm -rf lib/libwrap.a
+#         fi
+#         case "$target_os" in
+#         linux*)
+#            V_WRAPDEP="$V_WRAPDEP -lnsl";;
+#         esac
+#      fi
+#   fi
+#   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
+#   WRAPLIBS="$V_WRAPDEP"
+#fi
 
 
 saved_CPPFLAGS=$CPPFLAGS
@@ -9865,6 +9787,8 @@ aix*)
 
 darwin*)
 	have_darwin=yes;
+	saved_LDFLAGS=$LDFLAGS
+	LDFLAGS="${saved_LDFLAGS} -Wlinker -rpath /usr/local/mysql/lib"
 	;;
 
 hpux9*)
@@ -10613,11 +10537,11 @@ int x;
 curl_easy_setopt(NULL,CURLOPT_URL,NULL);
 x=CURL_ERROR_SIZE;
 x=CURLOPT_WRITEFUNCTION;
-x=CURLOPT_FILE;
+x=CURLOPT_WRITEDATA;
 x=CURLOPT_ERRORBUFFER;
 x=CURLOPT_STDERR;
 x=CURLOPT_VERBOSE;
-if (x) ;
+if (x) {;}
 
   ;
   return 0;
@@ -10864,8 +10788,8 @@ $as_echo "cannot compile with both libmaxminddb and GeoIP" >&6; }
       if test "x$with_libmaxminddb" = "xyes"; then
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBMAXMINDDB" >&5
-$as_echo_n "checking for LIBMAXMINDDB... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libmaxminddb >= 1.2.0" >&5
+$as_echo_n "checking for libmaxminddb >= 1.2.0... " >&6; }
 
 if test -n "$LIBMAXMINDDB_CFLAGS"; then
     pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
@@ -10905,7 +10829,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -10932,7 +10856,7 @@ Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
 and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -10971,8 +10895,8 @@ fi
       if test "x$with_c_ares" = "xyes"; then
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBCARES" >&5
-$as_echo_n "checking for LIBCARES... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libcares >= 1.10.0" >&5
+$as_echo_n "checking for libcares >= 1.10.0... " >&6; }
 
 if test -n "$LIBCARES_CFLAGS"; then
     pkg_cv_LIBCARES_CFLAGS="$LIBCARES_CFLAGS"
@@ -11012,7 +10936,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -11039,7 +10963,7 @@ Alternatively, you may set the environment variables LIBCARES_CFLAGS
 and LIBCARES_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}

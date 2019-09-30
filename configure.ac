@@ -186,29 +186,30 @@ case "$target_os" in
 esac
 
 AC_QOSIENT_THREADS(V_THREADS)
-AC_QOSIENT_TCPWRAP(V_WRAPDEP, V_INCLS)
-if test ! -z "$V_WRAPDEP"; then
-   if test -f "$V_WRAPDEP"; then
-      if test -f lib/libwrap.a; then
-         rm -rf lib/libwrap.a
-      fi
-      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
-      ln -s $wrapdir lib/libwrap.a
-      V_WRAPDEP="../lib/libwrap.a"
-   else
-      if test "$V_WRAPDEP" = "-lwrap" ; then
-         if test -f lib/libwrap.a; then
-            rm -rf lib/libwrap.a
-         fi
-         case "$target_os" in
-         linux*)
-            V_WRAPDEP="$V_WRAPDEP -lnsl";;
-         esac
-      fi
-   fi
-   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
-   WRAPLIBS="$V_WRAPDEP"
-fi
+
+#AC_QOSIENT_TCPWRAP(V_WRAPDEP, V_INCLS)
+#if test ! -z "$V_WRAPDEP"; then
+#   if test -f "$V_WRAPDEP"; then
+#      if test -f lib/libwrap.a; then
+#         rm -rf lib/libwrap.a
+#      fi
+#      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
+#      ln -s $wrapdir lib/libwrap.a
+#      V_WRAPDEP="../lib/libwrap.a"
+#   else
+#      if test "$V_WRAPDEP" = "-lwrap" ; then
+#         if test -f lib/libwrap.a; then
+#            rm -rf lib/libwrap.a
+#         fi
+#         case "$target_os" in
+#         linux*)
+#            V_WRAPDEP="$V_WRAPDEP -lnsl";;
+#         esac
+#      fi
+#   fi
+#   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
+#   WRAPLIBS="$V_WRAPDEP"
+#fi
 
 
 saved_CPPFLAGS=$CPPFLAGS
@@ -332,6 +333,8 @@ aix*)
 
 darwin*)
 	have_darwin=yes;
+	saved_LDFLAGS=$LDFLAGS
+	LDFLAGS="${saved_LDFLAGS} -Wlinker -rpath /usr/local/mysql/lib"
 	;;
 
 hpux9*)
