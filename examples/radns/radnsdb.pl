@@ -1,4 +1,4 @@
-#!@PERLBIN@
+#!/usr/bin/perl
 #
 #  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
 #  Copyright (c) 2000-2014 QoSient, LLC
@@ -141,21 +141,13 @@ if ($uri) {
    # Drop table 'foo'. This may fail, if 'foo' doesn't exist
    # Thus we put an eval around it.
 
-   {
-      local $dbh->{RaiseError} = 0;
-      local $dbh->{PrintError} = 0;
-
-      print "DEBUG: RaDnsDB: DROP TABLE $table\n" if $debug;
-      eval { $dbh->do("DROP TABLE $table") };
-   }
-
    switch ($db) {
       case /^dnsNames/ {
-         $options = "-qM json search:0.0.0.0/0";
+         $options = "-f /usr/argus/radns.conf -qM json search:0.0.0.0/0";
          $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
       }
       case /^dnsAddrs/ {
-         $options = "-qM json search:'.'";
+         $options = "-f /usr/argus/radns.conf -qM json search:'.'";
          $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
       }
    }
@@ -184,14 +176,14 @@ if ($uri) {
          if (scalar(@{$results_ref}) > 0) {
             # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
-            print "DEBUG: RaDnsDB: CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
-            $dbh->do("CREATE TABLE $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
+            print "DEBUG: RaDnsDB: CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
+            $dbh->do("CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
 
             foreach my $n (@$results_ref) {
                my $addr = $n->{'addr'};
                my $data = JSON->new->utf8->space_after->encode($n);
  
-               my $sql = "INSERT INTO $table VALUE('$addr', '$data')";
+               my $sql = "INSERT INTO $table (addr,names) VALUES('$addr', '$data') ON DUPLICATE KEY UPDATE names='$data'";
                print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
                $dbh->do($sql);
             }
@@ -203,11 +195,13 @@ if ($uri) {
          if (scalar(@{$results_ref}) > 0) {
             # Create a new table 'foo'. This must not fail, thus we don't catch errors.
 
-            my $SQL  = "CREATE TABLE $table (";
+            my $SQL  = "CREATE TABLE IF NOT EXISTS $table (";
                $SQL .= "`name` varchar(128) NOT NULL,";
                $SQL .= "`tld` varchar(64),";
                $SQL .= "`nld` varchar(64),";
                $SQL .= "`ref` INT,";
+               $SQL .= "`stime` double(18,6) unsigned,";
+               $SQL .= "`ltime` double(18,6) unsigned,";
                $SQL .= "`addrs` TEXT,";
                $SQL .= "`client` TEXT,";
                $SQL .= "`server` TEXT,";
@@ -219,8 +213,36 @@ if ($uri) {
             print "DEBUG: RaDnsDB: $SQL\n" if $debug;
             $dbh->do($SQL);
 
+            my $str = sprintf "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=\"$db\" AND TABLE_NAME=\"$table\"";
+            print "DEBUG: RaEsocFetchData: sql:$str\n" if $debug;
+
+            my $sth = $dbh->prepare($str) or die "can't prepare: ", $DBI::errstr, "\n";
+            $sth->execute() or die "can't execute: ", $DBI::errstr, "\n";
+
+            my $stimetbl = 0;
+            my $ltimetbl = 0;
+
+            while(my @row = $sth->fetchrow_array()) {
+               my $column = $row[0];
+               switch ($column) {
+                  case "stime"     {  $stimetbl = 1; }
+                  case "ltime"     {  $ltimetbl = 1; }
+              }
+            }
+            $sth->finish();
+            if ($stimetbl == 0) {
+               $str  = sprintf "ALTER TABLE $table ADD COLUMN `stime` double(18,6) AFTER `nld`";
+               $dbh->do($str);
+               print "DEBUG: sql '$str'\n" if $debug;
+            }
+            if ($ltimetbl == 0) {
+               $str  = sprintf "ALTER TABLE $table ADD COLUMN `ltime` double(18,6) AFTER `stime`";
+               $dbh->do($str);
+               print "DEBUG: sql '$str'\n" if $debug;
+            }
+
             foreach my $n (@$results_ref) {
-               my ($name,$tld,$nld,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
+               my ($name,$tld,$nld,$stime,$ltime,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
                my ($tind,$nind);
 
                if (defined $n->{'name'}) {
@@ -253,6 +275,8 @@ if ($uri) {
                   $name  = '"' . $n->{'name'} . '"'
                }
 
+               if (defined $n->{'stime'})  { $stime   = $n->{'stime'}};
+               if (defined $n->{'ltime'})  { $ltime   = $n->{'ltime'}};
                if (defined $n->{'ref'})  { $ref   = $n->{'ref'}};
 
                if (defined $n->{'addr'}) { 
@@ -288,6 +312,8 @@ if ($uri) {
                   if (defined $name)   { push(@fields,"name");   push(@values, $name); }
                   if (defined $tld)    { push(@fields,"tld");    push(@values, $tld); }
                   if (defined $nld)    { push(@fields,"nld");    push(@values, $nld); }
+                  if (defined $stime)  { push(@fields,"stime");  push(@values, $stime); }
+                  if (defined $ltime)  { push(@fields,"ltime");  push(@values, $ltime); }
                   if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
                   if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
                   if (defined $client) { push(@fields,"client"); push(@values, $client); }
@@ -299,7 +325,18 @@ if ($uri) {
                   my $cols = join(",", @fields);
                   my $vals = join(",", @values);
 
-                  my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals);";
+                  my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals) ";
+                  my $dup = " ON DUPLICATE KEY UPDATE ";
+                  my $fcnt = scalar @fields;
+
+                  for (my $i = 0; $i < $fcnt; $i++) {
+                     if ($i > 0) {
+                        $dup .= ",";
+                     }
+                     $dup .= "`$fields[$i]`=$values[$i]";
+                  }
+
+                  $SQL .= $dup.";";
                   print "DEBUG: results: sql: '$SQL'\n" if $debug;
 
                   $dbh->do($SQL);
