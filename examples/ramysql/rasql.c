@@ -123,7 +123,9 @@ char *RaTableCreateString[RA_MINTABLES];
 char *RaTableDeleteString[RA_MINTABLES];
 
 #define ARGUSSQLMAXQUERYTIMESPAN	300
+#define ARGUSSQLMAXQUERYTIMESPAN	300
 #define ARGUSSQLMAXCOLUMNS		256
+#define ARGUSSQLMAXROWNUMBER		0x80000
 
 char *ArgusTableColumnName[ARGUSSQLMAXCOLUMNS];
 
@@ -804,7 +806,7 @@ RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
    char *timeField = NULL;
    char *buf, *sbuf;
    int i, slen = 0;
-   int retn, x;
+   int retn, count, x;
 
    if ((buf = (char *)ArgusCalloc (1, MAXSTRLEN)) == NULL)
       ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
@@ -832,25 +834,98 @@ RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
       if ((ArgusSQLStatement = ArgusCalloc(1, MAXSTRLEN)) == NULL)
          ArgusLog(LOG_ERR, "unable to allocate ArgusSQLStatement: %s", strerror(errno));
 
-      if (ArgusParser->tflag == 0) {
-         sprintf (buf, "SELECT min(%s) start, max(%s) stop from %s", timeField, timeField, table);
-         if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) == 0) {
-            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-                  while ((row = mysql_fetch_row(mysqlRes))) {
-                     start = atoi(row[0]);
-                     stop  = atoi(row[1]) + 1;
-                  }
+      sprintf (buf, "SELECT count(*) from %s", table);
+      if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) == 0) {
+         if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+            if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+               while ((row = mysql_fetch_row(mysqlRes))) {
+                  count = atoi(row[0]);
                }
             }
          }
       }
 
-      for (t1 = start; t1 <= stop; t1 += ARGUSSQLMAXQUERYTIMESPAN) {
-         t2 = ((t1 + ARGUSSQLMAXQUERYTIMESPAN) > stop) ? stop : (t1 + ARGUSSQLMAXQUERYTIMESPAN);
+      if (count > ARGUSSQLMAXROWNUMBER) {
+         if (timeField && (ArgusParser->tflag == 0)) {
+            sprintf (buf, "SELECT min(%s) start, max(%s) stop from %s", timeField, timeField, table);
+            if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) == 0) {
+               if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+                  if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     while ((row = mysql_fetch_row(mysqlRes))) {
+                        start = atoi(row[0]);
+                        stop  = atoi(row[1]) + 1;
+                     }
+                  }
+               }
+            }
+         }
 
+         for (t1 = start; t1 <= stop; t1 += ARGUSSQLMAXQUERYTIMESPAN) {
+            t2 = ((t1 + ARGUSSQLMAXQUERYTIMESPAN) > stop) ? stop : (t1 + ARGUSSQLMAXQUERYTIMESPAN);
+
+            *ArgusSQLStatement = '\0';
+         
+            if (ArgusParser->ArgusSQLStatement != NULL)
+               strcpy(ArgusSQLStatement, ArgusParser->ArgusSQLStatement);
+
+            if (ArgusAutoId)
+               sprintf (buf, "SELECT autoid,record from %s", table);
+            else
+               sprintf (buf, "SELECT record from %s", table);
+
+            if ((slen = strlen(ArgusSQLStatement)) > 0) {
+               snprintf (&ArgusSQLStatement[strlen(ArgusSQLStatement)], MAXSTRLEN - slen, " and ");
+               slen = strlen(ArgusSQLStatement);
+            }
+
+            snprintf (&ArgusSQLStatement[slen], MAXSTRLEN - slen, "%s >= %d and %s < %d", timeField, t1, timeField, t2);
+
+            if (strlen(ArgusSQLStatement) > 0)
+               sprintf (&buf[strlen(buf)], " WHERE %s", ArgusSQLStatement);
+
+#ifdef ARGUSDEBUG
+            ArgusDebug (1, "SQL Query %s\n", buf);
+#endif
+            if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) == 0) {
+               if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+                  if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     while ((row = mysql_fetch_row(mysqlRes))) {
+                        unsigned long *lengths = mysql_fetch_lengths(mysqlRes);
+                        int autoid = 0;
+
+                        if (ArgusAutoId && (retn > 1)) {
+                           char *endptr;
+                           autoid = strtol(row[0], &endptr, 10);
+                           if (row[0] == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: autoid returned %s", row[0]);
+                           x = 1;
+                        } else
+                           x = 0;
+
+                        ArgusParser->ArgusAutoId = autoid;
+                        bcopy (row[x], sbuf, (int) lengths[x]);
+
+                        ArgusHandleRecord (ArgusParser, ArgusInput, (struct ArgusRecord *)sbuf, lengths[x], &ArgusParser->ArgusFilterCode);
+                     }
+                  }
+
+                  mysql_free_result(mysqlRes);
+               }
+
+            } else {
+               if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
+                  ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+#ifdef ARGUSDEBUG
+               } else {
+                  ArgusDebug (4, "%s: skip missing table %s", __func__, table);
+#endif
+               }
+            }
+         }
+
+      } else {
          *ArgusSQLStatement = '\0';
-      
+         
          if (ArgusParser->ArgusSQLStatement != NULL)
             strcpy(ArgusSQLStatement, ArgusParser->ArgusSQLStatement);
 
@@ -858,13 +933,6 @@ RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
             sprintf (buf, "SELECT autoid,record from %s", table);
          else
             sprintf (buf, "SELECT record from %s", table);
-
-         if ((slen = strlen(ArgusSQLStatement)) > 0) {
-            snprintf (&ArgusSQLStatement[strlen(ArgusSQLStatement)], MAXSTRLEN - slen, " and ");
-            slen = strlen(ArgusSQLStatement);
-         }
-
-         snprintf (&ArgusSQLStatement[slen], MAXSTRLEN - slen, "%s >= %d and %s < %d", timeField, t1, timeField, t2);
 
          if (strlen(ArgusSQLStatement) > 0)
             sprintf (&buf[strlen(buf)], " WHERE %s", ArgusSQLStatement);

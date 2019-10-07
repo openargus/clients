@@ -64,7 +64,6 @@ ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-debug//         && do { $debug++; next ARG; };
       s/^-t//             && do { $time = shift (@ARGV); next ARG; };
-
       s/^-time//          && do { $time = shift (@ARGV); next ARG; };
       s/^-mode//          && do { $mode = shift (@ARGV); next ARG; };
       s/^-node//          && do { $node = shift (@ARGV); next ARG; };
@@ -106,6 +105,9 @@ my $lastseries = 0;
 my ($user, $pass, $host, $port, $space, $db, $table);
 my $dbh;
 
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+   $time = RaTodaysDate();
+}
 
 if ($uri) {
    my $url = URI::URL->new($uri);
@@ -363,3 +365,7 @@ exit 0;
 
 sub numerically { $a <=> $b };
 
+sub RaTodaysDate {
+  my($day, $month, $year)=(localtime)[3,4,5];
+  return sprintf( "%04d/%02d/%02d", $year+1900, $month+1, $day);
+}

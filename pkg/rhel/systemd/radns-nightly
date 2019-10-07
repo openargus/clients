@@ -39,7 +39,7 @@ my $radnsdb   = which 'radnsdb';
 my $debug     = 0;
 my $done      = 0;
 
-my $time      = "";
+my $time;
 my $dbtime;
 my $filter;
 my @dbaseList;
@@ -64,6 +64,10 @@ ARG: while (my $arg = shift(@ARGV)) {
       }
    }
     $arglist[@arglist + 0] = $arg;
+}
+
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+   $time = RaTodaysDate();
 }
 
 if ($time eq "") {
@@ -100,4 +104,9 @@ foreach (@dbaseList) {
    foreach (@output) {
       print;
    }
+}
+
+sub RaTodaysDate {
+  my($day, $month, $year)=(localtime)[3,4,5];
+  return sprintf( "%04d/%02d/%02d", $year+1900, $month+1, $day);
 }
