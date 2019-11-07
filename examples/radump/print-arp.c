@@ -288,10 +288,8 @@ arp_dst_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
       struct ArgusNetworkStruct *net = NULL;
 
       if ((net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX]) == NULL) {
-/*
          if (ArgusParseDstArpBuffer(parser, argus) > 0)
             net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
-*/
       }
 
       if (net != NULL) {
