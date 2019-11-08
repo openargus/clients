@@ -245,11 +245,33 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
                            retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_SADDR_INDEX);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_SADDR_INDEX);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_DADDR_INDEX);
+                        break;
+                     }
+                     case ARGUS_FLOW_ARP: {
+                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                           case ARGUS_TYPE_ARP: {
+                              if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
+                                 unsigned int *saddr = (unsigned int *)&flow->arp_flow.arp_spa;
+                                 retn = RaProcessAddressLocality(parser, labeler, argus, saddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
+                              }
+                              if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                                 unsigned int *daddr = (unsigned int *)&flow->arp_flow.arp_tpa;
+                                 retn = RaProcessAddressLocality(parser, labeler, argus, daddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
+                              }
+                              break;
+                           }
+                           case ARGUS_TYPE_RARP: {
+                              break;
+                           }
+                        }
                         break;
                      }
                   }
                   break; 
+               }
+               case ARGUS_FLOW_ARP: {
+                  break;
                }
             }
          }
