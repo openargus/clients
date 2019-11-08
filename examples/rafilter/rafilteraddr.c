@@ -271,6 +271,14 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   break; 
                }
                case ARGUS_FLOW_ARP: {
+                  if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
+                     unsigned int *saddr = (unsigned int *)&flow->arp_flow.arp_spa;
+                     retn = RaProcessAddressLocality(parser, labeler, argus, saddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
+                  }
+                  if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                     unsigned int *daddr = (unsigned int *)&flow->arp_flow.arp_tpa;
+                     retn = RaProcessAddressLocality(parser, labeler, argus, daddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
+                  }
                   break;
                }
             }
