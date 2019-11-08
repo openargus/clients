@@ -1286,7 +1286,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name, int status)
         name[i] = tolower((int)name[i]);
 
       if ((RaDnsRootDomainDefault != NULL) && (status == 0)) {
-         if (snprintf(fqdn, MAXSTRLEN, name) > 0) {
+         if (snprintf(fqdn, MAXSTRLEN, "%s", name) > 0) {
             int dotted = 0;
 
             if ((eptr = strrchr(fqdn, '.')) != NULL) {
