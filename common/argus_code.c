@@ -657,11 +657,12 @@ Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
    s->s.data.k = offset;
 
    switch (op) {
-      case Q_EQUAL:   b = new_block(JMP(NFF_JEQ)); break;
-      case Q_LESS:    b = new_block(JMP(NFF_JGE)); b->sense = !b->sense; break;
-      case Q_GREATER: b = new_block(JMP(NFF_JGT)); break;
-      case Q_GEQ:     b = new_block(JMP(NFF_JGE)); break;
-      case Q_LEQ:     b = new_block(JMP(NFF_JGT)); b->sense = !b->sense; break;
+      case Q_EQUAL:    b = new_block(JMP(NFF_JEQ)); break;
+      case Q_NOTEQUAL: b = new_block(JMP(NFF_JEQ)); b->sense = !b->sense; break;
+      case Q_LESS:     b = new_block(JMP(NFF_JGE)); b->sense = !b->sense; break;
+      case Q_GREATER:  b = new_block(JMP(NFF_JGT)); break;
+      case Q_GEQ:      b = new_block(JMP(NFF_JGE)); break;
+      case Q_LEQ:      b = new_block(JMP(NFF_JGT)); b->sense = !b->sense; break;
    }
 
    if (b == NULL)
@@ -692,8 +693,8 @@ Argusgen_fcmp(int dsr, u_int offset, u_int size, float v, u_int op, int type)
 
    switch (op) {
       case Q_EQUAL:    b = new_block(JMP(NFF_JEQ|NFF_F)); break;
-      case Q_LESS:     b = new_block(JMP(NFF_JGE|NFF_F)); b->sense = !b->sense; break;
       case Q_NOTEQUAL: b = new_block(JMP(NFF_JEQ|NFF_F)); b->sense = !b->sense; break;
+      case Q_LESS:     b = new_block(JMP(NFF_JGE|NFF_F)); b->sense = !b->sense; break;
       case Q_GREATER:  b = new_block(JMP(NFF_JGT|NFF_F)); break;
       case Q_GEQ:      b = new_block(JMP(NFF_JGE|NFF_F)); break;
       case Q_LEQ:      b = new_block(JMP(NFF_JGT|NFF_F)); b->sense = !b->sense; break;
@@ -2227,7 +2228,7 @@ Argusgen_maxsegatom( int off, long v, int op)
    b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_W, (u_int)v, op, Q_DEFAULT);
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_maxsegatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+   ArgusDebug (4, "Argusgen_maxsegatom (%d, 0x%x, %d) returns 0x%x\n", off, v, op, b0);
 #endif
    return b0;
 }
