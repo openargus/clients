@@ -26019,11 +26019,20 @@ ArgusHtoN (struct ArgusRecord *argus)
                      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
                      switch (net->hdr.subtype) {
                         case ARGUS_TCP_INIT: {
-                           struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
-                           tcp->status       = htonl(tcp->status);
-                           tcp->seqbase      = htonl(tcp->seqbase);
-                           tcp->options      = htonl(tcp->options);
-                           tcp->win          = htons(tcp->win);
+                           if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
+                              struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
+                              tcp->status       = htonl(tcp->status);
+                              tcp->seqbase      = htonl(tcp->seqbase);
+                              tcp->options      = htonl(tcp->options);
+                              tcp->win          = htons(tcp->win);
+                              tcp->maxseg       = htons(tcp->maxseg);
+                           } else {
+                              struct ArgusTCPInitStatusV1 *tcp = (void *)&net->net_union.tcpinit;
+                              tcp->status       = htonl(tcp->status);
+                              tcp->seqbase      = htonl(tcp->seqbase);
+                              tcp->options      = htonl(tcp->options);
+                              tcp->win          = htons(tcp->win);
+                           }
                            break;
                         }
                         case ARGUS_TCP_STATUS: {
@@ -26032,42 +26041,82 @@ ArgusHtoN (struct ArgusRecord *argus)
                            break;
                         }
                         case ARGUS_TCP_PERF: {
-                           struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                           tcp->status       = htonl(tcp->status);
-                           tcp->state        = htonl(tcp->state);
-                           tcp->options      = htonl(tcp->options);
-                           tcp->synAckuSecs  = htonl(tcp->synAckuSecs);
-                           tcp->ackDatauSecs = htonl(tcp->ackDatauSecs);
+                           if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              tcp->status       = htonl(tcp->status);
+                              tcp->state        = htonl(tcp->state);
+                              tcp->options      = htonl(tcp->options);
+                              tcp->synAckuSecs  = htonl(tcp->synAckuSecs);
+                              tcp->ackDatauSecs = htonl(tcp->ackDatauSecs);
 
-                           tcp->src.lasttime.tv_sec  = htonl(tcp->src.lasttime.tv_sec);
-                           tcp->src.lasttime.tv_usec = htonl(tcp->src.lasttime.tv_usec);
-                           tcp->src.status = htonl(tcp->src.status);
-                           tcp->src.seqbase = htonl(tcp->src.seqbase);
-                           tcp->src.seq = htonl(tcp->src.seq);
-                           tcp->src.ack = htonl(tcp->src.ack);
-                           tcp->src.winnum = htonl(tcp->src.winnum);
-                           tcp->src.bytes = htonl(tcp->src.bytes);
-                           tcp->src.retrans = htonl(tcp->src.retrans);
-                           tcp->src.ackbytes = htonl(tcp->src.ackbytes);
-                           tcp->src.winbytes = htonl(tcp->src.winbytes);
-                           tcp->src.win = htons(tcp->src.win);
+                              tcp->src.lasttime.tv_sec  = htonl(tcp->src.lasttime.tv_sec);
+                              tcp->src.lasttime.tv_usec = htonl(tcp->src.lasttime.tv_usec);
+                              tcp->src.status = htonl(tcp->src.status);
+                              tcp->src.seqbase = htonl(tcp->src.seqbase);
+                              tcp->src.seq = htonl(tcp->src.seq);
+                              tcp->src.ack = htonl(tcp->src.ack);
+                              tcp->src.winnum = htonl(tcp->src.winnum);
+                              tcp->src.bytes = htonl(tcp->src.bytes);
+                              tcp->src.retrans = htonl(tcp->src.retrans);
+                              tcp->src.ackbytes = htonl(tcp->src.ackbytes);
+                              tcp->src.winbytes = htonl(tcp->src.winbytes);
+                              tcp->src.win = htons(tcp->src.win);
+                              tcp->src.maxseg = htons(tcp->src.maxseg);
 
-                           if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
-                              tcp->dst.lasttime.tv_sec  = htonl(tcp->dst.lasttime.tv_sec);
-                              tcp->dst.lasttime.tv_usec = htonl(tcp->dst.lasttime.tv_usec);
-                              tcp->dst.status = htonl(tcp->dst.status);
-                              tcp->dst.seqbase = htonl(tcp->dst.seqbase);
-                              tcp->dst.seq = htonl(tcp->dst.seq);
-                              tcp->dst.ack = htonl(tcp->dst.ack);
-                              tcp->dst.winnum = htonl(tcp->dst.winnum);
-                              tcp->dst.bytes = htonl(tcp->dst.bytes);
-                              tcp->dst.retrans = htonl(tcp->dst.retrans);
-                              tcp->dst.ackbytes = htonl(tcp->dst.ackbytes);
-                              tcp->dst.winbytes = htonl(tcp->dst.winbytes);
-                              tcp->dst.win = htons(tcp->dst.win);
+                              if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
+                                 tcp->dst.lasttime.tv_sec  = htonl(tcp->dst.lasttime.tv_sec);
+                                 tcp->dst.lasttime.tv_usec = htonl(tcp->dst.lasttime.tv_usec);
+                                 tcp->dst.status = htonl(tcp->dst.status);
+                                 tcp->dst.seqbase = htonl(tcp->dst.seqbase);
+                                 tcp->dst.seq = htonl(tcp->dst.seq);
+                                 tcp->dst.ack = htonl(tcp->dst.ack);
+                                 tcp->dst.winnum = htonl(tcp->dst.winnum);
+                                 tcp->dst.bytes = htonl(tcp->dst.bytes);
+                                 tcp->dst.retrans = htonl(tcp->dst.retrans);
+                                 tcp->dst.ackbytes = htonl(tcp->dst.ackbytes);
+                                 tcp->dst.winbytes = htonl(tcp->dst.winbytes);
+                                 tcp->dst.win = htons(tcp->dst.win);
+                                 tcp->dst.maxseg = htons(tcp->dst.maxseg);
+                              }
+                           } else {
+                              struct ArgusTCPObjectV1 *tcp = (struct ArgusTCPObjectV1 *)&net->net_union.tcp;
+                              tcp->status       = htonl(tcp->status);
+                              tcp->state        = htonl(tcp->state);
+                              tcp->options      = htonl(tcp->options);
+                              tcp->synAckuSecs  = htonl(tcp->synAckuSecs);
+                              tcp->ackDatauSecs = htonl(tcp->ackDatauSecs);
+
+                              tcp->src.lasttime.tv_sec  = htonl(tcp->src.lasttime.tv_sec);
+                              tcp->src.lasttime.tv_usec = htonl(tcp->src.lasttime.tv_usec);
+                              tcp->src.status = htonl(tcp->src.status);
+                              tcp->src.seqbase = htonl(tcp->src.seqbase);
+                              tcp->src.seq = htonl(tcp->src.seq);
+                              tcp->src.ack = htonl(tcp->src.ack);
+                              tcp->src.winnum = htonl(tcp->src.winnum);
+                              tcp->src.bytes = htonl(tcp->src.bytes);
+                              tcp->src.retrans = htonl(tcp->src.retrans);
+                              tcp->src.ackbytes = htonl(tcp->src.ackbytes);
+                              tcp->src.winbytes = htonl(tcp->src.winbytes);
+                              tcp->src.win = htons(tcp->src.win);
+
+                              if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
+                                 tcp->dst.lasttime.tv_sec  = htonl(tcp->dst.lasttime.tv_sec);
+                                 tcp->dst.lasttime.tv_usec = htonl(tcp->dst.lasttime.tv_usec);
+                                 tcp->dst.status = htonl(tcp->dst.status);
+                                 tcp->dst.seqbase = htonl(tcp->dst.seqbase);
+                                 tcp->dst.seq = htonl(tcp->dst.seq);
+                                 tcp->dst.ack = htonl(tcp->dst.ack);
+                                 tcp->dst.winnum = htonl(tcp->dst.winnum);
+                                 tcp->dst.bytes = htonl(tcp->dst.bytes);
+                                 tcp->dst.retrans = htonl(tcp->dst.retrans);
+                                 tcp->dst.ackbytes = htonl(tcp->dst.ackbytes);
+                                 tcp->dst.winbytes = htonl(tcp->dst.winbytes);
+                                 tcp->dst.win = htons(tcp->dst.win);
+                              }
                            }
                            break;
                         }
+
                         case ARGUS_ICMP_DSR: {
                            struct ArgusICMPObject *icmpObj = (void *)&net->net_union.icmp;
                            icmpObj->iseq     = htonl(icmpObj->iseq);
