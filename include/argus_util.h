@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	226
-#define MAX_PRINT_ALG_TYPES     	226
+#define ARGUS_MAX_PRINT_ALG     	228
+#define MAX_PRINT_ALG_TYPES     	228
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -643,6 +643,8 @@ void ArgusPrintSrcMpls (struct ArgusParserStruct *, char *, struct ArgusRecordSt
 void ArgusPrintDstMpls (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcWindow (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstWindow (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintSrcMaxSeg (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstMaxSeg (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintJoinDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintLeaveDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -882,8 +884,13 @@ void ArgusPrintDstVPRILabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcMplsLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstMplsLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintWindowLabel (struct ArgusParserStruct *, char *, int);
+
 void ArgusPrintSrcWindowLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstWindowLabel (struct ArgusParserStruct *, char *, int);
+
+void ArgusPrintSrcMaxSegLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstMaxSegLabel (struct ArgusParserStruct *, char *, int);
+
 void ArgusPrintJoinDelayLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintLeaveDelayLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintMeanLabel (struct ArgusParserStruct *, char *, int);
@@ -1828,6 +1835,8 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 #define ARGUSPRINTSRCNAME		219
 #define ARGUSPRINTDSTNAME		220
 #define ARGUSPRINTETHERTYPE		221
+#define ARGUSPRINTSRCMAXSEG		222
+#define ARGUSPRINTDSTMAXSEG		223
 
 extern struct ArgusPrintFieldStruct RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES];
 extern void (*RaPrintAlgorithms[ARGUS_MAX_PRINT_ALG])(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -2095,6 +2104,8 @@ extern void ArgusPrintSrcMpls (struct ArgusParserStruct *, char *, struct ArgusR
 extern void ArgusPrintDstMpls (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintSrcWindow (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintDstWindow (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintSrcMaxSeg (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintDstMaxSeg (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintJoinDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintLeaveDelay (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintMean (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -2240,6 +2251,10 @@ extern void ArgusPrintDstMplsLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintWindowLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcWindowLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintDstWindowLabel (struct ArgusParserStruct *, char *, int);
+
+extern void ArgusPrintSrcMaxSegLabel (struct ArgusParserStruct *, char *, int);
+extern void ArgusPrintDstMaxSegLabel (struct ArgusParserStruct *, char *, int);
+
 extern void ArgusPrintJoinDelayLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintLeaveDelayLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintMeanLabel (struct ArgusParserStruct *, char *, int);

@@ -17124,6 +17124,156 @@ ArgusPrintDstWindow (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
 #endif
 }
 
+
+void
+ArgusPrintSrcMaxSeg (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
+   char mssbuf[32];
+
+   bzero(mssbuf, sizeof(mssbuf));
+
+   if (net != NULL) {
+      struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+
+      if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE: {
+                  switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_IPV4:
+                        switch (flow->ip_flow.ip_p) {
+                           case  IPPROTO_TCP: {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              unsigned int mss = tcp->src.maxseg;
+                              if (parser->Hflag)
+                                 ArgusAbbreviateMetric(parser, mssbuf, 32, mss);
+                              else
+                                 sprintf (mssbuf, "%u", mss);
+                              break;
+                           }
+                           default:
+                              break;
+                        }
+                        break;
+
+                     case ARGUS_TYPE_IPV6:
+                        switch (flow->ipv6_flow.ip_p) {
+                           case  IPPROTO_TCP: {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              unsigned int mss = tcp->src.maxseg;
+                              if (parser->Hflag)
+                                 ArgusAbbreviateMetric(parser, mssbuf, 32, mss);
+                              else
+                                 sprintf (mssbuf, "%u", mss);
+                              break;
+                           }
+                           default:
+                              break;
+                        }
+                        break;
+                  }
+                  break;
+               }
+
+               default: 
+                  break;
+            }
+         }
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(mssbuf);
+      } else {
+         if (strlen(mssbuf) > len) {
+            mssbuf[len - 1] = '*';
+            mssbuf[len]     = '\0'; 
+         }        
+      }
+      sprintf (buf, "%*.*s ", len, len, mssbuf);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcMaxSeg (%p, %p)", buf, argus);
+#endif
+}
+
+
+void
+ArgusPrintDstMaxSeg (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
+   char mssbuf[32];
+
+   bzero(mssbuf, sizeof(mssbuf));
+
+   if (net != NULL) {
+      struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+      struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+
+      if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE: {
+                  switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_IPV4:
+                        switch (flow->ip_flow.ip_p) {
+                           case  IPPROTO_TCP: {
+                              unsigned int mss = tcp->dst.maxseg;
+                              if (parser->Hflag)
+                                 ArgusAbbreviateMetric(parser, mssbuf, 32, mss);
+                              else
+                                 snprintf (mssbuf, 32, "%u", mss);
+                              break;
+                           }
+                           default:
+                              break;
+                        }
+                        break;
+
+                     case ARGUS_TYPE_IPV6:
+                        switch (flow->ipv6_flow.ip_p) {
+                           case  IPPROTO_TCP: {
+                              unsigned int mss = tcp->dst.maxseg;
+                              if (parser->Hflag)
+                                 ArgusAbbreviateMetric(parser, mssbuf, 32, mss);
+                              else
+                                 sprintf (mssbuf, "%u", mss);
+                              break;
+                           }
+                           default:
+                              break;
+                        }
+                        break;
+                  }
+                  break;
+               }
+
+               default: 
+                  break;
+            }
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(mssbuf);
+      } else {
+         if (strlen(mssbuf) > len) {
+            mssbuf[len - 1] = '*';
+            mssbuf[len]     = '\0'; 
+         }        
+      }
+      sprintf (buf, "%*.*s ", len, len, mssbuf);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstMaxSeg (%p, %p)", buf, argus);
+#endif
+}
+
+
 void
 ArgusPrintTCPRTT (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -19801,6 +19951,18 @@ void
 ArgusPrintDstWindowLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "DstWin");
+}
+
+void
+ArgusPrintSrcMaxSegLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "SrcMss");
+}
+
+void
+ArgusPrintDstMaxSegLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "DstMss");
 }
 
 void
@@ -25180,11 +25342,20 @@ ArgusNtoH (struct ArgusRecord *argus)
                      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
                      switch (net->hdr.subtype) {
                         case ARGUS_TCP_INIT: {
-                           struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
-                           tcp->status       = ntohl(tcp->status);
-                           tcp->seqbase      = ntohl(tcp->seqbase);
-                           tcp->options      = ntohl(tcp->options);
-                           tcp->win          = ntohs(tcp->win);
+                           if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
+                              struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
+                              tcp->status       = ntohl(tcp->status);
+                              tcp->seqbase      = ntohl(tcp->seqbase);
+                              tcp->options      = ntohl(tcp->options);
+                              tcp->win          = ntohs(tcp->win);
+                              tcp->maxseg       = ntohs(tcp->maxseg);
+                           } else {
+                              struct ArgusTCPInitStatusV1 *tcp = (void *)&net->net_union.tcpinit;
+                              tcp->status       = ntohl(tcp->status);
+                              tcp->seqbase      = ntohl(tcp->seqbase);
+                              tcp->options      = ntohl(tcp->options);
+                              tcp->win          = ntohs(tcp->win);
+                           }
                            break;
                         }
                         case ARGUS_TCP_STATUS: {
@@ -25193,39 +25364,78 @@ ArgusNtoH (struct ArgusRecord *argus)
                            break;
                         }
                         case ARGUS_TCP_PERF: {
-                           struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                           tcp->status       = ntohl(tcp->status);
-                           tcp->state        = ntohl(tcp->state);
-                           tcp->options      = ntohl(tcp->options);
-                           tcp->synAckuSecs  = ntohl(tcp->synAckuSecs);
-                           tcp->ackDatauSecs = ntohl(tcp->ackDatauSecs);
+                           if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              tcp->status       = ntohl(tcp->status);
+                              tcp->state        = ntohl(tcp->state);
+                              tcp->options      = ntohl(tcp->options);
+                              tcp->synAckuSecs  = ntohl(tcp->synAckuSecs);
+                              tcp->ackDatauSecs = ntohl(tcp->ackDatauSecs);
 
-                           tcp->src.lasttime.tv_sec  = ntohl(tcp->src.lasttime.tv_sec);
-                           tcp->src.lasttime.tv_usec = ntohl(tcp->src.lasttime.tv_usec);
-                           tcp->src.status = ntohl(tcp->src.status);
-                           tcp->src.seqbase = ntohl(tcp->src.seqbase);
-                           tcp->src.seq = ntohl(tcp->src.seq);
-                           tcp->src.ack = ntohl(tcp->src.ack);
-                           tcp->src.winnum = ntohl(tcp->src.winnum);
-                           tcp->src.bytes = ntohl(tcp->src.bytes);
-                           tcp->src.retrans = ntohl(tcp->src.retrans);
-                           tcp->src.ackbytes = ntohl(tcp->src.ackbytes);
-                           tcp->src.winbytes = ntohl(tcp->src.winbytes);
-                           tcp->src.win = ntohs(tcp->src.win);
+                              tcp->src.lasttime.tv_sec  = ntohl(tcp->src.lasttime.tv_sec);
+                              tcp->src.lasttime.tv_usec = ntohl(tcp->src.lasttime.tv_usec);
+                              tcp->src.status = ntohl(tcp->src.status);
+                              tcp->src.seqbase = ntohl(tcp->src.seqbase);
+                              tcp->src.seq = ntohl(tcp->src.seq);
+                              tcp->src.ack = ntohl(tcp->src.ack);
+                              tcp->src.winnum = ntohl(tcp->src.winnum);
+                              tcp->src.bytes = ntohl(tcp->src.bytes);
+                              tcp->src.retrans = ntohl(tcp->src.retrans);
+                              tcp->src.ackbytes = ntohl(tcp->src.ackbytes);
+                              tcp->src.winbytes = ntohl(tcp->src.winbytes);
+                              tcp->src.win = ntohs(tcp->src.win);
+                              tcp->src.maxseg = ntohs(tcp->src.maxseg);
 
-                           if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
-                              tcp->dst.lasttime.tv_sec  = ntohl(tcp->dst.lasttime.tv_sec);
-                              tcp->dst.lasttime.tv_usec = ntohl(tcp->dst.lasttime.tv_usec);
-                              tcp->dst.status = ntohl(tcp->dst.status);
-                              tcp->dst.seqbase = ntohl(tcp->dst.seqbase);
-                              tcp->dst.seq = ntohl(tcp->dst.seq);
-                              tcp->dst.ack = ntohl(tcp->dst.ack);
-                              tcp->dst.winnum = ntohl(tcp->dst.winnum);
-                              tcp->dst.bytes = ntohl(tcp->dst.bytes);
-                              tcp->dst.retrans = ntohl(tcp->dst.retrans);
-                              tcp->dst.ackbytes = ntohl(tcp->dst.ackbytes);
-                              tcp->dst.winbytes = ntohl(tcp->dst.winbytes);
-                              tcp->dst.win = ntohs(tcp->dst.win);
+                              if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
+                                 tcp->dst.lasttime.tv_sec  = ntohl(tcp->dst.lasttime.tv_sec);
+                                 tcp->dst.lasttime.tv_usec = ntohl(tcp->dst.lasttime.tv_usec);
+                                 tcp->dst.status = ntohl(tcp->dst.status);
+                                 tcp->dst.seqbase = ntohl(tcp->dst.seqbase);
+                                 tcp->dst.seq = ntohl(tcp->dst.seq);
+                                 tcp->dst.ack = ntohl(tcp->dst.ack);
+                                 tcp->dst.winnum = ntohl(tcp->dst.winnum);
+                                 tcp->dst.bytes = ntohl(tcp->dst.bytes);
+                                 tcp->dst.retrans = ntohl(tcp->dst.retrans);
+                                 tcp->dst.ackbytes = ntohl(tcp->dst.ackbytes);
+                                 tcp->dst.winbytes = ntohl(tcp->dst.winbytes);
+                                 tcp->dst.win = ntohs(tcp->dst.win);
+                                 tcp->dst.maxseg = ntohs(tcp->dst.maxseg);
+                              }
+                           } else {
+                              struct ArgusTCPObjectV1 *tcp = (struct ArgusTCPObjectV1 *)&net->net_union.tcp;
+                              tcp->status       = ntohl(tcp->status);
+                              tcp->state        = ntohl(tcp->state);
+                              tcp->options      = ntohl(tcp->options);
+                              tcp->synAckuSecs  = ntohl(tcp->synAckuSecs);
+                              tcp->ackDatauSecs = ntohl(tcp->ackDatauSecs);
+
+                              tcp->src.lasttime.tv_sec  = ntohl(tcp->src.lasttime.tv_sec);
+                              tcp->src.lasttime.tv_usec = ntohl(tcp->src.lasttime.tv_usec);
+                              tcp->src.status = ntohl(tcp->src.status);
+                              tcp->src.seqbase = ntohl(tcp->src.seqbase);
+                              tcp->src.seq = ntohl(tcp->src.seq);
+                              tcp->src.ack = ntohl(tcp->src.ack);
+                              tcp->src.winnum = ntohl(tcp->src.winnum);
+                              tcp->src.bytes = ntohl(tcp->src.bytes);
+                              tcp->src.retrans = ntohl(tcp->src.retrans);
+                              tcp->src.ackbytes = ntohl(tcp->src.ackbytes);
+                              tcp->src.winbytes = ntohl(tcp->src.winbytes);
+                              tcp->src.win = ntohs(tcp->src.win);
+
+                              if (dsr->argus_dsrvl8.len > (((sizeof(struct ArgusTCPObject) - sizeof(struct ArgusTCPObjectMetrics))+3)/4 + 1)) {
+                                 tcp->dst.lasttime.tv_sec  = ntohl(tcp->dst.lasttime.tv_sec);
+                                 tcp->dst.lasttime.tv_usec = ntohl(tcp->dst.lasttime.tv_usec);
+                                 tcp->dst.status = ntohl(tcp->dst.status);
+                                 tcp->dst.seqbase = ntohl(tcp->dst.seqbase);
+                                 tcp->dst.seq = ntohl(tcp->dst.seq);
+                                 tcp->dst.ack = ntohl(tcp->dst.ack);
+                                 tcp->dst.winnum = ntohl(tcp->dst.winnum);
+                                 tcp->dst.bytes = ntohl(tcp->dst.bytes);
+                                 tcp->dst.retrans = ntohl(tcp->dst.retrans);
+                                 tcp->dst.ackbytes = ntohl(tcp->dst.ackbytes);
+                                 tcp->dst.winbytes = ntohl(tcp->dst.winbytes);
+                                 tcp->dst.win = ntohs(tcp->dst.win);
+                              }
                            }
                            break;
                         }

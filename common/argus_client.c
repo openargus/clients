@@ -1695,13 +1695,16 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
             bcopy((char *)hdr, (char *)&retn->hdr, sizeof(*hdr));
 
             while (retn && ((char *) dsr < argusend)) {
-               unsigned char type = dsr->type, subtype = dsr->subtype;
+               unsigned char type = dsr->type;
+               unsigned char subtype = dsr->subtype;
+               unsigned char qual = 0;
                int cnt;
 
                if ((cnt = (((type & ARGUS_IMMEDIATE_DATA) ? 1 :
                            ((subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
                                                             dsr->argus_dsrvl8.len))) * 4) > 0) {
 
+                  if (!(subtype & ARGUS_LEN_16BITS))  qual = dsr->argus_dsrvl8.qual;
                   if (argusend < ((char *)dsr + cnt))
                      break;
 
@@ -2582,17 +2585,34 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                            }
 
                            case ARGUS_TCP_INIT: {
-                              struct ArgusTCPInitStatus *tcpinit = (void *) &net->net_union.tcpinit;
-                              struct ArgusTCPObject *tcp = (void *) &canon->net.net_union.tcp;
-                              bcopy((char *)&net->hdr, (char *)&canon->net.hdr, sizeof(net->hdr));
-                              memset(tcp, 0, sizeof(*tcp));
-                              tcp->status = tcpinit->status;
-                              tcp->src.seqbase = tcpinit->seqbase;
-                              tcp->options = tcpinit->options;
-                              tcp->src.win = tcpinit->win;
-                              tcp->src.flags = tcpinit->flags;
-                              tcp->src.winshift = tcpinit->winshift;
-                              canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
+                              if (qual == 0) {   // Version 1
+                                 struct ArgusTCPInitStatusV1 *tcpinit = (void *) &net->net_union.tcpinit;
+                                 struct ArgusTCPObject *tcp = (void *) &canon->net.net_union.tcp;
+                                 bcopy((char *)&net->hdr, (char *)&canon->net.hdr, sizeof(net->hdr));
+                                 memset(tcp, 0, sizeof(*tcp));
+                                 tcp->status = tcpinit->status;
+                                 tcp->src.seqbase = tcpinit->seqbase;
+                                 tcp->options = tcpinit->options;
+                                 tcp->src.win = tcpinit->win;
+                                 tcp->src.flags = tcpinit->flags;
+                                 tcp->src.winshift = tcpinit->winshift;
+                                 tcp->src.maxseg = 0;
+                                 canon->net.hdr.argus_dsrvl8.qual = ARGUS_TCP_INIT_V2;
+                                 canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
+                              } else {
+                                 struct ArgusTCPInitStatus *tcpinit = (void *) &net->net_union.tcpinit;
+                                 struct ArgusTCPObject *tcp = (void *) &canon->net.net_union.tcp;
+                                 bcopy((char *)&net->hdr, (char *)&canon->net.hdr, sizeof(net->hdr));
+                                 memset(tcp, 0, sizeof(*tcp));
+                                 tcp->status = tcpinit->status;
+                                 tcp->src.seqbase = tcpinit->seqbase;
+                                 tcp->options = tcpinit->options;
+                                 tcp->src.win = tcpinit->win;
+                                 tcp->src.flags = tcpinit->flags;
+                                 tcp->src.winshift = tcpinit->winshift;
+                                 tcp->src.maxseg = tcpinit->maxseg;
+                                 canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
+                              }
                               break;
                            }
                            case ARGUS_TCP_STATUS: {
@@ -2611,20 +2631,39 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                               if (!canon->metric.dst.pkts) {
                                  tcp->dst.flags = 0;
                               }
+                              canon->net.hdr.argus_dsrvl8.qual = ARGUS_TCP_INIT_V2;
                               canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
                               break;
                            }
                            case ARGUS_TCP_PERF: {
-                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &canon->net.net_union.tcp;
+                              if (qual == 0) {   // Version 1
+                                 struct ArgusTCPObjectV1 *tcpperf = (struct ArgusTCPObjectV1 *) &canon->net.net_union.tcp;
+                                 struct ArgusTCPObject *tcp = (void *) &canon->net.net_union.tcp;
 
-                              bcopy((char *)net, (char *)&canon->net, cnt);
-                              if (!canon->metric.src.pkts) {
-                                 tcp->src.win = 0;
-                                 tcp->src.flags = 0;
-                              }
-                              if (!canon->metric.dst.pkts) {
-                                 tcp->dst.win = 0;
-                                 tcp->dst.flags = 0;
+                                 bcopy((char *)&net->hdr, (char *)&canon->net.hdr, sizeof(net->hdr));
+                                 memset(tcp, 0, sizeof(*tcp));
+                                 tcp->status = tcpperf->status;
+                                 tcp->state = tcpperf->state;
+                                 tcp->options = tcpperf->options;
+                                 tcp->synAckuSecs = tcpperf->synAckuSecs;
+                                 tcp->ackDatauSecs = tcpperf->ackDatauSecs;
+                                 bcopy((char *)&tcpperf->src, (char *)&tcp->src, sizeof(tcpperf->src));
+                                 bcopy((char *)&tcpperf->dst, (char *)&tcp->src, sizeof(tcpperf->dst));
+                                 canon->net.hdr.argus_dsrvl8.qual = ARGUS_TCP_INIT_V2;
+                                 canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
+
+                              } else {
+                                 struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &canon->net.net_union.tcp;
+
+                                 bcopy((char *)net, (char *)&canon->net, cnt);
+                                 if (!canon->metric.src.pkts) {
+                                    tcp->src.win = 0;
+                                    tcp->src.flags = 0;
+                                 }
+                                 if (!canon->metric.dst.pkts) {
+                                    tcp->dst.win = 0;
+                                    tcp->dst.flags = 0;
+                                 }
                               }
                               break;
                            }

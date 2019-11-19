@@ -295,16 +295,32 @@ struct ArgusICMPv6Object {
    unsigned short cksum;
 };
 
-struct ArgusTCPInitStatus {
+struct ArgusTCPInitStatusV1 {
    unsigned int status, seqbase;
    unsigned int options;
    unsigned short win;
    unsigned char flags, winshift;
 };  
+
+struct ArgusTCPInitStatus {
+   unsigned int status, seqbase;
+   unsigned int options;
+   unsigned short win;
+   unsigned char flags, winshift;
+   unsigned short maxseg, pad;
+};
   
 struct ArgusTCPStatus {
    unsigned int status;
    unsigned char src, dst, pad[2];
+};
+
+struct ArgusTCPObjectMetricsV1 {
+   struct ArgusTime lasttime;
+   unsigned int status, seqbase, seq, ack, winnum;
+   unsigned int bytes, retrans, ackbytes, winbytes;
+   unsigned short win;
+   unsigned char flags, winshift;
 };
 
 struct ArgusTCPObjectMetrics {
@@ -313,6 +329,13 @@ struct ArgusTCPObjectMetrics {
    unsigned int bytes, retrans, ackbytes, winbytes;
    unsigned short win;
    unsigned char flags, winshift;
+   unsigned short maxseg, pad;
+};
+
+struct ArgusTCPObjectV1 {
+   unsigned int status, state, options;
+   unsigned int synAckuSecs, ackDatauSecs;
+   struct ArgusTCPObjectMetrics src, dst;
 };
 
 struct ArgusTCPObject {
