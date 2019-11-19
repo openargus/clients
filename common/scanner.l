@@ -249,8 +249,9 @@ delltime   return DELTALAST;
 loss       return LOSS;
 ploss      return PLOSS;
 gap        return GAP;
+maxseg     return MAXSEG;
 
-gateway  return GATEWAY;
+gateway    return GATEWAY;
 
 eq       return EQUAL;
 equal    return EQUAL;

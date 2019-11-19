@@ -418,7 +418,7 @@ src -> dst application bytes.
 dst -> src application bytes.
 .TP
 .B pcr
-producer consumer  ratio.
+producer consumer ratio.
 .TP
 .B load
 bits per second.
@@ -584,6 +584,12 @@ source TCP base sequence number
 .TP
 .B dtcpb
 destination TCP base sequence number
+.TP
+.B smss
+source TCP maximum segment size
+.TP
+.B dmss
+destination TCP maximum segment size
 .TP
 .B tcprtt
 TCP connection setup round-trip time, the sum of 'synack' and 'ackdat'.
@@ -1102,6 +1108,10 @@ Primitives specific to TCP options are supported.
 \fItcpccecho\fP,
 \fIsecn\fP and
 \fIdecn\fP
+
+.LP
+Primitives specific to TCP metrics are supported.
+\fImaxseg\fP
 
 Primitives specific to ICMP flows are supported.
 \fIecho\fP,

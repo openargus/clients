@@ -164,7 +164,8 @@ static struct ablock *Argusgen_byte(int, int, u_int);
 static struct ablock *Argusgen_pkt(int, int, u_int);
 static struct ablock *Argusgen_nstroke(int, int, u_int);
 static struct ablock *Argusgen_seq(int, int, u_int);
-//static struct ablock *Argusgen_dup(int, int, u_int);
+static struct ablock *Argusgen_dup(int, int, u_int);
+static struct ablock *Argusgen_maxseg(int, int, u_int);
 static struct ablock *Argusgen_tcpbase(int, int, u_int);
 static struct ablock *Argusgen_trans(int, int, u_int);
 static struct ablock *Argusgen_deltadur(int, int, u_int);
@@ -172,7 +173,7 @@ static struct ablock *Argusgen_deltastart(int, int, u_int);
 static struct ablock *Argusgen_deltalast(int, int, u_int);
 static struct ablock *Argusgen_rate(float, int, u_int);
 static struct ablock *Argusgen_load(float, int, u_int);
-//static struct ablock *Argusgen_gap(float, int, u_int);
+static struct ablock *Argusgen_gap(float, int, u_int);
 static struct ablock *Argusgen_loss(float, int, u_int);
 static struct ablock *Argusgen_inter(float, int, int, u_int);
 static struct ablock *Argusgen_jitter(float, int, int, u_int);
@@ -2219,6 +2220,20 @@ Argusgen_tcpbaseatom( int off, long v, int op)
 }
 
 static struct ablock *
+Argusgen_maxsegatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_W, (u_int)v, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_maxsegatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
+
+static struct ablock *
 Argusgen_transatom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -3369,6 +3384,41 @@ Argusgen_ploss(float v, int dir, u_int op)
 }
 
 static struct ablock *
+Argusgen_gap(float v, int dir, u_int op)
+{
+   struct ablock *b1 = NULL;
+/*
+   struct ablock *b0;
+   struct ArgusRecordStruct argus;
+   int offset;
+
+   switch (dir) {
+   case Q_SRC:
+      break;
+
+   case Q_DST:
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      break;
+
+   case Q_AND:
+      break;
+
+   default:
+      abort();
+   }
+*/
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_gap (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
 Argusgen_lat(float v, int dir, u_int op)
 {
    struct ablock *b1 = NULL;
@@ -3922,11 +3972,12 @@ Argusgen_spi(u_int v, int dir, u_int op)
 }
 
 
-/*
 static struct ablock *
 Argusgen_dup(int v, int dir, u_int op)
 {
-   struct ablock *b0, *b1 = NULL;
+   struct ablock *b1 = NULL;
+/*
+   struct ablock *b0;
    struct ArgusNetworkStruct net;
    int offset;
 
@@ -3961,6 +4012,7 @@ Argusgen_dup(int v, int dir, u_int op)
    default:
       abort();
    }
+*/
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_dup (0x%x, %d) returns 0x%x\n", v, dir, b1);
@@ -3968,7 +4020,6 @@ Argusgen_dup(int v, int dir, u_int op)
 
    return b1;
 }
-*/
 
 
 static struct ablock *
@@ -4012,6 +4063,53 @@ Argusgen_tcpbase(int v, int dir, u_int op)
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_tcpbase (0x%x, %d) returns 0x%x\n", v, dir, b1);
+#endif
+ 
+   return b1;
+}
+
+
+static struct ablock *
+Argusgen_maxseg(int v, int dir, u_int op)
+{
+   struct ablock *b0, *b1 = NULL;
+   struct ArgusNetworkStruct net;
+   int offset;
+ 
+   switch (dir) {
+   case Q_SRC:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      break;
+
+   case Q_DST:
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b0 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      Argusgen_or(b0, b1);
+      break;
+
+   case Q_AND:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b0 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      Argusgen_and(b0, b1);
+      break;
+
+   default:
+      abort();
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_maxseg (0x%x, %d) returns 0x%x\n", v, dir, b1);
 #endif
  
    return b1;
@@ -5253,6 +5351,10 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
          b = Argusgen_tcpbase((int)v, dir, op);
          break;
 
+      case Q_MAXSEG:
+         b = Argusgen_maxseg((int)v, dir, op);
+         break;
+
       case Q_TRANS:
          b = Argusgen_trans((int)v, dir, op);
          break;
@@ -5274,11 +5376,11 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
          break;
 
       case Q_GAP:
-//       b = Argusgen_gap(v, dir, op);
+         b = Argusgen_gap(v, dir, op);
          break;
 
       case Q_DUP:
-//       b = Argusgen_dup(v, dir, op);
+         b = Argusgen_dup(v, dir, op);
          break;
 
       case Q_PCR:

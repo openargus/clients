@@ -105,6 +105,7 @@
 #define Q_DUP		142
 #define Q_MASKLEN	182
 #define Q_UUID		183
+#define Q_MAXSEG	190
 
 #define Q_SID		184
 #define Q_INF		185

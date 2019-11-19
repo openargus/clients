@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		128
-#define MAX_METRIC_ALG_TYPES		128
+#define ARGUS_MAX_METRIC_ALG		130
+#define MAX_METRIC_ALG_TYPES		130
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -155,6 +155,9 @@ double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcWindow (struct ArgusRecordStruct *ns);
 double ArgusFetchDstWindow (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
+
 double ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchDeltaLastTime (struct ArgusRecordStruct *ns);
@@ -418,12 +421,10 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"dintpktactmax", ArgusFetchDstIntPktActMax},
 #define ARGUSMETRICDSTINTPKTIDLMAX  112
    {"dintpktidlmax", ArgusFetchDstIntPktIdlMax},
-
 #define ARGUSMETRICAPPBYTERATIO  113
    {"abr", ArgusFetchAppByteRatio},
 #define ARGUSMETRICPRODUCERCONSUMERRATIO  114
    {"pcr", ArgusFetchAppByteRatio},
-
 #define ARGUSMETRICLOCALITY        115
    {"loc", ArgusFetchLocality},
 #define ARGUSMETRICSRCLOCALITY     116
@@ -444,13 +445,16 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"inf", ArgusFetchInf},
 #define ARGUSMETRICETHERTYPE       124
    {"etype", ArgusFetchEtherType},
-
 #define ARGUSMETRICMEANIDLE        125
    {"idlmean", ArgusFetchIdleMean},
 #define ARGUSMETRICMINIDLE         126
    {"idlmin", ArgusFetchIdleMin},
 #define ARGUSMETRICMAXIDLE         127
    {"idlmax", ArgusFetchIdleMax},
+#define ARGUSMETRICSRCMSS          128
+   {"smss", ArgusFetchSrcMaxSeg},
+#define ARGUSMETRICDSTMSS          129
+   {"dmss", ArgusFetchDstMaxSeg},
 };
 
 #else
@@ -511,15 +515,15 @@ extern double ArgusFetchDstPktsCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstAppByteCount (struct ArgusRecordStruct *ns);
-
 extern double ArgusFetchAppByteRatio (struct ArgusRecordStruct *ns);
-
 extern double ArgusFetchSrcTcpBase (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstTcpBase (struct ArgusRecordStruct *ns);
 extern double ArgusFetchTcpRtt (struct ArgusRecordStruct *ns);
 extern double ArgusFetchTcpMax (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcWindow (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstWindow (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaLastTime (struct ArgusRecordStruct *ns);
@@ -557,6 +561,8 @@ extern double ArgusFetchSrcJitterIdl (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitter (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitterAct (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 
 #define ARGUSMETRICSRCID		0
 #define ARGUSMETRICSTARTTIME		1
@@ -659,6 +665,35 @@ extern double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
 #define ARGUSMETRICDSTJITTER		98
 #define ARGUSMETRICDSTJITTERACT		99
 #define ARGUSMETRICDSTJITTERIDL		100
+#define ARGUSMETRICSRCMEANPKTSIZE	101
+#define ARGUSMETRICDSTMEANPKTSIZE	102
+#define ARGUSMETRICSRCTCPGAP		103
+#define ARGUSMETRICDSTTCPGAP		104
+#define ARGUSMETRICSRCINTPKTACTMIN	105
+#define ARGUSMETRICSRCINTPKTIDLMIN	106
+#define ARGUSMETRICSRCINTPKTACTMAX	107
+#define ARGUSMETRICSRCINTPKTIDLMAX	108
+#define ARGUSMETRICDSTINTPKTACTMIN	109
+#define ARGUSMETRICDSTINTPKTIDLMIN	110
+#define ARGUSMETRICDSTINTPKTACTMAX	111
+#define ARGUSMETRICDSTINTPKTIDLMAX	112
+#define ARGUSMETRICAPPBYTERATIO		113
+#define ARGUSMETRICPRODUCERCONSUMERRATIO  114
+#define ARGUSMETRICLOCALITY      	115
+#define ARGUSMETRICSRCLOCALITY   	116
+#define ARGUSMETRICDSTLOCALITY   	117
+#define ARGUSMETRICSRCMACOUI     	118
+#define ARGUSMETRICDSTMACOUI     	119
+#define ARGUSMETRICSRCDUP        	120
+#define ARGUSMETRICDSTDUP        	121
+#define ARGUSMETRICSID		 	122
+#define ARGUSMETRICINF		 	123
+#define ARGUSMETRICETHERTYPE     	124
+#define ARGUSMETRICMEANIDLE      	125
+#define ARGUSMETRICMINIDLE       	126
+#define ARGUSMETRICMAXIDLE       	127
+#define ARGUSMETRICSRCMSS        	128
+#define ARGUSMETRICDSTMSS        	129
 #endif
 #ifdef __cplusplus
 }

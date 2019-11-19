@@ -28,7 +28,7 @@
  * distributions including binary code include the above copyright notice and
  * this paragraph in its entirety in the documentation or other materials
  * provided with the distribution, and (3) af advertising materials mentioning
- * features or use of this software display the fofowing acknowledgement:
+ * features or use of this software display the following acknowledgement:
  * ``This product includes software developed by the University of California,
  * Lawrence Berkeley Laboratory and its contributors.'' Neither the name of
  * the University nor the names of its contributors may be used to endorse
@@ -122,7 +122,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 %token  ETHER MPLS VLAN ANON VID VPRI MPLSID SPI
 %token  ENCAPS RTP RTCP ESP DECNET MOPRC MOPDL
 %token  TK_BROADCAST TK_MULTICAST FRAG FRAG_ONLY 
-%token  ABR PCR RATE LOAD LOSS PLOSS GAP CO 
+%token  ABR PCR RATE LOAD LOSS PLOSS GAP MAXSEG CO 
 %token  INTER INTERACTIVE INTERIDLE JITTER JITTERACTIVE JITTERIDLE
 %token  DUR AVGDUR DELTADUR DELTASTART DELTALAST
 %token  DELTASPKTS DELTADPKTS
@@ -307,6 +307,7 @@ aqual:	  HOST			{ $$ = Q_HOST; }
 	| INODE			{ $$ = Q_INODE; }
 	| NET			{ $$ = Q_NET; }
 	;
+
 /* identifier types */
 iqual:    PORT			{ $$ = Q_PORT; }
 	| IPID			{ $$ = Q_IPID; }
@@ -326,6 +327,7 @@ iqual:    PORT			{ $$ = Q_PORT; }
 	| TCPBASE		{ $$ = Q_TCPBASE; }
 	| LOSS  		{ $$ = Q_LOSS; }
 	| GAP   		{ $$ = Q_GAP; }
+	| MAXSEG   		{ $$ = Q_MAXSEG; }
 	| SPI	  		{ $$ = Q_SPI; }
 	| ENCAPS  		{ $$ = Q_ENCAPS; }
 	| DELTADUR		{ $$ = Q_DELTADUR; }

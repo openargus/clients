@@ -16119,6 +16119,129 @@ ArgusFetchDstWindow (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+  
+   } else {
+      struct ArgusNetworkStruct *net = (void *)ns->dsrs[ARGUS_NETWORK_INDEX];
+      struct ArgusFlow *flow = (void *)ns->dsrs[ARGUS_FLOW_INDEX];
+      unsigned int mss = 0;
+
+      if (net && (net->hdr.subtype == ARGUS_UDT_FLOW)) {
+         retn = net->net_union.udt.src.bsize; 
+
+      } else {
+         if ((flow != NULL) && (net != NULL)) {
+            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+            struct ArgusMetricStruct *metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX];
+
+            if ((metric != NULL) && (metric->src.pkts > 0)) {
+               switch (flow->hdr.subtype & 0x3F) {
+                  case ARGUS_FLOW_CLASSIC5TUPLE: {
+                     switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                        case ARGUS_TYPE_IPV4:
+                           switch (flow->ip_flow.ip_p) {
+                              case  IPPROTO_TCP: {
+                                 mss = tcp->src.maxseg;
+                                 break;
+                              }
+                              default:
+                                 break;
+                           }
+                           break;
+         
+                        case ARGUS_TYPE_IPV6:
+                           switch (flow->ipv6_flow.ip_p) {
+                              case  IPPROTO_TCP: {
+                                 mss = tcp->src.maxseg;
+                                 break;
+                              }
+                              default:
+                                 break;
+                           }
+                           break;
+                     }
+                     break;
+                  }
+         
+                  default:
+                     break;
+               }
+
+               retn = mss;
+            }
+         }
+      }
+   }
+
+   return (retn);
+}
+
+
+double
+ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+ 
+   } else {
+      struct ArgusNetworkStruct *net = (void *)ns->dsrs[ARGUS_NETWORK_INDEX];
+      struct ArgusFlow *flow = (void *)ns->dsrs[ARGUS_FLOW_INDEX];
+      unsigned int mss = 0;
+
+      if (net && (net->hdr.subtype == ARGUS_UDT_FLOW)) {
+
+      } else {
+         if ((flow != NULL) && (net != NULL)) {
+            struct ArgusMetricStruct *metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX];
+            struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+
+            if ((metric != NULL) && (metric->dst.pkts > 0)) {
+               switch (flow->hdr.subtype & 0x3F) {
+                  case ARGUS_FLOW_CLASSIC5TUPLE: {
+                     switch ((flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                        case ARGUS_TYPE_IPV4:
+                           switch (flow->ip_flow.ip_p) {
+                              case  IPPROTO_TCP: {
+                                 mss = tcp->dst.maxseg;
+                                 break;
+                              }
+                              default:
+                                 break;
+                           }
+                           break;
+        
+                        case ARGUS_TYPE_IPV6:
+                           switch (flow->ipv6_flow.ip_p) {
+                              case  IPPROTO_TCP: {
+                                 mss = tcp->dst.maxseg;
+                                 break;
+                              }
+                              default:
+                                 break;
+                           }
+                           break;
+                     }
+                     break;
+                  }
+        
+                  default:
+                     break;
+               }
+
+               retn = mss;
+            }
+         }
+      }
+   }
+   return (retn);
+}
+
+double
 ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns)
 {
    double retn = 0.0;
