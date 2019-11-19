@@ -805,7 +805,7 @@ RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
    char *timeField = NULL;
    char *buf, *sbuf;
    int i, slen = 0;
-   int retn, count, x;
+   int retn, x, count = 0;
 
    if ((buf = (char *)ArgusCalloc (1, MAXSTRLEN)) == NULL)
       ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));

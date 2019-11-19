@@ -109,6 +109,10 @@ if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
    $time = RaTodaysDate();
 }
 
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+   $time = RaTodaysDate();
+}
+
 if ($uri) {
    my $url = URI::URL->new($uri);
 
