@@ -2649,6 +2649,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  tcp->ackDatauSecs = tcpperf->ackDatauSecs;
                                  bcopy((char *)&tcpperf->src, (char *)&tcp->src, sizeof(tcpperf->src));
                                  bcopy((char *)&tcpperf->dst, (char *)&tcp->src, sizeof(tcpperf->dst));
+                                 tcp->src.maxseg = 0;
+                                 tcp->dst.maxseg = 0;
+
                                  canon->net.hdr.argus_dsrvl8.qual = ARGUS_TCP_INIT_V2;
                                  canon->net.hdr.argus_dsrvl8.len  = ((sizeof(*tcp) + 3)/4) + 1;
 
