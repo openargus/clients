@@ -16581,12 +16581,12 @@ ArgusSortCompare (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
    int retn = 0;
 
    if (n1 && n2) {
-      int s1 = 1, s2 = 1;
+      int s1 = 0, s2 = 0;
 
-      if (n1->status & ARGUS_RECORD_BASELINE) s1 = 0;
-      if (n1->status & ARGUS_RECORD_MATCH)    s1 = 2;
-      if (n2->status & ARGUS_RECORD_BASELINE) s2 = 0;
-      if (n2->status & ARGUS_RECORD_MATCH)    s2 = 2;
+      if (n1->status & ARGUS_RECORD_BASELINE) s1 = -10000000;
+      if (n1->status & ARGUS_RECORD_MATCH)    s1 =  10000000;
+      if (n2->status & ARGUS_RECORD_BASELINE) s2 = -10000000;
+      if (n2->status & ARGUS_RECORD_MATCH)    s2 =  10000000;
 
    // baseline, match, new is the scale for sorting ... gives you missing, matches, 
    // and new in that order
