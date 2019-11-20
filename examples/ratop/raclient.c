@@ -44,6 +44,8 @@
 #include <racurses.h>
 #include <rabins.h>
 
+#include <wordexp.h>
+
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
@@ -839,8 +841,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   if (!(strncasecmp (mode->mode, "baseline:", 9))) {
                      if (strlen(mode->mode) > 9) {
                         char *ptr = &mode->mode[9];
-                        parser->ArgusBaseLineFile = strdup(ptr);
+                        wordexp_t p;
+                        if (wordexp (ptr, &p, 0) == 0) {
+                            char *str = p.we_wordv[0];
+                            if (str != NULL)
+                               parser->ArgusBaseLineFile = strdup(str);
+                        }
                      }
+
                   } else
                   if (!(strncasecmp (mode->mode, "control:", 8))) {
                      char *ptr = &mode->mode[8];
