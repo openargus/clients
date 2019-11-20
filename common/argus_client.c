@@ -16590,7 +16590,7 @@ ArgusSortCompare (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 
    // baseline, match, new is the scale for sorting ... gives you missing, matches, 
    // and new in that order
-      retn = (s2 > s1) ? 1 : 0;
+      retn = (s2 > s1) ? 1 : (s2 == s1) ? 0 : -1;
    }
 
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
