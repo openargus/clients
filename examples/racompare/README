@@ -1,0 +1,57 @@
+/*
+ * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2014 QoSient, LLC
+ * All rights reserved.
+ *
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */
+
+
+Gargoyle Clients 5.0 Racompare Readme
+QoSient, LLC
+argus@qosient.com
+http:/qosient.com
+
+
+Racompare.1 is a complex program that is designed to compare two argus data
+sets, and report on the differences.
+
+Racompare.1 is based on ratop.1, so that you can see the outcome of the comparisons
+on a terminal screen.  As such, racompare() is a curses program that uses readline()
+to provide input string editing and formating. Without a modern ncurses and readline
+library, racompare() doesn't do as good of a job as it can.
+
+There will be two files fed to racompare.1, the baseline, and then the data to
+compare to the baseline.  There are 3 basic outputs
+   1. datasets where the baseline has an entry, but the input file does not.
+   2. datasets where the baseline and input have matches, but they are different
+   3. datasets where the baseline does not have a matching entry.
+
+The model used for matches is specified on the command-line as a key function (-m).
+
+In curses, colors can be used to indicate matches and misses.
+
+Mac OS X
+Since Snow Leopard, Mac OS X is an excellent OS, but ...., the distribution doesn't provide
+a completely functional readine library.
+
+Use the MacPorts implementation of readline, and things work fine on Snow Leopard.
+After installing the MacPorts distribution, as root, I run this command:
+
+   # port install readline
+
+The argus-clients distribution configure script knows how to find libraries
+that have been installed in /opt/local whatever.
+

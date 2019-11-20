@@ -225,10 +225,14 @@ struct ArgusDisplayStruct {
 };
 
 #define ARGUS_NSR_STICKY		0x01000000
+
 #define ARGUS_RECORD_MODIFIED		0x0100
 #define ARGUS_RECORD_NEW		0x0200
 #define ARGUS_RECORD_PROCESSED		0x0400
 #define ARGUS_RECORD_DISCARD		0x0800
+
+#define ARGUS_RECORD_BASELINE		0x0010000 
+#define ARGUS_RECORD_MATCH   		0x0020000 
 
 struct ArgusRecordStruct {
    struct ArgusQueueHeader qhdr;
