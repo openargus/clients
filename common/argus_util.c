@@ -29752,6 +29752,39 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
    return (retn);
 }
 
+int
+ArgusPushFileList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
+{
+   int retn = 0;
+   struct ArgusFileInput *file;
+
+   if (ptr) {
+      if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
+         if (parser->ArgusInputFileList != NULL) {
+            file->qhdr.nxt = (struct ArgusQueueHeader *)parser->ArgusInputFileList;
+            parser->ArgusInputFileList = file;
+         } else {
+            parser->ArgusInputFileList = file;
+            parser->ArgusInputFileListTail = file;
+         }
+
+         file->type = type;
+         file->ostart = ostart;
+         file->ostop = ostop;
+         file->filename = strdup(ptr);
+         file->fd = -1;
+         parser->ArgusInputFileCount++;
+         retn = 1;
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusPushFileList (0x%x, %s, %d, %d, %d) returning %d\n", parser, ptr, type, ostart, ostop, retn);
+#endif
+
+   return (retn);
+}
+
 void
 ArgusDeleteFileList (struct ArgusParserStruct *parser)
 {

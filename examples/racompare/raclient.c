@@ -1,6 +1,6 @@
 /*
  * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2019 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -47,6 +47,9 @@
 #if defined(HAVE_ZLIB_H)
 #include <zlib.h>
 #endif
+
+struct ArgusAggregatorStruct *ArgusBaselineAggregator;
+struct ArgusAggregatorStruct *ArgusSampleAggregator;
 
 void ArgusThreadsInit(pthread_attr_t *);
 
@@ -521,20 +524,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             parser->timeout.tv_usec = 0;
          }
 
-         if ((parser->ArgusInputFileList != NULL) && (parser->ArgusInputFileCount == 2)) {
-            parser->RaTasksToDo = RA_ACTIVE;
-            if (parser->ProcessRealTime == 0) {
-               if (parser->ArgusRemoteHosts) {
-                  if ((input = (void *)parser->ArgusRemoteHosts->start) == NULL) {
-                     parser->timeout.tv_sec  = 0;
-                     parser->timeout.tv_usec = 0;
-                  }
-               }
-            }
-
-         } else 
-            ArgusLog (LOG_ERR, "ArgusClientInit: racompare needs 2 inputs", strerror(errno));
-
 
          if (parser->vflag)
             ArgusReverseSortDir++;
@@ -845,43 +834,71 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
          }
 
-         if (parser->ArgusFlowModelFile)
+         if ((parser->ArgusInputFileList != NULL) && (parser->ArgusInputFileCount == 2)) {
+            parser->RaTasksToDo = RA_ACTIVE;
+            if (parser->ProcessRealTime == 0) {
+               if (parser->ArgusRemoteHosts) {
+                  if ((input = (void *)parser->ArgusRemoteHosts->start) == NULL) {
+                     parser->timeout.tv_sec  = 0;
+                     parser->timeout.tv_usec = 0;
+                  }
+               }
+            }
+         } else 
+         if ((parser->ArgusInputFileList != NULL) && (parser->ArgusInputFileCount == 1)) {
+            if (parser->ArgusBaseLineFile == NULL)
+               ArgusLog (LOG_ERR, "ArgusClientInit: racompare needs 2 inputs", strerror(errno));
+            else {
+               if (!(ArgusPushFileList (parser, parser->ArgusBaseLineFile, ARGUS_DATA_SOURCE, -1, -1))) {
+                  ArgusLog(LOG_ERR, "ArgusClientInit: ArgusPushBaseLineFile  error: file %s", parser->ArgusBaseLineFile);
+               }
+               free(parser->ArgusBaseLineFile);
+               parser->ArgusBaseLineFile = NULL;
+            }
+         }
+
+         if (parser->ArgusFlowModelFile) {
             parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
-         else {
-            if (parser->ArgusMaskList != NULL)
-               parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
-            else
-               parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
+            ArgusBaselineAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
+            ArgusSampleAggregator   = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
+         } else {
+            char *mask = NULL;
+            if (parser->ArgusMaskList == NULL) mask = "sid saddr daddr proto sport dport";
+
+            parser->ArgusAggregator = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
+            ArgusBaselineAggregator = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
+            ArgusSampleAggregator   = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
          }
 
          if (parser->ArgusAggregator != NULL) {
             if (correct >= 0) {
-               if (correct == 0) {
-                  if (parser->ArgusAggregator->correct != NULL)
-                     free(parser->ArgusAggregator->correct);
-                  parser->ArgusAggregator->correct = NULL;
-               } else {
-                  if (parser->ArgusAggregator->correct != NULL)
-                     free(parser->ArgusAggregator->correct);
-                  parser->ArgusAggregator->correct = strdup("yes");
+               if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
+               if (ArgusBaselineAggregator->correct != NULL) { free(ArgusBaselineAggregator->correct); ArgusBaselineAggregator->correct = NULL; }
+               if (ArgusSampleAggregator->correct   != NULL) { free(ArgusSampleAggregator->correct);   ArgusSampleAggregator->correct = NULL; }
+
+               if (correct > 0) {
                   parser->ArgusPerformCorrection = 1;
+                  parser->ArgusAggregator->correct = strdup("yes");
+                  ArgusBaselineAggregator->correct = strdup("yes");
+                  ArgusSampleAggregator->correct   = strdup("yes");
                }
             }
 
-            if (preserve == 0) {
-               if (parser->ArgusAggregator->pres != NULL)
-                  free(parser->ArgusAggregator->pres);
-               parser->ArgusAggregator->pres = NULL;
-            } else {
-               if (parser->ArgusAggregator->pres != NULL)
-                  free(parser->ArgusAggregator->pres);
+            if (parser->ArgusAggregator->pres != NULL) { free(parser->ArgusAggregator->pres); parser->ArgusAggregator->pres = NULL; }
+            if (ArgusBaselineAggregator->pres != NULL) { free(ArgusBaselineAggregator->pres); ArgusBaselineAggregator->pres = NULL; }
+            if (ArgusSampleAggregator->pres != NULL)   { free(ArgusSampleAggregator->pres); ArgusSampleAggregator->pres = NULL; }
+
+            if (preserve > 0) {
                parser->ArgusAggregator->pres = strdup("yes");
+               ArgusBaselineAggregator->pres = strdup("yes");
+               ArgusSampleAggregator->pres   = strdup("yes");
             }
 
          } else {
             parser->RaCumulativeMerge = 0;
             bzero(parser->RaSortOptionStrings, sizeof(parser->RaSortOptionStrings));
             parser->RaSortOptionIndex = 0;
+            parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "compare";
             parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "stime";
          }
 

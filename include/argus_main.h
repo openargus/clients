@@ -216,6 +216,7 @@ void ArgusGenerateCanonicalRecord (struct ArgusRecord *, struct ArgusCanonRecord
 
 int ArgusGetServerSocket (struct ArgusInput *, int);
 int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
+int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 void ArgusDeleteFileList (struct ArgusParserStruct *);
 int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
 void ArgusDeleteHostList (struct ArgusParserStruct *);
@@ -326,6 +327,7 @@ extern int ArgusParseAliasFile (char *);
 
 extern int ArgusGetServerSocket (struct ArgusInput *, int);
 extern int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern void ArgusDeleteFileList (struct ArgusParserStruct *);
 extern int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
 extern void ArgusDeleteHostList (struct ArgusParserStruct *);

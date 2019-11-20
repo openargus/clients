@@ -5861,7 +5861,9 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
    if ((mode = parser->ArgusModeList) != NULL) { 
       snprintf_append(retn, &len, &remain, "-M ");
       while (mode) { 
-         snprintf_append(retn, &len, &remain, "%s ", mode->mode);
+         if (strstr(mode->mode, "baseline") == NULL) {
+            snprintf_append(retn, &len, &remain, "%s ", mode->mode);
+         }
          mode = mode->nxt;
       }
    }
