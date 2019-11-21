@@ -3785,8 +3785,12 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
                retn = ARGUS_MY_ADDRESS;
             else if (mode != ARGUS_EXACT_MATCH)
-               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL)
-                  retn = ARGUS_MY_NETWORK;
+               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
+                  if (raddr->locality > 1)
+                     retn = ARGUS_MY_NETWORK;
+                  if (*addr < 255)
+                     retn = ARGUS_MY_NETWORK;
+               }
 
             if (raddr != NULL) {
                if (label && (src || dst)) {

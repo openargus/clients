@@ -5946,10 +5946,10 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                      switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                         case ARGUS_TYPE_IPV4: {
                            if (ArgusTestMulticast(ns->input, flow->ip_flow.ip_src))
-                              ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BASE00);
+                              ArgusSrcAddrPair = COLOR_PAIR(ARGUS_VIOLET);
 
                            if (ArgusTestMulticast(ns->input, flow->ip_flow.ip_dst))
-                              ArgusDstAddrPair = COLOR_PAIR(ARGUS_BASE00);
+                              ArgusDstAddrPair = COLOR_PAIR(ARGUS_VIOLET);
 
                            if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                               int status;
