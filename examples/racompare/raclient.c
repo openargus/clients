@@ -2376,7 +2376,9 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
    return (retn);
 }
 
+
 extern struct ArgusRecordStruct *ArgusSearchHitRecord;
+struct ArgusQueueStruct *ArgusTimeoutQueue = NULL;
 
 int
 ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
@@ -2396,6 +2398,10 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
       struct timeval lasttime;
       int count, modified = 0;
       unsigned int status = 0;
+
+      if (ArgusTimeoutQueue == NULL)
+         if ((ArgusTimeoutQueue = ArgusNewQueue()) == NULL)
+            ArgusLog (LOG_ERR, "RaProcessQueue: ArgusNewQueue()error %s", strerror(errno));
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&queue->lock);
@@ -2450,15 +2456,20 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
 
                                  if ((pns = ArgusFindRecord(RaBaselineProcess->htable, hstruct)) != NULL) {
                                     struct ArgusRecordStruct *cns = ArgusCopyRecordStruct(pns);
-                                    pns->qhdr.queue = NULL;
                                     ArgusReplaceRecords (ArgusParser->ArgusAggregator, ns, cns);
+                                    if (ns->status & ARGUS_RECORD_BASELINE) {
+                                       cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
+                                    }
                                     ArgusDeleteRecordStruct(ArgusParser, ns);
-                                    ns = pns;
+                                    ns = cns;
+                                    cns = NULL;
                                  }
                               }
                            }
-                           ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
-                           ns->qhdr.lasttime = lasttime;
+                           if (ns != NULL) {
+                              ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+                              ns->qhdr.lasttime = lasttime;
+                           }
                         } else
                            ArgusDeleteRecordStruct (ArgusParser, ns);
 
@@ -2523,14 +2534,14 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
          }
       }
 
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&queue->lock);
+#endif
+
       if (modified)
          RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
 
       queue->status = status;
-
-#if defined(ARGUS_THREADS)
-      pthread_mutex_unlock(&queue->lock);
-#endif
    }
 
 #if defined(ARGUSDEBUG)
