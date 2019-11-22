@@ -6166,7 +6166,7 @@ ArgusColorBaselineMatch(struct ArgusParserStruct *parser, struct ArgusRecordStru
       int status = ns->status;
       tpair = COLOR_PAIR(ARGUS_BASE01);
 
-      if (status & ARGUS_RECORD_MATCH) {
+      if ((status & (ARGUS_RECORD_BASELINE | ARGUS_RECORD_MATCH)) == (ARGUS_RECORD_BASELINE | ARGUS_RECORD_MATCH)) {
          tpair = COLOR_PAIR(ARGUS_WHITE);
       } else {
          if (status & ARGUS_RECORD_BASELINE) {
@@ -6174,7 +6174,6 @@ ArgusColorBaselineMatch(struct ArgusParserStruct *parser, struct ArgusRecordStru
             tpair = COLOR_PAIR(ARGUS_BLUE);
          }
       }
-
 
       for (i = 0; i < RaScreenColumns; i++) {
          cols[i].pair = tpair;

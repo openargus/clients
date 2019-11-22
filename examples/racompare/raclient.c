@@ -53,6 +53,7 @@
 struct ArgusAggregatorStruct *ArgusBaselineAggregator;
 struct ArgusAggregatorStruct *ArgusSampleAggregator;
 
+struct RaCursesProcessStruct *RaBaselineProcess = NULL;
 struct RaCursesProcessStruct *RaSampleProcess = NULL;
 
 void ArgusThreadsInit(pthread_attr_t *);
@@ -197,7 +198,6 @@ ArgusProcessData (void *arg)
 #endif
 
    struct ArgusParserStruct *parser = ArgusParser;
-   int ArgusFilesProcessed = 0;
 
    while (parser == NULL) {
       struct timespec ts = {0, 250000000};
@@ -213,6 +213,10 @@ ArgusProcessData (void *arg)
 
    if (parser->ArgusInputFileList == NULL)
       parser->status |= ARGUS_FILE_LIST_PROCESSED;
+
+   /* Process the baseline file first */
+   ArgusProcessingBaseline = 1;
+   ArgusProcessingSample = 0;
 
    while (!ArgusCloseDown && !done) {
       if (parser->RaTasksToDo) {
@@ -233,15 +237,8 @@ ArgusProcessData (void *arg)
          if (input == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
-         /* Process the baseline file first */
-
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
-               switch (ArgusFilesProcessed++) {
-                  case 0: ArgusProcessingBaseline = 1;  ArgusProcessingSample = 0; break;
-                  case 1: ArgusProcessingBaseline = 0;  ArgusProcessingSample = 1; break;
-               }
-
                ArgusInputFromFile(input, file);
                parser->ArgusCurrentInput = input;
 
@@ -307,6 +304,9 @@ ArgusProcessData (void *arg)
          }
          ArgusFree(input);
          input = NULL;
+
+         ArgusProcessingSample = 0;
+         ArgusProcessingComplete = 1;
 
 // Then process the realtime stream input, if any
 
@@ -866,10 +866,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             parser->ArgusBaseLineFile = NULL;
          }
 
-         if ((parser->ArgusInputFileList != NULL) && (parser->ArgusInputFileCount != 2)) {
-            ArgusLog (LOG_ERR, "ArgusClientInit: racompare needs 2 inputs", strerror(errno));
-         }
-
          if (parser->ArgusFlowModelFile) {
             parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
             ArgusBaselineAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
@@ -936,6 +932,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          if ((ArgusFileQueue = ArgusNewQueue()) == NULL)
             ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
+
+         if ((RaBaselineProcess = RaCursesNewProcess(parser)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
 
          if ((RaSampleProcess = RaCursesNewProcess(parser)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
@@ -1039,10 +1038,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
 void RaArgusInputComplete (struct ArgusInput *input) {
    if (ArgusProcessingBaseline) {
-      struct ArgusQueueStruct *queue = RaCursesProcess->queue;
+      struct ArgusQueueStruct *queue = RaBaselineProcess->queue;
+      ArgusProcessingBaseline = 0;
       if (queue != NULL) {
          ArgusProcessQueue(queue, ARGUS_PROCESS_BASELINE);
       }
+      ArgusProcessingSample = 1;
 
    } else 
    if (ArgusProcessingSample) {
@@ -1388,7 +1389,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    gettimeofday (&RaCursesStopTime, 0L);
 
    if (ArgusProcessingBaseline) {
-      RaProcess = RaCursesProcess;
+      RaProcess = RaBaselineProcess;
    } else
    if (ArgusProcessingSample) {
       RaProcess = RaSampleProcess;
@@ -1428,7 +1429,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             cns = ArgusCopyRecordStruct(ns);
 
             if (agg->mask) {
-                  if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
+               if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, cns);
@@ -1533,7 +1534,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
                      ArgusDeleteRecordStruct(ArgusParser, cns);
                   }
-                  pns->status |= ARGUS_RECORD_MODIFIED | ARGUS_RECORD_BASELINE;
+                  pns->status |= ARGUS_RECORD_MODIFIED | ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY;
+
                } else {
                   pns = cns;
        
@@ -1542,7 +1544,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
        
                   pns->htblhdr = ArgusAddHashEntry (RaProcess->htable, pns, hstruct);
-                  pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED | ARGUS_RECORD_BASELINE;
+                  pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED | ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY;
                }
 
             } else {
@@ -1552,6 +1554,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      ArgusDeleteRecordStruct(ArgusParser, cns);
                   } else {
                      ArgusReplaceRecords (ArgusParser->ArgusAggregator, pns, cns);
+                     if (pns->status & ARGUS_RECORD_BASELINE) {
+                        cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
+                     }
                      ArgusDeleteRecordStruct(ArgusParser, pns);
                      pns = cns;
                      pns->status |= ARGUS_RECORD_MATCH;
@@ -2387,7 +2392,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
    if (process) {
       struct ArgusRecordStruct *ns;
       struct timeval lasttime;
-      int count, deleted = 0;
+      int count, modified = 0;
       unsigned int status = 0;
 
 #if defined(ARGUS_THREADS)
@@ -2425,12 +2430,36 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                            ArgusResetSearch();
 #endif
                         ArgusDeleteRecordStruct (ArgusParser, ns);
-                        deleted++;
+                        modified++;
 
                      } else {
-                        ArgusZeroRecord (ns);
-                        ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
-                        ns->qhdr.lasttime = lasttime;
+                        struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+                        struct ArgusHashStruct *hstruct = NULL;
+                        struct ArgusRecordStruct *pns = NULL;
+                        struct ArgusFlow *flow;
+
+                        if (ns->status & ARGUS_RECORD_BASELINE) {
+                           if (ns->status & ARGUS_RECORD_MATCH) {
+                              if ((flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
+                                 agg->ArgusMaskDefs = NULL;
+
+                                 if ((hstruct = ArgusGenerateHashStruct(agg, ns, flow)) == NULL)
+                                    ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+
+                                 if ((pns = ArgusFindRecord(RaBaselineProcess->htable, hstruct)) != NULL) {
+                                    struct ArgusRecordStruct *cns = ArgusCopyRecordStruct(pns);
+                                    pns->qhdr.queue = NULL;
+                                    ArgusReplaceRecords (ArgusParser->ArgusAggregator, ns, cns);
+                                    ArgusDeleteRecordStruct(ArgusParser, ns);
+                                    ns = pns;
+                                 }
+                              }
+                           }
+                           ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+                           ns->qhdr.lasttime = lasttime;
+                           modified++;
+                        } else
+                           ArgusDeleteRecordStruct (ArgusParser, ns);
                      }
 
                   } else {
@@ -2464,8 +2493,15 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                }
 
                case ARGUS_PROCESS_BASELINE: {
-                  ns->status |= ARGUS_RECORD_BASELINE;
+                  struct ArgusRecordStruct *cns = ArgusCopyRecordStruct(ns);
+
                   ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+                  cns->status |= ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY;
+
+                  ArgusProcessingComplete = 1;
+                  RaProcessThisRecord (ArgusParser, cns);
+                  ArgusProcessingComplete = 0;
+                  modified++;
                   break;
                }
 
@@ -2476,13 +2512,14 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                case ARGUS_PROCESS_COMPLETE: {
                   RaProcessThisRecord (ArgusParser, ns);
                   ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+                  modified++;
                   break;
                }
             }
          }
       }
 
-      if (deleted)
+      if (modified)
          RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
 
       queue->status = status;
