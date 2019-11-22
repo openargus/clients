@@ -1548,7 +1548,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                }
 
             } else {
-               if (pns) {                                                           //  We found a match ...
+               if (pns) {
+                  //  We found a match ...
                   if (pns->status & ARGUS_RECORD_MATCH) {
                      ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
                      ArgusDeleteRecordStruct(ArgusParser, cns);
@@ -1569,8 +1570,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
                   pns->htblhdr = ArgusAddHashEntry (RaProcess->htable, pns, hstruct);
-                  pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
+                  pns->status |= ARGUS_RECORD_NEW;
                }
+               pns->status |= ARGUS_RECORD_MODIFIED;
             }
 
             ArgusAddToQueue (RaProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
@@ -2457,9 +2459,10 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                            }
                            ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
                            ns->qhdr.lasttime = lasttime;
-                           modified++;
                         } else
                            ArgusDeleteRecordStruct (ArgusParser, ns);
+
+                        modified++;
                      }
 
                   } else {
@@ -2488,6 +2491,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                      }
                      ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
                      ns->qhdr.lasttime = lasttime;
+                     modified++;
                   }
                   break;
                }
