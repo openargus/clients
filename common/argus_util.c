@@ -1508,8 +1508,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
                         ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
 
-                     stat(optarg, &((struct ArgusFileInput *)
-                                    ArgusParser->ArgusInputFileListTail)->statbuf);
+                     stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
 
                      if ((optarg = argv[optind]) != NULL)
                         if (*optarg != '-')

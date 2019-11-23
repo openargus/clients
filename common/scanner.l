@@ -118,6 +118,9 @@ far      return FAR;
 event    return EVENT;
 index    return INDEX;
 
+baseline return BASELINE;
+match    return MATCH;
+
 dst      return DST;
 src      return SRC;
 

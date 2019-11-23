@@ -128,6 +128,7 @@ static void freechunks(void);
 static struct ablock *new_block(int);
 static struct slist *new_stmt(int);
 static struct ablock *Argusgen_retblk(int);
+static struct ablock *Argusgen_recordtype(unsigned int);
 static void syntax(void);
 
 #if defined(ARGUSFORKFILTER)
@@ -881,7 +882,7 @@ Argusgen_ipstatustype(unsigned int proto)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_tcpstatustype () returns %p\n", b1);
+   ArgusDebug (4, "Argusgen_ipstatustype () returns %p\n", b1);
 #endif
    return (b1);
 }
@@ -942,11 +943,30 @@ Argusgen_ipattrstatustype(unsigned int status)
 }
 
 static struct ablock *
+Argusgen_farstatustype(unsigned int status)
+{
+   struct ablock *b1, *b0;
+   struct ArgusRecordStruct argus;
+   int offset;
+
+   b0 = Argusgen_recordtype(ARGUS_FAR);
+
+   offset = ((char *)&argus.status - (char *)&argus);
+   b1 = Argusgen_mcmp(-1, offset, NFF_L, status, status, Q_EQUAL, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_farstatustype (%d) returns %p\n", status, b1);
+#endif
+   return (b1);
+}
+
+static struct ablock *
 Argusgen_causetype(unsigned int cause)
 {
    struct ablock *b0 = NULL;
-   struct ArgusCanonRecord canon;
-   int offset = ((char *)&canon.hdr.cause - (char *)&canon);
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.hdr.cause - (char *)&argus);
 
    switch (cause) {
       case ARGUS_START:
@@ -970,8 +990,8 @@ static struct ablock *
 Argusgen_recordtype(unsigned int type)
 {
    struct ablock *b0 = NULL;
-   struct ArgusCanonRecord canon;
-   int offset = ((char *)&canon.hdr.type - (char *)&canon);
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.hdr.type - (char *)&argus);
 
    switch (type) {
       case ARGUS_MAR:
@@ -1711,6 +1731,14 @@ int proto;
 
       case Q_INDEX:
          b1 =  Argusgen_recordtype(ARGUS_INDEX);
+         break;
+
+      case Q_BASELINE:
+         b1 =  Argusgen_farstatustype(ARGUS_RECORD_BASELINE);
+         break;
+
+      case Q_MATCH:
+         b1 =  Argusgen_farstatustype(ARGUS_RECORD_MATCH);
          break;
 
       case Q_CONNECTED:
@@ -3209,28 +3237,28 @@ Argusgen_rate(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b0 = Argusgen_rateatom(offset, v, op);
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b0 = Argusgen_rateatom(offset, v, op);
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3255,28 +3283,28 @@ Argusgen_load(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b0 = Argusgen_loadatom(offset, v, op);
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b0 = Argusgen_loadatom(offset, v, op);
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3301,28 +3329,28 @@ Argusgen_loss(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b0 = Argusgen_lossatom(offset, v, op);
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b0 = Argusgen_lossatom(offset, v, op);
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3347,28 +3375,28 @@ Argusgen_ploss(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b0 = Argusgen_plossatom(offset, v, op);
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b0 = Argusgen_plossatom(offset, v, op);
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3537,7 +3565,7 @@ Argusgen_pcr(float v, int dir, u_int op)
 {
    struct ArgusRecordStruct argus;
    struct ablock *b1 = NULL, *b0 = NULL;
-   int offset = ((char *)&argus.pcr - (char *)&argus.hdr);
+   int offset = ((char *)&argus.pcr - (char *)&argus);
 
    b0 = Argusgen_recordtype(ARGUS_FAR);
    b1 = Argusgen_pcratom(offset, v, op);
@@ -3706,7 +3734,7 @@ Argusgen_dur(float v, int dir, u_int op)
       case Q_OR:
       case Q_DEFAULT:
       case Q_AND:
-         offset = ((char *)&argus.dur - (char *)&argus.hdr);
+         offset = ((char *)&argus.dur - (char *)&argus);
          b1 = Argusgen_duratom(offset, v, op);
          break;
 
@@ -3734,7 +3762,7 @@ Argusgen_mean(float v, int dir, u_int op)
    case Q_OR:
    case Q_DEFAULT:
    case Q_AND:
-      offset = ((char *)&argus.mean - (char *)&argus.hdr);
+      offset = ((char *)&argus.mean - (char *)&argus);
       b1 = Argusgen_meanatom(offset, v, op);
       break;
 

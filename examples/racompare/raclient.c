@@ -2458,6 +2458,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                                     struct ArgusRecordStruct *cns = ArgusCopyRecordStruct(pns);
                                     ArgusReplaceRecords (ArgusParser->ArgusAggregator, ns, cns);
                                     if (ns->status & ARGUS_RECORD_BASELINE) {
+                                       cns->status &= ~ARGUS_RECORD_MATCH;
                                        cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
                                     }
                                     ArgusDeleteRecordStruct(ArgusParser, ns);

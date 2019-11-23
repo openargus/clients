@@ -274,7 +274,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(double)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -309,7 +309,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   F = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(float)) > sizeof(struct ArgusRecordStruct))
                      F = -1;
@@ -344,7 +344,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(long long)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -380,7 +380,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
 
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(int)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -415,7 +415,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(short)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -450,7 +450,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if (k > sizeof(struct ArgusRecordStruct))
                      A = -1;

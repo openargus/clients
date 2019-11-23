@@ -119,6 +119,10 @@
 #define Q_EVENT		133
 #define Q_INDEX		134
 
+/* Record status indicators */
+#define Q_BASELINE	190
+#define Q_MATCH		191
+
 /* Keystroke Behavior Keywords */
 
 #define Q_NKEY		135
