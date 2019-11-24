@@ -3360,10 +3360,10 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
                            struct ArgusWfileStruct *wfile = NULL;
                            struct ArgusListObjectStruct *lobj = NULL;
                            int i, count = parser->ArgusWfileList->count;
-    
+
                            if ((lobj = parser->ArgusWfileList->start) != NULL) {
                               for (i = 0; i < count; i++) {
-                                 if ((wfile = (struct ArgusWfileStruct *) lobj->list_obj) != NULL) {
+                                 if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                                     if (wfile->filterstr) {
                                        struct nff_insn *wfcode = wfile->filter.bf_insns;
                                        retn = ArgusFilterRecord (wfcode, argus);

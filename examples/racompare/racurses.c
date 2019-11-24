@@ -91,7 +91,9 @@ main(int argc, char **argv)
          ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       pthread_join(RaDataThread, NULL);
-      pthread_join(RaCursesThread, NULL);
+
+      if (ArgusCursesEnabled)
+         pthread_join(RaCursesThread, NULL);
 
       ArgusWindowClose();
 #endif
