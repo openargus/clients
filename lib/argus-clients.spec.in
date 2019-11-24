@@ -111,6 +111,7 @@ rm -f %{argusbin}/rasplit
 %{argusbin}/rasort
 %{argusbin}/rastream
 %{argusbin}/ramanage
+%{argusbin}/racompare
 %ghost %{argusbin}/rasplit
 %{argussbin}/radium
 %config /etc/ra.conf
