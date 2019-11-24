@@ -1307,7 +1307,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name, int status)
             }
 
             if (ArgusFindNameEntry(ArgusDnsNames->htable, sptr) == NULL) {
-               int splen, len;
+               int splen = 0, len;
                int found = 0;
                if (RaDnsRootDomains != NULL) {
                   struct ArgusListObjectStruct *lobj;
@@ -1330,7 +1330,7 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name, int status)
                   }
                }
 
-               if (!found) {
+               if (!found && splen > 0) {
                   if (strncmp(RaDnsRootDomainDefault, sptr, splen) == 0) {
                      char *dptr = &RaDnsRootDomainDefault[splen];
                      snprintf(&fqdn[slen], MAXSTRLEN - slen, "%s.", dptr);
