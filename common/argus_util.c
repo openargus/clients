@@ -1877,11 +1877,12 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
          break;
 
       case RA_FIELD_DELIMITER:
-         ptr = optarg;
          if ((ptr = strchr (optarg, '\'')) != NULL) {
             ptr++;
             if (ptr[0] == '\'')
                break;
+         } else {
+            ptr = optarg;
          }
 
          if (ptr[0] == '\\') {
