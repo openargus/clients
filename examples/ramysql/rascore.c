@@ -1681,7 +1681,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      parser->ArgusDirectionFunction = 0;
       if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
 
       if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
