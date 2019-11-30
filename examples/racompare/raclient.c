@@ -119,6 +119,7 @@ char *ArgusParseAirportTokens[MAX_AIRPORT_PARSE_TOKENS] = {
 #define ARGUS_PROCESS_BASELINE	0
 #define ARGUS_PROCESS_SAMPLE	1
 #define ARGUS_PROCESS_COMPLETE	2
+#define ARGUS_PROCESS_DONE	3
 
 int argus_version = ARGUS_VERSION;
 
@@ -389,7 +390,8 @@ ArgusProcessData (void *arg)
             parser->RaTasksToDo = RA_ACTIVE;
       }
 
-      ArgusClientTimeout ();
+      if (ArgusCursesEnabled)
+         ArgusClientTimeout ();
    }
 
    ArgusCloseDown = 1;
@@ -808,6 +810,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                             char *str = p.we_wordv[0];
                             if (str != NULL)
                                parser->ArgusBaseLineFile = strdup(str);
+                           wordfree (&p);
                         }
                      }
                   } else
@@ -972,6 +975,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (parser->Sflag) {
                ArgusLog(LOG_ERR, "-w option not supported.");
             }
+            ArgusCursesEnabled = 0;
          }
          
          for (i = 0; i < MAX_PRINT_ALG_TYPES; i++)
@@ -1077,6 +1081,7 @@ RaParseComplete (int sig)
 #ifdef ARGUSDEBUG
          ArgusDebug (1, "RaParseComplete(caught signal %d)\n", sig);
 #endif
+
          switch (sig) {
             case      0:
             case SIGHUP:
@@ -1092,6 +1097,8 @@ RaParseComplete (int sig)
                if (ArgusParser->ArgusWfileList != NULL) {
                   struct ArgusListObjectStruct *lobj = NULL;
                   int i, count = ArgusParser->ArgusWfileList->count;
+
+                  ArgusProcessQueue(RaCursesProcess->queue, ARGUS_PROCESS_DONE);
 
                   if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
                      for (i = 0; i < count; i++) {
@@ -2535,30 +2542,34 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                   ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
                   break;
                }
+
                case ARGUS_PROCESS_COMPLETE: {
-                  if (ArgusParser->RaCursesMode) {
-                     RaProcessThisRecord (ArgusParser, ns);
-                     ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
-                     modified++;
+                  RaProcessThisRecord (ArgusParser, ns);
+                  ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+                  modified++;
+                  break;
+               }
 
-                  } else {
-                     if (ArgusParser->ArgusWfileList != NULL) {
-                        struct ArgusWfileStruct *wfile = NULL;
-                        struct ArgusRecord *argusrec = NULL;
-                        struct ArgusListObjectStruct *lobj = NULL;
-                        int i, count = ArgusParser->ArgusWfileList->count;
+               case ARGUS_PROCESS_DONE: {
+                  if (!(ArgusParser->RaCursesMode)) {
+                     if (queue == RaCursesProcess->queue) {
+                        if (ArgusParser->ArgusWfileList != NULL) {
+                           struct ArgusWfileStruct *wfile = NULL;
+                           struct ArgusRecord *argusrec = NULL;
+                           struct ArgusListObjectStruct *lobj = NULL;
+                           int i, count = ArgusParser->ArgusWfileList->count;
 
-
-                        if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
-                           for (i = 0; i < count; i++) {
-                              if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
-                                 if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
-                                    int rv;
+                           if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
+                              for (i = 0; i < count; i++) {
+                                 if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+                                    if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                                       int rv;
 #ifdef _LITTLE_ENDIAN
-                                    ArgusHtoN(argusrec);
+                                       ArgusHtoN(argusrec);
 #endif
-                                    if ((rv = ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec)) < 0)
-                                       ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
+                                       if ((rv = ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec)) < 0)
+                                          ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
+                                    }
                                  }
                               }
                            }

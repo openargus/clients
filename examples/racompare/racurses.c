@@ -5847,6 +5847,9 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
          snprintf_append(retn, &len, &remain, "-r ");
          if ((file = (void *)parser->ArgusInputFileList) != NULL) {
             while (file != NULL) {
+               if (file->type & ARGUS_BASELINE_SOURCE)
+                  snprintf_append(retn, &len, &remain, "baseline:");
+
                snprintf_append(retn, &len, &remain, "%s ", file->filename);
                file = (void *)file->qhdr.nxt;
             }

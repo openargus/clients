@@ -322,6 +322,8 @@ struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct Ar
 #include <sys/stat.h>
 #include <stdio.h>
 
+#define ARGUS_DATA_TYPE			0x3FF
+
 #define ARGUS_DATA_SOURCE		0x01
 #define ARGUS_V2_DATA_SOURCE		0x02
 #define ARGUS_SFLOW_DATA_SOURCE		0x04
@@ -334,8 +336,10 @@ struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct Ar
 #define ARGUS_DOMAIN_SOURCE             0x100
 #define ARGUS_NAMED_PIPE_SOURCE		0x200
 
-#define ARGUS_MY_ADDRESS        5
-#define ARGUS_MY_NETWORK        4
+#define ARGUS_BASELINE_SOURCE		0x800
+
+#define ARGUS_MY_ADDRESS        	5
+#define ARGUS_MY_NETWORK        	4
 
 
 #define ARGUS_IPV4_UNICAST                      0x00010000

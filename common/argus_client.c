@@ -237,7 +237,7 @@ ArgusReadSaslStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *
                while (!retn && !done && !parser->RaParseDone) {
                   unsigned short length = 0;
 
-                  switch (input->type) {
+                  switch (input->type & ARGUS_DATA_TYPE) {
                      case ARGUS_V2_DATA_SOURCE: {
                         struct ArgusV2Record *recv2 = (struct ArgusV2Record *)input->ArgusReadPtr;
                         if (input->ArgusReadSocketCnt >= sizeof(recv2->ahdr)) {
@@ -394,7 +394,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
       }
 
    } else {
-      switch (input->type) {
+      switch (input->type & ARGUS_DATA_TYPE) {
          default:
          if ((cnt = read (input->fd, input->ArgusReadPtr + input->ArgusReadSocketCnt, bytes)) < 0) {
             switch (errno) {
@@ -426,7 +426,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          int length = 0;
 
          rec = NULL;
-         switch (input->type) {
+         switch (input->type & ARGUS_DATA_TYPE) {
             case ARGUS_DOMAIN_SOURCE:
             case ARGUS_DATA_SOURCE: {
                struct ArgusRecordHeader *recv3 = (struct ArgusRecordHeader *) input->ArgusReadPtr;
@@ -519,7 +519,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
                }
 
             } else {
-               if (input->type == ARGUS_V2_DATA_SOURCE)
+               if ((input->type  & ARGUS_DATA_TYPE) == ARGUS_V2_DATA_SOURCE)
                   len = length;
 
                input->offset += len;
@@ -579,7 +579,7 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
       
    while (input && !done) {
       
-      switch (input->type) {
+      switch (input->type & ARGUS_DATA_TYPE) {
          case ARGUS_DATA_SOURCE:
          case ARGUS_V2_DATA_SOURCE:
             if ((retn = ArgusReadStreamSocket (parser, input)) > 0) {
@@ -825,7 +825,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                if ((input->fd >= 0) && FD_ISSET (input->fd, &readmask)) {
                   input->ArgusLastTime = parser->ArgusRealTime;
 
-                  switch (input->type) {
+                  switch (input->type & ARGUS_DATA_TYPE) {
                      case ARGUS_DATA_SOURCE:
                      case ARGUS_DOMAIN_SOURCE:
                      case ARGUS_V2_DATA_SOURCE:
@@ -1014,7 +1014,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
    int optval = 1;
 #endif
 
-   switch (input->type) {
+   switch (input->type & ARGUS_DATA_TYPE) {
       case ARGUS_DATA_SOURCE:
       case ARGUS_V2_DATA_SOURCE: {
          char *protoStr;
@@ -1112,7 +1112,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
          ArgusLog (LOG_ERR, "ArgusGetServerSocket(%p) unknown type", input);
    }
 
-   switch (input->type) {
+   switch (input->type & ARGUS_DATA_TYPE) {
       case ARGUS_DATA_SOURCE:
       case ARGUS_V2_DATA_SOURCE: {
 

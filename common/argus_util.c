@@ -96,6 +96,7 @@
 #endif
 
 #include <time.h>
+#include <wordexp.h>
 
 #ifndef HAVE_POSIX_MEMALIGN
 # ifdef HAVE_MEMALIGN
@@ -1480,6 +1481,10 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   if (!(strncmp ("sflow:", optarg, 6))) {
                      type = ARGUS_SFLOW_DATA_SOURCE;
                      optarg += 6;
+                  }
+                  if (!(strncmp ("baseline:", optarg, 9))) {
+                     type |= ARGUS_BASELINE_SOURCE;
+                     optarg += 9;
                   }
                   if ((!rcmdline++) && (parser->ArgusInputFileList != NULL))
                      ArgusDeleteFileList(parser);
@@ -27923,7 +27928,7 @@ ArgusConvertRecord (struct ArgusInput *input, char *ptr)
          ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
    }
 
-   switch (input->type) {
+   switch (input->type & ARGUS_DATA_TYPE) {
       case ARGUS_V2_DATA_SOURCE: {
          struct ArgusV2Record *argus2 = (struct ArgusV2Record *) ptr;
          struct ArgusRecord *argus = (struct ArgusRecord *)input->ArgusConvBuffer;
@@ -28489,7 +28494,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
    switch  (type) {
       case ARGUS_FILE: {
          if (input->file != NULL) {
-            switch (input->type) {
+            switch (input->type & ARGUS_DATA_TYPE) {
                case ARGUS_DATA_SOURCE:
                case ARGUS_V2_DATA_SOURCE: {
                   if ((cnt = fread (&argus, 1, 16, input->file)) == 16) {
@@ -28901,7 +28906,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
       }
       
       case ARGUS_SOCKET: {
-         switch (input->type) {
+         switch (input->type & ARGUS_DATA_TYPE) {
             case ARGUS_DATA_SOURCE:
             case ARGUS_DOMAIN_SOURCE:
             case ARGUS_V2_DATA_SOURCE: {
@@ -29730,19 +29735,29 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
    struct ArgusFileInput *file;
 
    if (ptr) {
-      if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
-         if (parser->ArgusInputFileListTail != NULL) {
-            parser->ArgusInputFileListTail->qhdr.nxt = (struct ArgusQueueHeader *)file;
-            parser->ArgusInputFileListTail = file;
-         } else {
-            parser->ArgusInputFileList = file;
-            parser->ArgusInputFileListTail = file;
+      wordexp_t p;
+
+      if (wordexp (ptr, &p, 0) == 0) {
+         char *str = p.we_wordv[0];
+         if (str != NULL) {
+            if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
+               if (parser->ArgusInputFileListTail != NULL) {
+                  parser->ArgusInputFileListTail->qhdr.nxt = (struct ArgusQueueHeader *)file;
+                  parser->ArgusInputFileListTail = file;
+               } else {
+                  parser->ArgusInputFileList = file;
+                  parser->ArgusInputFileListTail = file;
+               }
+
+               file->filename = strdup(str);
+               file->type = type;
+               file->ostart = ostart;
+               file->ostop = ostop;
+            }
+
+            wordfree (&p);
          }
 
-         file->type = type;
-         file->ostart = ostart;
-         file->ostop = ostop;
-         file->filename = strdup(ptr);
          file->fd = -1;
          parser->ArgusInputFileCount++;
          retn = 1;
@@ -32070,7 +32085,7 @@ ArgusParseInit (struct ArgusParserStruct *parser, struct ArgusInput *input)
          input->ArgusConvBuffer = NULL;
       }
 
-      switch (input->type) {
+      switch (input->type & ARGUS_DATA_TYPE) {
          case ARGUS_SFLOW_DATA_SOURCE:
          case ARGUS_JFLOW_DATA_SOURCE:
          case ARGUS_CISCO_DATA_SOURCE: {
