@@ -60,6 +60,7 @@ my @names       = $query->param;
 my $time        = $query->param('tm');
 my $object      = $query->param('ob');
 my $database    = $query->param('db');
+my $filter      = $query->param('fi');
 my $mode        = $query->param('mo');
 
 my $debug       = 0;
@@ -84,6 +85,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-db$//       && do { $database = shift(@ARGV); next ARG; };
          s/^-dbase$//    && do { $database = shift(@ARGV); next ARG; };
          s/^-force$//    && do { $force++; next ARG; };
+         s/^-filter$//   && do { $filter = shift(@ARGV); next ARG; };
          s/^-mode$//     && do { $mode = shift(@ARGV); next ARG; };
          s/^-object$//   && do { $object = shift(@ARGV); next ARG; };
          s/^-obj$//      && do { $object = shift(@ARGV); next ARG; };
@@ -104,16 +106,21 @@ ARG: while (my $arg = shift(@ARGV)) {
   if (not defined $time) {
      $time = "-182d";
   }
+  if (not defined $filter) {
+     $filter = "";
+  } else {
+     $filter = " - ".$filter;
+  }
 
   ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($stime);
   my $sdate = sprintf("%4d/%02d/%02d", $year+1900, $mon+1, $mday);
 
   ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-  my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+  my $today = timelocal(0,0,12,$mday,$mon,$year);
 
-  if ($etime > $yesterday) {
-     $etime = $yesterday;
+  if ($etime > $today) {
+     $etime = $today;
   }
   ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($etime);
   my $edate = sprintf("%4d/%02d/%02d", $year+1900, $mon+1, $mday);
@@ -175,13 +182,13 @@ foreach my $i (0 .. $#databases) {
      if ($found > 0) {
         print "DEBUG: process db:$dbase table:$table annual:$annual monthly:$monthly date:$date\n" if $debug;
 
-        my $cmd = "$rasql -r mysql://root\@localhost/".$dbase."/".$table." -w ".$tmpfile;
+        my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -w ".$tmpfile . $filter;
         print "DEBUG: $cmd \n" if $debug;
         `$cmd`;
 
         if (-e $tmpfile) {
-           my $minsert = "$rasqlinsert -M cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
-           my $yinsert = "$rasqlinsert -M cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
+           my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
+           my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
 
            print "DEBUG: $minsert \n" if $debug;
            `$minsert`;
