@@ -497,13 +497,13 @@ Commandline equivalents:
 
 Those ra* clients that can create database tables may need to
 specify a table type or rather, a database engine other than the
-defaul, MyISAM.
+default, InnoDB.
 
 Commandline equivalents:
   -M mysql_engine=tableType
      Current tableTypes are
-        MyISAM
         InnoDB
+        MyISAM
         Merge
         Memory
         Archive
@@ -512,7 +512,7 @@ Commandline equivalents:
         CSV
 
 .nf
-\fBMYSQL_DB_ENGINE=\fP"MyISAM"
+\fBMYSQL_DB_ENGINE=\fP"InnoDB"
 .fi
 
 

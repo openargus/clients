@@ -520,13 +520,13 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 
 # Those ra* clients that can create database tables may need to
 # specify a table type or rather, a database engine other than the
-# defaul, MyISAM.
+# default, InnoDB.
 #
 # Commandline equivalents:
 #   -M mysql_engine=tableType
 #      Current tableTypes are
-#         MyISAM
 #         InnoDB
+#         MyISAM
 #         Merge
 #         Memory
 #         Archive
@@ -535,7 +535,7 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 #         CSV
 #
 
-#MYSQL_DB_ENGINE="MyISAM"
+#MYSQL_DB_ENGINE="InnoDB"
 
 
 # For ra* programs that use curses, these variables defined color schemes

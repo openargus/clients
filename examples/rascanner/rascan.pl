@@ -109,7 +109,7 @@ if (!($database eq "")) {
    }
 
    $dbh = DBI->connect("dbi:mysql:NTAIS", $user, $pass, \%attr) or die "can't connect: ", $DBI::errstr, "\n";
-   my $str  = sprintf "CREATE TABLE IF NOT EXISTS %s_Searchers (addr varchar(16), proto varchar(8), dport varchar(16), startime varchar(32), dur varchar(32), trans varchar(16), INDEX addrIndex(addr)) TYPE=MyISAM", $database;
+   my $str  = sprintf "CREATE TABLE IF NOT EXISTS %s_Searchers (addr varchar(16), proto varchar(8), dport varchar(16), startime varchar(32), dur varchar(32), trans varchar(16), INDEX addrIndex(addr)) TYPE=InnoDB", $database;
    my $sth = $dbh->prepare($str) or die "can't prepare: ", $DBI::errstr, "\n";
    $sth->execute() or die "can't execute: ", $DBI::errstr, "\n";
 }
