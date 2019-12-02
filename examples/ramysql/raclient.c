@@ -1244,8 +1244,8 @@ usage ()
    fprintf (stdout, "               cache            maintain flow caches in database table\n");
    fprintf (stdout, "               drop             drop target table before using\n");
    fprintf (stdout, "               mysql_engine=    use specific mysql storage engines\n");
-   fprintf (stdout, "                  MyISAM        default\n");
-   fprintf (stdout, "                  InnoDB        \n");
+   fprintf (stdout, "                  InnoDB        default\n");
+   fprintf (stdout, "                  MyISAM        \n");
    fprintf (stdout, "                  Memory        \n");
    fprintf (stdout, "                  Merge         \n");
    fprintf (stdout, "                  Archive       \n");

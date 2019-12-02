@@ -699,7 +699,7 @@ RaMySQLInit ()
    }
 
    if (ArgusParser->MySQLDBEngine == NULL)
-      ArgusParser->MySQLDBEngine = strdup("MyISAM");
+      ArgusParser->MySQLDBEngine = strdup("InnoDB");
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "RaMySQLInit () RaSource %s RaArchive %s RaFormat %s", RaSource, RaArchive, RaFormat);

@@ -6579,7 +6579,7 @@ RaMySQLInit (int ncons)
    bzero((char *)RaTableDeleteString, sizeof(RaTableDeleteString));
 
    if (ArgusParser->MySQLDBEngine == NULL)
-      ArgusParser->MySQLDBEngine = strdup("MyISAM");
+      ArgusParser->MySQLDBEngine = strdup("InnoDB");
 
    if ((RaUser == NULL) && (ArgusParser->dbuserstr != NULL)) {
       bzero(userbuf, sizeof(userbuf));
