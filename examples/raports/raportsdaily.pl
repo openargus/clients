@@ -57,9 +57,10 @@ ARG: while (my $arg = shift(@ARGV)) {
   if (!$done) {
      for ($arg) {
          s/^-debug$//  && do { $debug++; next ARG; };
-         s/^-drop$//   && do { $drop++; next ARG; };
+         s/^-drop$//   && do { $drop = 0; next ARG; };
          s/^-r$//      && do { $archive = shift(@ARGV); next ARG; };
          s/^-t$//      && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//   && do { $time = shift(@ARGV); next ARG; };
      }
   } else {
       for ($arg) {
@@ -100,26 +101,36 @@ chomp($pattern);
 
 print "DEBUG: raportsdaily: '$date' for date and '$pattern' for files\n" if $debug;
 
-my $Program = which 'raports';
-chomp $Program;
+my $raports = which 'raports';
+chomp $raports;
 
 my $srcOptions = "-M src -w mysql://root\@localhost/portsInventory/srcPorts_$dbdate";
 my $dstOptions = "-M dst -w mysql://root\@localhost/portsInventory/dstPorts_$dbdate";
-my $filter     = "- src pkts gt 0 and dst pkts gt 0";
+my $filter     = "- tcp or udp";
 
 my @files   = glob $pattern; 
+
+if ($debug > 0) {
+   $srcOptions .= " -debug ";
+   $dstOptions .= " -debug ";
+}
+if ($drop == 0) {
+   $srcOptions .= " -drop ";
+   $dstOptions .= " -drop ";
+}
 
 foreach my $file (@files) {
    if (index($file, "man") == -1) {
       if (index($file, "evt") == -1) {
          if (index($file, "rad") == -1) {
-            my $cmd = $Program . " " . $srcOptions . " -R $file $filter";
+            my $cmd = $raports . " " . $srcOptions . " -R $file $filter";
+
             print "DEBUG: raportsdaily: $cmd\n" if $debug;
             if (system($cmd) != 0) {
                print "raportsdaily: error: $cmd failed\n";
                exit -1;
             }
-            $cmd = $Program . " " . $dstOptions . " -R $file $filter";
+            $cmd = $raports . " " . $dstOptions . " -R $file $filter";
             print "DEBUG: raportsdaily: $cmd\n" if $debug;
             if (system($cmd) != 0) {
                print "raportsdaily: error: $cmd failed\n";

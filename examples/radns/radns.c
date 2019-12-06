@@ -1056,9 +1056,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusDNSNameSpace->tlds = ArgusNewQueue()) != NULL)
             ArgusDNSNameSpace->table = ArgusNewHashTable(0x10000);
 
-      parser->ArgusGrepSource = 0;
-      parser->ArgusGrepDestination = 0;
-
       if (parser->ArgusWfileList != NULL) {
          parser->qflag = 1;
       }
@@ -2266,6 +2263,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   }
 
 // test if there is a regex expression and match against the query/response name.
+/*
                   if (parser->estr != NULL) {
                      char *tbuf = (req && req->name) ? req->name : NULL;
                      found = 0;
@@ -2292,8 +2290,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         }
                      }
                   }
+*/
 
-                  if (found) {
+//                if (found) {
                   if (unicast) {
                      struct RaAddressStruct *raddr = NULL, node;
   
@@ -2334,7 +2333,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      dns->client = dnsClnt = raddr;
 
                   } else 
-
                   if (multicast) {
                   }
 
@@ -2512,7 +2510,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         }
                      }
                   }
-                  }
+//                }
 
                   if (req != NULL) {
                      if (req->name  != NULL) free(req->name);

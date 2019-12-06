@@ -43,9 +43,9 @@ local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 
 # Global variables
 my $debug = 0;
-my $drop  = 0;
-my $Program = which 'racluster';
-chomp $Program;
+my $drop  = 1;
+my $racluster = which 'racluster';
+chomp $racluster;
 
 my $Options = " -nc , ";   # Default Options
 my $VERSION = "5.0";
@@ -144,8 +144,8 @@ if ($uri) {
 
 # Start the program
 
-chomp $Program;
-my @args = ($Program, $Options, $model, $fields, @arglist);
+my @args = ($racluster, "-w - ", @arglist, " | ", $racluster, $Options, $model, $fields);
+
 my (%items, %addrs, $sid, $inf, $addr, $proto, $port);
 
 print "DEBUG: raports: calling '@args'\n" if $debug;

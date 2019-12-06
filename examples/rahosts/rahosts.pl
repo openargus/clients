@@ -89,7 +89,7 @@ my $racluster   = which 'racluster';
 my $ralabel     = which 'ralabel';
 my $rasort      = which 'rasort';
 
-my $ralabelconf = "/usr/argus/ralocality.conf";
+my $ralabelconf = "/usr/argus/ralabel.local.conf";
 
 my $f;
 my $fname;
