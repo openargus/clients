@@ -54,9 +54,12 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
+INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
 DEFS = @DEFS@
 COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
+
+MYSQLLIB = @MYSQL_LDFLAGS@
+CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
@@ -79,19 +82,22 @@ YACC = @V_YACC@
 # problem if you don't own the file but can write to the directory.
 .c.o:
 	@rm -f $@
-	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+	$(CC) $(CFLAGS) -DRABINPATH=\"$(BINDIR)\" -c $(srcdir)/$*.c
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = rahosts.pl raips.pl
+SRC = rahosts.c raips.pl
 
 PROGS = $(INSTALLBIN)/rahosts $(INSTALLBIN)/raips $(INSTALLBIN)/rahostsdaily
 
 all: $(PROGS)
 
-$(INSTALLBIN)/rahosts: rahosts.pl
-	sed 's+@PERLBIN@+$(PERL)+' rahosts.pl > $@
-	chmod +x $@
+#$(INSTALLBIN)/rahosts: rahosts.pl
+#	sed 's+@PERLBIN@+$(PERL)+' rahosts.pl > $@
+#	chmod +x $@
+
+$(INSTALLBIN)/rahosts: rahosts.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rahosts.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/raips: raips.pl
 	sed 's+@PERLBIN@+$(PERL)+' raips.pl > $@

@@ -346,7 +346,9 @@ struct ArgusParserStruct {
    float RaFilterTimeout;
 
    struct ArgusAggregatorStruct *ArgusAggregator;
+   struct ArgusAggregatorStruct *ArgusProbeAggregator;
    struct ArgusAggregatorStruct *ArgusPathAggregator;
+
    struct ArgusLabelerStruct *ArgusLocalLabeler;
    struct ArgusLabelerStruct *ArgusColorLabeler;
    struct ArgusLabelerStruct *ArgusLabeler;
