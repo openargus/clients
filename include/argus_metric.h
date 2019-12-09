@@ -479,6 +479,8 @@ extern double ArgusFetchSrcAddr (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstAddr (struct ArgusRecordStruct *ns);
 extern double ArgusFetchProtocol (struct ArgusRecordStruct *ns);
 extern double ArgusFetchIpId (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcLocality (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstLocality (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcPort (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstPort (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcMpls (struct ArgusRecordStruct *ns);

@@ -42,6 +42,7 @@
 #include <argus_filter.h>
 
 #include <argus_grep.h>
+#include <argus_metric.h>
 #include <rasqlinsert.h>
 
 #include <signal.h>
@@ -57,6 +58,10 @@
 #include "argus_mysql.h"
 #include <mysqld_error.h>
 
+
+#define	ARGUS_MATRIX_LOCAL	0x01000
+#define	ARGUS_MATRIX_REMOTE	0x02000
+
 int RaHostsLabelStartTreeLevel = 0;
 int RaHostsPrintTreeLevel = 1000000;
 int RaHostsPrintTreeDebug = 0;
@@ -70,7 +75,7 @@ char **RaTables = NULL;
 extern int ArgusTimeRangeStrategy;
 
 int RaHostsPrintTreeEntries (struct RaAddressStruct *);
-void RaHostsPrintTree (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int);
+void RaHostsPrintTreeContents (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int, int);
 char *RaHostsPrintTreeLabeler(struct RaAddressStruct *, char *, int);
 int ArgusRaHostsHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
 
@@ -222,7 +227,8 @@ struct RaMySQLSecondsTable {
 
 struct ArgusProbeStruct {
    struct ArgusQueueHeader qhdr;
-   struct ArgusLabelerStruct *labeler;
+   struct ArgusLabelerStruct *localLabeler;
+   struct ArgusLabelerStruct *remoteLabeler;
    struct ArgusAggregatorStruct *agg;
    unsigned int status;
    struct ArgusHashTableHdr *htblhdr;
@@ -254,10 +260,14 @@ RaParseComplete (int sig)
    }
 
    while ((probe = (void *)ArgusPopQueue(ArgusProbeQueue, ARGUS_LOCK)) != NULL) {
-      struct ArgusLabelerStruct *labeler = probe->labeler;
-      if (labeler && ((labeler->status & ARGUS_LABELER_DEBUG) || (labeler->status & ARGUS_LABELER_DUMP))) {
-         RaHostsPrintTree (labeler, labeler->ArgusAddrTree[AF_INET], 0, 0);
-      }
+      struct ArgusLabelerStruct *labeler = probe->localLabeler;
+      int status = ARGUS_MATRIX_LOCAL;
+
+      RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
+
+      status = ARGUS_MATRIX_REMOTE;
+      labeler = probe->remoteLabeler;
+      RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
    }
 
 #ifdef ARGUSDEBUG
@@ -364,6 +374,8 @@ RaProcessMatrixData (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #endif
 }
 
+
+
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
@@ -387,6 +399,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       case ARGUS_FAR: {
          struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusProbeAggregator;
+         int sloc, dloc, status;
+
+         sloc = ArgusFetchSrcLocality (argus);
+         dloc = ArgusFetchDstLocality (argus);
+
+         if ((sloc > 2) && (dloc > 2))
+            status = ARGUS_MATRIX_LOCAL;
+         else
+            status = ARGUS_MATRIX_REMOTE;
 
          if (metric != NULL) {
             parser->ArgusTotalPkts  += metric->src.pkts;
@@ -402,7 +423,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-            ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
          if ((probe = ArgusFindProbe(agg->htable, hstruct)) == NULL) {
             if ((probe = ArgusNewProbe(parser, hstruct)) != NULL)  {
@@ -413,7 +434,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          }
 
          if ((probe = ArgusFindProbe(agg->htable, hstruct)) != NULL) {
-            struct ArgusLabelerStruct *labeler = probe->labeler;
+            struct ArgusLabelerStruct *labeler;
+
+            switch (status) {
+               case ARGUS_MATRIX_LOCAL:  labeler = probe->localLabeler; break;
+               case ARGUS_MATRIX_REMOTE: labeler = probe->remoteLabeler; break;
+            }
 
             if (labeler && flow) {
                switch (flow->hdr.subtype & 0x3F) {
@@ -421,7 +447,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                   case ARGUS_FLOW_LAYER_3_MATRIX: {
                      switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                         case ARGUS_TYPE_IPV4:
-
                            if ((addr = RaHostsProcessAddress(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH)) != NULL) {
                               if (addr->labeler == NULL) {
                                  if ((addr->labeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
@@ -431,7 +456,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                                     if ((addr->labeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
                                        ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
                               }
+                              addr->locality = sloc;
+                              if (addr->ns == NULL)
+                                 addr->ns = ArgusCopyRecordStruct(argus);
+                              else
+                                 ArgusMergeRecords (parser->ArgusAggregator, addr->ns, argus);
+
                               if ((addr = RaHostsProcessAddress(parser, addr->labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH)) != NULL) {
+                                 addr->locality = dloc;
+                                 addr->count++;
                                  if (addr->ns == NULL)
                                     addr->ns = ArgusCopyRecordStruct(argus);
                                  else
@@ -448,7 +481,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                                     if ((addr->labeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
                                        ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
                               }
+                              addr->locality = dloc;
+                              if (addr->ns == NULL)
+                                 addr->ns = ArgusCopyRecordStruct(argus);
+                              else
+                                 ArgusMergeRecords (parser->ArgusAggregator, addr->ns, argus);
+
                               if ((addr = RaHostsProcessAddress(parser, addr->labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, ARGUS_EXACT_MATCH)) != NULL) {
+                                 addr->locality = sloc;
+                                 addr->count++;
                                  if (addr->ns == NULL)
                                     addr->ns = ArgusCopyRecordStruct(argus);
                                  else
@@ -2272,7 +2313,7 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, char *buf, int len)
             snprintf (&buf[slen], len - slen, ",");
             slen++;
          }
-         snprintf (&buf[slen], len - slen, "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
+         snprintf (&buf[slen], len - slen, "%s(%d)", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->count);
       }
       retn = buf;
    }
@@ -2282,15 +2323,13 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, char *buf, int len)
 
 #define RAHOSTSADDRESSLIST	0x100000
 char RaHostsAddressList[RAHOSTSADDRESSLIST];
+char ArgusRecordPrintBuffer[MAXSTRLEN];
 
 void
-RaHostsPrintTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *node, int level, int dir)
+RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *node, int status, int level, int dir)
 {
-   int i = 0, length, len, count = 0;
-   char str[MAXSTRLEN], chr = ' ', *lstr = "";
-   int olen = strlen(RaAddrTreeArray);
-
-   bzero(str, MAXSTRLEN);
+   int count = 0, slen;
+   char *lstr = "";
 
    if (node != NULL) {
       if (node->addr.masklen > RaHostsPrintTreeLevel)
@@ -2301,318 +2340,76 @@ RaHostsPrintTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
          case ARGUS_TREE_VISITED: {
             level = node->addr.masklen;
             if (node->status & ARGUS_VISITED) {
-               if (dir == RA_SRV_LEFT) {
-                  strcat (str, "   |");
-                  strcat (RaAddrTreeArray, str);
-                  printf ("%s\n", RaAddrTreeArray);
-               }
+               RaHostsPrintTreeContents(labeler, node->r, status, level + 1, RA_SRV_RIGHT);
+               RaHostsPrintTreeContents(labeler, node->l, status, level + 1, RA_SRV_LEFT);
 
-               length = strlen(RaAddrTreeArray);
-               if ((len = length) > 0) {
-                  chr = RaAddrTreeArray[len - 1];
-                  if (node->r != NULL) {
-                     if (dir == RA_SRV_RIGHT)
-                        RaAddrTreeArray[len - 1] = ' ';
+               if ((node->r == NULL) && (node->l == NULL)) {
+                  bzero (ArgusRecordPrintBuffer, sizeof(ArgusRecordPrintBuffer));
+
+                  switch (status) {
+                     case ARGUS_MATRIX_LOCAL:  sprintf (ArgusRecordPrintBuffer, "local, ");  break;
+                     case ARGUS_MATRIX_REMOTE: sprintf (ArgusRecordPrintBuffer, "remote, "); break;
                   }
-               }
+                  if (node->ns) {
+                     slen = strlen(ArgusRecordPrintBuffer);
+                     ArgusPrintSID(ArgusParser, &ArgusRecordPrintBuffer[slen], node->ns, MAXSTRLEN - slen);
+                     slen = strlen(ArgusRecordPrintBuffer);
+                     snprintf (&ArgusRecordPrintBuffer[slen], MAXSTRLEN - slen, ", ");
 
-               strcat (RaAddrTreeArray, "   |");
+                     slen = strlen(ArgusRecordPrintBuffer);
+                     ArgusPrintInf(ArgusParser, &ArgusRecordPrintBuffer[slen], node->ns, MAXSTRLEN - slen);
 
-               RaHostsPrintTree(labeler, node->r, level + 1, RA_SRV_RIGHT);
-
-               for (i = length, len = strlen(RaAddrTreeArray); i < len; i++)
-                  RaAddrTreeArray[i] = '\0';
-
-               if ((len = length) > 0)
-                  RaAddrTreeArray[len - 1] = chr;
-         
-               printf ("%s+", RaAddrTreeArray);
-
-               if (node && node->labeler && node->labeler->ArgusAddrTree) {
-                  if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
-                     lstr = RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], RaHostsAddressList, RAHOSTSADDRESSLIST);
-                  }
-               }
-
-               if (node->addr.str) {
-                  if (count > 0) {
-                     printf ("%s(%d) %s", node->addr.str, count, lstr);
-                  } else {
-                     printf ("%s", node->addr.str);
+                     slen = strlen(ArgusRecordPrintBuffer);
+                     snprintf (&ArgusRecordPrintBuffer[slen], MAXSTRLEN - slen, ", ");
                   }
 
-               } else {
-                  if (node->addr.masklen > 0) {
+                  if (node && node->labeler && node->labeler->ArgusAddrTree) {
+                     if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
+                        lstr = RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], RaHostsAddressList, RAHOSTSADDRESSLIST);
+                     }
+                  }
+
+                  slen = strlen(ArgusRecordPrintBuffer);
+
+                  if (node->addr.str) {
                      if (count > 0) {
-                        printf ("%s/%d(%d) %s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen, count, lstr);
+                        sprintf (&ArgusRecordPrintBuffer[slen], "%s, %d, %d, %s", node->addr.str, node->locality, count, lstr);
                      } else {
-                        printf ("%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
+                        sprintf (&ArgusRecordPrintBuffer[slen], "%s", node->addr.str);
                      }
 
-                  } else
-                     printf ("0.0.0.0/0 ");
-               }
-               RaHostsAddressList[0] = '\0';
-
-               if (strlen(node->cco))
-                  printf ("%s ", node->cco);
-
-               if (node->label)
-                  printf ("%s ", node->label);
-
-               if (node->ns) {
-                  char buf[MAXSTRLEN];
-                  bzero (buf, sizeof(buf));
-                  ArgusPrintRecord(ArgusParser, buf, node->ns, MAXSTRLEN);
-                  printf ("%s ", buf);
-               }
-
-               printf ("\n");
-
-               len = strlen(RaAddrTreeArray);
-               if (len > 0) {
-                  chr = RaAddrTreeArray[len - 1];
-                  if (node->l != NULL) {
-                     if (dir == RA_SRV_LEFT)
-                        RaAddrTreeArray[len - 1] = ' ';
-                  }
-               }
-
-               RaHostsPrintTree(labeler, node->l, level + 1, RA_SRV_LEFT);
-
-               if (dir == RA_SRV_RIGHT) {
-                  printf ("%s", RaAddrTreeArray);
-                  putchar ('\n');
-               }
-
-               for (i = olen, len = strlen(RaAddrTreeArray); i < len; i++)
-                  RaAddrTreeArray[i] = '\0';
-            }
-            break;
-         }
-
-         case ARGUS_LABEL: {
-            level = node->addr.masklen;
-            if (node->r || node->l) {
-               RaHostsPrintTree(labeler, node->r, level + 1, RA_SRV_RIGHT);
-               RaHostsPrintTree(labeler, node->l, level + 1, RA_SRV_LEFT);
-            }
-
-           if (node->label) {
-              char nbuf[1024];
-              int slen;
-              if (node->addr.str) {
-                 snprintf (nbuf, 1024, "%s", node->addr.str);
-              } else  {
-                 if (node->addr.masklen == 32) {
-                    snprintf (nbuf, 1024, "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
-                 } else
-                 if (node->addr.masklen > 0) {
-                    snprintf (nbuf, 1024, "%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
-                 } else
-                    snprintf (nbuf, 1024, "0.0.0.0");
-              }
-              slen = strlen(nbuf);
-              snprintf (&nbuf[slen], 1024 - slen, "\t%s", node->label);
-              printf ("%s\n", nbuf);
-            }
-            break;
-         }
-
-         case ARGUS_GRAPH: {
-            level = node->addr.masklen;
-            if (node->status & ARGUS_VISITED) {
-               if (node->r || node->l) {
-                  if (node->r) {
-                     if (node->addr.str)
-                        printf ("\"%s\" ", node->addr.str);
-                     else  {
-                        if (node->addr.addr[0]) {
-                           if (node->addr.masklen > 0) {
-                              printf ("\"%s/%d\" ", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))),
-                                        node->addr.masklen);
-                           } else
-                              printf ("\"0.0.0.0/0\" ");
-                        }
-                     }
-                     printf (" -> ");
-                     if (node->r->addr.str)
-                        printf ("\"%s\"\n", node->r->addr.str);
-                     else  {
-                        if (node->r->addr.addr[0]) {
-                           if (node->r->addr.masklen > 0) {
-                              printf ("\"%s/%d\"\n", intoa(node->r->addr.addr[0] & (0xFFFFFFFF << (32 - node->r->addr.masklen))),
-                                        node->r->addr.masklen);
-                           } else
-                              printf ("\"0.0.0.0/0\"\n");
-                        }
-                     }
-                     RaHostsPrintTree(labeler, node->r, level + 1, RA_SRV_RIGHT);
-                  }
-
-                  if (node->l) {
-                     if (node->addr.str)
-                        printf ("\"%s\" ", node->addr.str);
-                     else  {
-                        if (node->addr.addr[0]) {
-                           if (node->addr.masklen > 0) {
-                              printf ("\"%s/%d\" ", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))),
-                                        node->addr.masklen);
-                           } else
-                              printf ("\"0.0.0.0/0\" ");
-                        }
-                     }
-                     printf (" -> ");
-                     if (node->l->addr.str)
-                        printf ("\"%s\"\n", node->l->addr.str);
-                     else  {
-                        if (node->l->addr.addr[0]) {
-                           if (node->l->addr.masklen > 0) {
-                              printf ("\"%s/%d\"\n", intoa(node->l->addr.addr[0] & (0xFFFFFFFF << (32 - node->l->addr.masklen))),
-                                        node->l->addr.masklen);
-                           } else
-                              printf ("\"0.0.0.0/0\"\n");
-                        }
-                     }
-                     RaHostsPrintTree(labeler, node->l, level + 1, RA_SRV_RIGHT);
-                  }
-               }
-            }
-            break;
-         }
-
-         case ARGUS_JSON: {
-               char nbuf[1024];
-               int rcnt = 0, lcnt = 0;
-
-               level = node->addr.masklen;
-               if (level >= RaHostsLabelStartTreeLevel)
-                  strcat (RaAddrTreeArray, " ");
-
-               if (node->addr.str)
-                  snprintf (nbuf, 1024, "%s", node->addr.str);
-               else  {
-                  if (node->addr.masklen > 0) {
-                     snprintf (nbuf, 1024, "%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
-                  } else
-                     snprintf (nbuf, 1024, "0.0.0.0/0");
-               }
-
-               if (level == 0) 
-                  printf ("{\n");
-
-               if (level >= RaHostsLabelStartTreeLevel)
-                  printf ("%s{", RaAddrTreeArray);
-
-               if (node->r || node->l) {
-                  rcnt = RaHostsPrintTreeEntries(node->r); 
-                  lcnt = RaHostsPrintTreeEntries(node->l);
-
-                  if (rcnt || lcnt) {
-                     if ((level >= RaHostsLabelStartTreeLevel)) {
-                        strcat (RaAddrTreeArray, " ");
-                        printf ("\n%s\"name\": \"%s\"", RaAddrTreeArray, nbuf);
-                        if (node->ns) {
-                           char sbuf[256], *sptr = sbuf;
-                           bzero(sbuf, 256);
-                           ArgusPrintRecord(ArgusParser, sbuf, node->ns, 256);
-                           if ((sptr = strchr(sbuf, '{')) != NULL) {
-                              char *tptr = strchr(sbuf, '}');
-                              if (tptr != NULL) *tptr = '\0';
-                              sptr++;
-                              printf (", %s", sptr);
+                  } else {
+                     if (node->addr.masklen > 0) {
+                        if (count > 0) {
+                           if (node->addr.masklen == 32) {
+                              sprintf (&ArgusRecordPrintBuffer[slen], "%s, %d, %d, %s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->locality, count, lstr);
+                           } else {
+                              sprintf (&ArgusRecordPrintBuffer[slen], "%s/%d, %d, %d, %s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen, node->locality, count, lstr);
+                           }
+                        } else {
+                           if (node->addr.masklen == 32) {
+                              sprintf (&ArgusRecordPrintBuffer[slen], "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
+                           } else {
+                              sprintf (&ArgusRecordPrintBuffer[slen], "%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
                            }
                         }
-                        printf (",\n%s\"children\": [\n", RaAddrTreeArray);
-                     }
 
-                     if (rcnt) RaHostsPrintTree(labeler, node->r, level + 1, RA_SRV_RIGHT);
-                     if (rcnt && lcnt) printf (",\n");
-                     if (lcnt) RaHostsPrintTree(labeler, node->l, level + 1, RA_SRV_LEFT);
-
-                     if ((level >= RaHostsLabelStartTreeLevel)) {
-                        printf ("\n%s]\n", RaAddrTreeArray);
-                        RaAddrTreeArray[strlen(RaAddrTreeArray) - 1] = '\0';
-                        printf ("%s}", RaAddrTreeArray);
                      }
-
-                  } else {
-                     printf ("\"name\": \"%s\"", nbuf);
-                     if (node->ns) {
-                        char sbuf[256], *sptr = sbuf;
-                        bzero(sbuf, 256);
-                        ArgusPrintRecord(ArgusParser, sbuf, node->ns, 256);
-                        if ((sptr = strchr(sbuf, '{')) != NULL) {
-                           char *tptr = strchr(sbuf, '}');
-                           if (tptr != NULL) *tptr = '\0';
-                           sptr++;
-                           printf (", %s", sptr);
-                        }
-                     }
-                     printf ("}");
                   }
-               } else {
-                  if ((level >= RaHostsLabelStartTreeLevel)) {
-                     printf ("\"name\": \"%s\"", nbuf);
-                     if (node->ns) {
-                        char sbuf[256], *sptr = sbuf;
-                        bzero(sbuf, 256);
-                        ArgusPrintRecord(ArgusParser, sbuf, node->ns, 256);
-                        if ((sptr = strchr(sbuf, '{')) != NULL) {
-                           char *tptr = strchr(sbuf, '}');
-                           if (tptr != NULL) *tptr = '\0';
-                           sptr++;
-                           printf (", %s", sptr);
-                        }
-                     }
-                     printf ("}");
-                  }
+
+                  RaHostsAddressList[0] = '\0';
+
+                  printf ("%s\n", ArgusRecordPrintBuffer);
+
                }
-
-           for (i = olen, len = strlen(RaAddrTreeArray); i < len; i++)
-              RaAddrTreeArray[i] = '\0';
-
-           if (level == 0)
-              printf ("\n}\n");
-           break;
-        }
-
-        case ARGUS_NEWICK: {
-           char nbuf[1024];
-           int rcnt, lcnt;
-
-           if (node->r || node->l) {
-              rcnt = RaHostsPrintTreeEntries(node->r);
-              lcnt = RaHostsPrintTreeEntries(node->l);
-
-              if (rcnt || lcnt) {
-                 printf ("(");
-                 if (rcnt) RaHostsPrintTree(labeler, node->r, level + 1, RA_SRV_RIGHT);
-                 if (rcnt && lcnt) printf (",");
-                 if (lcnt) RaHostsPrintTree(labeler, node->l, level + 1, RA_SRV_LEFT);
-                 printf (")");
-              }
-
-           } else {
-              if ((level >= RaHostsLabelStartTreeLevel)) {
-              }
-           }
-           if (node->addr.str)
-              snprintf (nbuf, 1024, "%s", node->addr.str);
-           else  {
-              if (node->addr.masklen > 0) {
-                 snprintf (nbuf, 1024, "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
-              } else
-                 snprintf (nbuf, 1024, "0.0.0.0");
-           }
-           printf ("%s:%d", nbuf, node->addr.masklen);
-           if (level == 0) printf (";\n");
-           break;
-        }
+            }
+            break;
+         }
       }
    }
    fflush(stdout);
 }
+
 
 struct ArgusProbeStruct *
 ArgusNewProbe (struct ArgusParserStruct *parser, struct ArgusHashStruct *hstruct)
@@ -2622,12 +2419,24 @@ ArgusNewProbe (struct ArgusParserStruct *parser, struct ArgusHashStruct *hstruct
    if ((retn = ArgusCalloc(1, sizeof(*retn))) == NULL) 
       ArgusLog (LOG_ERR, "ArgusNewProbe: error %s", strerror(errno));
 
-   if ((retn->labeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
-      ArgusLog (LOG_ERR, "RaProcessRecord: ArgusNewLabeler error");
+   if ((retn->localLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewProbe: ArgusNewLabeler error");
+
+   retn->localLabeler->status = parser->ArgusLabeler->status;
     
-   if (retn->labeler->ArgusAddrTree == NULL)
-      if ((retn->labeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
+   if (retn->localLabeler->ArgusAddrTree == NULL)
+      if ((retn->localLabeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
          ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
+
+   if ((retn->remoteLabeler = ArgusNewLabeler(parser, ARGUS_LABELER_ADDRESS)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusNewProbe: ArgusNewLabeler error");
+
+   retn->remoteLabeler->status = parser->ArgusLabeler->status;
+   
+   if (retn->remoteLabeler->ArgusAddrTree == NULL)
+      if ((retn->remoteLabeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
+         ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
+
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusNewProbe (%p) returning %p\n", hstruct, retn);

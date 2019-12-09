@@ -16338,14 +16338,80 @@ ArgusFetchLocality (struct ArgusRecordStruct *ns)
 double
 ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
 {
+   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) ns->dsrs[ARGUS_LOCAL_INDEX];
+   struct ArgusLabelerStruct *labeler;
    double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      int locValue = -1;
+
+      if (local != NULL) {
+         locValue = local->sloc;
+      } else {
+         struct ArgusFlow *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = ArgusParser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (ArgusParser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      retn = locValue;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+#endif
    return (retn);
 }
 
 double
 ArgusFetchDstLocality (struct ArgusRecordStruct *ns)
 {
+   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) ns->dsrs[ARGUS_LOCAL_INDEX];
+   struct ArgusLabelerStruct *labeler;
    double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      int locValue = -1;
+
+      if (local != NULL) {
+         locValue = local->dloc;
+      } else {
+         struct ArgusFlow *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = ArgusParser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (ArgusParser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+      retn = locValue;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+#endif
    return (retn);
 }
 
