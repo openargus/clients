@@ -1281,7 +1281,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
-      parser->ArgusDirectionFunction = 0;
       if (parser->ArgusAggregator->correct != NULL) { free(parser->ArgusAggregator->correct); parser->ArgusAggregator->correct = NULL; }
 
       if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
@@ -1439,6 +1438,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      free(parser->ArgusAggregator->correct);
                      parser->ArgusAggregator->correct = NULL;
                   }
+                  parser->ArgusPerformCorrection = 0;
                } else
                if (!(strncasecmp (mode->mode, "rtime", 5)) ||
                   (!(strncasecmp (mode->mode, "realtime", 8)))) {
@@ -1449,6 +1449,23 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                } else
                if (!strncasecmp (mode->mode, "nocreate", 8)) {
                   RaSQLNoCreate = 1;
+               } else
+               if (!strncasecmp (mode->mode, "noprune", 7)) {
+                  if (parser->ArgusLabeler != NULL) {
+                     parser->ArgusLabeler->prune = 0;
+                  }
+                  if (parser->ArgusLocalLabeler != NULL) {
+                     parser->ArgusLocalLabeler->prune = 0;
+                  }
+               } else
+               if (!(strncasecmp (mode->mode, "debug.local", 10))) {
+                  if (parser->ArgusLocalLabeler != NULL) {
+                     parser->ArgusLocalLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+                     if (!(strncasecmp (mode->mode, "debug.localnode", 14))) {
+                        parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_NODE;
+                     } else
+                        parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_LOCAL;
+                  }
                }
             }
 
@@ -1462,6 +1479,18 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          nadp->mode = ARGUSSPLITCOUNT;
          nadp->value = 10000;
          nadp->count = 1;
+      }
+
+      if (parser->ArgusLocalLabeler && ((parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_LOCAL) ||
+                                        (parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_NODE))) {
+         if (parser->ArgusLocalLabeler &&  parser->ArgusLocalLabeler->ArgusAddrTree) {
+            extern int RaPrintLabelTreeLevel;
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLocalLabeler, parser->ArgusLocalLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
       }
 
       RaMySQLInit();

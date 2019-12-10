@@ -748,9 +748,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   else
                   if (!(strncasecmp (mode->mode, "nocorrect", 9))) {
                      correct = 0;
+                     parser->ArgusPerformCorrection = 0;
                   } else
                   if (!(strncasecmp (mode->mode, "correct", 7))) {
                      correct = 1;
+                     parser->ArgusPerformCorrection = 1;
                   } else
                   if (!(strncasecmp (mode->mode, "preserve", 8))) {
                      preserve = 1;
@@ -858,6 +860,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   if (parser->ArgusAggregator->correct != NULL)
                      free(parser->ArgusAggregator->correct);
                   parser->ArgusAggregator->correct = NULL;
+                  parser->ArgusPerformCorrection = 0;
                } else {
                   if (parser->ArgusAggregator->correct != NULL)
                      free(parser->ArgusAggregator->correct);

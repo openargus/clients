@@ -1838,6 +1838,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      free(parser->ArgusAggregator->correct);
                      parser->ArgusAggregator->correct = NULL;
                   }
+                  parser->ArgusPerformCorrection = 0;
                } else
                if (!(strncasecmp (mode->mode, "rtime", 5)) ||
                   (!(strncasecmp (mode->mode, "realtime", 8)))) {
