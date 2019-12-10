@@ -66,6 +66,8 @@ extern int ArgusTotalFarRecords;
 extern struct ArgusParserStruct *ArgusParser;
 
 int RaPrintCounter = 1;
+int ArgusDebugTree = 0;
+
 static int argus_version = ARGUS_VERSION;
 
 void
@@ -103,6 +105,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (!(strncasecmp (mode->mode, "noman", 5)))
                parser->ArgusPrintMan = 0;
 
+            if (!(strncasecmp (mode->mode, "debug.local", 10))) {
+               if (parser->ArgusLocalLabeler != NULL) {
+                  parser->ArgusLocalLabeler->RaPrintLabelTreeMode = ARGUS_TREE;
+                  if (!(strncasecmp (mode->mode, "debug.localnode", 14))) {
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_NODE;
+                  } else
+                     parser->ArgusLocalLabeler->status |= ARGUS_LABELER_DEBUG_LOCAL;
+               }
+            }
             mode = mode->nxt;
          }
       }
@@ -153,6 +164,18 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
       parser->RaInitialized++;
+
+      if (parser->ArgusLocalLabeler && ((parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_LOCAL) ||
+                                        (parser->ArgusLocalLabeler->status & ARGUS_LABELER_DEBUG_NODE))) {
+         if (parser->ArgusLocalLabeler &&  parser->ArgusLocalLabeler->ArgusAddrTree) {
+            extern int RaPrintLabelTreeLevel;
+            if (parser->Lflag > 0) {
+               RaPrintLabelTreeLevel = parser->Lflag;
+            }
+            RaPrintLabelTree (parser->ArgusLocalLabeler, parser->ArgusLocalLabeler->ArgusAddrTree[AF_INET], 0, 0);
+         }
+         exit(0);
+      }
    }
 }
 
