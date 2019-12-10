@@ -7000,15 +7000,18 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    char stable[1024], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN - 32];
    MYSQL_RES *mysqlRes;
 
+   if ((sbuf = (char *) ArgusCalloc(1, MAXSTRLEN)) == NULL) 
+      ArgusLog(LOG_INFO, "ArgusCreateSQLSaveTable: ArgusCalloc error %s", mysql_error(RaMySQL));
+  
+   if ((kbuf = (char *) ArgusCalloc(1, MAXSTRLEN)) == NULL) 
+      ArgusLog(LOG_INFO, "ArgusCreateSQLSaveTable: ArgusCalloc error %s", mysql_error(RaMySQL));
+
    MUTEX_LOCK(&RaMySQLlock);
 
    if ((db != NULL) && (table != NULL)) {
       sprintf (stable, "%s.%s", db, table);
  
       if (check_dbtbl(dbtables, (u_char *)stable) == NULL) {
-         bzero(sbuf, sizeof(sbuf));
-         bzero(kbuf, sizeof(kbuf));
-
          sprintf (sbuf, "SHOW TABLES LIKE '%s'", table);
          if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
             ArgusLog(LOG_INFO, "ArgusCreateSQLSaveTable: mysql_real_query %s error %s", sbuf, mysql_error(RaMySQL));
@@ -7163,6 +7166,9 @@ ArgusCreateSQLSaveTable(char *db, char *table)
    }
 
    MUTEX_UNLOCK(&RaMySQLlock);
+
+   ArgusFree(kbuf);
+   ArgusFree(sbuf);
 
 #ifdef ARGUSDEBUG
    if (retn)

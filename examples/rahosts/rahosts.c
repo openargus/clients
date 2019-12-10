@@ -68,15 +68,18 @@ int RaHostsPrintTreeDebug = 0;
 
 char RaAddrTreeArray[MAXSTRLEN];
 
+char *RaTableCreationString = "CREATE TABLE IF NOT EXISTS %s (region VARCHAR(8), sid VARCHAR(64), inf VARCHAR(4), saddr VARCHAR(64) NOT NULL, sloc TINYINT, count INTEGER, hoststring TEXT, PRIMARY KEY ( region,saddr,sid,inf ))";
+
 
 char *RaDatabase = NULL;
 char **RaTables = NULL;
 
 extern int ArgusTimeRangeStrategy;
 
+void ArgusProcessAddressData(struct ArgusParserStruct *, char *, char *, char *, char *, char *, char *, char *);
 int RaHostsPrintTreeEntries (struct RaAddressStruct *);
 void RaHostsPrintTreeContents (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int, int);
-char *RaHostsPrintTreeLabeler(struct RaAddressStruct *, char *, int);
+char *RaHostsPrintTreeLabeler(struct RaAddressStruct *, int *, char *, int);
 int ArgusRaHostsHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
 
 struct RaOutputProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *);
@@ -103,7 +106,9 @@ int ArgusCreateTable = 0;
 
 char *RaRoleString = NULL;
 char *RaProbeString = NULL;
+char *RaSQLReadTable = NULL;
 char *RaSQLSaveTable = NULL;
+char *RaSQLSaveDatabase = NULL;
 char *RaSQLCurrentTable = NULL;
 
 struct timeval RaStartTime = {0x7FFFFFFF, 0x7FFFFFFF};
@@ -248,26 +253,55 @@ extern struct ArgusParserStruct *ArgusParser;
 struct RaBinProcessStruct *RaBinProcess = NULL;
 
 void RaArgusInputComplete (struct ArgusInput *input) {};
+char ArgusSqlStatement[0x100000];
 
 void
 RaParseComplete (int sig)
 {
    struct ArgusParserStruct *parser = ArgusParser;
    struct ArgusProbeStruct *probe;
+   int retn;
 
    if (!parser->RaParseCompleting++) {
+      if (ArgusParser->writeDbstr != NULL) {
+         char *ptr;
+
+         if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL) {
+            *ptr = '\0';
+            RaSQLSaveTable = ptr + 1;
+         }
+         if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL) {
+            RaSQLSaveDatabase = ptr + 1;
+         }
+
+         sprintf (ArgusSqlStatement, "USE %s", RaSQLSaveDatabase);
+
+         if ((retn = mysql_real_query(RaMySQL, ArgusSqlStatement, strlen(ArgusSqlStatement))) != 0)
+            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+
+         sprintf (ArgusSqlStatement, "DROP TABLE IF EXISTS %s;" , RaSQLSaveTable);
+
+         if ((retn = mysql_real_query(RaMySQL, ArgusSqlStatement, strlen(ArgusSqlStatement))) != 0)
+            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+
+         sprintf (ArgusSqlStatement, RaTableCreationString , RaSQLSaveTable);
+
+         if ((retn = mysql_real_query(RaMySQL, ArgusSqlStatement, strlen(ArgusSqlStatement))) != 0)
+            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+      }
+
+      while ((probe = (void *)ArgusPopQueue(ArgusProbeQueue, ARGUS_LOCK)) != NULL) {
+         struct ArgusLabelerStruct *labeler = probe->localLabeler;
+         int status = ARGUS_MATRIX_LOCAL;
+
+         RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
+
+         status = ARGUS_MATRIX_REMOTE;
+         labeler = probe->remoteLabeler;
+         RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
+      }
+
       mysql_close(RaMySQL);
-   }
-
-   while ((probe = (void *)ArgusPopQueue(ArgusProbeQueue, ARGUS_LOCK)) != NULL) {
-      struct ArgusLabelerStruct *labeler = probe->localLabeler;
-      int status = ARGUS_MATRIX_LOCAL;
-
-      RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
-
-      status = ARGUS_MATRIX_REMOTE;
-      labeler = probe->remoteLabeler;
-      RaHostsPrintTreeContents (labeler, labeler->ArgusAddrTree[AF_INET], status, 0, 0);
    }
 
 #ifdef ARGUSDEBUG
@@ -667,6 +701,7 @@ void ArgusWindowClose(void) {
 void
 RaMySQLInit ()
 {
+   struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
    my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
    char *sptr = NULL, *ptr;
@@ -692,11 +727,18 @@ RaMySQLInit ()
       RaPass = ArgusParser->dbpassstr;
 
    if (RaDatabase == NULL) {
-      if (ArgusParser->writeDbstr != NULL)
-         RaDatabase = strdup(ArgusParser->writeDbstr);
+      if (ArgusParser->readDbstr != NULL) {
+         if (ArgusParser->tflag) {
+            if (strstr(ArgusParser->readDbstr, "mysql:") == NULL) {
 
-      else if (ArgusParser->readDbstr != NULL)
+               ArgusParser->readDbstr = strdup("mysql://root@localhost/ipMatrix/ip_%Y_%m_%d");
+               nadp->qual = ARGUSSPLITDAY;
+               nadp->size = nadp->value * 86400 * 1000000LL;
+               nadp->modify = 1;
+            }
+         }
          RaDatabase = strdup(ArgusParser->readDbstr);
+      }
 
       if (RaDatabase) 
          if (!(strncmp("mysql:", RaDatabase, 6))) {
@@ -769,8 +811,8 @@ RaMySQLInit ()
       *ptr++ = '\0';
       RaTable = ptr;
 
-      if (ArgusParser->writeDbstr != NULL)
-         RaSQLSaveTable = strdup(RaTable);
+      if (ArgusParser->readDbstr != NULL)
+         RaSQLReadTable = strdup(RaTable);
    }
 
    if (!(ArgusParser->status & ARGUS_REAL_TIME_PROCESS))
@@ -900,34 +942,20 @@ RaMySQLInit ()
    if (RaTable != NULL) {
    }
 
-   if (ArgusParser->writeDbstr != NULL) {
-      char *ptr;
-      sprintf (ArgusParser->RaDBString, "-w %s", ArgusParser->writeDbstr);
-      if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL)
-         *ptr = '\0';
-
-   } else 
    if (ArgusParser->readDbstr != NULL) {
-      char *ptr;
       sprintf (ArgusParser->RaDBString, "-r %s", ArgusParser->readDbstr);
-      if ((ptr = strrchr(ArgusParser->readDbstr, '/')) != NULL)
-         *ptr = '\0';
-   } else  {
-      sprintf (ArgusParser->RaDBString, "db %s", RaDatabase);
-
-      if (RaHost)
-         sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], "@%s", RaHost);
-
-      sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], " user %s", RaUser);
+   }
+   if (ArgusParser->writeDbstr != NULL) {
+      sprintf (ArgusParser->RaDBString, "-w %s", ArgusParser->writeDbstr);
    }
 
    if ((ArgusParser->ArgusInputFileList != NULL)  ||
         (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0))) {
 
-      if (RaSQLSaveTable != NULL) {
-         if (!((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))))
-            if (ArgusCreateSQLSaveTable(RaSQLSaveTable))
-               ArgusLog(LOG_ERR, "mysql create %s returned error", RaSQLSaveTable);
+      if (RaSQLReadTable != NULL) {
+         if (!((strchr(RaSQLReadTable, '%') || strchr(RaSQLReadTable, '$'))))
+            if (ArgusCreateSQLSaveTable(RaSQLReadTable))
+               ArgusLog(LOG_ERR, "mysql create %s returned error", RaSQLReadTable);
       }
    }
 
@@ -1154,6 +1182,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       parser->RaInitialized++;
       parser->RaWriteOut = 0;
+      parser->RaFieldDelimiter = ',';
+      parser->RaFieldWidth = RA_VARIABLE_WIDTH;
 
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
@@ -1161,6 +1191,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
 
       ArgusParseInit(ArgusParser, NULL);
+
+      ArgusAddModeList(ArgusParser, "time");
+      ArgusAddModeList(ArgusParser, "1d");
 
       if (parser->ver3flag)
          ArgusLog(LOG_ERR, "rahosts does not support version 3 output\n");
@@ -1579,8 +1612,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if (!found) {
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "No SQL tables found\n");
+         ArgusDebug (1, "No SQL tables found ... exiting\n");
 #endif
+         RaParseComplete(0);
       }
    }
 }
@@ -1705,7 +1739,7 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
 {
    char **retn = NULL, *fileStr = NULL;
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
-   int retnIndex = 2;
+   int retnIndex = 0;
 
    if (table && (strchr(table, '%') || strchr(table, '$'))) {
       if ((retn = ArgusCalloc(sizeof(void *), ARGUS_MAX_TABLE_LIST_SIZE)) == NULL)
@@ -2299,21 +2333,53 @@ RaHostsPrintTreeEntries (struct RaAddressStruct *node)
    return(retn);
 }
 
+unsigned int startseries = 0, lastseries = 0;
+
 char *
-RaHostsPrintTreeLabeler(struct RaAddressStruct *node, char *buf, int len)
+RaHostsPrintTreeLabeler(struct RaAddressStruct *node, int *count, char *buf, int len)
 {
+   int print = 0, carry = 0;
    char *retn = NULL;
+
    if (node && buf && (len > 0)) {
-      if (node->r) retn = RaHostsPrintTreeLabeler(node->r, buf, len);
-      if (node->l) retn = RaHostsPrintTreeLabeler(node->l, buf, len);
+      if (node->r) retn = RaHostsPrintTreeLabeler(node->r, count, buf, len);
+      if (node->l) retn = RaHostsPrintTreeLabeler(node->l, count, buf, len);
   
       if ((node->r == NULL) && (node->l == NULL)) {
-         int slen = strlen(buf);
-         if (slen > 0) {
-            snprintf (&buf[slen], len - slen, ",");
-            slen++;
+         *count -= 1;
+
+         if (startseries == 0) {
+            startseries = node->addr.addr[0];
+            lastseries = node->addr.addr[0];
+         } else {
+            if ((lastseries + 1) == node->addr.addr[0]) {
+               lastseries = node->addr.addr[0];
+            } else {
+               carry = 1;
+               print = 1;
+            }
          }
-         snprintf (&buf[slen], len - slen, "%s(%d)", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->count);
+         if (print || (*count == 0)) {
+            int slen = strlen(buf);
+            if (slen > 0) {
+               snprintf (&buf[slen], len - slen, ",");
+               slen++;
+            }
+            if (startseries != lastseries) {
+               snprintf (&buf[slen], len - slen, "%s-", intoa(startseries));
+               slen = strlen(buf);
+               snprintf (&buf[slen], len - slen, "%s", intoa(lastseries));
+            } else {
+               snprintf (&buf[slen], len - slen, "%s", intoa(startseries));
+            }
+            if (carry) {
+               startseries = node->addr.addr[0];
+               lastseries = node->addr.addr[0];
+            } else {
+               startseries = 0;
+               lastseries = 0;
+            }
+         }
       }
       retn = buf;
    }
@@ -2323,13 +2389,14 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, char *buf, int len)
 
 #define RAHOSTSADDRESSLIST	0x100000
 char RaHostsAddressList[RAHOSTSADDRESSLIST];
-char ArgusRecordPrintBuffer[MAXSTRLEN];
+char ArgusRecordPrintBuffer[0x1000000];
 
 void
 RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *node, int status, int level, int dir)
 {
-   int count = 0, slen;
-   char *lstr = "";
+   char *region, *sid, *inf, *saddr, *loc, *cnt, *hoststring;
+   char field[256];
+   int count = 0;
 
    if (node != NULL) {
       if (node->addr.masklen > RaHostsPrintTreeLevel)
@@ -2347,60 +2414,45 @@ RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressSt
                   bzero (ArgusRecordPrintBuffer, sizeof(ArgusRecordPrintBuffer));
 
                   switch (status) {
-                     case ARGUS_MATRIX_LOCAL:  sprintf (ArgusRecordPrintBuffer, "local, ");  break;
-                     case ARGUS_MATRIX_REMOTE: sprintf (ArgusRecordPrintBuffer, "remote, "); break;
+                     case ARGUS_MATRIX_LOCAL:  region = strdup("local");  break;
+                     case ARGUS_MATRIX_REMOTE: region = strdup("remote"); break;
                   }
                   if (node->ns) {
-                     slen = strlen(ArgusRecordPrintBuffer);
-                     ArgusPrintSID(ArgusParser, &ArgusRecordPrintBuffer[slen], node->ns, MAXSTRLEN - slen);
-                     slen = strlen(ArgusRecordPrintBuffer);
-                     snprintf (&ArgusRecordPrintBuffer[slen], MAXSTRLEN - slen, ", ");
+                     ArgusPrintSID(ArgusParser, field, node->ns, 256);
+                     sid = strdup(ArgusTrimString(field));
 
-                     slen = strlen(ArgusRecordPrintBuffer);
-                     ArgusPrintInf(ArgusParser, &ArgusRecordPrintBuffer[slen], node->ns, MAXSTRLEN - slen);
-
-                     slen = strlen(ArgusRecordPrintBuffer);
-                     snprintf (&ArgusRecordPrintBuffer[slen], MAXSTRLEN - slen, ", ");
+                     ArgusPrintInf(ArgusParser, field, node->ns, 256);
+                     inf = strdup(ArgusTrimString(field));
                   }
 
                   if (node && node->labeler && node->labeler->ArgusAddrTree) {
                      if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
-                        lstr = RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], RaHostsAddressList, RAHOSTSADDRESSLIST);
+                        int tcount = count;
+                        hoststring = strdup(RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], &tcount, RaHostsAddressList, RAHOSTSADDRESSLIST));
+                        sprintf(field, "%d", count);
+                        cnt = strdup(field);
                      }
                   }
 
-                  slen = strlen(ArgusRecordPrintBuffer);
+                  sprintf(field, "%d", node->locality);
+                  loc = strdup(field);
 
                   if (node->addr.str) {
-                     if (count > 0) {
-                        sprintf (&ArgusRecordPrintBuffer[slen], "%s, %d, %d, %s", node->addr.str, node->locality, count, lstr);
-                     } else {
-                        sprintf (&ArgusRecordPrintBuffer[slen], "%s", node->addr.str);
-                     }
-
+                     saddr = strdup(node->addr.str);
                   } else {
                      if (node->addr.masklen > 0) {
-                        if (count > 0) {
-                           if (node->addr.masklen == 32) {
-                              sprintf (&ArgusRecordPrintBuffer[slen], "%s, %d, %d, %s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->locality, count, lstr);
-                           } else {
-                              sprintf (&ArgusRecordPrintBuffer[slen], "%s/%d, %d, %d, %s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen, node->locality, count, lstr);
-                           }
+                        if (node->addr.masklen == 32) {
+                           sprintf (field, "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
                         } else {
-                           if (node->addr.masklen == 32) {
-                              sprintf (&ArgusRecordPrintBuffer[slen], "%s", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))));
-                           } else {
-                              sprintf (&ArgusRecordPrintBuffer[slen], "%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
-                           }
+                           sprintf (field, "%s/%d", intoa(node->addr.addr[0] & (0xFFFFFFFF << (32 - node->addr.masklen))), node->addr.masklen);
                         }
-
+                        saddr = strdup(ArgusTrimString(field));
                      }
                   }
 
                   RaHostsAddressList[0] = '\0';
 
-                  printf ("%s\n", ArgusRecordPrintBuffer);
-
+                  ArgusProcessAddressData(ArgusParser, region, sid, inf, saddr, loc, cnt, hoststring);
                }
             }
             break;
@@ -2494,4 +2546,24 @@ ArgusFindProbe (struct ArgusHashTable *htable, struct ArgusHashStruct *hstruct)
 #endif
   
    return (retn);
+}
+
+
+
+void
+ArgusProcessAddressData(struct ArgusParserStruct *parser, char *region, char *sid, char *inf, char *saddr, char *loc, char *cnt, char *hoststring)
+{
+   int retn = 0;
+
+   if (ArgusParser->writeDbstr != NULL) {
+      snprintf(ArgusSqlStatement, 0x100000, "INSERT INTO %s (region,sid,inf,saddr,sloc,count,hoststring) VALUES ('%s','%s','%s','%s','%s','%s', '%s');", RaSQLSaveTable, region, sid, inf, saddr, loc, cnt, hoststring);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusProcessAddressData: sql %s\n", ArgusSqlStatement);
+#endif
+      if ((retn = mysql_real_query(RaMySQL, ArgusSqlStatement, strlen(ArgusSqlStatement))) != 0)
+         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+   
+   } else 
+      printf ("%s, %s, %s, %s, %s, %s, '%s'\n", region, sid, inf, saddr, loc, cnt, hoststring);
 }
