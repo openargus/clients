@@ -2394,7 +2394,9 @@ char ArgusRecordPrintBuffer[0x1000000];
 void
 RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *node, int status, int level, int dir)
 {
-   char *region, *sid, *inf, *saddr, *loc, *cnt, *hoststring;
+   char *region = NULL, *sid = NULL, *inf = NULL, *saddr = NULL;
+   char *loc = NULL, *cnt = NULL, *hoststring = NULL;
+
    char field[256];
    int count = 0;
 
@@ -2425,7 +2427,7 @@ RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressSt
                      inf = strdup(ArgusTrimString(field));
                   }
 
-                  if (node && node->labeler && node->labeler->ArgusAddrTree) {
+                  if (node->labeler && node->labeler->ArgusAddrTree) {
                      if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
                         int tcount = count;
                         hoststring = strdup(RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], &tcount, RaHostsAddressList, RAHOSTSADDRESSLIST));
