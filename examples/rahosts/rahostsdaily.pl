@@ -127,7 +127,7 @@ sub RaHostsDailyRunRoutines {
       my $ra = "$rahosts -t $time -w mysql://root\@localhost/hostsInventory/host_$dbdate";
 
       if ($debug > 0) {
-         $ra .= " -debug";
+         $ra .= " -D3";
       }
       print "DEBUG: calling: $ra\n" if $debug;
 

@@ -2366,7 +2366,10 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, int *count, char *buf, int
                slen++;
             }
             if (startseries != lastseries) {
-               snprintf (&buf[slen], len - slen, "%s-", intoa(startseries));
+               if ((startseries + 1) == lastseries)
+                  snprintf (&buf[slen], len - slen, "%s,", intoa(startseries));
+               else
+                  snprintf (&buf[slen], len - slen, "%s-", intoa(startseries));
                slen = strlen(buf);
                snprintf (&buf[slen], len - slen, "%s", intoa(lastseries));
             } else {
