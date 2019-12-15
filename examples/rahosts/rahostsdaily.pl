@@ -154,7 +154,7 @@ sub RaHostsDailyGetDates {
 
    print "DEBUG: RaHostsDailyGetDates: stime $stime etime $etime\n" if $debug;
 
-   while ($stime <= $etime) {
+   while ($stime < $etime) {
       my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($stime);
       my $date = sprintf("%4d/%02d/%02d", $year+1900, $mon + 1, $mday);
       push @dates, $date;

@@ -2433,6 +2433,7 @@ RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressSt
                   if (node->labeler && node->labeler->ArgusAddrTree) {
                      if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
                         int tcount = count;
+                        startseries = 0; lastseries = 0;
                         hoststring = strdup(RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], &tcount, RaHostsAddressList, RAHOSTSADDRESSLIST));
                         sprintf(field, "%d", count);
                         cnt = strdup(field);
