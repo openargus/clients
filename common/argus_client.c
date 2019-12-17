@@ -11829,8 +11829,10 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
       if ((retn->queue = ArgusNewQueue()) == NULL)
          ArgusLog (LOG_ERR, "ArgusNewAggregator: ArgusNewQueue error %s", strerror(errno));
 
-      if (retn->correct != NULL)
+      if (retn->correct != NULL) {
          free (retn->correct);
+         retn->correct = NULL;
+      }
 
       parser->ArgusPerformCorrection = 0;
 
