@@ -3038,7 +3038,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
       snprintf (tstrbuf, MAXSTRLEN, "%s", str);
       ptr = tstrbuf;
 
-      while ((sptr = strtok(ptr, " \t\r\n\"")) != NULL) {
+      while ((sptr = strtok(ptr, "\t\r\n\"")) != NULL) {
          switch (state) {
             case ARGUS_PARSING_START_ADDRESS: {
                if ((eptr = strchr(sptr, '-')) != NULL)
@@ -5994,7 +5994,7 @@ RaPrintLabelTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
                      printf ("0.0.0.0/0 ");
                }
 
-               if (strlen(node->cco))
+               if (node->cco && strlen(node->cco))
                   printf ("%s ", node->cco);
 
                if (node->group && strlen(node->group))
