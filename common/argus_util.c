@@ -1777,6 +1777,12 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
          }
          break;
 
+      case RA_TMP_PATH: {
+         if (parser->RaTempFilePath != NULL) free(parser->RaTempFilePath);
+         parser->RaTempFilePath = strdup(optarg);
+         break;
+      }
+
       case RA_SOURCE_PORT:
          parser->ArgusSourcePort = atoi (optarg);
          break;
