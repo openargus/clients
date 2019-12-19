@@ -16648,14 +16648,19 @@ ArgusSortCompare (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 {
    int retn = 0;
 
+// The concept is that you want row sorted in this order
+//       [baseline, nomatch]
+//       [baseline, match]
+//       [new]
+
    if (n1 && n2) {
-      int s1 = 0, s2 = 0;
+      int s1 = 0, s2 = 0; // baseline, nomatch
 
-      if (!(n1->status & ARGUS_RECORD_BASELINE)) s1 += 1;
-      if (!(n2->status & ARGUS_RECORD_BASELINE)) s2 += 1;
+      if (n1->status & ARGUS_RECORD_MATCH) s1 += 1;
+      if (n2->status & ARGUS_RECORD_MATCH) s2 += 1;
 
-      if (n1->status & ARGUS_RECORD_MATCH)    s1 += 2;
-      if (n2->status & ARGUS_RECORD_MATCH)    s2 += 2;
+      if (!(n1->status & ARGUS_RECORD_BASELINE)) s1 += 8; // not baseline, then new
+      if (!(n2->status & ARGUS_RECORD_BASELINE)) s2 += 8; // not baseline, then new
 
    // baseline, match, new is the scale for sorting ... gives you missing, matches, 
    // and new in that order
