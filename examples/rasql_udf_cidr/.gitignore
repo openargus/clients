@@ -1,0 +1,3 @@
+.libs/
+rasql_udf_cidr.la
+rasql_udf_cidr_la-rasql_udf_cidr.lo
