@@ -3764,7 +3764,7 @@ argus_command_string(void)
                   RaScreenMove = FALSE;
                   getbegyx(RaCurrentWindow->window, RaScreenStartY, RaScreenStartX);
                   if (mvwin(RaCurrentWindow->window, RaScreenStartY - 1, RaScreenStartX) == ERR)
-                     ArgusLog (LOG_ERR, "RaResizeScreen: mvwin %d, %d returned ERR\n", RaScreenStartY - 1, RaScreenStartX);
+                     ArgusLog (LOG_ERR, "argus_command_string: mvwin %d, %d returned ERR\n", RaScreenStartY - 1, RaScreenStartX);
                }
                ArgusTouchScreen();
             }
@@ -3773,7 +3773,10 @@ argus_command_string(void)
 
          case RAGETTINGd: {
             struct ArgusInput *input;
-            char strbuf[MAXSTRLEN];
+            char *strbuf = NULL;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if ((input = (void *)ArgusParser->ArgusActiveHosts->start) != NULL) {
                do {
@@ -3786,6 +3789,7 @@ argus_command_string(void)
                   input = (void *)input->qhdr.nxt;
                } while (input != (void *)ArgusParser->ArgusActiveHosts->start);
             }
+            ArgusFree(strbuf);
          }
          break;
 
@@ -3954,10 +3958,13 @@ argus_command_string(void)
                       
          case RAGETTINGm: {
             struct ArgusRecordStruct *ns = NULL;
-            char strbuf[MAXSTRLEN], *tok = NULL, *ptr;
             struct ArgusModeStruct *mode = NULL, *modelist = NULL, *list; 
             struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+            char *strbuf = NULL, *tok = NULL, *ptr;
             int i;                                  
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if ((agg->modeStr == NULL) || strcmp(agg->modeStr, RaCommandInputStr)) {
                if (agg->modeStr != NULL)
@@ -4125,15 +4132,20 @@ argus_command_string(void)
                werase(RaCurrentWindow->window);
                ArgusTouchScreen();
             }
-
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGM: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL, sbuf[1024];
+            char *strbuf, *str, *tok = NULL, *sbuf = NULL;
             struct ArgusModeStruct *mode = NULL;
             char *tzptr;
             int retn = 0;
+
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
 
@@ -4347,11 +4359,16 @@ argus_command_string(void)
                }
             }
 
+            ArgusFree(sbuf);
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGn: {
-            char sbuf[1024], *name = NULL;;
+            char *sbuf = NULL, *name = NULL;
+
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if (strstr(RaCommandInputStr, "all")) ArgusParser->nflag = 0; else
             if (strstr(RaCommandInputStr, "port")) ArgusParser->nflag = 1; else
@@ -4369,6 +4386,7 @@ argus_command_string(void)
             sprintf (sbuf, "%s changed to %s ", RAGETTINGnSTR, name);
             ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
             ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+            ArgusFree(sbuf);
             break;
          }
 
@@ -4392,7 +4410,13 @@ argus_command_string(void)
          }
 
          case RAGETTINGR: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
+            char *strbuf, *str = NULL, *ptr = NULL;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            str = strbuf;
+
             strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
 
             if (strlen(strbuf) > 0) {
@@ -4402,14 +4426,20 @@ argus_command_string(void)
                   str = NULL;
                }
             }
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGr: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL, sbuf[1024];
+            char *strbuf, *str = NULL, *ptr = NULL, *sbuf = NULL;
             glob_t globbuf;
 
-            bzero (strbuf, MAXSTRLEN);
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            str = strbuf;
             strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
 
             if (strlen(strbuf) > 0) {
@@ -4456,15 +4486,23 @@ argus_command_string(void)
                pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
             }
+            ArgusFree(sbuf);
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGs: {
-            char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
-            int (*srtalg[ARGUS_MAX_SORT_ALG])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+            char *strbuf = NULL, *ptr = NULL, *tok;
+            int (**srtalg)(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
             int x, ind = 0;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((srtalg = (int (**)()) ArgusCalloc(ARGUS_MAX_SORT_ALG, sizeof(void *))) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            ptr = strbuf;
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
-            bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
                   if (!strncmp (ArgusSortKeyWords[x], tok, strlen(ArgusSortKeyWords[x]))) {
@@ -4473,7 +4511,7 @@ argus_command_string(void)
                   }
                }
                if (x == ARGUS_MAX_SORT_ALG) {
-                  bzero(srtalg, sizeof(srtalg));
+                  srtalg[0] = NULL;
                   ArgusLog (LOG_ALERT, "sort keyword %s not valid", tok);
                   break;
                }
@@ -4514,6 +4552,8 @@ argus_command_string(void)
             pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
             ArgusTouchScreen();
+            ArgusFree(strbuf);
+            ArgusFree(srtalg);
             break;
          }
 
@@ -4645,9 +4685,13 @@ argus_command_string(void)
 
          case RAGETTINGF: {
             struct ArgusQueueStruct *queue = RaCursesProcess->queue;
-            char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
+            char *strbuf = NULL, *ptr = NULL, *tok;
             int x;
 
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            ptr = strbuf;
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             bzero ((char *)ArgusParser->RaPrintOptionStrings, sizeof(ArgusParser->RaPrintOptionStrings));
             ArgusParser->RaPrintOptionIndex = 0;
@@ -4684,6 +4728,7 @@ argus_command_string(void)
             }
             ArgusInitializeColorMap(ArgusParser, RaDisplayWindow);
             ArgusTouchScreen();
+            ArgusFree(strbuf);
             break;
          }
 
@@ -4738,8 +4783,13 @@ argus_command_string(void)
 int
 argus_process_command (struct ArgusParserStruct *parser, int status)
 {
-   char promptbuf[256], *prompt = promptbuf;
+   char *promptbuf = NULL, *prompt = NULL;
    int retn = status;
+
+   if ((promptbuf = ArgusCalloc(1, 256)) == NULL)
+      ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+   prompt = promptbuf;
 
    if (strlen(rl_line_buffer) == 1) {
       switch (*rl_line_buffer) {
@@ -5140,6 +5190,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
       }
    }
 
+   ArgusFree(promptbuf);
    return (retn);
 }
 
