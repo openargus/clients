@@ -19,6 +19,8 @@
 
 /*
  *  rahosts     - network address matrix inventory reporting
+ *                routines that use the hostsInventory database
+ *                tables.
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
@@ -41,4 +43,5 @@ metrics and a list of peer level addresses (L2 and L3 matrix).
 Filters can be used to generate "connected" relationships, i.e. process
 flow records that are active, to generate empirical interactions, rather
 than requests for addresses.
+
 
