@@ -60,6 +60,7 @@ my @selectItems = ();
 
 my @names       = $query->param;
 my $dm          = $query->param('dm');
+my $tod         = $query->param('td');
 my $time        = $query->param('tm');
 my $interval    = $query->param('in');
 my $filter      = $query->param('fi');
@@ -71,6 +72,7 @@ my $field       = $query->param('fd');
 my $mode        = $query->param('mo');
 my $uuid        = $query->param('uu');
 my $id          = $query->param('id');
+my @tinds       = ();
 
 my $skey        = " ";
 my $stype       = "";
@@ -80,6 +82,8 @@ my @results     = ();
 my $results_ref = \@results;
 my @matchAddress;
 my $elements    = "";
+
+my @wdays       = qw (sun mon tue wed thu fri sat);
 
 my $clique;
 
@@ -160,6 +164,24 @@ sub RaCliqueProcessParameters {
   }
 
   if (defined $time) {
+      if (index($time,":") != -1) {
+         ($time, $tod) = split(/:/, $time);
+
+         if (defined ($tod)) {
+            $tod = lc $tod;
+            my @days = split(/,/, $tod);
+            foreach my $day (@days) {
+               my ($tind) = grep { $wdays[$_] eq $day } (0 .. @wdays-1);
+               if ($tind >= 0) { push @tinds, $tind; }
+            }
+
+            if (scalar @tinds) {
+               my $tstr = join ",", @tinds;
+               print "DEBUG: RaCliqueProcessParameters: time:'$time' tod:$tstr\n" if $debug;
+            }
+         }
+      }
+    
     ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
     print "DEBUG: RaCliqueProcessParameters: time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
   }
@@ -1500,12 +1522,17 @@ sub RaCliqueGetTables {
 
          my $date = sprintf("%4d-%02d-%02d", $year+1900, $mon + 1, $mday);
 
-         foreach my $tab (@tnames) {
-            my $tableName = sprintf("%s_%4d_%02d_%02d", $tab, $year+1900, $mon + 1, $mday);
+         my $val = scalar @tinds;
+         my ($mch) = grep { $tinds[$_] eq $wday } (0 .. @tinds-1);
 
-            if ($hash{$tableName} > 0) {
-               my @trow = ($date, $tableName, $tab);
-               push @tables, \@trow;
+         if (($val == 0) || defined $mch) {
+            foreach my $tab (@tnames) {
+               my $tableName = sprintf("%s_%4d_%02d_%02d", $tab, $year+1900, $mon + 1, $mday);
+
+               if ($hash{$tableName} > 0) {
+                  my @trow = ($date, $tableName, $tab);
+                  push @tables, \@trow;
+               }
             }
          }
          $stime += 86400;
