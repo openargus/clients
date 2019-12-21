@@ -84,7 +84,6 @@ my @matchAddress;
 my $elements    = "";
 
 my @wdays       = qw (sun mon tue wed thu fri sat);
-
 my $clique;
 
 my $f;
@@ -181,7 +180,6 @@ sub RaCliqueProcessParameters {
             }
          }
       }
-    
     ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
     print "DEBUG: RaCliqueProcessParameters: time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
   }
