@@ -1,4 +1,6 @@
 .libs/
+.deps/
+libtool
 config.log
 config.status
 config.h
