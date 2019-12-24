@@ -1190,15 +1190,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
 
-      ArgusParseInit(ArgusParser, NULL);
+      ArgusParseInit(parser, NULL);
 
-      ArgusAddModeList(ArgusParser, "time");
-      ArgusAddModeList(ArgusParser, "1d");
+      ArgusAddModeList(parser, "time");
+      ArgusAddModeList(parser, "1d");
 
       if (parser->ver3flag)
          ArgusLog(LOG_ERR, "rahosts does not support version 3 output\n");
 
-      if (ArgusParser->Sflag)
+      if (parser->Sflag)
          usage();
 
       for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
@@ -1364,8 +1364,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                         /* need to set the flow idle timeout value to be equal to or
                            just a bit bigger than (nadp->count * nadp->size) */
 
-                        ArgusParser->timeout.tv_sec  = (nadp->count * (nadp->size / 1000000));
-                        ArgusParser->timeout.tv_usec = 0;
+                        parser->timeout.tv_sec  = (nadp->count * (nadp->size / 1000000));
+                        parser->timeout.tv_usec = 0;
                      }
                      break;
 
@@ -1418,7 +1418,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                } else
                if (!(strncasecmp (mode->mode, "rtime", 5)) ||
                   (!(strncasecmp (mode->mode, "realtime", 8)))) {
-                  ArgusParser->status |= ARGUS_REAL_TIME_PROCESS;
+                  parser->status |= ARGUS_REAL_TIME_PROCESS;
                } else
                if (!(strncasecmp (mode->mode, "oui", 3))) {
                   parser->ArgusPrintEthernetVendors++;
