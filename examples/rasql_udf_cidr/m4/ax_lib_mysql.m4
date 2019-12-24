@@ -141,6 +141,14 @@ AC_DEFUN([AX_LIB_MYSQL],
                   [Define to 1 if MySQL libraries are available])
     fi
 
+    AC_CHECK_HEADER([mysql_con.h],
+                  [AC_DEFINE(HAVE_MYSQL_CON,,
+                             [Define if you have the mysql_con.h header file])],
+    [AC_CHECK_HEADER([server/m_ctype.h],
+                  [AC_DEFINE(HAVE_M_CTYPE,,
+                             [Define if you have the mysql_con.h header file])],,
+                                   [AC_WARN([Disabling GSSAPI - no include files found]); gssapi=no])])
+
     AC_SUBST([MYSQL_VERSION])
     AC_SUBST([MYSQL_CFLAGS])
     AC_SUBST([MYSQL_LDFLAGS])

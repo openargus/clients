@@ -33,7 +33,12 @@
 #include <syslog.h>
 
 #include <mysql.h>
+
+#if defined(HAVE_MYSQL_CON)
+#include <mysql_con.h>
+#else
 #include <server/m_ctype.h>
+#endif
 
 #if defined(PACKAGE_VERSION)
 #undef PACKAGE_VERSION
