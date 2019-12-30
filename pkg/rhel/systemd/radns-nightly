@@ -36,6 +36,7 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/usr/local/bin";
 my @arglist = ();
 
 my $radnsdb   = which 'radnsdb';
+my $mysql     = which 'mysql';
 my $debug     = 0;
 my $done      = 0;
 
@@ -82,6 +83,9 @@ if ($time eq "") {
    ($dbtime = $time) =~ s/\//_/g;
 }
 
+my $sqlcmd = "mysql dnsFlows -u root -NBe 'CREATE INDEX idx_stime ON dns_$dbtime (stime);' 2>&1";
+print "DEBUG: calling $sqlcmd\n" if $debug;
+my $output = `$sqlcmd`;
 
 if ($dbase eq "") {
    push @dbaseList, "dnsNames";
