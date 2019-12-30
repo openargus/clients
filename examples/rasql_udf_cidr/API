@@ -1,1 +1,0 @@
-int match_cidraddr(char *cidr, char *addr)

@@ -92,7 +92,6 @@ ralabel: ../common
 ramatrix: ../common
 rampc: ../common
 ramysql: ../common
-rasql_udf_cidr: ../common
 rap: ../common
 rapath: ../common
 rapolicy: ../common
