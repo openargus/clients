@@ -18,7 +18,8 @@ Buildroot: %{_tmppath}/%{srcname}-%{ver}-root
 %{?systemd_requires}
 BuildRequires: systemd
 BuildRequires: ncurses-devel, readline-devel, zlib-devel
-BuildRequires: pcre-devel, GeoIP-devel
+BuildRequires: pcre-devel
+BuildRequires: libmaxminddb-devel
 BuildRequires: mariadb-devel
 BuildRequires: cyrus-sasl-devel
 BuildRequires: libuuid-devel
@@ -48,7 +49,8 @@ Copyright: 2000-2022 QoSient, LLC
 %prep
 %setup -n %{srcname}-%{ver}.%{rel}
 %build
-%configure --with-sasl --with-c-ares %{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
+%configure --with-sasl --with-c-ares --with-GeoIP=no --with-libmaxminddb \
+	%{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
 make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
 
 %install
