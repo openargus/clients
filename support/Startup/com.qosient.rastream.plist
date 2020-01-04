@@ -19,7 +19,7 @@
                 <string>time</string>
                 <string>5m</string>
                 <string>-w</string>
-                <string>/Volumes/Data/Archive/QoSient/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S</string>
+                <string>/usr/local/argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S</string>
         </array>
         <key>OnDemand</key>
         <false/>
