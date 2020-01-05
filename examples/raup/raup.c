@@ -1359,8 +1359,10 @@ RaParseComplete (int sig)
          while ((ArgusAupStruct = (struct RaAupStruct *) ArgusPopQueue(ArgusAupQueue, ARGUS_LOCK)) != NULL)
             RaPrintAup (ArgusParser, ArgusAupStruct);
 
+#ifdef ARGUS_MYSQL
          for (con = 0; con < ArgusMySQLConnections; con++)
             mysql_close(RaMySQL+con);
+#endif
 
          fflush(stdout);
          ArgusShutDown(sig);
