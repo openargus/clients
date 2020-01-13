@@ -2427,22 +2427,32 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
       }
 
       case RA_LOCAL_DIRECTION: {
-         if (!(strncasecmp(optarg, "suggest:", 7))) {
-            if (!(strncasecmp(&optarg[8], "src", 3)))
+         char *str = strdup(optarg), *opt = NULL;
+         char *strptr = str;
+
+         while ((opt = strtok(strptr, " \t\n")) != NULL) {
+            if (!(strncasecmp(opt, "time", 4))) {
+               parser->ArgusDirectionFunction |= ARGUS_LOCAL_TIME;
+            } else
+            if (!(strncasecmp(opt, "suggest:", 7))) {
+               if (!(strncasecmp(&opt[8], "src", 3)))
+                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
+               else
+                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
+            } else
+            if (!(strncasecmp(opt, "force:", 6))) {
+               if (!(strncasecmp(&opt[6], "src", 3)))
+                  parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_SRC;
+               else
+                  parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_DST;
+            } else
+            if (!(strncasecmp(opt, "src", 3)))
                parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
-            else
+            if (!(strncasecmp(opt, "dst", 3)))
                parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
-         } else
-         if (!(strncasecmp(optarg, "force:", 6))) {
-            if (!(strncasecmp(&optarg[6], "src", 3)))
-               parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_SRC;
-            else
-               parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_DST;
-         } else
-         if (!(strncasecmp(optarg, "src", 3)))
-            parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
-         if (!(strncasecmp(optarg, "dst", 3)))
-            parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
+            strptr = NULL;
+         }
+         free(str);
          break;
       }
 
@@ -4178,10 +4188,20 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
    if (parser->ArgusDirectionFunction) {
       struct ArgusLabelerStruct *labeler = NULL;
       int tested = 0, reverse = 0;
+      double stime, dtime;
       char dbuf[16];
 
       if (parser->RaMonMode)
          return;
+
+      if (parser->ArgusDirectionFunction & ARGUS_LOCAL_TIME) {
+         stime = ArgusFetchSrcStartTime(ns);
+         dtime = ArgusFetchDstStartTime(ns);
+
+         if (stime && dtime && (stime > dtime)) {
+            reverse++;
+         }
+      }
 
       bzero(dbuf, 16);
       ArgusPrintDirection(parser, dbuf, ns, 8);

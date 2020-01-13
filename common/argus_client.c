@@ -12613,6 +12613,68 @@ ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns)
+{
+   double sec = 0, usec = 0;
+   double retn = 0;
+
+   switch (ns->hdr.type & 0xF0) {
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
+         struct timeval stimebuf, *st = &stimebuf;
+         struct timeval *stime = NULL;
+
+         if (dtime != NULL) {
+            unsigned int subtype = dtime->hdr.subtype & ARGUS_TIME_SRC_START;
+
+            if (subtype) {
+               st->tv_sec  = dtime->src.start.tv_sec;
+               st->tv_usec = dtime->src.start.tv_usec;
+               stime = st;
+            }
+         }
+         sec  = stime->tv_sec;
+         usec = stime->tv_usec;
+      }
+   }
+
+   retn = ((sec * 1000000.0) + usec) / 1000000.0;
+   return(retn);
+}
+
+double
+ArgusFetchDstStartTime (struct ArgusRecordStruct *ns)
+{
+   double sec = 0, usec = 0;
+   double retn = 0;
+
+   switch (ns->hdr.type & 0xF0) {
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
+         struct timeval stimebuf, *st = &stimebuf;
+         struct timeval *stime = NULL;
+
+         if (dtime != NULL) {
+            unsigned int subtype = dtime->hdr.subtype & ARGUS_TIME_DST_START;
+
+            if (subtype) {
+               st->tv_sec  = dtime->dst.start.tv_sec;
+               st->tv_usec = dtime->dst.start.tv_usec;
+               stime = st;
+            }
+         }
+         sec  = stime->tv_sec;
+         usec = stime->tv_usec;
+      }
+   }
+
+   retn = ((sec * 1000000.0) + usec) / 1000000.0;
+   return(retn);
+}
+
+double
 ArgusFetchStartTime (struct ArgusRecordStruct *ns)
 {
    double retn = ArgusFetchStartuSecTime(ns) / 1000000.0;
