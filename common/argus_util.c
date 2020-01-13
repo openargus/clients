@@ -2426,6 +2426,14 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
          break;
       }
 
+      case RA_LOCAL_CORRECT: {
+         if (!(strncasecmp(optarg, "yes", 3)))
+            parser->ArgusPerformCorrection = 1;
+         else
+            parser->ArgusPerformCorrection = 0;
+         break;
+      }
+
       case RA_LOCAL_DIRECTION: {
          char *str = strdup(optarg), *opt = NULL;
          char *strptr = str;
