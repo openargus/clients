@@ -20301,16 +20301,27 @@ void
 ArgusPrintSrcUserData (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusDataStruct *user = NULL;
+/*
    char strbuf[MAXSTRLEN], *str = strbuf;
    char conbuf[MAXSTRLEN], *con = conbuf;
+*/
+
+   char *strbuf = NULL, *conbuf = NULL, *str, *con;
    int slen = 0, exlen = len;
+
 // char delim = ' ';
 
 // if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0'))
 //    delim = parser->RaFieldDelimiter;
 
-   bzero (conbuf, sizeof(conbuf));
-   bzero (strbuf, sizeof(strbuf));
+   if ((strbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+      ArgusLog(LOG_ERR, "ArgusPrintSrcUserData: ArgusCalloc: error %s", strerror(errno));
+
+   if ((conbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+      ArgusLog(LOG_ERR, "ArgusPrintSrcUserData: ArgusCalloc: error %s", strerror(errno));
+   
+   str = strbuf;
+   con = conbuf;
    bzero (buf, len);
 
    if (len > 0) {
@@ -20340,17 +20351,17 @@ ArgusPrintSrcUserData (struct ArgusParserStruct *parser, char *buf, struct Argus
          slen = (user->count < len) ? user->count : slen;
          slen = (slen > len) ? len : slen;
 
-         bzero (strbuf, sizeof(strbuf));
-
          if ((slen = ArgusEncode (parser, (const char *)&user->array, NULL, slen, str, sizeof(strbuf))) > 0) {
             if (parser->ArgusPrintXml) {
                switch (parser->eflag) {
                   case ARGUS_ENCODE_OBFUSCATE:
                   case ARGUS_ENCODE_ASCII: {
-                     char xmlbuf[MAXSTRLEN], *dptr = str;
+                     char *xmlbuf, *dptr = str;
                      int i, dlen;
 
-                     bzero(xmlbuf, sizeof(xmlbuf));
+                     if ((xmlbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+                        ArgusLog(LOG_ERR, "ArgusPrintSrcUserData: ArgusCalloc: error %s", strerror(errno));
+
                      for (i = 0; i < slen; i++) {
                         if (*dptr == '&')
                            sprintf(&xmlbuf[strlen(xmlbuf)], "&amp;");
@@ -20368,15 +20379,46 @@ ArgusPrintSrcUserData (struct ArgusParserStruct *parser, char *buf, struct Argus
                      }
                      dlen = strlen(xmlbuf);
                      sprintf (con, "%*.*s", dlen, dlen, xmlbuf);
+                     ArgusFree(xmlbuf);
                      break;
                   }
                   default:
                      sprintf (con, "%s", str);
                      break;
                }
-            } else {
+            } else 
+            if (parser->ArgusPrintJson) {
+               char *jsonbuf, *dptr = str;
+               int i, dlen;
+
+               if ((jsonbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL)
+                  ArgusLog(LOG_ERR, "ArgusPrintSrcUserData: ArgusCalloc: error %s", strerror(errno));
+
+               for (i = 0; i < slen; i++) {
+                  if (*dptr == '\n')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\n");
+                  if (*dptr == '\r')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\r");
+                  if (*dptr == '\t')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\t");
+                  if (*dptr == '\b')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\b");
+                  if (*dptr == '\f')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\f");
+                  else if (*dptr == '"')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\\"");
+                  else if (*dptr == '\'')
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "\\\\");
+                  else
+                     sprintf(&jsonbuf[strlen(jsonbuf)], "%c", *dptr);
+                  dptr++;
+               }
+               dlen = strlen(jsonbuf);
+               sprintf (con, "%*.*s", dlen, dlen, jsonbuf);
+               ArgusFree(jsonbuf);
+
+            } else 
                sprintf (con, "s[%d]=%s", slen, str);
-            }
          }
       }
    }
@@ -20388,6 +20430,9 @@ ArgusPrintSrcUserData (struct ArgusParserStruct *parser, char *buf, struct Argus
          exlen = strlen(con);
       sprintf (buf, "%-*.*s ", exlen, exlen, con);
    }
+
+   ArgusFree(conbuf);
+   ArgusFree(strbuf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintSrcUserData (%p, %p)", buf, argus);
