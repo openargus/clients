@@ -11854,11 +11854,6 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
 
       retn->RaMetricFetchAlgorithm = ArgusFetchDuration;
       retn->ArgusMetricIndex = ARGUSMETRICDURATION;
-
-#define ARGUS_STANDARD_MASK  (ARGUS_MASK_PROTO_INDEX | ARGUS_MASK_SADDR_INDEX | ARGUS_MASK_SPORT_INDEX | ARGUS_MASK_DADDR_INDEX | ARGUS_MASK_DPORT_INDEX)
-
-      if ((retn->mask & ARGUS_STANDARD_MASK) != ARGUS_STANDARD_MASK)
-         parser->ArgusPerformCorrection = 0;
    }
 
    return (retn);
@@ -12658,18 +12653,16 @@ ArgusFetchDstStartTime (struct ArgusRecordStruct *ns)
 
          if (dtime != NULL) {
             unsigned int subtype = dtime->hdr.subtype & ARGUS_TIME_DST_START;
-
             if (subtype) {
                st->tv_sec  = dtime->dst.start.tv_sec;
                st->tv_usec = dtime->dst.start.tv_usec;
                stime = st;
+               sec  = stime->tv_sec;
+               usec = stime->tv_usec;
             }
          }
-         sec  = stime->tv_sec;
-         usec = stime->tv_usec;
       }
    }
-
    retn = ((sec * 1000000.0) + usec) / 1000000.0;
    return(retn);
 }
