@@ -124,7 +124,7 @@ sub RaHostsDailyRunRoutines {
       my $time = $dates[$i];
       my  $dbdate = $time;
       $dbdate =~ s/\//_/g;
-      my $ra = "$rahosts -t $time -w mysql://root\@localhost/hostsInventory/host_$dbdate";
+      my $ra = "$rahosts -F /usr/argus/rarc -t $time -w mysql://root\@localhost/hostsInventory/host_$dbdate";
 
       if ($debug > 0) {
          $ra .= " -D3";
