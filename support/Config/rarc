@@ -3,20 +3,6 @@
 #  Copyright (c) 2000-2022 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# 
 #
 # Example .rarc
 #
@@ -39,32 +25,12 @@
 #
 #RA_ARGUS_SERVER=localhost:561
 
-#
-# You can specify the source port that will be used on all remote TCP
-# connections, using this variable.
-#
-#RA_SOURCE_PORT=13564
 
+# All ra* clients can read Cicso Netflow records directly from Cisco
+# routers.  Specifying this value will alert the ra* client to open
+# a UDP based socket listening for data on this port number.
 #
-# You can specify the default port used by Argus servers that we would
-# connect to.  The default is 561, and can be overriden within the
-# RA_ARGUS_SERVER directive..
-#
-#RA_ARGUS_SERVERPORT=561
-
-#
-# You can specify the input file for reading argus data.
-# All ra* programs using this rarc file will attempt to read from
-# this file, and is usually reserved as a script specific rarc
-# directive.
-#
-#RA_INPUT_FILE=/tmp/argus.data.out
-
-#
-# You can specify this instance of a ra* program will not generate output.
-# This is the equivalent of using the -q command line option.
-#
-#RA_NO_OUTPUT=no
+#RA_CISCONETFLOW_PORT=
 
 
 # Any ra* program can generate a pid file, which can be
@@ -115,8 +81,8 @@ RA_PID_PATH="/var/run"
 # strength values.  Set these variable to control this policy.
 #
  
-#RA_MIN_SSF=0
-#RA_MAX_SSF=128
+RA_MIN_SSF=0
+RA_MAX_SSF=0
 
 
 # All ra* clients can support writing its output as Argus Records into
@@ -124,15 +90,6 @@ RA_PID_PATH="/var/run"
 #    "output.file filter"
 #
 #RA_OUTPUT_FILE="/tmp/ra.out tcp"
-
-
-# When using a filter expression at the end of the command, this option
-# will cause the ra(1) program to append the records that  are  rejected 
-# by the filter into the file.
-#
-# This is the equivalent of the ' -E ' command line option.
-#
-#RA_EXCEPTION_OUTPUT_FILE="/tmp/ra.exception.out"
 
 
 # All ra* clients can support filtering its input based on a time
@@ -153,42 +110,20 @@ RA_PID_PATH="/var/run"
 RA_RUN_TIME=0
 
 
-# Specify the number of records that are processed by the ra* program.
-# Process the first <num> records, the inclusive range <start - end>, or process <num + 1>
-# records starting at index number <start>.  The optional 1st character indicates  whether
-# the  specification  is applied to the input or the output stream of records, the default
-# is input.  If applied to the input, these are the range of records that match the  input
-# filter.
+# Specify if ra* clients should print management records out
+# by default.  This does not affect management record
+# processing, nor down stream management record propagation.
 #
-# Syntax:
-#      [io]<num>, [io]<start-end>, [io]<start+num>
-#
-# This is equivalent to the " -N " option.
-#
-
-#RA_NUMBER=0
-#RA_NUMBER=i34-128
-#RA_NUMBER=o50+5
-
-
-# Specify if ra* clients should print management records by default.  
-# This does not affect management record processing, nor down stream
-# management record propagation.
-#
-# Commandline equivalents:
-#   -M man
-#   -M noman
 #
 RA_PRINT_MAN_RECORDS=yes
 RA_PRINT_EVENT_RECORDS=yes
-
 
 # Specify if rabins-like clients should print start and stop management
 # records to frame its output.  This does not affect management record
 # processing, nor down stream management record propagation.
 #
 #
-RA_GENERATE_BIN_MAR_RECORDS=yes
+RA_GENERATE_BIN_MAR_RECORDS=no
 
 
 # Most ra* clients are designed to print argus records out in ASCII,
@@ -196,39 +131,32 @@ RA_GENERATE_BIN_MAR_RECORDS=yes
 # clients, this variable will generate column headers as labels.
 # The number is the number of lines between repeated header output.
 # Setting this value to zero (0) will cause the labels to be printed
-# once.  If you don't want labels, set the value to -1, comment out
-# this line out or delete it.
+# once.  If you don't want labels,  then comment this line out or
+# delete it.
 #
+# 
 RA_PRINT_LABELS=0
-
-
-# Some ra* clients are designed to print summaries at the end of running.
-# Setting this value to "yes" will cause the summary to be printed.
-#
-# Command line equivalent is " -a ".
-#
-#RA_PRINT_SUMMARY=no
 
 
 # All ra* clients are designed to provide flexibility in what data
 # is printed when configured to generate ASCII output.
 # For ra() like clients, this variable overide the default field
 # printing specification.  This is the equivalent to the "-s option".
-# The syntax for printable fields is:
-#
-#   [-][[+[#]]field[:len[:format]] 
-#
-# where field is one of the printable objects, len is the maximum width of
-# printed values, and format is an sprintf.1 format specification, such as
-# %d, %u or %x.  The format specification support is limited to IP addresses
-# at this point, but will support a rich syntax.
-#
-# Examples include 'saddr:24:%d', 'dport:12', '+3proto'.  See ra.1 for a complete
-# list of printable objects.
-# 
 # The below example is the default field definition.
 #
-RA_FIELD_SPECIFIER="stime flgs proto saddr sport dir daddr dport spkts dpkts sbytes dbytes state"
+RA_FIELD_SPECIFIER="stime dur flgs proto saddr sport dir daddr dport spkts dpkts sbytes dbytes state"
+
+
+# Many ra* style programs sorting records as a part of its function.
+# Programs like rasort.1, providing explicit command-line options
+# to specify the sort algorithms and their order, using rasort's
+# '-m field [field ...]' option.  
+# 
+# Use this configuration directive to specify the default sorting
+# algorithm table.  The default sort algorithm is record starting
+# time, stime.
+#
+RA_SORT_ALGORITHMS="pkts saddr daddr proto dport sport"
 
 
 # Most ra* clients are designed to print argus records out in ASCII,
@@ -241,37 +169,6 @@ RA_FIELD_SPECIFIER="stime flgs proto saddr sport dir daddr dport spkts dpkts sby
 RA_FIELD_DELIMITER=''
 
 
-# To provide consistent printing behavior with tcpdump(), ra* programs
-# will use a '.' as the field separator, between the Address and the
-# Port values, when they coincide.  This results in "x.y.z.w.yyyy"
-# as the printed entity for 'IP address' 'port value'.
-#
-# Modify this variable if you want to use a space instead.
-# The default behavior is for this variable to be 'yes'
-
-#RA_SEPARATE_ADDR_FROM_PORT_WITH_PERIOD="yes"
-
-
-# The field width generates columnar output for the ra* programs,
-# but in some cases, you don't really want a lot of white space
-# in your output.
-# 
-# To handle these cases, use the RA_FIELD_WIDTH variable to specify
-# whether you want 'variable' or 'fixed'.  'fixed' is the default.
-# 
-# When using 'variable', the field width is the length of the string
-# needed to print the entire field's value.  This is generally the
-# ideal behavior when you want to use the output in other programs,
-# such as the use of CSV ('comma seperated values') formated input
-# for importing into Excel.
-# 
-# When the field delimiter is changed, all ra* programs will change
-# to 'variable' field widths.  To override this, remove the comment
-# below, so that you explicitly set the width to be 'fixed'.
-# 
-#RA_FIELD_WIDTH='fixed'
-
-
 # For ra() like clients, this variable will control the
 # translation of numbers to names, such as resolving hostnames, 
 # and print port or protocol names.  There can be a huge performance
@@ -282,7 +179,7 @@ RA_FIELD_DELIMITER=''
 # port names, and 'all' to translate all fields.  An
 # invalid value will default to 'port', silently.
 #
-RA_PRINT_NAMES=port
+RA_PRINT_NAMES=proto
 
 
 # Ra() clients when printing numeric IP addresses, print them
@@ -305,18 +202,7 @@ RA_PRINT_NAMES=port
 #     "yes"    -  print CIDR mask length when less than 32
 #     "strict" -  always print CIDR mask length
 #
-#RA_CIDR_ADDRESS_FORMAT="yes"
-
-
-# ra() clients can print and process AS Numbers that are
-# associated with IP addresses in the flow record.
-#
-# RFC 5396 specifies 3 formats for printing AS Numbers,
-# 'asplain', 'asdot+' and 'asdot'.
-#
-# The default is 'asplain'.
-#
-RA_ASN_PRINT_FORMAT="asplain"
+RA_CIDR_ADDRESS_FORMAT="yes"
 
 
 # For ra() like clients, this variable will include the response
@@ -336,13 +222,15 @@ RA_PRINT_UNIX_TIME=no
 # For ra() like clients, the format that is used to print
 # timestamps, is based on the strftime() library call, with
 # an extension to print fractions of a sec "%f".  The
-# default is "%T.%f" (%H:%M:%S.fsecs).  You can overide this default time
+# default is "%T.%f".  You can overide this default time
 # format by setting this variable.  This string must conform
 # to the format specified in strftime().  Malformed strings can
 # generate interesting output, so be aware with this one, and
 # don't forget the '.' when doing fractions of a second.
 #
-RA_TIME_FORMAT="%T.%f"
+#RA_TIME_FORMAT="%Y/%m/%d"
+#RA_TIME_FORMAT="%Y/%m/%d.%T.%f"
+RA_TIME_FORMAT="%m/%d.%T.%f"
 
 
 # The timezone used for timestamps is specified by the
@@ -367,22 +255,13 @@ RA_USEC_PRECISION=6
 
 
 # Argus can capture user data.  When printing out the user data
-# contents, using tools such as ra() and raxml(), the type of encoding
-# can be specified here. Supported values are "Ascii", "Obfuscate",
-# "Hex", "Encode64" or "Encode32".  The default is "Ascii".
+# contents, using tools such as raxml(), the type of encoding
+# can be specified here. Supported values are "Ascii", "Encode64",
+# or "Encode32".
 #
-# Ascii prints printable ascii characters, and '.' for non-printable chars.
-#
-# Obfuscate is an extension to the Ascii print, that attempts to
-# over-write plain text passwords, encountered in the user data,
-# with 'x's.
-#
-RA_USERDATA_ENCODE=Ascii
-#RA_USERDATA_ENCODE=Obfuscate
-#RA_USERDATA_ENCODE=Hex
 #RA_USERDATA_ENCODE=Encode32
 #RA_USERDATA_ENCODE=Encode64
-
+RA_USERDATA_ENCODE=Ascii
 
 # Argus supports extending flow records using argus labels.  Labels are
 # metadata strings that can be modified for flow data enhancements.
@@ -425,43 +304,18 @@ RA_USERDATA_ENCODE=Ascii
 #RA_FILTER=""
 
 
-# Many ra* programs sort records as a part of their function.
-# Programs like rasort.1, providing explicit command-line options
-# to specify the sort algorithms and their order, using the
-# '-m field [field ...]' option.
-#
-# Use this configuration directive to specify the default sorting
-# algorithm table for your ra* programs.  The default sort algorithm
-# is record start time "stime".
-#
-# For some programs, such as ratop(), and rabins(), the commandline
-# equivalent is -P <fields>.
-#
-RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
-
-
-# ra* clients that match flow attributes such as aggregators, use
-# hash table to hold data for processing.  This variable can change
-# the size of hash tables to help control memory, or increase
-# processing speed.  The default is 262144 (0x40000).
-#
-#RA_HASHTABLE_SIZE=262144
-
-
-# Some ra* clients have a timeout based function.  Ratop, as an
-# example, times out flows and removes them from  screen at a fixed
-# interval.  This variable can be set using the RA_TIMEOUT_INTERVAL
-# variable, which is a float in seconds. 60.0 seconds is the default.
-#
-#RA_TIMEOUT_INTERVAL=60.0
-
-
 # Some ra* clients have an interval based function.  Ratop, as an
 # example, can refresh the screen at a fixed interval.  This variable
 # can be set using the RA_UPDATE_INTERVAL variable, which is a
 # float in seconds.  0.5 seconds is the default.
 #
-#RA_UPDATE_INTERVAL=0.5
+RA_UPDATE_INTERVAL=0.15
+
+
+# All ra* clients have the ability to alias the srcid to the "node" field.
+# The method for finding the  alias is specified using the RA_SRCID_ALIAS variable.
+#
+RA_SRCID_ALIAS="file:/usr/argus/srcid.alias.txt"
 
 
 # All ra* clients have the ability to print vendor names for the
@@ -469,11 +323,11 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 # ra* programs gets its strings for the ethernet vendors using
 # the Wireshark 'manuf' file, that is provided with the distribution.
 #
-# No Commandline equivalent
+# Commandline equivalents:
+#   -M oui
 #
-#RA_PRINT_ETHERNET_VENDORS="no"
-#RA_ETHERNET_VENDORS="/usr/local/argus/wireshark.manuf.txt"
-
+RA_PRINT_ETHERNET_VENDORS="no"
+RA_ETHERNET_VENDORS="/usr/argus/wireshark.manuf.txt"
 
 # All ra* clients have the ability to print country codes for the
 # IP addresses that are in a flow record.  Country codes are 
@@ -482,7 +336,7 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 #
 # No Commandline equivalent
 #
-#RA_DELEGATED_IP="/usr/local/argus/delegated-ipv4-latest"
+#RA_DELEGATED_IP="/usr/argus/delegated-ipv4-latest"
 
 
 # All ra* clients can reliably connect to remote data sources.
@@ -496,6 +350,20 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 # No Commandline equivalent
 #
 #RA_RELIABLE_CONNECT=no
+
+
+# Many ra* clients can read and write into a system archive.
+# These variables are provided to specify the path to the archive
+# and define the archive strategy.
+#
+# Default values for these variables can be set here.
+#
+# Commandline equivalents:
+#     No commandline equivalent
+#
+
+ARGUS_ARCHIVE="/home/argus/$srcid/$inf/%Y/%m/argus.%Y.%m.%d"
+ARGUS_ARCHIVE_STRATEGY="time 1d"
 
 
 # Many ra* clients can connect and use a MySQL database, either
@@ -512,21 +380,19 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 #   -u username:password
 #
 
-#RA_DATABASE="argus"
-#RA_DB_TABLE="table"
-#RA_DB_USER="user"
-#RA_DB_PASS="whatever"
+RA_DATABASE="inventory"
+RA_DB_USER="root"
 
 
 # Those ra* clients that can create database tables may need to
 # specify a table type or rather, a database engine other than the
-# default, InnoDB.
+# defaul, MyISAM.
 #
 # Commandline equivalents:
 #   -M mysql_engine=tableType
 #      Current tableTypes are
-#         InnoDB
 #         MyISAM
+#         InnoDB
 #         Merge
 #         Memory
 #         Archive
@@ -535,8 +401,7 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 #         CSV
 #
 
-#MYSQL_DB_ENGINE="InnoDB"
-
+MYSQL_DB_ENGINE="MyISAM"
 
 # For ra* programs that use curses, these variables defined color schemes
 # and color assignments.
@@ -548,8 +413,8 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 # values using a 256 Xterm color wheel, to assign foreground and background
 # colors. But we're not there yet
 #
-#RA_COLOR_SUPPORT="yes"
-#RA_COLOR_CONFIG=racolor.conf
+RA_COLOR_SUPPORT="yes"
+RA_COLOR_CONFIG=/root/.racolor.conf
 
 
 # Many ra* clients process flow records based on source and destination
@@ -574,20 +439,17 @@ RA_SORT_ALGORITHMS="dpkts spkts saddr dport daddr sport"
 RA_PORT_DIRECTION="services,wellknown"
 
 
-# Sites use locality for a number of features, such as  access control,
+# Many ra* clients process flow records where locality is an important
+# property.  Sites use locality for a number of features, such as  access control,
 # and this support is intended to support visualization, and analytics.
 #
 # Currently, you can identify a collection of IP addresses that represent RA_LOCAL,
 # and are specified using an iana-address-file formatted file.  (See ralabel.conf)
-
-#RA_LOCAL=/usr/local/argus/local.addrs
-
-# When locality information is available, programs like ra(), and
-# as the assignement of source when there is ambiguity in the
-# flow record as to who is the actual initiator or receiver of the flow.
 #
 # When locality information is available, programs like ra(), and
 # ratop() can use that information to make display decisions, such
+# as the assignement of source when the data does not provide
+# enough information to definitively make that assignment.
 #
 # RA_LOCAL_DIRECTION provides the logic for using the locality
 # information to assign flow direction.  You can force the local
@@ -597,6 +459,10 @@ RA_PORT_DIRECTION="services,wellknown"
 #    RA_LOCAL_DIRECTION="local:src"
 #    RA_LOCAL_DIRECTION="local:dst"
 #
+RA_LOCAL=/usr/argus/ralocality.conf
+RA_LOCAL_CORRECT="yes"
+RA_LOCAL_DIRECTION="suggest:src"
 
-#RA_LOCAL_DIRECTION="suggest:src"
-RA_LOCAL_DIRECTION="force:src"
+RA_CORRELATE_EVENTS="yes"
+
+#RATOP_CONTROL_PORT=15057
