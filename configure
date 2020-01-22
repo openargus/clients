@@ -2508,7 +2508,7 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-PACKAGE_RELEASE='3.5'
+PACKAGE_RELEASE='3.6'
 
 ac_aux_dir=
 for ac_dir in config "$srcdir"/config; do
@@ -10537,11 +10537,11 @@ int x;
 curl_easy_setopt(NULL,CURLOPT_URL,NULL);
 x=CURL_ERROR_SIZE;
 x=CURLOPT_WRITEFUNCTION;
-x=CURLOPT_WRITEDATA;
+x=CURLOPT_FILE;
 x=CURLOPT_ERRORBUFFER;
 x=CURLOPT_STDERR;
 x=CURLOPT_VERBOSE;
-if (x) {;}
+if (x) ;
 
   ;
   return 0;
@@ -10788,8 +10788,8 @@ $as_echo "cannot compile with both libmaxminddb and GeoIP" >&6; }
       if test "x$with_libmaxminddb" = "xyes"; then
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libmaxminddb >= 1.2.0" >&5
-$as_echo_n "checking for libmaxminddb >= 1.2.0... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBMAXMINDDB" >&5
+$as_echo_n "checking for LIBMAXMINDDB... " >&6; }
 
 if test -n "$LIBMAXMINDDB_CFLAGS"; then
     pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
@@ -10829,7 +10829,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -10856,7 +10856,7 @@ Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
 and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -10895,8 +10895,8 @@ fi
       if test "x$with_c_ares" = "xyes"; then
 
 pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libcares >= 1.10.0" >&5
-$as_echo_n "checking for libcares >= 1.10.0... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LIBCARES" >&5
+$as_echo_n "checking for LIBCARES... " >&6; }
 
 if test -n "$LIBCARES_CFLAGS"; then
     pkg_cv_LIBCARES_CFLAGS="$LIBCARES_CFLAGS"
@@ -10936,7 +10936,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -10963,7 +10963,7 @@ Alternatively, you may set the environment variables LIBCARES_CFLAGS
 and LIBCARES_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
