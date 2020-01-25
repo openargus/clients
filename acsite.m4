@@ -901,6 +901,7 @@ ARGUS_MYSQL_MAKEFILE=no
 
          ARGUS_MYSQL="./ramysql"
          ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
+         ARGUS_MYSQL="ramysql"
          AC_SUBST(MYSQL_LDFLAGS)
          AC_SUBST(MYSQL_INCLS)
          AC_SUBST(ARGUS_MYSQL)

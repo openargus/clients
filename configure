@@ -5720,6 +5720,7 @@ $as_echo "no" >&6; }
 
          ARGUS_MYSQL="./ramysql"
          ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
+         ARGUS_MYSQL="ramysql"
 
 
 
