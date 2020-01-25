@@ -623,6 +623,35 @@ RaMySQLInit ()
    if ((ArgusSQLBulkBuffer = calloc(1, ArgusSQLBulkInsertSize)) == NULL)
       ArgusLog(LOG_WARNING, "ArgusMySQLInit: cannot alloc bulk buffer size %d\n", ArgusSQLBulkInsertSize);
 
+   sprintf (sbuf, "USE argus");
+
+   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+
+   if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
+      char sbuf[MAXSTRLEN];
+
+      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+         while ((row = mysql_fetch_row(mysqlRes))) {
+            unsigned long *lengths;
+            lengths = mysql_fetch_lengths(mysqlRes);
+            bzero(sbuf, sizeof(sbuf));
+               for (x = 0; x < retn; x++)
+               sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
+
+            if (!(strncmp(sbuf, "Seconds", 8))) {
+               ArgusSQLSecondsTable = 1;
+            }
+         }
+
+      } else {
+#ifdef ARGUSDEBUG
+         ArgusDebug (2, "list argus database returned no tables.\n");
+#endif
+      }
+      mysql_free_result(mysqlRes);
+   }
+
    if (!RaSQLNoCreate) {
       bzero(sbuf, sizeof(sbuf));
       sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaDatabase);
@@ -650,9 +679,6 @@ RaMySQLInit ()
                sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
 
             RaTableExistsNames[thisIndex++] = strdup (sbuf);
-            if (!(strncmp(sbuf, "Seconds", 8))) {
-               ArgusSQLSecondsTable = 1;
-            }
          }
 
       } else {
@@ -726,7 +752,7 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
    for (t1 = start; t1 <= stop; t1 += ARGUSSQLMAXQUERYTIMESPAN) {
       t2 = ((t1 + ARGUSSQLMAXQUERYTIMESPAN) > stop) ? stop : (t1 + ARGUSSQLMAXQUERYTIMESPAN);
 
-      str = "SELECT * from Seconds WHERE second >= %u and second <= %u",
+      str = "SELECT * from argus.Seconds WHERE second >= %u and second <= %u",
       sprintf (buf, str, t1, t2);
 
 #ifdef ARGUSDEBUG
