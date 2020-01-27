@@ -2184,7 +2184,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
             if (dnsTransaction) {
                struct ArgusDomainStruct dnsbuf, *dns = NULL;
-               int found = 1, unicast = 0, multicast = 0;
+//             int found = 1, unicast = 0, multicast = 0;
+               int unicast = 0, multicast = 0;
                bzero (&dnsbuf, sizeof(dnsbuf));
 
                if ((dns = ArgusParseDNSRecord(parser, argus, &dnsbuf)) != NULL) {
