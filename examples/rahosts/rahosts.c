@@ -468,7 +468,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          }
 
          if ((probe = ArgusFindProbe(agg->htable, hstruct)) != NULL) {
-            struct ArgusLabelerStruct *labeler;
+            struct ArgusLabelerStruct *labeler = NULL;
 
             switch (status) {
                case ARGUS_MATRIX_LOCAL:  labeler = probe->localLabeler; break;

@@ -86,7 +86,7 @@ YACC = @V_YACC@
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = rahosts.c rahostsdaily.pl
+SRC = rahosts.c
 
 PROGS = $(INSTALLBIN)/rahosts $(INSTALLBIN)/rahostsdaily $(INSTALLBIN)/raclique
 
@@ -106,7 +106,7 @@ $(INSTALLBIN)/raclique: raclique.pl
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
 
-OBJ =	
+OBJ =	$(SRC:.c=.o)
 
 CLEANFILES = $(OBJ) $(PROGS)
 
