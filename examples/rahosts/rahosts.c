@@ -397,13 +397,13 @@ RaProcessMatrixData (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             }
 
          }
-#if defined(ARGUSDEBUG)
+#ifdef ARGUSDEBUG
          ArgusDebug (3, "RaProcessMatrixData () returning\n"); 
 #endif
       }
    }
 
-#if defined(ARGUSDEBUG)
+#ifdef ARGUSDEBUG
    ArgusDebug (6, "RaProcessMatrixData (%p, %p, %p)\n", parser, argus, process);
 #endif
 }
