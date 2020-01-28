@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically Process Esoc Scoring
+
+[Timer]
+# daily at 0015 hrs
+OnCalendar=*-*-* *:00:10
+Persistent=true
+
+[Install]
+Also=processEsoc.service
+WantedBy=multi-user.target

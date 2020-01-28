@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e
+
+typeset -r RASTATUS_CONF=/run/argus/rastatus.conf
+
+if [[ -r /etc/os-release ]] ; then
+	. /etc/os-release
+fi
+
+rastatus_configure(){
+	echo "RA_SRCID_ALIAS=\"file:/usr/argus/srcid.alias.txt\""
+	echo "ARGUS_ARCHIVE=\"/home/argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S\""
+	echo "ARGUS_ARCHIVE_STRATEGY=\"time 5m\""
+
+	echo "RA_DATABASE=\"status\""
+	echo "RA_DB_USER=\"root\""
+
+	echo "MYSQL_DB_ENGINE=\"InnoDB\""
+
+
+	echo "RA_STATUS_EVENT=\"prog:/usr/bin/rastatus-loadavg:10s:return:mysql://root@localhost/status/site_loadavg_status\""
+	echo "RA_STATUS_EVENT=\"prog:/usr/bin/rastatus-diskstats:10s:return:mysql://root@localhost/status/site_disk_status\""
+	echo "RA_STATUS_EVENT=\"prog:/usr/bin/rastatus-cpustats:10s:return:mysql://root@localhost/status/site_cpu_status\""
+	echo "RA_STATUS_EVENT=\"prog:/usr/bin/rastatus-memstats:10s:return:mysql://root@localhost/status/site_mem_status\""
+	echo "RA_STATUS_EVENT=\"prog:/usr/bin/rastatus-dailylogs:20s:return:mysql://root@localhost/status/site_logs_status\""
+}
+
+if (( $# == 0 )) ; then
+	exit 1
+fi
+
+if [[ "$1" == start ]] ; then
+	mkdir -p $(dirname ${RASTATUS_CONF})
+	rastatus_configure > ${RASTATUS_CONF}
+elif [[ "$1" == stop ]] ; then
+	rm -f ${RASTATUS_CONF} ${CLIENT_CONF}
+fi
+

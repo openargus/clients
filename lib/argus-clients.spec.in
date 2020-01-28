@@ -64,17 +64,20 @@ cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
 mkdir -p /home/argus
 %systemd_post radium.service
 %systemd_post rastream.service
+%systemd_post rastatus.service
 ln -s %{argusbin}/rastream %{argusbin}/rasplit
 ln -s /etc/pam.d/system-auth /etc/pam.d/radium
 
 %preun
 %systemd_preun radium.service
 %systemd_preun rastream.service
+%systemd_preun rastatus.service
 %systemd_preun rasqlinsert@ipv4matrix
 
 %postun
 %systemd_postun_with_restart radium.service
 %systemd_postun_with_restart rastream.service
+%systemd_postun_with_restart rastatus.service
 rm -f %{argusbin}/rasplit
 rm -f /etc/pam.d/radium
 %else
@@ -124,8 +127,10 @@ rm -f %{argusbin}/rasplit
 %config /usr/argus/ralabel.country.conf
 %ghost /etc/pam.d/radium
 %{argussbin}/radium-setup
+%{argussbin}/rastatus-setup
 %{_unitdir}/radium.service
 %{_unitdir}/rastream.service
+%{_unitdir}/rastatus.service
 %config /etc/sysconfig/radium
 %config /etc/sysconfig/rastream
 %{argussbin}/rastream-process

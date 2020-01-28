@@ -1,0 +1,8 @@
+[Unit]
+Description=Periodically Process Esoc Scoring
+
+[Service]
+Type=oneshot
+ExecStart=/srv/www/cgi-bin/esoc/processEsocEmail.pl
+TimeoutStartSec=1hr
+
