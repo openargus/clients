@@ -7510,9 +7510,19 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
 
                         if (f1 && f2) {
                            unsigned char masklen = 0;
-                           if (f1->hdr.subtype == f2->hdr.subtype) {
+                           if ((f1->hdr.subtype & 0x3F) == (f2->hdr.subtype & 0x3F)) {
                               char f1qual = f1->hdr.argus_dsrvl8.qual & 0x1F;
                               char f2qual = f2->hdr.argus_dsrvl8.qual & 0x1F;
+
+                              if (f1->hdr.subtype != f2->hdr.subtype) {
+                                 if ((f1->hdr.subtype & ARGUS_REVERSE) || (f1->hdr.subtype & ARGUS_REVERSE)) {
+                                    long long v1 = ArgusFetchStartTime(ns1);
+                                    long long v2 = ArgusFetchStartTime(ns2);
+                                    if (v1 > v2) {
+                                       f1->hdr.subtype = f2->hdr.subtype;
+                                    }
+                                 }
+                              }
 
                               switch (f1->hdr.subtype & 0x3F) {
                                  case ARGUS_FLOW_LAYER_3_MATRIX: {
@@ -8044,9 +8054,9 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           }
                                           break;
                                        }
-
                                        break;
                                     }
+                                    break;
                                  }
 
                                  case ARGUS_RTP_FLOW: {
