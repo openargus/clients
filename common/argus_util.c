@@ -4194,22 +4194,19 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
       struct ArgusLabelerStruct *labeler = NULL;
       int tested = 0, reverse = 0;
       double stime, dtime;
-      char dbuf[16];
-
-      if (parser->RaMonMode)
-         return;
 
       if (parser->ArgusDirectionFunction & ARGUS_LOCAL_TIME) {
          stime = ArgusFetchSrcStartTime(ns);
          dtime = ArgusFetchDstStartTime(ns);
-
          if (stime && dtime && (stime > dtime)) {
             reverse++;
          }
       }
 
-      bzero(dbuf, 16);
-      ArgusPrintDirection(parser, dbuf, ns, 8);
+      switch (ns->hdr.type & 0xF0) {
+         case ARGUS_NETFLOW:
+         case ARGUS_FAR: {
+            int src = 0, dst = 0, proceed = 1;
 
       if (strchr(dbuf, '?')) {
          switch (ns->hdr.type & 0xF0) {
@@ -4219,8 +4216,28 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
                int src = 0, dst = 0;
 
-               if (flow != NULL) {
-                     if (parser->ArgusDirectionFunction & ARGUS_PORT_DIR_MASK) {
+            if (flow != NULL) {
+               switch (flow->hdr.subtype & 0x3F) {
+                  case ARGUS_FLOW_CLASSIC5TUPLE:
+                  case ARGUS_FLOW_LAYER_3_MATRIX: {
+                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                        case ARGUS_TYPE_IPV4: {
+                           switch (flow->ip_flow.ip_p) {
+                              case IPPROTO_TCP: {
+                                 bzero(dbuf, 16);
+                                 ArgusPrintDirection(parser, dbuf, ns, 8);
+                                 if (!(strchr(dbuf, '?'))) {
+                                    proceed = 0;
+                                 }
+                                 break;
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+               if (proceed) {
+                  if (parser->ArgusDirectionFunction & ARGUS_PORT_DIR_MASK) {
                         int ssrv = 0, dsrv = 0;
                         u_short sport = 0;
                         u_short dport = 0;
