@@ -662,8 +662,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                   }
                }
 
-//             flow->hdr.subtype &= ~ARGUS_REVERSE;
-//             flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
+               flow->hdr.subtype &= ~ARGUS_REVERSE;
+               flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
             }
 
             RaProcessThisRecord(parser, ns);
