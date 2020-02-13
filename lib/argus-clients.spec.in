@@ -296,7 +296,7 @@ Argus DNS-tracking Client Software
 %package devel
 Summary: Argus Client Software Development Libraries
 Group: Applications/Internet
-Requires: GeoIP-devel = 1.5.0
+Requires: libmaxminddb-devel >= 1.2.0
 Requires: zlib-devel
 Requires: cyrus-sasl-devel
 
