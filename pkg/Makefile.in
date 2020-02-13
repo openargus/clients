@@ -46,6 +46,7 @@ GLOBAL_CONFIG_DIR := $(DESTDIR)$(sysconfdir)
 
 ifndef WORKSTATION_BUILD
  SBIN_SCRIPTS = rhel/systemd/radium-setup \
+                rhel/systemd/rastatus-setup \
                 rhel/systemd/rastream-process \
                 rhel/systemd/radhcp-nightly \
                 rhel/systemd/radhcp-setup \
@@ -59,6 +60,7 @@ ifndef WORKSTATION_BUILD
                 rhel/systemd/radhcp-nightly.service \
                 rhel/systemd/radhcp.service \
                 rhel/systemd/radium.service \
+                rhel/systemd/rastatus.service \
                 rhel/systemd/rasqlinsert@.service \
                 rhel/systemd/rastream.service \
                 rhel/systemd/radns-nightly.timer \
