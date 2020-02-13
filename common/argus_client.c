@@ -2637,7 +2637,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                            }
                            case ARGUS_TCP_PERF: {
                               if (qual == 0) {   // Version 1
-                                 struct ArgusTCPObjectV1 *tcpperf = (struct ArgusTCPObjectV1 *) &canon->net.net_union.tcp;
+                                 struct ArgusTCPObjectV1 *tcpperf = (void *) &net->net_union.tcp;
                                  struct ArgusTCPObject *tcp = (void *) &canon->net.net_union.tcp;
 
                                  bcopy((char *)&net->hdr, (char *)&canon->net.hdr, sizeof(net->hdr));
