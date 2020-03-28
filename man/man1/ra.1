@@ -253,7 +253,20 @@ The available fields to print are:
 .RS
 .TP 12
 .B srcid
-argus source identifier.
+Argus source identifier. In V3 records this is a 32-bit value that can be an integer,
+IP address, or 4-byte ascii string. In V5 records, the srcid is composed of a new
+128-bit 'sid' or source id, and an optional 4-char 'inf' or interface identifier,
+separated by a '/'.  The 128-bit 'sid' can be a UUID, IPv6, ethernet or IPv4
+address, as well as a 16-byte string.  You can print out the 'sid' and 'inf'
+components separately.
+.TP
+.B sid
+Argus source identifier. Introduced in V5 records, the 'sid' supports new identifiers that are up
+to 128-bits long. The 'sid' can support the original V3 srcid objects, as well as the new UUID,
+IPv6, ethernet address, and 16 byte string formats.
+.TP
+.B inf
+Optional 4-char string that describes the interface where the flow was observed.
 .TP
 .B rank
 Ordinal value of this output flow record i.e. sequence number.

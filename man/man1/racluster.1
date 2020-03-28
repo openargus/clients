@@ -60,7 +60,10 @@ Supported aggregation objects are:
 .RS
 .TP 15
 .B none
-use a null flow key.
+do not merge records (results in no aggregation).
+.TP
+.B all
+merge all records into a single record.
 .TP
 .B srcid
 argus source identifier.
