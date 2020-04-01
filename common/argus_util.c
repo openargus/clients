@@ -3320,163 +3320,163 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
             return (ptr->hdr.len * 4);
 
          if ((argus = ArgusGenerateRecordStruct (parser, input, (struct ArgusRecord *) ptr)) != NULL) {
+            if ((retn = ArgusCheckTime (parser, argus, ArgusTimeRangeStrategy)) != 0) {
+               ArgusProcessDirection(parser, argus);
 
-            ArgusProcessDirection(parser, argus);
+               if ((retn = ArgusFilterRecord (fcode, argus)) != 0) {
 
-            if ((retn = ArgusFilterRecord (fcode, argus)) != 0) {
-
-               if (parser->ArgusGrepSource || parser->ArgusGrepDestination)
-                  if (ArgusGrepUserData(parser, argus) == 0)
-                     return (argus->hdr.len * 4);
-
-               if (parser->ArgusMatchLabel) {
-                  struct ArgusLabelStruct *label;
-                  if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
-                     if (regexec(&parser->lpreg, label->l_un.label, 0, NULL, 0))
+                  if (parser->ArgusGrepSource || parser->ArgusGrepDestination)
+                     if (ArgusGrepUserData(parser, argus) == 0)
                         return (argus->hdr.len * 4);
-                  } else
-                     return (argus->hdr.len * 4);
-               }
 
-               if (parser->ArgusMatchGroup) {
-                  struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
-                  if (flow != NULL) {
-                     switch (flow->hdr.subtype & 0x3F) {
-                        case ARGUS_FLOW_CLASSIC5TUPLE:
-                        case ARGUS_FLOW_LAYER_3_MATRIX: {
-                           switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                              case ARGUS_TYPE_IPV4: {
-                                 struct ArgusLabelerStruct *labeler;
-                                 char *labelbuf;
+                  if (parser->ArgusMatchLabel) {
+                     struct ArgusLabelStruct *label;
+                     if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+                        if (regexec(&parser->lpreg, label->l_un.label, 0, NULL, 0))
+                           return (argus->hdr.len * 4);
+                     } else
+                        return (argus->hdr.len * 4);
+                  }
 
-                                 if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                                    if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
-                                       if (regexec(&parser->sgpreg, labelbuf, 0, NULL, 0)) {
+                  if (parser->ArgusMatchGroup) {
+                     struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+                     if (flow != NULL) {
+                        switch (flow->hdr.subtype & 0x3F) {
+                           case ARGUS_FLOW_CLASSIC5TUPLE:
+                           case ARGUS_FLOW_LAYER_3_MATRIX: {
+                              switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                 case ARGUS_TYPE_IPV4: {
+                                    struct ArgusLabelerStruct *labeler;
+                                    char *labelbuf;
+
+                                    if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                                       if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
+                                          if (regexec(&parser->sgpreg, labelbuf, 0, NULL, 0)) {
+                                             free(labelbuf);
+                                             return (argus->hdr.len * 4);
+                                          }
                                           free(labelbuf);
+                                       } else
                                           return (argus->hdr.len * 4);
-                                       }
-                                       free(labelbuf);
-                                    } else
-                                       return (argus->hdr.len * 4);
 
-                                    if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
-                                       if (regexec(&parser->dgpreg, labelbuf, 0, NULL, 0)) {
+                                       if ((labelbuf = RaFetchAddressLocalityLabel (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH)) != NULL) {
+                                          if (regexec(&parser->dgpreg, labelbuf, 0, NULL, 0)) {
+                                             free(labelbuf);
+                                             return (argus->hdr.len * 4);
+                                          }
                                           free(labelbuf);
+                                       } else
                                           return (argus->hdr.len * 4);
-                                       }
-                                       free(labelbuf);
-                                    } else
-                                       return (argus->hdr.len * 4);
-                                    break;
+                                       break;
+                                    }
                                  }
                               }
                            }
                         }
                      }
                   }
-               }
 
-               if (((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)) {
+                  if (((ptr->hdr.type & 0xF0) == ARGUS_MAR) && (argus->status & ARGUS_INIT_MAR)) {
 #ifdef _LITTLE_ENDIAN
-                  ArgusHtoN(ptr);
+                     ArgusHtoN(ptr);
 #endif
-               }
+                  }
 
-               if ((retn = ArgusCheckTime (parser, argus, ArgusTimeRangeStrategy)) != 0) {
-                  if (parser->ArgusWfileList != NULL) {
-                     if (parser->RaWriteOut) {
-                        if (parser->ArgusWfileList != NULL) {
-                           struct ArgusWfileStruct *wfile = NULL;
-                           struct ArgusListObjectStruct *lobj = NULL;
-                           int i, count = parser->ArgusWfileList->count;
+                     if (parser->ArgusWfileList != NULL) {
+                        if (parser->RaWriteOut) {
+                           if (parser->ArgusWfileList != NULL) {
+                              struct ArgusWfileStruct *wfile = NULL;
+                              struct ArgusListObjectStruct *lobj = NULL;
+                              int i, count = parser->ArgusWfileList->count;
 
-                           if ((lobj = parser->ArgusWfileList->start) != NULL) {
-                              for (i = 0; i < count; i++) {
-                                 if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
-                                    if (wfile->filterstr) {
-                                       struct nff_insn *wfcode = wfile->filter.bf_insns;
-                                       retn = ArgusFilterRecord (wfcode, argus);
-                                    }
+                              if ((lobj = parser->ArgusWfileList->start) != NULL) {
+                                 for (i = 0; i < count; i++) {
+                                    if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+                                       if (wfile->filterstr) {
+                                          struct nff_insn *wfcode = wfile->filter.bf_insns;
+                                          retn = ArgusFilterRecord (wfcode, argus);
+                                       }
 
-                                    if (retn != 0) {
-                                       if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
-                                          if (!(((argus->hdr.type & ARGUS_MAR) && ((argus->hdr.cause & 0xF0) == ARGUS_START)))) {
+                                       if (retn != 0) {
+                                          if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
+                                             if (!(((argus->hdr.type & ARGUS_MAR) && ((argus->hdr.cause & 0xF0) == ARGUS_START)))) {
 
-                                             if (argus->status & ARGUS_RECORD_MODIFIED) {
-                                                struct ArgusRecord *ns = NULL;
-                                                int version = ARGUS_VERSION;
+                                                if (argus->status & ARGUS_RECORD_MODIFIED) {
+                                                   struct ArgusRecord *ns = NULL;
+                                                   int version = ARGUS_VERSION;
 
-                                                /* FIXME: version should be in ArgusWfileStruct */
-                                                /* if (parser->ArgusOutput != NULL)
-                                                 * version =  parser->ArgusOutput->version;
-                                                 */
+                                                   /* FIXME: version should be in ArgusWfileStruct */
+                                                   /* if (parser->ArgusOutput != NULL)
+                                                    * version =  parser->ArgusOutput->version;
+                                                    */
 
-                                                if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordBuffer, version)) == NULL)
-                                                   ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
+                                                   if ((ns = ArgusGenerateRecord (argus, 0L, ArgusHandleRecordBuffer, version)) == NULL)
+                                                      ArgusLog(LOG_ERR, "ArgusHandleRecord: ArgusGenerateRecord error %s", strerror(errno));
 #ifdef _LITTLE_ENDIAN
-                                                ArgusHtoN(ns);
+                                                   ArgusHtoN(ns);
 #endif
-                                                if (ArgusWriteNewLogfile (parser, input, wfile, ns))
-                                                   ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
-                                             } else
-                                                if (ArgusWriteNewLogfile (parser, input, wfile, input->ArgusOriginal))
-                                                   ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                                                   if (ArgusWriteNewLogfile (parser, input, wfile, ns))
+                                                      ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                                                } else
+                                                   if (ArgusWriteNewLogfile (parser, input, wfile, input->ArgusOriginal))
+                                                      ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                                             }
                                           }
                                        }
                                     }
+                                    lobj = lobj->nxt;
                                  }
-                                 lobj = lobj->nxt;
                               }
                            }
-                        }
-    
+       
+                        } else
+                           RaScheduleRecord (parser, argus);
                      } else
                         RaScheduleRecord (parser, argus);
-                  } else
-                     RaScheduleRecord (parser, argus);
-               }
 
-            } else {
-               if (parser->exceptfile) {
-                  struct ArgusWfileStruct *wfile = NULL, *start = NULL;
+               } else {
+                  if (parser->exceptfile) {
+                     struct ArgusWfileStruct *wfile = NULL, *start = NULL;
 
-                  if ((wfile = (struct ArgusWfileStruct *)ArgusFrontList(parser->ArgusWfileList)) != NULL) {
-                     start = wfile;
-                     do {
-                        if (!(strcmp(wfile->filename, parser->exceptfile))) {
-                           if (!((ptr->hdr.type & ARGUS_MAR) && ((ptr->hdr.cause & 0xF0) == ARGUS_START)))
-                              if (ArgusWriteNewLogfile (parser, input, wfile, input->ArgusOriginal))
-                                 ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
-                           break;
-                        }
-    
-                        ArgusPopFrontList(parser->ArgusWfileList, ARGUS_LOCK);
-                        ArgusPushBackList(parser->ArgusWfileList, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
-                        wfile = (struct ArgusWfileStruct *)ArgusFrontList(parser->ArgusWfileList);
-    
-                     } while (wfile != start);
-                  }
-               }
-            }
-      
-            retn = 0;
-      
-            if (ptr->hdr.type & ARGUS_MAR) {
-               switch (ptr->hdr.cause & 0xF0) {
-                  case ARGUS_STOP:
-                  case ARGUS_SHUTDOWN:
-                  case ARGUS_ERROR: {
-                     if (ptr->argus_mar.value == input->srcid.a_un.value) {
-#ifdef ARGUSDEBUG
-                        ArgusDebug (3, "ArgusHandleRecord (%p, %p) received closing Mar\n", ptr, filter);
-#endif
-                        if (parser->Sflag)
-                           retn = 1;
+                     if ((wfile = (struct ArgusWfileStruct *)ArgusFrontList(parser->ArgusWfileList)) != NULL) {
+                        start = wfile;
+                        do {
+                           if (!(strcmp(wfile->filename, parser->exceptfile))) {
+                              if (!((ptr->hdr.type & ARGUS_MAR) && ((ptr->hdr.cause & 0xF0) == ARGUS_START)))
+                                 if (ArgusWriteNewLogfile (parser, input, wfile, input->ArgusOriginal))
+                                    ArgusLog (LOG_ERR, "ArgusWriteNewLogfile failed. %s", strerror(errno));
+                              break;
+                           }
+       
+                           ArgusPopFrontList(parser->ArgusWfileList, ARGUS_LOCK);
+                           ArgusPushBackList(parser->ArgusWfileList, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
+                           wfile = (struct ArgusWfileStruct *)ArgusFrontList(parser->ArgusWfileList);
+       
+                        } while (wfile != start);
                      }
-                     break;
+                  }
+               }
+         
+               retn = 0;
+         
+               if (ptr->hdr.type & ARGUS_MAR) {
+                  switch (ptr->hdr.cause & 0xF0) {
+                     case ARGUS_STOP:
+                     case ARGUS_SHUTDOWN:
+                     case ARGUS_ERROR: {
+                        if (ptr->argus_mar.value == input->srcid.a_un.value) {
+#ifdef ARGUSDEBUG
+                           ArgusDebug (3, "ArgusHandleRecord (%p, %p) received closing Mar\n", ptr, filter);
+#endif
+                           if (parser->Sflag)
+                              retn = 1;
+                        }
+                        break;
+                     }
                   }
                }
             }
+
          } else
             retn = -1;
 
