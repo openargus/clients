@@ -12628,7 +12628,6 @@ ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns)
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
          struct timeval stimebuf, *st = &stimebuf;
-         struct timeval *stime = NULL;
 
          if (dtime != NULL) {
             unsigned int subtype = dtime->hdr.subtype & ARGUS_TIME_SRC_START;
@@ -12636,11 +12635,10 @@ ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns)
             if (subtype) {
                st->tv_sec  = dtime->src.start.tv_sec;
                st->tv_usec = dtime->src.start.tv_usec;
-               stime = st;
+               sec  = st->tv_sec;
+               usec = st->tv_usec;
             }
          }
-         sec  = stime->tv_sec;
-         usec = stime->tv_usec;
       }
    }
 
@@ -12659,16 +12657,14 @@ ArgusFetchDstStartTime (struct ArgusRecordStruct *ns)
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
          struct timeval stimebuf, *st = &stimebuf;
-         struct timeval *stime = NULL;
 
          if (dtime != NULL) {
             unsigned int subtype = dtime->hdr.subtype & ARGUS_TIME_DST_START;
             if (subtype) {
                st->tv_sec  = dtime->dst.start.tv_sec;
                st->tv_usec = dtime->dst.start.tv_usec;
-               stime = st;
-               sec  = stime->tv_sec;
-               usec = stime->tv_usec;
+               sec  = st->tv_sec;
+               usec = st->tv_usec;
             }
          }
       }
