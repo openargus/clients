@@ -589,9 +589,12 @@ RaMySQLInit ()
       else if (ArgusParser->readDbstr != NULL)
          RaDatabase = strdup(ArgusParser->readDbstr);
 
-      if (RaDatabase != NULL)
+      if (RaDatabase == NULL) {
+         RaDatabase = "argus";
+      } else {
          if (!(strncmp("mysql:", RaDatabase, 6)))
             RaDatabase = &RaDatabase[6];
+      }
    }
 
    if (RaDatabase == NULL)

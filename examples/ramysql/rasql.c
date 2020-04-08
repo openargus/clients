@@ -752,8 +752,8 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
    for (t1 = start; t1 <= stop; t1 += ARGUSSQLMAXQUERYTIMESPAN) {
       t2 = ((t1 + ARGUSSQLMAXQUERYTIMESPAN) > stop) ? stop : (t1 + ARGUSSQLMAXQUERYTIMESPAN);
 
-      str = "SELECT * from argus.Seconds WHERE second >= %u and second <= %u",
-      sprintf (buf, str, t1, t2);
+      str = "SELECT * from %s.Seconds WHERE second >= %u and second <= %u",
+      sprintf (buf, str, RaDatabase, t1, t2);
 
 #ifdef ARGUSDEBUG
       ArgusDebug (2, "SQL Query %s\n", buf);
