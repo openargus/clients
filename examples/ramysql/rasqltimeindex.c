@@ -22,12 +22,6 @@
  *
  */
 
-/* 
- * $Id: //depot/gargoyle/clients/examples/ramysql/rasqltimeindex.c#11 $
- * $DateTime: 2016/11/30 12:35:01 $
- * $Change: 3247 $
- */
-
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
@@ -1008,8 +1002,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   parser->ArgusInputFileListTail->qhdr.nxt = &file->qhdr;
                } else {
                   parser->ArgusInputFileList = file;
-                  parser->ArgusInputFileListTail = file;
                }
+               parser->ArgusInputFileListTail = file;
                parser->ArgusInputFileCount++;
 
             } else {
