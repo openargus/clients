@@ -1,6 +1,6 @@
 /*
  * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2020 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -15,12 +15,6 @@
  * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
- */
-
-/* 
- * $Id: //depot/gargoyle/clients/examples/radns/radns.c#24 $
- * $DateTime: 2016/11/30 00:54:11 $
- * $Change: 3245 $
  */
 
 /*
@@ -572,7 +566,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
                if (ArgusParser->ArgusPrintJson) {
                   snprintf(refbuf, 16, "\"ref\":\"%d\"", name->ref);
                   results[resultnum++] = strdup(refbuf);
-                  if (name->ref > 0) {
+                  if (name->stime.tv_sec > 0) {
                      snprintf(timebuf, 64, "\"stime\":\"%d\",\"ltime\":\"%d\"", (int)name->stime.tv_sec, (int)name->ltime.tv_sec);
                      results[resultnum++] = strdup(timebuf);
                   }
@@ -1936,9 +1930,24 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
          if ((ptr = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
+            if ((ptr->stime.tv_sec == 0) || (ptr->stime.tv_sec > dns->stime.tv_sec)) {
+               ptr->stime = dns->stime;
+            }
+            if ((ptr->ltime.tv_sec == 0) || (ptr->ltime.tv_sec < dns->ltime.tv_sec)) {
+               ptr->ltime = dns->ltime;
+            }
+
+
             if ((name = ArgusNameEntry(ArgusDNSNameTable, rr->data, 0)) != NULL) {
                char *nptr = strdup(rr->name);
                char *sptr, *tptr;
+
+               if ((name->stime.tv_sec == 0) || (name->stime.tv_sec > dns->stime.tv_sec)) {
+                  name->stime = dns->stime;
+               }
+               if ((name->ltime.tv_sec == 0) || (name->ltime.tv_sec < dns->ltime.tv_sec)) {
+                  name->ltime = dns->ltime;
+               }
 
                if ((tptr = nptr) != NULL) {
                   char addrbuf[48], *addr = addrbuf, *a[4];

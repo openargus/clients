@@ -146,11 +146,11 @@ if ($uri) {
    switch ($db) {
       case /^dnsNames/ {
          $options = "-f /usr/argus/radns.conf -qM json search:0.0.0.0/0";
-         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows -w - | $radns $options";
       }
       case /^dnsAddrs/ {
          $options = "-f /usr/argus/radns.conf -qM json search:'.'";
-         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+         $Program = "$rasql -t $time -r mysql://root\@localhost/$flows -w - | $radns $options";
       }
    }
 
