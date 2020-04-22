@@ -48,6 +48,17 @@
 unsigned int RaMapHash = 0;
 unsigned int RaHashSize  = 1024;
 
+char *RaNonEthernetAnonmyization = "sequential";
+int RaMacAnonymize = 1;
+char *RaNonIPAnonmyization = NULL;
+int RaIPAnonymize = 1;
+char *RaNonNetAnonmyization = NULL;
+int RaNetAnonymize = 1;
+char *RaNonHostAnonmyization = NULL;
+int RaHostAnonymize = 1;
+char *RaNonASAnonmyization = NULL;
+int RaASAnonymize = 1;
+
 unsigned short RaMapIpIdValue = 0;
 unsigned int RaMapOffsetValue  = 0;
 unsigned int RaMapTransOffsetValue  = 0;
@@ -57,6 +68,7 @@ unsigned int RaMapTimeSecOffsetValue  = 0;
 unsigned int RaMapTimeuSecOffsetValue = 0;
 unsigned int RaPortMappingOffsetValue = 0;
 unsigned char RaTosMappingOffsetValue = 0;
+
 
 int RaMapMacCounter = 0;
 int RaMapMacMultiCastCounter = 0;
@@ -1117,6 +1129,7 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
          ArgusLog (LOG_ERR, "RaMapNewNetwork: gethostbyname(%s) error %s", optarg, strerror(errno));
    
       addr->s_addr = **(unsigned int **)hp->h_addr_list;
+
       if ((retn = RaMapFindHashObject (&RaMapNetTable, &addr->s_addr, RAMAP_IP_ADDR, 4))) {
          if (retn->net->index >= RA_MAX_CLASS_VALUE) {
             if (RaMapNetAddrHierarchy > RANON_SUBNET) {
@@ -1333,47 +1346,49 @@ RaMapInventory (void *oid, int type, int len)
 
    switch (type) {
       case RAMAP_ETHER_MAC_ADDR: {
-         if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
+         if (RaMacAnonymize) {
+            if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
 
-            if (!(retn = RaMapAllocateEtherAddr (oid, type, len))) 
-               ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateEtherAddr error %s\n", strerror(errno));
+               if (!(retn = RaMapAllocateEtherAddr (oid, type, len))) 
+                  ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateEtherAddr error %s\n", strerror(errno));
 
-            if (!(RaMapEtherAddrList))
-               RaMapEtherAddrList = ArgusNewList();
+               if (!(RaMapEtherAddrList))
+                  RaMapEtherAddrList = ArgusNewList();
 
-            if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
-               ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
+               if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
+                  ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
 
-            lobj->list_obj = retn;
-            ArgusPushBackList(RaMapEtherAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+               lobj->list_obj = retn;
+               ArgusPushBackList(RaMapEtherAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+            }
+
+            if (RaMapConvert)
+               if (retn->sub)
+                  bcopy ((char *)retn->sub, (char *) oid, len);
          }
-
-         if (RaMapConvert)
-            if (retn->sub)
-               bcopy ((char *)retn->sub, (char *) oid, len);
-      
          break;     
       }
 
       case RAMAP_IP_ADDR: {
-         if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
-            if (!(retn = RaMapAllocateIPAddr (oid, type, len)))
-               ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateIPAddr error %s\n", strerror(errno));
+         if (RaIPAnonymize) {
+            if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
+               if (!(retn = RaMapAllocateIPAddr (oid, type, len)))
+                  ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateIPAddr error %s\n", strerror(errno));
             
-            if (!(RaMapIPAddrList))
-               RaMapIPAddrList = ArgusNewList();
+               if (!(RaMapIPAddrList))
+                  RaMapIPAddrList = ArgusNewList();
 
-            if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
-               ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
+               if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
+                  ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
 
-            lobj->list_obj = retn;
-            ArgusPushBackList(RaMapIPAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+               lobj->list_obj = retn;
+               ArgusPushBackList(RaMapIPAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+            }
+
+            if (RaMapConvert)
+               if (retn->sub)
+                  bcopy ((char *)retn->sub, (char *) oid, len);
          }
-
-         if (RaMapConvert)
-            if (retn->sub)
-               bcopy ((char *)retn->sub, (char *) oid, len);
-
          break;     
       }
 
@@ -1568,32 +1583,33 @@ RaMapRemoveHashEntry (struct RaMapHashTableStruct *table, struct RaMapHashTableH
 #define RANON_PRESERVE_ETHERNET_VENDOR		6
 #define RANON_PRESERVE_ETHERNET_BROADCAST	7
 #define RANON_PRESERVE_ETHERNET_MULTICAST	8
-#define RANON_NET_ANONYMIZATION			9
-#define RANON_HOST_ANONYMIZATION		10
-#define RANON_NETWORK_ADDRESS_LENGTH		11
-#define RANON_PRESERVE_NET_ADDRESS_HIERARCHY	12
-#define RANON_PRESERVE_BROADCAST_ADDRESS	13
-#define RANON_PRESERVE_MULTICAST_ADDRESS	14
-#define RANON_PRESERVE_IP_ID			15
-#define RANON_SPECIFY_NET_TRANSLATION		16
-#define RANON_SPECIFY_HOST_TRANSLATION		17
-#define RANON_PRESERVE_WELLKNOWN_PORT_NUMS	18
-#define RANON_PRESERVE_REGISTERED_PORT_NUMS	19
-#define RANON_PRESERVE_PRIVATE_PORT_NUMS	20
-#define RANON_PRESERVE_PORT_NUMS		21
-#define RANON_PRESERVE_PORT_NUM			22
-#define RANON_CLASSA_NET_ADDRESS_LIST		23
-#define RANON_CLASSB_NET_ADDRESS_LIST		24
-#define RANON_CLASSC_NET_ADDRESS_LIST		25
-#define RANON_CLASSM_NET_ADDRESS_LIST		26
-#define RANON_MAP_DUMPFILE			27
-#define RANON_PORT_METHOD			28
-#define RANON_PRESERVE_ICMPMAPPED_TTL		29
-#define RANON_PRESERVE_IP_TTL			30
-#define RANON_PRESERVE_IP_TOS			31
-#define RANON_PRESERVE_IP_OPTIONS		32
-#define RANON_AS_ANONYMIZATION			33
-#define RANON_SPECIFY_ASN_TRANSLATION		34
+#define RANON_IP_ADDRESS_ANONYMIZATION		9
+#define RANON_NET_ANONYMIZATION			10
+#define RANON_HOST_ANONYMIZATION		11
+#define RANON_NETWORK_ADDRESS_LENGTH		12
+#define RANON_PRESERVE_NET_ADDRESS_HIERARCHY	13
+#define RANON_PRESERVE_BROADCAST_ADDRESS	14
+#define RANON_PRESERVE_MULTICAST_ADDRESS	15
+#define RANON_PRESERVE_IP_ID			16
+#define RANON_SPECIFY_NET_TRANSLATION		17
+#define RANON_SPECIFY_HOST_TRANSLATION		18
+#define RANON_PRESERVE_WELLKNOWN_PORT_NUMS	19
+#define RANON_PRESERVE_REGISTERED_PORT_NUMS	20
+#define RANON_PRESERVE_PRIVATE_PORT_NUMS	21
+#define RANON_PRESERVE_PORT_NUMS		22
+#define RANON_PRESERVE_PORT_NUM			23
+#define RANON_CLASSA_NET_ADDRESS_LIST		24
+#define RANON_CLASSB_NET_ADDRESS_LIST		25
+#define RANON_CLASSC_NET_ADDRESS_LIST		26
+#define RANON_CLASSM_NET_ADDRESS_LIST		27
+#define RANON_MAP_DUMPFILE			28
+#define RANON_PORT_METHOD			29
+#define RANON_PRESERVE_ICMPMAPPED_TTL		30
+#define RANON_PRESERVE_IP_TTL			31
+#define RANON_PRESERVE_IP_TOS			32
+#define RANON_PRESERVE_IP_OPTIONS		33
+#define RANON_AS_ANONYMIZATION			34
+#define RANON_SPECIFY_ASN_TRANSLATION		35
 
 
 char *RaNonResourceFileStr [] = {
@@ -1606,6 +1622,7 @@ char *RaNonResourceFileStr [] = {
    "RANON_PRESERVE_ETHERNET_VENDOR=",
    "RANON_PRESERVE_ETHERNET_BROADCAST=",
    "RANON_PRESERVE_ETHERNET_MULTICAST=",
+   "RANON_IP_ADDRESS_ANONYMIZATION=",
    "RANON_NET_ANONYMIZATION=",
    "RANON_HOST_ANONYMIZATION=",
    "RANON_NETWORK_ADDRESS_LENGTH=",
@@ -1696,15 +1713,34 @@ RaNonParseResourceFile (char *file)
                               break;
 
                            case RANON_ETHERNET_ANONYMIZATION:
+                              RaNonEthernetAnonmyization = strdup(optarg);
+
+                              if (!(strncmp(RaNonEthernetAnonmyization, "no", 2)))
+                                 RaMacAnonymize = 0;
+                              break;
+
+                           case RANON_IP_ADDRESS_ANONYMIZATION:
+                              RaNonIPAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonIPAnonmyization, "no", 2)))
+                                 RaIPAnonymize = 0;
                               break;
 
                            case RANON_NET_ANONYMIZATION:
+                              RaNonNetAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonNetAnonmyization, "no", 2)))
+                                 RaNetAnonymize = 0;
                               break;
 
                            case RANON_HOST_ANONYMIZATION:
+                              RaNonHostAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonHostAnonmyization, "no", 2)))
+                                 RaHostAnonymize = 0;
                               break;
 
                            case RANON_AS_ANONYMIZATION:
+                              RaNonASAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonASAnonmyization, "no", 2)))
+                                 RaASAnonymize = 0;
                               break;
 
                            case RANON_SPECIFY_ASN_TRANSLATION: {
@@ -2170,8 +2206,10 @@ ArgusAnonymizeMac(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
 
-   RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_shost, RAMAP_ETHER_MAC_ADDR, 6);
-   RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_dhost, RAMAP_ETHER_MAC_ADDR, 6);
+   if (RaMacAnonymize) {
+      RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_shost, RAMAP_ETHER_MAC_ADDR, 6);
+      RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_dhost, RAMAP_ETHER_MAC_ADDR, 6);
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusAnonymizeMac (0x%x, 0x%x)\n", parser, argus);
