@@ -27617,7 +27617,7 @@ ArgusParseTimeArg(char **argp, char *args[], int ind, struct tm *tm,
    }
 
    if (ArgusCheckTimeFormat (tm, ptr))
-      ArgusLog (LOG_INFO, "time syntax error %s", buf);
+      ArgusLog (LOG_ERR, "time syntax error %s", buf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "ArgusParseTimeArg (%s, %d, %p)\n", buf, ind, tm);
