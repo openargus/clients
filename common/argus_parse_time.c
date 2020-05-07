@@ -80,9 +80,10 @@ static int RaDaysInAMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
  *    yyyy/mm/dd.hh.mm           returns the range from yyyy/mm/dd.hh+1M
  *    yyyy/mm/dd.hh.mm.ss        returns the range from yyyy/mm/dd.hh:mm:ss+1S
  *
- *    %d[yMdhms] 
- *    %d[yMdhms][[+]%d[yMdhms]] explict time range 
- *    -%d[yMdhms] explicit time range ending with now time in the range 
+ *    %d[.%d]                    unixtime (d > 10000000)
+ *    %d[yMdhms]                 
+ *    %d[yMdhms][[+]%d[yMdhms]]  explict time range 
+ *    -%d[yMdhms] explicit time  range ending with now time in the range 
  * 
  * The "continued" parameter should be != 0 when parsing the second
  * part (that after a +/-).  Or can we determine that just from the
@@ -259,12 +260,14 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
 
          bcopy ((u_char *) endtm, (u_char *) startm, sizeof (struct tm));
 
-         if (!(strpbrk(str, "./:"))) {
+         if (!(strpbrk(str, "/:"))) {
             int value = atoi(str);
-            if (value > 1000000) {
+            unixt = 1;
+            if (value > 10000000) {
                thistime = value;
-               unixt = 1;
                retn = 1;
+            } else {
+               retn = -1;
             }
          }
          if (unixt) {
