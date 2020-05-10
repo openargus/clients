@@ -182,13 +182,13 @@ foreach my $i (0 .. $#databases) {
      if ($found > 0) {
         print "DEBUG: process db:$dbase table:$table annual:$annual monthly:$monthly date:$date\n" if $debug;
 
-        my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -w ".$tmpfile . $filter;
+        my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -M nocorrect -w ".$tmpfile . $filter;
         print "DEBUG: $cmd \n" if $debug;
         `$cmd`;
 
         if (-e $tmpfile) {
-           my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
-           my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
+           my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
+           my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
 
            print "DEBUG: $minsert \n" if $debug;
            `$minsert`;
