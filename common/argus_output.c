@@ -1108,24 +1108,32 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                struct ArgusMarStruct *man = (struct ArgusMarStruct *) &((struct ArgusRecord *) rec->dsrs[0])->ar_un.mar;
 
                if (man->major_version > ARGUS_VERSION_3) {
-                  if (((man->status & ARGUS_IDIS_UUID) == ARGUS_IDIS_UUID)  || ((man->status & ARGUS_IDIS_IPV6) == ARGUS_IDIS_IPV6)) {
-                     if (cp != NULL) {
-                        man->status &= ~(ARGUS_ID_INC_INF | ARGUS_IDIS_UUID | ARGUS_IDIS_IPV6 | ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4);
-                        man->status |= cp->type;
-                        man->argusid = cp->addr.a_un.value;
-                     } else {
-                        man->argusid = man->value;
-                     }
-                  } else {
-                     man->status &= ~ARGUS_ID_INC_INF;
+                  switch (retn->hdr.cause & 0xF0) {
+                     case ARGUS_START:
+                        man->argusid = ARGUS_V3_COOKIE;
+                        break;
+
+                     default:
+                        if (((man->status & ARGUS_IDIS_UUID) == ARGUS_IDIS_UUID)  || ((man->status & ARGUS_IDIS_IPV6) == ARGUS_IDIS_IPV6)) {
+                           if (cp != NULL) {
+                              man->status &= ~(ARGUS_ID_INC_INF | ARGUS_IDIS_UUID | ARGUS_IDIS_IPV6 | ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4);
+                              man->status |= cp->type;
+                              man->argusid = cp->addr.a_un.value;
+                           } else {
+                              man->argusid = man->value;
+                           }
+                        } else {
+                           man->status &= ~ARGUS_ID_INC_INF;
+                        }
+                        break;
                   }
                   bzero(&man->pad, sizeof(man->pad));
                   man->thisid = 0;
                   man->major_version = ARGUS_VERSION_3;
-
-                  retn->hdr.type   = ARGUS_MAR | ARGUS_VERSION_3;
-                  retn->hdr.cause &= ~ARGUS_SRC_RADIUM;
                }
+
+               retn->hdr.type   = ARGUS_MAR | ARGUS_VERSION_3;
+               retn->hdr.cause &= ~ARGUS_SRC_RADIUM;
 
                bcopy ((char *)rec->dsrs[0], (char *) retn, rec->hdr.len * 4);
                retn->hdr = rec->hdr;
