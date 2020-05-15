@@ -4935,7 +4935,7 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                break;
 
             case ARGUS_AGR_INDEX: {
-               struct ArgusOutputAgrStruct *agr = (struct ArgusOutputAgrStruct *) dsr;
+               struct ArgusAgrStruct *agr = (struct ArgusAgrStruct *) dsr;
                struct ArgusAggregatorStruct *agg;
 
                if ((agg = ArgusParser->ArgusAggregator) != NULL) {
@@ -14703,15 +14703,6 @@ ArgusPrintIdleDstIntPkt (struct ArgusParserStruct *parser, char *buf, struct Arg
 #endif
 }
 
-/*
-struct ArgusStatObject {
-   int n;
-   unsigned int minval;
-   float meanval;
-   float stdev;
-   unsigned int maxval;
-}; 
-*/
 
 void
 ArgusPrintSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -14870,7 +14861,7 @@ ArgusPrintDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, " DstIntPktMin = \"%s\"", value);
+      sprintf (buf, " SrcIdleIntFlow = \"%s\"", value);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(value);
@@ -14878,26 +14869,32 @@ ArgusPrintDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
          if (strlen(value) > len) {
             value[len - 1] = '*';
             value[len]     = '\0';
-         }  
-      } 
+         }
+      }
       sprintf (buf, "%*.*s ", len, len, value);
    } 
-   
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintDstIntPktMin (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIdleIntFlow (%p, %p)", buf, argus);
 #endif
 }
 
 void
-ArgusPrintActiveSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
-   bzero(value, sizeof(value));
+
+   bzero (value, sizeof(value));
 
    switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
+      case ARGUS_MAR: {
+         if (parser->ArgusPrintXml) {
+         } else {
+            sprintf (buf, "%*.*s ", len, len, " ");
+         }
          break;
+      }
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
@@ -14906,37 +14903,75 @@ ArgusPrintActiveSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struc
          if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
             sprintf (value, "%.*f", parser->pflag, jitter->src.act.maxval/1000.0);
          break;
+      }
    }
-
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcActIntPktMax = \"%s\"", value);
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveSrcIntPktMax (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIntFlowMax (%p, %p)", buf, argus);
 #endif
 }
 
 void
-ArgusPrintActiveSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
-   bzero(value, sizeof(value));
+
+   bzero (value, sizeof(value));
 
    switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
+      case ARGUS_MAR: {
+         if (parser->ArgusPrintXml) {
+         } else {
+            sprintf (buf, "%*.*s ", len, len, " ");
+         }
          break;
+      }
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            float stddev = agr->idle.stdev;
+            sprintf (value, "%.*f", parser->pflag, stddev/1000.0);
+         }
+
+         if (parser->ArgusPrintXml) {
+            sprintf (buf, " IntFlowStdDev = \"%s\"", value);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+               len = strlen(value);
+            } else {
+               if (strlen(value) > len) {
+                  value[len - 1] = '*';
+                  value[len]     = '\0';
+               }
+            }
+            sprintf (buf, "%*.*s ", len, len, value);
+         }
+         break;
+      }
+   }
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIntFlowStdDev (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr;
+   char value[128];
+
+   bzero (value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: {
+         if (parser->ArgusPrintXml) {
+         } else {
+            sprintf (buf, "%*.*s ", len, len, " ");
+         }
+         break;
+      }
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
@@ -14945,31 +14980,19 @@ ArgusPrintActiveSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struc
          if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
             sprintf (value, "%.*f", parser->pflag, jitter->src.act.minval/1000.0);
          break;
+      }
    }
 
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcActIntPktMin = \"%s\"", value);
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveSrcIntPktMin (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIntFlowMin (%p, %p)", buf, argus);
 #endif
 }
 
+
 void
-ArgusPrintActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintActiveIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
    bzero(value, sizeof(value));
 
@@ -14981,13 +15004,13 @@ ArgusPrintActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struc
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: 
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->dst.act.maxval/1000.0);
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, agr->act.stdev/1000.0);
          break;
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, " DstActIntPktMax = \"%s\"", value);
+      sprintf (buf, " SrcActIntFlowStdDev = \"%s\"", value);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(value);
@@ -15001,14 +15024,14 @@ ArgusPrintActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struc
    } 
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveDstIntPktMax (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintActiveIntFlowStdDev (%p, %p)", buf, argus);
 #endif
 }
 
 void
-ArgusPrintActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintActiveIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
    bzero(value, sizeof(value));
 
@@ -15020,13 +15043,13 @@ ArgusPrintActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struc
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR:
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->dst.act.minval/1000.0);
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, agr->act.maxval/1000.0);
          break;
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, " DstActIntPktMin = \"%s\"", value);
+      sprintf (buf, " SrcActIntFlowMax = \"%s\"", value);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(value);
@@ -15034,20 +15057,20 @@ ArgusPrintActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struc
          if (strlen(value) > len) {
             value[len - 1] = '*';
             value[len]     = '\0';
-         }  
-      } 
+         }
+      }
       sprintf (buf, "%*.*s ", len, len, value);
-   } 
+   }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveDstIntPktMin (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintActiveIntFlowMax (%p, %p)", buf, argus);
 #endif
 }
 
 void
-ArgusPrintIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintActiveIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
    bzero(value, sizeof(value));
 
@@ -15065,6 +15088,7 @@ ArgusPrintIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
    }
 
    if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcActIntFlowMin = \"%s\"", value);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(value);
@@ -15078,14 +15102,15 @@ ArgusPrintIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
    } 
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleSrcIntPktMax (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintActiveIntFlowMin (%p, %p)", buf, argus);
 #endif
 }
 
+
 void
-ArgusPrintIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintIdleIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
    bzero(value, sizeof(value));
 
@@ -15097,8 +15122,46 @@ ArgusPrintIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct 
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR:
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->src.idle.minval/1000.0);
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, agr->idle.stdev/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, value);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleIntFlowStdDev (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, agr->idle.maxval/1000.0);
          break;
    }
 
@@ -15116,14 +15179,14 @@ ArgusPrintIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct 
    } 
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleSrcIntPktMin (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIdleIntFlowMax (%p, %p)", buf, argus);
 #endif
 }
 
 void
-ArgusPrintIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+ArgusPrintIdleIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusJitterStruct *jitter;
+   struct ArgusAgrStruct *agr;
    char value[128];
    bzero(value, sizeof(value));
 
@@ -15135,8 +15198,8 @@ ArgusPrintIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR:
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->dst.idle.maxval/1000.0);
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, agr->idle.minval/1000.0);
          break;
    }
 
@@ -15154,45 +15217,7 @@ ArgusPrintIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
    } 
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleDstIntPktMax (%p, %p)", buf, argus);
-#endif
-}
-
-void
-ArgusPrintIdleDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusJitterStruct *jitter;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->dst.idle.minval/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleDstIntPktMin (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIdleIntFlowMin (%p, %p)", buf, argus);
 #endif
 }
 
@@ -18056,6 +18081,8 @@ ArgusPrintDeltaDuration (struct ArgusParserStruct *parser, char *buf, struct Arg
 }
  
 
+double lastStartTime = 0;
+
 void
 ArgusPrintDeltaStartTime (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -18068,7 +18095,14 @@ ArgusPrintDeltaStartTime (struct ArgusParserStruct *parser, char *buf, struct Ar
       dstart = cor->metrics.deltaStart/1000000.0;
       sprintf (deltastart, "%.*f", parser->pflag, dstart);
    } else {
+      double stime;
       sprintf (deltastart, " ");
+      if ((stime = ArgusFetchStartTime(argus)) > 0.0) {
+         if (lastStartTime != 0) {
+            sprintf (deltastart, "%f", (stime - lastStartTime));
+         }
+         lastStartTime = stime;
+      }
    }
 
    if (parser->ArgusPrintXml) {
@@ -19406,6 +19440,98 @@ ArgusPrintIdleDstIntPktMinLabel (struct ArgusParserStruct *parser, char *buf, in
 {
    sprintf (buf, "%*.*s ", len, len, "DIPIdlMin");
 }
+
+
+void
+ArgusPrintIntFlowLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlow");
+}
+
+void
+ArgusPrintIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowDist");
+}
+ 
+void
+ArgusPrintActiveIntFlowLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowAct");
+}
+ 
+void
+ArgusPrintActiveIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntActFlowDist");
+}
+ 
+void
+ArgusPrintIdleIntFlowLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowIdl");
+}
+ 
+void
+ArgusPrintIdleIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntIdlFlowDist");
+}
+ 
+void
+ArgusPrintIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowStd");
+}
+
+void
+ArgusPrintIntFlowMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowMax");
+}
+
+void
+ArgusPrintIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IntFlowMin");
+}
+
+void
+ArgusPrintActiveIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "ActIntFlowStd");
+}
+
+void
+ArgusPrintActiveIntFlowMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "ActIntFlowMax");
+}
+
+void
+ArgusPrintActiveIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "ActIntFlowMin");
+}
+
+void
+ArgusPrintIdleIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowStd");
+}
+
+void
+ArgusPrintIdleIntFlowMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowMax");
+}
+
+void
+ArgusPrintIdleIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowMin");
+}
+
 
 void
 ArgusPrintSrcJitterLabel (struct ArgusParserStruct *parser, char *buf, int len)

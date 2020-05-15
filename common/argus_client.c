@@ -2732,34 +2732,57 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      }
 
                      case ARGUS_AGR_DSR: {
-                        struct ArgusOutputAgrStruct *agr = (struct ArgusOutputAgrStruct *) dsr;
-                        int agrLen = sizeof(*agr);
-                
-                        if (agrLen == sizeof(struct ArgusAgrStruct)) {
-                           bcopy (agr, &canon->agr, agrLen);
-                        } else {
-                           canon->agr.hdr = agr->hdr;
-                           canon->agr.hdr.argus_dsrvl8.len = sizeof(struct ArgusAgrStruct)/4;
+#if defined(HAVE_XDR)
+                        struct ArgusAgrStruct *agr = (struct ArgusAgrStruct *) dsr;
 
+                        if (cnt != sizeof(*agr)) {
+/* 
+   This is legacy ArgusOutputAgrStruct kind of input (V3 ?).
+                           struct ArgusOutputAgrStruct *oagr = (struct ArgusOutputAgrStruct *) dsr;
+                           struct ArgusStatsObject *tstat = (struct ArgusStatsObject *) &agr->act;
+                           int agrlen = sizeof(*oagr);
+*/
+
+                        } else {
+                           bcopy(agr, &canon->agr, sizeof(*agr));
+                          
+/* 
+                           struct ArgusStatObject *stat, *tstat;
+                           XDR xdrbuf, *xdrs = &xdrbuf;
+
+   We haven't been using XDR for this struct, but when we do ... next version ...
+
+                           canon->agr.hdr = agr->hdr;
                            canon->agr.count = agr->count;
                            canon->agr.laststartime = agr->laststartime;
                            canon->agr.lasttime = agr->lasttime;
 
-                           canon->agr.act.n       = agr->act.n;
-                           canon->agr.act.minval  = agr->act.minval;
-                           canon->agr.act.meanval = agr->act.meanval;
-                           canon->agr.act.stdev   = agr->act.stdev;
-                           canon->agr.act.maxval  = agr->act.maxval;
+                           stat  = &canon->agr.act;
+                           tstat = &agr->act;
+                           xdrmem_create(xdrs, (char *)tstat, sizeof(*stat), XDR_DECODE);
+                           xdr_int(xdrs,   &stat->n);
+                           xdr_float(xdrs, &stat->minval);
+                           xdr_float(xdrs, &stat->meanval);
+                           xdr_float(xdrs, &stat->stdev);
+                           xdr_float(xdrs, &stat->maxval);
+                           
+                           bcopy(tstat->fdist, stat->fdist, sizeof (stat->fdist));
 
-                           canon->agr.idle.n       = agr->idle.n;
-                           canon->agr.idle.minval  = agr->idle.minval;
-                           canon->agr.idle.meanval = agr->idle.meanval;
-                           canon->agr.idle.stdev   = agr->idle.stdev;
-                           canon->agr.idle.maxval  = agr->idle.maxval;
+                           stat = &canon->agr.idle;
+                           tstat = &agr->idle;
+                           xdrmem_create(xdrs, (char *)tstat, sizeof(*stat), XDR_DECODE);
+                           xdr_int(xdrs,   &stat->n);
+                           xdr_float(xdrs, &stat->minval);
+                           xdr_float(xdrs, &stat->meanval);
+                           xdr_float(xdrs, &stat->stdev);
+                           xdr_float(xdrs, &stat->maxval);
 
+                           bcopy(tstat->fdist, stat->fdist, sizeof (stat->fdist));
+*/
                            retn->dsrs[ARGUS_AGR_INDEX] = (struct ArgusDSRHeader*) &canon->agr;
                            retn->dsrindex |= (0x01 << ARGUS_AGR_INDEX);
                         }
+#endif
                         break;
                      }
 
@@ -5848,37 +5871,37 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                                           case ARGUS_TYPE_IPV4:
                                              switch (flow->ip_flow.ip_p) {
-                                                case IPPROTO_ESP: { 
+                                                case IPPROTO_ESP: {
                                                    slen   = (i == ARGUS_MASK_SPORT) ? -1 : 4;
                                                    offset = (i == ARGUS_MASK_SPORT) ? -1 : na->ArgusMaskDefs[i].offset;
                                                    break;
                                                 }
 
-//                                              case IPPROTO_ICMP: {
-//                                                 if (i == ARGUS_MASK_SPORT) {
-//                                                    slen = 1;
-//                                                    offset = na->ArgusMaskDefs[i].offset;
-//                                                 } else {
-//                                                    switch (flow->icmp_flow.type) {
-//                                                       case ICMP_MASKREQ:
-//                                                       case ICMP_ECHO:
-//                                                       case ICMP_TSTAMP:
-//                                                       case ICMP_IREQ: 
-//                                                       case ICMP_MASKREPLY:
-//                                                       case ICMP_ECHOREPLY:
-//                                                       case ICMP_TSTAMPREPLY:
-//                                                       case ICMP_IREQREPLY:
-//                                                          offset = na->ArgusMaskDefs[i].offset - 1;
-//                                                          slen = 5;
-//                                                          break;
-//
-//                                                       default:
-//                                                          offset = na->ArgusMaskDefs[i].offset - 1;
-//                                                          slen = 1;
-//                                                    }
-//                                                 }
-//                                                 break;
-//                                              }
+                                                case IPPROTO_ICMP: {
+                                                   if (i == ARGUS_MASK_SPORT) {
+                                                      slen = 1;
+                                                      offset = na->ArgusMaskDefs[i].offset;
+                                                   } else {
+                                                      switch (flow->icmp_flow.type) {
+                                                         case ICMP_MASKREQ:
+                                                         case ICMP_ECHO:
+                                                         case ICMP_TSTAMP:
+                                                         case ICMP_IREQ: 
+                                                         case ICMP_MASKREPLY:
+                                                         case ICMP_ECHOREPLY:
+                                                         case ICMP_TSTAMPREPLY:
+                                                         case ICMP_IREQREPLY:
+                                                            offset = na->ArgusMaskDefs[i].offset - 1;
+                                                            slen = 5;
+                                                            break;
+  
+                                                         default:
+                                                            offset = na->ArgusMaskDefs[i].offset - 1;
+                                                            slen = 1;
+                                                      }
+                                                   }
+                                                   break;
+                                                }
                                              }
                                              break;  
                                        }
@@ -7448,20 +7471,40 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                struct ArgusMetricStruct *ns1metric = (void *)ns1->dsrs[ARGUS_METRIC_INDEX];
                struct ArgusMetricStruct *ns2metric = (void *)ns2->dsrs[ARGUS_METRIC_INDEX];
 
-               double deltaSrcTime = 0.0;
-               double deltaDstTime = 0.0;
+               double deltaSrcFlowTime = 0.0;
+               double deltaSrcStartTime = 0.0;
+               double deltaDstFlowTime = 0.0;
+               double deltaDstStartTime = 0.0;
 
                if ((ns1time && ns2time) && (ns1metric && ns2metric)) {
-                  double snst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
-                  double dnst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
-                  double snst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
-                  double dnst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
+                  double ssnst1 = (ns1time->src.start.tv_sec * 1000000LL) + ns1time->src.start.tv_usec;
+                  double dsnst1 = (ns1time->dst.start.tv_sec * 1000000LL) + ns1time->dst.start.tv_usec;
+                  double senst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
+                  double denst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
 
-                  if (ns1metric->src.pkts && ns2metric->src.pkts)
-                     deltaSrcTime = fabs(snst1 - snst2)/1000000.0;
+                  double ssnst2 = (ns2time->src.start.tv_sec * 1000000LL) + ns2time->src.start.tv_usec;
+                  double dsnst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
 
-                  if (ns1metric->dst.pkts && ns2metric->dst.pkts)
-                     deltaDstTime = fabs(dnst1 - dnst2)/1000000.0;
+                  double slstime = (ns1->lastSrcStartTime.tv_sec * 1000000LL) + ns1->lastSrcStartTime.tv_usec;
+                  double dlstime = (ns1->lastDstStartTime.tv_sec * 1000000LL) + ns1->lastDstStartTime.tv_usec;
+
+                  if (ns1metric->src.pkts && ns2metric->src.pkts) {
+                     if (slstime) {
+                       deltaSrcStartTime = fabs(ssnst2 - slstime)/1000000.0;
+                     } else {
+                       deltaSrcStartTime = fabs(ssnst2 - ssnst1)/1000000.0;
+                     }
+                     deltaSrcFlowTime = fabs(ssnst2 - senst1)/1000000.0;
+                  }
+
+                  if (ns1metric->dst.pkts && ns2metric->dst.pkts) {
+                     if (dlstime) {
+                       deltaDstStartTime = fabs(dsnst2 - dlstime)/1000000.0;
+                     } else {
+                       deltaDstStartTime = fabs(dsnst2 - dsnst1)/1000000.0;
+                     }
+                     deltaDstFlowTime = fabs(dsnst2 - denst1)/1000000.0;
+                  }
                }
 
                ns1->status &= ~ARGUS_RECORD_WRITTEN; 
@@ -8357,7 +8400,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  } else
                                     ss1 = pow(a1->idle.meanval, 2.0);
 
-                                 ss1 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
+                                 ss1 += pow(deltaSrcFlowTime, 2.0) + pow(deltaDstFlowTime, 2.0);
 
                                  if (a2->idle.stdev != 0) {
                                     tvalstd  = pow(a2->idle.stdev, 2.0);
@@ -8366,12 +8409,12 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  } else
                                     ss2 = pow(a2->idle.meanval, 2.0);
 
-                                 ss2 += pow(deltaSrcTime, 2.0) + pow(deltaDstTime, 2.0);
+                                 ss2 += pow(deltaSrcFlowTime, 2.0) + pow(deltaDstFlowTime, 2.0);
 
                                  if ((items = (a1->idle.n + a2->idle.n)) > 0) {
                                     for (n = 0; n < 8; n++) {
-                                       int value = ((a1->idle.fdist[n] * a1->idle.n) + (a2->idle.fdist[n] * a2->idle.n)) / items;
-                                       data->idle.fdist[n] = (value > 0xFF) ? 0xFF : value;
+                                       int val = ((a1->idle.fdist[n] * a1->idle.n) + (a2->idle.fdist[n] * a2->idle.n)) / items;
+                                       data->idle.fdist[n] = (val > 0xFF) ? 0xFF : val;
                                        if (data->idle.fdist[n] == 0) {
                                           if (a1->idle.fdist[n] || a2->idle.fdist[n])
                                              data->idle.fdist[n] = 1;
@@ -8380,17 +8423,17 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  }
                               }
 
-                              if (deltaSrcTime || deltaDstTime) {
-                                 if (deltaSrcTime) {
-                                    value += deltaSrcTime;
-                                    if (deltaSrcTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcTime;
-                                    if (deltaSrcTime < a1->idle.minval)  a1->idle.minval = deltaSrcTime;
+                              if (deltaSrcFlowTime || deltaDstFlowTime) {
+                                 if (deltaSrcFlowTime) {
+                                    value += deltaSrcFlowTime;
+                                    if (deltaSrcFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcFlowTime;
+                                    if (deltaSrcFlowTime < a1->idle.minval)  a1->idle.minval = deltaSrcFlowTime;
                                     a1->idle.n++;
-                                 }
-                                 if (deltaDstTime) {
-                                    value += deltaDstTime;
-                                    if (deltaDstTime > a1->idle.maxval)  a1->idle.maxval = deltaDstTime;
-                                    if (deltaDstTime < a1->idle.minval)  a1->idle.minval = deltaDstTime;
+                                 } else 
+                                 if (deltaDstFlowTime) {
+                                    value += deltaDstFlowTime;
+                                    if (deltaDstFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaDstFlowTime;
+                                    if (deltaDstFlowTime < a1->idle.minval)  a1->idle.minval = deltaDstFlowTime;
                                     a1->idle.n++;
                                  }
 
@@ -8406,16 +8449,16 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                        data->idle.stdev = sqrt (fabs(((ss1 + ss2)/(data->idle.n)) - pow(data->idle.meanval, 2.0)));
                                  }
 
-                                 for (n = 0, x = 10; (n < 8) && (deltaSrcTime || deltaDstTime); n++) {
-                                    if (deltaSrcTime && (deltaSrcTime < x)) {
+                                 for (n = 0, x = 10; (n < 8) && (deltaSrcFlowTime || deltaDstFlowTime); n++) {
+                                    if (deltaSrcFlowTime && (deltaSrcFlowTime < x)) {
                                        if (data->idle.fdist[n] < 0xFF)
                                           data->idle.fdist[n]++;
-                                       deltaSrcTime = 0;
+                                       deltaSrcFlowTime = 0;
                                     } 
-                                    if (deltaDstTime && (deltaDstTime < x)) {
+                                    if (deltaDstFlowTime && (deltaDstFlowTime < x)) {
                                        if (data->idle.fdist[n] < 0xFF)
                                           data->idle.fdist[n]++;
-                                       deltaDstTime = 0;
+                                       deltaDstFlowTime = 0;
                                     }
                                     x *= 10;
                                  }
@@ -9060,6 +9103,19 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
 
                if (ns2->score > ns1->score)
                   ns1->score = ns2->score;
+
+               if (ns1time && ns2time) {
+                  if (ns2time->src.start.tv_sec > 0) {
+                     ns1->lastSrcStartTime.tv_sec  = ns2time->src.start.tv_sec;
+                     ns1->lastSrcStartTime.tv_usec = ns2time->src.start.tv_usec;
+                  } else {
+                  }
+                  if (ns2time->dst.start.tv_sec > 0) {
+                     ns1->lastDstStartTime.tv_sec  = ns2time->dst.start.tv_sec;
+                     ns1->lastDstStartTime.tv_usec = ns2time->dst.start.tv_usec;
+                  } else {
+                  }
+               }
 
                ns1->status |= ARGUS_RECORD_MODIFIED;
                break;
@@ -15625,6 +15681,179 @@ ArgusFetchDstDup (struct ArgusRecordStruct *ns)
    return (retn);
 }
 
+double
+ArgusFetchIntFlow (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      unsigned int n;
+
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         if ((n = (agr->act.n + agr->idle.n)) > 0) {
+            if (agr->act.n && agr->idle.n) {
+               retn  = ((agr->act.meanval * agr->act.n) +
+                        (agr->idle.meanval * agr->idle.n)) / n;
+            } else {
+               retn = (agr->act.n) ? agr->act.meanval : agr->idle.meanval;
+            }
+         }
+      }
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchActiveIntFlow (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
+         if (agr->act.n > 0)
+            retn = agr->act.meanval;
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchIdleIntFlow (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
+         if (agr->idle.n > 0)
+            retn = agr->idle.meanval;
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = (agr->act.maxval > agr->idle.maxval) ?
+                 agr->act.maxval : agr->idle.maxval;
+      }
+   }
+
+   return (retn/1000.0);
+   return (retn);
+
+}
+
+double
+ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = (agr->act.minval > agr->idle.minval) ?
+                 agr->act.minval : agr->idle.minval;
+      }
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchActiveIntFlowMax (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = agr->act.maxval;
+      }
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchActiveIntFlowMin (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = agr->act.minval;
+      }          
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchIdleIntFlowMax (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = agr->idle.maxval;
+      }          
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
+
+double
+ArgusFetchIdleIntFlowMin (struct ArgusRecordStruct *ns)
+{
+   double retn = 0.0;
+   struct ArgusAgrStruct *agr;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+
+   } else {
+      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+         retn = agr->act.minval;
+      }          
+   }
+
+   return (retn/1000.0);
+   return (retn);
+}
 
 double
 ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns)
