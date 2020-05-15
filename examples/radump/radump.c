@@ -447,6 +447,8 @@ struct ArgusMacFlow {
                 ns_print(bp + 2, slen - 2, 0);
             else if (ISPORT(MSDP_PORT))
                msdp_print(bp, slen);
+            else if (ISPORT(SMB_PORT))
+               smb_tcp_print(bp, slen);
             else if (ISPORT(LDP_PORT))
                ldp_print(bp, slen);
             else {

@@ -68,6 +68,7 @@
 #define SNMP_PORT 161      /*XXX*/
 #define NTP_PORT 123      /*XXX*/
 #define SNMPTRAP_PORT 162   /*XXX*/
+#define SMB_PORT 445   /*XXX*/
 #define ISAKMP_PORT 500      /*XXX*/
 #define SYSLOG_PORT 514         /* rfc3164 */
 #define TIMED_PORT 525      /*XXX*/
@@ -156,6 +157,7 @@ extern char * telnet_print(const u_char *, u_int);
 extern char * tftp_print(const u_char *, u_int);
 extern char * timed_print(const u_char *, u_int);
 extern char * radius_print(const u_int8_t *, u_int);
+extern char * smb_tcp_print(const u_char *, int);
 extern char * nbt_tcp_print(const u_char *, int);
 extern char * nbt_udp137_print(const u_char *, int);
 extern char * nbt_udp138_print(const u_char *, int);
