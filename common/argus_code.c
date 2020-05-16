@@ -177,6 +177,8 @@ static struct ablock *Argusgen_load(float, int, u_int);
 static struct ablock *Argusgen_gap(float, int, u_int);
 static struct ablock *Argusgen_loss(float, int, u_int);
 static struct ablock *Argusgen_inter(float, int, int, u_int);
+static struct ablock *Argusgen_interflow(float, int, int, u_int);
+static struct ablock *Argusgen_interflowstddev(float, int, int, u_int);
 static struct ablock *Argusgen_jitter(float, int, int, u_int);
 static struct ablock *Argusgen_dur(float, int, u_int);
 static struct ablock *Argusgen_mean(float, int, u_int);
@@ -3579,6 +3581,40 @@ Argusgen_pcr(float v, int dir, u_int op)
 }
 
 static struct ablock *
+Argusgen_interflow(float v, int dir, int type, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusAgrStruct agr;
+   float value = v;
+   int offset = (char *)&agr.idle.meanval - (char *)&agr;
+
+   b1 = Argusgen_fcmp(ARGUS_AGR_INDEX, offset, NFF_F, value, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_interflow (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
+Argusgen_interflowstddev(float v, int dir, int type, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusAgrStruct agr;
+   float value = v * 1000;
+   int offset = (char *)&agr.idle.stdev - (char *)&agr;
+
+   b1 = Argusgen_fcmp(ARGUS_AGR_INDEX, offset, NFF_F, value, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_interflowstddev (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
 Argusgen_inter(float v, int dir, int type, u_int op)
 {
    struct ablock *b1 = NULL, *b0 = NULL;
@@ -5414,6 +5450,14 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
       case Q_PCR:
          b = Argusgen_pcr(v, dir, op);
+         break;
+
+      case Q_INTERFLOW:
+         b = Argusgen_interflow((int)v, dir, type, op);
+         break;
+
+      case Q_INTERFLOWSTDDEV:
+         b = Argusgen_interflowstddev((int)v, dir, type, op);
          break;
 
       case Q_INTER:

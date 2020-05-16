@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		81
-#define MAX_SORT_ALG_TYPES		81
+#define ARGUS_MAX_SORT_ALG		83
+#define MAX_SORT_ALG_TYPES		83
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -251,6 +251,9 @@ int ArgusSortDstHops (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcMasklen (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstMasklen (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
+int ArgusSortIntFlow (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortIntFlowStdDev (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 /*
 int ArgusSortSrcDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -342,6 +345,8 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortInf,
    ArgusSortScore,
    ArgusSortCompare,
+   ArgusSortIntFlow,
+   ArgusSortIntFlowStdDev,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -434,6 +439,8 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "inf",
    "score",
    "compare",
+   "intflow",
+   "intflowsdev",
 };
 
 #else

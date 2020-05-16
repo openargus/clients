@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		139
-#define MAX_METRIC_ALG_TYPES		139
+#define ARGUS_MAX_METRIC_ALG		134
+#define MAX_METRIC_ALG_TYPES		134
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -129,14 +129,9 @@ double ArgusFetchSrcDup (struct ArgusRecordStruct *ns);
 double ArgusFetchDstDup (struct ArgusRecordStruct *ns);
 
 double ArgusFetchIntFlow (struct ArgusRecordStruct *ns);
-double ArgusFetchActiveIntFlow (struct ArgusRecordStruct *ns);
-double ArgusFetchIdleIntFlow (struct ArgusRecordStruct *ns);
 double ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns);
 double ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns);
-double ArgusFetchActiveIntFlowMax (struct ArgusRecordStruct *ns);
-double ArgusFetchActiveIntFlowMin (struct ArgusRecordStruct *ns);
-double ArgusFetchIdleIntFlowMax (struct ArgusRecordStruct *ns);
-double ArgusFetchIdleIntFlowMin (struct ArgusRecordStruct *ns);
+double ArgusFetchIntFlowStdDev (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcIntPktAct (struct ArgusRecordStruct *ns);
@@ -469,22 +464,12 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"dmss", ArgusFetchDstMaxSeg},
 #define ARGUSMETRICINTFLOW         130
    { "intflow", ArgusFetchIntFlow},
-#define ARGUSMETRICACTINTFLOW      131
-   { "intflowact", ArgusFetchActiveIntFlow},
-#define ARGUSMETRICIDLEINTFLOW     132
-   { "intflowidl", ArgusFetchIdleIntFlow},
-#define ARGUSMETRICINTFLOWMAX      133
+#define ARGUSMETRICINTFLOWMAX      131
    { "intflowmax", ArgusFetchIntFlowMax},
-#define ARGUSMETRICINTFLOWMIN      134
+#define ARGUSMETRICINTFLOWMIN      132
    { "intflowmin", ArgusFetchIntFlowMin},
-#define ARGUSMETRICACTINTFLOWMAX   135
-   { "intflowactmax", ArgusFetchActiveIntFlowMax},
-#define ARGUSMETRICACTINTFLOWMIN   136
-   { "intflowactmin", ArgusFetchActiveIntFlowMin},
-#define ARGUSMETRICIDLEINTFLOWMAX  137
-   { "intflowidlmax", ArgusFetchIdleIntFlowMax},
-#define ARGUSMETRICIDLEINTFLOWMIN  138
-   { "intflowidlmin", ArgusFetchIdleIntFlowMin},
+#define ARGUSMETRICINTFLOWSTDDEV   133
+   { "intflowsdev", ArgusFetchIntFlowStdDev},
 };
 
 #else

@@ -18597,14 +18597,23 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
          for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
             if (((void *) parser->RaPrintAlgorithmList[i]->print != NULL) &&
                 ((void *) parser->RaPrintAlgorithmList[i]->print == (void *) RaPrintAlgorithmTable[x].print)) {
-               char labelbuf[MAXSTRLEN], *lptr = labelbuf;
-               bzero(labelbuf, sizeof(labelbuf));
-               RaPrintAlgorithmTable[x].label(parser, labelbuf, parser->RaPrintAlgorithmList[i]->length);
+               char *labelbuf, *lptr;
+               int labelen = (parser->RaPrintAlgorithmList[i]->length > MAXSTRLEN) ? MAXSTRLEN : parser->RaPrintAlgorithmList[i]->length;
+               int slen = sizeof(parser->RaLabelStr) - strlen(parser->RaLabel);
+
+               if ((labelbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+                  ArgusLog(LOG_ERR, "ArgusGenerateLabel: ArgusCalloc: error %s", strerror(errno));
+
+               lptr = labelbuf;
+               RaPrintAlgorithmTable[x].label(parser, labelbuf, labelen);
+
                if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
                   lptr = ArgusTrimString(labelbuf);
-                  sprintf(&parser->RaLabel[strlen(parser->RaLabel)], "%s ", lptr);
-               } else
-                  sprintf(&parser->RaLabel[strlen(parser->RaLabel)], "%s", lptr);
+                  snprintf(&parser->RaLabel[strlen(parser->RaLabel)], slen, "%s ", lptr);
+               } else {
+                  snprintf(&parser->RaLabel[strlen(parser->RaLabel)], slen, "%s", lptr);
+               }
+               ArgusFree(labelbuf);
                break;
             }
          }
@@ -19455,30 +19464,6 @@ ArgusPrintIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len
 }
  
 void
-ArgusPrintActiveIntFlowLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IntFlowAct");
-}
- 
-void
-ArgusPrintActiveIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IntActFlowDist");
-}
- 
-void
-ArgusPrintIdleIntFlowLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IntFlowIdl");
-}
- 
-void
-ArgusPrintIdleIntFlowDistLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IntIdlFlowDist");
-}
- 
-void
 ArgusPrintIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "IntFlowStd");
@@ -19495,43 +19480,6 @@ ArgusPrintIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "IntFlowMin");
 }
-
-void
-ArgusPrintActiveIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "ActIntFlowStd");
-}
-
-void
-ArgusPrintActiveIntFlowMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "ActIntFlowMax");
-}
-
-void
-ArgusPrintActiveIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "ActIntFlowMin");
-}
-
-void
-ArgusPrintIdleIntFlowStdDevLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowStd");
-}
-
-void
-ArgusPrintIdleIntFlowMaxLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowMax");
-}
-
-void
-ArgusPrintIdleIntFlowMinLabel (struct ArgusParserStruct *parser, char *buf, int len)
-{
-   sprintf (buf, "%*.*s ", len, len, "IdlIntFlowMin");
-}
-
 
 void
 ArgusPrintSrcJitterLabel (struct ArgusParserStruct *parser, char *buf, int len)

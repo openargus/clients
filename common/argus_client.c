@@ -8423,26 +8423,24 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  }
                               }
 
-                              if (deltaSrcFlowTime || deltaDstFlowTime) {
-                                 if (deltaSrcFlowTime) {
-                                    value += deltaSrcFlowTime;
-                                    if (deltaSrcFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcFlowTime;
-                                    if (deltaSrcFlowTime < a1->idle.minval)  a1->idle.minval = deltaSrcFlowTime;
-                                    a1->idle.n++;
-                                 } else 
-                                 if (deltaDstFlowTime) {
-                                    value += deltaDstFlowTime;
-                                    if (deltaDstFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaDstFlowTime;
-                                    if (deltaDstFlowTime < a1->idle.minval)  a1->idle.minval = deltaDstFlowTime;
-                                    a1->idle.n++;
-                                 }
+                              if (deltaSrcFlowTime) {
+                                 value += deltaSrcFlowTime;
+                                 if (deltaSrcFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaSrcFlowTime;
+                                 if (deltaSrcFlowTime < a1->idle.minval)  a1->idle.minval = deltaSrcFlowTime;
+                              } else 
+                              if (deltaDstFlowTime) {
+                                 value += deltaDstFlowTime;
+                                 if (deltaDstFlowTime > a1->idle.maxval)  a1->idle.maxval = deltaDstFlowTime;
+                                 if (deltaDstFlowTime < a1->idle.minval)  a1->idle.minval = deltaDstFlowTime;
+                              }
+                              a1->idle.n++;
 
-                                 sum1 += value;
+                              sum1 += value;
 
-                                 data->idle.maxval  = (a1->idle.maxval > a2->idle.maxval) ? a1->idle.maxval : a2->idle.maxval;
-                                 data->idle.minval  = (a1->idle.minval < a2->idle.minval) ? a1->idle.minval : a2->idle.minval;
+                              data->idle.maxval  = (a1->idle.maxval > a2->idle.maxval) ? a1->idle.maxval : a2->idle.maxval;
+                              data->idle.minval  = (a1->idle.minval < a2->idle.minval) ? a1->idle.minval : a2->idle.minval;
 
-                                 if ((data->idle.n = a1->idle.n + a2->idle.n) > 0) {
+                              if ((data->idle.n = a1->idle.n + a2->idle.n) > 0) {
                                     data->idle.meanval = (sum1 + sum2) / data->idle.n;
 
                                     if (data->idle.n > 1)
@@ -8472,10 +8470,6 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                                       ((a1->lasttime.tv_sec == a2->lasttime.tv_sec) &&
                                                        (a1->lasttime.tv_usec > a2->lasttime.tv_usec))) ?
                                                         a1->lasttime : a2->lasttime;
-                              } else {
-// looks like we're completing the first two records, so merge into active.
-
-                              }
 
                               bcopy ((char *)data, (char *) a1, sizeof (databuf));
                            }
@@ -15693,23 +15687,16 @@ ArgusFetchIntFlow (struct ArgusRecordStruct *ns)
       unsigned int n;
 
       if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         if ((n = (agr->act.n + agr->idle.n)) > 0) {
-            if (agr->act.n && agr->idle.n) {
-               retn  = ((agr->act.meanval * agr->act.n) +
-                        (agr->idle.meanval * agr->idle.n)) / n;
-            } else {
-               retn = (agr->act.n) ? agr->act.meanval : agr->idle.meanval;
-            }
+         if ((n = agr->idle.n) > 0) {
+            retn = agr->idle.meanval;
          }
       }
    }
-
-   return (retn/1000.0);
    return (retn);
 }
 
 double
-ArgusFetchActiveIntFlow (struct ArgusRecordStruct *ns)
+ArgusFetchIntFlowStdDev (struct ArgusRecordStruct *ns)
 {
    double retn = 0.0;
    struct ArgusAgrStruct *agr;
@@ -15719,25 +15706,7 @@ ArgusFetchActiveIntFlow (struct ArgusRecordStruct *ns)
    } else {
       if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
          if (agr->act.n > 0)
-            retn = agr->act.meanval;
-   }
-
-   return (retn/1000.0);
-   return (retn);
-}
-
-double
-ArgusFetchIdleIntFlow (struct ArgusRecordStruct *ns)
-{
-   double retn = 0.0;
-   struct ArgusAgrStruct *agr;
-
-   if (ns->hdr.type & ARGUS_MAR) {
-
-   } else {
-      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL)
-         if (agr->idle.n > 0)
-            retn = agr->idle.meanval;
+            retn = agr->act.stdev;
    }
 
    return (retn/1000.0);
@@ -15754,14 +15723,10 @@ ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns)
 
    } else {
       if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = (agr->act.maxval > agr->idle.maxval) ?
-                 agr->act.maxval : agr->idle.maxval;
+         retn = agr->idle.maxval;
       }
    }
-
-   return (retn/1000.0);
    return (retn);
-
 }
 
 double
@@ -15774,84 +15739,9 @@ ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns)
 
    } else {
       if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = (agr->act.minval > agr->idle.minval) ?
-                 agr->act.minval : agr->idle.minval;
+         retn = agr->idle.minval;
       }
    }
-
-   return (retn/1000.0);
-   return (retn);
-}
-
-double
-ArgusFetchActiveIntFlowMax (struct ArgusRecordStruct *ns)
-{
-   double retn = 0.0;
-   struct ArgusAgrStruct *agr;
-
-   if (ns->hdr.type & ARGUS_MAR) {
-
-   } else {
-      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = agr->act.maxval;
-      }
-   }
-
-   return (retn/1000.0);
-   return (retn);
-}
-
-double
-ArgusFetchActiveIntFlowMin (struct ArgusRecordStruct *ns)
-{
-   double retn = 0.0;
-   struct ArgusAgrStruct *agr;
-
-   if (ns->hdr.type & ARGUS_MAR) {
-
-   } else {
-      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = agr->act.minval;
-      }          
-   }
-
-   return (retn/1000.0);
-   return (retn);
-}
-
-double
-ArgusFetchIdleIntFlowMax (struct ArgusRecordStruct *ns)
-{
-   double retn = 0.0;
-   struct ArgusAgrStruct *agr;
-
-   if (ns->hdr.type & ARGUS_MAR) {
-
-   } else {
-      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = agr->idle.maxval;
-      }          
-   }
-
-   return (retn/1000.0);
-   return (retn);
-}
-
-double
-ArgusFetchIdleIntFlowMin (struct ArgusRecordStruct *ns)
-{
-   double retn = 0.0;
-   struct ArgusAgrStruct *agr;
-
-   if (ns->hdr.type & ARGUS_MAR) {
-
-   } else {
-      if ((agr = (struct ArgusAgrStruct *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
-         retn = agr->act.minval;
-      }          
-   }
-
-   return (retn/1000.0);
    return (retn);
 }
 
@@ -18867,5 +18757,33 @@ ArgusSortDstHops (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *ar
 
    retn = (value < 0) ? 1 : ((value == 0) ? 0 : -1);
    retn = ArgusReverseSortDir ? ((retn < 0) ? 1 : ((retn == 0) ? 0 : -1)) : retn;
+   return (retn);
+}
+
+int
+ArgusSortIntFlow (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
+{
+   double intf1 = ArgusFetchIntFlow(argus1);
+   double intf2 = ArgusFetchIntFlow(argus2);
+   double value = (intf1 - intf2);
+   int retn;
+
+   retn = (value < 0) ? 1 : ((value == 0) ? 0 : -1);
+   retn = ArgusReverseSortDir ? ((retn < 0) ? 1 : ((retn == 0) ? 0 : -1)) : retn;
+
+   return (retn);
+}
+
+int
+ArgusSortIntFlowStdDev (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
+{
+   double intf1 = ArgusFetchIntFlowStdDev(argus1);
+   double intf2 = ArgusFetchIntFlowStdDev(argus2);
+   double value = (intf1 - intf2);
+   int retn;
+
+   retn = (value < 0) ? 1 : ((value == 0) ? 0 : -1);
+   retn = ArgusReverseSortDir ? ((retn < 0) ? 1 : ((retn == 0) ? 0 : -1)) : retn;
+
    return (retn);
 }
