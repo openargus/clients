@@ -359,7 +359,7 @@ ArgusProcessData (void *arg)
          parser->RaTasksToDo = RA_IDLE;
 
       } else {
-         struct timespec ts = {0, 150000000};
+         struct timespec ts = {0, 250000000};
          gettimeofday (&parser->ArgusCurrentTime, 0L);
          nanosleep (&ts, NULL);
 

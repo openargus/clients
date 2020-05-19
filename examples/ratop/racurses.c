@@ -248,7 +248,7 @@ ArgusCursesProcess (void *arg)
       pthread_mutex_unlock(&RaCursesLock);
 #endif
       tsp->tv_sec  = 0;
-      tsp->tv_nsec = 2500000;
+      tsp->tv_nsec = 250000000;
       nanosleep(tsp, NULL);
    }
 
@@ -5742,7 +5742,7 @@ RaResizeScreen(void)
       it_val.it_interval.tv_sec  = 0;
       it_val.it_interval.tv_usec  = 0;
       it_val.it_value.tv_sec  = 0;
-      it_val.it_value.tv_usec = 100000;
+      it_val.it_value.tv_usec = 250000;
 
       if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
          ArgusLog (LOG_ERR, "RaResizeScreen() setitimer error %s\n", strerror(errno));
