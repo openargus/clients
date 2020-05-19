@@ -190,15 +190,17 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
    if (dns != NULL) {
       struct ArgusListObjectStruct *tdns;
       struct timeval tvbuf, *tvp = &tvbuf;
-      char tbuf[128], *resbuf;
+      char tbuf[128], rbuf[128], *resbuf;
       int ind = *rind;
 
       if ((resbuf = ArgusMalloc(ARGUS_MAX_RESPONSE)) == NULL)
          ArgusLog (LOG_ERR, "ArgusPrintAddressResponse: ArgusMalloc error %s\n", strerror(errno));
 
       bzero(tbuf, sizeof(tbuf));
+      bzero(rbuf, sizeof(rbuf));
 
       ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
+      ArgusPrintTime(ArgusParser, rbuf, sizeof(rbuf), &raddr->rtime);
 
       RaDiffTime (&raddr->rtime, &raddr->atime, tvp);
 
@@ -206,7 +208,7 @@ ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***r
          raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
 
       if (ArgusParser->ArgusPrintJson) {
-         sprintf (resbuf, "{ \"stime\":\"%s\", \"addr\":\"%s\"", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+         sprintf (resbuf, "{ \"stime\":\"%s\", \"rtime\":\"%s\", \"addr\":\"%s\"", tbuf, rbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       } else {
          sprintf (resbuf, "%s: \"%s\" ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
       }

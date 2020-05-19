@@ -145,10 +145,10 @@ if ($uri) {
 
    switch ($db) {
       case /^dnsNames/ {
-         $options = "-f /usr/argus/radns.conf -qM json search:0.0.0.0/0";
+         $options = "-u -f /usr/argus/radns.conf -qM json search:0.0.0.0/0";
       }
       case /^dnsAddrs/ {
-         $options = "-f /usr/argus/radns.conf -qM json search:'.'";
+         $options = "-u -f /usr/argus/radns.conf -qM json search:'.'";
       }
    }
 
@@ -246,7 +246,6 @@ if ($uri) {
                $dbh->do($str);
                print "DEBUG: sql '$str'\n" if $debug;
             }
-
             foreach my $n (@$results_ref) {
                my ($name,$tld,$nld,$stime,$ltime,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
                my ($tind,$nind);
