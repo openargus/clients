@@ -5883,12 +5883,15 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                                                       offset = na->ArgusMaskDefs[i].offset;
                                                    } else {
                                                       switch (flow->icmp_flow.type) {
-                                                         case ICMP_MASKREQ:
                                                          case ICMP_ECHO:
+                                                         case ICMP_ECHOREPLY:
+                                                            slen = -1;
+                                                            break;
+
+                                                         case ICMP_MASKREQ:
                                                          case ICMP_TSTAMP:
                                                          case ICMP_IREQ: 
                                                          case ICMP_MASKREPLY:
-                                                         case ICMP_ECHOREPLY:
                                                          case ICMP_TSTAMPREPLY:
                                                          case ICMP_IREQREPLY:
                                                             offset = na->ArgusMaskDefs[i].offset - 1;
@@ -8400,16 +8403,12 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  } else
                                     ss1 = pow(a1->idle.meanval, 2.0);
 
-                                 ss1 += pow(deltaSrcFlowTime, 2.0) + pow(deltaDstFlowTime, 2.0);
-
                                  if (a2->idle.stdev != 0) {
                                     tvalstd  = pow(a2->idle.stdev, 2.0);
                                     ss2 = a2->idle.n * (tvalstd + pow(a2->idle.meanval, 2.0));
 
                                  } else
                                     ss2 = pow(a2->idle.meanval, 2.0);
-
-                                 ss2 += pow(deltaSrcFlowTime, 2.0) + pow(deltaDstFlowTime, 2.0);
 
                                  if ((items = (a1->idle.n + a2->idle.n)) > 0) {
                                     for (n = 0; n < 8; n++) {
@@ -8436,6 +8435,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                               a1->idle.n++;
 
                               sum1 += value;
+                              ss1  += pow(value, 2.0);
 
                               data->idle.maxval  = (a1->idle.maxval > a2->idle.maxval) ? a1->idle.maxval : a2->idle.maxval;
                               data->idle.minval  = (a1->idle.minval < a2->idle.minval) ? a1->idle.minval : a2->idle.minval;
