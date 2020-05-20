@@ -8030,12 +8030,17 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  case ARGUS_TCP_PERF: {
                                     struct ArgusTCPObject *t1 = (struct ArgusTCPObject *)&n1->net_union.tcp;
                                     switch (n2->hdr.subtype) {
-                                       case ARGUS_TCP_INIT: {
-                                          break;
-                                       }
+                                       case ARGUS_TCP_INIT: 
                                        case ARGUS_TCP_STATUS: {
+                                          struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
+
+                                          t1->status    |= t2->status;
+                                          t1->options   |= t2->options;
+                                          t1->src.flags |= t2->src.flags;
+
                                           break;
                                        }
+
                                        case ARGUS_TCP_PERF: {
                                           struct ArgusTCPObject *t2 = (struct ArgusTCPObject *)&n2->net_union.tcp;
 

@@ -967,7 +967,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
       getoptStr = "a:A:bB:c:C:dD:E:e:f:F:g:GhH:iJlL:m:M:nN:o:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
    if (!(strncmp(parser->ArgusProgramName, "rahisto", 6)))
-      getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
+      getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:Op:P:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
       getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:o:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
 

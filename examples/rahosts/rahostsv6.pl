@@ -1,6 +1,7 @@
 #!@PERLBIN@
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2017 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -197,7 +198,7 @@ sub RaHostsFetchData {
 # Start the program
 
    my $Options = "-L -1 -n -s sid:42 inf saddr:32 daddr:32 proto sloc dloc -c , ";
-   $RA = "$rasql -t $time -r 'mysql://root\@localhost/ipMatrix/ip_%Y_%m_%d' -M time 1d  -w - - ip | $ralabel -f $ralabelconf $Options";
+   $RA = "$rasql -t $time -r 'mysql://root\@localhost/ipMatrix/ip_%Y_%m_%d' -M time 1d  -w - - ipv6 | $ralabel -f $ralabelconf $Options";
 
    print "DEBUG: RaHostsFetchData: cmd: $RA\n" if $debug;
 

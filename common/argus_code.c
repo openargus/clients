@@ -3602,7 +3602,7 @@ Argusgen_interflowstddev(float v, int dir, int type, u_int op)
 {
    struct ablock *b1 = NULL;
    struct ArgusAgrStruct agr;
-   float value = v * 1000;
+   float value = v;
    int offset = (char *)&agr.idle.stdev - (char *)&agr;
 
    b1 = Argusgen_fcmp(ARGUS_AGR_INDEX, offset, NFF_F, value, op, Q_DEFAULT);
