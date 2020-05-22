@@ -46,7 +46,7 @@ use Time::Local;
 
 # Global variables
 my $debug = 0;
-my $drop  = 1;
+my $drop  = 0;
 my $time;
 my $database;
 my $filter;
@@ -104,7 +104,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-q//           && do { $quiet++; next ARG; };
          s/^-w//           && do { $uri = shift (@ARGV); next ARG; };
          s/^-debug//       && do { $debug++; next ARG; };
-         s/^-drop//        && do { $drop = 0; next ARG; };
+         s/^-drop//        && do { $drop = 1; next ARG; };
          s/^-dbase$//      && do { $database = shift(@ARGV); next ARG; };
          s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
          s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
