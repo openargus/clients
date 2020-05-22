@@ -44,9 +44,10 @@ Various output options, such as the specific columns of data to display,
 the entry idle timeout value, the screen refresh rate, etc ... are 
 all configurable.
 
-\fBratop\fP uses \fBncurses\fP and \fBreadline.3\fP, when available,
-to provide a \fBvi.1\fP look and feel for displaying, navigating and 
-modifying network flow data.  
+\fBratop\fP uses \fBncurses\fP and \fBreadline.3\fP, when available, to provide 
+an \fBemacs.1\fP or \fBvi.1\fP look and feel for displaying, navigating and 
+modifying network flow data.  Configure these features using \fBreadline's\fP
+configuruation strategy.  See 'man readline'.
 
 While running \fBratop\fP a lot of help can be obtained from the on-line
 help system, using the ":h" command.
@@ -268,3 +269,4 @@ Run ratop as a live display of realtime flow traffic.
 rarc(5)
 racluster(1)
 racluster.conf(5)
+readline(3)
