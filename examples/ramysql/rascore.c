@@ -520,6 +520,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 		   * one present and we have no baseline data
                    */
                   if ((RaAnnualProcess == NULL) && (RaMonthlyProcess == NULL) && (argus->dsrs[ARGUS_SCORE_INDEX] == NULL)) {
+                  } else {
+                     argus->score = 0;
                   }
 
                   for (pass = 0; pass < 2; pass++) {
@@ -721,7 +723,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                            }
                         }
                      }
-                     if (tns != NULL) {                            // found record in queue
+                     if (tns != NULL) {                            // found record in the baseline (process) queue
                         struct timeval nstvbuf, tstvbuf, *nstvp = &nstvbuf, *tstvp = &tstvbuf;
                         float tdur = RaGetFloatDuration (tns);
 
@@ -734,9 +736,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #define	SECONDS_IN_QUARTER	86400*7*4*4
 #define	SECONDS_IN_YEAR		86400*365.25
 
+// First test if we've seen this before, so if the times are the same, then we're in baseline.
+
                         if (nstvp->tv_sec > tstvp->tv_sec) {
                            int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_MONTH) ? 4 : ((tdur > SECONDS_IN_WEEK) ? 4 : 0)) : ((tdur > SECONDS_IN_WEEK) ? 4 : 0);
                            argus->score = argus->score > score ? argus->score : score;
+                        } else {
+                           if ((nstvp->tv_sec == tstvp->tv_sec) && (nstvp->tv_usec == tstvp->tv_usec)) {
+                               argus->score = 1;
+                           }
                         }
                      }
                   }
@@ -772,21 +780,20 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
    if (argus->score) {
       if (score == NULL) {
-            struct ArgusScoreStruct *score = (struct ArgusScoreStruct *) ArgusCalloc(1, sizeof(*score));
-            if (score == NULL) 
-               ArgusLog(LOG_ERR, "RaSendArgusRecord: ArgusCalloc failed");
+         struct ArgusScoreStruct *score = (struct ArgusScoreStruct *) ArgusCalloc(1, sizeof(*score));
+         if (score == NULL) 
+            ArgusLog(LOG_ERR, "RaSendArgusRecord: ArgusCalloc failed");
 
-            score->hdr.type = ARGUS_SCORE_DSR;
-            score->hdr.subtype = ARGUS_BEHAVIOR_SCORE;
-            score->hdr.argus_dsrvl8.len = (sizeof(*score) + 3)/4;
-            argus->dsrs[ARGUS_SCORE_INDEX] = (struct ArgusDSRHeader*) &score->hdr;
-            argus->dsrindex |= (0x01 << ARGUS_SCORE_INDEX);
+         score->hdr.type = ARGUS_SCORE_DSR;
+         score->hdr.subtype = ARGUS_BEHAVIOR_SCORE;
+         score->hdr.argus_dsrvl8.len = (sizeof(*score) + 3)/4;
+         argus->dsrs[ARGUS_SCORE_INDEX] = (struct ArgusDSRHeader*) &score->hdr;
+         argus->dsrindex |= (0x01 << ARGUS_SCORE_INDEX);
 
-            score->behvScore.values[0] = argus->score;
+         score->behvScore.values[0] = argus->score;
 
       } else {
-         if (argus->score > score->behvScore.values[0])
-            score->behvScore.values[0] = argus->score;
+         score->behvScore.values[0] = argus->score;
       }
    }
 
@@ -1254,6 +1261,7 @@ RaSQLQueryTable (char *table, struct RaOutputProcessStruct *process)
       snprintf (&ArgusSQLStatement[slen], MAXSTRLEN - slen, "%s >= %d and %s <= %d", timeField, (int)ArgusParser->startime_t.tv_sec, timeField, (int)ArgusParser->lasttime_t.tv_sec);
    }
 
+   if (table != NULL) {
    if (!(strcmp ("Seconds", table))) {
       RaSQLQuerySecondsTable (ArgusParser->startime_t.tv_sec, ArgusParser->lasttime_t.tv_sec);
 
@@ -1304,6 +1312,7 @@ RaSQLQueryTable (char *table, struct RaOutputProcessStruct *process)
 #endif
          }
       }
+   }
    }
 }
 
@@ -1939,10 +1948,28 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
                *ArgusSQLTableNameBuf = '\0';
+            } else
+            if (strcmp(RaDatabase, "arpMatrix") == 0) {
+               struct tm tmval;
+               struct timeval durbuf, *dur = &durbuf;
+               RaDiffTime (&parser->lasttime_t, &parser->startime_t, dur);
+
+               localtime_r(&parser->startime_t.tv_sec, &tmval);
+               if (dur->tv_sec > (86400 * 182))  {
+                  strftime (ArgusSQLTableNameBuf, 256, "arp_%Y", &tmval);
+               } else
+               if (dur->tv_sec > (86400 * 14))  {
+                  strftime (ArgusSQLTableNameBuf, 256, "arp_%Y_%m", &tmval);
+               } else
+                  strftime (ArgusSQLTableNameBuf, 256, "arp_%Y_%m_%d", &tmval);
+
+               str = strdup(ArgusSQLTableNameBuf);
+               *ArgusSQLTableNameBuf = '\0';
             }
          }
 
          if (str != NULL) {
+            char *tstr = strdup(str);
             if ((RaTables = ArgusCalloc(sizeof(void *), 5)) == NULL)
                ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
@@ -1957,12 +1984,17 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year);
             snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
 
-            RaTables[0] = strdup(RaAnnualBaseLineTable);
-            RaTables[1] = strdup(RaMonthlyBaseLineTable);
+            if (strcmp(tstr, RaAnnualBaseLineTable))
+               RaTables[0] = strdup(RaAnnualBaseLineTable);
+
+            if (strcmp(tstr, RaMonthlyBaseLineTable))
+               RaTables[1] = strdup(RaMonthlyBaseLineTable);
+
             if (strlen(ArgusSQLTableNameBuf) > 0) 
                RaTables[2] = strdup(ArgusSQLTableNameBuf);
 
             if (str != NULL) free(str);
+            if (tstr != NULL) free(tstr);
             if (base != NULL) free(base);
             if (year != NULL) free(year);
             if (month != NULL) free(month);
@@ -2032,15 +2064,18 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                ArgusProcessSOptions(parser);
             }
 
-            if ((RaAnnualProcess = RaCursesNewProcess(parser)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
-
-            if ((RaMonthlyProcess = RaCursesNewProcess(parser)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
-
             if (RaTables) {
-               RaSQLQueryTable (RaTables[0], RaAnnualProcess);
-               RaSQLQueryTable (RaTables[1], RaMonthlyProcess);
+               if (RaTables[0] != NULL) {
+                  if ((RaAnnualProcess = RaCursesNewProcess(parser)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+                  RaSQLQueryTable (RaTables[0], RaAnnualProcess);
+               }
+
+               if (RaTables[1] != NULL) {
+                  if ((RaMonthlyProcess = RaCursesNewProcess(parser)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+                  RaSQLQueryTable (RaTables[1], RaMonthlyProcess);
+               }
 
                if (RaTables[2] != NULL) {
                   RaSQLQueryTable (RaTables[2], NULL);

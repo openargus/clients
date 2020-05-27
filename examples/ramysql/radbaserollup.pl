@@ -125,7 +125,7 @@ ARG: while (my $arg = shift(@ARGV)) {
   ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($etime);
   my $edate = sprintf("%4d/%02d/%02d", $year+1900, $mon+1, $mday);
 
-  print "DEBUG: using stime:$stime sdate:$sdate etime:$etime edate:$edate\n" if $debug;
+  print "DEBUG: radbaserollup: using dbase:'$database' stime:$stime sdate:$sdate etime:$etime edate:$edate\n" if $debug;
 
   my $dsn = "DBI:mysql:";
   my $username = "root";
@@ -147,59 +147,66 @@ my @db6 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime ltime sid inf sa
 my @db7 = ( "arpMatrix", "arg", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db8 = ( "ether", "ether", "smac etype sid inf", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
 
-my @databases = \(@db1, @db2);
-#my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
+#my @databases = \(@db1, @db2);
+my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
 
 # Now generate yearly and monthly tables
 
 foreach my $i (0 .. $#databases) {
-   my %hash = ();
-
    my ($db, $table, $keys, $fields) = @{$databases[$i]};
-   my @tables = RaDbaseRollupGetTables($db, $stime, $etime);
 
-   foreach my $tbl (keys %annualTables) {
-      drop_table( $dbh, $tbl );
-   }
+   print "DEBUG: radbaserollup: processing db:$db dbase:'$database'\n" if $debug;
 
-   foreach my $tbl (keys %monthlyTables) {
-      drop_table( $dbh, $tbl );
-   }
+   if (($database eq "") || ($database eq $db)) {
+      my %hash = ();
 
-   foreach my $i (0 .. $#tables) {
-     my ($dbase, $table, $monthly, $annual, $date) = @{$tables[$i]};
-     my ($db, $tbl, $keys, $fields);
-     my $found = 0;
+      print "DEBUG: radbaserollup: processing dbase:'$database'\n" if $debug;
 
-     foreach my $i (0 .. $#databases) {
-        ($db, $tbl, $keys, $fields) = @{$databases[$i]};
-        if ($db eq $dbase) {
-           $found = 1;
-           last;
+      my @tables = RaDbaseRollupGetTables($db, $stime, $etime);
+
+      foreach my $tbl (keys %annualTables) {
+         drop_table( $dbh, $tbl );
+      }
+
+      foreach my $tbl (keys %monthlyTables) {
+         drop_table( $dbh, $tbl );
+      }
+
+      foreach my $i (0 .. $#tables) {
+        my ($dbase, $table, $monthly, $annual, $date) = @{$tables[$i]};
+        my ($db, $tbl, $keys, $fields);
+        my $found = 0;
+
+        foreach my $i (0 .. $#databases) {
+           ($db, $tbl, $keys, $fields) = @{$databases[$i]};
+           if ($db eq $dbase) {
+              $found = 1;
+              last;
+           }
         }
-     }
 
-     if ($found > 0) {
-        print "DEBUG: process db:$dbase table:$table annual:$annual monthly:$monthly date:$date\n" if $debug;
+        if ($found > 0) {
+           print "DEBUG: process db:$dbase table:$table annual:$annual monthly:$monthly date:$date\n" if $debug;
 
-        my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -M nocorrect -w ".$tmpfile . $filter;
-        print "DEBUG: $cmd \n" if $debug;
-        `$cmd`;
+           my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -M nocorrect -w ".$tmpfile . $filter;
+           print "DEBUG: $cmd \n" if $debug;
+           `$cmd`;
 
-        if (-e $tmpfile) {
-           my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
-           my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
+           if (-e $tmpfile) {
+              my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
+              my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
 
-           print "DEBUG: $minsert \n" if $debug;
-           `$minsert`;
+              print "DEBUG: $minsert \n" if $debug;
+              `$minsert`;
 
-           print "DEBUG: $yinsert \n" if $debug;
-           `$yinsert`;
+              print "DEBUG: $yinsert \n" if $debug;
+              `$yinsert`;
 
-           print "DEBUG: rm -f $tmpfile\n" if $debug;
-           `rm -f $tmpfile`;
+              print "DEBUG: rm -f $tmpfile\n" if $debug;
+              `rm -f $tmpfile`;
+           }
         }
-     }
+      }
    }
 }
 exit;
