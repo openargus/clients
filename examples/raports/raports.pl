@@ -47,10 +47,10 @@ my $drop  = 1;
 my $racluster = which 'racluster';
 chomp $racluster;
 
-my $Options = " -nc , ";   # Default Options
 my $VERSION = "5.0";
+my $Options = " -nc , -M rmon";   # Default Options
 my $format  = 'addr';
-my $fields  = '-M rmon -s sid inf saddr proto sport';
+my $fields  = '-s sid inf saddr proto sport';
 my $model   = '-m sid inf saddr proto sport';
 my $uri     = 0;
 my $quiet   = 0;
@@ -138,7 +138,7 @@ if ($uri) {
  
    # Create a new table 'foo'. This must not fail, thus we don't catch errors.
  
-   $dbh->do("CREATE TABLE IF NOT EXISTS $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports TEXT, udpports TEXT, PRIMARY KEY ( addr, sid, inf ))");
+   $dbh->do("CREATE TABLE IF NOT EXISTS $table (sid VARCHAR(64), inf VARCHAR(4), addr VARCHAR(64) NOT NULL, tcp INTEGER, udp INTEGER, tcpports MEDIUMTEXT, udpports MEDIUMTEXT, PRIMARY KEY ( addr, sid, inf ))");
 }
 
 
