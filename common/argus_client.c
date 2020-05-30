@@ -7475,13 +7475,9 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                struct ArgusMetricStruct *ns2metric = (void *)ns2->dsrs[ARGUS_METRIC_INDEX];
 
                double deltaSrcFlowTime = 0.0;
-               double deltaSrcStartTime = 0.0;
                double deltaDstFlowTime = 0.0;
-               double deltaDstStartTime = 0.0;
 
                if ((ns1time && ns2time) && (ns1metric && ns2metric)) {
-                  double ssnst1 = (ns1time->src.start.tv_sec * 1000000LL) + ns1time->src.start.tv_usec;
-                  double dsnst1 = (ns1time->dst.start.tv_sec * 1000000LL) + ns1time->dst.start.tv_usec;
                   double senst1 = (ns1time->src.end.tv_sec * 1000000LL) + ns1time->src.end.tv_usec;
                   double denst1 = (ns1time->dst.end.tv_sec * 1000000LL) + ns1time->dst.end.tv_usec;
 
@@ -7489,23 +7485,15 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                   double dsnst2 = (ns2time->dst.start.tv_sec * 1000000LL) + ns2time->dst.start.tv_usec;
 
                   double slstime = (ns1->lastSrcStartTime.tv_sec * 1000000LL) + ns1->lastSrcStartTime.tv_usec;
-                  double dlstime = (ns1->lastDstStartTime.tv_sec * 1000000LL) + ns1->lastDstStartTime.tv_usec;
 
                   if (ns1metric->src.pkts && ns2metric->src.pkts) {
                      if (slstime) {
-                       deltaSrcStartTime = fabs(ssnst2 - slstime)/1000000.0;
                      } else {
-                       deltaSrcStartTime = fabs(ssnst2 - ssnst1)/1000000.0;
                      }
                      deltaSrcFlowTime = fabs(ssnst2 - senst1)/1000000.0;
                   }
 
                   if (ns1metric->dst.pkts && ns2metric->dst.pkts) {
-                     if (dlstime) {
-                       deltaDstStartTime = fabs(dsnst2 - dlstime)/1000000.0;
-                     } else {
-                       deltaDstStartTime = fabs(dsnst2 - dsnst1)/1000000.0;
-                     }
                      deltaDstFlowTime = fabs(dsnst2 - denst1)/1000000.0;
                   }
                }
