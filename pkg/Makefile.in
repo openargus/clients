@@ -84,6 +84,7 @@ ifndef WORKSTATION_BUILD
                 rhel/share/argus-clients/rasqlinsert.ipmatrix \
                 rhel/share/argus-clients/rasqlinsert.ether \
                 rhel/share/argus-clients/rasqlinsert.ethermatrix \
+                rhel/share/argus-clients/rasqlinsert.etherflows \
                 rhel/share/argus-clients/rasqlinsert.dns \
                 rhel/share/argus-clients/rasqlinsert.man \
                 rhel/share/argus-clients/rasqlinsert.dhcp \
