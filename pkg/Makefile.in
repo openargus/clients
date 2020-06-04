@@ -82,11 +82,12 @@ ifndef WORKSTATION_BUILD
     USR_ARGUS = rhel/ralabel.country.conf
       PKGDATA = rhel/share/argus-clients/rasqlinsert.l2_l3 \
                 rhel/share/argus-clients/rasqlinsert.ipmatrix \
+                rhel/share/argus-clients/rasqlinsert.ether \
+                rhel/share/argus-clients/rasqlinsert.ethermatrix \
                 rhel/share/argus-clients/rasqlinsert.dns \
                 rhel/share/argus-clients/rasqlinsert.man \
                 rhel/share/argus-clients/rasqlinsert.dhcp \
                 rhel/share/argus-clients/rasqlinsert.arp \
-                rhel/share/argus-clients/rasqlinsert.ether \
                 rhel/share/argus-clients/rasqlinsert.ldap \
                 rhel/share/argus-clients/rasqlinsert.ntp \
                 rhel/share/argus-clients/emerging-Block-IPs-2018-03-22.conf
