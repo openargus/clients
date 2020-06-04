@@ -4137,7 +4137,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGM: {
-            char *strbuf, *str, *tok = NULL, *sbuf = NULL;
+            char *strbuf, *str = NULL, *tok = NULL, *sbuf = NULL;
             struct ArgusModeStruct *mode = NULL;
             char *tzptr;
             int retn = 0;
