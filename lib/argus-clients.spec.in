@@ -360,6 +360,7 @@ Copyright 2000-2016 QoSient, LLC
 %{_sbindir}/dbaseRollup-nightly
 %{_unitdir}/dbaseRollup-nightly.timer
 %{_unitdir}/dbaseRollup-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.ethermatrix
 %{_datarootdir}/argus-clients/rasqlinsert.ether
 %{_datarootdir}/argus-clients/rasqlinsert.ipmatrix
 %{_datarootdir}/argus-clients/rasqlinsert.l2_l3
