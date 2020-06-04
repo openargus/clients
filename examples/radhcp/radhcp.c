@@ -753,7 +753,7 @@ usage ()
 {
    extern char version[];
 
-   fprintf (stdout, "Radns Version %s\n", version);
+   fprintf (stdout, "Radhcp Version %s\n", version);
    fprintf (stdout, "usage: %s \n", ArgusParser->ArgusProgramName);
    fprintf (stdout, "usage: %s [options] [ra-options]  [- filter-expression]\n", ArgusParser->ArgusProgramName);
 
