@@ -364,6 +364,7 @@ Copyright 2000-2016 QoSient, LLC
 %{_datarootdir}/argus-clients/rasqlinsert.ether
 %{_datarootdir}/argus-clients/rasqlinsert.ipmatrix
 %{_datarootdir}/argus-clients/rasqlinsert.l2_l3
+%{_datarootdir}/argus-clients/rasqlinsert.eflows
 %{_datarootdir}/argus-clients/rasqlinsert.ldap
 %{_datarootdir}/argus-clients/rasqlinsert.man
 %{_datarootdir}/argus-clients/rasqlinsert.ntp
