@@ -1622,8 +1622,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                    parser->writeDbstr = strdup(optarg);
 
                } else
-               if ((*tmparg != '-') || ((*tmparg == '-') &&
-                                       (!(strcmp (tmparg, "-"))))) {
+               if ((*tmparg != '-') || ((*tmparg == '-') && (!(strcmp (tmparg, "-"))))) {
                   if (argc == optind)
                      filter = NULL;
                   else {
@@ -21100,6 +21099,8 @@ ArgusDeleteList (struct ArgusListStruct *list, int type)
 
              case ARGUS_WFILE_LIST: {
                 struct ArgusWfileStruct *wfile = (struct ArgusWfileStruct *) retn;
+                if (wfile->agg != NULL)
+                   ArgusDeleteAggregator (ArgusParser, wfile->agg);
                 if (wfile->filename != NULL)
                    free(wfile->filename);
                 if (wfile->filterstr != NULL)

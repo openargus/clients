@@ -116,6 +116,8 @@ struct ArgusLfileStruct {
 struct ArgusWfileStruct {
    struct ArgusListObjectStruct *nxt, *prv;
    struct ArgusHashTableHdr *htblhdr;
+   struct ArgusAggregatorStruct *agg;
+
    char *filename, *filetarget, *command;
    char *filterstr;
 
