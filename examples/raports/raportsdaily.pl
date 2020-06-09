@@ -33,6 +33,8 @@ use strict;
 # Used modules
 use POSIX;
 use POSIX qw(strftime);
+use URI::URL;
+use DBI;
 
 use File::DosGlob qw/ bsd_glob /;
 use File::Temp qw/ tempfile tempdir /;
@@ -46,9 +48,15 @@ local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
 my $VERSION = "5.0.3";
 my $done    = 0;
 my $debug   = 0;
-my $drop    = 1;
+my $drop    = 0;
 my $time;
 my $archive;
+my $scheme;
+my $netloc;
+my $path;
+
+my ($user, $pass, $host, $port, $space, $db, $table);
+my $dbh;
 
 # Parse the arguments if any
 
@@ -57,7 +65,7 @@ ARG: while (my $arg = shift(@ARGV)) {
   if (!$done) {
      for ($arg) {
          s/^-debug$//  && do { $debug++; next ARG; };
-         s/^-drop$//   && do { $drop = 0; next ARG; };
+         s/^-drop$//   && do { $drop = 1; next ARG; };
          s/^-r$//      && do { $archive = shift(@ARGV); next ARG; };
          s/^-t$//      && do { $time = shift(@ARGV); next ARG; };
          s/^-time$//   && do { $time = shift(@ARGV); next ARG; };
@@ -70,7 +78,6 @@ ARG: while (my $arg = shift(@ARGV)) {
   }
   $arglist[@arglist + 0] = $arg;
 }
-
 
 print "DEBUG: raportsdaily: using $time as date adjustment\n" if $debug;
 
@@ -104,11 +111,30 @@ print "DEBUG: raportsdaily: '$date' for date and '$pattern' for files\n" if $deb
 my $raports = which 'raports';
 chomp $raports;
 
+my $uri = "mysql://root\@localhost/portsInventory";
 my $srcOptions = "-M src -w mysql://root\@localhost/portsInventory/srcPorts_$dbdate";
 my $dstOptions = "-M dst -w mysql://root\@localhost/portsInventory/dstPorts_$dbdate";
 my $filter     = "- tcp or udp";
-
 my @files   = glob $pattern; 
+
+my $url = URI::URL->new($uri);
+
+$scheme = $url->scheme;
+$netloc = $url->netloc;
+$path   = $url->path;
+
+if ($netloc ne "") {
+   ($user, $host) = split /@/, $netloc;
+   if ($user =~ m/:/) {
+         ($user , $pass) = split/:/, $user;
+   }
+   if ($host =~ m/:/) {
+         ($host , $port) = split/:/, $host;
+   }
+}
+if ($path ne "") {
+   ($space, $db, $table)  = split /\//, $path;
+}
 
 if ($debug > 0) {
    $srcOptions .= " -debug ";
@@ -118,6 +144,22 @@ if ($drop == 0) {
    $srcOptions .= " -drop ";
    $dstOptions .= " -drop ";
 }
+
+$dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+$dbh->do("CREATE DATABASE IF NOT EXISTS $db");
+$dbh->do("use $db");
+
+# Drop table 'foo'. This may fail, if 'foo' doesn't exist
+# Thus we put an eval around it.
+
+local $dbh->{RaiseError} = 0;
+local $dbh->{PrintError} = 0;
+
+$table = "portsInventory.srcPorts_$dbdate";
+eval { $dbh->do("DROP TABLE IF EXISTS $table") };
+
+$table = "portsInventory.dstPorts_$dbdate";
+eval { $dbh->do("DROP TABLE IF EXISTS $table") };
 
 foreach my $file (@files) {
    if (index($file, "man") == -1) {
