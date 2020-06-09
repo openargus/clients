@@ -56,6 +56,10 @@ short ArgusColorHighlight = ARGUS_WHITE;
 
 #endif
 
+#if defined(ARGUS_MYSQL)
+extern int ArgusReadSQLTimeTables (struct ArgusParserStruct *);
+#endif
+
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
@@ -1266,6 +1270,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusParser->timearg = strdup(RaCommandInputStr);
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
+            ArgusReadSQLTimeTables (ArgusParser);
             break;
          }
 
@@ -1369,7 +1374,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   ArgusParser->ArgusWfileList = wlist;
                }
             }
-
             break;   
          }
 
@@ -4539,6 +4543,8 @@ argus_command_string(void)
          }
 
          case RAGETTINGt: {
+            struct ArgusRecordStruct *ns = NULL;
+
             if (ArgusParser->timearg) {
                free (ArgusParser->timearg);
                ArgusParser->timearg = NULL;
@@ -4548,6 +4554,36 @@ argus_command_string(void)
                ArgusParser->timearg = strdup(RaCommandInputStr);
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
+            ArgusDeleteFileList(ArgusParser);
+            ArgusReadSQLTimeTables (ArgusParser);
+
+            ArgusParser->RaTasksToDo = RA_ACTIVE;
+            ArgusParser->Sflag = 0;
+
+#if defined(ARGUS_THREADS)
+            pthread_mutex_lock(&RaCursesProcess->queue->lock);
+#endif
+            while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(RaCursesProcess->queue, ARGUS_NOLOCK)) != NULL)  {
+               if (ArgusSearchHitRecord == ns) {
+                  ArgusResetSearch();
+               }
+               ArgusDeleteRecordStruct (ArgusParser, ns);
+            }
+
+            ArgusEmptyHashTable(RaCursesProcess->htable);
+
+            if (ArgusParser->ns != NULL) {
+               ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
+               ArgusParser->ns = NULL;
+            }
+
+            ArgusParser->RaClientUpdate.tv_sec = 0;
+            ArgusParser->status &= ~ARGUS_FILE_LIST_PROCESSED;
+            ArgusParser->ArgusLastTime.tv_sec  = 0;
+            ArgusParser->ArgusLastTime.tv_usec = 0;
+#if defined(ARGUS_THREADS)
+            pthread_mutex_unlock(&RaCursesProcess->queue->lock);
+#endif
             break;
          }
 
@@ -4646,7 +4682,6 @@ argus_command_string(void)
                   ArgusParser->ArgusWfileList = wlist;
                }
             }
-
             break;   
          }
 
@@ -5673,7 +5708,6 @@ RaResizeAlarmHandler(int sig)
 void
 RaResizeScreen(void)
 {
-   struct ArgusQueueStruct *queue = RaCursesProcess->queue;
    struct winsize size;
    int i, count;
 
@@ -5876,15 +5910,24 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
             } while (input != (void *)parser->ArgusActiveHosts->start);
          }
       } else {
-         snprintf_append(retn, &len, &remain, "-r ");
-         if ((file = (void *)parser->ArgusInputFileList) != NULL) {
-            while (file != NULL) {
-               snprintf_append(retn, &len, &remain, "%s ", file->filename);
-               file = (void *)file->qhdr.nxt;
+#if defined(ARGUS_MYSQL)
+         if (parser->timearg) {
+            snprintf_append(retn, &len, &remain, "-t %s", parser->timearg);
+         } else {
+#endif
+            snprintf_append(retn, &len, &remain, "-r ");
+            if ((file = (void *)parser->ArgusInputFileList) != NULL) {
+               while (file != NULL) {
+                  snprintf_append(retn, &len, &remain, "%s ", file->filename);
+                  file = (void *)file->qhdr.nxt;
+               }
+            } else {
+               snprintf_append(retn, &len, &remain, "- ");
             }
+#if defined(ARGUS_MYSQL)
          }
+#endif
       }
-
 
    } else {
       if (RaDatabase && RaTable) {
