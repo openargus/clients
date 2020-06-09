@@ -245,8 +245,11 @@ main (int argc, char **argv)
             if (strcmp (file->filename, "-")) {
                if (strlen(file->filename)) {
                   if (file->file == NULL) {
-                     if ((file->file = fopen(file->filename, "r")) == NULL) 
-                        ArgusLog (LOG_ALERT, "open '%s': %s", file->filename, strerror(errno));
+                     if ((file->file = fopen(file->filename, "r")) == NULL) {
+#ifdef ARGUSDEBUG
+                        ArgusDebug (1, "open '%s': %s", file->filename, strerror(errno));
+#endif
+                     }
 
                   } else {
                      fseek(file->file, 0, SEEK_SET);
