@@ -66,7 +66,7 @@ ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-q//             && do { $quiet++; next ARG; };
       s/^-debug//         && do { $debug++; next ARG; };
-      s/^-drop//          && do { $drop = 1; next ARG; };
+      s/^-drop//          && do { $drop = 0; next ARG; };
       s/^-w//             && do {
          $uri = shift (@ARGV);
          next ARG;
@@ -83,8 +83,8 @@ ARG: while (my $arg = shift(@ARGV)) {
 
             /dst/  && do {
                $format = 'dst';
-               $fields = '-s sid:42 inf daddr:15 proto dport:15';
-               $model  = '-m sid inf daddr proto dport';
+               $fields = '-s sid:42 inf saddr:15 proto dport:15';
+               $model  = '-m sid inf saddr proto dport';
                shift (@ARGV);
                next ARG;
             };
@@ -101,7 +101,6 @@ ARG: while (my $arg = shift(@ARGV)) {
 
    $arglist[@arglist + 0] = $arg;
 }
-
 
 if ($uri) {
    my $url = URI::URL->new($uri);
