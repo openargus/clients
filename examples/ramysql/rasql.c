@@ -18,9 +18,9 @@
  *
  *
  * rasql  - Read Argus data using time offset indexs from mysql database.
- *         This program reads argus output streams from a database query,
- *         filters and optionally writes the output to a file, its
- *         stdout or prints the binary records to stdout in ASCII.
+ *          This program reads argus output streams from a database query,
+ *          filters and optionally writes the output to a file, its
+ *          stdout or prints the binary records to stdout in ASCII.
  */
 
 /* 
@@ -337,11 +337,10 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        rv = ArgusWriteNewLogfile (parser, argus->input,
-                                                   wfile, argusrec);
-                        if (rv < 0)
-                           ArgusLog(LOG_ERR, "%s unable to open file\n",
-                                    __func__);
+                        rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                        if (rv < 0) {
+                           ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
+                        }
                      }
                      ArgusFree(sbuf);
                   }
