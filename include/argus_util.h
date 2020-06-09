@@ -338,6 +338,10 @@ struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct Ar
 
 #define ARGUS_BASELINE_SOURCE		0x800
 
+#if defined(ARGUS_MYSQL)
+#define ARGUS_DBASE_SOURCE		0x1000
+#endif
+
 #define ARGUS_MY_ADDRESS        	5
 #define ARGUS_MY_NETWORK        	4
 
