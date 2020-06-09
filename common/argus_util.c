@@ -1461,64 +1461,65 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   if (parser->readDbstr != NULL)
                      free(parser->readDbstr);
                   parser->readDbstr = strdup(optarg);
+                  type = ARGUS_DBASE_SOURCE;
+                  optarg += 6;
 
-               } else {
-                  if (!(strncmp ("cisco:", optarg, 6))) {
-                     parser->Cflag++;
-                     type = ARGUS_CISCO_DATA_SOURCE;
-                     optarg += 6;
-                  } else
-                  if (!(strncmp ("jflow:", optarg, 6))) {
-                     parser->Cflag++;
-                     type = ARGUS_JFLOW_DATA_SOURCE;
-                     optarg += 6;
-                  } else
-                  if (!(strncmp ("ft:", optarg, 3))) {
-                     type = ARGUS_FLOW_TOOLS_SOURCE;
-                     optarg += 3;
-                  } else
-                  if (!(strncmp ("sflow:", optarg, 6))) {
-                     type = ARGUS_SFLOW_DATA_SOURCE;
-                     optarg += 6;
-                  }
-                  if (!(strncmp ("baseline:", optarg, 9))) {
-                     type |= ARGUS_BASELINE_SOURCE;
-                     optarg += 9;
-                  }
-                  if ((!rcmdline++) && (parser->ArgusInputFileList != NULL))
-                     ArgusDeleteFileList(parser);
+               } else 
+               if (!(strncmp ("cisco:", optarg, 6))) {
+                  parser->Cflag++;
+                  type = ARGUS_CISCO_DATA_SOURCE;
+                  optarg += 6;
+               } else
+               if (!(strncmp ("jflow:", optarg, 6))) {
+                  parser->Cflag++;
+                  type = ARGUS_JFLOW_DATA_SOURCE;
+                  optarg += 6;
+               } else
+               if (!(strncmp ("ft:", optarg, 3))) {
+                  type = ARGUS_FLOW_TOOLS_SOURCE;
+                  optarg += 3;
+               } else
+               if (!(strncmp ("sflow:", optarg, 6))) {
+                  type = ARGUS_SFLOW_DATA_SOURCE;
+                  optarg += 6;
+               }
+               if (!(strncmp ("baseline:", optarg, 9))) {
+                  type |= ARGUS_BASELINE_SOURCE;
+                  optarg += 9;
+               }
+               if ((!rcmdline++) && (parser->ArgusInputFileList != NULL))
+                  ArgusDeleteFileList(parser);
 
-                  do {
-                     long long ostart = -1, ostop = -1;
-                     char *ptr, *eptr;
+               do {
+                  long long ostart = -1, ostop = -1;
+                  char *ptr, *eptr;
 
-                     if ((ptr = strstr(optarg, "::")) != NULL) {
-                        char *endptr = NULL;
+                  if ((ptr = strstr(optarg, "::")) != NULL) {
+                     char *endptr = NULL;
 
-                        *ptr++ = '\0';
-                        ptr++;
+                     *ptr++ = '\0';
+                     ptr++;
 
-                        ostart = strtol(ptr, (char **)&endptr, 10);
+                     ostart = strtol(ptr, (char **)&endptr, 10);
+                     if (endptr == optarg)
+                        usage ();
+
+                     if ((eptr = strstr(ptr, ":")) != NULL) {
+                        ostop = strtol((eptr + 1), (char **)&endptr, 10);
                         if (endptr == optarg)
                            usage ();
-
-                        if ((eptr = strstr(ptr, ":")) != NULL) {
-                           ostop = strtol((eptr + 1), (char **)&endptr, 10);
-                           if (endptr == optarg)
-                              usage ();
-                        }
                      }
+                  }
 
-                     if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
-                        ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+                  if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
+                     ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
 
-                     stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
+                  stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
 
-                     if ((optarg = argv[optind]) != NULL)
-                        if (*optarg != '-')
-                           optind++;
-                  } while (optarg && (*optarg != '-'));
-               }
+                  if ((optarg = argv[optind]) != NULL)
+                     if (*optarg != '-')
+                        optind++;
+               } while (optarg && (*optarg != '-'));
             }
             break;
          }
