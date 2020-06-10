@@ -57,7 +57,8 @@ short ArgusColorHighlight = ARGUS_WHITE;
 #endif
 
 #if defined(ARGUS_MYSQL)
-extern int ArgusReadSQLTimeTables (struct ArgusParserStruct *);
+extern void RaMySQLInit (void);
+extern int ArgusReadSQLTables (struct ArgusParserStruct *);
 #endif
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
@@ -1159,11 +1160,33 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE;
+                  if (!(strncmp ("mysql:", ptr, 6))) {
+                     if (parser->readDbstr != NULL)
+                        free(parser->readDbstr);
+                     parser->readDbstr = strdup(ptr);
+                     type = ARGUS_DBASE_SOURCE;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("cisco:", ptr, 6))) {
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("jflow:", ptr, 6))) {
+                     type = ARGUS_JFLOW_DATA_SOURCE;
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("sflow:", ptr, 6))) {
+                     type = ARGUS_SFLOW_DATA_SOURCE;
+                     ptr += 6;
+                  }
+
                   glob (ptr, 0, NULL, &globbuf);
                   if (globbuf.gl_pathc > 0) {
                      int i;
                      for (i = 0; i < globbuf.gl_pathc; i++)
-                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
+                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], type, -1, -1);
                   } else {
                      sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
                      ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
@@ -1270,7 +1293,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusParser->timearg = strdup(RaCommandInputStr);
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
-            ArgusReadSQLTimeTables (ArgusParser);
+            ArgusReadSQLTables (ArgusParser);
             break;
          }
 
@@ -2659,6 +2682,33 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      retn = RAGETTINGr;
                      RaInputString = RAGETTINGrSTR;
                      while (input) {
+                        switch (input->type) {
+                           case ARGUS_DATA_SOURCE:
+                           case ARGUS_V2_DATA_SOURCE:
+                           case ARGUS_NAMED_PIPE_SOURCE:
+                           case ARGUS_DOMAIN_SOURCE:
+                           case ARGUS_BASELINE_SOURCE:
+                           case ARGUS_DATAGRAM_SOURCE:
+                              break;
+                           case ARGUS_SFLOW_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "sflow:");
+                              break;
+                           case ARGUS_JFLOW_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "jflow:");
+                              break;
+                           case ARGUS_CISCO_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "cisco:");
+                              break;
+                           case ARGUS_IPFIX_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "ipfix:");
+                              break;
+                           case ARGUS_FLOW_TOOLS_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "ftools:");
+                              break;
+                           case ARGUS_DBASE_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "mysql:");
+                              break;
+                        }
                         RaCommandIndex = snprintf_append(RaCommandInputStr,
                                                          &len, &remain, " %s",
                                                          input->filename);
@@ -4421,27 +4471,15 @@ argus_command_string(void)
             char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
             glob_t globbuf;
 
-            bzero (strbuf, MAXSTRLEN);
-            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+            if ((str = (char *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog(LOG_ERR, "ArgusCursesProcess: ArgusCalloc error %s", strerror(errno));
 
-            if (strlen(strbuf) > 0) {
+            strncpy(str, RaCommandInputStr, MAXSTRLEN);
+
+            if (strlen(str) > 0) {
                struct ArgusRecordStruct *ns = NULL;
 
                ArgusDeleteFileList(ArgusParser);
-               while ((ptr = strtok(str, " ")) != NULL) {
-                  glob (ptr, 0, NULL, &globbuf);
-                  if (globbuf.gl_pathc > 0) {
-                     int i;
-                     for (i = 0; i < globbuf.gl_pathc; i++)
-                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
-                  } else {
-                     sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
-                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
-                  }
-                  str = NULL;
-               }
-               ArgusParser->RaTasksToDo = RA_ACTIVE;
-               ArgusParser->Sflag = 0;
 
 #if defined(ARGUS_THREADS)
                pthread_mutex_lock(&RaCursesProcess->queue->lock);
@@ -4467,15 +4505,79 @@ argus_command_string(void)
 #if defined(ARGUS_THREADS)
                pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
+
+               while ((ptr = strtok(str, " ")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE;
+                  ArgusParser->Cflag = 0;
+
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", ptr, 6))) {
+                     if (ArgusParser->readDbstr != NULL)
+                        free(ArgusParser->readDbstr);
+                     ArgusParser->readDbstr = strdup(ptr);
+                     RaDatabase = NULL;
+                     RaMySQLInit();
+                     type = ARGUS_DBASE_SOURCE;
+                     ptr += 6;
+                  } else
+#endif
+                  if (!(strncmp ("cisco:", ptr, 6))) {
+                     ArgusParser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("jflow:", ptr, 6))) {
+                     type = ARGUS_JFLOW_DATA_SOURCE;
+                     ArgusParser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("sflow:", ptr, 6))) {
+                     type = ARGUS_SFLOW_DATA_SOURCE;
+                     ptr += 6;
+                  }
+
+                  switch (type) {
+#if defined(ARGUS_MYSQL)
+                     case ARGUS_DBASE_SOURCE: {
+                        ArgusAddFileList (ArgusParser, ptr, type, -1, -1);
+                        ArgusParser->status &=  ~ARGUS_FILE_LIST_PROCESSED;
+                        ArgusReadSQLTables (ArgusParser);
+                        break;
+                     }
+#endif
+                     default: {
+                        glob (ptr, 0, NULL, &globbuf);
+                        if (globbuf.gl_pathc > 0) {
+                           int i;
+                           for (i = 0; i < globbuf.gl_pathc; i++)
+                              ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], type, -1, -1);
+                        } else {
+                           sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
+                           ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                        }
+                        break;
+                     }
+                  }
+                  str = NULL;
+               }
+               ArgusParser->RaTasksToDo = RA_ACTIVE;
+               ArgusParser->Sflag = 0;
+
             }
+            ArgusFree(str);
             break;
          }
 
          case RAGETTINGs: {
-            char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
+            char *str, *ptr, *tok;
             int (*srtalg[ARGUS_MAX_SORT_ALG])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
             int x, ind = 0;
-            strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
+
+            if ((str = (char *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog(LOG_ERR, "ArgusCursesProcess: ArgusCalloc error %s", strerror(errno));
+
+            ptr = str;
+            strncpy(str, RaCommandInputStr, MAXSTRLEN);
+
             bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
@@ -4491,6 +4593,7 @@ argus_command_string(void)
                }
                ptr = NULL;
             }
+            ArgusFree(str);
 
             if (srtalg[0] != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++)
@@ -4555,7 +4658,7 @@ argus_command_string(void)
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
             ArgusDeleteFileList(ArgusParser);
-            ArgusReadSQLTimeTables (ArgusParser);
+            ArgusReadSQLTables (ArgusParser);
 
             ArgusParser->RaTasksToDo = RA_ACTIVE;
             ArgusParser->Sflag = 0;
@@ -4981,8 +5084,35 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
             retn = RAGETTINGr;
             RaInputString = RAGETTINGrSTR;
             while (input) {
+               switch (input->type) {
+                  case ARGUS_DATA_SOURCE:
+                  case ARGUS_V2_DATA_SOURCE:
+                  case ARGUS_NAMED_PIPE_SOURCE:
+                  case ARGUS_DOMAIN_SOURCE:
+                  case ARGUS_BASELINE_SOURCE:
+                  case ARGUS_DATAGRAM_SOURCE:
+                     break;
+                  case ARGUS_SFLOW_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "sflow:");
+                     break;
+                  case ARGUS_JFLOW_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "jflow:");
+                     break;
+                  case ARGUS_CISCO_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "cisco:");
+                     break;
+                  case ARGUS_IPFIX_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "ipfix:");
+                     break;
+                  case ARGUS_FLOW_TOOLS_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "ftools:");
+                     break;
+                  case ARGUS_DBASE_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "mysql:");
+                     break;
+               }
                RaCommandIndex = snprintf_append(RaCommandInputStr,
-                                                &len, &remain, " %s",
+                                                &len, &remain, "%s",
                                                 input->filename);
                input = (void *) input->qhdr.nxt;
             }
@@ -5918,6 +6048,33 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
             snprintf_append(retn, &len, &remain, "-r ");
             if ((file = (void *)parser->ArgusInputFileList) != NULL) {
                while (file != NULL) {
+                  switch (file->type) {
+                     case ARGUS_DATA_SOURCE:
+                     case ARGUS_V2_DATA_SOURCE:
+                     case ARGUS_NAMED_PIPE_SOURCE:
+                     case ARGUS_DOMAIN_SOURCE:
+                     case ARGUS_BASELINE_SOURCE:
+                     case ARGUS_DATAGRAM_SOURCE:
+                        break;
+                     case ARGUS_SFLOW_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "sflow:");
+                        break;
+                     case ARGUS_JFLOW_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "jflow:");
+                        break;
+                     case ARGUS_CISCO_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "cisco:");
+                        break;
+                     case ARGUS_IPFIX_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "ipfix:");
+                        break;
+                     case ARGUS_FLOW_TOOLS_SOURCE:
+                        snprintf_append(retn, &len, &remain, "ftools:");
+                        break;
+                     case ARGUS_DBASE_SOURCE:
+                        snprintf_append(retn, &len, &remain, "mysql:");
+                        break;
+                  }
                   snprintf_append(retn, &len, &remain, "%s ", file->filename);
                   file = (void *)file->qhdr.nxt;
                }
