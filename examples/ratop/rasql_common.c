@@ -22,6 +22,9 @@
 extern int RaDaysInAMonth[12];
 extern void RaSQLQuerySecondsTable (unsigned int, unsigned int); /* temporary */
 extern void RaSQLQueryDatabaseTable (char *table, unsigned int, unsigned int); /* temporary */
+extern void RaSQLProcessQueue (struct ArgusQueueStruct *);
+
+extern struct ArgusQueueStruct *ArgusModelerQueue;
 
 char **
 ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
@@ -241,6 +244,9 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
    for (i = 0; ((table = tables[i]) != NULL); i++) {
       if (!(strcmp ("Seconds", table))) {
          RaSQLQuerySecondsTable (start, stop);
+
+         if (ArgusModelerQueue->count > 0)
+            RaSQLProcessQueue (ArgusModelerQueue);
 
       } else {
          RaSQLQueryDatabaseTable ((char *)table, start, stop);
