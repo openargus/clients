@@ -29940,9 +29940,10 @@ ArgusDeleteModeList (struct ArgusParserStruct *parser)
 int
 ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
 {
-   int retn = 0;
+   int retn = 0, wexp = 0;
    struct ArgusFileInput *file;
    char *str = NULL;
+   wordexp_t p;
 
    if (ptr) {
       switch(type) {
@@ -29951,10 +29952,9 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
             break;
 
          default: {
-            wordexp_t p;
             if (wordexp (ptr, &p, 0) == 0) {
                str = p.we_wordv[0];
-               wordfree (&p);
+               wexp = 1;
             }
          }
       }
@@ -29977,6 +29977,8 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
          parser->ArgusInputFileCount++;
          retn = 1;
       }
+      if (wexp)
+         wordfree (&p);
    }
 
 #ifdef ARGUSDEBUG
