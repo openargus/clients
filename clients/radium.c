@@ -638,7 +638,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
 
          } else {
             if (optarg && (*optarg == '`')) {
-               if (optarg[strlen(optarg) - 1] == '`') {
+               if (strrchr(optarg, (int) '`') != optarg) {
                   char *val = ArgusExpandBackticks(optarg);
 
                      switch (i) {
