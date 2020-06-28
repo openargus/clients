@@ -5953,10 +5953,10 @@ RaSQLQuerySecondsTable (unsigned int start, unsigned int stop)
    int retn, x;
 
    if (RaRoleString) {
-      str = "SELECT * from %s_Seconds WHERE second >= %u and second <= %u",
+      str = "SELECT * from %s_Seconds WHERE second >= %u and second <= %u";
       sprintf (buf, str, RaRoleString, start, stop);
    } else {
-      str = "SELECT * from Seconds WHERE second >= %u and second <= %u",
+      str = "SELECT * from Seconds WHERE second >= %u and second <= %u";
       sprintf (buf, str, start, stop);
    }
 
