@@ -3125,10 +3125,12 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
 
    ArgusProcessSOptions(parser);
 
-   for (i = 0; i < parser->RaPrintOptionIndex; i++)
-      if (parser->RaPrintOptionStrings[i] != NULL)
+   for (i = 0; i < parser->RaPrintOptionIndex; i++) {
+      if (parser->RaPrintOptionStrings[i] != NULL) {
+         free(parser->RaPrintOptionStrings[i]);
          parser->RaPrintOptionStrings[i] = NULL;
-
+      }
+   }
    parser->RaPrintOptionIndex = 0;
 
 #ifdef ARGUSDEBUG
