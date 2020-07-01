@@ -1340,7 +1340,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+#ifdef ARGUS_MYSQL
          int con;
+#endif
          if (ArgusParser->ArgusPrintJson)
             fprintf (stdout, "\n");
 
