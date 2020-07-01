@@ -389,10 +389,11 @@ ArgusProcessData (void *arg)
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
                switch (file->type) {
+#if defined(ARGUS_MYSQL)
                   case ARGUS_DBASE_SOURCE: {
                      break;
                   }
-
+#endif
                   case ARGUS_DATA_SOURCE:
                   case ARGUS_V2_DATA_SOURCE:
                   case ARGUS_NAMED_PIPE_SOURCE:

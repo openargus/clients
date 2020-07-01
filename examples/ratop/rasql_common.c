@@ -1,3 +1,4 @@
+#if defined(ARGUS_MYSQL)
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
@@ -379,3 +380,4 @@ RaSQLOptimizeTables (MYSQL *RaMySQL, const char **tables)
    }
    ArgusFree(query);
 }
+#endif
