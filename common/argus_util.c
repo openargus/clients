@@ -1460,6 +1460,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             if (optarg == NULL)
                optarg = "-";
             else {
+#if defined(ARGUS_MYSQL)
                if (!(strncmp ("mysql:", optarg, 6))) {
                   if (parser->readDbstr != NULL)
                      free(parser->readDbstr);
@@ -1468,6 +1469,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   optarg += 6;
 
                } else 
+#endif
                if (!(strncmp ("cisco:", optarg, 6))) {
                   parser->Cflag++;
                   type = ARGUS_CISCO_DATA_SOURCE;
@@ -2387,9 +2389,11 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
       }
 
       case MYSQL_DB_ENGINE: {
+#if defined(ARGUS_MYSQL)
          if (parser->MySQLDBEngine != NULL)
             free(parser->MySQLDBEngine);
          parser->MySQLDBEngine = strdup(optarg);
+#endif
          break;
       }
 
@@ -29949,10 +29953,11 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
 
    if (ptr) {
       switch(type) {
+#if defined(ARGUS_MYSQL)
          case ARGUS_DBASE_SOURCE:
             str = ptr;
             break;
-
+#endif
          default: {
             if (wordexp (ptr, &p, 0) == 0) {
                str = p.we_wordv[0];
