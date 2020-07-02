@@ -5,7 +5,7 @@
         <key>KeepAlive</key>
         <true/>
         <key>Label</key>
-        <string>com.qosient.argus.rastream</string>
+        <string>com.qosient.rastream</string>
         <key>ProgramArguments</key>
         <array>
                 <string>/usr/local/bin/rastream</string>
