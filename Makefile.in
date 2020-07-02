@@ -256,7 +256,7 @@ osxpackage:
            | awk -F: '/Mach-O.*executable/{print $$1}' \
            | xargs strip ) && \
         cp -f -L -R pkg/osx/osx-pkg/* pkg/osx/BUILDROOT/  && \
-        codesign -vvvv -s "Developer ID Application: Carter Bullard"  -r="designated => identifier com.qosient.radium" --timestamp --options runtime pkg/osx/BUILDROOT/Contents/MacOS/usr/local/sbin/radium && \
+        codesign -vvvv -s "Developer ID Application: Carter Bullard" --timestamp --options runtime pkg/osx/BUILDROOT/Contents/MacOS/usr/local/sbin/radium && \
         codesign -vvvv -s "Developer ID Application: Carter Bullard" --timestamp --options runtime pkg/osx/BUILDROOT/Contents/MacOS/usr/local/bin/ra* && \
         pkgbuild --root pkg/osx/BUILDROOT/Contents/MacOS \
 	         --identifier com.qosient.argus-clients \
