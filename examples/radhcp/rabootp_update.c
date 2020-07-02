@@ -21,8 +21,6 @@ do {									\
    if ((target) != (val)) {						\
       if ((val) != (unsetval)) {					\
          if ((target) != (unsetval)) {					\
-            ArgusLog(LOG_INFO, "%s: %s changed from original value\n",	\
-                     __func__, #target);				\
          }								\
          (target) = (val);						\
       }									\
@@ -35,8 +33,6 @@ do {									\
       if ((val) != NULL) {						\
          if ((target) != NULL) {					\
             if (strcmp(target, val)) {					\
-               ArgusLog(LOG_INFO, "%s: %s changed from original value\n", \
-                        __func__, #target);				\
                free(target);						\
                (target) = strdup(val);					\
             }								\
@@ -268,8 +264,9 @@ __update_common_reply(const struct ArgusDhcpStruct * const parsed,
          /* no replies yet, use the reply struct in 'cached' */
          rep = &cached->rep;
       } else {
-         /* need to chain a new reply onto the list */
+       /* need to chain a new reply onto the list 
          ArgusLog(LOG_INFO, "%s: allocating a new reply struct \n", __func__);
+       */
          rep = ArgusMallocAligned(sizeof(*rep), 64);
          memset(rep, 0, sizeof(*rep));
       }
