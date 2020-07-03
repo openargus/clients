@@ -964,9 +964,11 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    }
 
 #ifdef HAVE_LIBCURL
-   if (config->upload_auth
-       && strcasecmp(config->upload_auth, "spnego") == 0)
+   if (config->upload_auth && (strcasecmp(config->upload_auth, "spnego") == 0))
       auth = CURLAUTH_GSSNEGOTIATE;
+   else
+   if (config->upload_auth && (strcasecmp(config->upload_auth, "digest") == 0))
+      auth = CURLAUTH_DIGEST;
 
    *hnd = curl_easy_init();
    if (*hnd == NULL) {
@@ -974,18 +976,18 @@ __upload_init(CURL **hnd, const configuration_t * const config)
       return -1;
    }
 
-   curl_easy_setopt(*hnd, CURLOPT_BUFFERSIZE, 102400L);
-   curl_easy_setopt(*hnd, CURLOPT_NOPROGRESS, 1L);
-   curl_easy_setopt(*hnd, CURLOPT_UPLOAD, 1L);
-   curl_easy_setopt(*hnd, CURLOPT_USERPWD, userpwd);
+   DEBUGLOG(4, "user pass string '%s'\n", userpwd);
+
    if (auth)
       curl_easy_setopt(*hnd, CURLOPT_HTTPAUTH, auth);
-   curl_easy_setopt(*hnd, CURLOPT_USERAGENT, "ramanage");
-   curl_easy_setopt(*hnd, CURLOPT_MAXREDIRS, 0L);
+   curl_easy_setopt(*hnd, CURLOPT_USERPWD, userpwd);
+
    curl_easy_setopt(*hnd, CURLOPT_SSL_VERIFYPEER, 0L);
    curl_easy_setopt(*hnd, CURLOPT_SSL_VERIFYHOST, 0L);
    curl_easy_setopt(*hnd, CURLOPT_TCP_KEEPALIVE, 1L);
    curl_easy_setopt(*hnd, CURLOPT_WRITEFUNCTION, RamanageLibcurlWriteCallback);
+   curl_easy_setopt(*hnd, CURLOPT_UPLOAD, 1L);
+
 # ifdef ARGUSDEBUG
    curl_easy_setopt(*hnd, CURLOPT_DEBUGFUNCTION, __trace);
    curl_easy_setopt(*hnd, CURLOPT_VERBOSE, 1L);
@@ -1018,10 +1020,11 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    rstr->remain = PATH_MAX;
    rstr->len = 0;
 
-   if (config->upload_auth
-       && strcasecmp(config->upload_auth, "spnego") == 0)
+   if (config->upload_auth && strcasecmp(config->upload_auth, "spnego") == 0)
       auth = 1;
-
+   else
+   if (config->upload_auth && strcasecmp(config->upload_auth, "digest") == 0)
+      auth = 1;
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
                           "%s --fail --silent --show-error -k -u %s %s > /dev/null",
@@ -1334,8 +1337,8 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
          break;
       case RAMANAGE_UPLOAD_AUTH:
          retn = __parse_str(optarg, &global_config.upload_auth, NAME_MAX);
-         if (retn == 0 &&
-             strcasecmp(global_config.upload_auth, "spnego") != 0) {
+         if (retn == 0 && ((strcasecmp(global_config.upload_auth, "spnego") != 0) &&
+                           (strcasecmp(global_config.upload_auth, "digest") != 0))) {
             ArgusLog(LOG_WARNING, "only spnego authentication is supported\n");
             retn = -1;
          }
@@ -1549,8 +1552,7 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
       }
 
       file = filvec[i];
-      DEBUGLOG(4, "upload file %s size %u\n", file->filename,
-               file->statbuf.st_size);
+      DEBUGLOG(4, "upload file %s size %u\n", file->filename, file->statbuf.st_size);
       res = __upload(hnd, file->filename, file->statbuf.st_size, config);
       if (res == 0) {
          upload_kb += file->statbuf.st_size / 1024;
@@ -1639,6 +1641,10 @@ __check_filename(const char * const filename,
 
    free(rp);
 out:
+   if (rv == -1) {
+      DEBUGLOG(4, "%s: %s: wrong directory\n", __func__,
+         filename);
+   }
    return rv;
 }
 
