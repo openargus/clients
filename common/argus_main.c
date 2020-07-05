@@ -276,7 +276,6 @@ main (int argc, char **argv)
 #endif
                      if (ArgusParser->RaPollMode) {
                          ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
-                         ArgusCloseInput(ArgusParser, input);
                      } else {
                         if (file->ostart != -1) {
                            input->offset = file->ostart;
@@ -290,10 +289,6 @@ main (int argc, char **argv)
 
                   } else
                      file->fd = -1;
-
-                  if (input->file != NULL) {
-                     ArgusCloseInput(ArgusParser, input);
-                  }
                }
 
             } else {

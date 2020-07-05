@@ -28762,7 +28762,6 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                            ArgusDebug (1, "ArgusReadConnection() read %d bytes from pipe\n", cnt);
 #endif
                            input->file = input->pipe;
-                           input->pipe = NULL;
                         }
                      }
 
@@ -29683,14 +29682,14 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
 
    input->status |= ARGUS_CLOSED;
 
-   if (input->file) {
-      fclose(input->file);
-      input->file = NULL;
-   }
-
    if (input->pipe) {
       pclose(input->pipe);
       input->pipe = NULL;
+      input->file = NULL;
+   }
+
+   if (input->file) {
+      fclose(input->file);
       input->file = NULL;
    }
 

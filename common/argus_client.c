@@ -583,22 +583,19 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
          case ARGUS_DATA_SOURCE:
          case ARGUS_V2_DATA_SOURCE:
             if ((retn = ArgusReadStreamSocket (parser, input)) > 0) {
-               ArgusCloseInput(parser, input);
                done++;
             }
             break;
 
          case ARGUS_CISCO_DATA_SOURCE:
             if ((retn = ArgusReadCiscoStreamSocket (parser, input)) > 0) {
-               ArgusCloseInput(parser, input);
                done++;
             }
             break;
 
       }
 
-      if (parser->RaClientTimeoutAbs.tv_sec > 0 &&
-               ArgusCheckTimeout(parser, input)) {
+      if (parser->RaClientTimeoutAbs.tv_sec > 0 && ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
 
          if (ArgusParser->Tflag) {
