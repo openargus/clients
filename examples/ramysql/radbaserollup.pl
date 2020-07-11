@@ -103,6 +103,9 @@ ARG: while (my $arg = shift(@ARGV)) {
     $arglist[@arglist + 0] = $arg;
   }
 
+  if (not defined $database) {
+     $database = "";
+  }
   if (not defined $time) {
      $time = "-182d";
   }
