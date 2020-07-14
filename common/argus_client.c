@@ -790,6 +790,13 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             if (input->fd >= 0) {
                FD_SET (input->fd, &readmask);
                width = (width < input->fd) ? input->fd : width;
+            } else {
+               if (!(parser->RaShutDown) && (parser->ArgusReliableConnection)) {
+                  if (input->qhdr.queue != NULL) {
+                     ArgusRemoveFromQueue(input->qhdr.queue, &input->qhdr, ARGUS_NOLOCK);
+                     ArgusAddToQueue(parser->ArgusRemoteHosts, &input->qhdr, ARGUS_LOCK);
+                  }
+               }
             }
             input = (void *)input->qhdr.nxt;
          }
@@ -968,7 +975,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 #endif
 
       }
-
    }
 
 #ifdef ARGUSDEBUG
