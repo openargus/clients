@@ -139,7 +139,7 @@ void RaArgusInputComplete (struct ArgusInput *input) {
    int cnt, retn, fileindex, filestatus;
    char buf[MAXSTRLEN], *endptr = NULL;
    char sbuf[MAXSTRLEN], *sptr = NULL;
-   char *filename;
+   char *cptr, *filename;
    struct ArgusInput *ArgusInput = input;
    struct RaTimeProbesStruct *probe = NULL;
 
@@ -149,12 +149,23 @@ void RaArgusInputComplete (struct ArgusInput *input) {
 
       do {
          int found = 0, error = 0;
+         char *sid = NULL, *inf = NULL;
 
          bzero(sbuf, sizeof(sbuf));
          sptr = sbuf;
+
          ArgusPrintSourceID(ArgusParser, sbuf, probe->tn, 64);
          while (isspace(*sptr)) sptr++;
          while (sptr[strlen(sptr) - 1] == ' ') sptr[strlen(sptr) - 1] = '\0';
+
+         if ((cptr = strchr(sptr, '/')) != NULL) {
+            *cptr = '\0';
+            sid = strdup(sptr);
+            inf = strdup(cptr+1);
+            *cptr = '/';
+         } else {
+            sid = strdup(sptr);
+         }
 
          do {
             sprintf (buf, RaTableQueryString[6], sptr);
@@ -177,12 +188,15 @@ void RaArgusInputComplete (struct ArgusInput *input) {
                if (!found) {
                   if (ArgusParser->vflag)
                      ArgusLog(LOG_ALERT, "Probe %s not found: installing", sptr);
-                  sprintf (buf, RaTableQueryString[7], sptr);
+
+                  sprintf (buf, RaTableQueryString[7], sptr, sid, inf);
                   if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
                      ArgusLog(LOG_ERR, "mysql_real_query error %s: %s", buf, mysql_error(RaMySQL));
                }
             }
          } while (!found && !error++);
+         if (sid != NULL) { free(sid); }
+         if (inf != NULL) { free(inf); }
       } while ((probe = (struct RaTimeProbesStruct *) probe->qhdr.nxt) != (void *) ArgusProbes->queue->start);
 
       bzero (buf, sizeof(buf));

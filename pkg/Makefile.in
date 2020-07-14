@@ -55,7 +55,8 @@ ifndef WORKSTATION_BUILD
                 rhel/systemd/radns-nightly \
                 rhel/systemd/matrixData-nightly \
                 rhel/systemd/dbaseRollup-nightly \
-                rhel/systemd/rarp-nightly
+                rhel/systemd/rarp-nightly \
+                rhel/systemd/rawatcher-process
     UNITFILES = rhel/systemd/radhcp-nightly.timer \
                 rhel/systemd/radhcp-nightly.service \
                 rhel/systemd/radhcp.service \

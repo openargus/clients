@@ -130,7 +130,7 @@ char *RaCreateTableNames[RA_NUMTABLES] = {
 char *RaTableCreationString[RA_NUMTABLES] = {
    "CREATE TABLE Filename (id int not null auto_increment, filename varchar(255) not null, size int unsigned, creation int unsigned , hmac varchar(64), start int unsigned, stop int unsigned, indexed int unsigned, primary key (id))",
    "CREATE TABLE Seconds (probe int unsigned not null, second int unsigned not null, fileindex int not null, ostart int unsigned not null, ostop int unsigned not null, KEY secondprobeKey(second, probe))",
-   "CREATE TABLE Probes (id int not null auto_increment, name varchar(128) not null, url varchar(255), type varchar(255), filter varchar(255), authname varchar(255), authpass varchar(255), description varchar(255), access timestamp(6), created timestamp(6), start timestamp(6), stop timestamp(6), status int unsigned, primary key (id))",
+   "CREATE TABLE Probes (id int not null auto_increment, name varchar (128), sid varchar(128) not null, inf varchar(4), node varchar(128), url varchar(255), type varchar(255), filter varchar(255), authname varchar(255), authpass varchar(255), description varchar(255), access timestamp(6), created timestamp(6), start timestamp(6), stop timestamp(6), status int unsigned, primary key (id))",
 };
 
 #define RA_MAXSQLQUERY		8
@@ -142,7 +142,7 @@ char *RaTableQueryString[RA_MAXSQLQUERY] = {
    "UPDATE Filename set indexed=1 where id=%d",
    "UPDATE Filename set indexed=2 where id=%d",
    "SELECT id from Probes where name=\"%s\"",
-   "INSERT Probes (name) VALUES (\"%s\")",
+   "INSERT Probes (name,sid,inf) VALUES (\"%s\",\"%s\",\"%s\")",
 };
 
 

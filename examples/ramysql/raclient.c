@@ -1067,6 +1067,13 @@ RaCloseBinProcess(struct ArgusParserStruct *parser, struct RaBinProcessStruct *r
             RaDeleteBin(parser, rbps, i);
          }
       }
+/*
+      if (!(parser->Sflag)) {
+         sprintf (sbuf, "UNLOCK TABLES");
+         if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+            ArgusLog(LOG_INFO, "mysql_real_query error %s", mysql_error(RaMySQL));
+      }
+*/
       MUTEX_UNLOCK(&rbps->lock);
    }
 
@@ -1544,6 +1551,13 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                     } else {
                                        bin->table = strdup(RaSQLSaveTable);
                                     }
+/*                                  
+                                    if (!(parser->Sflag)) {
+                                       sprintf (sbuf, "LOCK TABLE %s WRITE", bin->table);
+                                       if ((mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+                                          ArgusLog(LOG_INFO, "mysql_real_query LOCK TABLE error %s", mysql_error(RaMySQL));
+                                    }
+*/
                                  }
                                  if (RaSQLCacheDB) {
                                     if ((cns = ArgusCheckSQLCache(parser, rec->bin, rec)) != NULL) {
