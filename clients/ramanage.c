@@ -1021,11 +1021,11 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    rstr->remain = PATH_MAX;
    rstr->len = 0;
 
-   if (config->upload_auth && strcasecmp(config->upload_auth, "spnego") == 0)
+   if (config->upload_auth && (strcasecmp(config->upload_auth, "spnego") == 0)) {
       authStr = "--negotiate";
       auth = 1;
    } else 
-   if (config->upload_auth && strcasecmp(config->upload_auth, "digest") == 0)
+   if (config->upload_auth && (strcasecmp(config->upload_auth, "digest") == 0)) {
       authStr = "--digest";
       auth = 1;
    }
