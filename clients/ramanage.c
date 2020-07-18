@@ -933,7 +933,7 @@ __should_upload(const configuration_t * const config)
 static int
 __upload_init(CURL **hnd, const configuration_t * const config)
 {
-   char *userpwd;
+   char *userpwd, *authStr = "";
    long auth = 0;
    int slen;
 
@@ -992,6 +992,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    curl_easy_setopt(*hnd, CURLOPT_DEBUGFUNCTION, __trace);
    curl_easy_setopt(*hnd, CURLOPT_VERBOSE, 1L);
 # endif /* ARGUSDEBUG */
+
 #else	/* HAVE_LIBCURL */
    ramanage_str_t *rstr;
    char * const curlexe =
@@ -1021,14 +1022,17 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    rstr->len = 0;
 
    if (config->upload_auth && strcasecmp(config->upload_auth, "spnego") == 0)
+      authStr = "--negotiate";
       auth = 1;
-   else
+   } else 
    if (config->upload_auth && strcasecmp(config->upload_auth, "digest") == 0)
+      authStr = "--digest";
       auth = 1;
+   }
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
                           "%s --fail --silent --show-error -k -u %s %s > /dev/null",
-                          curlexe, userpwd, auth ? "--negotiate" : "");
+                          curlexe, userpwd, auth ? authStr : "");
    free(curlexe);
    if (slen >= PATH_MAX) {
       ArgusFree(userpwd);
