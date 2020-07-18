@@ -7364,7 +7364,7 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
 {
    struct ArgusAgrStruct *nsagr, *agr;
    unsigned int count = 0;
-   char trans[32];
+   char trans[64];
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -7374,12 +7374,12 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
 
          if (rec != NULL) {
             value = rec->argus_mar.flows;
-            sprintf (pbuf, "%u", value);
+            snprintf (pbuf, 32, "%u", value);
          } else
             bzero(pbuf, sizeof(pbuf));
 
          if (parser->ArgusPrintXml) {
-            sprintf (trans, " Flows = \"%s\"", pbuf);
+            snprintf (trans, 64, " Flows = \"%s\"", pbuf);
          } else {
             if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
                len = strlen(pbuf);
@@ -7389,7 +7389,7 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
                   pbuf[len]     = '\0';
                }
             }
-            sprintf (trans, "%*.*s ", len, len, pbuf);
+            snprintf (trans, 64, "%*.*s ", len, len, pbuf);
          }
          break;
       }
@@ -7402,7 +7402,7 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
             count = agr->count;
 
          if (parser->ArgusPrintXml) {
-            sprintf(trans, " Trans = \"%s\"", trans);
+            snprintf(trans, 64, " Trans = \"%d\"", count);
          } else {
             if (parser->Pctflag && parser->ns) {
                nsagr = (struct ArgusAgrStruct *) parser->ns->dsrs[ARGUS_AGR_INDEX];
@@ -7416,7 +7416,7 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, "%s", trans);
+      snprintf (buf, 64, "%s", trans);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(trans);
@@ -28734,15 +28734,15 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                         input->file = NULL;
 
                         if (ptr[0] == 'B')
-                           strncpy(cmd, "bzip2 -dc \"", 11);
+                           strncpy(cmd, "bzip2 -dc \"", 12);
                         else
                         if (ptr[1] == 0x8B)
-                           strncpy(cmd, "gzip -dc \"", 11);
+                           strncpy(cmd, "gzip -dc \"", 12);
                         else
                         if ((ptr[0] == 0xFD) && (ptr[1] == 0x37) && (ptr[2] == 0x7A) && (ptr[3] == 0x58) &&  (ptr[4] == 0x5A) && (ptr[5] == 0x00))
-                           strncpy(cmd, "xzcat \"", 7);
+                           strncpy(cmd, "xzcat \"", 8);
                         else
-                           strncpy(cmd, "zcat \"", 6);
+                           strncpy(cmd, "zcat \"", 7);
             
                         strncat(cmd, input->filename, (256 - strlen(cmd)));
                         strncat(cmd, "\" 2>/dev/null", (256 - strlen(cmd)));
@@ -29962,7 +29962,8 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
             if (wordexp (ptr, &p, 0) == 0) {
                str = p.we_wordv[0];
                wexp = 1;
-            }
+            } else
+               str = ptr;
          }
       }
 
