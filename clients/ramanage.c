@@ -1341,9 +1341,9 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
          break;
       case RAMANAGE_UPLOAD_AUTH:
          retn = __parse_str(optarg, &global_config.upload_auth, NAME_MAX);
-         if (retn == 0 && ((strcasecmp(global_config.upload_auth, "spnego") != 0) &&
-                           (strcasecmp(global_config.upload_auth, "digest") != 0))) {
-            ArgusLog(LOG_WARNING, "only spnego authentication is supported\n");
+         if ((retn == 0) && ((strcasecmp(global_config.upload_auth, "spnego") != 0) &&
+                             (strcasecmp(global_config.upload_auth, "digest") != 0))) {
+            ArgusLog(LOG_WARNING, "only spnego,digest authentication are supported\n");
             retn = -1;
          }
          break;
