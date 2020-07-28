@@ -933,9 +933,13 @@ __should_upload(const configuration_t * const config)
 static int
 __upload_init(CURL **hnd, const configuration_t * const config)
 {
-   char *userpwd, *authStr = "";
+   char *userpwd;
    long auth = 0;
    int slen;
+
+# ifdef ARGUS_CURLEXE
+   char *authStr = "";
+#endif
 
 #ifdef HAVE_LIBCURL
    /* with libcurl we don't need to re-initialize anything */
@@ -1539,7 +1543,7 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
 #endif
    struct ArgusFileInput *file;
    unsigned int upload_kb = 0;
-   int res;
+   int res, done = 0;
    size_t i;
 
    if (!__should_upload(config)) {
@@ -1549,7 +1553,7 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
 
    i = 0;
    hnd = NULL;
-   while (i < filcount && upload_kb <= config->upload_max_kb) {
+   while (!done && (i < filcount && upload_kb <= config->upload_max_kb)) {
       if (__upload_init(&hnd, config) < 0) {
          ArgusLog(LOG_WARNING, "unable to initialize libcurl\n");
          return -1;
@@ -1559,8 +1563,6 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
       DEBUGLOG(4, "upload file %s size %u\n", file->filename, file->statbuf.st_size);
       res = __upload(hnd, file->filename, file->statbuf.st_size, config);
       if (res == 0) {
-         upload_kb += file->statbuf.st_size / 1024;
-
          DEBUGLOG(4, "move file %s to staging area\n", file->filename);
          __upload_move_to_staging(file->filename, config);
       } else if (res > 0) {
@@ -1569,10 +1571,12 @@ RamanageUpload(const struct ArgusParserStruct * const parser,
 #else
          ArgusLog(LOG_WARNING, "error: %s", strerror(errno));
 #endif
+         done = 1;
       } else {
-         ArgusLog(LOG_WARNING, "received non-success code from server (%d)\n",
-                  -1 * res);
+         ArgusLog(LOG_WARNING, "received non-success code from server (%d)\n", -1 * res);
+         done = 1;
       }
+      upload_kb += file->statbuf.st_size / 1024;
       i++;
    }
 
