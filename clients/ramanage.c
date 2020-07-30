@@ -43,6 +43,8 @@
 #include <libgen.h>
 #include <unistd.h>
 
+#include <wait.h>
+
 #ifdef HAVE_LIBCARES
 # ifdef HAVE_NETDB_H
 #  include <netdb.h>
@@ -127,6 +129,7 @@ typedef struct _configuration_t {
    unsigned char cmd_compress;
    unsigned char cmd_upload;
    unsigned char cmd_remove;
+   unsigned int  debug_level;
 } configuration_t;
 
 typedef struct _ramanage_str_t {
@@ -167,6 +170,7 @@ enum RamanageOpts {
    RAMANAGE_CMD_COMPRESS,
    RAMANAGE_CMD_DELETE,
    RAMANAGE_CMD_UPLOAD,
+   RAMANAGE_DEBUG_LEVEL,
 };
 
 static char *RamanageResourceFileStr[] = {
@@ -194,6 +198,7 @@ static char *RamanageResourceFileStr[] = {
    "RAMANAGE_CMD_COMPRESS=",
    "RAMANAGE_CMD_DELETE=",
    "RAMANAGE_CMD_UPLOAD=",
+   "RAMANAGE_DEBUG_LEVEL=",
 };
 
 static const size_t RAMANAGE_RCITEMS =
@@ -247,6 +252,7 @@ struct {
    REG_INIT("RAMANAGE_CMD_COMPRESS", RAMANAGE_TYPE_YESNO, cmd_compress),
    REG_INIT("RAMANAGE_CMD_DELETE", RAMANAGE_TYPE_YESNO, cmd_remove),
    REG_INIT("RAMANAGE_CMD_UPLOAD", RAMANAGE_TYPE_YESNO, cmd_upload),
+   REG_INIT("RAMANAGE_DEBUG_LEVEL", RAMANAGE_TYPE_UINT, debug_level),
 };
 static const size_t RAMANAGE_REGITEMS =
    sizeof(RamanageWindowsRegistryValues)/
@@ -1197,9 +1203,8 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    } else {
       DEBUGLOG(4, "cmd: %s\n", rstr->str);
       ret = system(rstr->str);
-      if (ret > 0) {
-         DEBUGLOG(1, "curl command failed, returned %d.  (%s)\n", ret,
-                  rstr->str);
+      if (WEXITSTATUS(ret) > 0) {
+         DEBUGLOG(1, "curl command failed, returned %d.  (%s)\n", ret, rstr->str);
          ret = -ret; /* child process failed */
       }
    }
@@ -1393,6 +1398,10 @@ RamanageConfigureParse(struct ArgusParserStruct *parser,
          break;
       case RAMANAGE_CMD_DELETE:
          retn = __parse_yesno(optarg, &global_config.cmd_remove);
+         break;
+      case RAMANAGE_DEBUG_LEVEL:
+         retn = __parse_uint(optarg, &global_config.debug_level);
+         ArgusParser->debugflag = global_config.debug_level;
          break;
    }
 
