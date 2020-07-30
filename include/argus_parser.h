@@ -358,7 +358,7 @@ struct ArgusParserStruct {
    struct ArgusEventsStruct *ArgusEventsTask;
 
 #if defined(ARGUS_THREADS)
-   pthread_t thread, remote, output, timer, dns;
+   pthread_t thread, remote, output, timer, dns, script;
    pthread_t listenthread;
    pthread_mutex_t lock;
    pthread_cond_t cond;
