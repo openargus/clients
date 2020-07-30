@@ -134,8 +134,6 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/rapolicy.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasort.1 \
 		$(DESTDIR)@mandir@/man1/rasort.1
-	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasplit.1 \
-		$(DESTDIR)@mandir@/man1/rasplit.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ramanage.1 \
 		$(DESTDIR)@mandir@/man1/ramanage.1
 ifndef WORKSTATION_BUILD
@@ -214,7 +212,6 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@mandir@/man1/rapath.1
 	rm -f $(DESTDIR)@mandir@/man1/rapolicy.1
 	rm -f $(DESTDIR)@mandir@/man1/rasort.1
-	rm -f $(DESTDIR)@mandir@/man1/rasplit.1
 	rm -f $(DESTDIR)@mandir@/man1/rasql.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqlcheckconf.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqlinsert.1
