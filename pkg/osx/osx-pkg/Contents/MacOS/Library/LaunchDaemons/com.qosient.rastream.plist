@@ -3,9 +3,11 @@
 <plist version="1.0">
 <dict>
         <key>KeepAlive</key>
-        <true/>
+                <true/>
+        <key>Program</key>
+                <string>/usr/local/bin/rastream</string>
         <key>Label</key>
-        <string>com.qosient.rastream</string>
+                <string>com.qosient.rastream</string>
         <key>ProgramArguments</key>
         <array>
                 <string>/usr/local/bin/rastream</string>
@@ -16,12 +18,12 @@
                 <string>-M</string>
                 <string>time</string>
                 <string>5m</string>
+                <string>-f</string>
+                <string>/usr/local/bin/rastream.sh</string>
                 <string>-w</string>
-                <string>/usr/local/argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S</string>
+                <string>/usr/local/argus/archive/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S</string>
         </array>
-        <key>OnDemand</key>
-        <false/>
-        <key>ServiceDescription</key>
-        <string>rastream</string>
+        <key>Disabled</key>
+                <false/>
 </dict>
 </plist>
