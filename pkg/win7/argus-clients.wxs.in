@@ -24,7 +24,7 @@
         Key="SYSTEM\CurrentControlSet\Services\QoSient:Rasplit\Parameters"
         Action="create">
           <RegistryValue Type="expandable" Name="AppPath"
-          Value="/bin/rasplit.exe" />
+          Value="/bin/rastream.exe" />
           <RegistryValue Type="string" Name="AppArgs"
           Value='-S localhost:562 -B 10 -M time 5m -w /argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S -f /bin/ramanage'/>
           <RegistryValue Type="integer" Name="NeverExits"
@@ -85,11 +85,6 @@
             <Component Id='rasort.exe' Guid="*">
               <File Id='rasort.exe' Name='rasort.exe' DiskId='1'
               Source="BUILDROOT/usr/bin/rasort.exe" KeyPath='yes'>
-              </File>
-            </Component>
-            <Component Id='rasplit.exe' Guid="*">
-              <File Id='rasplit.exe' Name='rasplit.exe' DiskId='1'
-              Source="BUILDROOT/usr/bin/rastream.exe" KeyPath='yes'>
               </File>
             </Component>
             <Component Id='rastream.exe' Guid="*">
@@ -225,7 +220,6 @@
     <Feature Id='Complete' Level='1'>
       <ComponentRef Id='ra.exe' />
       <ComponentRef Id='rabins.exe' />
-      <ComponentRef Id='rasplit.exe' />
       <ComponentRef Id='rastream.exe' />
       <ComponentRef Id='racluster.exe' />
       <ComponentRef Id='radium.exe' />
