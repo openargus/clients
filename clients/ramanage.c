@@ -43,8 +43,6 @@
 #include <libgen.h>
 #include <unistd.h>
 
-#include <wait.h>
-
 #ifdef HAVE_LIBCARES
 # ifdef HAVE_NETDB_H
 #  include <netdb.h>
