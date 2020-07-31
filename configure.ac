@@ -526,13 +526,13 @@ AS_IF([test "$with_examples" != no],
       ./examples/rahisto/rahisto-querysql
       ./examples/rahisto/rahisto-updatesql
       ./examples/rahisto/rahisto-delsql
-      ./examples/rahosts/Makefile
       ./examples/ralabel/Makefile
    ])
    
    AS_IF([test "$ARGUS_MYSQL_MAKEFILE" != no],
       [AC_CONFIG_FILES([
          ./examples/ramysql/Makefile
+         ./examples/rahosts/Makefile
       ])
    ])
    
