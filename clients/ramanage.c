@@ -1975,15 +1975,16 @@ main(int argc, char **argv)
    if (global_config.rpolicy_ignore_archive == 0 &&
        __should_process_archive(&global_config) == 1) {
       DEBUGLOG(1, "%s: adding files from archive directory\n", __func__);
+/*
       if (RaProcessRecursiveFiles(global_config.path_archive,
                                   ARGUS_FILES_NOSORT) == 0) {
          cmdres = 1;
          goto out;
       }
 
-      /* used later to decide if we should also process staged files */
+//    used later to decide if we should also process staged files 
       process_archive = 1;
-
+*/
       __save_state();
    }
 
