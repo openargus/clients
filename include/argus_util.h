@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	232
-#define MAX_PRINT_ALG_TYPES     	232
+#define ARGUS_MAX_PRINT_ALG     	242
+#define MAX_PRINT_ALG_TYPES     	242
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -741,6 +741,9 @@ void ArgusPrintDstOui (struct ArgusParserStruct *, char *, struct ArgusRecordStr
 void ArgusPrintCor (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
+void ArgusPrintSrcVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
 void ArgusPrintBssidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSsidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCauseLabel (struct ArgusParserStruct *, char *, int);
@@ -999,6 +1002,9 @@ void ArgusPrintResponseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
+
+void ArgusPrintSrcVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 
 
 struct ArgusPrintFieldStruct 
@@ -1881,6 +1887,8 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 #define ARGUSPRINTIDLEINTFLOWMAX	237
 #define ARGUSPRINTIDLEINTFLOWMIN	238
 #define ARGUSPRINTIDLEINTFLOWSDEV	239
+#define ARGUSPRINTSRCVNID		240
+#define ARGUSPRINTDSTVNID		241
 
 
 extern struct ArgusPrintFieldStruct RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES];
@@ -2214,6 +2222,9 @@ extern void ArgusPrintStdDeviation (struct ArgusParserStruct *, char *, struct A
 extern void ArgusPrintRunTime (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintIdleTime (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintLabel (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
+extern void ArgusPrintSrcVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintDstVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 extern void ArgusPrintLabelLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintCauseLabel (struct ArgusParserStruct *, char *, int);

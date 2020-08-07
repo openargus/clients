@@ -118,8 +118,7 @@ are:
            flow     flow key data (proto, saddr, sport, dir, daddr, dport)
            time     time stamp fields (stime, ltime).
            metric   basic ([s|d]bytes, [s|d]pkts, [s|d]rate, [s|d]load)
-           agr      aggregation stats (trans, avgdur, mindur, maxdur, stdev)
-                    and intflow[min,max,stdev,dist] timing data.
+           agr      aggregation stats (trans, avgdur, mindur, maxdur, stdev).
            net      network objects (tcp, esp, rtp, icmp data).
            vlan     VLAN tag data
            mpls     MPLS label data
@@ -546,21 +545,6 @@ destination active jitter (mSec).
 .B djitidle
 destination idle jitter (mSec).
 .TP
-.B intflow
-interflow time(sec).
-.TP
-.B intflowsdev
-interflow time(sec) standard deviation.
-.TP
-.B intflowmin
-minimum interflow time(sec).
-.TP
-.B intflowmax
-maximum interflow time(sec).
-.TP
-.B intflowdist
-inter flow time distribution
-.TP
 .B state
 transaction state
 .TP
@@ -968,7 +952,7 @@ the \fItype\fP.  The list of valid encapsulation types is:
 .nf
 .sp .5
 
- mpls, eth, 802q, llc, pppoe, isl, gre, ah, ipnip, ipnip6, chdlc
+ mpls, eth, 802q, llc, pppoe, vxlan, isl, gre, ah, ipnip, ipnip6, chdlc
 .IP "\fBdst host \fIhost\fR"
 True if the IP destination field in the Argus record is \fIhost\fP,
 which may be either an address or a name.
@@ -1312,6 +1296,7 @@ The format is:
   w       -  802.11 wireless encapsulation
   p       -  PPP over Enternet encapsulated flow
   i       -  ISL encapsulated flow
+  x       -  VXLAN encapsulation
   G       -  GRE encapsulation
   a       -  AH encapsulation
   P       -  IP tunnel encapsulation

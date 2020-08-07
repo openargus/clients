@@ -1647,7 +1647,6 @@ extern "C" {
 
 #define ARGUS_SRC_VLAN                   0x01
 #define ARGUS_DST_VLAN                   0x02
-
  
 /* Mpls Transport DSR Type */
 #define ARGUS_MPLS_DSR                   0x44

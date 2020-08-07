@@ -2701,6 +2701,15 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
+                     case ARGUS_VXLAN_DSR: {
+                        struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *) dsr;
+
+                        bcopy((char *)vxlan, (char *)&canon->vxlan, cnt);
+                        retn->dsrs[ARGUS_VXLAN_INDEX] = (struct ArgusDSRHeader*) &canon->vxlan;
+                        retn->dsrindex |= (0x01 << ARGUS_VXLAN_INDEX);
+                        break;
+                     }
+
                      case ARGUS_MPLS_DSR: {
                         struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                         unsigned int *mlabel = (unsigned int *)(dsr + 1);
