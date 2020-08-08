@@ -96,7 +96,6 @@
 #endif
 
 #include <time.h>
-#include <wordexp.h>
 
 #ifndef HAVE_POSIX_MEMALIGN
 # ifdef HAVE_MEMALIGN
@@ -30033,13 +30032,11 @@ ArgusDeleteModeList (struct ArgusParserStruct *parser)
 int
 ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
 {
-   int retn = 0, wexp = 0;
    struct ArgusFileInput *file;
    char *str = NULL;
+   int retn = 0;
 
    if (ptr) {
-      wordexp_t p;
-
       switch(type) {
 #if defined(ARGUS_MYSQL)
          case ARGUS_DBASE_SOURCE:
@@ -30047,13 +30044,8 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
             break;
 #endif
          default: {
-#if !defined(CYGWIN)
-            if (wordexp (ptr, &p, 0) == 0) {
-               str = p.we_wordv[0];
-               wexp = 1;
-            } else
-#endif
-               str = ptr;
+            str = ptr;
+            break;
          }
       }
 
@@ -30075,8 +30067,6 @@ ArgusAddFileList (struct ArgusParserStruct *parser, char *ptr, int type, long lo
          parser->ArgusInputFileCount++;
          retn = 1;
       }
-      if (wexp)
-         wordfree (&p);
    }
 
 #ifdef ARGUSDEBUG
