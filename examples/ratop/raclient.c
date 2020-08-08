@@ -1213,7 +1213,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
 #if defined(ARGUS_MYSQL)
          RaMySQLInit();
-         ArgusReadSQLTables (parser);
+         if (RaMySQL != NULL) {
+            ArgusReadSQLTables (parser);
+         }
 #endif
          if (!(parser->Sflag)) {
             if (parser->ArgusInputFileList == NULL) {
@@ -3206,194 +3208,200 @@ RaMySQLInit ()
       if ((RaMySQL = (void *) ArgusCalloc(1, sizeof(*RaMySQL))) == NULL)
          ArgusLog(LOG_ERR, "RaMySQLInit: ArgusCalloc error %s", strerror(errno));
 
-      if ((mysql_init(RaMySQL)) == NULL)
-         ArgusLog(LOG_ERR, "mysql_init error %s");
+      if ((mysql_init(RaMySQL)) != NULL) {
+         if (!mysql_thread_safe())
+            ArgusLog(LOG_INFO, "mysql not thread-safe");
 
-      if (!mysql_thread_safe())
-         ArgusLog(LOG_INFO, "mysql not thread-safe");
+         mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
+         mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
 
-      mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
-      mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
+         if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) != NULL) {
+            bzero(sbuf, sizeof(sbuf));
+            sprintf (sbuf, "SHOW VARIABLES LIKE 'version'");
 
-      if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
-         ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
+            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
-      bzero(sbuf, sizeof(sbuf));
-      sprintf (sbuf, "SHOW VARIABLES LIKE 'version'");
+            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                  while ((row = mysql_fetch_row(mysqlRes))) {
+                     int matches = 0;
+                     unsigned long *lengths;
+                     lengths = mysql_fetch_lengths(mysqlRes);
+                     sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
 
-      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               int matches = 0;
-               unsigned long *lengths;
-               lengths = mysql_fetch_lengths(mysqlRes);
-               sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
-
-              ArgusSQLVersion = strdup(sbuf);
-              if ((matches = sscanf(ArgusSQLVersion,"%d.%d.%d", &MySQLVersionMajor, &MySQLVersionMinor, &MySQLVersionSub)) > 0) {
+                    ArgusSQLVersion = strdup(sbuf);
+                    if ((matches = sscanf(ArgusSQLVersion,"%d.%d.%d", &MySQLVersionMajor, &MySQLVersionMinor, &MySQLVersionSub)) > 0) {
+                     }
+                  }
                }
+               mysql_free_result(mysqlRes);
             }
-         }
-         mysql_free_result(mysqlRes);
-      }
 
-      bzero(sbuf, sizeof(sbuf));
-      sprintf (sbuf, "SHOW VARIABLES LIKE 'bulk_insert_buffer_size'");
+            bzero(sbuf, sizeof(sbuf));
+            sprintf (sbuf, "SHOW VARIABLES LIKE 'bulk_insert_buffer_size'");
 
-      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-               lengths = mysql_fetch_lengths(mysqlRes);
-               sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
+            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                  while ((row = mysql_fetch_row(mysqlRes))) {
+                     unsigned long *lengths;
+                     lengths = mysql_fetch_lengths(mysqlRes);
+                     sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
 
-              ArgusSQLBulkBufferSize = (int)strtol(sbuf, (char **)NULL, 10);
+                    ArgusSQLBulkBufferSize = (int)strtol(sbuf, (char **)NULL, 10);
+                  }
+               }
+               mysql_free_result(mysqlRes);
             }
-         }
-         mysql_free_result(mysqlRes);
-      }
 
-      bzero(sbuf, sizeof(sbuf));
-      sprintf (sbuf, "SHOW VARIABLES LIKE 'max_allowed_packet'");
+            bzero(sbuf, sizeof(sbuf));
+            sprintf (sbuf, "SHOW VARIABLES LIKE 'max_allowed_packet'");
 
-      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-               lengths = mysql_fetch_lengths(mysqlRes);
-               sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
-               
-              ArgusSQLMaxPacketSize = (int)strtol(sbuf, (char **)NULL, 10);
+            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                  while ((row = mysql_fetch_row(mysqlRes))) {
+                     unsigned long *lengths;
+                     lengths = mysql_fetch_lengths(mysqlRes);
+                     sprintf(sbuf, "%.*s", (int) lengths[1], row[1] ? row[1] : "NULL");
+                     
+                    ArgusSQLMaxPacketSize = (int)strtol(sbuf, (char **)NULL, 10);
+                  }
+               }
+               mysql_free_result(mysqlRes);
             }
-         }
-         mysql_free_result(mysqlRes);
-      }
 
-      ArgusSQLBulkInsertSize = (ArgusSQLMaxPacketSize < ArgusSQLBulkBufferSize) ? ArgusSQLMaxPacketSize : ArgusSQLBulkBufferSize;
+            ArgusSQLBulkInsertSize = (ArgusSQLMaxPacketSize < ArgusSQLBulkBufferSize) ? ArgusSQLMaxPacketSize : ArgusSQLBulkBufferSize;
 
-      if ((ArgusSQLBulkBuffer = calloc(1, ArgusSQLBulkInsertSize)) == NULL)
-         ArgusLog(LOG_WARNING, "ArgusMySQLInit: cannot alloc bulk buffer size %d\n", ArgusSQLBulkInsertSize);
+            if ((ArgusSQLBulkBuffer = calloc(1, ArgusSQLBulkInsertSize)) == NULL)
+               ArgusLog(LOG_WARNING, "ArgusMySQLInit: cannot alloc bulk buffer size %d\n", ArgusSQLBulkInsertSize);
 
-      sprintf (sbuf, "USE argus");
+            sprintf (sbuf, "USE argus");
 
 /* If we don't an argus database, then we don't have -t support in the database */
 
-      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) == 0) {
-         if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
-            char sbuf[MAXSTRLEN];
+            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) == 0) {
+               if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
+                  char sbuf[MAXSTRLEN];
 
-            if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-               while ((row = mysql_fetch_row(mysqlRes))) {
-                  unsigned long *lengths;
-                  lengths = mysql_fetch_lengths(mysqlRes);
-                  bzero(sbuf, sizeof(sbuf));
-                     for (x = 0; x < retn; x++)
-                     sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
+                  if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     while ((row = mysql_fetch_row(mysqlRes))) {
+                        unsigned long *lengths;
+                        lengths = mysql_fetch_lengths(mysqlRes);
+                        bzero(sbuf, sizeof(sbuf));
+                           for (x = 0; x < retn; x++)
+                           sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
 
-                  if (!(strncmp(sbuf, "Seconds", 8))) {
-                     ArgusSQLSecondsTable = 1;
+                        if (!(strncmp(sbuf, "Seconds", 8))) {
+                           ArgusSQLSecondsTable = 1;
+                        }
+                     }
+
                   }
+                  mysql_free_result(mysqlRes);
                }
 
+            } else {
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "argus database is missing or has no tables.\n");
+#endif
             }
-            mysql_free_result(mysqlRes);
+
+            if (ArgusSQLSecondsTable == 0) {
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "argus database returned no tables.\n");
+#endif
+            }
+
+            if (!RaSQLNoCreate) {
+               bzero(sbuf, sizeof(sbuf));
+               sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaDatabase);
+
+               if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+                  ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+            }
+         } else {
+            ArgusFree(RaMySQL);
+            RaMySQL = NULL;
          }
-
       } else {
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "argus database is missing or has no tables.\n");
-#endif
-      }
-
-      if (ArgusSQLSecondsTable == 0) {
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "argus database returned no tables.\n");
-#endif
-      }
-
-      if (!RaSQLNoCreate) {
-         bzero(sbuf, sizeof(sbuf));
-         sprintf (sbuf, "CREATE DATABASE IF NOT EXISTS %s", RaDatabase);
-
-         if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-            ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+         ArgusFree(RaMySQL);
+         RaMySQL = NULL;
       }
    }
 
-   sprintf (sbuf, "USE %s", RaDatabase);
+   if (RaMySQL != NULL) {
+      sprintf (sbuf, "USE %s", RaDatabase);
 
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+      if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+         ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
 
-   if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
-      char sbuf[MAXSTRLEN];
+      if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
+         char sbuf[MAXSTRLEN];
 
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         int thisIndex = 0;
+         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+            int thisIndex = 0;
 
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            bzero(sbuf, sizeof(sbuf));
-               for (x = 0; x < retn; x++)
-               sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
+            while ((row = mysql_fetch_row(mysqlRes))) {
+               unsigned long *lengths;
+               lengths = mysql_fetch_lengths(mysqlRes);
+               bzero(sbuf, sizeof(sbuf));
+                  for (x = 0; x < retn; x++)
+                  sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
 
-            RaTableExistsNames[thisIndex++] = strdup (sbuf);
+               RaTableExistsNames[thisIndex++] = strdup (sbuf);
+            }
+
+         } else {
+#ifdef ARGUSDEBUG
+            ArgusDebug (2, "mysql_num_fields() returned zero.\n");
+#endif
          }
-
-      } else {
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "mysql_num_fields() returned zero.\n");
-#endif
+         mysql_free_result(mysqlRes);
       }
-      mysql_free_result(mysqlRes);
-   }
 
-   if (RaTable != NULL) {
-   }
-
-   if (ArgusParser->writeDbstr != NULL) {
-      char *ptr;
-      sprintf (ArgusParser->RaDBString, "-w %s", ArgusParser->writeDbstr);
-      if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL)
-         *ptr = '\0';
-
-   } else 
-   if (ArgusParser->readDbstr != NULL) {
-      char *ptr;
-      sprintf (ArgusParser->RaDBString, "-r %s", ArgusParser->readDbstr);
-      if ((ptr = strrchr(ArgusParser->readDbstr, '/')) != NULL)
-         *ptr = '\0';
-   } else  {
-      sprintf (ArgusParser->RaDBString, "db %s", RaDatabase);
-
-      if (RaHost)
-         sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], "@%s", RaHost);
-
-      sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], " user %s", RaUser);
-   }
-
-   if ((ArgusParser->ArgusInputFileList != NULL)  ||
-        (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0))) {
-
-      if (RaSQLSaveTable != NULL) {
-         if (!((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))))
-            if (ArgusCreateSQLSaveTable(RaSQLSaveTable))
-               ArgusLog(LOG_ERR, "mysql create %s returned error", RaSQLSaveTable);
+      if (RaTable != NULL) {
       }
-   }
 
-   if (ArgusParser->MySQLDBEngine == NULL)
-      ArgusParser->MySQLDBEngine = strdup("InnoDB");
+      if (ArgusParser->writeDbstr != NULL) {
+         char *ptr;
+         sprintf (ArgusParser->RaDBString, "-w %s", ArgusParser->writeDbstr);
+         if ((ptr = strrchr(ArgusParser->writeDbstr, '/')) != NULL)
+            *ptr = '\0';
+
+      } else 
+      if (ArgusParser->readDbstr != NULL) {
+         char *ptr;
+         sprintf (ArgusParser->RaDBString, "-r %s", ArgusParser->readDbstr);
+         if ((ptr = strrchr(ArgusParser->readDbstr, '/')) != NULL)
+            *ptr = '\0';
+      } else  {
+         sprintf (ArgusParser->RaDBString, "db %s", RaDatabase);
+
+         if (RaHost)
+            sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], "@%s", RaHost);
+
+         sprintf (&ArgusParser->RaDBString[strlen(ArgusParser->RaDBString)], " user %s", RaUser);
+      }
+
+      if ((ArgusParser->ArgusInputFileList != NULL)  ||
+           (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0))) {
+
+         if (RaSQLSaveTable != NULL) {
+            if (!((strchr(RaSQLSaveTable, '%') || strchr(RaSQLSaveTable, '$'))))
+               if (ArgusCreateSQLSaveTable(RaSQLSaveTable))
+                  ArgusLog(LOG_ERR, "mysql create %s returned error", RaSQLSaveTable);
+         }
+      }
+
+      if (ArgusParser->MySQLDBEngine == NULL)
+         ArgusParser->MySQLDBEngine = strdup("InnoDB");
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "RaMySQLInit () RaSource %s RaArchive %s RaFormat %s", RaSource, RaArchive, RaFormat);
