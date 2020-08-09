@@ -943,6 +943,7 @@ struct ArgusMacStruct {
 struct ArgusVxLanStruct {
    struct ArgusDSRHeader hdr;
    unsigned int svnid, dvnid;
+   struct ArgusFlow tflow;
 };
 
 struct ArgusVlanStruct {
