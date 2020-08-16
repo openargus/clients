@@ -59,7 +59,7 @@
 #endif
 
 #if defined(ARGUS_MYSQL)
-#include <mysql.h>
+#include <argus_mysql.h>
 
 char *ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, char *, int, int);
 
