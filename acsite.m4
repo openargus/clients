@@ -890,6 +890,18 @@ ARGUS_MYSQL_MAKEFILE=no
             fi
          fi
 
+         AC_MSG_CHECKING([for my_bool in $ac_cv_mysql_where_inc/mysql.h])
+         AC_EGREP_HEADER(my_bool, $ac_cv_mysql_where_inc/mysql.h,
+            MYSQL_MY_BOOL_AVAILABLE=yes,)
+
+         if test "$MYSQL_BOOL_AVAILABLE" = yes; then
+            AC_DEFINE([HAVE_MYSQL_MY_BOOL],[],
+               [Define if your mysql implimentation defines my_bool type])
+            AC_MSG_RESULT([yes])
+         else
+            AC_MSG_RESULT([no])
+         fi
+
          ARGUS_MYSQL="./ramysql"
          ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
          AC_SUBST(MYSQL_LDFLAGS)
