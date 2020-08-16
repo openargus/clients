@@ -5518,6 +5518,32 @@ fi
             fi
          fi
 
+         MYSQL_BOOL_AVAILABLE=no
+         { $as_echo "$as_me:${as_lineno-$LINENO}: checking for my_bool in $ac_cv_mysql_where_inc/mysql.h" >&5
+$as_echo_n "checking for my_bool in $ac_cv_mysql_where_inc/mysql.h... " >&6; }
+         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <$ac_cv_mysql_where_inc/mysql.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "my_bool" >/dev/null 2>&1; then :
+  MYSQL_MY_BOOL_AVAILABLE=yes
+fi
+rm -f conftest*
+
+
+         if test "$MYSQL_BOOL_AVAILABLE" = yes; then
+
+$as_echo "#define HAVE_MYSQL_MY_BOOL /**/" >>confdefs.h
+
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+         else
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+         fi
+
          ARGUS_MYSQL="./ramysql"
          ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
 

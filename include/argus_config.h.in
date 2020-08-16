@@ -224,6 +224,9 @@
 /* Define to 1 if you have the `modf' function. */
 #undef HAVE_MODF
 
+/* Define if your mysql implimentation defines my_bool type */
+#undef HAVE_MYSQL_MY_BOOL
+
 /* Define to 1 if you have the <ncurses.h> header file. */
 #undef HAVE_NCURSES_H
 
