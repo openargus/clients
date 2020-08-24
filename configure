@@ -5518,7 +5518,6 @@ fi
             fi
          fi
 
-         MYSQL_BOOL_AVAILABLE=no
          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for my_bool in $ac_cv_mysql_where_inc/mysql.h" >&5
 $as_echo_n "checking for my_bool in $ac_cv_mysql_where_inc/mysql.h... " >&6; }
          cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6315,7 +6314,7 @@ $as_echo "#define HAVE_SYS_WAIT_H 1" >>confdefs.h
 fi
 
 
-for ac_header in sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h
+for ac_header in sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h stdbool.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"

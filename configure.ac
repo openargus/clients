@@ -77,7 +77,7 @@ AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 
-AC_CHECK_HEADERS([sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h])
+AC_CHECK_HEADERS([sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h stdbool.h])
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h libintl.h malloc.h memory.h netdb.h netinet/in.h net/if_dl.h])
 AC_CHECK_HEADERS([stdlib.h stddef.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h])
 AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h])
