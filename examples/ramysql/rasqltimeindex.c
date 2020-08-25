@@ -1105,8 +1105,6 @@ struct RaMySQLProbeTable {
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
-   struct ArgusModeStruct *mode = parser->ArgusModeList;
-   unsigned int RaThisNet = 0, RaThisHost = 0;
    int RaHashSize = 0x10000;
    char buf[2048];
    int oldpflag;
@@ -1122,20 +1120,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if (ArgusParser->Sflag)
          usage();
-
-      while (mode && mode->mode) {
-         if (!(strcasecmp (mode->mode, "host"))) {
-            mode = mode->nxt;
-            RaThisHost = **argus_nametoaddr(mode->mode);
-            RaThisNet = RaThisHost & ipaddrtonetmask(RaThisHost);
-         } else
-         if (!(strcasecmp (mode->mode, "net"))) {
-            mode = mode->nxt;
-            RaThisNet = **argus_nametoaddr(mode->mode);
-         }
-
-         mode = mode->nxt;
-      }
 
       if ((ArgusTimeQueue = ArgusNewQueue()) == NULL)
          ArgusLog(LOG_ERR, "ArgusClientInit: ArgusNewQueue error %s", strerror(errno));

@@ -319,7 +319,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    struct ArgusAdjustStruct *nadp = NULL;
    struct ArgusInput *input = NULL;
    struct ArgusModeStruct *mode;
-   char outputfile[MAXSTRLEN];
    int i = 0, size = 1;
 
 #if defined(ARGUS_THREADS)
@@ -327,7 +326,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #endif
 
    if (parser != NULL) {
-      outputfile[0] = '\0';
       parser->RaWriteOut = 1;
 
       if (!(parser->RaInitialized)) {
