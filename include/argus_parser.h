@@ -339,7 +339,9 @@ struct ArgusParserStruct {
    int ArgusGenerateManRecords;
    int ArgusPrintMan, ArgusPrintEvent;
    int ArgusPrintXml, ArgusAsnFormat;
+   int ArgusPrintJson, ArgusPrintD3;
    int ArgusSrvInit;
+   char RaOutputStarted;
    int RaXMLStarted; 
    int ArgusGrepSource;
    int ArgusGrepDestination;
