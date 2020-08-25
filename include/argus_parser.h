@@ -265,6 +265,11 @@ struct ArgusCIDRAddr {
 #define ARGUS_REPLACE_COMPRESSED_BZ	0x04
 #define ARGUS_REPLACE_FILENAME_MODIFIED	0x08
 
+#define ARGUS_PRINT_NULL                0x01
+#define ARGUS_PRINT_EMPTY_STRING        0x02
+#define ARGUS_OMIT_EMPTY_STRING         0x04
+
+
 struct ArgusParserStruct {
    int status, RaParseCompleting, RaParseDone;
    int RaDonePending, RaShutDown, RaSortedInput;
@@ -340,9 +345,10 @@ struct ArgusParserStruct {
    int ArgusPrintMan, ArgusPrintEvent;
    int ArgusPrintXml, ArgusAsnFormat;
    int ArgusPrintJson, ArgusPrintD3;
-   int ArgusSrvInit;
+   int ArgusPrintJsonEmptyString;
    char RaOutputStarted;
    int RaXMLStarted; 
+   int ArgusSrvInit;
    int ArgusGrepSource;
    int ArgusGrepDestination;
    int ArgusAutoId;
