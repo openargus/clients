@@ -4312,12 +4312,14 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                      parser->RaPrintAlgorithm->print(parser, tmpbuf, argus, parser->RaPrintAlgorithm->length);
 
                      if ((slen = strlen(tmpbuf)) > 0) {
-                        int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
-                        if (iret) {
-                           thistype = ARGUS_PTYPE_INT;
-                        } else {
-                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
-                           if (fret) thistype = ARGUS_PTYPE_DOUBLE;
+                        if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
+                           int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
+                           if (iret) {
+                              thistype = ARGUS_PTYPE_INT;
+                           } else {
+                              int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+                              if (fret) thistype = ARGUS_PTYPE_DOUBLE;
+                           }
                         }
 
                         dlen = sizeof(tmpbuf) - slen;
