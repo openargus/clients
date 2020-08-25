@@ -4300,14 +4300,26 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 #endif
             for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
                char tmpbuf[0x10000];
+               float fval = 0.0;
+               int ival = 0;
+               int tlen = 0;
 
                if ((parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex]) != NULL) {
                   if (parser->RaPrintAlgorithm->print != NULL) {
+                     int thistype = ARGUS_PTYPE_STRING;
                      bzero(tmpbuf, 16);
 
                      parser->RaPrintAlgorithm->print(parser, tmpbuf, argus, parser->RaPrintAlgorithm->length);
 
                      if ((slen = strlen(tmpbuf)) > 0) {
+                        int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
+                        if (iret) {
+                           thistype = ARGUS_PTYPE_INT;
+                        } else {
+                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+                           if (fret) thistype = ARGUS_PTYPE_DOUBLE;
+                        }
+
                         dlen = sizeof(tmpbuf) - slen;
 
                         if (tmpbuf[slen - 1] == ' ') {
@@ -4317,7 +4329,6 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                         }
 
                         if (parser->ArgusPrintXml) {
-                           slen = strlen(tmpbuf); dlen = len - slen;
                            if (slen > 0)
                               if (!(tmpbuf[slen - 1] == '\"'))
                                  sprintf(&tmpbuf[slen], "\"");
@@ -4370,7 +4381,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               int tlen, tind = 0, i;
 
                               if ((tlen = strlen(tmpbuf)) > 0) {
-                                 if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
+                                 if (thistype == ARGUS_PTYPE_STRING) {
                                     if (strchr(tmpbuf, parser->RaFieldQuoted)) {
                                        for (i = 0; i < tlen; i++) {
                                           if (tmpbuf[i] == parser->RaFieldQuoted)
@@ -4392,7 +4403,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                                           tmpbuf, parser->RaFieldDelimiter);
 				    
                                     } else {
-                                       if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
+                                       if (thistype == ARGUS_PTYPE_STRING) {
                                           slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c:%c%s%c%c", 
                                              parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
                                              parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted,
@@ -9296,7 +9307,11 @@ ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                snprintf (buf, len, " Dir = \"%s\"", ndirStr);
 
             } else {
-               sprintf (buf, "%*.*s ", len, len, dirStr);
+               if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
+                  sprintf (buf, "%s ", dirStr);
+               } else {
+                  sprintf (buf, "%*.*s ", len, len, dirStr);
+               }
             }
          }
 
