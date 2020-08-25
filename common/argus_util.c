@@ -4300,8 +4300,6 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 #endif
             for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
                char tmpbuf[0x10000];
-               float fval = 0.0;
-               int ival = 0;
                int tlen = 0;
 
                if ((parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex]) != NULL) {
@@ -4313,10 +4311,12 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
                      if ((slen = strlen(tmpbuf)) > 0) {
                         if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
+                          int ival = 0;
                            int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
                            if (iret) {
                               thistype = ARGUS_PTYPE_INT;
                            } else {
+                              float fval = 0.0;
                               int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
                               if (fret) thistype = ARGUS_PTYPE_DOUBLE;
                            }
