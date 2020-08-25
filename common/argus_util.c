@@ -358,6 +358,7 @@ void ArgusSortFileList (struct ArgusInput **);
 time_t timegm (struct tm *);
 #endif
 
+void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 int
 RaProcessRecursiveFiles (char *path)
@@ -4395,7 +4396,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 }
 
 
-void ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+void
+ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    ArgusPrintManStatus(parser,&buf[strlen(buf)],argus,len);
 }
@@ -4422,7 +4424,7 @@ ArgusPrintRecordHeader (struct ArgusParserStruct *parser, char *buf, struct Argu
       snprintf(buf, len, "{ \"type\":\"%s\",", ArgusTypeStr);
    } else
    if (parser->ArgusPrintXml) {
-      snprintf (ArgusTypeBuf, 32, ArgusTypeStr);
+      snprintf (ArgusTypeBuf, 32, "%s", ArgusTypeStr);
       snprintf(&buf[strlen(buf)], len, " <Argus%sRecord ", ArgusTypeStr);
    }
 }
