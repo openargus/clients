@@ -1626,8 +1626,7 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
       RaPrintAlgorithmTable[ARGUSPRINTPROTO].type    = ARGUS_PTYPE_INT;
    }
 
-   if (parser->RaPrintOptionIndex > 0)
-      ArgusProcessSOptions(parser);
+   ArgusProcessSOptions(parser);
 
    if (parser->RaParseDone)
       exit (0);
