@@ -48,7 +48,7 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../include @V_INCLS@ @MYSQL_INCLS@
+INCLS = -I. -I../include @V_INCLS@ @MYSQL_INCLS@ @XDR_INCLS@
 DEFS = @DEFS@ -DARGUS_SYSLOG
 
 # Standard CFLAGS

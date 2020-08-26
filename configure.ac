@@ -181,16 +181,23 @@ if test ! -z "$V_WRAPDEP"; then
    WRAPLIBS="$V_WRAPDEP"
 fi
 
-AC_CHECK_FUNCS(xdrmem_create)
-if test "$ac_cv_func_xdrmem_create" = yes ; then
-   AC_DEFINE([HAVE_XDR], [], [Using system XDR library])
-else
-   case "$target_cpu" in
-      cygwin*)
-      ;;
-   esac
+saved_CPPFLAGS=$CPPFLAGS
+saved_LIBS=$LIBS
+LIB_XDR = ""
 
-fi
+AC_CHECK_HEADERS([rcp/xdr.h rcp/types.h], ,
+   [CPPFLAGS="${saved_CPPFLAGS} -I/usr/include/tirpc"
+    AC_CHECK_HEADERS(rpc/xdr.h rcp/types.h,
+      [XDR_INCLS="-I/usr/include/tirpc"
+      LIB_XDR="-ltirpc"])],)
+
+LIBS="$LIB_XDR $LIBS"
+
+AC_CHECK_FUNCS(xdrmem_create,
+   AC_DEFINE([HAVE_XDR], [], [Using system XDR library]),)
+
+CPPFLAGS=${saved_CPPFLAGS}
+LIBS=${saved_LIBS}
 
 
 CURSESLIB=""
@@ -386,6 +393,8 @@ AC_SUBST(COMPATLIB)
 AC_SUBST(ZLIB)
 AC_SUBST(CURSESLIB)
 AC_SUBST(CURSES_INCLS)
+AC_SUBST(XDR_INCLS)
+AC_SUBST(LIB_XDR)
 AC_SUBST(INSTALL_LIB)
 AC_SUBST(INSTALL_BIN)
 AC_SUBST(PCRE_CFLAGS)
