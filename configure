@@ -9414,6 +9414,11 @@ if test "x$ac_cv_header_rpc_xdr_h" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_RPC_XDR_H 1
 _ACEOF
+ XDR_INCLS="-I/usr/include/tirpc"
+      LIB_XDR="-ltirpc"
+fi
+
+done
 
 else
   CPPFLAGS="${saved_CPPFLAGS} -I/usr/include/tirpc"
@@ -10251,6 +10256,7 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
+if test -n "$PKG_CONFIG"; then
 
 # Check whether --with-systemdsystemunitdir was given.
 if test "${with_systemdsystemunitdir+set}" = set; then :
@@ -10275,6 +10281,7 @@ fi
 if test "x$with_systemdsystemunitdir" != "xno"; then :
   systemdsystemunitdir=$with_systemdsystemunitdir
 
+fi
 fi
 
 

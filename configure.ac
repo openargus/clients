@@ -437,6 +437,7 @@ V_INCLS_EXAMPLES=`echo $V_INCLS | sed -e 's/\.\./..\/../'`
 
 # from https://www.freedesktop.org/software/systemd/man/daemon.html
 PKG_PROG_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
 AC_ARG_WITH([systemdsystemunitdir],
      [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
      [with_systemdsystemunitdir=auto])
@@ -450,6 +451,7 @@ AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitd
    [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
 AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+fi
 
 LIBCURL_CHECK_CONFIG
 AC_QOSIENT_CURLEXE
