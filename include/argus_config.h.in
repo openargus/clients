@@ -251,12 +251,6 @@
 /* Define to 1 if you have the `putenv' function. */
 #undef HAVE_PUTENV
 
-/* Define to 1 if you have the <rcp/types.h> header file. */
-#undef HAVE_RCP_TYPES_H
-
-/* Define to 1 if you have the <rcp/xdr.h> header file. */
-#undef HAVE_RCP_XDR_H
-
 /* Define to 1 if you have the <readline/readline.h> header file. */
 #undef HAVE_READLINE_READLINE_H
 
