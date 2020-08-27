@@ -1006,6 +1006,11 @@ void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 
+#define ARGUS_PTYPE_INT         0
+#define ARGUS_PTYPE_UINT        1
+#define ARGUS_PTYPE_DOUBLE      2
+#define ARGUS_PTYPE_STRING      4
+
 
 struct ArgusPrintFieldStruct 
 RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {

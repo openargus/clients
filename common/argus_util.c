@@ -401,8 +401,6 @@ static void ArgusSortFileList (struct ArgusFileInput **,
                                struct ArgusFileInput **, size_t);
 static int RaDescend(char *, size_t, size_t);
 
-int ArgusParseInited = 0;
-
 #if !defined(HAVE_TIMEGM)
 time_t timegm (struct tm *);
 #endif
@@ -1236,8 +1234,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                } else
                if (!(strcmp (optarg, "json"))) {
                   parser->ArgusPrintJson++;
-                  parser->RaFieldDelimiter = ',';
-                  parser->RaFieldWidth = RA_VARIABLE_WIDTH;
+                  parser->Lflag = 0;                        // No print header lines
+                  parser->RaFieldDelimiter = ',';           // Force delimiter to comma
+                  parser->RaFieldWidth = RA_VARIABLE_WIDTH; // just making sure
                   parser->RaFieldQuoted = RA_DOUBLE_QUOTED;
                   parser->eflag = ARGUS_ENCODE_ASCII;
                   parser->cflag++;
@@ -5671,9 +5670,16 @@ ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser)
    }
 }
 
-void ArgusPrintRecordHeader (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
-void ArgusPrintRecordCloser (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+int ArgusPrintRecordHeader (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+int ArgusPrintRecordCloser (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
+int ArgusParseInited = 0;
+extern char version[];
+
+#define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
+#define ARGUS_TEMP_BUF_SIZE             0x400
+char *ArgusPrintTempBuf = NULL;
+char *ArgusTempBuffer = NULL;
 
 #define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
 #define ARGUS_TEMP_BUF_SIZE             0x400
@@ -5684,6 +5690,335 @@ char *ArgusTempBuffer = NULL;
 void
 ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *timeFormat = parser->RaTimeFormat, *tmpbuf;
+   int slen = 0, dlen = len, blen = 0;
+
+   if (ArgusPrintTempBuf == NULL)
+      if ((ArgusPrintTempBuf = (char *)ArgusMalloc(ARGUS_PRINT_TEMP_BUF_SIZE)) == NULL)
+         ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+   if (ArgusTempBuffer == NULL)
+      if ((ArgusTempBuffer = (char *)ArgusMalloc(ARGUS_TEMP_BUF_SIZE)) == NULL)
+         ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+   if ((tmpbuf = ArgusPrintTempBuf) != NULL)
+      *tmpbuf = '\0';
+
+   if (!(ArgusParseInited)) {
+      ArgusInitAddrtoname(parser);
+      ArgusParseInited = 1;
+   }
+
+   if (parser->ArgusPrintJson) {
+      if (timeFormat == NULL)
+         parser->RaTimeFormat = "%H:%M:%S.%f";
+      if (parser->RaOutputStarted == 0) {
+         parser->RaOutputStarted++;
+      }
+      blen = ArgusPrintRecordHeader (parser, buf, argus, dlen);
+   }
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         if (parser->ArgusPrintJson) {
+            ArgusPrintManagementRecord(parser, buf, argus, dlen);
+            break;
+	 }
+
+      default: {
+#if defined(ARGUS_THREADS)
+         pthread_mutex_lock(&parser->lock);
+#endif
+         for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
+            int tlen = 0;
+            if ((parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex]) != NULL) {
+               if (parser->RaPrintAlgorithm->print != NULL) {
+                  int thistype = -1;
+                  *tmpbuf = '\0';
+
+                  parser->RaPrintAlgorithm->print(parser, tmpbuf, argus, parser->RaPrintAlgorithm->length);
+                  if ((slen = strlen(tmpbuf)) > 0) {
+                     if ((thistype = parser->RaPrintAlgorithm->type) == ARGUS_PTYPE_STRING) {
+                        int ival = 0;
+                        int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
+                        if (iret) {
+                           thistype = ARGUS_PTYPE_INT;
+                        } else {
+                           float fval = 0.0;
+                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+                           if (fret) thistype = ARGUS_PTYPE_DOUBLE;
+                        }
+                     }
+                     dlen = ARGUS_PRINT_TEMP_BUF_SIZE - slen;
+                     if (!(parser->ArgusPrintJson) && (parser->RaSeparateAddrPortWithPeriod)) {
+                        if ((parser->RaPrintIndex > 0) && (parser->RaPrintIndex < ARGUS_MAX_PRINT_ALG)) {
+                           if ((parser->RaFieldDelimiter == '\0') || (parser->RaFieldDelimiter == ' ')) {
+                              if (tmpbuf[slen - 1] == ' ') {
+                                 tmpbuf[slen - 1] = '\0';  // remove trailing space
+                                 slen--;
+                                 dlen++;
+                              }
+
+                              int tok = 0, i;
+
+                              for (i = 0; i < slen; i++) {
+                                 if (!isspace((int)tmpbuf[i])) {
+                                    tok = 1; break; 
+                                 } 
+                              } 
+                              switch (argus->hdr.type & 0xF0) {
+                                 case ARGUS_FAR:
+                                 case ARGUS_NETFLOW:
+                                    if (tok) {
+                                       if ((parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1] != NULL) && 
+                                           (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)) {
+                                          if (((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintSrcPort) &&
+                                               (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintSrcAddr)) ||
+                                              ((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintDstPort) &&
+                                               (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintDstAddr))) {
+
+                                             if (parser->RaFieldDelimiter == '\0')
+                                                if (buf[blen - 1] == ' ')
+                                                   buf[blen - 1] = '.';
+                                          }
+                                       }
+                                    }
+                                    break;
+
+                                 default:
+                                    break;
+                              }
+                              tmpbuf[slen++] = ' ';
+                              tmpbuf[slen] = '\0';
+                              dlen = len - slen;
+                           }
+                        }
+                     }
+
+                     if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
+                        if (parser->RaPrintAlgorithm->print != ArgusPrintFlags)
+                           while ((slen > 0) && isspace((int)(tmpbuf[slen - 1]))) {
+                              tmpbuf[slen - 1] = '\0';  // remove trailing space
+                              slen--;
+                              dlen++;
+                           }
+
+                           if (parser->RaFieldQuoted) {
+                              int tlen, tind = 0, i;
+                              tlen = slen;
+
+			      if (tlen > 0) {
+                                 if (thistype == ARGUS_PTYPE_STRING) {
+                                    if (strchr(tmpbuf, parser->RaFieldQuoted)) {
+                                       for (i = 0; i < tlen; i++) {
+                                          if (tmpbuf[i] == parser->RaFieldQuoted)
+                                             ArgusTempBuffer[tind++] = '\\';
+                                          ArgusTempBuffer[tind++] = tmpbuf[i];
+                                       }
+                                       bcopy(ArgusTempBuffer, tmpbuf, tind);
+                                       tmpbuf[tind] = '\0';
+				       slen = tind;
+                                       dlen = ARGUS_PRINT_TEMP_BUF_SIZE - tind;
+                                    }
+                                 }
+                                 
+                                 if (parser->ArgusPrintJson) {
+                                    if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
+                                                              (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
+                                       slen = snprintf(&buf[blen], dlen, "%c%s%c:%s%c", 
+                                          parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                                          tmpbuf, parser->RaFieldDelimiter);
+				    
+                                    } else {
+                                       if (thistype == ARGUS_PTYPE_STRING) {
+                                          char *ptr = &buf[blen];
+                                          char *sptr = ptr;
+                                          int flen = strlen(parser->RaPrintAlgorithm->field);
+
+                                          *ptr++ = parser->RaFieldQuoted;
+                                          bcopy(parser->RaPrintAlgorithm->field, ptr, flen);
+                                          ptr[flen] = '\0';
+                                          ptr += flen;
+                                          *ptr++ = parser->RaFieldQuoted;
+                                          *ptr++ = ':';
+                                          *ptr++ = parser->RaFieldQuoted;
+                                          bcopy(tmpbuf, ptr, tlen);
+                                          ptr[tlen] = '\0';
+                                          ptr += tlen;
+                                          *ptr++ = parser->RaFieldQuoted;
+                                          *ptr++ = parser->RaFieldDelimiter;
+                                          slen = (ptr - sptr);
+/*
+                                          slen = snprintf(&buf[blen], dlen, "%c%s%c:%c%s%c%c", 
+                                             parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                                             parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted,
+                                             parser->RaFieldDelimiter);
+*/
+				       } else {
+					  char *ptr = &buf[blen];
+					  char *sptr = ptr;
+					  int flen = strlen(parser->RaPrintAlgorithm->field);
+
+					  *ptr++ = parser->RaFieldQuoted;
+					  bcopy(parser->RaPrintAlgorithm->field, ptr, flen);
+					  ptr[flen] = '\0';
+					  ptr += flen;
+					  *ptr++ = parser->RaFieldQuoted;
+					  *ptr++ = ':';
+					  bcopy(tmpbuf, ptr, tlen);
+					  ptr[tlen] = '\0';
+					  ptr += tlen;
+					  *ptr++ = parser->RaFieldDelimiter;
+					  slen = (ptr - sptr);
+/*
+                                          slen = snprintf(&buf[blen], dlen, "%c%s%c:%s%c", 
+                                             parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                                             tmpbuf, parser->RaFieldDelimiter);
+*/
+				       }
+                                    }
+                                 }
+                              }
+
+                           } else {
+                              slen = snprintf(&buf[blen], dlen, "%s%c", tmpbuf, parser->RaFieldDelimiter);
+                           }
+
+                        } else {
+                           dlen = len - blen;
+                           slen = snprintf(&buf[blen], dlen, "%s", tmpbuf);
+                        }
+
+                  } else {
+                     if (parser->ArgusPrintJson) {
+                        switch (parser->ArgusPrintJsonEmptyString) {
+                           case ARGUS_PRINT_NULL: {
+                              char *ptr = &buf[blen];
+                              char *sptr = ptr;
+                              int flen = strlen(parser->RaPrintAlgorithm->field);
+
+                              *ptr++ = parser->RaFieldQuoted;
+                              bcopy(parser->RaPrintAlgorithm->field, ptr, flen);
+                              ptr[flen] = '\0';
+                              ptr += flen;
+                              *ptr++ = parser->RaFieldQuoted;
+                              *ptr++ = ':';
+                              bcopy("null", ptr, 4);
+                              ptr[4] = '\0';
+                              ptr += 4;
+                              *ptr++ = parser->RaFieldDelimiter;
+                              slen = (ptr - sptr);
+/*
+                              slen = snprintf(&buf[blen], dlen, "%c%s%c:null%c", 
+                                 parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                                 parser->RaFieldDelimiter);
+*/
+                              break;
+                           }
+
+                           case ARGUS_PRINT_EMPTY_STRING: {
+                              char *ptr = &buf[blen];
+                              char *sptr = ptr;
+                              int flen = strlen(parser->RaPrintAlgorithm->field);
+
+                              *ptr++ = parser->RaFieldQuoted;
+                              bcopy(parser->RaPrintAlgorithm->field, ptr, flen); 
+                              ptr[flen] = '\0';
+                              ptr += flen;
+                              *ptr++ = parser->RaFieldQuoted;
+                              *ptr++ = ':';
+                              *ptr++ = parser->RaFieldQuoted;
+                              *ptr++ = parser->RaFieldQuoted;
+                              *ptr++ = parser->RaFieldDelimiter;
+                              slen = (ptr - sptr);
+/*
+                              slen = snprintf(&buf[blen], dlen, "%c%s%c:%c%c%c", 
+                                       parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                                       parser->RaFieldQuoted, parser->RaFieldQuoted, parser->RaFieldDelimiter);
+*/
+                              break;
+                           }
+
+                           case ARGUS_OMIT_EMPTY_STRING:
+                              slen = 0;
+                              break;
+		        }
+                     } else
+                        slen = snprintf(&buf[blen], dlen, "%c%s%c%c", 
+			         parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
+                  }
+                  blen += slen;
+                  parser->RaPrintAlgorithm->offset = blen;
+               }
+            }
+         }
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&parser->lock);
+#endif
+         break;
+      }
+   }
+
+   blen = strlen(buf);
+   dlen = len - blen;
+
+   if (!(parser->ArgusPrintJson))
+      while (isspace((int)(buf[blen - 1])))
+      {
+         buf[blen - 1] = '\0';
+         blen--;
+      }
+
+   if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0'))
+      if (buf[blen - 1] == parser->RaFieldDelimiter)
+      {
+         buf[blen - 1] = '\0';
+         blen--;
+      }
+
+   /*
+   if (parser->RaFieldQuoted)
+   {
+      char *ptr = tptr, sepbuf[8], *sep = sepbuf;
+      char *ap, *tstr = buf;
+      int i = 0;
+
+      bzero(sep, 8);
+      sep[0] = parser->RaFieldDelimiter;
+
+      while ((ap = strtok(tstr, sep)) != NULL)
+      {
+         if (i++)
+            *ptr++ = parser->RaFieldDelimiter;
+         if (*ap != '\0')
+         {
+            snprintf(ptr, MAXSTRLEN, "%c%s%c", parser->RaFieldQuoted, ap, parser->RaFieldQuoted);
+            ptr += strlen(ptr);
+         }
+         else
+         {
+            snprintf(ptr, MAXSTRLEN, "%c%c", parser->RaFieldQuoted, parser->RaFieldQuoted);
+            ptr += strlen(ptr);
+         }
+         tstr = NULL;
+      }
+   }
+   */
+
+   dlen = len - blen;
+
+   if (parser->ArgusPrintJson)
+   {
+      ArgusPrintRecordCloser(parser, &buf[blen], argus, dlen);
+   }
+
+   parser->RaTimeFormat = timeFormat;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug(10, "ArgusPrintRecord (%p, %p, %p, %d)", parser, buf, argus, len);
+#endif
+
+/*
    struct ArgusInput *input = argus->input;
    char *timeFormat = parser->RaTimeFormat, *tmpbuf;
    int slen = 0, dlen = len;
@@ -5710,7 +6045,6 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       if (parser->RaOutputStarted == 0) {
          parser->RaOutputStarted++;
       }
-      snprintf(&buf[strlen(buf)], dlen, "{");
 
    if (parser->ArgusPrintJson) {
       if (timeFormat == NULL)
@@ -5724,7 +6058,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    if (parser->ArgusPrintXml) {
       parser->RaTimeFormat="%Y-%m-%dT%H:%M:%S.%f";
 
-      /* If input is NULL this record was generated locally, not received. */
+//  If input is NULL this record was generated locally, not received.
       if (parser->RaOutputStarted == 0 && input != NULL) {
          struct ArgusRecord *rec = (struct ArgusRecord *) &input->ArgusManStart;
          struct ArgusInterfaceStruct *interface = &ArgusInterfaceTypes[0];
@@ -5983,6 +6317,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintRecord (%p, %p, %p, %d)", parser, buf, argus, len);
 #endif
+*/
 }
 
 /*
@@ -5993,6 +6328,12 @@ ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct A
 }
 
 void
+ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   ArgusPrintManStatus(parser,&buf[strlen(buf)],argus,len);
+}
+
+int
 ArgusPrintRecordHeader (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char *ArgusTypeStr = NULL;
@@ -6018,10 +6359,13 @@ ArgusPrintRecordHeader (struct ArgusParserStruct *parser, char *buf, struct Argu
       snprintf(&buf[strlen(buf)], len, " <Argus%sRecord ", ArgusTypeStr);
    }
 
-void
+int
 ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   int retn = 0;
+
    if (buf != NULL) {
+      retn = strlen(buf);
       if (parser->ArgusPrintJson) {
          sprintf(&buf[strlen(buf)], "}");
       } else {
@@ -6045,6 +6389,7 @@ ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct Argu
          }
       }
    }
+   return (retn);
 }
 
 
