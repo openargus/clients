@@ -6736,10 +6736,6 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
    return;
 }
 
-
-char argus_strbuf[MAXSTRLEN];
-u_short ArgusThisProto;
-
 void
 ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
