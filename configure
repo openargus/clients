@@ -5534,7 +5534,7 @@ fi
 rm -f conftest*
 
 
-         if test "$MYSQL_BOOL_AVAILABLE" = yes; then
+         if test "$MYSQL_MY_BOOL_AVAILABLE" = yes; then
 
 $as_echo "#define HAVE_MYSQL_MY_BOOL /**/" >>confdefs.h
 
