@@ -921,18 +921,20 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 
    if (ArgusFileQueue->count) {
       int i, cnt = ArgusFileQueue->count;
-      char buf[2048], sbuf[2048];
+      char *buf = NULL, *sbuf = NULL;
       MYSQL_RES *mysqlRes;
       struct stat statbuf;
       int retn, x;
 
+      if ((buf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+      if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+
       for (i = 0; i < cnt; i++) {
          if ((fstruct = (struct RaMySQLFileStruct *) ArgusPopQueue(ArgusFileQueue, ARGUS_LOCK)) !=  NULL) {
-            char *str = NULL;
-            bzero (buf, sizeof(buf));
 
-            str = "SELECT filename from Filename WHERE id = %d",
-            sprintf (buf, str, fstruct->fileindex);
+            sprintf (buf, "SELECT filename from Filename WHERE id = %d", fstruct->fileindex);
 
             if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
                ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
@@ -940,13 +942,19 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
             else {
                if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
                   if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     char *file = NULL, *filenamebuf = NULL, *directorypath = NULL;
+          
+                     if ((file = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+                     if ((filenamebuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+                     if ((directorypath = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+
                      while ((row = mysql_fetch_row(mysqlRes))) {
-                        char file[MAXSTRLEN];
-                        char filenamebuf[MAXSTRLEN];
-                        char directorypath[MAXSTRLEN];
                         char *ptr = NULL;
                         unsigned long *lengths;
-          
+
                         lengths = mysql_fetch_lengths(mysqlRes);
                         if (RaFormat) {
                            char fbuf[1024];
@@ -1002,11 +1010,17 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                         }
 
                         if ((stat (filenamebuf, &statbuf)) != 0) {
-                           char compressbuf[MAXSTRLEN];
+                           char *command, *compressbuf;
+
+                           if ((command = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+                              ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusCalloc error %s", strerror(errno));
+
+                           if ((compressbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+                              ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusCalloc error %s", strerror(errno));
+
                            sprintf (compressbuf, "%s.gz", filenamebuf);
                            if ((stat (compressbuf, &statbuf)) == 0) {
                               if ((fstruct->ostart >= 0) || (fstruct->ostop > 0)) {
-                                 char command[MAXSTRLEN];
                                  sprintf (command, "gunzip %s", compressbuf);
 #ifdef ARGUSDEBUG
                                  ArgusDebug (2, "RaSQLProcessQueue: local decomression command %s\n", command);
@@ -1019,7 +1033,6 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 
                            } else {
                               if (RaHost) {
-                                 char command[MAXSTRLEN];
                                  int RaPort = ArgusParser->ArgusPortNum ?  ArgusParser->ArgusPortNum : ARGUS_DEFAULTPORT;
 
                                  if (RaRoleString != NULL)
@@ -1031,12 +1044,22 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 #endif
                                  if (system(command) < 0)
                                     ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
+
+                                 if (command != NULL)
+                                    ArgusFree(command);
                               }
                            }
+                           if (command != NULL)
+                              ArgusFree(command);
+                           if (compressbuf != NULL)
+                              ArgusFree(compressbuf);
                         }
 
                         fstruct->filename = strdup (filenamebuf);
                      }
+                     if (file != NULL) ArgusFree(file);
+                     if (filenamebuf) ArgusFree(filenamebuf);
+                     if (directorypath != NULL) ArgusFree(directorypath);
                   }
 
                   mysql_free_result(mysqlRes);

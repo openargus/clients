@@ -158,8 +158,6 @@ extern SIGRET nohostname(int);
 extern char *ArgusGetName(struct ArgusParserStruct *, unsigned char *);
 extern char *ArgusGetV6Name(struct ArgusParserStruct *, unsigned char *);
 extern struct enamemem *lookup_emem(struct enamemem *, const unsigned char *);
-extern inline struct enamemem *lookup_nsap(const unsigned char *);
-extern inline struct protoidmem *lookup_protoid(const unsigned char *);
 
 char *ArgusEtherProtoString(struct ArgusParserStruct *, unsigned short port);
 char *linkaddr_string(struct ArgusParserStruct *parser, unsigned char *, unsigned int);

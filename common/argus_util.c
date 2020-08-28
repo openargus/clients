@@ -2271,11 +2271,12 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            }
 
                            case RA_SERVICES_SIGNATURES: {
-                              if (parser->ArgusLabeler == NULL)
+                              if (parser->ArgusLabeler == NULL) {
                                  if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
                                     ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
                                  RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
+			      }
                               break;
                            }
 
@@ -19406,7 +19407,7 @@ ArgusPrintCountryCode (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                while (caddr && strlen(caddr->cco) == 0) caddr = caddr->p;
 
                if (caddr != NULL) 
-                  snprintf (buf, 3, "%s", caddr->cco);
+                  snprintf (buf, 4, "%s", caddr->cco);
                else
                   snprintf (buf, 3, "ZZ");
             }
@@ -19418,7 +19419,7 @@ ArgusPrintCountryCode (struct ArgusParserStruct *parser, struct ArgusRecordStruc
       }
 
    } else
-      snprintf (buf, 2, "  ");
+      snprintf (buf, 3, "  ");
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "ArgusPrintCountryCode (%p, %p, %p, %d, %d, %p) returning\n", parser, argus, addr, type, len, buf);
@@ -22773,12 +22774,15 @@ void
 ArgusLog (int priority, char *fmt, ...)
 {
    va_list ap;
-   char buf[MAXSTRLEN], *ptr = buf;
+   char *buf = NULL, *ptr = NULL;
    struct timeval now;
    char *label = NULL;
-   int i;
+   int i, slen;
 
-   bzero(buf, sizeof(buf));
+   if ((buf = (char *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusLog ArgusCalloc: error %s", strerror(errno));
+
+   ptr = buf;
    gettimeofday (&now, 0L);
 
 #if defined(ARGUS_THREADS)
@@ -22832,10 +22836,13 @@ ArgusLog (int priority, char *fmt, ...)
    (void) vsnprintf (ptr, (MAXSTRLEN - strlen(buf)), fmt, ap);
    va_end (ap);
 
-   while (buf[strlen(buf) - 1] == '\n')
-      buf[strlen(buf) - 1] = '\0';
+   slen = strlen(buf);
+   while (buf[slen] == '\n') {
+      buf[slen - 1] = '\0';
+      slen--;
+   }
 
-   ptr = &buf[strlen(buf)];
+   ptr = &buf[slen];
 
    for (i = 0; i < ARGUSPRIORITYSTR; i++) 
       if (ArgusPriorityStr[i].priority == priority) {
@@ -22900,6 +22907,9 @@ ArgusLog (int priority, char *fmt, ...)
       default:
          break;
    }
+
+   if (buf != NULL)
+      ArgusFree(buf);
 }
 
 

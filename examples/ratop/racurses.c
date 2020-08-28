@@ -389,6 +389,10 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 {
    struct ArgusParserStruct *parser = ArgusParser;
    int retn = status;
+   char *sbuf = NULL;
+
+   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
    if ((ch == '\n') || (ch == '\r')) {
       RaCursorOffset = 0;
@@ -512,11 +516,9 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ptr = NULL;
 
             if ((fretn = ArgusFilterCompile (&lfilter, ptr, 1)) < 0) {
-               char sbuf[1024];
                sprintf (sbuf, "%s %s syntax error", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
             } else {
-               char sbuf[1024];
                sprintf (sbuf, "%s %s filter accepted", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
                if ((str = ptr) != NULL)
@@ -789,7 +791,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGM: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL, sbuf[1024];
+            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL;
             struct ArgusModeStruct *mode = NULL;
             int mretn = 0;
             char *tzptr;
@@ -992,7 +994,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGn: {
-            char sbuf[1024], *name = NULL;;
+            char *name = NULL;;
             if (strstr(RaCommandInputStr, "all")) ArgusParser->nflag = 0; else
             if (strstr(RaCommandInputStr, "port")) ArgusParser->nflag = 1; else
             if (strstr(RaCommandInputStr, "proto")) ArgusParser->nflag = 2; else
@@ -1021,7 +1023,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (RaCommandInputStr != endptr) {
                ArgusParser->pflag = value;
             } else {
-               char sbuf[1024];
                sprintf (sbuf, "%s %s syntax error", RAGETTINGuSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
             }
@@ -1060,7 +1061,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                      for (i = 0; i < globbuf.gl_pathc; i++)
                         ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
                   } else {
-                     char sbuf[1024];
                      sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
                      ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
                   }
@@ -1167,7 +1167,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGu: {
             double value = 0.0, ivalue, fvalue;
             char *endptr = NULL;
-            char sbuf[1024];
 #if defined(ARGUS_READLINE)
             int keytimeout;
 #endif
@@ -1202,7 +1201,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGU: {
             double value = 0.0;
             char *endptr = NULL;
-            char sbuf[1024];
  
             value = strtod(RaCommandInputStr, &endptr);
  
@@ -1225,7 +1223,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             struct ArgusWfileStruct *wfile = NULL;
             struct ArgusRecord *argusrec = NULL;
             struct ArgusRecordStruct *ns;
-            static char sbuf[0x10000];
+            static char buf[0x10000];
             int i;
 
             if (strlen(RaCommandInputStr)) {
@@ -1246,7 +1244,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, sbuf)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
@@ -1344,7 +1342,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGslash: {
             int linenum = RaWindowCursorY;
             int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
-            char sbuf[1024];
 
             if ((linenum = RaSearchDisplay(ArgusParser, RaCursesProcess->queue, ArgusSearchDirection, &cursx, &cursy, RaCommandInputStr, ARGUS_LOCK)) < 0) {
                if (ArgusSearchDirection == ARGUS_FORWARD) {
@@ -1397,6 +1394,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          RaCommandInputStr[0] = '\0';
       }
    }
+   if (sbuf != NULL) ArgusFree(sbuf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusProcessTerminator(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
@@ -3550,7 +3548,10 @@ argus_getsearch_string(int dir)
 void
 argus_command_string(void)
 {
-   char *line;
+   char *line, *sbuf = NULL;
+
+   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
 #if defined(ARGUS_HISTORY)
    argus_disable_history();
@@ -3727,12 +3728,10 @@ argus_command_string(void)
             }
 
             if ((retn = ArgusFilterCompile (&lfilter, ptr, 1)) < 0) {
-               char sbuf[1024];
                sprintf (sbuf, "%s%s syntax error", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
 
            } else {
-               char sbuf[1024];
                sprintf (sbuf, "%s%s filter accepted", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
                if ((str = ptr) != NULL)
@@ -3996,7 +3995,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGM: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL, sbuf[1024];
+            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL;
             struct ArgusModeStruct *mode = NULL;
             char *tzptr;
             int retn = 0;
@@ -4199,7 +4198,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGn: {
-            char sbuf[1024], *name = NULL;;
+            char *name = NULL;;
 
             if (strstr(RaCommandInputStr, "all")) ArgusParser->nflag = 0; else
             if (strstr(RaCommandInputStr, "port")) ArgusParser->nflag = 1; else
@@ -4221,7 +4220,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGp: {
-            char *endptr = NULL, sbuf[1024];
+            char *endptr = NULL;
             int value = 0;
 
             value = strtod(RaCommandInputStr, &endptr);
@@ -4254,7 +4253,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGr: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL, sbuf[1024];
+            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
             glob_t globbuf;
 
             bzero (strbuf, MAXSTRLEN);
@@ -4387,7 +4386,7 @@ argus_command_string(void)
 
          case RAGETTINGu: {
             double value = 0.0, ivalue, fvalue;
-            char *endptr = NULL, sbuf[1024];
+            char *endptr = NULL;
        
             value = strtod(RaCommandInputStr, &endptr);
        
@@ -4411,7 +4410,7 @@ argus_command_string(void)
 
 
          case RAGETTINGU: {
-            char *endptr = NULL, sbuf[1024];
+            char *endptr = NULL;
             double value = 0.0;
        
             value = strtod(RaCommandInputStr, &endptr);
@@ -4435,7 +4434,7 @@ argus_command_string(void)
             struct ArgusWfileStruct *wfile = NULL;
             struct ArgusRecord *argusrec = NULL;
             struct ArgusRecordStruct *ns;
-            static char sbuf[0x10000];
+            static char buf[0x10000];
             int i;
 
             if (strlen(RaCommandInputStr)) {
@@ -4459,7 +4458,7 @@ argus_command_string(void)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, sbuf)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
@@ -4566,6 +4565,7 @@ argus_command_string(void)
 
    cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
+   if (sbuf != NULL) ArgusFree(sbuf);
 
 #if defined(ARGUS_HISTORY)
    argus_enable_history();
@@ -5172,7 +5172,10 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
    struct ArgusRecordStruct *ns = NULL;
    regex_t pregbuf, *preg = &pregbuf;
    regmatch_t pmbuf[32], *pm = &pmbuf[0];
-   char sbuf[1024];
+   char *sbuf = NULL;
+
+   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
 #if defined(ARGUS_PCRE)
    options = 0;
@@ -5229,6 +5232,8 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
       touchwin(RaCurrentWindow->window);
 
    regfree(preg);
+   if (sbuf != NULL) ArgusFree(sbuf);
+
    return (retn);
 }
 
@@ -5239,7 +5244,10 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    int retn = -1, x = 0, startline = *cursy, options, rege;
    struct ArgusRecordStruct *ns = NULL;
    regex_t pregbuf, *preg = &pregbuf;
-   char buf[MAXSTRLEN], *ptr;
+   char *buf = NULL, *ptr = NULL;
+
+   if ((buf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
 #if defined(ARGUS_PCRE)
    options = 0;
@@ -5429,6 +5437,7 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    ArgusSearchHitRecord = NULL;
    ArgusSearchHitRank = 0;
    regfree(preg);
+   if (buf != NULL) ArgusFree(buf);
    return (-1);
 }
 

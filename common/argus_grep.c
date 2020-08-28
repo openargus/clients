@@ -151,9 +151,10 @@ ArgusGrepUserData (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
             len = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
 
          for (i = 0; i < parser->ArgusRegExItems; i++) {
-            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len])))
+            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len]))) {
                found++;
                break;
+            }
          }
       }
    }

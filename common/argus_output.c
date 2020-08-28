@@ -1685,7 +1685,7 @@ ArgusTcpWrapper (int fd, struct sockaddr *from, char *clienthost)
    if ((getpeername(fd, (struct sockaddr *)&remoteaddr, &salen) == 0) &&
                       (remoteaddr.ss_family == AF_INET || remoteaddr.ss_family == AF_INET6)) {
       if (getnameinfo((struct sockaddr *)&remoteaddr, salen, hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD) == 0) {
-         strncpy(clienthost, hbuf, sizeof(hbuf));
+         strncpy(clienthost, hbuf, sizeof(hbuf) - 1);
       } else {
          clienthost[0] = '\0';
       }
