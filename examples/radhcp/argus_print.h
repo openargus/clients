@@ -36,15 +36,23 @@ struct ArgusFormatterTable {
 # if defined(ARGUS_MYSQL)
 #  include "argus_mysql.h"
 #  define ASSIGN_ARGUS_SQL_BIND(b) .sql_bind = (b)
+#  define ASSIGN_ARGUS_SQL_SCAN(c) .sql_scan = (c)
 struct ArgusPrinterTable;
 typedef int (*ArgusSQLBind)(MYSQL_BIND *b, 
                             const struct ArgusParserStruct * const,
                             const struct ArgusPrinterTable * const,
                             const void * const,
                             const struct ArgusFormatterTable * const);
+typedef int (*ArgusSQLScan)(const MYSQL_BIND * const b,
+                            const struct ArgusParserStruct * const,
+                            const struct ArgusPrinterTable * const,
+                            const void * const,
+                            void * /* ArgusDhcpStruct */);
 # else
 #  define ASSIGN_ARGUS_SQL_BIND(b) .sql_bind = NULL
+#  define ASSIGN_ARGUS_SQL_SCAN(b) .sql_scan = NULL
 typedef void *ArgusSQLBind;
+typedef void *ArgusSQLScan;
 # endif
 /* enable flags for ArgusPrinterTable->enabled */
 # define ENA_DISPLAY            0x1
@@ -57,6 +65,7 @@ typedef ssize_t (*ArgusPrinter)(const struct ArgusParserStruct * const,
 struct ArgusPrinterTable {
    ArgusPrinter printer;       /* function to format as text */
    ArgusSQLBind sql_bind;      /* bind parameter for prepared statement */
+   ArgusSQLScan sql_scan;      /* retrieve data from prepared statement result */
    const char * const label;   /* display name */
    const char * const sqltype; /* SQL data type for this element */
    unsigned offset;            /* offset into structure */
@@ -64,13 +73,14 @@ struct ArgusPrinterTable {
 };
 
 
-# define ARGUS_PRINT_INITIALIZER(typename, fieldname, l, func, s, e, b) \
-   { .printer = (func),                                                 \
-     .label = (l),                                                      \
-     .offset = offsetof(struct typename, fieldname),                    \
-     .sqltype = (s),                                                    \
-     .enabled = (e),                                                    \
-     ASSIGN_ARGUS_SQL_BIND(b),                                          \
+# define ARGUS_PRINT_INITIALIZER(typename, fieldname, l, func, s, e, b, c) \
+   { .printer = (func),                                                    \
+     .label = (l),                                                         \
+     .offset = offsetof(struct typename, fieldname),                       \
+     .sqltype = (s),                                                       \
+     .enabled = (e),                                                       \
+     ASSIGN_ARGUS_SQL_BIND(b),                                             \
+     ASSIGN_ARGUS_SQL_SCAN(c),                                             \
    }
 
 static inline
@@ -117,6 +127,23 @@ int ArgusPrintFieldSQL(const struct ArgusParserStruct * const parser,
    rv = table[idx].sql_bind(b, parser, &table[idx],
                             ((char *)ptr)+table[idx].offset,
                             &ArgusSQLFormatterTable);
+   if (rv == 0)
+      return 1;
+   return 0;
+}
+
+static inline
+int ArgusScanFieldSQL(const struct ArgusParserStruct * const parser,
+                      const struct ArgusPrinterTable * const table,
+                      void *ptr,        /* structure */
+                      unsigned idx, const MYSQL_BIND * const b)
+{
+   int rv;
+
+   if (table[idx].enabled <= ENA_DISPLAY)
+      return 0;
+   rv = table[idx].sql_scan(b, parser, &table[idx], NULL,
+                            ((char *)ptr)+table[idx].offset);
    if (rv == 0)
       return 1;
    return 0;

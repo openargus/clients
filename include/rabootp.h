@@ -31,9 +31,12 @@
 #ifndef _RABOOTP_H_
 #define	_RABOOTP_H_
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <sys/types.h>
 #include <netinet/in.h>
-#include "argus_config.h"
 #include "argus_util.h"
 #include "argus_parser.h"
 #include "argus_debug.h"
@@ -41,6 +44,16 @@
 #include "rabootp_callback.h"
 #include "rabootp_timer.h"
 #include "rabootp_interval_tree.h" /* for RabootpIntvlTreeOverlapsRange */
+
+# if defined(ARGUS_MYSQL)
+#  include "argus_mysql.h"
+
+void RaSQLResultBindFreeOne(MYSQL_BIND *);
+void RaSQLResultBindFree(MYSQL_BIND *, int);
+int RaSQLResultBindOne(MYSQL_BIND *, const MYSQL_FIELD * const);
+int RaSQLResultBind(MYSQL_BIND *, const MYSQL_FIELD * const, int);
+
+# endif /* ARGUS_MYSQL */
 
 #ifdef ARGUSDEBUG
 # define DEBUGLOG(lvl, fmt...) ArgusDebug(lvl, fmt)
@@ -50,6 +63,30 @@
 
 /* message type missing from dhcp.h */
 #define DHCPFORCERENEW 9           /* RFC 3203 */
+
+static int
+#ifdef __GNUC__
+__attribute__((always_inline))
+#endif
+inline
+__ether_aton(const char * const etherstr, unsigned char *addr)
+{
+   int i;
+   unsigned int o0, o1, o2, o3, o4, o5;
+
+   i = sscanf(etherstr, "%x:%x:%x:%x:%x:%x", &o0, &o1, &o2, &o3, &o4, &o5);
+   if (i != 6)
+      return -1;
+
+   addr[0] = o0;
+   addr[1] = o1;
+   addr[2] = o2;
+   addr[3] = o3;
+   addr[4] = o4;
+   addr[5] = o5;
+
+   return 0;
+}
 
 static inline uint16_t
 __type2mask(const uint8_t t)

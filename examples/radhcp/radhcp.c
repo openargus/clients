@@ -135,6 +135,7 @@ __is_oneshot_query(void)
    return 0;
 }
 
+/*
 static int
 __ether_aton(const char * const etherstr, unsigned char *addr)
 {
@@ -154,6 +155,7 @@ __ether_aton(const char * const etherstr, unsigned char *addr)
 
    return 0;
 }
+*/
 
 static int
 __parse_ipv4_prefix(const char * const prefixstr, struct in_addr *addr,

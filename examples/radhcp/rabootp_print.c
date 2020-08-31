@@ -15,6 +15,7 @@
 #include "rabootp_print.h"
 #include "argus_print.h"
 #include "rabootp_sql_bind.h" /* static sql-binding functions */
+#include "rabootp_sql_scan.h"
 
 #define RABOOTP_PRINT_FIELD_MAX 64
 
@@ -88,93 +89,112 @@ static const struct ArgusPrinterTable ArgusDhcpReplyPrinterTablep[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, yiaddr, "clientaddr", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, hostname, "hostname", \
                            RabootpPrintString, "varchar(128)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, netmask, "netmask", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, broadcast, "broadcast", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, router, "router", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, router_count, \
                            "router_count", \
                            RabootpPrintUint8, "tinyint unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTiny),
+                           RabootpSQLBindTiny, \
+                           RabootpSQLScanUint8),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, domainname, \
                            "domainname", \
                            RabootpPrintString, "varchar(128)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanString),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, siaddr, "siaddr", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver[0], \
                            "timeserver0", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, timeserver_count, \
                            "timeserver_count", \
                            RabootpPrintUint8, "tinyint unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTiny),
+                           RabootpSQLBindTiny, \
+                           RabootpSQLScanUint8),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[0], \
                            "nameserver0", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver[1], \
                            "nameserver1", \
                            RabootpPrintL3, "varchar(16)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL3Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, nameserver_count, \
                            "nameserver_count", \
                            RabootpPrintUint8, "tinyint unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTiny),
+                           RabootpSQLBindTiny, \
+                           RabootpSQLScanUint8),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, shaddr, "servermac", \
                            RabootpPrintL2, "varchar(18)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL2Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpV4LeaseOptsStruct, hops, \
                            "hops", \
                            RabootpPrintUint8, "tinyint unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTiny),
+                           RabootpSQLBindTiny, \
+                           RabootpSQLScanUint8),
 };
 
 static const struct ArgusPrinterTable ArgusDhcpStructPrinterTable[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpStruct, chaddr, "clientmac", \
                            RabootpPrintL2, "varchar(18)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanL2Addr),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpStruct, xid, "XID", \
                            RabootpPrintHex32, "integer unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindUnsigned),
+                           RabootpSQLBindUnsigned, \
+                           RabootpSQLScanUint32),
 };
 
 static const struct ArgusPrinterTable ArgusDhcpIntvlPrinterTable[] = {
    ARGUS_PRINT_INITIALIZER(ArgusDhcpIntvlNode, intlo, "stime", \
                            RabootpPrintTimeval, "double(18,6) unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTimeval),
+                           RabootpSQLBindTimeval, \
+                           RabootpSQLScanTimeval),
    ARGUS_PRINT_INITIALIZER(ArgusDhcpIntvlNode, inthi, "ltime", \
                            RabootpPrintTimeval, "double(18,6) unsigned", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY, \
-                           RabootpSQLBindTimeval),
+                           RabootpSQLBindTimeval, \
+                           RabootpSQLScanTimeval),
 };
 
 static const struct ArgusPrinterTable ArgusDhcpRequestTable[] = {
@@ -182,7 +202,8 @@ static const struct ArgusPrinterTable ArgusDhcpRequestTable[] = {
                            "requested_hostname", \
                            RabootpPrintString, "varchar(128)", \
                            ENA_DISPLAY|ENA_SQL_LEASE_SUMMARY,
-                           RabootpSQLBindString),
+                           RabootpSQLBindString, \
+                           RabootpSQLScanString),
 };
 
 static inline void
@@ -582,5 +603,57 @@ int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
       }
    }
    return out_idx;
+}
+
+int RabootpScanSQL(const struct ArgusParserStruct * const parser,
+                   struct ArgusDhcpIntvlNode *node,
+                   const MYSQL_BIND * const bindvec, size_t nitems)
+{
+   int timax, tcmax, trmax, tqmax, t;
+   int res;
+   int idx = 0;
+
+   tcmax = sizeof(ArgusDhcpStructPrinterTable)/
+           sizeof(ArgusDhcpStructPrinterTable[0]);
+   timax = sizeof(ArgusDhcpIntvlPrinterTable)/
+           sizeof(ArgusDhcpIntvlPrinterTable[0]);
+   trmax = sizeof(ArgusDhcpReplyPrinterTablep)/
+           sizeof(ArgusDhcpReplyPrinterTablep[0]);
+   tqmax = sizeof(ArgusDhcpRequestTable)/
+           sizeof(ArgusDhcpRequestTable[0]);
+
+   for (t = 0; t < tcmax && idx < nitems; t++) {
+      res = ArgusScanFieldSQL(parser, ArgusDhcpStructPrinterTable, node->data,
+                              t, &bindvec[idx]);
+      if (res <= 0)
+          DEBUGLOG(4, "%s: failed to scan SQL field in ArgusDhcpStructPrinterTable\n",
+                   __func__);
+      idx++;
+   }
+   for (t = 0; t < timax && idx < nitems; t++) {
+      res = ArgusScanFieldSQL(parser, ArgusDhcpIntvlPrinterTable, node, t,
+                              &bindvec[idx]);
+      if (res <= 0)
+          DEBUGLOG(4, "%s: failed to scan SQL field in ArgusDhcpIntvlPrinterTable\n",
+                   __func__);
+      idx++;
+   }
+   for (t = 0; t < trmax && idx < nitems; t++) {
+      res = ArgusScanFieldSQL(parser, ArgusDhcpReplyPrinterTablep,
+                              &(node->data->rep), t, &bindvec[idx]);
+      if (res <= 0)
+          DEBUGLOG(4, "%s: failed to scan SQL field in ArgusDhcpReplyPrinterTablep\n",
+                   __func__);
+      idx++;
+   }
+   for (t = 0; t < tqmax && idx < nitems; t++) {
+      res = ArgusScanFieldSQL(parser, ArgusDhcpRequestTable,
+                              &(node->data->req), t, &bindvec[idx]);
+      if (res <= 0)
+          DEBUGLOG(4, "%s: failed to scan SQL field in ArgusDhcpRequestTable\n",
+                   __func__);
+      idx++;
+   }
+   return idx;
 }
 #endif
