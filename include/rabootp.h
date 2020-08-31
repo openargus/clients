@@ -48,6 +48,12 @@
 # if defined(ARGUS_MYSQL)
 #  include "argus_mysql.h"
 
+#  define RASQL_MAX_COLUMNS     64
+#  define RASQL_MAX_VARCHAR     128
+
+/* excessive? */
+#  define ARGUS_MAX_TABLE_LIST_SIZE	0x10000
+
 void RaSQLResultBindFreeOne(MYSQL_BIND *);
 void RaSQLResultBindFree(MYSQL_BIND *, int);
 int RaSQLResultBindOne(MYSQL_BIND *, const MYSQL_FIELD * const);

@@ -91,13 +91,31 @@ SRC =	radhcp.c rabootp.c rasql.c rabootp_memory.c rabootp_client_tree.c \
 	rabootp_patricia_tree.c \
 	rabootp_lease_pullup.c \
 	rabootp_querystr.c \
-	rabootp_sql_scan.c \
 	rabootp_sql_bind.c \
+	rabootp_sql_scan.c \
         rabootp_sql.c
 
 PROGS = $(INSTALLBIN)/radhcp
 ifndef WORKSTATION_BUILD
+ifneq ("@ARGUS_MYSQL@","")
 SCRIPTS = $(INSTALLBIN)/radhcp-query
+DHCPLIB = argus_dhcp.a
+DHCPLIB_OBJ = \
+	argus_dhcp.o \
+	rasql_result_bind.o \
+	rabootp_lease_pullup.o \
+	rasql_prepared_query.o \
+	rabootp_memory.o \
+	rabootp_print.o \
+	rabootp_sql_scan.o \
+	rabootp_sql_bind.o \
+	rasql_common.o
+DHCPLIB_EXAMPLE = example-libargus_dhcp
+DHCPLIB_EXAMPLE_OBJ = \
+        argus_format_json.o \
+	example-libargus_dhcp.o
+PROGS += $(DHCPLIB_EXAMPLE)
+endif
 endif
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -105,16 +123,35 @@ endif
  
 OBJ =	$(SRC:.c=.o)
 
-all: $(PROGS) $(SCRIPTS)
+all: $(PROGS) $(SCRIPTS) $(DHCPLIB)
 
 $(INSTALLBIN)/radhcp: $(OBJ) $(LIB)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+ifndef WORKSTATION_BUILD
+example-libargus_dhcp: $(DHCPLIB_EXAMPLE_OBJ) \
+                       argus_dhcp.a
+	$(CC) $(CFLAGS) -o $@ $^ $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(DHCPLIB): $(DHCPLIB_OBJ)
+	rm -f $@; $(AR) qc $@ $^
+	-$(RANLIB) $@
+rasql_common.o: ../ramysql/rasql_common.c
+	@rm -f $@
+	$(CC) $(CFLAGS) -c $^
+rasql_result_bind.o: ../ramysql/rasql_result_bind.c
+	$(CC) $(CFLAGS) -c $^
+rasql_prepared_query.o: ../ramysql/rasql_prepared_query.c
+	$(CC) $(CFLAGS) -c $^
+endif
 
 $(INSTALLBIN)/radhcp-query: radhcp-query
 	$(INSTALL) -m 0755 $^ $@
 
 # Need to clean radhcp-query from both $(INSTALLBIN) and $PWD
-CLEANFILES = $(OBJ) $(PROGS) $(SCRIPTS)
+CLEANFILES = $(OBJ) $(PROGS) $(SCRIPTS) $(DHCPLIB) $(DHCPLIB_OBJ) \
+             $(DHCPLIB_EXAMPLE_OBJ) \
+             $(DHCPLIB_EXAMPLE)
 
 .PHONY: install
 install: force all install-perl
