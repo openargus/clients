@@ -30115,8 +30115,9 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
 
    if (input->pipe) {
       pclose(input->pipe);
+      if (input->file == input->pipe)
+         input->file = NULL;
       input->pipe = NULL;
-      input->file = NULL;
    }
 
    if (input->file) {
