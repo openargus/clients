@@ -5847,6 +5847,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                                           ptr += tlen;
                                           *ptr++ = parser->RaFieldQuoted;
                                           *ptr++ = parser->RaFieldDelimiter;
+                                          *ptr = '\0';
                                           slen = (ptr - sptr);
 /*
                                           slen = snprintf(&buf[blen], dlen, "%c%s%c:%c%s%c%c", 
@@ -5869,6 +5870,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 					  ptr[tlen] = '\0';
 					  ptr += tlen;
 					  *ptr++ = parser->RaFieldDelimiter;
+                                          *ptr = '\0';
 					  slen = (ptr - sptr);
 /*
                                           slen = snprintf(&buf[blen], dlen, "%c%s%c:%s%c", 
@@ -5907,6 +5909,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               ptr[4] = '\0';
                               ptr += 4;
                               *ptr++ = parser->RaFieldDelimiter;
+                              *ptr = '\0';
                               slen = (ptr - sptr);
 /*
                               slen = snprintf(&buf[blen], dlen, "%c%s%c:null%c", 
@@ -5930,6 +5933,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               *ptr++ = parser->RaFieldQuoted;
                               *ptr++ = parser->RaFieldQuoted;
                               *ptr++ = parser->RaFieldDelimiter;
+                              *ptr = '\0';
                               slen = (ptr - sptr);
 /*
                               slen = snprintf(&buf[blen], dlen, "%c%s%c:%c%c%c", 
@@ -24812,20 +24816,23 @@ ArgusPrintResponse (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 }
 
 
-void
-ArgusPrintLabel (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+void 
+ArgusPrintLabel(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusLabelStruct *label;
    char *labelbuf = "";
+   char *obuf = "";
 
    if (argus->hdr.type & ARGUS_MAR) {
-      if (parser->ArgusPrintXml) {
-      } else 
-         sprintf (buf, "%*.*s ", len, len, " ");
- 
+      sprintf(buf, "%*.*s ", len, len, " ");
    } else {
-      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL))
-         labelbuf = label->l_un.label;
+      if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+         if (label->l_un.label != NULL)
+            obuf = label->l_un.label;
+         else
+            obuf = "";
+      } else
+         obuf = "";
 
       if (parser->ArgusPrintXml) {
          if (strchr(labelbuf, '\"')) {
@@ -24836,22 +24843,24 @@ ArgusPrintLabel (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
             sprintf (buf, " Label = \"%s\"", labelbuf);
       } else {
          if (parser->RaFieldWidth != RA_FIXED_WIDTH)
-            len = strlen(labelbuf);
+            len = strlen(obuf);
 
          if (len != 0) {
-            if (len < strlen(labelbuf))
-               sprintf (buf, "%*.*s* ", len-1, len-1, labelbuf);
+            if (len < strlen(obuf))
+               sprintf(buf, "%*.*s* ", len - 1, len - 1, obuf);
             else
-               sprintf (buf, "%*.*s ", len, len, labelbuf);
-         } else
-            sprintf (buf, "%s ", labelbuf);
+               sprintf(buf, "%*.*s ", len, len, obuf);
+         }
+         else
+            sprintf(buf, "%s ", obuf);
       }
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintLabel (%p, %p)", buf, argus);
+   ArgusDebug(10, "ArgusPrintLabel (%p, %p)", buf, argus);
 #endif
 }
+
 
 static char ArgusStatusBuf[32];
 
