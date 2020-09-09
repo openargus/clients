@@ -681,7 +681,7 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
-         struct ArgusAggregatorStruct *agg;
+         struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
 
          RastreamProcessFileRetryList();
          RastreamFreeFileRetryList();
@@ -689,20 +689,20 @@ RaParseComplete (int sig)
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
-
+         RastreamProcessAllFileCaches(agg ? agg->queue : NULL);
          RastreamCloseAllWfiles();
+         ArgusParser->RaParseDone = 1;
+         if (ArgusParser->script != (pthread_t) 0) {
+            pthread_join(ArgusParser->script, NULL);
+            ArgusParser->script = NULL;
+         }
 
          switch (sig) {
             case SIGHUP:
             case SIGINT:
             case SIGTERM:
             case SIGQUIT: {
-               ArgusParser->RaParseDone = 1;
-               if (ArgusParser->script != (pthread_t) 0) {
-                  pthread_join(ArgusParser->script, NULL);
-               }
                ArgusShutDown(sig);
-               exit(0);
                break;
             }
          }
@@ -1653,7 +1653,8 @@ ArgusProcessFileCache(struct ArgusFileCacheStruct *fcache)
          tfile->fd = NULL;
       }
 
-      ArgusRunFileScript(ArgusParser, tfile, ARGUS_SCHEDULE_SCRIPT);
+      if (!(ArgusParser->Sflag)) 
+         ArgusRunFileScript(ArgusParser, tfile, ARGUS_SCHEDULE_SCRIPT);
 
       if (tfile->filename)
          free(tfile->filename);
@@ -1787,8 +1788,10 @@ ArgusRunScript (struct ArgusParserStruct *parser, struct ArgusScriptStruct *scri
 {
    int retn = 0;
 
-   if (ArgusParser->RaParseDone)
-      return (retn);
+   if (ArgusParser->RaParseDone) {
+      if (parser->Sflag)
+         return (retn);
+   }
 
    switch (status) {
       case ARGUS_SCHEDULE_SCRIPT: {
@@ -1863,6 +1866,13 @@ ArgusScriptProcess (void *args) {
       }
       if (!ArgusParser->RaParseDone)
          nanosleep(ts, NULL);
+   }
+
+   if (ArgusScriptList != NULL) {
+      if (!ArgusListEmpty(ArgusScriptList)) {
+         while ((script = (struct ArgusScriptStruct *) ArgusPopFrontList(ArgusScriptList, ARGUS_LOCK)) != NULL)
+            ArgusRunScript(ArgusParser, script, ARGUS_RUN_SCRIPT);
+      }
    }
 
 #ifdef ARGUSDEBUG
