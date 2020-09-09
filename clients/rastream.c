@@ -202,7 +202,7 @@ RastreamProcessFileRetryList(void)
 {
    FILE *pipe;
    struct RastreamFileMap *file = RastreamRetryListHead;
-   char *cmd;
+   char *cmd, path[PATH_MAX];
    static const char * const fmt = "ra -X -Mlock -r %s -w %s";
    int rv = 1;
 
@@ -232,6 +232,12 @@ RastreamProcessFileRetryList(void)
          ArgusLog(LOG_WARNING, "%s unable to run command: %s\n", __func__, cmd);
          goto next;
       }
+
+#ifdef ARGUSDEBUG
+      while (fgets(path, PATH_MAX, pipe) != NULL)
+          ArgusDebug(1, "cmd returns: %s", path);
+#endif
+
       pres = pclose(pipe);
       if (pres == 0) {
          /* we are done with the temporary file.  clean up. */
