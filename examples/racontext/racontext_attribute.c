@@ -412,7 +412,7 @@ RacontextAttrSqlValue(const struct racontext_attribute * const attr,
          af = attr->value_un.l3addr.sin6_family;
 
          if (attr->attrib_num == CTX_ATTRIB_SLAAC_PREFIX) {
-            addrp = &attr->value_un.l3addr.sin6_addr.s6_addr;
+            addrp = (void *) &attr->value_un.l3addr.sin6_addr.s6_addr;
          } else {
             sin = *(struct sockaddr_in *)&attr->value_un.l3addr;
             sin.sin_addr.s_addr = ntohl(sin.sin_addr.s_addr);

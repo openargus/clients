@@ -240,6 +240,9 @@ ArgusDhcpSqlQueryClientAddr(const unsigned char * const clientmac,
  * Returns the number of leases that were added to the **leases array.
  */
 
+extern int RabootpScanSQL(const struct ArgusParserStruct * const, struct ArgusDhcpIntvlNode *,
+                   const MYSQL_BIND * const, size_t);
+
 static int
 ArgusDhcpSqlQueryTables(const struct ArgusParserStruct * const parser,
                         const char ** const tablevec, const char * const where,

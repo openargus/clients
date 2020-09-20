@@ -5994,7 +5994,7 @@ RaPrintLabelTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
                      printf ("0.0.0.0/0 ");
                }
 
-               if (node->cco && strlen(node->cco))
+               if (strlen(node->cco))
                   printf ("%s ", node->cco);
 
                if (node->group && strlen(node->group))
