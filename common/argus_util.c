@@ -11186,10 +11186,9 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                               break;
 
                            case IPPROTO_ESP: 
-                              ArgusPrintEspSpi (parser, buf, argus, type, flow->esp_flow.spi, len);
+                              ArgusPrintEspSpi (parser, buf, argus, type, flow->esp6_flow.spi, len);
                               done++; 
                               break; 
-
 
                            default:
                               if (parser->ArgusPrintPortZero) {
