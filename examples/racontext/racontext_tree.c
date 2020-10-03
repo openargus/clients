@@ -326,7 +326,7 @@ RacontextTreeScore(const struct ArgusParserStruct * const parser,
        * those that did, if there are enough distinct attribute types,
        * add a new definition to the database.
        */
-      if (distinct < RACONTEXT_DISTICT_TYPES_THRESHOLD)
+      if (distinct < RACONTEXT_DISTINCT_TYPES_THRESHOLD)
          continue;
 
       uuid_generate(nid);

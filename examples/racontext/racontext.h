@@ -24,7 +24,7 @@
 # define RACONTEXT_MIN_MATCHING_SCORE	1.0
 # define RACONTEXT_VALUE_NAMELEN	64
 # define RACONTEXT_OCCURRENCES_NORM_THRESHOLD	0.01
-# define RACONTEXT_DISTICT_TYPES_THRESHOLD	4
+# define RACONTEXT_DISTINCT_TYPES_THRESHOLD	2
 static const char * const contexts_table_name = "testdata.contexts";
 static const char * const index_table_name = "testdata.context_index";
 
