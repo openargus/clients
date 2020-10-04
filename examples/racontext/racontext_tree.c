@@ -242,8 +242,8 @@ RacontextTreeDump(struct RacontextTree *rct)
    printf("\n\n=== SID %s ===\n", rct->srcidstr);
    RB_FOREACH(ctx, racontext_tree, &rct->head) {
       printf("context start %12ld.%06d end %12ld.%06d source %d\n",
-             ctx->stime.tv_sec, ctx->stime.tv_usec,
-             ctx->ltime.tv_sec, ctx->ltime.tv_usec, ctx->source);
+             ctx->stime.tv_sec, (int)ctx->stime.tv_usec,
+             ctx->ltime.tv_sec, (int)ctx->ltime.tv_usec, ctx->source);
       RacontextAttrTreeDump(ctx->attrs);
       KnownContextTreeDump(&ctx->known_contexts);
       if (ctx->match) {

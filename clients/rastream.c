@@ -694,7 +694,7 @@ RaParseComplete (int sig)
          ArgusParser->RaParseDone = 1;
          if (ArgusParser->script != (pthread_t) 0) {
             pthread_join(ArgusParser->script, NULL);
-            ArgusParser->script = NULL;
+            ArgusParser->script = (pthread_t) 0;
          }
 
          switch (sig) {
