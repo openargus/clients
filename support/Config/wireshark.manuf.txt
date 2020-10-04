@@ -158,6 +158,10 @@
 00:00:5C	Telemati	Telematics International Inc.
 00:00:5D	CsTeleco	Cs Telecom
 00:00:5E	ICANNIAN	ICANN, IANA Department
+00:00:5E:00:00:00/28	IanaRes	ICANN, IANA reserved
+00:00:5E:00:01:00/28	Vrrp	ICANN, IANA reserved
+00:00:5E:00:02:00/28	VrrpV6	ICANN, IANA reserved
+
 00:00:5F	Sumitomo	Sumitomo Electric Industries, Ltd
 00:00:60	KontronE	Kontron Elektronik Gmbh
 00:00:61	GatewayC	Gateway Communications
@@ -17298,6 +17302,10 @@
 00:FD:45	HewlettP	Hewlett Packard Enterprise
 00:FD:4C	Nevatec
 00:FE:C8	Cisco	Cisco Systems, Inc
+
+01:00:5E:00:00:00/23	IPv4mcast	
+01:00:5E:80:00:00/20	MPLSmcast	
+
 01:0E:CF	PN-MC		PROFINET Multicast
 02:04:06	BbnInter	BBN	# internal usage (not registered)
 02:07:01	Racal-Da	Racal-Datacom
@@ -21056,6 +21064,9 @@
 30:FD:65	HuaweiTe	Huawei Technologies Co.,Ltd
 30:FE:31	Nokia
 30:FF:F6	HangZhou	HangZhou KuoHeng Technology Co.,ltd
+
+33:33:00:00:00:00/16  IPv6mcast IANA IPv6 multicast
+
 34:00:8A	IEEERegi	IEEE Registration Authority
 34:00:8A:00:00:00/28	AngeeTec	Angee Technologies Ltd.
 34:00:8A:10:00:00/28	ZQAMComm	ZQAM Communications
