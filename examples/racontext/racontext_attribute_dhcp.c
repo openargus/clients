@@ -6,6 +6,7 @@
 #include "rabootp.h"
 #include "argus_dhcp.h"
 #include "racontext.h"
+#include "racontext_attribute_dhcp.h"
 
 /*
  * Fill in the CTX_ATTRIB_DHCP_DNS_SERVER, CTX_ATTRIB_DHCP_DNS_DOMAIN,

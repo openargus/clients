@@ -95,6 +95,9 @@ void ArgusClientTimeout (void) { return; }
 void usage (void) { return; }
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) { return 0; }
 void ArgusWindowClose(void) { return; }
+
+
+void RaSQLQuerySecondsTable (unsigned int, unsigned int);
 void RaSQLQuerySecondsTable (unsigned int start, unsigned int stop) { return; }
 
 static void

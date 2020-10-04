@@ -605,6 +605,7 @@ int RabootpPrintTypeSQL(const struct ArgusParserStruct * const parser,
    return out_idx;
 }
 
+
 int RabootpScanSQL(const struct ArgusParserStruct * const parser,
                    struct ArgusDhcpIntvlNode *node,
                    const MYSQL_BIND * const bindvec, size_t nitems)

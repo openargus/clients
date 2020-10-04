@@ -11,6 +11,12 @@
 #  include "argus_print.h"
 #  include "rabootp_print.h"
 
+
+int
+RabootpScanSQL(const struct ArgusParserStruct * const parser,
+               struct ArgusDhcpIntvlNode *node,
+               const MYSQL_BIND * const bindvec, 
+               size_t nitems);
 int
 RabootpSQLScanString(const MYSQL_BIND * const b,
                      const struct ArgusParserStruct * const parser,

@@ -19,6 +19,7 @@
 
 #include "racontext.h"
 #include "racontext_sql_bind.h"
+#include "racontext_index_known_context.h"
 
 #if defined(CYGWIN)
 # include <sys/cygwin.h>

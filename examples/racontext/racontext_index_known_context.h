@@ -11,15 +11,21 @@
 # include "argus_mysql.h"
 
 int
+RacontextIndexSQLCreateTable(const struct ArgusParserStruct * const parser,
+                             MYSQL *mysql, const char * const table);
+
+int
+RacontextIndexKnownContextOne(const struct ArgusParserStruct * const parser,
+                              const uuid_t nid,
+                              const char * const tablename,
+                              unsigned total_weight,
+                              MYSQL *mysql,
+                              MYSQL_STMT *statement);
+int
 RacontextIndexKnownContext(const struct ArgusParserStruct * const parser,
                            const uuid_t nid,
                            const char * const tablename,
                            unsigned total_weight,
                            const char * const indextable,
                            MYSQL *mysql);
-
-int
-RacontextIndexSQLCreateTable(const struct ArgusParserStruct * const parser,
-                             MYSQL *mysql, const char * const table);
-
 #endif

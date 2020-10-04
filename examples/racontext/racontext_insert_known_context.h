@@ -20,4 +20,10 @@ int
 KnownContextSQLCreateTable(const struct ArgusParserStruct * const parser,
                            MYSQL *mysql, const char * const table);
 
+int
+RacontextInsertKnownContextAttr(const struct ArgusParserStruct * const parser,
+                                const struct racontext_attribute * const attr,
+                                const uuid_t nid, MYSQL *mysql,
+                                MYSQL_STMT *statement);
+
 #endif

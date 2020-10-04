@@ -119,6 +119,8 @@ RabootpSQLScanUint8(const MYSQL_BIND * const b,
       default:
          DEBUGLOG(2, "%s: unknown integer size %lu for %s\n", __func__,
                   *b->length, table_entry->label);
+         return -1;
+         break;
    }
 
    *(uint8_t *)arg = val;
@@ -162,6 +164,8 @@ RabootpSQLScanUint32(const MYSQL_BIND * const b,
       default:
          DEBUGLOG(2, "%s: unknown integer size %lu for %s\n", __func__,
                   *b->length, table_entry->label);
+         return -1;
+         break;
    }
 
    *(uint32_t *)arg = val;

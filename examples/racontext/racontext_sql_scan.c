@@ -156,6 +156,8 @@ RacontextSQLScanInt32(const MYSQL_BIND * const b,
       default:
          DEBUGLOG(2, "%s: unknown integer size %lu for %s\n", __func__,
                   *b->length, table_entry->label);
+         return -1;
+         break;
    }
 
    *(int32_t *)arg = val;
@@ -199,6 +201,8 @@ RacontextSQLScanInt64(const MYSQL_BIND * const b,
       default:
          DEBUGLOG(2, "%s: unknown integer size %lu for %s\n", __func__,
                   *b->length, table_entry->label);
+         return -1;
+         break;
    }
 
    *(int64_t *)arg = val;

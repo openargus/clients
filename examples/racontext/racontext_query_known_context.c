@@ -14,6 +14,7 @@
 #include "../radhcp/argus_print.h"
 #include "racontext.h"
 #include "racontext_sql_scan.h"
+#include "racontext_query_known_context.h"
 
 #if defined(CYGWIN)
 # include <sys/cygwin.h>
