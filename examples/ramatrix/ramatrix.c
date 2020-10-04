@@ -82,7 +82,7 @@ void ArgusIdleClientTimeout (void);
 
 #define ARGUS_ETHER_STUDY	0
 int ArgusStudy     = 0;
-int ArgusNormalize = 1;
+int ArgusNormalize = 0;
 int ArgusSelfIndex = -1;
 int ArgusRouterIndex = -1;
 
@@ -91,25 +91,25 @@ struct ArgusAggregatorStruct *ArgusEntityAggregator = NULL;
 
 char *RaEtherMatrixAggregationConfig[] = {
    "RACLUSTER_PRESERVE_FIELDS=yes",
-   "model=\"srcid smac dmac\"   status=0 idle=0\n",
+   "model=\"smac dmac\"   status=0 idle=0\n",
    NULL,
 };
 
 char *RaIPMatrixAggregationConfig[] = {
    "RACLUSTER_PRESERVE_FIELDS=yes",
-   "model=\"srcid saddr daddr\" status=0 idle=0\n",
+   "model=\"saddr daddr\" status=0 idle=0\n",
    NULL,
 };
 
 char *RaEtherEntityAggregationConfig[] = {
    "RACLUSTER_PRESERVE_FIELDS=yes",
-   "model=\"srcid smac\"         status=0 idle=0\n",
+   "model=\"smac\"         status=0 idle=0\n",
    NULL,
 };
 
 char *RaIPEntityAggregationConfig[] = {
    "RACLUSTER_PRESERVE_FIELDS=yes",
-   "model=\"srcid saddr\"         status=0 idle=0\n",
+   "model=\"saddr\"         status=0 idle=0\n",
    NULL,
 };
 
@@ -352,7 +352,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                }
 
                if (strstr(oui, "cast") != NULL) {
-                  category =  categorySchemes[2].id;
+                  category = categorySchemes[2].id;
                   x = 2;
                } else {
                   x = (random() % 6);
@@ -374,7 +374,6 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                   tp->rank = argus->rank;
                   tp->category = (x > 0) ? x : 1;
                }
-
 
                if ((tp = check_emem(elabeltable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
                   ArgusSelfIndex = argus->rank;
@@ -434,12 +433,13 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                   }
 
                   if ((x >= 0) && (y >= 0)) {
+                     struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
                      double weight = ARGUS_DEFAULT_WEIGHT;
+                     double cvalue = 0;
 
                      if ((stp->category == 2) || (dtp->category == 2)) {
-                        matrix[x][y] = 3.0 / n;
-                        matrix[y][x] = 3.0 / n;
-                        category[x][y] = 2;
+                        weight = 3.0 / n;
+                        cvalue = 2;
                      } else {
                         if ((x == ArgusSelfIndex) || (y == ArgusSelfIndex))
                            weight = ARGUS_SELF_WEIGHT;
@@ -447,8 +447,15 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                            if ((x == ArgusRouterIndex) || (y == ArgusRouterIndex))
                               weight = ARGUS_ROUTER_WEIGHT;
 
+                        cvalue = dtp->category;
+                     }
+                     if ((metric != NULL) && (metric->src.pkts > 0)) {
                         matrix[x][y] = weight;
-                        category[x][y] = dtp->category;
+                        category[x][y] = cvalue;
+                     }
+                     if ((metric != NULL) && (metric->dst.pkts > 0)) {
+                        matrix[y][x] = weight;
+                        category[y][x] = cvalue;
                      }
                   }
                }
@@ -842,6 +849,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
             struct ArgusAggregatorStruct *agg = parser->ArgusPathAggregator;
             struct ArgusRecordStruct *tns = ArgusCopyRecordStruct(ns);
             struct ArgusFlow *flow;
+            int rev = parser->ArgusReverse;
+
+            parser->ArgusReverse = 0;
 
             if ((flow = (void *)ns->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
                flow->hdr.subtype &= ~ARGUS_REVERSE;
@@ -859,6 +869,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 
             RaProcessThisRecord(parser, agg, tns);
             ArgusDeleteRecordStruct(parser, tns);
+            parser->ArgusReverse = rev;
          }
 
          if (flow != NULL) {
