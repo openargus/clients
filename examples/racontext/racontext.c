@@ -637,15 +637,11 @@ void RaParseComplete(int sig)
    if (ArgusParser->RaParseCompleting++)
       return;
 
-   if (KnownContextSQLCreateTable(ArgusParser, RaMySQL,
-                                  contexts_table_name) < 0)
-      ArgusLog(LOG_INFO, "failed to create context index table %s\n",
-               contexts_table_name);
+   if (KnownContextSQLCreateTable(ArgusParser, RaMySQL, contexts_table_name) < 0)
+      ArgusLog(LOG_INFO, "failed to create context index table %s\n", contexts_table_name);
 
-   if (RacontextIndexSQLCreateTable(ArgusParser, RaMySQL,
-                                  index_table_name) < 0)
-      ArgusLog(LOG_INFO, "failed to create context index table %s\n",
-               index_table_name);
+   if (RacontextIndexSQLCreateTable(ArgusParser, RaMySQL, index_table_name) < 0)
+      ArgusLog(LOG_INFO, "failed to create context index table %s\n", index_table_name);
 
    SidtreeScore(ArgusParser, RaMySQL, RacontextSidtree);
    SidtreeForeach(RacontextSidtree, RacontextTreePullup, NULL);

@@ -58,20 +58,40 @@ KnownContextMatchFree(struct known_context_match *kcm)
    ArgusFree(kcm);
 }
 
+char ArgusDebugOutputBuffer[MAXSTRLEN];
+
 void
-KnownContextMatchDump(const struct known_context_match * const kcm)
+KnownContextDump(const struct known_context_match * const kcm)
 {
    char uuidstr[37];
+   char *buf = ArgusDebugOutputBuffer;
    int i;
 
    uuid_unparse_lower(kcm->cid, uuidstr);
 
-   printf("known context : CID %s : SCORE %f : COUNTS [", uuidstr,
-          kcm->score);
+#ifdef ARGUSDEBUG
+   sprintf(buf, "known context : CID %s : SCORE %f : COUNTS [", uuidstr, kcm->score);
    for (i = 0; i < NUM_CTX_ATTRIB; i++)
-      printf("%u%s", kcm->attr_match_counts[i],
-            i < (NUM_CTX_ATTRIB-1) ? "," : "");
-   printf("]\n");
+      sprintf(&buf[strlen(buf)], "%u%s", kcm->attr_match_counts[i], i < (NUM_CTX_ATTRIB-1) ? "," : "");
+   ArgusDebug (0, "%s]\n", buf);
+#endif
+}
+
+void
+KnownContextMatchDump(const struct known_context_match * const kcm)
+{
+   char uuidstr[37];
+   char *buf = ArgusDebugOutputBuffer;
+   int i;
+
+   uuid_unparse_lower(kcm->cid, uuidstr);
+
+#ifdef ARGUSDEBUG
+   sprintf(buf, "match context : CID %s : SCORE %f : COUNTS [", uuidstr, kcm->score);
+   for (i = 0; i < NUM_CTX_ATTRIB; i++)
+      sprintf(&buf[strlen(buf)], "%u%s", kcm->attr_match_counts[i], i < (NUM_CTX_ATTRIB-1) ? "," : "");
+   ArgusDebug (0, "%s]\n", buf);
+#endif
 }
 
 int
@@ -146,6 +166,6 @@ KnownContextTreeDump(struct known_context_tree *kct)
    struct known_context_match *kcm;
 
    RB_FOREACH(kcm, known_context_tree, kct) {
-      KnownContextMatchDump(kcm);
+      KnownContextDump(kcm);
    }
 }

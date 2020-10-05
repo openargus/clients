@@ -237,20 +237,55 @@ RacontextTreeFree(struct RacontextTree *rct)
 void
 RacontextTreeDump(struct RacontextTree *rct)
 {
-   struct racontext *ctx;
+   extern struct ArgusParserStruct *ArgusParser;
+   struct racontext lctx, *ctx;
+   struct known_context_match *match = NULL;
 
    printf("\n\n=== SID %s ===\n", rct->srcidstr);
+
    RB_FOREACH(ctx, racontext_tree, &rct->head) {
-      printf("context start %12ld.%06d end %12ld.%06d source %d\n",
-             ctx->stime.tv_sec, (int)ctx->stime.tv_usec,
-             ctx->ltime.tv_sec, (int)ctx->ltime.tv_usec, ctx->source);
-      RacontextAttrTreeDump(ctx->attrs);
-      KnownContextTreeDump(&ctx->known_contexts);
       if (ctx->match) {
-         printf("matched context:  ");
-         KnownContextMatchDump(ctx->match);
+      if (match != NULL) {
+         if (bcmp(match->cid, ctx->match->cid, sizeof(*match->cid)) == 0) {
+            lctx.ltime = ctx->ltime;
+         } else {
+            ArgusDebug(0, "context start %12ld.%06d end %12ld.%06d source %d\n",
+                   lctx.stime.tv_sec, (int)lctx.stime.tv_usec,
+                   lctx.ltime.tv_sec, (int)lctx.ltime.tv_usec, lctx.source);
+
+            if (lctx.match) {
+               KnownContextMatchDump(lctx.match);
+               bcopy(ctx, &lctx, sizeof(lctx));
+               match = ctx->match;
+            }
+         }
+      } else {
+         bcopy(ctx, &lctx, sizeof(lctx));
+         match = ctx->match;
+      }
       }
    }
+
+   ArgusDebug(0, "context start %12ld.%06d end %12ld.%06d source %d\n",
+      lctx.stime.tv_sec, (int)lctx.stime.tv_usec,
+      lctx.ltime.tv_sec, (int)lctx.ltime.tv_usec, lctx.source);
+
+   if (match) {
+      KnownContextMatchDump(lctx.match);
+   }
+
+/*
+#ifdef ARGUSDEBUG
+      if (ArgusParser->debugflag > 2) {
+         RacontextAttrTreeDump(ctx->attrs);
+         KnownContextTreeDump(&ctx->known_contexts);
+      }
+
+      if (ctx->match) {
+         KnownContextMatchDump(ctx->match);
+      }
+#endif
+*/
 }
 
 int

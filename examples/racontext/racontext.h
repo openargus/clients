@@ -24,7 +24,7 @@
 # define RACONTEXT_MIN_MATCHING_SCORE	1.0
 # define RACONTEXT_VALUE_NAMELEN	64
 # define RACONTEXT_OCCURRENCES_NORM_THRESHOLD	0.01
-# define RACONTEXT_DISTINCT_TYPES_THRESHOLD	2
+# define RACONTEXT_DISTINCT_TYPES_THRESHOLD	4
 static const char * const contexts_table_name = "testdata.contexts";
 static const char * const index_table_name = "testdata.context_index";
 
@@ -232,6 +232,7 @@ void KnownContextTreeInit(struct known_context_tree *kct);
 struct known_context_match *KnownContextMatchAlloc(void);
 void KnownContextMatchFree(struct known_context_match *kcm);
 void KnownContextMatchDump(const struct known_context_match * const kcm);
+void KnownContextDump(const struct known_context_match * const kcm);
 int KnownContextTreeInsert(struct known_context_tree *kct, uuid_t cid,
                            struct known_context_match **kcm_out);
 int KnownContextTreeFind(struct known_context_tree *kct, uuid_t cid,
