@@ -969,6 +969,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
    if (!(strncmp(parser->ArgusProgramName, "rahisto", 6)))
       getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:Op:P:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
+   if (!(strcmp(parser->ArgusProgramName, "ra")))
+      getoptStr = "a:AbB:c:C:dD:E:e:fF:GhHiJlL:m:M:nN:o:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
+   else
       getoptStr = "a:AbB:c:C:dD:E:e:f:F:GhHiJlL:m:M:nN:o:Op:P:qQ:r:R:S:s:t:T:uU:Vvw:XzZ:%3";
 
    while ((op = getopt (argc, argv, getoptStr)) != EOF) {
@@ -1072,9 +1075,11 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             break;
 
          case 'f':
+            if (!(strcmp(parser->ArgusProgramName,  "ra"))) {
+               parser->fflag = 1;
+            } else 
             if (!(strncmp(parser->ArgusProgramName,  "rascore", 7))) {
                setArgusLfile (parser, optarg);
-
             } else {
                if (parser->ArgusFlowModelFile != NULL)
                   free (parser->ArgusFlowModelFile);
@@ -2024,9 +2029,9 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
 
       case RA_PRINT_LOCALONLY:
          if (!(strncasecmp(optarg, "yes", 3)))
-            ++parser->fflag;
+            ++parser->nlflag;
          else
-            parser->fflag = 0;
+            parser->nlflag = 0;
          break;
 
       case RA_CIDR_ADDRESS_FORMAT:
@@ -2979,6 +2984,7 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
    parser->Mflag = NULL;
    parser->Netflag = 0;
    parser->nflag = 1;
+   parser->nlflag = 0;
    parser->sNflag = -1;
    parser->eNflag = -1;
    parser->Normflag = 0;
@@ -23742,7 +23748,7 @@ ArgusInitDSCodepointarray()
 
 /*
  * Initialize the address to name translation machinery.  We map all
- * non-local IP addresses to numeric addresses if fflag is true (i.e.,
+ * non-local IP addresses to numeric addresses if nlflag is true (i.e.,
  * to prevent blocking on the nameserver).  localnet is the IP address
  * of the local network.  mask is its subnet mask.
  */
@@ -23750,7 +23756,7 @@ ArgusInitDSCodepointarray()
 void
 ArgusSetLocalNet(u_int localnet, u_int mask)
 {
-   if (ArgusParser->fflag) {
+   if (ArgusParser->nlflag) {
        f_localnet = localnet;
        f_netmask = mask;
        netmask = mask;
