@@ -2303,15 +2303,17 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               tcpinit.win = tcp->src.win;
                               tcpinit.flags = tcp->src.flags;
                               tcpinit.winshift = tcp->src.winshift;
+                              tcpinit.maxseg = tcp->src.maxseg;
 
-                              net->hdr.argus_dsrvl8.len = 5;
+                              net->hdr.argus_dsrvl8.len = 6;
 
                               *dsrptr++ = *(unsigned int *)&net->hdr;
                               *dsrptr++ = ((unsigned int *)&tcpinit)[0];
                               *dsrptr++ = ((unsigned int *)&tcpinit)[1];
                               *dsrptr++ = ((unsigned int *)&tcpinit)[2];
                               *dsrptr++ = ((unsigned int *)&tcpinit)[3];
-                              len = 5;
+                              *dsrptr++ = ((unsigned int *)&tcpinit)[4];
+                              len = 6;
                               break;
                            }
                            case ARGUS_TCP_STATUS: {
