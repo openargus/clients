@@ -47,10 +47,11 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @CURSES_INCLS@
+INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @CURSES_INCLS@ @MYSQL_INCLS@
 DEFS = @DEFS@
 COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@ @LIBMAXMINDDB_LIBS@
 
+MYSQLLIB = @MYSQL_LDFLAGS@
 CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 # Standard CFLAGS
@@ -74,7 +75,7 @@ YACC = @V_YACC@
 # problem if you don't own the file but can write to the directory.
 .c.o:
 	@rm -f $@
-	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+	$(CC) $(CFLAGS) -DRABINPATH=\"$(BINDIR)\" -c $(srcdir)/$*.c
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -83,14 +84,14 @@ OBJ =	$(SRC:.c=.o)
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = racurses.c raclient.c
+SRC = racurses.c raclient.c rasql_common.c
 
 PROGS = $(INSTALLBIN)/racompare
 
 all: $(PROGS)
 
 $(INSTALLBIN)/racompare: $(OBJ) $(LIB)
-	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB) $(MYSQLLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
 
