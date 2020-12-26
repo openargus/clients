@@ -5957,8 +5957,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                         slen = snprintf(&buf[blen], dlen, "%c%s%c%c", 
 			         parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
                   }
-                  blen += slen;
                   parser->RaPrintAlgorithm->offset = blen;
+                  blen += slen;
                }
             }
          }
