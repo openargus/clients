@@ -103,7 +103,7 @@ rm -f %{argusbin}/rasplit
 %{argusman}/man8/radium.8.gz
 %{argusman}/man1/ranonymize.1.gz
 %{argusman}/man1/rasort.1.gz
-%{argusman}/man1/rasplit.1.gz
+%ghost %{argusman}/man1/rasplit.1.gz
 %{argusman}/man1/rastream.1.gz
 %{argusman}/man1/ramanage.1.gz
 %{argusman}/man5/ramanage.conf.5.gz
@@ -138,6 +138,7 @@ rm -f %{argusbin}/rasplit
 %{_unitdir}/rahosts-nightly.service
 %{_unitdir}/raports-nightly.timer
 %{_unitdir}/raports-nightly.service
+%{argussbin}/rawatcher-process
 %{perl_vendorlib}/qosient/util.pm
 %else
 %{_unitdir}/rasplit.service

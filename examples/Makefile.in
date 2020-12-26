@@ -47,7 +47,7 @@ SHELL = /bin/sh
 DIRS = ./race ./raconvert ./racompare ./radecode ./radns ./radhcp ./radump ./raevent ./rafilter ./ragraph \
 	./ragrep ./rahisto ./ralabel ./rampc ./ramatrix ./rap ./rapath ./rapolicy ./raqsort ./rarpwatch \
 	./raservices ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
-	./racontext ./ratemplate @ARGUS_MYSQL@
+	./ratemplate @ARGUS_MYSQL@
 
 ifndef WORKSTATION_BUILD
 DIRS += ./raports
