@@ -177,8 +177,8 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
 #define ARGUSPERFMETRICS		1
 */
 #if defined(ARGUSPERFMETRICS)
-   extern int ArgusAllocMax, ArgusAllocBytes;
-   extern int ArgusAllocTotal, ArgusFreeTotal;
+   extern unsigned int ArgusAllocMax, ArgusAllocBytes;
+   extern unsigned int ArgusAllocTotal, ArgusFreeTotal;
 
    struct timeval timediff;
    int x = 0 , len;

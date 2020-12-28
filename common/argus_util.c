@@ -27370,10 +27370,10 @@ ArgusPrintHex (const u_char *bp, u_int length)
 }
 
 
-int ArgusAllocMax   = 0;
-int ArgusAllocBytes = 0;
-int ArgusAllocTotal = 0;
-int ArgusFreeTotal  = 0;
+int unsigned ArgusAllocMax   = 0;
+int unsigned ArgusAllocBytes = 0;
+int unsigned ArgusAllocTotal = 0;
+int unsigned ArgusFreeTotal  = 0;
 
 struct ArgusMemoryList memory = {
 	.start = NULL,

@@ -4877,7 +4877,7 @@ struct ArgusRecordStruct *
 ArgusGenerateStatusMarRecord(struct ArgusOutputStruct *output,
                              unsigned char status, char version)
 {
-   extern int ArgusAllocTotal, ArgusFreeTotal, ArgusAllocBytes;
+   extern unsigned int ArgusAllocTotal, ArgusFreeTotal, ArgusAllocBytes;
    struct ArgusAddrStruct asbuf, *asptr = &asbuf;
    struct ArgusRecordStruct *retn;
    struct ArgusRecord *rec;

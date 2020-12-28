@@ -2149,9 +2149,6 @@ RaDeleteAddressTree(struct ArgusLabelerStruct *labeler, struct RaAddressStruct *
    if (node->asnlabel) { free(node->asnlabel); node->asnlabel = NULL;}
    if (node->ns) {ArgusDeleteRecordStruct(ArgusParser, node->ns); node->ns = NULL;}
 
-   if (node->status & ARGUS_NODE)
-      labeler->count--;
-
    ArgusFree(node);
 }
 
