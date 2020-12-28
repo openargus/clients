@@ -279,6 +279,7 @@ struct ArgusCIDRAddr {
 
 #define ARGUS_REAL_TIME_PROCESS   	0x0100
 #define ARGUS_FILE_LIST_PROCESSED	0x1000
+#define ARGUS_BASELINE_LIST_PROCESSED	0x2000
 
 #define ARGUS_LOCAL_TIME		0x01
 #define ARGUS_FORCE_LOCAL_SRC		0x02
@@ -545,6 +546,11 @@ struct ArgusParserStruct {
    size_t ArgusInputFileCount;
    struct ArgusFileInput *ArgusInputFileList;	        /* first element in file list */
    struct ArgusFileInput *ArgusInputFileListTail;	/* last element in file list */
+
+   size_t ArgusBaselineCount;
+   struct ArgusFileInput *ArgusBaselineList;	/* first element in file list */
+   struct ArgusFileInput *ArgusBaselineListTail;	/* last element in file list */
+
    struct ArgusInput *ArgusRemoteHostList;
 
    struct ArgusListStruct *ArgusLabelerFileList;

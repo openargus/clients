@@ -1219,6 +1219,23 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      ArgusAddMode = 0;
                   }
                } else
+               if ((tzptr = strstr (optarg, "baseline:")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE | ARGUS_BASELINE_SOURCE;
+                  optarg += 9;
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", optarg, 6))) {
+                     if (parser->readDbstr != NULL)
+                        free(parser->readDbstr);
+                     parser->readDbstr = strdup(optarg);
+                     type &= ~ARGUS_DATA_SOURCE;
+                     type |= ARGUS_DBASE_SOURCE;
+                     optarg += 6;
+                  }
+#endif
+                  if (!(ArgusAddBaselineList (parser, optarg, type, -1, -1)))
+                     ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+                  stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
+               } else
                if ((tzptr = strstr (optarg, "label=")) != NULL) {
                   parser->ArgusMatchLabel = strdup(&optarg[6]);
                   ArgusProcessLabelOptions(parser, &optarg[6]);
@@ -1463,40 +1480,45 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             if (optarg == NULL)
                optarg = "-";
             else {
+               if (!(strncmp ("baseline:", optarg, 9))) {
+                  type |= ARGUS_BASELINE_SOURCE;
+                  optarg += 9;
+               }
+
 #if defined(ARGUS_MYSQL)
                if (!(strncmp ("mysql:", optarg, 6))) {
                   if (parser->readDbstr != NULL)
                      free(parser->readDbstr);
                   parser->readDbstr = strdup(optarg);
-                  type = ARGUS_DBASE_SOURCE;
+                  type &= ~ARGUS_DATA_SOURCE;
+                  type |= ARGUS_DBASE_SOURCE;
                   optarg += 6;
-
-               } else 
+               }
 #endif
+
                if (!(strncmp ("cisco:", optarg, 6))) {
                   parser->Cflag++;
-                  type = ARGUS_CISCO_DATA_SOURCE;
+                  type |= ARGUS_CISCO_DATA_SOURCE;
                   optarg += 6;
                } else
                if (!(strncmp ("jflow:", optarg, 6))) {
                   parser->Cflag++;
-                  type = ARGUS_JFLOW_DATA_SOURCE;
+                  type |= ARGUS_JFLOW_DATA_SOURCE;
                   optarg += 6;
                } else
                if (!(strncmp ("ft:", optarg, 3))) {
-                  type = ARGUS_FLOW_TOOLS_SOURCE;
+                  type |= ARGUS_FLOW_TOOLS_SOURCE;
                   optarg += 3;
                } else
                if (!(strncmp ("sflow:", optarg, 6))) {
-                  type = ARGUS_SFLOW_DATA_SOURCE;
+                  type |= ARGUS_SFLOW_DATA_SOURCE;
                   optarg += 6;
                }
-               if (!(strncmp ("baseline:", optarg, 9))) {
-                  type |= ARGUS_BASELINE_SOURCE;
-                  optarg += 9;
+
+               if (!rcmdline++) {
+                  if (parser->ArgusInputFileList != NULL)
+                     ArgusDeleteFileList(parser);
                }
-               if ((!rcmdline++) && (parser->ArgusInputFileList != NULL))
-                  ArgusDeleteFileList(parser);
 
                do {
                   long long ostart = -1, ostop = -1;
@@ -1519,10 +1541,15 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      }
                   }
 
-                  if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
-                     ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
-
-                  stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
+                  if (type & ARGUS_BASELINE_SOURCE) {
+                     if (!(ArgusAddBaselineList (parser, optarg, type, ostart, ostop)))
+                        ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+                     stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
+                  } else {
+                     if (!(ArgusAddFileList (parser, optarg, type, ostart, ostop)))
+                        ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+                     stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
+                  }
 
                   if ((optarg = argv[optind]) != NULL)
                      if (*optarg != '-')
@@ -30491,6 +30518,111 @@ ArgusDeleteFileList (struct ArgusParserStruct *parser)
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusDeleteFileList () returning\n");
+#endif
+}
+
+int
+ArgusAddBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
+{
+   struct ArgusFileInput *file;
+   char *str = NULL;
+   int retn = 0;
+
+   if (ptr) {
+      switch(type) {
+#if defined(ARGUS_MYSQL)
+         case ARGUS_DBASE_SOURCE:
+            str = ptr;
+            break;
+#endif
+         default: {
+            str = ptr;
+            break;
+         }
+      }
+
+      if (str != NULL) {
+         if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
+            if (parser->ArgusBaselineListTail != NULL) {
+               parser->ArgusBaselineListTail->qhdr.nxt = (struct ArgusQueueHeader *)file;
+               parser->ArgusBaselineListTail = file;
+            } else {
+               parser->ArgusBaselineList = file;
+               parser->ArgusBaselineListTail = file;
+            }
+            file->filename = strdup(str);
+            file->type = type;
+            file->ostart = ostart;
+            file->ostop = ostop;
+         }
+         file->fd = -1;
+         parser->ArgusBaselineCount++;
+         retn = 1;
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusAddBaselineList (0x%x, %s, %d, %d, %d) returning %d\n", parser, ptr, type, ostart, ostop, retn);
+#endif
+
+   return (retn);
+}
+
+int
+ArgusPushBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
+{
+   int retn = 0;
+   struct ArgusFileInput *file;
+
+   if (ptr) {
+      if ((file = ArgusCalloc (1, sizeof(*file))) != NULL) {
+         if (parser->ArgusBaselineList != NULL) {
+            file->qhdr.nxt = (struct ArgusQueueHeader *)parser->ArgusBaselineList;
+            parser->ArgusBaselineList = file;
+         } else {
+            parser->ArgusBaselineList = file;
+            parser->ArgusBaselineListTail = file;
+         }
+
+         file->type = type;
+         file->ostart = ostart;
+         file->ostop = ostop;
+         file->filename = strdup(ptr);
+         file->fd = -1;
+         parser->ArgusBaselineCount++;
+         retn = 1;
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusPushBaselineList (0x%x, %s, %d, %d, %d) returning %d\n", parser, ptr, type, ostart, ostop, retn);
+#endif
+
+   return (retn);
+}
+
+void
+ArgusDeleteBaselineList (struct ArgusParserStruct *parser) 
+{
+   if (parser && parser->ArgusBaselineList) {
+      struct ArgusFileInput *addr = parser->ArgusBaselineList;
+
+      while (addr) {
+        if (addr->filename)
+           free(addr->filename);
+
+        addr = (struct ArgusFileInput *)addr->qhdr.nxt;
+        ArgusFree(parser->ArgusBaselineList);
+        parser->ArgusBaselineList = addr;
+      }
+   }
+
+   parser->ArgusBaselineCount = 0;
+   parser->ArgusBaselineList = NULL;
+   parser->ArgusBaselineListTail = NULL;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusDeleteBaselineList () returning\n");
 #endif
 }
 

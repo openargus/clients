@@ -379,13 +379,13 @@ ArgusProcessData (void *arg)
 #endif
 
 #if defined(ARGUS_THREADS)
+   if (parser->ArgusBaselineList == NULL)
+      parser->status |= ARGUS_BASELINE_LIST_PROCESSED;
 
    if (parser->ArgusInputFileList == NULL)
       parser->status |= ARGUS_FILE_LIST_PROCESSED;
 
    /* Process the baseline file first */
-   ArgusProcessingBaseline = 1;
-   ArgusProcessingSample = 0;
 
    while (!ArgusCloseDown && !done) {
       if (parser->RaTasksToDo) {
@@ -405,14 +405,118 @@ ArgusProcessData (void *arg)
          input = ArgusMalloc(sizeof(*input));
          if (input == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+ 
+         /* Process the baseline files first */
+         if ((!(parser->status & ARGUS_BASELINE_LIST_PROCESSED)) && ((file = parser->ArgusBaselineList) != NULL)) {
+            ArgusProcessingBaseline = 1;
+            ArgusProcessingSample = 0;
 
-         /* Process the input files first */
-
-         if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
-               switch (file->type) {
+               switch (file->type & 0x17FF) {
 #if defined(ARGUS_MYSQL)
                   case ARGUS_DBASE_SOURCE: {
+                     if (RaTables == NULL) 
+                        if ((RaTables = ArgusCalloc(sizeof(void *), 2)) == NULL)
+                           ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+ 
+                     RaTables[0] = strdup(file->filename);
+                     ArgusReadSQLTables (parser);
+                     ArgusFree(RaTables);
+                     RaTables = NULL;
+                     break;
+                  }
+#endif
+                  case ARGUS_DATA_SOURCE:
+                  case ARGUS_V2_DATA_SOURCE:
+                  case ARGUS_NAMED_PIPE_SOURCE:
+                  case ARGUS_DOMAIN_SOURCE:
+                  case ARGUS_BASELINE_SOURCE:
+                  case ARGUS_DATAGRAM_SOURCE:
+                  case ARGUS_SFLOW_DATA_SOURCE:
+                  case ARGUS_JFLOW_DATA_SOURCE:
+                  case ARGUS_CISCO_DATA_SOURCE:
+                  case ARGUS_IPFIX_DATA_SOURCE:
+                  case ARGUS_FLOW_TOOLS_SOURCE: {
+                     ArgusInputFromFile(input, file);
+                     parser->ArgusCurrentInput = input;
+
+                     if (strcmp (input->filename, "-")) {
+                        if (input->fd < 0) {
+                           if ((input->file = fopen(input->filename, "r")) == NULL) {
+                              sprintf (sbuf, "open '%s': %s", input->filename, strerror(errno));
+                              ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
+                           }
+
+                        } else {
+                           fseek(input->file, 0, SEEK_SET);
+                        }
+
+                        if ((input->file != NULL) && ((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
+                           parser->ArgusTotalMarRecords++;
+                           parser->ArgusTotalRecords++;
+
+                           if (parser->RaPollMode) {
+                               ArgusHandleRecord (parser, input, &input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                           } else {
+                              if (input->ostart != -1) {
+                                 input->offset = input->ostart;
+                                 if (fseek(input->file, input->offset, SEEK_SET) >= 0)
+                                    ArgusReadFileStream(parser, input);
+                              } else
+                                 ArgusReadFileStream(parser, input);
+                           }
+
+                           sprintf (sbuf, "RaCursesLoop() Processing Input File %s done.", input->filename);
+                           ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
+
+                        } else {
+                           input->fd = -1;
+                           sprintf (sbuf, "ArgusReadConnection '%s': %s", input->filename, strerror(errno));
+                           ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                        }
+
+                     } else {
+                        input->file = stdin;
+                        input->ostart = -1;
+                        input->ostop = -1;
+
+                        if (((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
+                           parser->ArgusTotalMarRecords++;
+                           parser->ArgusTotalRecords++;
+                           fcntl(fileno(stdin), F_SETFL, O_NONBLOCK);
+                           ArgusReadFileStream(parser, input);
+                        }
+                     }
+                     break;
+                  }
+               }
+               RaArgusInputComplete(input);
+               ArgusParser->ArgusCurrentInput = NULL;
+               ArgusCloseInput(ArgusParser, input);
+               file = (struct ArgusFileInput *)file->qhdr.nxt;
+            }
+            parser->ArgusCurrentInput = NULL;
+            parser->status |= ARGUS_BASELINE_LIST_PROCESSED;
+         }
+
+         /* Then process the input files */
+
+         if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
+            ArgusProcessingBaseline = 0;
+            ArgusProcessingSample = 1;
+
+            while (file && parser->eNflag) {
+               switch (file->type & 0x17FF) {
+#if defined(ARGUS_MYSQL)
+                  case ARGUS_DBASE_SOURCE: {
+                     if (RaTables == NULL)
+                        if ((RaTables = ArgusCalloc(sizeof(void *), 2)) == NULL)
+                           ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+
+                     RaTables[0] = strdup(file->filename);
+                     ArgusReadSQLTables (parser);
+                     ArgusFree(RaTables);
+                     RaTables = NULL;
                      break;
                   }
 #endif
@@ -492,6 +596,9 @@ ArgusProcessData (void *arg)
 
          ArgusFree(input);
          input = NULL;
+
+         ArgusProcessingSample = 0;
+         ArgusProcessingComplete = 1;
 
 // Then process the realtime stream input, if any
 
@@ -735,7 +842,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusSorter = ArgusNewSorter(parser)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewSorter error %s", strerror(errno));
 
-         ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
+         ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTCOMPARE];
+         ArgusSorter->ArgusSortAlgorithms[1] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
 
          if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
@@ -987,6 +1095,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                             char *str = p.we_wordv[0];
                             if (str != NULL)
                                parser->ArgusBaseLineFile = strdup(str);
+                           wordfree (&p);
                         }
                      }
 
@@ -1030,7 +1139,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                               RaPrintLabelTreeLevel = parser->Lflag;
                         }
                   } else {
-                     for (x = 0, i = 0; x < MAX_SORT_ALG_TYPES; x++) {
+                     ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTCOMPARE];
+                     for (x = 0, i = 1; x < MAX_SORT_ALG_TYPES; x++) {
                         if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
                            ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
                            break;
@@ -1043,7 +1153,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
 
          if (parser->ArgusBaseLineFile != NULL) {
-            if (!(ArgusPushFileList (parser, parser->ArgusBaseLineFile, ARGUS_DATA_SOURCE, -1, -1))) {
+            if (!(ArgusPushBaselineList (parser, parser->ArgusBaseLineFile, ARGUS_DATA_SOURCE, -1, -1))) {
                ArgusLog(LOG_ERR, "ArgusClientInit: ArgusPushBaseLineFile  error: file %s", parser->ArgusBaseLineFile);
             }
             free(parser->ArgusBaseLineFile);
@@ -1219,12 +1329,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (ArgusWireless != NULL)
             bzero(ArgusWireless, sizeof(*ArgusWireless));
 
-#if defined(ARGUS_MYSQL)
-         RaMySQLInit();
-         if (RaMySQL != NULL) {
-            ArgusReadSQLTables (parser);
-         }
-#endif
          if (!(parser->Sflag)) {
             if (parser->ArgusInputFileList == NULL) {
                if (!(ArgusAddFileList (parser, "-", ARGUS_DATA_SOURCE, -1, -1))) {
@@ -1233,6 +1337,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
          }
 
+#if defined(ARGUS_MYSQL)
+         RaMySQLInit();
+#endif
+/*
          if (parser->RaTasksToDo == RA_IDLE) {
             RaCursesUpdateInterval.tv_sec  = 1;
             RaCursesUpdateInterval.tv_usec = 0;
@@ -1245,6 +1353,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                RaCursesUpdateInterval.tv_usec = 153613;
             }
          }
+*/
       }
    }
 }
@@ -1256,7 +1365,6 @@ void RaArgusInputComplete (struct ArgusInput *input) {
       if (queue != NULL) {
          ArgusProcessQueue(queue, ARGUS_PROCESS_BASELINE);
       }
-      ArgusProcessingSample = 1;
 
    } else
    if (ArgusProcessingSample) {
@@ -3915,11 +4023,9 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
          }
 
          if (fstruct != NULL) {
-            ArgusAddFileList(ArgusParser, fstruct->filename, ARGUS_DATA_SOURCE,
-                       fstruct->ostart, fstruct->ostop);
+            ArgusAddFileList(ArgusParser, fstruct->filename, ARGUS_DATA_SOURCE, fstruct->ostart, fstruct->ostop);
 #ifdef ARGUSDEBUG
-            ArgusDebug (2, "RaSQLProcessQueue: filename %s ostart %d  ostop %d\n",
-                              fstruct->filename, fstruct->ostart, fstruct->ostop);
+            ArgusDebug (2, "RaSQLProcessQueue: filename %s ostart %d  ostop %d\n", fstruct->filename, fstruct->ostart, fstruct->ostop);
 #endif
          }
       }
@@ -4090,7 +4196,7 @@ int
 ArgusReadSQLTables (struct ArgusParserStruct *parser)
 {
    int retn = 0, found = 0, tableIndex;
-   char *table = NULL;
+   char *url = NULL, *table = NULL;
    MYSQL_RES *mysqlRes;
 
    if (parser->tflag) {
@@ -4123,7 +4229,80 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
 
       tableIndex = 0;
       retn = -1;
-      while ((table = RaTables[tableIndex]) != NULL) {
+
+      while ((url = RaTables[tableIndex]) != NULL) {
+         char *dbptr = NULL, *ptr;
+         char sbuffer[128], *sbuf = sbuffer;
+         dbptr = url;
+/*
+      maybe a table name or a url of the format:
+         //[[username[:password]@]hostname[:port]]/database/tablename
+*/
+
+         if (!(strncmp ("//", dbptr, 2))) {
+            char *rhost = NULL, *ruser = NULL, *rpass = NULL;
+            if ((strncmp ("///", dbptr, 3))) {
+               dbptr = &dbptr[2];
+               rhost = dbptr;
+               if ((ptr = strchr (dbptr, '/')) != NULL) {
+                  *ptr++ = '\0';
+                  dbptr = ptr;
+
+                  if ((ptr = strchr (rhost, '@')) != NULL) {
+                     ruser = rhost;
+                     *ptr++ = '\0';
+                     rhost = ptr;
+                     if ((ptr = strchr (ruser, ':')) != NULL) {
+                        *ptr++ = '\0';
+                        rpass = ptr;
+                     } else {
+                        rpass = NULL;
+                     }
+                  }
+
+                  if ((ptr = strchr (rhost, ':')) != NULL) {
+                     *ptr++ = '\0';
+                     RaPort = atoi(ptr);
+                  }
+               } else
+                  dbptr = NULL;
+
+            } else {
+               dbptr = &dbptr[3];
+            }
+
+            if (ruser != NULL) {
+               if (RaUser != NULL) free(RaUser);
+               RaUser = strdup(ruser);
+            }
+            if (rpass != NULL) {
+               if (RaPass != NULL) free(RaPass);
+               RaPass = strdup(rpass);
+            }
+            if (rhost != NULL) {
+               if (RaHost != NULL) free(RaHost);
+               RaHost = strdup(rhost);
+            }
+            free(RaDatabase);
+
+            if ((table = strchr (dbptr, '/')) != NULL)
+               *table++ = '\0';
+
+            free(RaTables[tableIndex]);
+            RaTables[tableIndex] = strdup(table);
+
+            RaDatabase = strdup(dbptr);
+            sprintf (sbuf, "USE %s", RaDatabase);
+
+            if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
+               ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+
+            table = RaTables[tableIndex];
+
+         } else {
+            table = url;
+         }
+
          if (strcmp("Seconds", table)) {
             sprintf (ArgusSQLStatement, "desc %s", table);
             if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
@@ -4140,6 +4319,7 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
             }
          } else
             retn = 0;
+
          tableIndex++;
       }
    }

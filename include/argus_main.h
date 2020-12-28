@@ -217,9 +217,15 @@ int ArgusProcessRecord (struct ArgusRecordStruct *);
 void ArgusGenerateCanonicalRecord (struct ArgusRecord *, struct ArgusCanonRecord *);
 
 int ArgusGetServerSocket (struct ArgusInput *, int);
+
+int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+void ArgusDeleteBaselineList (struct ArgusParserStruct *);
+
 int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 void ArgusDeleteFileList (struct ArgusParserStruct *);
+
 int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
 void ArgusDeleteHostList (struct ArgusParserStruct *);
 int ArgusAddModeList (struct ArgusParserStruct *, char *);
@@ -328,9 +334,15 @@ extern int read_file (int fd, struct nff_program *);
 extern int ArgusParseAliasFile (char *);
 
 extern int ArgusGetServerSocket (struct ArgusInput *, int);
+
 extern int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern void ArgusDeleteFileList (struct ArgusParserStruct *);
+
+extern int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern void ArgusDeleteBaselineList (struct ArgusParserStruct *);
+
 extern int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
 extern void ArgusDeleteHostList (struct ArgusParserStruct *);
 extern int ArgusAddModeList (struct ArgusParserStruct *, char *);
