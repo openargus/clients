@@ -98,40 +98,42 @@ extern gid_t new_gid;
 
 void ArgusSetChroot(char *);
 
-#define RADIUM_RCITEMS                          27
+#define RADIUM_RCITEMS                          28
 
 #define RADIUM_MONITOR_ID                       0
 #define RADIUM_MONITOR_ID_INCLUDE_INF		1
 #define RADIUM_ARGUS_SERVER                     2
-#define RADIUM_DAEMON                           3
-#define RADIUM_CISCONETFLOW_PORT                4
-#define RADIUM_ACCESS_PORT                      5
-#define RADIUM_INPUT_FILE                       6
-#define RADIUM_USER_AUTH                        7
-#define RADIUM_AUTH_PASS                        8
-#define RADIUM_OUTPUT_FILE                      9
-#define RADIUM_OUTPUT_STREAM                    10
-#define RADIUM_MAR_STATUS_INTERVAL              11
-#define RADIUM_DEBUG_LEVEL                      12
-#define RADIUM_FILTER_OPTIMIZER                 13
-#define RADIUM_FILTER_TAG                       14
-#define RADIUM_BIND_IP                          15
-#define RADIUM_MIN_SSF                          16
-#define RADIUM_MAX_SSF                          17
-#define RADIUM_ADJUST_TIME                      18
-#define RADIUM_CHROOT_DIR                       19
-#define RADIUM_SETUSER_ID                       20
-#define RADIUM_SETGROUP_ID                      21
-#define RADIUM_CLASSIFIER_FILE                  22
-#define RADIUM_ZEROCONF_REGISTER                23
-#define RADIUM_V3_ACCESS_PORT                   24
-#define RADIUM_SRCID_CONVERSION_FILE            25
-#define RADIUM_AUTH_LOCALHOST                   26
+#define RADIUM_ARGUS_CLIENT			3
+#define RADIUM_DAEMON                           4
+#define RADIUM_CISCONETFLOW_PORT                5
+#define RADIUM_ACCESS_PORT                      6
+#define RADIUM_INPUT_FILE                       7
+#define RADIUM_USER_AUTH                        8
+#define RADIUM_AUTH_PASS                        9
+#define RADIUM_OUTPUT_FILE                      10
+#define RADIUM_OUTPUT_STREAM                    11
+#define RADIUM_MAR_STATUS_INTERVAL              12
+#define RADIUM_DEBUG_LEVEL                      13
+#define RADIUM_FILTER_OPTIMIZER                 14
+#define RADIUM_FILTER_TAG                       15
+#define RADIUM_BIND_IP                          16
+#define RADIUM_MIN_SSF                          17
+#define RADIUM_MAX_SSF                          18
+#define RADIUM_ADJUST_TIME                      19
+#define RADIUM_CHROOT_DIR                       20
+#define RADIUM_SETUSER_ID                       21
+#define RADIUM_SETGROUP_ID                      22
+#define RADIUM_CLASSIFIER_FILE                  23
+#define RADIUM_ZEROCONF_REGISTER                24
+#define RADIUM_V3_ACCESS_PORT                   25
+#define RADIUM_SRCID_CONVERSION_FILE            26
+#define RADIUM_AUTH_LOCALHOST                   27
 
 char *RadiumResourceFileStr [] = {
    "RADIUM_MONITOR_ID=",
    "RADIUM_MONITOR_ID_INCLUDE_INF=",
    "RADIUM_ARGUS_SERVER=",
+   "RADIUM_ARGUS_CLIENT=",
    "RADIUM_DAEMON=",
    "RADIUM_CISCONETFLOW_PORT=",
    "RADIUM_ACCESS_PORT=",
@@ -745,20 +747,23 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
          setArgusManInf(parser, optarg);
          break;
 
-      case RADIUM_ARGUS_SERVER:
-         if (!parser->Sflag++ && (parser->ArgusRemoteHostList != NULL))
-            ArgusDeleteHostList(parser);
+      case RADIUM_ARGUS_CLIENT:
+         break;
 
-         if (!(ArgusAddHostList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
+      case RADIUM_ARGUS_SERVER:
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
+
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
             ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
          break;
 
       case RADIUM_CISCONETFLOW_PORT: {
          ++parser->Cflag;
-         if (!parser->Sflag++ && (parser->ArgusRemoteHostList != NULL))
-            ArgusDeleteHostList(parser);
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
 
-         if (!(ArgusAddHostList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
             ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
 
          break;
@@ -975,8 +980,8 @@ clearRadiumConfiguration (void)
 
    ArgusParser->dflag = 0;
 
-   if (ArgusParser->ArgusRemoteHostList != NULL)
-      ArgusDeleteHostList(ArgusParser);
+   if (ArgusParser->ArgusRemoteServerList != NULL)
+      ArgusDeleteServerList(ArgusParser);
 
    if (ArgusParser->ArgusInputFileList) {
       ArgusDeleteFileList(ArgusParser);

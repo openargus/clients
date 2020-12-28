@@ -553,6 +553,8 @@ struct ArgusParserStruct {
 
    struct ArgusInput *ArgusRemoteHostList;
 
+   struct ArgusOutput *ArgusRemoteClientList;
+
    struct ArgusListStruct *ArgusLabelerFileList;
    struct ArgusListStruct *ArgusWfileList;
 

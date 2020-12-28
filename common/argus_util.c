@@ -1033,10 +1033,10 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
          case 'C':
             ++parser->Cflag;
             ++parser->Sflag;
-            if ((!Scmdline++) && (parser->ArgusRemoteHostList != NULL))
-               ArgusDeleteHostList(parser);
+            if ((!Scmdline++) && (parser->ArgusRemoteServerList != NULL))
+               ArgusDeleteServerList(parser);
 
-            if (!(ArgusAddHostList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
+            if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
                ArgusLog(LOG_ERR, "%s: host %s unknown", *argv, optarg);
             break;
 
@@ -1598,10 +1598,10 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
          case 'S':
             ++parser->Sflag;
-            if ((!Scmdline++) && (parser->ArgusRemoteHostList != NULL))
-               ArgusDeleteHostList(parser);
+            if ((!Scmdline++) && (parser->ArgusRemoteServerList != NULL))
+               ArgusDeleteServerList(parser);
 
-            if (!(ArgusAddHostList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
+            if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
                ArgusLog(LOG_ERR, "%s: host %s unknown", *argv, optarg);
             break;
 
@@ -1803,10 +1803,10 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
 
    switch (idx) {
       case RA_ARGUS_SERVER:
-         if (!parser->Sflag++ && (parser->ArgusRemoteHostList != NULL))
-            ArgusDeleteHostList(parser);
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
                               
-         if (!(ArgusAddHostList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP))) {
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP))) {
             ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
          }
          break;
@@ -1831,10 +1831,10 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
 
       case RA_CISCONETFLOW_PORT:
          ++parser->Cflag;
-         if (!parser->Sflag++ && (parser->ArgusRemoteHostList != NULL))
-            ArgusDeleteHostList(parser);
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
                               
-         if (!(ArgusAddHostList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP))) {
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP))) {
             ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
          }
          break;
@@ -3133,9 +3133,9 @@ RaClearConfiguration (struct ArgusParserStruct *parser)
       ArgusDeleteFileList(parser);
    }
 
-   if (parser->ArgusRemoteHostList != NULL) {
-      ArgusDeleteHostList(parser);
-      parser->ArgusRemoteHostList = NULL;
+   if (parser->ArgusRemoteServerList != NULL) {
+      ArgusDeleteServerList(parser);
+      parser->ArgusRemoteServerList = NULL;
    }
 
    while (parser->RaPrintOptionIndex > 0) {
@@ -30649,7 +30649,7 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi)
 */
 
 int
-ArgusAddHostList (struct ArgusParserStruct *parser, char *host, int type, int proto)
+ArgusAddServerList (struct ArgusParserStruct *parser, char *host, int type, int proto)
 {
    static char *str, strbuf[MAXSTRLEN], msgbuf[MAXSTRLEN];
    static char *protoStr, portbuf[16];
@@ -30753,12 +30753,12 @@ ArgusAddHostList (struct ArgusParserStruct *parser, char *host, int type, int pr
                *tptr++ = '\0';
                portnum = strtol(tptr, &endptr, 10);
                if (endptr != &tptr[strlen(tptr)]) {
-                  ArgusLog (LOG_ALERT, "ArgusAddHostList(%s) format error %s is not a port number", tptr);
+                  ArgusLog (LOG_ALERT, "ArgusAddServerList(%s) format error %s is not a port number", tptr);
                } else
                   servname = tptr;
             }
          } else {
-            ArgusLog (LOG_ALERT, "ArgusAddHostList(%s) literal ipv6 format error %s: no terminating ']'", host, ptr);
+            ArgusLog (LOG_ALERT, "ArgusAddServerList(%s) literal ipv6 format error %s: no terminating ']'", host, ptr);
          }
 
       } else {
@@ -30775,7 +30775,7 @@ ArgusAddHostList (struct ArgusParserStruct *parser, char *host, int type, int pr
             
             portnum = strtol(tptr, &endptr, 10);
             if (endptr == tptr) {
-               ArgusLog (LOG_ALERT, "ArgusAddHostList(%s) format error %s is not a port number", host, tptr);
+               ArgusLog (LOG_ALERT, "ArgusAddServerList(%s) format error %s is not a port number", host, tptr);
             } else
                servname = tptr;
 
@@ -30939,20 +30939,20 @@ ArgusAddHostList (struct ArgusParserStruct *parser, char *host, int type, int pr
          retn = 1;
 
       } else
-         ArgusLog (LOG_ERR, "ArgusAddHostList(%s) ArgusCalloc %s", str, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusAddServerList(%s) ArgusCalloc %s", str, strerror(errno));
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusAddHostList (0x%x, %s, %d, %d) returning %d\n", parser, host, type, proto, retn);
+   ArgusDebug (2, "ArgusAddServerList (0x%x, %s, %d, %d) returning %d\n", parser, host, type, proto, retn);
 #endif
 
    return (retn);
 }
 
 void
-ArgusDeleteHostList (struct ArgusParserStruct *parser)
+ArgusDeleteServerList (struct ArgusParserStruct *parser)
 {
-   struct ArgusInput *input = parser->ArgusRemoteHostList, *prv;
+   struct ArgusInput *input = parser->ArgusRemoteServerList, *prv;
 
    while ((prv = input) != NULL) {
       ArgusCloseInput(parser, input);
@@ -30960,10 +30960,10 @@ ArgusDeleteHostList (struct ArgusParserStruct *parser)
       ArgusFree(prv);
    }
 
-   parser->ArgusRemoteHostList = NULL;
+   parser->ArgusRemoteServerList = NULL;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusDeleteHostList () returning\n");
+   ArgusDebug (2, "ArgusDeleteServerList () returning\n");
 #endif
 }
 

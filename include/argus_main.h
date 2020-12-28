@@ -225,9 +225,8 @@ void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 void ArgusDeleteFileList (struct ArgusParserStruct *);
-
-int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
-void ArgusDeleteHostList (struct ArgusParserStruct *);
+int ArgusAddServerList (struct ArgusParserStruct *, char *, int, int);
+void ArgusDeleteServerList (struct ArgusParserStruct *);
 int ArgusAddModeList (struct ArgusParserStruct *, char *);
 void ArgusDeleteModeList (struct ArgusParserStruct *);
 int ArgusAddMaskList (struct ArgusParserStruct *, const char * const);
@@ -271,7 +270,7 @@ extern char *exceptfile, *wfile;
 
 extern struct ArgusInput *ArgusInput;
 extern struct ArgusInput *ArgusInputFileList;
-extern struct ArgusInput *ArgusRemoteHostList;
+extern struct ArgusInput *ArgusRemoteServerList;
 extern struct ArgusModeStruct *ArgusModeList;
 extern struct ArgusModeStruct *ArgusMaskList;
 
@@ -343,8 +342,8 @@ extern int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long l
 extern int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 
-extern int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
-extern void ArgusDeleteHostList (struct ArgusParserStruct *);
+extern int ArgusAddServerList (struct ArgusParserStruct *, char *, int, int);
+extern void ArgusDeleteServerList (struct ArgusParserStruct *);
 extern int ArgusAddModeList (struct ArgusParserStruct *, char *);
 extern void ArgusDeleteModeList (struct ArgusParserStruct *);
 extern int ArgusAddMaskList (struct ArgusParserStruct *, const char * const);

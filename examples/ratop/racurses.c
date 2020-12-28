@@ -431,11 +431,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGS: {
-            if (!(ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
+            if (!(ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
                ArgusLog (LOG_ALERT, "%s%s host not found", RaInputString, RaCommandInputStr);
             } else {
-               ArgusDeleteHostList(ArgusParser);
-               ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0);
+               ArgusDeleteServerList(ArgusParser);
+               ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0);
                ArgusParser->Sflag = 1;
                ArgusParser->RaParseDone = 0;
             }
@@ -2539,7 +2539,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      retn = RAGETTINGd;
                      RaInputString = RAGETTINGdSTR;
 
-                     if (ArgusParser->ArgusRemoteHostList) {
+                     if (ArgusParser->ArgusRemoteServerList) {
                         struct ArgusInput *input = (void *)ArgusParser->ArgusActiveHosts->start;
                         do {
                            sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s:%d", input->hostname, input->portnum);
@@ -2743,7 +2743,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   }
 
                   case 'S': {
-                     struct ArgusInput *input = ArgusParser->ArgusRemoteHostList;
+                     struct ArgusInput *input = ArgusParser->ArgusRemoteServerList;
                      retn = RAGETTINGS;
                      RaInputString = RAGETTINGSSTR;
                      while (input) {
@@ -3827,7 +3827,7 @@ argus_command_string(void)
          }
 
          case RAGETTINGS: {
-            if (!(ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
+            if (!(ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
                ArgusLog (LOG_ALERT, "%s%s host not found", RaInputString, RaCommandInputStr);
             } else {
                ArgusParser->Sflag = 1;
