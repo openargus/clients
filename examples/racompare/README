@@ -18,6 +18,23 @@
  *
  */
 
+Mon Dec 28 09:51:45 EST 2020
+Mods to add reading from the database ... you can have database files for any combo of
+baseline or sample.  
+
+Key to running racompare.1 is to assign baseline tag to the baseline source, and to
+define the merge model, if needed, and if the data is derived, like it is in these tables,
+turn off record correction.  
+
+As an example, to compare two database rollup tables:
+   racompare -M nocorrect -r baseline:mysql://root@localhost/inventory/ipAddrs_2020_09 -r mysql://root@localhost/inventory/ipAddrs_2020_12_25 -m sid inf smac saddr
+
+With the sql support, these methods support the "-M sql='where-like clause'", so to compare a particular address ...
+   racompare -M nocorrect sql="saddr='10.0.1.8'" -r baseline:mysql://root@localhost/inventory/ipAddrs_2020_09 -r mysql://root@localhost/inventory/ipAddrs_2020_12_25 -m sid inf smac saddr
+
+In this particular case, you may want to ignore the smac address, if things are running in different VMs, as an example, take out the smac from the model.
+   racompare -M nocorrect sql="saddr='10.0.1.8'" -r baseline:mysql://root@localhost/inventory/ipAddrs_2020_09 -r mysql://root@localhost/inventory/ipAddrs_2020_12_25 -m sid inf saddr
+
 
 Gargoyle Clients 5.0 Racompare Readme
 QoSient, LLC
