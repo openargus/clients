@@ -3098,6 +3098,8 @@ RaCursesNewProcess(struct ArgusParserStruct *parser)
 #endif
    return (retn);
 }
+
+#define ARGUS_MIN_ARRAY_SIZE   1024
  
 int
 RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queue, int type)
@@ -3111,12 +3113,27 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
       pthread_mutex_lock(&queue->lock);
 #endif
 
-   cnt = queue->count;
+   if (queue->array == NULL) {
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(sizeof(struct ArgusQueueHeader *), ARGUS_MIN_ARRAY_SIZE)) != NULL) {
+         queue->arraylen = ARGUS_MIN_ARRAY_SIZE;
+      } else
+         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), ARGUS_MIN_ARRAY_SIZE, strerror(errno));
+   }
 
-   if (queue->array != NULL) {
-      ArgusFree(queue->array);
-      queue->array = NULL;
-      queue->arraylen = 0;
+   if ((cnt = queue->count) > queue->arraylen) {
+      if (queue->array != NULL) {
+         int size = queue->arraylen;
+
+         ArgusFree(queue->array);
+         queue->array = NULL;
+         while (size < cnt) {
+            size += ARGUS_MIN_ARRAY_SIZE;
+         }
+         queue->arraylen = size;
+ 
+         if ((queue->array = (struct ArgusQueueHeader **) ArgusCalloc(1, sizeof(struct ArgusQueueHeader *) * queue->arraylen)) == NULL)
+            ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), cnt, strerror(errno));
+      }
    }
 
    if (cnt > 0) {
