@@ -3045,14 +3045,16 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
             qhdr = qhdr->nxt;
          }
 
-         queue->array[x] = NULL;
-         qsort ((char *) queue->array, x, sizeof (struct ArgusQueueHeader *), ArgusSortRoutine);
+         if (x > 0) {
+            queue->array[x] = NULL;
+            qsort ((char *) queue->array, x, sizeof (struct ArgusQueueHeader *), ArgusSortRoutine);
 
-         for (i = 0; i < x; i++) {
-            struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) queue->array[i];
-            if (ns->rank != (i + 1)) {
-               ns->rank = i + 1;
-               ns->status |= ARGUS_RECORD_MODIFIED;
+            for (i = 0; i < x; i++) {
+               struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) queue->array[i];
+               if (ns->rank != (i + 1)) {
+                  ns->rank = i + 1;
+                  ns->status |= ARGUS_RECORD_MODIFIED;
+               }
             }
          }
 
