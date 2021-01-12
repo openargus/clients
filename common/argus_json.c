@@ -360,6 +360,8 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
             if (parent->type != ARGUS_JSON_KEY) {
                parent->type = ARGUS_JSON_STRING;
             }
+            if (parent->value.string != NULL)
+               free (parent->value.string);
             parent->value.string = new_string;
             *cursor = end + 1;
             retn = 1;
