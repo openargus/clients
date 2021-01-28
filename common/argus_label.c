@@ -855,7 +855,7 @@ ArgusConvertLabelToJson(char *label, char *buf, int len)
             int llabsindex = 0;
 
             if ((llabs = ArgusCalloc(256, sizeof(struct ArgusLabelObject))) == NULL)
-               ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
+               ArgusLog (LOG_ERR, "ArgusConvertLabelToJson: ArgusCalloc error %s", strerror(errno));
 
             while ((obj = strtok(sptr, ":")) != NULL) {
                if (llabsindex < 256) {
@@ -903,7 +903,12 @@ ArgusConvertLabelToJson(char *label, char *buf, int len)
                         slen++;
                      }
                      if (llabs[i].values[x]) {
-                        snprintf(&buf[slen], 1024, "%s",llabs[i].values[x]);
+                        int n;
+                        float f;
+                        if ((sscanf(llabs[i].values[x],"%d",&n) == 1) || (sscanf(llabs[i].values[x],"%f",&f) == 1))
+                           snprintf(&buf[slen], 1024, "%s",llabs[i].values[x]);
+			else
+                           snprintf(&buf[slen], 1024, "\"%s\"",llabs[i].values[x]);
                         free(llabs[i].values[x]);
                      }
                   }
@@ -944,6 +949,9 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
    ArgusJsonValue l1root, l2root, *res1 = NULL, *res2 = NULL;
    char *l1str = NULL, *l2str = NULL, *retn = NULL;
    char *l1buf = NULL, *l2buf = NULL;
+
+   bzero(&l1root, sizeof(l1root));
+   bzero(&l2root, sizeof(l2root));
 
    if ((l1 != NULL) && (l2 != NULL)) {
       if (strcmp(l1, l2) == 0) 

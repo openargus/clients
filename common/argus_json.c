@@ -120,7 +120,7 @@ vector_push_back(vector* v, void* data) {
 
 void
 vector_foreach_data(const vector* v, vector_foreach_data_t fp, void* data) {
-   if ((v == NULL) || (((ArgusJsonValue *)v)->type != ARGUS_JSON_NULL)) return;
+   if (v == NULL) return;
    char* item = v->data;
    size_t i;
 
@@ -311,8 +311,8 @@ json_zero_value(ArgusJsonValue *val) {
 
    switch (val->type) {
       case ARGUS_JSON_STRING:
-         val->value.string = NULL;
          break;
+
       case ARGUS_JSON_ARRAY:
       case ARGUS_JSON_OBJECT:
          vector_foreach(&(val->value.array), val, (void(*)(void*))json_zero_value);
@@ -360,8 +360,6 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
             if (parent->type != ARGUS_JSON_KEY) {
                parent->type = ARGUS_JSON_STRING;
             }
-            if (parent->value.string != NULL)
-               free (parent->value.string);
             parent->value.string = new_string;
             *cursor = end + 1;
             retn = 1;
@@ -512,6 +510,20 @@ json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
       vector_push_back(&p1->value.array, &v2);
       p1->status |= ARGUS_JSON_MODIFIED;
 
+      switch (p2->type) {
+         case ARGUS_JSON_BOOL:
+         case ARGUS_JSON_INTEGER:
+         case ARGUS_JSON_DOUBLE:
+            break;
+
+         case ARGUS_JSON_STRING:
+            v2.value.string = strdup(p2->value.string);
+            break;
+      }
+
+      vector_init(&p1->value.object, sizeof(ArgusJsonValue));
+      vector_push_back(&p1->value.array, &v1);
+      vector_push_back(&p1->value.array, &v2);
       p1->status |= ARGUS_JSON_MODIFIED;
 
    } else {
