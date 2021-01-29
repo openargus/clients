@@ -22443,12 +22443,14 @@ unsigned int
 getnamehash(const u_char *np)
 {
    unsigned int retn = 0;
-   if (np != NULL) {
+   unsigned char *ptr = np;
+   if (ptr != NULL) {
       retn = 5381;
       int c;
 
-      while ((c = tolower(*np++)) != '\0')
-         retn = ((retn << 5) + retn) ^ c;  // (retn * 33) ^ c 
+      while ((c = tolower(*ptr++)) != '\0') {
+         retn = ((retn << 5) + retn) ^ c;
+      }
    }
    return retn;
 }
