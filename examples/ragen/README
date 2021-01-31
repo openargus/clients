@@ -1,0 +1,36 @@
+/*
+ * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2013 QoSient, LLC
+ * All rights reserved.
+ *
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ */
+
+
+Sun Jan 31 12:13:11 EST 2021
+
+Ragen.1 is designed to generate a stream of argus flow records based on a
+baseline defintion of flow records.  The concept is to use each flow record
+in the baseline as a template for generating flow records.  The basis for this
+is rabins.1 which will take a flow record and "split" it into time ranges ...
+
+This technique is used to generate the expected records, 
+
+All of this is structured in a radium.1 framework, so that it can read live
+data, if it needs it, and offer generated live streams from sockets.
+
+Ragen.1 also introduces a new protocol, similar to the argus protocol, where
+the client needs to identify what baseline it is interested in, at what interval
+and for how long.  Eventually, the protocol will allow the client to specify a
+method for generating the flows.

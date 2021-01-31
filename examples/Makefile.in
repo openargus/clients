@@ -44,14 +44,13 @@ docdir = @datadir@/doc/argus-clients-3.0
 
 SHELL = /bin/sh
 
-DIRS = ./race ./raconvert ./racompare ./radecode ./radns ./radhcp ./radump ./raevent ./rafilter ./ragraph \
-	./ragrep ./rahisto ./ralabel ./rampc ./ramatrix ./rap ./rapath ./rapolicy ./raqsort ./rarpwatch \
-	./raservices ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
+DIRS = ./race ./raconvert ./racompare ./radecode ./radns ./radhcp ./radump ./raevent ./rafilter \
+	./ragen ./ragraph ./ragrep ./rahisto ./ralabel ./rampc ./ramatrix ./rap ./rapath ./rapolicy \
+	./raqsort ./rarpwatch ./raservices ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
 	./ratemplate @ARGUS_MYSQL@
 
 ifndef WORKSTATION_BUILD
 DIRS += ./raports
-DIRS += ./rahosts
 DIRS += ./rascanner
 DIRS += ./radbase
 DIRS += ./raup
