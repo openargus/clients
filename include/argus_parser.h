@@ -343,6 +343,9 @@ struct ArgusParserStruct {
    struct timeval ArgusTimeDelta;
    struct timeval ArgusTimeOffset;
 
+   int (*ArgusParseClientMessage)(struct ArgusParserStruct *, void *, void *, char *);
+   int (*ArgusWriteClientMessage)(struct ArgusParserStruct *, void *, void *, char *);
+
    int ArgusDirectionFunction, ArgusZeroConf;
 
    double ArgusLastRecordTime;
@@ -529,6 +532,8 @@ struct ArgusParserStruct {
    char *ArgusLocalFilter;
    char *ArgusRemoteFilter;
    char *ArgusDisplayFilter;
+
+   char *ArgusGeneratorConfig;
 
    char *ArgusBindAddr;
    char *ArgusEthernetVendorFile;

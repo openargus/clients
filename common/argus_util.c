@@ -1236,6 +1236,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
                   stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
                } else
+               if ((tzptr = strstr (optarg, "gen=")) != NULL) {
+                  parser->ArgusGeneratorConfig = strdup(&optarg[4]);
+               } else
                if ((tzptr = strstr (optarg, "label=")) != NULL) {
                   parser->ArgusMatchLabel = strdup(&optarg[6]);
                   ArgusProcessLabelOptions(parser, &optarg[6]);
@@ -29775,6 +29778,18 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                         }
 
                         if (input->fd >= 0) {
+                           if (parser->ArgusGeneratorConfig != NULL) {
+                              snprintf ((char *) buf, MAXSTRLEN-1, "GEN: %s", (char *) parser->ArgusGeneratorConfig);
+
+                              len = strlen((char *) buf);
+                              if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
+                                 ArgusLog (LOG_ALERT, "%s: write remote generator string error %s.", strerror(errno));
+                                 close(input->fd);
+                                 input->fd = -1;
+                                 goto out;
+                              }
+                           }
+
                            if (parser->ArgusRemoteFilter != NULL) {
                               snprintf ((char *) buf, MAXSTRLEN-1, "FILTER: man or (%s)",
                                        (char *) parser->ArgusRemoteFilter);

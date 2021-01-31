@@ -4372,7 +4372,7 @@ no_auth:
 }
 
  
-#define ARGUSMAXCLIENTCOMMANDS          6
+#define ARGUSMAXCLIENTCOMMANDS          7
 #define RADIUM_START                    0
 #define RADIUM_DONE                     1
 #define RADIUM_FILTER                   2
@@ -4478,7 +4478,7 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
    ArgusDebug (3, "ArgusCheckClientMessage (0x%x, %d) read '%s' from remote\n", client, fd, ptr);
 #endif
 
-   for (i = 0, found = 0; i < ARGUSMAXCLIENTCOMMANDS; i++) {
+   for (i = 0, found = 0; (i < ARGUSMAXCLIENTCOMMANDS) && !found; i++) {
       if (!(strncmp (ptr, ArgusClientCommands[i], strlen(ArgusClientCommands[i])))) {
          found++;
          switch (i) {
@@ -4545,14 +4545,19 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
                break;
             }
 
-            default:
-               if (client->hostname)
-                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s",  client->hostname, ptr);
-               else
-                  ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received %s",  ptr);
+            default: {
+               if (ArgusParser->ArgusParseClientMessage != NULL) {
+                  if (ArgusParser->ArgusParseClientMessage(ArgusParser, output, client, ptr))
+                     found++;
+               } else {
+                  if (client->hostname)
+                     ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s\n",  client->hostname, ptr);
+                  else
+                     ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received %s\n",  ptr);
+               }
                break;
+            }
          }
-
          break;
       }
    }
