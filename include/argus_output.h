@@ -102,6 +102,7 @@ struct ArgusClientData {
    struct ArgusQueueHeader qhdr;
    int fd, pid, ArgusClientStart;
    int ArgusFilterInitialized;
+   int ArgusGeneratorInitialized;
    struct timeval startime, lasttime;
    struct ArgusSocketStruct *sock;
    struct nff_program ArgusNFFcode;

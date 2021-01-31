@@ -29788,6 +29788,23 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                                  input->fd = -1;
                                  goto out;
                               }
+
+                              if (input->major_version >= MAJOR_VERSION_3) {
+                                 bzero(buf, len);
+                                 if ((cnt = read (input->fd, buf, 2)) != 2) {
+                                    ArgusLog (LOG_ALERT, "remote Filter error");
+                                    close(input->fd);
+                                    input->fd = -1;
+                                    goto out;
+                                 }
+
+                                 if (strncmp((char *)buf, "OK", 2)) {
+                                    ArgusLog (LOG_ALERT, "remote rejects generator configuration.");
+                                    close(input->fd);
+                                    input->fd = -1;
+                                    goto out;
+                                 }
+                              }
                            }
 
                            if (parser->ArgusRemoteFilter != NULL) {

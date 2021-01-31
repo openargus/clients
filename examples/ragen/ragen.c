@@ -19,13 +19,13 @@
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/clients/radium.c#20 $
+ * $Id: //depot/gargoyle/clients/clients/ragen.c#20 $
  * $DateTime: 2016/11/30 00:54:11 $
  * $Change: 3245 $
  */
 
 /*
- * radium.c  - this is the argus record distribtion node.
+ * ragen.c  - this is the argus record distribtion node.
  *    Acting just like a ra* program, supporting all the options
  *    and functions of ra(), and providing access to data, like
  *    argus, supporting remote filtering, and MAR record generation.
@@ -51,9 +51,10 @@
 #include <argus_compat.h>
 #include <argus_util.h>
 #include <argus_output.h>
-#include "argus_clientconfig.h"
+#include <argus_clientconfig.h>
 
 #include <rabins.h>
+#include "ragen.h"
 
 #if defined(HAVE_UUID_UUID_H)
 #include <uuid/uuid.h>
@@ -162,12 +163,85 @@ char *RaGenResourceFileStr [] = {
 };
 
 
+static struct RaGenConfig *
+RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientData *client, char *ptr)
+{
+   struct RaGenConfig *retn = NULL, config;
+   struct tm tmbuf, *tm = &tmbuf;
+   char *sptr, *str = strdup(ptr);
+
+   sptr = str;
+   bzero(&config, sizeof(config));
+
+   while ((optarg = strtok(str, ";")) != NULL) {
+      char *key, *value, *dptr;
+      if ((dptr = strchr(optarg, '=')) != NULL) {
+         key = optarg;
+         *dptr++ = '\0';
+         value = dptr;
+      }
+      if (strcasecmp(key, "baseline") == 0) {
+         config.baseline = strdup(value);
+      } else if ((strcasecmp(key, "startime") == 0) || (strcasecmp(key, "stime") == 0)) {
+         ArgusCheckTimeFormat (tm, value);
+      } else if (strcasecmp(key, "interval") == 0) {
+         config.interval = atof(value);
+      } else if (strcasecmp(key, "dur") == 0) {
+         config.duration = atof(value);
+      }
+      str = NULL;
+   }
+
+   if (parser->startime_t.tv_sec > 0) {
+      if (config.duration > 0) {
+         parser->lasttime_t.tv_sec = parser->startime_t.tv_sec + config.duration;
+         if ((retn = ArgusCalloc (1, sizeof(*retn))) != NULL) {
+            bcopy(&config, retn, sizeof(*retn));
+         }
+      }
+   }
+   free(sptr);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p, '%s') returns %d\n", parser, client, ptr, retn);
+#endif
+
+   return (retn);
+}
+
+
 static int
 RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, char *ptr)
 {
    struct ArgusOutputStruct *output = (struct ArgusOutputStruct *)o;
    struct ArgusClientData *client = (struct ArgusClientData *) c;
-   int retn = 1;
+   struct RaGenConfig *config;
+
+   int cnt, retn = 1, fd = client->fd, slen = 0;
+   char *reply;
+
+   if (strstr(ptr, "GEN: ") != NULL) {
+      if ((config = RaGenParseGeneratorConfig(parser, client, &ptr[5])) != NULL) {
+         client->ArgusGeneratorInitialized++;
+         reply = "OK";
+         retn = 1;
+      } else {
+         reply = "FAIL";
+         retn = 0;
+      }
+
+      slen = strlen(reply);
+      if ((cnt = send (fd, reply, slen, 0)) != slen) {
+         retn = -3;
+#ifdef ARGUSDEBUG
+         ArgusDebug (3, "RaGenParseClientMessage: send error %s\n", strerror(errno));
+#endif
+      } else {
+#ifdef ARGUSDEBUG
+         ArgusDebug (3, "RaGenParseClientMessage: ArgusGeneratorConfiguration processed.\n");
+#endif
+      }
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "RaGenParseClientMessage(%p, %p, %p, '%s') returns %d\n", parser, o, c, ptr, retn);
@@ -280,14 +354,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    This is the basic new argus() strategy for processing output
    records.  The thread will do two basic things: 
       1) it will grab stuff off the queue, and then do the basic
-         processing that this radium will do, such as time
+         processing that this ragen will do, such as time
          adjustment, aggregation, correction, and anonymization, etc...
 
       2) it will establish the permanent and non-argus outputs
          from the configuration file.
 
       3) it will manage the listen, to deal without remote argus
-         requests.  radium() can write its records to a file, and
+         requests.  ragen() can write its records to a file, and
          any number of remote clients, so ......
 
    The ArgusClientTimeout() routine will drive all the maintenance
@@ -461,7 +535,7 @@ usage ()
    extern char version[];
 
    fprintf (stdout, "RaGen Version %s\n", version);
-   fprintf (stdout, "usage: %s [radiumoptions] [raoptions]\n", ArgusParser->ArgusProgramName);
+   fprintf (stdout, "usage: %s [ragenoptions] [raoptions]\n", ArgusParser->ArgusProgramName);
 
    fprintf (stdout, "options: -c <dir>       daemon chroot directory.\n");
    fprintf (stdout, "         -d             run as a daemon.\n");
