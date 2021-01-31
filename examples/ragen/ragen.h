@@ -4,6 +4,10 @@
 #  include "argus_config.h"
 # endif
 
+#define RA_IDLE                 0
+#define RA_ACTIVE               1
+#define RA_SORTING              2
+
 typedef struct RaGenConfig {
    char *baseline;
    struct timeval startime;

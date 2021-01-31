@@ -56,11 +56,11 @@ PERL = @V_PERL@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
+INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
 DEFS = @DEFS@
 COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @LIBMAXMINDDB_LIBS@
 
-CURSESLIB = @CURSESLIB@ @V_READLINE@
+MYSQLLIB = @MYSQL_LDFLAGS@
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
@@ -85,31 +85,27 @@ YACC = @V_YACC@
 	@rm -f $@
 	$(CC) $(CFLAGS) -DRABINPATH=\"$(BINDIR)\" -c $(srcdir)/$*.c
 
-LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
-
-
-SRC =	ragen.c
-
-PROGS = $(INSTALLBIN)/ragen
-
-all: $(PROGS)
-
-$(INSTALLBIN)/ragen: ragen.o 
-	$(CC) $(CFLAGS) -o $@ ragen.o $(LDFLAGS) $(LIB) $(COMPATLIB)
-
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
 
 OBJ =	$(SRC:.c=.o)
 
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
+
+SRC =	ragen.c rasql_common.c
+
+PROGS = $(INSTALLBIN)/ragen
+
+all: $(PROGS)
+
+$(INSTALLBIN)/ragen: $(OBJ) $(LIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIB) $(COMPATLIB) $(MYSQLLIB)
+
 CLEANFILES = $(OBJ) $(PROGS)
 
 install: force all
-	[ -d $(DESTDIR) ] || \
-		(mkdir -p $(DESTDIR); chmod 755 $(DESTDIR))
-
-	[ -d $(BINDIR) ] || \
-		(mkdir -p $(BINDIR); chmod 755 $(BINDIR))
+	[ -d $(DESTDIR)$(BINDIR) ] || \
+		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/ragen $(DESTDIR)$(BINDIR)
 
 uninstall: force all
