@@ -349,7 +349,7 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
 {
    struct RaGenConfig *retn = NULL, config;
    struct tm tmbuf, *tm = &tmbuf;
-   char *sptr, *str = strdup(ptr);
+   char *file = NULL, *sptr, *str = strdup(ptr);
 
    sptr = str;
 
@@ -385,7 +385,19 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
    }
 
    if (config.baseline != NULL) {
-      if ((ptr = strchr(config.baseline, '/')) != NULL) {
+      if ((file = config.baseline) != NULL) {
+         struct stat statbuf;
+         FILE *fd = NULL;
+
+         if ((file = realpath (file, NULL)) != NULL) {
+#ifdef ARGUSDEBUG
+            ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p) sending file %s\n", parser, client, file);
+#endif
+
+            if (!(ArgusAddFileList (parser, file, ARGUS_DATA_SOURCE, -1, -1)))
+               ArgusLog(LOG_ERR, "RaGenParseGeneratorConfig: error: file arg %s", file);
+            stat(file, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
+         }
       }
    }
 
