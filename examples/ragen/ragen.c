@@ -332,7 +332,9 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
    char *sptr, *str = strdup(ptr);
 
    sptr = str;
+
    bzero(&config, sizeof(config));
+   bzero(&tmbuf, sizeof(tmbuf));
 
    while ((optarg = strtok(str, ";")) != NULL) {
       char *key, *value, *dptr;

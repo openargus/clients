@@ -28208,111 +28208,116 @@ int
 ArgusCheckTimeFormat (struct tm *tm, char *str)
 {
    int retn = 0, startfrac = 0, lastfrac = 0;
-   char *ptr, buf[128];
+   char *ptr, buf[132];
 
    /* time - [time] explicit timestamp range */  
    /* time + [time] explicit timestamp with range offset */
 
-   bzero (buf, sizeof(buf));
-   strncpy (buf, str, 120);
+   if (strlen(str) <= 128) {
+      bzero (buf, sizeof(buf));
+      strncpy (buf, str, 128);
 
-   if ((ptr = strpbrk (buf, "smhdMy")) != NULL) {
-      if (tm->tm_year == 0) {
-         time_t tsec = ArgusParser->ArgusGlobalTime.tv_sec;
-         localtime_r(&tsec, tm);
-         bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
-      } else {
-         bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
-      }
-   }
-
-   if (*buf == '-')
-      *buf = '_';
-
-   if (((ptr = strchr(buf, '-')) != NULL) || ((ptr = strchr(buf, '+')) != NULL)) {
-      char mode  = *ptr;
-      if (*buf == '_') *buf = '-';
-
-      *ptr++ = '\0';
-
-      while (isspace((int) buf[strlen(buf) - 1]))
-         buf[strlen(buf) - 1] = 0;
-      while (isspace((int) *ptr))
-         ptr++;
-      
-      if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac, 0)) > 0)
-         ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, ptr, mode, &lastfrac, 1);
-
-      if (retn >= 0)
-         retn = 0;
-
-   } else {
-
-      /* this is a time stamp should be preceeded with a '-' (translated to '_' */
-
-      int len = strlen(buf);
-
-      if (len > 0) {
-         char mode = ' ';
-
-         if (*buf == '_')
-            *buf = '-';
-
-         bcopy ((char *)tm, (char *)&ArgusParser->RaStartFilter, sizeof(struct tm));
-         bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
-
-         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, &ArgusParser->RaLastFilter, buf, mode, &startfrac, 0)) > 0) {
-            lastfrac = startfrac;
-            if (*buf != '-') {
-               bcopy ((char *)&ArgusParser->RaStartFilter, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
-
-               if (buf[len - 1] != '.') {
-                  switch (retn) {
-                     case ARGUS_YEAR:  ArgusParser->RaLastFilter.tm_year++; break;
-                     case ARGUS_MONTH: ArgusParser->RaLastFilter.tm_mon++; break;
-                     case ARGUS_DAY:   ArgusParser->RaLastFilter.tm_mday++; break;
-                     case ARGUS_HOUR:  ArgusParser->RaLastFilter.tm_hour++; break;
-                     case ARGUS_MIN:   ArgusParser->RaLastFilter.tm_min++; break;
-                     case ARGUS_SEC:   ArgusParser->RaLastFilter.tm_sec++; break;
-                     default: break;
-                  }
-
-                  while (tm->tm_sec  > 59) {tm->tm_min++;  tm->tm_sec -= 60;} 
-                  while (tm->tm_min  > 59) {tm->tm_hour++; tm->tm_min  -= 60;}
-                  while (tm->tm_hour > 23) {tm->tm_mday++; tm->tm_hour -= 24;}
-                  while (tm->tm_mday > RaDaysInAMonth[tm->tm_mon]) {tm->tm_mday -= RaDaysInAMonth[tm->tm_mon]; tm->tm_mon++;} 
-                  while (tm->tm_mon  > 11) {tm->tm_year++; tm->tm_mon  -= 12;}
-               }
-
-            } else 
-               ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, &buf[1], '+', &lastfrac, 1);
-
-            retn = 0;
+      if ((ptr = strpbrk (buf, "smhdMy")) != NULL) {
+         if (tm->tm_year == 0) {
+            time_t tsec = ArgusParser->ArgusGlobalTime.tv_sec;
+            localtime_r(&tsec, tm);
+            bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
+         } else {
+            bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
          }
       }
-   }
 
-   if (retn == 0) {
-      ArgusParser->startime_t.tv_sec  = mktime (&ArgusParser->RaStartFilter);
-      ArgusParser->startime_t.tv_usec = startfrac;
-      ArgusParser->lasttime_t.tv_sec  = mktime (&ArgusParser->RaLastFilter);
-      ArgusParser->lasttime_t.tv_usec = lastfrac;
+      if (*buf == '-')
+         *buf = '_';
 
-      if (!((ArgusParser->lasttime_t.tv_sec  > ArgusParser->startime_t.tv_sec) ||
-           ((ArgusParser->lasttime_t.tv_sec == ArgusParser->startime_t.tv_sec) &&
-           ((ArgusParser->lasttime_t.tv_usec > ArgusParser->startime_t.tv_usec))))) {
-         ArgusLog (LOG_ERR, "error: invalid time range startime_t %d.%06d lasttime_t %d.%06d\n",
-                 (int)ArgusParser->startime_t.tv_sec, (int)ArgusParser->startime_t.tv_usec,
-                 (int)ArgusParser->lasttime_t.tv_sec, (int)ArgusParser->lasttime_t.tv_usec);
+      if (((ptr = strchr(buf, '-')) != NULL) || ((ptr = strchr(buf, '+')) != NULL)) {
+         char mode  = *ptr;
+         if (*buf == '_') *buf = '-';
+
+         *ptr++ = '\0';
+
+         while (isspace((int) buf[strlen(buf) - 1]))
+            buf[strlen(buf) - 1] = 0;
+         while (isspace((int) *ptr))
+            ptr++;
+         
+         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac, 0)) > 0)
+            ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, ptr, mode, &lastfrac, 1);
+
+         if (retn >= 0)
+            retn = 0;
+
+      } else {
+
+         /* this is a time stamp should be preceeded with a '-' (translated to '_' */
+
+         int len = strlen(buf);
+
+         if (len > 0) {
+            char mode = ' ';
+
+            if (*buf == '_')
+               *buf = '-';
+
+            bcopy ((char *)tm, (char *)&ArgusParser->RaStartFilter, sizeof(struct tm));
+            bcopy ((char *)tm, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
+
+            if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, &ArgusParser->RaLastFilter, buf, mode, &startfrac, 0)) > 0) {
+               lastfrac = startfrac;
+               if (*buf != '-') {
+                  bcopy ((char *)&ArgusParser->RaStartFilter, (char *)&ArgusParser->RaLastFilter, sizeof(struct tm));
+
+                  if (buf[len - 1] != '.') {
+                     switch (retn) {
+                        case ARGUS_YEAR:  ArgusParser->RaLastFilter.tm_year++; break;
+                        case ARGUS_MONTH: ArgusParser->RaLastFilter.tm_mon++; break;
+                        case ARGUS_DAY:   ArgusParser->RaLastFilter.tm_mday++; break;
+                        case ARGUS_HOUR:  ArgusParser->RaLastFilter.tm_hour++; break;
+                        case ARGUS_MIN:   ArgusParser->RaLastFilter.tm_min++; break;
+                        case ARGUS_SEC:   ArgusParser->RaLastFilter.tm_sec++; break;
+                        default: break;
+                     }
+
+                     while (tm->tm_sec  > 59) {tm->tm_min++;  tm->tm_sec -= 60;} 
+                     while (tm->tm_min  > 59) {tm->tm_hour++; tm->tm_min  -= 60;}
+                     while (tm->tm_hour > 23) {tm->tm_mday++; tm->tm_hour -= 24;}
+                     while (tm->tm_mday > RaDaysInAMonth[tm->tm_mon]) {tm->tm_mday -= RaDaysInAMonth[tm->tm_mon]; tm->tm_mon++;} 
+                     while (tm->tm_mon  > 11) {tm->tm_year++; tm->tm_mon  -= 12;}
+                  }
+
+               } else 
+                  ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, &buf[1], '+', &lastfrac, 1);
+
+               retn = 0;
+            }
+         }
       }
+
+      if (retn == 0) {
+         ArgusParser->startime_t.tv_sec  = mktime (&ArgusParser->RaStartFilter);
+         ArgusParser->startime_t.tv_usec = startfrac;
+         ArgusParser->lasttime_t.tv_sec  = mktime (&ArgusParser->RaLastFilter);
+         ArgusParser->lasttime_t.tv_usec = lastfrac;
+
+         if (!((ArgusParser->lasttime_t.tv_sec  > ArgusParser->startime_t.tv_sec) ||
+              ((ArgusParser->lasttime_t.tv_sec == ArgusParser->startime_t.tv_sec) &&
+              ((ArgusParser->lasttime_t.tv_usec > ArgusParser->startime_t.tv_usec))))) {
+            ArgusLog (LOG_ERR, "error: invalid time range startime_t %d.%06d lasttime_t %d.%06d\n",
+                    (int)ArgusParser->startime_t.tv_sec, (int)ArgusParser->startime_t.tv_usec,
+                    (int)ArgusParser->lasttime_t.tv_sec, (int)ArgusParser->lasttime_t.tv_usec);
+         }
+      }
+#ifdef ARGUSDEBUG
+      ArgusDebug (3, "ArgusCheckTimeFormat (%p, %s) %d.%06d-%d.%06d\n", tm, str, 
+                            (int)ArgusParser->startime_t.tv_sec, (int)ArgusParser->startime_t.tv_usec,
+                            (int)ArgusParser->lasttime_t.tv_sec, (int)ArgusParser->lasttime_t.tv_usec);
+#endif
+   } else {
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusCheckTimeFormat (%p) string too long (> 128)\n", tm);
+#endif
    }
 
-#ifdef ARGUSDEBUG
-   ArgusDebug (3, "ArgusCheckTimeFormat (%p, %s) %d.%06d-%d.%06d\n", tm, str, 
-                         (int)ArgusParser->startime_t.tv_sec, (int)ArgusParser->startime_t.tv_usec,
-                         (int)ArgusParser->lasttime_t.tv_sec, (int)ArgusParser->lasttime_t.tv_usec);
-#endif
-      
    return (retn);
 }
 
