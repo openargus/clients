@@ -2616,7 +2616,8 @@ RaParseResourceStr (struct ArgusParserStruct *parser, char *str,
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "%s () returning %d\n", __func__, retn);
+   if (retn == 1)
+      ArgusDebug (2, "%s ('%s') returning %d\n", __func__, str, retn);
 #endif
 
    return (retn);
