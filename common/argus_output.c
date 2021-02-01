@@ -4394,8 +4394,9 @@ char *ArgusClientCommands[ARGUSMAXCLIENTCOMMANDS] =
 int
 ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientData *client)
 {
-   int retn = 0, cnt = 0, i, found, fd = client->fd;
+   int retn = 0, cnt = 0, found = 0;
    char buf[MAXSTRLEN], *ptr = buf;
+   int i,  fd = client->fd;
    unsigned int value = 0;
     
 #ifdef ARGUS_SASL
@@ -4478,84 +4479,84 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
    ArgusDebug (3, "ArgusCheckClientMessage (0x%x, %d) read '%s' from remote\n", client, fd, ptr);
 #endif
 
-   for (i = 0, found = 0; (i < ARGUSMAXCLIENTCOMMANDS) && !found; i++) {
-      if (ArgusClientCommands[i] != NULL) {
-         if (!(strncmp (ptr, ArgusClientCommands[i], strlen(ArgusClientCommands[i])))) {
-            found++;
-            switch (i) {
-               case RADIUM_START: {
-                  int slen = strlen(ArgusClientCommands[i]);
-                  char *sptr;
+   if (ArgusParser->ArgusParseClientMessage != NULL) {
+      if (ArgusParser->ArgusParseClientMessage(ArgusParser, output, client, ptr))
+         found++;
+   } else {
+      for (i = 0, found = 0; (i < ARGUSMAXCLIENTCOMMANDS) && !found; i++) {
+         if (ArgusClientCommands[i] != NULL) {
+            if (!(strncmp (ptr, ArgusClientCommands[i], strlen(ArgusClientCommands[i])))) {
+               found++;
+               switch (i) {
+                  case RADIUM_START: {
+                     int slen = strlen(ArgusClientCommands[i]);
+                     char *sptr;
 
-                  if (strlen(ptr) > slen) {
-                     if ((sptr = strstr(ptr, "user=")) != NULL) {
-                        if (client->clientid != NULL)
-                           free(client->clientid);
-                        client->clientid = strdup(sptr);
+                     if (strlen(ptr) > slen) {
+                        if ((sptr = strstr(ptr, "user=")) != NULL) {
+                           if (client->clientid != NULL)
+                              free(client->clientid);
+                           client->clientid = strdup(sptr);
 
+                        }
                      }
+                     client->ArgusClientStart++;
+                     retn = 0; break;
                   }
-                  client->ArgusClientStart++;
-                  retn = 0; break;
-               }
-               case RADIUM_DONE:  {
-                  if (client->hostname != NULL)
-                     ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
-                  else
-                     ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received DONE");
-                  retn = -4;
-                  break; 
-               }
-               case RADIUM_FILTER: {
-                  if (ArgusFilterCompile (&client->ArgusNFFcode, &ptr[7], 1) < 0) {
-                     retn = -2;
+                  case RADIUM_DONE:  {
+                     if (client->hostname != NULL)
+                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
+                     else
+                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received DONE");
+                     retn = -4;
+                     break; 
+                  }
+                  case RADIUM_FILTER: {
+                     if (ArgusFilterCompile (&client->ArgusNFFcode, &ptr[7], 1) < 0) {
+                        retn = -2;
 #ifdef ARGUSDEBUG
-                     ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter syntax error: %s\n", &ptr[7]);
-#endif
-                  } else {
-#ifdef ARGUSDEBUG
-                     ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s\n", &ptr[7]);
-#endif
-                     client->ArgusFilterInitialized++;
-                     if ((cnt = send (fd, "OK", 2, 0)) != 2) {
-                        retn = -3;
-#ifdef ARGUSDEBUG
-                        ArgusDebug (3, "ArgusCheckClientMessage: send error %s\n", strerror(errno));
+                        ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter syntax error: %s\n", &ptr[7]);
 #endif
                      } else {
-                        retn = 0;
 #ifdef ARGUSDEBUG
-                        ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s initialized.\n", &ptr[7]);
+                        ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s\n", &ptr[7]);
 #endif
+                        client->ArgusFilterInitialized++;
+                        if ((cnt = send (fd, "OK", 2, 0)) != 2) {
+                           retn = -3;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (3, "ArgusCheckClientMessage: send error %s\n", strerror(errno));
+#endif
+                        } else {
+                           retn = 0;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s initialized.\n", &ptr[7]);
+#endif
+                        }
                      }
+                     break;
                   }
-                  break;
-               }
 
-               case RADIUM_PROJECT: 
-               case RADIUM_MODEL: 
-                  break;
+                  case RADIUM_PROJECT: 
+                  case RADIUM_MODEL: 
+                     break;
 
-               case RADIUM_FILE: {
-                  char *file = &ptr[6];
+                  case RADIUM_FILE: {
+                     char *file = &ptr[6];
 #ifdef ARGUSDEBUG
-                  ArgusDebug (3, "ArgusCheckClientMessage: ArgusFile %s requested.\n", file);
+                     ArgusDebug (3, "ArgusCheckClientMessage: ArgusFile %s requested.\n", file);
 #endif
-                  ArgusSendFile (output, client, file, 0);
-                  retn = 5;
-                  break;
+                     ArgusSendFile (output, client, file, 0);
+                     retn = 5;
+                     break;
+                  }
                }
+               break;
             }
-            break;
          }
       }
-   }
 
-   if (!found) {
-      if (ArgusParser->ArgusParseClientMessage != NULL) {
-         if (ArgusParser->ArgusParseClientMessage(ArgusParser, output, client, ptr))
-            found++;
-      } else {
+      if (!found) {
          if (client->hostname)
             ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s\n",  client->hostname, ptr);
          else

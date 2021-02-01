@@ -235,6 +235,26 @@ struct RaMySQLProbeTable {
 #endif
 #endif
 
+#define ARGUSMAXCLIENTCOMMANDS          7
+#define RADIUM_START                    0
+#define RADIUM_DONE                     1
+#define RADIUM_FILTER                   2
+#define RADIUM_MODEL                    3
+#define RADIUM_PROJECT                  4
+#define RADIUM_FILE                     5
+#define RADIUM_GEN                      6
+
+char *RaGenClientCommands[ARGUSMAXCLIENTCOMMANDS] =
+{
+   "START:",
+   "DONE:",
+   "FILTER:",
+   "MODEL:",
+   "PROJECT:",
+   "FILE:",
+   "GEN:",
+};
+
 
 #define RAGEN_MAX_ANALYTICS    128
 struct ArgusRecordStruct *(*RaGenAnalyticAlgorithmTable[RAGEN_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
@@ -363,6 +383,12 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
          }
       }
    }
+
+   if (config.baseline != NULL) {
+      if ((ptr = strchr(config.baseline, '/')) != NULL) {
+      }
+   }
+
    free(sptr);
 
 #ifdef ARGUSDEBUG
@@ -380,31 +406,113 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
    struct ArgusClientData *client = (struct ArgusClientData *) c;
    struct RaGenConfig *config;
 
-   int cnt, retn = 1, fd = client->fd, slen = 0;
+   int fd = client->fd, slen = 0;
+   int i, cnt, retn = 1, found;
    char *reply;
 
-   if (strstr(ptr, "GEN: ") != NULL) {
-      if ((config = RaGenParseGeneratorConfig(parser, client, &ptr[5])) != NULL) {
-         client->ArgusGeneratorInitialized++;
-         reply = "OK";
-         retn = 1;
-      } else {
-         reply = "FAIL";
-         retn = 0;
-      }
+   for (i = 0, found = 0; (i < ARGUSMAXCLIENTCOMMANDS) && !found; i++) {
+         if (RaGenClientCommands[i] != NULL) {
+            if (!(strncmp (ptr, RaGenClientCommands[i], strlen(RaGenClientCommands[i])))) {
+               found++;
+               switch (i) {
+                  case RADIUM_START: {
+                     int slen = strlen(RaGenClientCommands[i]);
+                     char *sptr;
 
-      slen = strlen(reply);
-      if ((cnt = send (fd, reply, slen, 0)) != slen) {
-         retn = -3;
+                     if (strlen(ptr) > slen) {
+                        if ((sptr = strstr(ptr, "user=")) != NULL) {
+                           if (client->clientid != NULL)
+                              free(client->clientid);
+                           client->clientid = strdup(sptr);
+
+                        }
+                     }
+                     client->ArgusClientStart++;
+                     retn = 0; break;
+                  }
+                  case RADIUM_DONE:  {
+                     if (client->hostname != NULL)
+                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
+                     else
+                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received DONE");
+                     retn = -4;
+                     break; 
+                  }
+                  case RADIUM_FILTER: {
+                     if (ArgusFilterCompile (&client->ArgusNFFcode, &ptr[7], 1) < 0) {
+                        retn = -2;
 #ifdef ARGUSDEBUG
-         ArgusDebug (3, "RaGenParseClientMessage: send error %s\n", strerror(errno));
+                        ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter syntax error: %s\n", &ptr[7]);
 #endif
-      } else {
+                     } else {
 #ifdef ARGUSDEBUG
-         ArgusDebug (3, "RaGenParseClientMessage: ArgusGeneratorConfiguration processed.\n");
+                        ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s\n", &ptr[7]);
 #endif
-      }
+                        client->ArgusFilterInitialized++;
+                        if ((cnt = send (fd, "OK", 2, 0)) != 2) {
+                           retn = -3;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (3, "ArgusCheckClientMessage: send error %s\n", strerror(errno));
+#endif
+                        } else {
+                           retn = 0;
+#ifdef ARGUSDEBUG
+                           ArgusDebug (3, "ArgusCheckClientMessage: ArgusFilter %s initialized.\n", &ptr[7]);
+#endif
+                        }
+                     }
+                     break;
+                  }
+
+                  case RADIUM_PROJECT: 
+                  case RADIUM_MODEL: 
+                     break;
+
+                  case RADIUM_FILE: {
+                     char *file = &ptr[6];
+#ifdef ARGUSDEBUG
+                     ArgusDebug (3, "ArgusCheckClientMessage: ArgusFile %s requested.\n", file);
+#endif
+                     ArgusSendFile (output, client, file, 0);
+                     retn = 5;
+                     break;
+                  }
+
+                  case RADIUM_GEN: {
+                     if ((config = RaGenParseGeneratorConfig(parser, client, &ptr[5])) != NULL) {
+                        client->ArgusGeneratorInitialized++;
+                        reply = "OK";
+                        retn = 1;
+                     } else {
+                        reply = "FAIL";
+                        retn = 0;
+                     }
+
+                     slen = strlen(reply);
+                     if ((cnt = send (fd, reply, slen, 0)) != slen) {
+                        retn = -3;
+#ifdef ARGUSDEBUG
+                        ArgusDebug (3, "RaGenParseClientMessage: send error %s\n", strerror(errno));
+#endif
+                     } else {
+#ifdef ARGUSDEBUG
+                        ArgusDebug (3, "RaGenParseClientMessage: ArgusGeneratorConfiguration processed.\n");
+#endif
+                     }
+                  }
+               }
+               break;
+            }
+         }
    }
+
+   if (!found) {
+      if (client->hostname)
+         ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent %s\n",  client->hostname, ptr);
+      else
+         ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received %s\n",  ptr);
+   }
+
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "RaGenParseClientMessage(%p, %p, %p, '%s') returns %d\n", parser, o, c, ptr, retn);
