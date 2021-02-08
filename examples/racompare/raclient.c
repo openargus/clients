@@ -593,10 +593,10 @@ ArgusProcessData (void *arg)
             parser->ArgusCurrentInput = NULL;
             parser->status |= ARGUS_FILE_LIST_PROCESSED;
          }
-
+/*
          ArgusFree(input);
          input = NULL;
-
+*/
          ArgusProcessingSample = 0;
          ArgusProcessingComplete = 1;
 
@@ -1100,6 +1100,42 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      }
 
                   } else
+                  if (!(strncasecmp (mode->mode, "baselineMask:", 13))) {
+                     if (strlen(mode->mode) > 13) {
+                        char *ptr = &mode->mode[13], *str = NULL;
+
+                        if ((str = strchr(ptr, '\"')) != NULL) {
+                           if ((ptr = strchr(str, '\"')) != NULL) {
+                              *ptr = '\0';
+			   }
+			} else
+                        if ((str = strchr(ptr, '\'')) != NULL) {
+                           if ((ptr = strchr(str, '\'')) != NULL) {
+                              *ptr = '\0';
+			   }
+			} else
+			   ptr = &mode->mode[13];
+                        parser->ArgusBaseLineMask = strdup(ptr);
+                     }
+		  } else   
+                  if (!(strncasecmp (mode->mode, "sampleMask:", 11))) {
+                     if (strlen(mode->mode) > 11) {
+                        char *ptr = &mode->mode[11], *str;
+
+                        if ((str = strchr(ptr, '\"')) != NULL) {
+                           if ((ptr = strchr(str, '\"')) != NULL) {
+                              *ptr = '\0';
+                              parser->ArgusSampleMask = strdup(ptr);
+                           }
+                        } else
+                        if ((str = strchr(ptr, '\'')) != NULL) {
+                           if ((ptr = strchr(str, '\'')) != NULL) {
+                              *ptr = '\0';
+                              parser->ArgusSampleMask = strdup(ptr);
+                           }
+                        }
+                     }
+		  } else   
                   if (!(strncasecmp (mode->mode, "control:", 8))) {
                      char *ptr = &mode->mode[8];
                      double value = 0.0;
@@ -1167,9 +1203,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          } else {
             char *mask = NULL;
             if (parser->ArgusMaskList == NULL) mask = "sid saddr daddr proto sport dport";
+               parser->ArgusAggregator = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
 
-            parser->ArgusAggregator = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
+            if ((mask = parser->ArgusBaseLineMask) == NULL) mask = "saddr daddr proto dport";
             ArgusBaselineAggregator = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
+
+            if ((mask = parser->ArgusSampleMask) == NULL) mask = "sid saddr daddr proto sport dport";
             ArgusSampleAggregator   = ArgusNewAggregator(parser, mask, ARGUS_RECORD_AGGREGATOR);
          }
 
@@ -1687,7 +1726,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusAggregatorStruct *tagg, *agg = parser->ArgusAggregator;
    struct RaBinProcessStruct *RaBinProcess = parser->RaBinProcess;
    struct ArgusHashStruct *hstruct = NULL;
-   int found = 0;
+   struct ArgusFlow *flow = NULL;
+   int found = 0, baselinefound = 0;
 
    /* terminal aggregator -- The aggregators form a singly-linked list
     * so we have to find this value along the way.  Initialize to the
@@ -1712,16 +1752,102 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
    if (ArgusProcessingBaseline) {
       RaProcess = RaBaselineProcess;
+      agg = ArgusBaselineAggregator;
+
    } else
    if (ArgusProcessingSample) {
       RaProcess = RaSampleProcess;
+      agg = ArgusBaselineAggregator;
+
+      {                     // lets find this flow using the baseline aggregation
+         int retn = 0, fretn = -1, lretn = -1;
+
+         if (agg->filterstr) {
+            struct nff_insn *fcode = agg->filter.bf_insns;
+            fretn = ArgusFilterRecord (fcode, ns);
+         }
+
+         if (agg->grepstr) {
+            struct ArgusLabelStruct *label;
+            if (((label = (void *)ns->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
+               if (regexec(&agg->lpreg, label->l_un.label, 0, NULL, 0))
+                  lretn = 0;
+               else
+                  lretn = 1;
+            } else
+               lretn = 0;
+         }
+
+         retn = (lretn < 0) ? ((fretn < 0) ? 1 : fretn) : ((fretn < 0) ? lretn : (lretn && fretn));
+
+         if (retn != 0) {
+            cns = ArgusCopyRecordStruct(ns);
+
+            if (agg->mask) {
+               if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
+                  agg->rap = agg->drap;
+
+               ArgusGenerateNewFlow(agg, cns);
+               agg->ArgusMaskDefs = NULL;
+
+               if ((hstruct = ArgusGenerateHashStruct(agg, cns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+                  if ((pns = ArgusFindRecord(RaBaselineProcess->htable, hstruct)) == NULL) {
+                     flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
+                     int tryreverse = 0;
+
+                     if (flow != NULL) {
+                        if (agg->correct != NULL)
+                           tryreverse = 1;
+
+                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                           case ARGUS_TYPE_IPV4: {
+                              switch (flow->ip_flow.ip_p) {
+                                 case IPPROTO_ESP:
+                                    tryreverse = 0;
+                                    break;
+                              }
+                              break;
+                           }
+                           case ARGUS_TYPE_IPV6: {
+                              switch (flow->ipv6_flow.ip_p) {
+                                 case IPPROTO_ESP:
+                                    tryreverse = 0;
+                                    break;
+                              }
+                              break;
+                           }
+                        }
+
+                        if (!parser->RaMonMode && tryreverse) {
+                           ArgusReverseRecord (cns);
+
+                           ArgusGenerateNewFlow(agg, cns);
+                           flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
+
+                           if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
+                              ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+
+                           if ((pns = ArgusFindRecord(RaBaselineProcess->htable, hstruct)) != NULL) 
+                              baselinefound++;
+                        }
+                     }
+
+                  } else
+                     baselinefound++;
+               }
+            }
+            ArgusDeleteRecordStruct(ArgusParser, cns);
+         }
+      }
+      agg = parser->ArgusAggregator;
+
    } else
    if (ArgusProcessingComplete) {
       RaProcess = RaCursesProcess;
    }
 
+
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
-      struct ArgusFlow *flow = NULL;
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&RaProcess->queue->lock);
 #endif
@@ -1799,6 +1925,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                            if ((pns = ArgusFindRecord(RaProcess->htable, hstruct)) != NULL) {
                               ArgusDeleteRecordStruct(ArgusParser, cns);
                               cns = dns;
+                              found++;
 
                            } else {
                               ArgusDeleteRecordStruct(ArgusParser, dns);
@@ -1808,7 +1935,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                            }
                         }
                      }
-                  }
+                  } else
+                     found++;
 
                   if (pns) {
                      if (pns->qhdr.queue) {
@@ -1825,7 +1953,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   }
                }
             }
-            found++;
 
          } else
             agg = agg->nxt;
@@ -1846,6 +1973,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       if (cns) {        // OK we're processing something from the ns, and we've got a copy
 
          if (!(RaBinProcess && (RaBinProcess->nadp.mode == ARGUSSPLITRATE))) {   //  Are we not processing bins ???  
+/*
             if (ArgusProcessingBaseline) {
                if (pns) {                                                           //  We found a match ...
                   if (RaTopReplace) {
@@ -1870,13 +1998,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                }
 
             } else {
+*/
+            {
                if (pns) {
                   //  We found a match ...
                   if (pns->status & ARGUS_RECORD_MATCH) {
-                     ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
+                     ArgusMergeRecords (agg, pns, cns);
                      ArgusDeleteRecordStruct(ArgusParser, cns);
                   } else {
-                     ArgusReplaceRecords (ArgusParser->ArgusAggregator, pns, cns);
+                     ArgusReplaceRecords (agg, pns, cns);
                      if (pns->status & ARGUS_RECORD_BASELINE) {
                         cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
                      }
@@ -1892,7 +2022,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
                   pns->htblhdr = ArgusAddHashEntry (RaProcess->htable, pns, hstruct);
-                  pns->status |= ARGUS_RECORD_NEW;
+
+                  if (!baselinefound)
+                     pns->status |= ARGUS_RECORD_NEW;
                }
                pns->status |= ARGUS_RECORD_MODIFIED;
             }
@@ -1950,7 +2082,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         ArgusDeleteRecordStruct(ArgusParser, tns);
       
                      pns->bins->status |= RA_DIRTYBINS;
-                     pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
+                     pns->status |= ARGUS_RECORD_MODIFIED;
+                     if (!baselinefound)
+                        pns->status |= ARGUS_RECORD_NEW;
                   }
                }
             }
