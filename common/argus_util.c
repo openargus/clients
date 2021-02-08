@@ -72,6 +72,7 @@
 #endif
 #include <pwd.h>
 #include <grp.h>
+#include <wordexp.h>
 
 #include <argus_compat.h>
 
@@ -30576,7 +30577,15 @@ ArgusAddBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, lon
             break;
 #endif
          default: {
-            str = ptr;
+            if (strlen(ptr)) {
+               wordexp_t p;
+               if (wordexp (ptr, &p, 0) == 0) {
+                  char *wstr = p.we_wordv[0];
+                  if (wstr != NULL)
+                     str = strdup(wstr);
+                  wordfree (&p);
+               }
+            }
             break;
          }
       }

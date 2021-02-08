@@ -51,7 +51,6 @@
 
 #include <wordexp.h>
 
-
 #if defined(ARGUS_MYSQL)
 #include <rasplit.h>
 
@@ -1840,6 +1839,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          }
       }
       agg = parser->ArgusAggregator;
+      pns = NULL;
 
    } else
    if (ArgusProcessingComplete) {
@@ -1999,35 +1999,34 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
             } else {
 */
-            {
-               if (pns) {
-                  //  We found a match ...
-                  if (pns->status & ARGUS_RECORD_MATCH) {
-                     ArgusMergeRecords (agg, pns, cns);
-                     ArgusDeleteRecordStruct(ArgusParser, cns);
-                  } else {
-                     ArgusReplaceRecords (agg, pns, cns);
-                     if (pns->status & ARGUS_RECORD_BASELINE) {
-                        cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
-                     }
-                     ArgusDeleteRecordStruct(ArgusParser, pns);
-                     pns = cns;
-                     pns->status |= ARGUS_RECORD_MATCH;
-                  }
+            if (pns) {
+               //  We found a match ...
+               if (pns->status & ARGUS_RECORD_MATCH) {
+                  ArgusMergeRecords (agg, pns, cns);
+                  ArgusDeleteRecordStruct(ArgusParser, cns);
                } else {
+                  ArgusReplaceRecords (agg, pns, cns);
+                  if (pns->status & ARGUS_RECORD_BASELINE) {
+                     cns->status |= (ARGUS_RECORD_BASELINE | ARGUS_NSR_STICKY);
+                  }
+                  ArgusDeleteRecordStruct(ArgusParser, pns);
                   pns = cns;
-
-                  if (!found)    // If we didn't find a pns, we'll need to setup to insert the cns
-                     if ((hstruct = ArgusGenerateHashStruct(agg, pns, flow)) == NULL)
-                        ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-                  pns->htblhdr = ArgusAddHashEntry (RaProcess->htable, pns, hstruct);
-
-                  if (!baselinefound)
-                     pns->status |= ARGUS_RECORD_NEW;
                }
-               pns->status |= ARGUS_RECORD_MODIFIED;
+               if (baselinefound)
+                  pns->status |= (ARGUS_RECORD_BASELINE | ARGUS_RECORD_MATCH);
+
+            } else {
+               pns = cns;
+
+               if (!found)    // If we didn't find a pns, we'll need to setup to insert the cns
+                  if ((hstruct = ArgusGenerateHashStruct(agg, pns, flow)) == NULL)
+                     ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+
+               pns->htblhdr = ArgusAddHashEntry (RaProcess->htable, pns, hstruct);
+               if (baselinefound)
+                  pns->status |= (ARGUS_RECORD_BASELINE | ARGUS_RECORD_MATCH);
             }
+            pns->status |= ARGUS_RECORD_MODIFIED;
 
             ArgusAddToQueue (RaProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
 

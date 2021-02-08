@@ -33,6 +33,9 @@
 #include "argus_config.h"
 #endif
 
+#include <sys/time.h>
+void RaResizeAlarmHandler(int);
+
 #if defined(CYGWIN)
 #define USE_IPV6
 #endif
@@ -80,6 +83,7 @@ main(int argc, char **argv)
       sigdelset(&blocked_signals, SIGTERM);
       sigdelset(&blocked_signals, SIGINT);
       sigdelset(&blocked_signals, SIGWINCH);
+      sigdelset(&blocked_signals, SIGALRM);
 
       pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
 
@@ -247,7 +251,7 @@ ArgusCursesProcess (void *arg)
       pthread_mutex_unlock(&RaCursesLock);
 #endif
       tsp->tv_sec  = 0;
-      tsp->tv_nsec = 2500000;
+      tsp->tv_nsec = 250000000;
       nanosleep(tsp, NULL);
    }
 
@@ -271,6 +275,7 @@ void ArgusProcessCursesInputInit(WINDOW *);
 int ArgusProcessTerminator (WINDOW *, int, int);
 int ArgusProcessNewPage (WINDOW *, int, int);
 int ArgusProcessDeviceControl (WINDOW *, int, int);
+int ArgusProcessError (WINDOW *, int, int);
 int ArgusProcessEscape (WINDOW *, int, int);
 int ArgusProcessEndofTransmission (WINDOW *, int, int);
 int ArgusProcessKeyUp (WINDOW *, int, int);
@@ -285,7 +290,7 @@ int ArgusProcessCharacter(WINDOW *, int, int);
 
 #define MAX_INPUT_OPERATORS	21
 struct ArgusInputCommand ArgusInputCommandTable [MAX_INPUT_OPERATORS] = {
-   {0,             ArgusProcessCharacter },
+   { 0,            ArgusProcessCharacter },
    {'\n',          ArgusProcessTerminator },
    {'\r',          ArgusProcessTerminator },
    {0x07,          ArgusProcessBell },
@@ -360,6 +365,8 @@ ArgusProcessCursesInput(void *arg)
       while (!ArgusWindowClosing && (select(1, &in, 0, 0, tvp) > 0)) {
          if ((ch = wgetch(RaStatusWindow)) != ERR) {
             RaInputStatus = ArgusProcessCommand (ArgusParser, RaInputStatus, ch);
+         } else {
+            ArgusProcessError(RaStatusWindow, RaInputStatus, ch);
          }
       }
       tvp->tv_sec = 0; tvp->tv_usec = 10000;
@@ -1532,6 +1539,22 @@ ArgusProcessNewPage(WINDOW *win, int status, int ch)
 }
 
 int
+ArgusProcessError(WINDOW *win, int status, int ch)
+{
+   RaInputString = RANEWCOMMANDSTR;
+   bzero(RaCommandInputStr, MAXSTRLEN);
+   RaCommandIndex = 0;
+   RaCursorOffset = 0;
+   RaWindowCursorY = 0;
+   RaWindowCursorX = 0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusProcessError(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, status);
+#endif
+   return (status);
+}
+
+int
 ArgusProcessDeviceControl(WINDOW *win, int status, int ch)
 {
    int retn = status;
@@ -1998,11 +2021,13 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
       switch (retn) {
          case RAGOTcolon:
          case RAGOTslash: {
+            int awu = ArgusAlwaysUpdate;
             ArgusZeroDebugString();
             switch (ch) {
                case 0x07: {
                   ArgusDisplayStatus = (ArgusDisplayStatus ? 0 : 1);
                   ArgusTouchScreen();
+                  ArgusAlwaysUpdate = 1;
                   break;
                }
                case '%': {
@@ -2012,12 +2037,14 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   else
                      RaInputString = "Toggle percent off";
                   ArgusTouchScreen();
+                  ArgusAlwaysUpdate = 1;
                   break;
                }
                case 'A':
                   ArgusParser->Aflag = ArgusParser->Aflag ? 0 : 1;
                   break;
                case 'H':
+                  ArgusAlwaysUpdate = 1;
                   ArgusParser->Hflag = ArgusParser->Hflag ? 0 : 1;
                   break;
                case 'P': {
@@ -2439,6 +2466,8 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   break;
                }
             }
+            ArgusDrawWindow(RaCurrentWindow);
+            ArgusAlwaysUpdate = awu;
             break;
          }
 
@@ -2816,6 +2845,9 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                }
                break;
             }
+            wclear(RaCurrentWindow->window);
+            ArgusTouchScreen();
+            RaRefreshDisplay();
          }
 
          default: {
@@ -2914,6 +2946,11 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                      }
                   }
                }
+
+               if (ArgusParser->ns)
+                  parser->RaLabel = ArgusGenerateLabel(parser, parser->ns);
+               else
+                  parser->RaLabel = NULL;
 
                if (queue->array != NULL) {
                   int i, firstRow = 1;
@@ -3120,6 +3157,7 @@ ArgusCursesProcessInit()
 */
 
    (void) signal (SIGWINCH,(void (*)(int)) RaResizeHandler);
+   (void) signal (SIGALRM,(void (*)(int)) RaResizeAlarmHandler);
 #endif
 
    if (ArgusCursesEnabled)
@@ -3597,7 +3635,7 @@ argus_getsearch_string(int dir)
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline("")) != NULL) {
+   if ((line = readline(NULL)) != NULL) {
       int linenum = RaWindowCursorY;
       int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
 
@@ -3690,7 +3728,7 @@ argus_command_string(void)
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline("")) != NULL) {
+   if ((line = readline(NULL)) != NULL) {
       if (strlen(line) > 0) {
          strcpy (RaCommandInputStr, line);
          free(line);
@@ -5698,6 +5736,11 @@ ArgusResetSearch (void)
    RaWindowStartLine = 0;
 }
 
+void
+RaResizeAlarmHandler(int sig)
+{
+   ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+}
 
 void
 RaResizeScreen(void)
@@ -5769,9 +5812,26 @@ RaResizeScreen(void)
 
 #endif    // ARGUS_SOLARIS 
 
-   ArgusTouchScreen();
-   RaRefreshDisplay();
+   {
+      struct itimerval it_val;
+
+      if (signal(SIGALRM, (void (*)(int)) RaResizeAlarmHandler) == SIG_ERR) {
+         ArgusLog (LOG_ERR, "RaResizeScreen() signal error %s\n", strerror(errno));
+      }
+      it_val.it_interval.tv_sec  = 0;
+      it_val.it_interval.tv_usec  = 0;
+      it_val.it_value.tv_sec  = 0;
+      it_val.it_value.tv_usec = 250000;
+
+      if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
+         ArgusLog (LOG_ERR, "RaResizeScreen() setitimer error %s\n", strerror(errno));
+      }
+   }
    RaScreenResize = FALSE;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "RaResizeScreen() y %d x %d\n", RaScreenLines, RaScreenColumns);
+#endif
 }
 
 
