@@ -19,6 +19,7 @@
 #  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
 
+# Top level hierarchy
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@

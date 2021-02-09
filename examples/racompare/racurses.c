@@ -44,6 +44,11 @@ void RaResizeAlarmHandler(int);
 #include <racurses.h>
 
 extern struct ArgusWirelessStruct *ArgusWireless;
+extern struct ArgusAggregatorStruct *ArgusBaselineAggregator;
+extern struct ArgusAggregatorStruct *ArgusSampleAggregator;
+
+extern struct RaCursesProcessStruct *RaBaselineProcess;
+extern struct RaCursesProcessStruct *RaSampleProcess;
 
 #if defined(ARGUS_CURSES) && defined(ARGUS_COLOR_SUPPORT)
 int ArgusColorAvailability(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAttributeStruct *, short, attr_t);
@@ -57,6 +62,8 @@ short ArgusColorHighlight = ARGUS_WHITE;
 
 #endif
 
+extern int ArgusFindRecordInBaseline (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+int ArgusLoadBaselineFiles (struct ArgusParserStruct *);
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
@@ -1147,6 +1154,54 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             }
             break;
          }
+
+/*
+         case RAGETTINGb: {
+            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
+            glob_t globbuf;
+
+            bzero (strbuf, MAXSTRLEN);
+            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+
+            if (strlen(strbuf) > 0) {
+               struct ArgusRecordStruct *ns = NULL;
+
+               ArgusDeleteFileList(ArgusParser);
+               while ((ptr = strtok(str, " ")) != NULL) {
+                  glob (ptr, 0, NULL, &globbuf);
+                  if (globbuf.gl_pathc > 0) {
+                     int i;
+                     for (i = 0; i < globbuf.gl_pathc; i++)
+                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
+                  } else {
+                     char sbuf[1024];
+                     sprintf (sbuf, "%s no files found for %s", RAGETTINGbSTR, ptr);
+                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                  }
+                  str = NULL;
+               }
+               ArgusParser->RaTasksToDo = RA_ACTIVE;
+               ArgusParser->Sflag = 0;
+               while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(RaCursesProcess->queue, ARGUS_LOCK)) != NULL)  {
+                  if (ArgusSearchHitRecord == ns) {
+                     ArgusResetSearch();
+                  }
+                  ArgusDeleteRecordStruct (ArgusParser, ns);
+               }
+               ArgusEmptyHashTable(RaCursesProcess->htable);
+               if (ArgusParser->ns) {
+                  ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
+                  ArgusParser->ns = NULL;
+               }
+               
+               ArgusParser->RaClientUpdate.tv_sec = 0;
+               ArgusParser->status &= ~ARGUS_FILE_LIST_PROCESSED;
+               ArgusParser->ArgusLastTime.tv_sec  = 0;
+               ArgusParser->ArgusLastTime.tv_usec = 0;
+            }
+            break;
+         }
+ */
 
          case RAGETTINGr: {
             char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
@@ -2671,11 +2726,27 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      break;
                   }
 
+                  case 'b': {
+                     size_t len = strlen(RaCommandInputStr);
+                     size_t remain = sizeof(RaCommandInputStr) - len;
+                     struct ArgusFileInput *input = ArgusParser->ArgusBaselineList;
+ 
+                     retn = RAGETTINGb;
+                     RaInputString = RAGETTINGbSTR;
+                     while (input) {
+                        RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                         &len, &remain, " %s",
+                                                         input->filename);
+                        input = (void *)input->qhdr.nxt;
+                     }
+                     break;
+                  }
+
                   case 'r': {
                      size_t len = strlen(RaCommandInputStr);
                      size_t remain = sizeof(RaCommandInputStr) - len;
                      struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
-
+ 
                      retn = RAGETTINGr;
                      RaInputString = RAGETTINGrSTR;
                      while (input) {
@@ -4468,6 +4539,60 @@ argus_command_string(void)
             break;
          }
 
+         case RAGETTINGb: {
+            char *strbuf, *str = NULL, *ptr = NULL, *sbuf = NULL;
+            glob_t globbuf;
+
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            str = strbuf;
+            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+
+            if (strlen(strbuf) > 0) {
+               int i;
+               ArgusEmptyHashTable(RaBaselineProcess->htable);
+               ArgusDeleteBaselineList(ArgusParser);
+
+               while ((ptr = strtok(str, " ")) != NULL) {
+                  glob (ptr, 0, NULL, &globbuf);
+                  if (globbuf.gl_pathc > 0) {
+                     int i;
+                     for (i = 0; i < globbuf.gl_pathc; i++)
+                        ArgusAddBaselineList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
+                  } else {
+                     sprintf (sbuf, "%s no files found for %s", RAGETTINGbSTR, ptr);
+                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                  }
+                  str = NULL;
+               }
+
+               ArgusLoadBaselineFiles (ArgusParser);
+
+#if defined(ARGUS_THREADS)
+               pthread_mutex_lock(&RaCursesProcess->queue->lock);
+#endif
+
+               for (i = 0; i < RaCursesProcess->queue->count; i++) {
+                  struct ArgusRecordStruct *ns;
+                  if ((ns = (struct ArgusRecordStruct *)RaCursesProcess->queue->array[i]) == NULL)
+                     break;
+                  if (ArgusFindRecordInBaseline(ArgusParser, ns))
+                     ns->status |= ARGUS_RECORD_MATCH;
+		  else
+                     ns->status &= ~ARGUS_RECORD_MATCH;
+               }
+#if defined(ARGUS_THREADS)
+               pthread_mutex_unlock(&RaCursesProcess->queue->lock);
+#endif
+            }
+            ArgusFree(sbuf);
+            ArgusFree(strbuf);
+            break;
+         }
+
          case RAGETTINGr: {
             char *strbuf, *str = NULL, *ptr = NULL, *sbuf = NULL;
             glob_t globbuf;
@@ -4585,6 +4710,7 @@ argus_command_string(void)
                else
                   ArgusParser->ns = ArgusCopyRecordStruct (ns);
             }
+
 */
 #if defined(ARGUS_THREADS)
             pthread_mutex_unlock(&RaCursesProcess->queue->lock);
@@ -5017,6 +5143,23 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
             }
             break;
           }
+
+          case 'b': {
+            size_t len = strlen(RaCommandInputStr);
+            size_t remain = sizeof(RaCommandInputStr) - len;
+            struct ArgusFileInput *input = ArgusParser->ArgusBaselineList;
+
+            retn = RAGETTINGb;
+            RaInputString = RAGETTINGbSTR;
+            while (input) {
+               RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                &len, &remain, " %s",
+                                                input->filename);
+               input = (void *) input->qhdr.nxt;
+            }
+            break;
+          }
+
 
           case 'r': {
             size_t len = strlen(RaCommandInputStr);
@@ -6284,13 +6427,17 @@ ArgusColorBaselineMatch(struct ArgusParserStruct *parser, struct ArgusRecordStru
       int status = ns->status & ARGUS_MATCH_MASK;
       tpair = COLOR_PAIR(ARGUS_BASE01);
 
-      switch (status) {
+      switch (status & ARGUS_MATCH_MASK) {
          case ARGUS_MATCH_MASK: 
-            tpair = COLOR_PAIR(ARGUS_WHITE); 
+            tpair = COLOR_PAIR(ARGUS_VIOLET); 
             break;
 
          case ARGUS_RECORD_MATCH:
+            tpair = COLOR_PAIR(ARGUS_WHITE); 
+            break;
+
          case ARGUS_RECORD_BASELINE:
+            tpair = COLOR_PAIR(ARGUS_RED); 
             break;
 
          default:
