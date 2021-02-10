@@ -719,8 +719,7 @@ rfc1048_print(register const u_char *bp, const u_char *endp)
          continue;
       if (tag == DHO_END)
          return;
-
-         cp = tok2str(tag2str, "?T%u", tag);
+      cp = tok2str(tag2str, "?T%u", tag);
       c = *cp++;
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:", cp);
 

@@ -3871,152 +3871,151 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                      struct ArgusDSRHeader *dsr;
                      if ((dsr = rec->dsrs[i]) != NULL) {
                         if (dsr->type) {
-                        int len = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
-                                   ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
-                                                                         dsr->argus_dsrvl8.len)));
-                        if (len == 0)
-                           ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: dsr %d len is zero\n", i);
-
-                        switch (i) {
-                           case ARGUS_TRANSPORT_INDEX:
-                           case ARGUS_FLOW_HASH_INDEX:
-                           case ARGUS_TIME_INDEX:
-                           case ARGUS_METRIC_INDEX:
-                           case ARGUS_PSIZE_INDEX:
-                           case ARGUS_IPATTR_INDEX:
-                           case ARGUS_ICMP_INDEX:
-                           case ARGUS_ENCAPS_INDEX:
-                           case ARGUS_MAC_INDEX:
-                           case ARGUS_VLAN_INDEX:
-                           case ARGUS_MPLS_INDEX:
-                           case ARGUS_ASN_INDEX:
-                           case ARGUS_AGR_INDEX:
-                           case ARGUS_BEHAVIOR_INDEX:
-                           case ARGUS_SCORE_INDEX:
-                           case ARGUS_COCODE_INDEX:
-                           case ARGUS_COR_INDEX: 
-                           case ARGUS_GEO_INDEX: 
-                           case ARGUS_LOCAL_INDEX: {
-                              if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-                              bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
-                              break;
-                           }
-
-                           case ARGUS_FLOW_INDEX: {
-                              if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusFlow))) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-                              bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
-                              break;
-                           }
-
-                           case ARGUS_NETWORK_INDEX: {
-                              struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
-                              switch (net->hdr.subtype) {
-                                 case ARGUS_TCP_INIT:
-                                 case ARGUS_TCP_STATUS:
-                                 case ARGUS_TCP_PERF: {
-                                    if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusTCPObject) + 4)) == NULL)
-                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-                                    break;
-                                 }
-                                 default: {
+                           int len = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
+                                      ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
+                                                                            dsr->argus_dsrvl8.len)));
+                           if (len > 0) {
+                              switch (i) {
+                                 case ARGUS_TRANSPORT_INDEX:
+                                 case ARGUS_FLOW_HASH_INDEX:
+                                 case ARGUS_TIME_INDEX:
+                                 case ARGUS_METRIC_INDEX:
+                                 case ARGUS_PSIZE_INDEX:
+                                 case ARGUS_IPATTR_INDEX:
+                                 case ARGUS_ICMP_INDEX:
+                                 case ARGUS_ENCAPS_INDEX:
+                                 case ARGUS_MAC_INDEX:
+                                 case ARGUS_VLAN_INDEX:
+                                 case ARGUS_MPLS_INDEX:
+                                 case ARGUS_ASN_INDEX:
+                                 case ARGUS_AGR_INDEX:
+                                 case ARGUS_BEHAVIOR_INDEX:
+                                 case ARGUS_SCORE_INDEX:
+                                 case ARGUS_COCODE_INDEX:
+                                 case ARGUS_COR_INDEX: 
+                                 case ARGUS_GEO_INDEX: 
+                                 case ARGUS_LOCAL_INDEX: {
                                     if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
                                        ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                    bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
+                                    break;
+                                 }
+
+                                 case ARGUS_FLOW_INDEX: {
+                                    if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusFlow))) == NULL)
+                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                    bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
+                                    break;
+                                 }
+
+                                 case ARGUS_NETWORK_INDEX: {
+                                    struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
+                                    switch (net->hdr.subtype) {
+                                       case ARGUS_TCP_INIT:
+                                       case ARGUS_TCP_STATUS:
+                                       case ARGUS_TCP_PERF: {
+                                          if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusTCPObject) + 4)) == NULL)
+                                             ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                          break;
+                                       }
+                                       default: {
+                                          if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
+                                             ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                          break;
+                                       }
+                                    }
+                                    bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
+                                    break;
+                                 }
+
+                                 case ARGUS_JITTER_INDEX: {
+                                    struct ArgusJitterStruct *tjit, *jitter = (void *)rec->dsrs[i];
+
+                                    if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
+                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+
+                                    tjit = (void *)retn->dsrs[i];
+                                    bcopy((char *)rec->dsrs[i], (char *)tjit, len * 4);
+
+                                    if (jitter->hdr.subtype & ARGUS_HISTO_LINEAR) {
+                                       struct ArgusHistoObject *histo  = &jitter->src.act.dist_union.linear;
+                                       struct ArgusHistoObject *thisto = &tjit->src.act.dist_union.linear;
+
+                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
+                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
+                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
+                                             thisto->data = ArgusCalloc(1, len);
+                                             bcopy((char *)histo->data, thisto->data, len);
+                                          }
+
+                                       histo  = &jitter->src.idle.dist_union.linear;
+                                       thisto = &tjit->src.idle.dist_union.linear;
+                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
+                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
+                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
+                                             thisto->data = ArgusCalloc(1, len);
+                                             bcopy((char *)histo->data, thisto->data, len);
+                                          }
+
+                                       histo = &jitter->dst.act.dist_union.linear;
+                                       thisto = &tjit->dst.act.dist_union.linear;
+                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
+                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
+                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
+                                             thisto->data = ArgusCalloc(1, len);
+                                             bcopy((char *)histo->data, thisto->data, len);
+                                          }
+
+                                       histo = &jitter->dst.idle.dist_union.linear;
+                                       thisto = &tjit->dst.idle.dist_union.linear;
+                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
+                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
+                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
+                                             thisto->data = ArgusCalloc(1, len);
+                                             bcopy((char *)histo->data, thisto->data, len);
+                                          }
+                                    }
+                                    break;
+                                 }
+
+                                 case ARGUS_LABEL_INDEX: {
+                                    struct ArgusLabelStruct *label = (void *)rec->dsrs[i];
+                                    int slen;
+
+                                    if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusLabelStruct))) == NULL)
+                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+
+                                    bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], sizeof(struct ArgusLabelStruct));
+
+                                    if (label->l_un.label != NULL) {
+                                       struct ArgusLabelStruct *tlabel = (void *)retn->dsrs[i];
+
+                                       if ((slen = strlen(label->l_un.label)) > 0) {
+                                          int blen = (label->hdr.argus_dsrvl8.len - 1) * 4;
+
+                                          tlabel->l_un.label = calloc(1, blen + 1);
+                                          bcopy((char *)label->l_un.label, tlabel->l_un.label, (blen > slen) ? slen : blen);
+
+                                       } else {
+                                          free(tlabel->l_un.label);
+                                          tlabel->l_un.label = NULL;
+                                       }
+                                    }
+                                    break;
+                                 }
+
+                                 case ARGUS_SRCUSERDATA_INDEX: 
+                                 case ARGUS_DSTUSERDATA_INDEX: {
+                                    struct ArgusDataStruct *user = (struct ArgusDataStruct *) rec->dsrs[i];
+                                    len = ((user->size + 8) + 3) / 4;
+                                    if ((retn->dsrs[i] = (struct ArgusDSRHeader *) ArgusCalloc(1, len * 4)) == NULL)
+                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+
+                                    bcopy (rec->dsrs[i], retn->dsrs[i], len * 4);
                                     break;
                                  }
                               }
-                              bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
-                              break;
                            }
-
-                           case ARGUS_JITTER_INDEX: {
-                              struct ArgusJitterStruct *tjit, *jitter = (void *)rec->dsrs[i];
-
-                              if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-
-                              tjit = (void *)retn->dsrs[i];
-                              bcopy((char *)rec->dsrs[i], (char *)tjit, len * 4);
-
-                              if (jitter->hdr.subtype & ARGUS_HISTO_LINEAR) {
-                                 struct ArgusHistoObject *histo  = &jitter->src.act.dist_union.linear;
-                                 struct ArgusHistoObject *thisto = &tjit->src.act.dist_union.linear;
-
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                       int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                       thisto->data = ArgusCalloc(1, len);
-                                       bcopy((char *)histo->data, thisto->data, len);
-                                    }
-
-                                 histo  = &jitter->src.idle.dist_union.linear;
-                                 thisto = &tjit->src.idle.dist_union.linear;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                       int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                       thisto->data = ArgusCalloc(1, len);
-                                       bcopy((char *)histo->data, thisto->data, len);
-                                    }
-
-                                 histo = &jitter->dst.act.dist_union.linear;
-                                 thisto = &tjit->dst.act.dist_union.linear;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                       int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                       thisto->data = ArgusCalloc(1, len);
-                                       bcopy((char *)histo->data, thisto->data, len);
-                                    }
-
-                                 histo = &jitter->dst.idle.dist_union.linear;
-                                 thisto = &tjit->dst.idle.dist_union.linear;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                       int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                       thisto->data = ArgusCalloc(1, len);
-                                       bcopy((char *)histo->data, thisto->data, len);
-                                    }
-                              }
-                              break;
-                           }
-
-                           case ARGUS_LABEL_INDEX: {
-                              struct ArgusLabelStruct *label = (void *)rec->dsrs[i];
-                              int slen;
-
-                              if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusLabelStruct))) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-
-                              bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], sizeof(struct ArgusLabelStruct));
-
-                              if (label->l_un.label != NULL) {
-                                 struct ArgusLabelStruct *tlabel = (void *)retn->dsrs[i];
-
-                                 if ((slen = strlen(label->l_un.label)) > 0) {
-                                    int blen = (label->hdr.argus_dsrvl8.len - 1) * 4;
-
-                                    tlabel->l_un.label = calloc(1, blen + 1);
-                                    bcopy((char *)label->l_un.label, tlabel->l_un.label, (blen > slen) ? slen : blen);
-
-                                 } else {
-                                    free(tlabel->l_un.label);
-                                    tlabel->l_un.label = NULL;
-                                 }
-                              }
-                              break;
-                           }
-
-                           case ARGUS_SRCUSERDATA_INDEX: 
-                           case ARGUS_DSTUSERDATA_INDEX: {
-                              struct ArgusDataStruct *user = (struct ArgusDataStruct *) rec->dsrs[i];
-                              len = ((user->size + 8) + 3) / 4;
-                              if ((retn->dsrs[i] = (struct ArgusDSRHeader *) ArgusCalloc(1, len * 4)) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-
-                              bcopy (rec->dsrs[i], retn->dsrs[i], len * 4);
-                              break;
-                           }
-                        }
                         }
                      }
                   }

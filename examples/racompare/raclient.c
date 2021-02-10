@@ -1888,14 +1888,8 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
                ArgusLog (LOG_ERR, "RaProcessRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
             if ((pns = ArgusFindRecord(RaEventProcess->htable, hstruct)) == NULL) {
-               struct ArgusFlow *cflow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
-               int tryreverse = 0;
-
-               if (cflow->hdr.subtype & ARGUS_FLOW_KEY_ATTRIBUTE)
-                  tryreverse = 1;
-
-               if (agg->correct == NULL)
-                  tryreverse = 0;
+//             struct ArgusFlow *cflow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
+               int tryreverse = 1;
 
                switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                   case ARGUS_TYPE_IPV4: {
@@ -2465,11 +2459,13 @@ RaParseLsOfEventRecord (struct ArgusParserStruct *parser, char *dptr, struct Arg
                            }
 
                            bzero(lptr, MAXBUFFERLEN);
-                           sprintf (lptr, "pid=%s:usr=%s:app=%s", pid, user, app);
+                           sprintf (lptr, "\"task\":{\"pid\":%s,\"usr\":\"%s\",\"app\":\"%s\"}", pid, user, app);
 
                            label->hdr.type    = ARGUS_LABEL_DSR;
                            label->hdr.subtype = ARGUS_PROC_LABEL;
                            label->hdr.argus_dsrvl8.len  = 1 + ((strlen(lptr) + 3)/4);
+
+                           if (label->l_un.label != NULL) free (label->l_un.label);
                            label->l_un.label = lptr;
                            ns->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
 
@@ -2856,23 +2852,41 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
          struct ArgusLabelStruct *l2 = (void *) pns->dsrs[ARGUS_LABEL_INDEX];
 
          if (l1 && l2) {
-            if (strcmp(l1->l_un.label, l2->l_un.label)) {
-               char buf[MAXSTRLEN], *label = NULL;
-               bzero(buf, sizeof(buf));
+            if (l1->l_un.label && l2->l_un.label) {
+               if (strcmp(l1->l_un.label, l2->l_un.label)) {
+                  char *buf, *label = NULL;
 
-               if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
+                  if ((buf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusCorrelateRecord: ArgusCalloc error %s\n", strerror(errno));
+
+                  if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
+                     int slen = strlen(label);
+                     int len = (slen + 3)/4;
+
+                     if (l1->l_un.label != NULL)
+                        free(l1->l_un.label);
+
+                     if ((l1->l_un.label = calloc(1, (len * 4) + 1)) == NULL)
+                        ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
+
+                     l1->hdr.argus_dsrvl8.len = 1 + len;
+                     bcopy (label, l1->l_un.label, slen + 1);
+                  }
+                  ns->status |= ARGUS_RECORD_MODIFIED;
+               }
+
+            } else {
+               char *label = NULL;
+               if ((label = l2->l_un.label) != NULL) {
                   int slen = strlen(label);
-                  int len = 4 * ((slen + 3)/4);
+                  int len = (slen + 3)/4;
 
-                  if (l1->l_un.label != NULL)
-                     free(l1->l_un.label);
-
-                  if ((l1->l_un.label = calloc(1, len)) == NULL)
+                  if ((l1->l_un.label = calloc(1, (len * 4) + 1)) == NULL)
                      ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
 
-                  l1->hdr.argus_dsrvl8.len = 1 + ((len + 3)/4);
-                  bcopy (label, l1->l_un.label, strlen(label));
-               }
+                  l1->hdr.argus_dsrvl8.len = 1 + len;
+                  bcopy (label, l1->l_un.label, slen + 1);
+	       }
             }
 #if defined(ARGUSDEBUG)
             ArgusDebug (3, "ArgusCorrelateRecord (0x%x) merged label", pns); 
@@ -2880,21 +2894,21 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 
          } else {
             if (l2 && (l1 == NULL)) {
-               ns->dsrs[ARGUS_LABEL_INDEX] = calloc(1, sizeof(struct ArgusLabelStruct));
-               l1 = (void *) ns->dsrs[ARGUS_LABEL_INDEX];
+               l1 = (struct ArgusLabelStruct *) calloc(1, sizeof(struct ArgusLabelStruct));
+               ns->dsrs[ARGUS_LABEL_INDEX] = (void *) l1;
 
                bcopy(l2, l1, sizeof(*l2));
 
-               if (l2->l_un.label)
-                  l1->l_un.label = strdup(l2->l_un.label);
-
+               if (l2->l_un.label) {
+                  l1->l_un.label = l2->l_un.label;
+                  l2->l_un.label = NULL;
+               }
                ns->dsrindex |= (0x1 << ARGUS_LABEL_INDEX);
 #if defined(ARGUSDEBUG)
-               ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label", pns); 
+               ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label", pns);
 #endif
             }
          }
-
          pns->status |= ARGUS_RECORD_MODIFIED;
       }
 
