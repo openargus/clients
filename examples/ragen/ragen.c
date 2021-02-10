@@ -271,8 +271,7 @@ static int RaGenAuthLocalhost = 1;
 static int RaGenParseResourceLine (struct ArgusParserStruct *parser,
                                     int linenum, char *optarg, int quoted,
                                     int idx);
-static void clearRaGenConfiguration (void);
-
+void clearRaGenConfiguration (void);
 const static unsigned int ArgusClientMaxQueueDepth = 500000;
 
 extern char *chroot_dir;
@@ -386,9 +385,6 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
 
    if (config.baseline != NULL) {
       if ((file = config.baseline) != NULL) {
-         struct stat statbuf;
-         FILE *fd = NULL;
-
          if ((file = realpath (file, NULL)) != NULL) {
 #ifdef ARGUSDEBUG
             ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p) sending file %s\n", parser, client, file);
@@ -1286,7 +1282,6 @@ clearRaGenConfiguration (void)
    ArgusDebug (1, "clearRaGenConfiguration () returning\n");
 #endif 
 }
-
 
 int
 RaGenParseSourceID (struct ArgusAddrStruct *srcid, char *optarg)

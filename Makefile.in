@@ -118,8 +118,6 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/raevent.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rafilteraddr.1 \
 		$(DESTDIR)@mandir@/man1/rafilteraddr.1
-	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragen.1 \
-		$(DESTDIR)@mandir@/man1/ragen.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragraph.1 \
 		$(DESTDIR)@mandir@/man1/ragraph.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragrep.1 \

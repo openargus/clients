@@ -198,12 +198,15 @@ void ArgusUsr1Sig (int);
 void ArgusUsr2Sig (int);
 void ArgusChildExit (int);
 
+
 void ArgusClientError(void);
 void ArgusInitClientProcess(struct ArgusClientData *, struct ArgusWfileStruct *);
 
 void setArgusOutputVersion (struct ArgusOutputStruct *, char *);
 int getArgusOutputVersion (struct ArgusOutputStruct *);
 void ArgusCloseListen(struct ArgusParserStruct *);
+
+void ArgusSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
 
 
 #else
