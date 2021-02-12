@@ -129,10 +129,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if ((parser->ArgusMaskList) == NULL)
-         parser->ArgusReverse = 1;
-      else
-         parser->ArgusReverse = 0;
+      parser->ArgusReverse = 1;
 
       if (parser->ArgusFlowModelFile) {
          if ((parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL)) == NULL)
