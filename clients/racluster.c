@@ -707,260 +707,290 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                ArgusAddToRecordLabel(parser, ns, agg->labelstr);
 
             if (agg->mask) {
-            if ((agg->rap = RaFlowModelOverRides(agg, ns)) == NULL)
-               agg->rap = agg->drap;
+               if ((agg->rap = RaFlowModelOverRides(agg, ns)) == NULL)
+                  agg->rap = agg->drap;
 
-            ArgusGenerateNewFlow(agg, ns);
+               ArgusGenerateNewFlow(agg, ns);
 
-            if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-               ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+               if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+                  if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
+                     struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
+                     if (!parser->RaMonMode && parser->ArgusReverse) {
+                        int tryreverse = 0;
 
-            if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
-               struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
-               if (!parser->RaMonMode && parser->ArgusReverse) {
-                  int tryreverse = 0;
+                        if (flow != NULL) {
+                           if (agg->correct != NULL)
+                              tryreverse = 1;
 
-                  if (flow != NULL) {
-                     if (agg->correct != NULL)
-                        tryreverse = 1;
-
-                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                        case ARGUS_TYPE_IPV4: {
-                           switch (flow->ip_flow.ip_p) {
-                              case IPPROTO_ESP:
-                                 tryreverse = 0;
-                                 break;
-                           }
-                           break;
-                        }
-                        case ARGUS_TYPE_IPV6: {
-                           switch (flow->ipv6_flow.ip_p) {
-                              case IPPROTO_ESP:
-                                 tryreverse = 0;
-                                 break;
-                           }
-                           break;
-                        }
-                     }
-                  } else
-                     tryreverse = 0;
-
-                  if (tryreverse) {
-                     if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                        ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-                     if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
-                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                           case ARGUS_TYPE_IPV4: {
-                              switch (flow->ip_flow.ip_p) {
-                                 case IPPROTO_ICMP: {
-                                    struct ArgusICMPFlow *icmpFlow = &flow->flow_un.icmp;
-
-                                    if (ICMP_INFOTYPE(icmpFlow->type)) {
-                                       switch (icmpFlow->type) {
-                                          case ICMP_ECHO:
-                                          case ICMP_ECHOREPLY:
-                                             icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
-                                             if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                tns = ArgusFindRecord(agg->htable, hstruct);
-                                             icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
-                                             if (tns)
-                                                ArgusReverseRecord (ns);
-                                             break;
-
-                                          case ICMP_ROUTERADVERT:
-                                          case ICMP_ROUTERSOLICIT:
-                                             icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
-                                             if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                tns = ArgusFindRecord(agg->htable, hstruct);
-                                             icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
-                                             if (tns)
-                                                ArgusReverseRecord (ns);
-                                             break;
-
-                                          case ICMP_TSTAMP:
-                                          case ICMP_TSTAMPREPLY:
-                                             icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
-                                             if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                tns = ArgusFindRecord(agg->htable, hstruct);
-                                             icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
-                                             if (tns)
-                                                ArgusReverseRecord (ns);
-                                             break;
-
-                                          case ICMP_IREQ:
-                                          case ICMP_IREQREPLY:
-                                             icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
-                                             if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                tns = ArgusFindRecord(agg->htable, hstruct);
-                                             icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
-                                             if (tns)
-                                                ArgusReverseRecord (ns);
-                                             break;
-
-                                          case ICMP_MASKREQ:
-                                          case ICMP_MASKREPLY:
-                                             icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
-                                             if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
-                                                tns = ArgusFindRecord(agg->htable, hstruct);
-                                             icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
-                                             if (tns)
-                                                ArgusReverseRecord (ns);
-                                             break;
-                                       }
-                                    }
-                                    break;
+                           switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                              case ARGUS_TYPE_IPV4: {
+                                 switch (flow->ip_flow.ip_p) {
+                                   case IPPROTO_ESP:
+                                       tryreverse = 0;
+                                       break;
                                  }
+                                 break;
+                              }
+                              case ARGUS_TYPE_IPV6: {
+                                 switch (flow->ipv6_flow.ip_p) {
+                                    case IPPROTO_ESP:
+                                       tryreverse = 0;
+                                       break;
+                                 }
+                                 break;
                               }
                            }
-                        }
+                        } else
+                           tryreverse = 0;
 
-                        if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                           ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                        if (tryreverse) {
+                           if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
 
-                     } else {    // OK, so we have a match (tns) that is the reverse of the current flow (ns)
-                                 // Need to decide which direction wins.
+                           if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
+                              switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                 case ARGUS_TYPE_IPV4: {
+                                    switch (flow->ip_flow.ip_p) {
+                                       case IPPROTO_ICMP: {
+                                          struct ArgusICMPFlow *icmpFlow = &flow->flow_un.icmp;
 
-                        struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
-                        struct ArgusNetworkStruct *tnet = (struct ArgusNetworkStruct *)tns->dsrs[ARGUS_NETWORK_INDEX];
+                                          if (ICMP_INFOTYPE(icmpFlow->type)) {
+                                             switch (icmpFlow->type) {
+                                                case ICMP_ECHO:
+                                                case ICMP_ECHOREPLY:
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
+                                                   if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      tns = ArgusFindRecord(agg->htable, hstruct);
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_ECHO) ? ICMP_ECHOREPLY : ICMP_ECHO;
+                                                   if (tns)
+                                                      ArgusReverseRecord (ns);
+                                                   break;
 
-                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                           case ARGUS_TYPE_IPV4: {
-                              switch (flow->ip_flow.ip_p) {
-                                 case IPPROTO_TCP: {
-                                    if ((nnet != NULL) && (tnet != NULL)) {
-                                       struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
-                                       struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
+                                                case ICMP_ROUTERADVERT:
+                                                case ICMP_ROUTERSOLICIT:
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
+                                                   if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      tns = ArgusFindRecord(agg->htable, hstruct);
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_ROUTERADVERT) ? ICMP_ROUTERSOLICIT : ICMP_ROUTERADVERT;
+                                                   if (tns)
+                                                      ArgusReverseRecord (ns);
+                                                   break;
+
+                                                case ICMP_TSTAMP:
+                                                case ICMP_TSTAMPREPLY:
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
+                                                   if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      tns = ArgusFindRecord(agg->htable, hstruct);
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_TSTAMP) ? ICMP_TSTAMPREPLY : ICMP_TSTAMP;
+                                                   if (tns)
+                                                      ArgusReverseRecord (ns);
+                                                   break;
+
+                                                case ICMP_IREQ:
+                                                case ICMP_IREQREPLY:
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
+                                                   if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      tns = ArgusFindRecord(agg->htable, hstruct);
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_IREQ) ? ICMP_IREQREPLY : ICMP_IREQ;
+                                                   if (tns)
+                                                      ArgusReverseRecord (ns);
+                                                   break;
+
+                                                case ICMP_MASKREQ:
+                                                case ICMP_MASKREPLY:
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
+                                                   if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL)
+                                                      tns = ArgusFindRecord(agg->htable, hstruct);
+                                                   icmpFlow->type = (icmpFlow->type == ICMP_MASKREQ) ? ICMP_MASKREPLY : ICMP_MASKREQ;
+                                                   if (tns)
+                                                      ArgusReverseRecord (ns);
+                                                   break;
+                                             }
+                                          }
+                                          break;
+                                       }
+                                    }
+                                 }
+                              }
+
+                              hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct);
+
+                           } else {    // OK, so we have a match (tns) that is the reverse of the current flow (ns)
+                                       // Need to decide which direction wins.
+
+                              struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
+                              struct ArgusNetworkStruct *tnet = (struct ArgusNetworkStruct *)tns->dsrs[ARGUS_NETWORK_INDEX];
+
+                              switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                 case ARGUS_TYPE_IPV4: {
+                                    switch (flow->ip_flow.ip_p) {
+                                       case IPPROTO_TCP: {
+                                          if ((nnet != NULL) && (tnet != NULL)) {
+                                             struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
+                                             struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
 
 // first if both flows have syn, then don't merge;
-                                       if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
-                                          tns = NULL;
-                                       } else {
-                                          if (ntcp->status & ARGUS_SAW_SYN) {
+                                             if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
+                                                tns = NULL;
+                                             } else {
+                                                if ((ntcp->status & ARGUS_SAW_SYN) || 
+                                                   ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED))) {
+                                                   struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
+                                                   ArgusRemoveHashEntry(&tns->htblhdr);
+                                                   ArgusReverseRecord (tns);
+                                                   hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                                   tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                                   tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                                   tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
+                                                } else
+                                                   ArgusReverseRecord (ns);
+                                             }
+                                          }
+                                          break;
+                                       }
+
+                                       default: {
+                                          double  nstime = ArgusFetchStartTime(ns);
+                                          double tnstime = ArgusFetchStartTime(tns);
+                                          if (tnstime > nstime) {
+                                             struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
                                              ArgusRemoveHashEntry(&tns->htblhdr);
                                              ArgusReverseRecord (tns);
-                                             if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                                                ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                                             hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
                                              tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
-                                          } else
-                                          if ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED)) {
-                                             ArgusRemoveHashEntry(&tns->htblhdr);
-                                             ArgusReverseRecord (tns);
-                                             if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                                                ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-                                             tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                             tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                             tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                                           } else
                                              ArgusReverseRecord (ns);
+                                          break;
                                        }
                                     }
                                     break;
                                  }
 
-                                 default:
-                                    ArgusReverseRecord (ns);
-                                    break;
-                              }
-                           }
-                           break;
-
-                           case ARGUS_TYPE_IPV6: {
-                              switch (flow->ipv6_flow.ip_p) {
-                                 case IPPROTO_TCP: {
-                                    if ((nnet != NULL) && (tnet != NULL)) {
-                                       struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
-                                       struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
+                                 case ARGUS_TYPE_IPV6: {
+                                    switch (flow->ipv6_flow.ip_p) {
+                                       case IPPROTO_TCP: {
+                                          if ((nnet != NULL) && (tnet != NULL)) {
+                                             struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
+                                             struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
 
 // first if both flows have syn, then don't merge;
-                                       if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
-                                          tns = NULL;
-                                       } else {
-                                          if (ntcp->status & ARGUS_SAW_SYN) {
+                                             if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
+                                                tns = NULL;
+                                             } else {
+                                                if (ntcp->status & ARGUS_SAW_SYN) {
+                                                   ArgusRemoveHashEntry(&tns->htblhdr);
+                                                   ArgusReverseRecord (tns);
+                                                   hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                                   tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                                } else
+                                                if ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED)) {
+                                                   ArgusRemoveHashEntry(&tns->htblhdr);
+                                                   ArgusReverseRecord (tns);
+                                                   hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                                   tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                                } else
+                                                   ArgusReverseRecord (ns);
+                                             }
+                                          }
+                                          break;
+                                       }
+
+                                       default: {
+                                          double  nstime = ArgusFetchStartTime(ns);
+                                          double tnstime = ArgusFetchStartTime(tns);
+                                          if (tnstime > nstime) {
+                                             struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
                                              ArgusRemoveHashEntry(&tns->htblhdr);
                                              ArgusReverseRecord (tns);
-                                             if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                                                ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                                             hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
                                              tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
-                                          } else
-                                          if ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED)) {
-                                             ArgusRemoveHashEntry(&tns->htblhdr);
-                                             ArgusReverseRecord (tns);
-                                             if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                                                ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-                                             tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                             tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                             tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                                           } else
                                              ArgusReverseRecord (ns);
+                                          break;
                                        }
                                     }
                                     break;
                                  }
 
-                                 default:
-                                    ArgusReverseRecord (ns);
+                                 default: {
+                                    double  nstime = ArgusFetchStartTime(ns);
+                                    double tnstime = ArgusFetchStartTime(tns);
+                                    if (tnstime > nstime) {
+                                       struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
+                                       ArgusRemoveHashEntry(&tns->htblhdr);
+                                       ArgusReverseRecord (tns);
+                                       hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                       tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                       tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                       tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
+                                    } else
+                                       ArgusReverseRecord (ns);
                                     break;
+                                 }
                               }
                            }
-                           break;
-
-                           default:
-                              ArgusReverseRecord (ns);
+                           }
                         }
                      }
                   }
-               }
-            }
 
-            if (tns != NULL) {                            // found record in queue
-               if (parser->Aflag) {
-                  if ((tns->status & RA_SVCTEST) != (ns->status & RA_SVCTEST)) {
-                     RaSendArgusRecord(tns);
-                     tns->status &= ~(RA_SVCTEST);
-                     tns->status |= (ns->status & RA_SVCTEST);
-                  }
-               }
-
-               if (tns->status & ARGUS_RECORD_WRITTEN) {
-                  ArgusZeroRecord (tns);
-
-               } else {
-                  if (agg->statusint || agg->idleint) {   // if any timers, need to flush if needed
-                     double dur, nsst, tnsst, nslt, tnslt;
-
-                     nsst  = ArgusFetchStartTime(ns);
-                     tnsst = ArgusFetchStartTime(tns);
-                     nslt  = ArgusFetchLastTime(ns);
-                     tnslt = ArgusFetchLastTime(tns);
-
-                     dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst); 
-                  
-                     if (agg->statusint && (dur >= agg->statusint)) {
-                        RaSendArgusRecord(tns);
-                        ArgusZeroRecord(tns);
-                     } else {
-                        dur = ((nslt < tnsst) ? (tnsst - nslt) : ((tnslt < nsst) ? (nsst - tnslt) : 0.0));
-                        if (agg->idleint && (dur >= agg->idleint)) {
+                  if (tns != NULL) {                            // found record in queue
+                     if (parser->Aflag) {
+                        if ((tns->status & RA_SVCTEST) != (ns->status & RA_SVCTEST)) {
                            RaSendArgusRecord(tns);
-                           ArgusZeroRecord(tns);
+                           tns->status &= ~(RA_SVCTEST);
+                           tns->status |= (ns->status & RA_SVCTEST);
                         }
+                     }
+
+                     if (tns->status & ARGUS_RECORD_WRITTEN) {
+                        ArgusZeroRecord (tns);
+
+                     } else {
+                        if ((agg->statusint > 0) || (agg->idleint > 0)) {   // if any timers, need to flush if needed
+                           double dur, nsst, tnsst, nslt, tnslt;
+
+                           nsst  = ArgusFetchStartTime(ns);
+                           tnsst = ArgusFetchStartTime(tns);
+                           nslt  = ArgusFetchLastTime(ns);
+                           tnslt = ArgusFetchLastTime(tns);
+
+                           dur = ((tnslt > nslt) ? tnslt : nslt) - ((nsst < tnsst) ? nsst : tnsst); 
+                        
+                           if ((agg->statusint > 0) && (dur >= agg->statusint)) {
+                              RaSendArgusRecord(tns);
+                              ArgusZeroRecord(tns);
+                           } else {
+                              dur = ((nslt < tnsst) ? (tnsst - nslt) : ((tnslt < nsst) ? (nsst - tnslt) : 0.0));
+                              if (agg->idleint && (dur >= agg->idleint)) {
+                                 RaSendArgusRecord(tns);
+                                 ArgusZeroRecord(tns);
+                              }
+                           }
+                        }
+                     }
+
+                     ArgusMergeRecords (agg, tns, ns);
+
+                     ArgusRemoveFromQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
+                     ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);         // use the agg queue as an idle timeout queue
+
+                     ArgusDeleteRecordStruct(parser, ns);
+                     agg->status |= ARGUS_AGGREGATOR_DIRTY;
+
+                  } else {
+                     tns = ns;
+                     if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
+                        tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                        ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
+                        agg->status |= ARGUS_AGGREGATOR_DIRTY;
                      }
                   }
                }
 
-               ArgusMergeRecords (agg, tns, ns);
-
-               ArgusRemoveFromQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);
-               ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_LOCK);         // use the agg queue as an idle timeout queue
-
-               ArgusDeleteRecordStruct(parser, ns);
-               agg->status |= ARGUS_AGGREGATOR_DIRTY;
-
-            } else {
-               tns = ns;
-               if ((hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
-                  ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-               tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
-               ArgusAddToQueue (agg->queue, &tns->qhdr, ARGUS_NOLOCK);
-               agg->status |= ARGUS_AGGREGATOR_DIRTY;
-            }
             } else {
                ArgusAddToQueue (agg->queue, &ns->qhdr, ARGUS_NOLOCK);
                agg->status |= ARGUS_AGGREGATOR_DIRTY;

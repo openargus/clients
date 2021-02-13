@@ -10676,22 +10676,34 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                                           ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
                                     } else {
+                                       struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
+                                       struct ArgusNetworkStruct *tnet = (struct ArgusNetworkStruct *)tns->dsrs[ARGUS_NETWORK_INDEX];
+
                                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                                           case ARGUS_TYPE_IPV4: {
                                              switch (flow->ip_flow.ip_p) {
                                                 case IPPROTO_TCP: {
-                                                   struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)argus->dsrs[ARGUS_NETWORK_INDEX];
-                                                   if (tcp != NULL) {
-                                                      struct ArgusTCPObject *ttcp = (struct ArgusTCPObject *)tns->dsrs[ARGUS_NETWORK_INDEX];
-                                                      if (ttcp != NULL) {
-                                                         if ((tcp->status & ARGUS_SAW_SYN) && !(ttcp->status & ARGUS_SAW_SYN)) {
+                                                   if ((nnet != NULL) && (tnet != NULL)) {
+                                                      struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
+                                                      struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
+
+// first if both flows have syn, then don't merge;
+                                                      if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
+                                                         tns = NULL;
+                                                      } else {
+                                                         if ((ntcp->status & ARGUS_SAW_SYN) ||
+                                                            ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED))) {
+                                                            struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
+                                                            ArgusRemoveHashEntry(&tns->htblhdr);
                                                             ArgusReverseRecord (tns);
+                                                            hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                                            tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                                            tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                                            tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                                                          } else
                                                             ArgusReverseRecord (argus);
-                                                      } else
-                                                         ArgusReverseRecord (argus);
-                                                   } else
-                                                      ArgusReverseRecord (argus);
+                                                      }
+                                                   }
                                                    break;
                                                 }
 
@@ -10705,19 +10717,27 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                                           case ARGUS_TYPE_IPV6: {
                                              switch (flow->ipv6_flow.ip_p) {
                                                 case IPPROTO_TCP: {
-                                                   struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)argus->dsrs[ARGUS_NETWORK_INDEX];
-                                                   if (tcp != NULL) {
-                                                      struct ArgusTCPObject *ttcp = (struct ArgusTCPObject *)tns->dsrs[ARGUS_NETWORK_INDEX];
-                                                      if (ttcp != NULL) {
-                                                         if ((tcp->status & ARGUS_SAW_SYN) && !(ttcp->status & ARGUS_SAW_SYN)) {
+                                                   if ((nnet != NULL) && (tnet != NULL)) {
+                                                      struct ArgusTCPObject *ntcp = &nnet->net_union.tcp;
+                                                      struct ArgusTCPObject *ttcp = &tnet->net_union.tcp;
+
+// first if both flows have syn, then don't merge;
+                                                      if ((ntcp->status & ARGUS_SAW_SYN) && (ttcp->status & ARGUS_SAW_SYN)) {
+                                                         tns = NULL;
+                                                      } else {
+                                                         if ((ntcp->status & ARGUS_SAW_SYN) ||
+                                                            ((ntcp->status & ARGUS_SAW_SYN_SENT) && (ntcp->status & ARGUS_CON_ESTABLISHED))) {
+                                                            struct ArgusFlow *tflow = (struct ArgusFlow *) tns->dsrs[ARGUS_FLOW_INDEX];
+                                                            ArgusRemoveHashEntry(&tns->htblhdr);
                                                             ArgusReverseRecord (tns);
+                                                            hstruct = ArgusGenerateHashStruct(agg, tns, (struct ArgusFlow *)&agg->fstruct);
+                                                            tns->htblhdr = ArgusAddHashEntry (agg->htable, tns, hstruct);
+                                                            tflow->hdr.subtype &= ~ARGUS_REVERSE;
+                                                            tflow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                                                          } else
                                                             ArgusReverseRecord (argus);
-                                                      } else
-                                                         ArgusReverseRecord (argus);
-                                                   } else
-                                                      ArgusReverseRecord (argus);
-                                                   break;
+                                                      }
+                                                   }
                                                 }
 
                                                 default:

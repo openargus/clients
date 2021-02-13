@@ -496,10 +496,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
       parser->ArgusReverse = 0;
-      if ((parser->ArgusMaskList) == NULL)
-         if (parser->ArgusAggregator->correct != NULL) 
-            parser->ArgusReverse = 1;
-
+      if (parser->ArgusAggregator->correct != NULL) 
+         parser->ArgusReverse = 1;
 
       if (parser->dflag) {
          int pid;
