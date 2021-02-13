@@ -1574,7 +1574,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    gettimeofday (&RaCursesStopTime, 0L);
 
    if ((agg != NULL) && (parser->RaCumulativeMerge)) {
-      struct ArgusFlow *flow = NULL;
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
@@ -1604,7 +1603,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             cns = ArgusCopyRecordStruct(ns);
 
             if (agg->mask) {
-                  if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
+               if ((agg->rap = RaFlowModelOverRides(agg, cns)) == NULL)
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, cns);
@@ -1899,9 +1898,11 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             } else {
                pns = cns;
     
-               if (!found)    // If we didn't find a pns, we'll need to setup to insert the cns
+               if (!found) {  // If we didn't find a pns, we'll need to setup to insert the cns
+                  struct ArgusFlow *flow = (struct ArgusFlow *) cns->dsrs[ARGUS_FLOW_INDEX];
                   if ((hstruct = ArgusGenerateHashStruct(agg, pns, flow)) == NULL)
                      ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+               }
     
                pns->htblhdr = ArgusAddHashEntry (RaCursesProcess->htable, pns, hstruct);
                pns->status |= ARGUS_RECORD_NEW | ARGUS_RECORD_MODIFIED;
@@ -1944,6 +1945,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          
                } else {
                   if ((pns =  ArgusCopyRecordStruct(tns)) != NULL) { /* new record */
+                     struct ArgusFlow *flow = (struct ArgusFlow *) pns->dsrs[ARGUS_FLOW_INDEX];
+
                      if (!found)    // If we didn't find a pns, we'll need to setup to insert the cns
                         if ((hstruct = ArgusGenerateHashStruct(agg, pns, flow)) == NULL)
                            ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));

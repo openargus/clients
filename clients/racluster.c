@@ -677,7 +677,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
    struct ArgusHashStruct *hstruct = NULL;
    int found = 0;
@@ -685,6 +684,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    if (agg != NULL) {
       while (agg && !found) {
          int retn = 0, fretn = -1, lretn = -1;
+
          if (agg->filterstr) {
             struct nff_insn *fcode = agg->filter.bf_insns;
             fretn = ArgusFilterRecord (fcode, argus);
