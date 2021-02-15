@@ -1,7 +1,0 @@
-#!/bin/sh
-
-if [[ -z "$FILENAME" ]] ; then
-	exit 0
-fi
-
-/usr/bin/rasqltimeindex -r "$FILENAME"
