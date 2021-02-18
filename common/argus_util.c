@@ -1444,6 +1444,11 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                parser->ArgusPortNum = atoi (optarg);
             } else 
             if (!(strncmp(parser->ArgusProgramName, "rabins", 6))) {
+               while (parser->RaSortOptionIndex > 0) {
+                  free(parser->RaSortOptionStrings[parser->RaSortOptionIndex - 1]);
+                  parser->RaSortOptionStrings[parser->RaSortOptionIndex - 1] = NULL;
+                  parser->RaSortOptionIndex--;
+               }
                do {
                   if (parser->RaSortOptionIndex < ARGUS_MAX_S_OPTIONS) {
                      char *soptstr = strdup(optarg), *sptr;

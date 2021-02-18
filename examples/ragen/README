@@ -17,6 +17,20 @@
  * THIS SOFTWARE.
  */
 
+Tue Feb 16 12:31:13 EST 2021
+
+Clients request a generated flow, using the -M gen=" ... " where the string assigned
+to gen is the basic generator configuration.  Currently the configuration syntax is:
+
+   baseline=uuid;startime=time;interval=float;dur=float
+
+      uuid:     this is an id for the baseline definition ...
+                for convenience we provide support for files, and database lookups ...
+
+      time:     any valid argus time specification
+      interval: float of status record generationg in seconds
+      dur:      float of duration in seconds
+   
 
 Sun Jan 31 12:13:11 EST 2021
 
@@ -34,3 +48,4 @@ Ragen.1 also introduces a new protocol, similar to the argus protocol, where
 the client needs to identify what baseline it is interested in, at what interval
 and for how long.  Eventually, the protocol will allow the client to specify a
 method for generating the flows.
+

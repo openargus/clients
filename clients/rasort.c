@@ -232,7 +232,8 @@ RaParseComplete (int sig)
             if ((wfile = (void *)ArgusParser->ArgusWfileList->start) != NULL) {
                fflush (wfile->fd);
                rename (wfile->filename, file->filename);
-               fclose (wfile->fd);
+               if (wfile->fd != NULL)
+                  fclose (wfile->fd);
                wfile->fd = NULL;
             }
 

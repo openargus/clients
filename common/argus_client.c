@@ -11172,7 +11172,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                               } else
                                  tryreverse = 0;
 
-                              if (!parser->RaMonMode && tryreverse) {
+                              if (tryreverse) {
                                  if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
                                     if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
                                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
@@ -16678,40 +16678,43 @@ ArgusSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queue
 {
    int i = 0, cnt;
 
+   if (ArgusSorter->ArgusSortAlgorithms[0] != NULL) {
 #if defined(ARGUS_THREADS)
-   if (type == ARGUS_LOCK)
-      pthread_mutex_lock(&queue->lock);
+      if (type == ARGUS_LOCK)
+         pthread_mutex_lock(&queue->lock);
 #endif
 
-   if (queue->array != NULL) {
-      ArgusFree(queue->array);
-      queue->array = NULL;
-      queue->arraylen = 0;
-   }
-
-   cnt = queue->count;
-
-   if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
-      struct ArgusQueueHeader *qhdr = queue->start;
-      queue->arraylen = cnt;
-
-      for (i = 0; i < cnt; i++) {
-         queue->array[i] = qhdr;
-         qhdr = qhdr->nxt;
+      if (queue->array != NULL) {
+         ArgusFree(queue->array);
+         queue->array = NULL;
+         queue->arraylen = 0;
       }
 
-      queue->array[i] = NULL;
+      cnt = queue->count;
 
-      if (cnt > 1)
-         if (ArgusSorter->ArgusSortAlgorithms[0] != NULL)
+      if ((queue->array = (struct ArgusQueueHeader **) ArgusMalloc(sizeof(struct ArgusQueueHeader *) * (cnt + 1))) != NULL) {
+         struct ArgusQueueHeader *qhdr;
+
+         for (i = 0; i < cnt; i++)
+            if ((qhdr = ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL)
+               queue->array[i] = qhdr;
+
+         queue->array[i] = NULL;
+
+         if (cnt > 1)
             qsort ((char *) queue->array, cnt, sizeof (struct ArgusQueueHeader *), ArgusSortRoutine);
-   } else
-      ArgusLog (LOG_ERR, "ArgusSortQueue: ArgusMalloc %s\n", strerror(errno));
+
+         for (i = 0; i < cnt; i++)
+            ArgusAddToQueue(queue, queue->array[i], ARGUS_NOLOCK);
+
+      } else
+         ArgusLog (LOG_ERR, "ArgusSortQueue: ArgusMalloc %s\n", strerror(errno));
 
 #if defined(ARGUS_THREADS)
-   if (type == ARGUS_LOCK)
-      pthread_mutex_unlock(&queue->lock);
+      if (type == ARGUS_LOCK)
+         pthread_mutex_unlock(&queue->lock);
 #endif
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "ArgusSortQueue(%p, %p, %d) returned\n", sorter, queue, type);

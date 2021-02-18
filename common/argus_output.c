@@ -3870,7 +3870,8 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                if (client->delete) {
                   ArgusRemoveFromQueue(output->ArgusClients, &client->qhdr, ARGUS_NOLOCK);
 #ifdef ARGUSDEBUG
-                  ArgusDebug(1, "%s/%s: client %s %s removed", caller, __func__,
+                  ArgusDebug(1, "%s/%s: client %p %s %s removed", caller, __func__,
+                             client,
                              client->hostname ? client->hostname : "(unknown)",
                              client->clientid ? client->clientid : "(unknown)");
 #endif

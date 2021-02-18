@@ -216,10 +216,12 @@ main (int argc, char **argv)
    if (ArgusParser->pidflag)
       ArgusCreatePIDFile (ArgusParser, ArgusParser->ArgusProgramName);
  
-   if (!(ArgusParser->Sflag))
-      if (ArgusParser->ArgusInputFileList == NULL)
+   if (!(ArgusParser->Sflag)) {
+      if (ArgusParser->ArgusInputFileList == NULL) {
          if (!(ArgusAddFileList (ArgusParser, "-", ARGUS_DATA_SOURCE, -1, -1)))
             ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
+      }
+   }
 
 /*
    OK now we're ready.  Read in all the files, for as many passes as

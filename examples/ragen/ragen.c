@@ -235,14 +235,14 @@ struct RaMySQLProbeTable {
 #endif
 #endif
 
-#define ARGUSMAXCLIENTCOMMANDS          7
-#define RADIUM_START                    0
-#define RADIUM_DONE                     1
-#define RADIUM_FILTER                   2
-#define RADIUM_MODEL                    3
-#define RADIUM_PROJECT                  4
-#define RADIUM_FILE                     5
-#define RADIUM_GEN                      6
+#define ARGUSMAXCLIENTCOMMANDS         7
+#define RAGEN_START                    0
+#define RAGEN_DONE                     1
+#define RAGEN_FILTER                   2
+#define RAGEN_MODEL                    3
+#define RAGEN_PROJECT                  4
+#define RAGEN_FILE                     5
+#define RAGEN_GEN                      6
 
 char *RaGenClientCommands[ARGUSMAXCLIENTCOMMANDS] =
 {
@@ -343,19 +343,23 @@ char *RaGenResourceFileStr [] = {
 };
 
 
-static struct RaGenConfig *
-RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientData *client, char *ptr)
+struct ArgusListStruct *ArgusGeneratorList = NULL;
+
+static struct ArgusGenerator *
+RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
 {
-   struct RaGenConfig *retn = NULL, config;
+   struct ArgusGenerator *retn = NULL;
+   struct ArgusGenConfig config, *conf = &config;
    struct tm tmbuf, *tm = &tmbuf;
    char *file = NULL, *sptr, *str = strdup(ptr);
 
    sptr = str;
+   while (isspace((int)*sptr)) sptr++;
 
-   bzero(&config, sizeof(config));
+   bzero(conf, sizeof(*conf));
    bzero(&tmbuf, sizeof(tmbuf));
 
-   while ((optarg = strtok(str, ";")) != NULL) {
+   while ((optarg = strtok(sptr, ";")) != NULL) {
       char *key, *value, *dptr;
       if ((dptr = strchr(optarg, '=')) != NULL) {
          key = optarg;
@@ -371,38 +375,75 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
       } else if (strcasecmp(key, "dur") == 0) {
          config.duration = atof(value);
       }
-      str = NULL;
+      sptr = NULL;
    }
+
+   config.client = client;
+   config.output = output;
 
    if (parser->startime_t.tv_sec > 0) {
       if (config.duration > 0) {
          parser->lasttime_t.tv_sec = parser->startime_t.tv_sec + config.duration;
          if ((retn = ArgusCalloc (1, sizeof(*retn))) != NULL) {
-            bcopy(&config, retn, sizeof(*retn));
+            bcopy(&config, &retn->config, sizeof(retn->config));
          }
       }
    }
 
-   if (config.baseline != NULL) {
-      if ((file = config.baseline) != NULL) {
-         if ((file = realpath (file, NULL)) != NULL) {
+   if ((file = config.baseline) != NULL) {
+      if ((file = realpath (file, NULL)) != NULL) {
 #ifdef ARGUSDEBUG
-            ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p) sending file %s\n", parser, client, file);
+         ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p) sending file %s\n", parser, client, file);
 #endif
-
-            if (!(ArgusAddFileList (parser, file, ARGUS_DATA_SOURCE, -1, -1)))
-               ArgusLog(LOG_ERR, "RaGenParseGeneratorConfig: error: file arg %s", file);
-            stat(file, &((struct ArgusFileInput *) ArgusParser->ArgusInputFileListTail)->statbuf);
-         }
+         config.baseline = strdup(file);
       }
+
+      if (!(ArgusPushBackList (ArgusGeneratorList, (struct ArgusListRecord *) retn, ARGUS_LOCK)))
+         ArgusLog(LOG_ERR, "RaGenParseGeneratorConfig: error: file arg %s", file);
    }
 
-   free(sptr);
+   free(str);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p, '%s') returns %d\n", parser, client, ptr, retn);
+   ArgusDebug (1, "RaGenParseGeneratorConfig(%p, %p, %p, '%s') returns %d\n", parser, client, output, ptr, retn);
 #endif
 
+   return (retn);
+}
+
+int ArgusDeleteGenerator(struct ArgusGenerator *);
+
+int
+ArgusDeleteGenerator(struct ArgusGenerator *gen)
+{
+   int retn = 0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusDeleteGenerator(%p) baseline %s, client %p, output %p\n", gen, 
+                                                                                  gen->config.baseline, 
+                                                                                  gen->config.client, 
+                                                                                  gen->config.output, 
+                                                                                  retn);
+#endif
+
+   if (gen->config.baseline != NULL)
+      free (gen->config.baseline);
+
+   if (gen->status & ARGUS_START) {
+      if (gen->config.file != NULL) {
+         fclose(gen->config.file);
+         gen->config.file = NULL;
+      }
+   }
+   if (gen->config.fd)
+      close(gen->config.fd);
+
+   if (gen->config.tempfile != NULL) {
+      unlink(gen->config.tempfile);
+      free(gen->config.tempfile);
+   }
+
+   ArgusFree(gen);
    return (retn);
 }
 
@@ -412,7 +453,7 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
 {
    struct ArgusOutputStruct *output = (struct ArgusOutputStruct *)o;
    struct ArgusClientData *client = (struct ArgusClientData *) c;
-   struct RaGenConfig *config;
+   struct ArgusGenerator *gen;
 
    int fd = client->fd, slen = 0;
    int i, cnt, retn = 1, found;
@@ -423,7 +464,7 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
             if (!(strncmp (ptr, RaGenClientCommands[i], strlen(RaGenClientCommands[i])))) {
                found++;
                switch (i) {
-                  case RADIUM_START: {
+                  case RAGEN_START: {
                      int slen = strlen(RaGenClientCommands[i]);
                      char *sptr;
 
@@ -438,15 +479,43 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
                      client->ArgusClientStart++;
                      retn = 0; break;
                   }
-                  case RADIUM_DONE:  {
+
+                  case RAGEN_DONE:  {
                      if (client->hostname != NULL)
-                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: client %s sent DONE", client->hostname);
+                        ArgusLog (LOG_INFO, "RaGenParseClientMessage: client %s sent DONE", client->hostname);
                      else
-                        ArgusLog (LOG_INFO, "ArgusCheckClientMessage: received DONE");
+                        ArgusLog (LOG_INFO, "RaGenParseClientMessage: received DONE");
+
+                     if ((cnt = ArgusGeneratorList->count) > 0) {
+#if defined(ARGUS_THREADS)
+                        pthread_mutex_lock(&ArgusGeneratorList->lock);
+#endif
+
+                        /* Get the queue length down to the max.  The addition below
+                         * will push it back over the max length and ArgusWriteOutSocket()
+                         * can later determine if it needs to hang up the connection.
+                         */
+                        for (i = 0; i < cnt; i++) {
+                           struct ArgusGenerator *gen;
+
+                           if ((gen = (struct ArgusGenerator *)ArgusPopFrontList(ArgusGeneratorList, ARGUS_NOLOCK)) != NULL) {
+                              if (gen->config.client == client) {
+                                 ArgusDeleteGenerator(gen);
+                                 break;
+                              } else
+                                 ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
+                           }
+                        }
+
+#if defined(ARGUS_THREADS)
+                        pthread_mutex_unlock(&ArgusGeneratorList->lock);
+#endif
+                     }
                      retn = -4;
                      break; 
                   }
-                  case RADIUM_FILTER: {
+
+                  case RAGEN_FILTER: {
                      if (ArgusFilterCompile (&client->ArgusNFFcode, &ptr[7], 1) < 0) {
                         retn = -2;
 #ifdef ARGUSDEBUG
@@ -472,11 +541,11 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
                      break;
                   }
 
-                  case RADIUM_PROJECT: 
-                  case RADIUM_MODEL: 
+                  case RAGEN_PROJECT: 
+                  case RAGEN_MODEL: 
                      break;
 
-                  case RADIUM_FILE: {
+                  case RAGEN_FILE: {
                      char *file = &ptr[6];
 #ifdef ARGUSDEBUG
                      ArgusDebug (3, "ArgusCheckClientMessage: ArgusFile %s requested.\n", file);
@@ -486,8 +555,8 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
                      break;
                   }
 
-                  case RADIUM_GEN: {
-                     if ((config = RaGenParseGeneratorConfig(parser, client, &ptr[5])) != NULL) {
+                  case RAGEN_GEN: {
+                     if ((gen = RaGenParseGeneratorConfig(parser, client, output, &ptr[4])) != NULL) {
                         client->ArgusGeneratorInitialized++;
                         reply = "OK";
                         retn = 1;
@@ -542,6 +611,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    parser->RaWriteOut = 1;
    parser->ArgusReverse = 1;
+   parser->ArgusTimeoutThread = 1;
 
    parser->ArgusParseClientMessage = RaGenParseClientMessage;
 
@@ -559,6 +629,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+
+      if ((ArgusGeneratorList = ArgusNewList()) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewList error");
 
       if (parser->ArgusFlowModelFile != NULL) {
          RaParseResourceFile (parser, parser->ArgusFlowModelFile,
@@ -647,6 +720,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    and so it should be run, probably 4x a second, just for good
    measure.
 */
+      parser->RaClientTimeout.tv_sec  = 0;
+      parser->RaClientTimeout.tv_usec = 250000;
       parser->ArgusReliableConnection++;
 
       tvp = getArgusMarReportInterval(ArgusParser);
@@ -654,9 +729,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          setArgusMarReportInterval (ArgusParser, "5s");
       }
 
-      if ((parser->ArgusOutput = ArgusNewOutput(parser, RaGenMinSsf,
-                                                RaGenMaxSsf,
-                                                RaGenAuthLocalhost)) == NULL)
+      if ((parser->ArgusOutput = ArgusNewOutput(parser, RaGenMinSsf, RaGenMaxSsf, RaGenAuthLocalhost)) == NULL)
          ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
 
       /* Need valid parser->ArgusOutput before starting listener */
@@ -688,6 +761,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTTOU, SIG_IGN);
       (void) signal (SIGTTIN, SIG_IGN);
 
+      parser->Sflag++;
       parser->RaInitialized++;
    }
 }
@@ -701,6 +775,7 @@ void
 RaParseComplete (int sig)
 {
    struct ArgusRecordStruct *rec = NULL;
+   int i, cnt = 0;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "RaParseComplete(%d) Starting\n", sig);
@@ -730,6 +805,23 @@ RaParseComplete (int sig)
          }
          ArgusDeleteQueue(queue);
          ArgusParser->ArgusActiveHosts = NULL;
+      }
+
+      if ((cnt = ArgusGeneratorList->count) > 0) {
+#if defined(ARGUS_THREADS)
+         pthread_mutex_lock(&ArgusGeneratorList->lock);
+#endif
+         for (i = 0; i < cnt; i++) {
+            struct ArgusGenerator *gen;
+
+            if ((gen = (struct ArgusGenerator *)ArgusPopFrontList(ArgusGeneratorList, ARGUS_NOLOCK)) != NULL) {
+               ArgusDeleteGenerator(gen);
+            }
+         }
+
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&ArgusGeneratorList->lock);
+#endif
       }
 
       if (ArgusParser->ArgusOutput) {
@@ -792,12 +884,83 @@ RaParseComplete (int sig)
 #endif
 }
 
+void ArgusGenerateStatusRecords(struct ArgusGenerator *);
+void ArgusProcessStatusRecords(struct ArgusGenerator *);
+
+void
+ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
+{
+   if (!(gen->status & ARGUS_START)) {
+      char cmd[1024];
+      int retn;
+
+      gen->config.tempfile = strdup("/tmp/ragen.tmp.XXXXXX");
+      gen->config.fd = mkstemp(gen->config.tempfile);
+
+      snprintf (cmd, 1024, "/usr/bin/rabins -P stime -r %s -M time %d -w %s", 
+                   gen->config.baseline, (int) gen->config.interval, gen->config.tempfile);
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (2, "ArgusGenerateStatusRecord(%p) calling '%s'\n", gen, cmd);
+#endif
+      if ((retn = system(cmd))  < 0) {
+         ArgusLog (LOG_ERR, "%s: system() failed\n", __func__);
+      }
+      snprintf (cmd, 1024, "/usr/bin/rasort -m stime -r %s -M replace", gen->config.tempfile);
+      if ((retn = system(cmd))  < 0) {
+         ArgusLog (LOG_ERR, "%s: system() failed\n", __func__);
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusGenerateStatusRecord(%p) output %p client %p flow data stored in '%s'\n", 
+           gen, gen->config.output, gen->config.client, gen->config.tempfile);
+#endif
+}
+
+void
+ArgusProcessStatusRecords(struct ArgusGenerator *gen)
+{
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusProcessStatusRecord(%p) output %p client %p\n", gen, gen->config.output, gen->config.client);
+#endif
+}
+
 
 void
 ArgusClientTimeout ()
 {
+   int i, cnt = 0;
    gettimeofday(&ArgusParser->ArgusRealTime, 0);
    ArgusParser->ArgusGlobalTime = ArgusParser->ArgusRealTime;
+
+   if ((cnt = ArgusGeneratorList->count) > 0) {
+#if defined(ARGUS_THREADS)
+      pthread_mutex_lock(&ArgusGeneratorList->lock);
+#endif
+
+      /* Get the queue length down to the max.  The addition below
+       * will push it back over the max length and ArgusWriteOutSocket()
+       * can later determine if it needs to hang up the connection.
+       */
+      for (i = 0; i < cnt; i++) {
+         struct ArgusGenerator *gen;
+
+         if ((gen = (struct ArgusGenerator *)ArgusPopFrontList(ArgusGeneratorList, ARGUS_NOLOCK)) != NULL) {
+            if (!(gen->status & ARGUS_START)) {
+               ArgusGenerateStatusRecords(gen);
+               gen->status |= ARGUS_START;
+            } else 
+               ArgusProcessStatusRecords(gen);
+
+            ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
+         }
+      }
+
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&ArgusGeneratorList->lock);
+#endif
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");
@@ -1068,7 +1231,7 @@ RaGenParseResourceLine (struct ArgusParserStruct *parser, int linenum,
          if ((!roption++) && (parser->ArgusInputFileList != NULL))
             ArgusDeleteFileList(parser);
 
-         if (!(ArgusAddFileList (parser, optarg, (parser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), -1, -1))) {
+         if (!(ArgusAddFileList (parser, optarg, ARGUS_DATA_SOURCE, -1, -1))) {
             ArgusLog (LOG_ERR, "%s: error: file arg %s\n", optarg);
          }
          break;
@@ -2503,5 +2666,5 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
 
    return (retn);
 }
-
 #endif 
+
