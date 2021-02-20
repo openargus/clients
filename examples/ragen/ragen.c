@@ -341,6 +341,11 @@ char *RaGenResourceFileStr [] = {
 };
 
 
+void ArgusGenerateStatusRecords(struct ArgusGenerator *);
+void *ArgusProcessStatusRecords(void *);
+void ArgusStartGenerator(struct ArgusGenerator *);
+void ArgusStopGenerator(struct ArgusGenerator *);
+
 static int RaGenParseResourceLine (struct ArgusParserStruct *, int, char *, int, int);
 struct ArgusListStruct *ArgusGeneratorList = NULL;
 struct ArgusGenerator *ArgusNewGenerator (struct ArgusParserStruct *, struct ArgusClientData *, struct ArgusOutputStruct *);
@@ -367,10 +372,12 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
 static struct ArgusGenerator *
 RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
 {
-   struct ArgusGenerator *retn = NULL;
+   struct ArgusGenerator *gen = NULL, *tgen = NULL;
+   struct ArgusQueueStruct *queue;
    struct ArgusGenConfig *config;
    struct tm tmbuf, *tm = &tmbuf;
    char *file = NULL, *sptr, *str = strdup(ptr);
+   int i, cnt;
 
    if ((config = ArgusCalloc (1, sizeof(*config))) == NULL) 
       ArgusLog (LOG_ERR, "%s: ArgusCalloc failed\n", __func__);
@@ -398,15 +405,11 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
       sptr = NULL;
    }
 
-   retn = ArgusNewGenerator(parser, client, output);
-
    if (parser->startime_t.tv_sec > 0) {
       if (config->duration > 0) {
          parser->lasttime_t.tv_sec = parser->startime_t.tv_sec + config->duration;
       }
    }
-
-   ArgusAddToQueue (retn->configs, &config->qhdr, ARGUS_LOCK);
 
    if ((file = config->baseline) != NULL) {
       if ((file = realpath (file, NULL)) != NULL) {
@@ -415,18 +418,41 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
 #endif
          config->baseline = strdup(file);
       }
+   }
 
-      if (!(ArgusPushBackList (ArgusGeneratorList, (struct ArgusListRecord *) retn, ARGUS_LOCK)))
+   if ((cnt = ArgusGeneratorList->count) > 0) {
+#if defined(ARGUS_THREADS)
+      pthread_mutex_lock(&ArgusGeneratorList->lock);
+#endif
+
+      for (i = 0; i < cnt; i++) {
+         if ((tgen = (struct ArgusGenerator *)ArgusPopFrontList(ArgusGeneratorList, ARGUS_NOLOCK)) != NULL) {
+            if (tgen->client == client)
+               gen = tgen;
+            ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) tgen, ARGUS_NOLOCK);
+         }
+      }
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&ArgusGeneratorList->lock);
+#endif
+   }
+
+   if (gen == NULL) {
+      gen = ArgusNewGenerator(parser, client, output);
+      if (!(ArgusPushBackList (ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_LOCK)))
          ArgusLog(LOG_ERR, "RaGenParseGeneratorConfig: error: file arg %s", file);
    }
 
+   config->gen = gen;
+   if ((queue = gen->configs) != NULL)
+      ArgusAddToQueue(queue, &config->qhdr, ARGUS_LOCK);
    free(str);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaGenParseGeneratorConfig(%p, %p, %p, '%s') returns %d\n", parser, client, output, ptr, retn);
+   ArgusDebug (1, "RaGenParseGeneratorConfig(%p, %p, %p, '%s') returns %d\n", parser, client, output, ptr, gen);
 #endif
 
-   return (retn);
+   return (gen);
 }
 
 int ArgusDeleteGenerator(struct ArgusGenerator *);
@@ -445,6 +471,8 @@ ArgusDeleteGenerator(struct ArgusGenerator *gen)
       for (i = 0; i < cnt; i++) {
          if ((config = (struct ArgusGenConfig *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
             if (config->status & ARGUS_START) {
+               if (config->tid && (config->status & ARGUS_STOP))
+                  pthread_join(config->tid, NULL);
 #ifdef ARGUSDEBUG
                ArgusDebug (1, "ArgusDeleteGenerator(%p) baseline %s\n", gen, config->baseline); 
 #endif
@@ -452,10 +480,12 @@ ArgusDeleteGenerator(struct ArgusGenerator *gen)
                   free (config->baseline);
 
                if (gen->status & ARGUS_START) {
+/*
                   if (config->finput->file != NULL) {
                      fclose(config->finput->file);
                      config->finput->file = NULL;
                   }
+*/
                }
                if (config->finput->fd)
                   close(config->finput->fd);
@@ -527,10 +557,9 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
 
                            if ((gen = (struct ArgusGenerator *)ArgusPopFrontList(ArgusGeneratorList, ARGUS_NOLOCK)) != NULL) {
                               if (gen->client == client) {
-                                 ArgusDeleteGenerator(gen);
-                                 break;
-                              } else
-                                 ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
+                                 ArgusStopGenerator(gen);
+                              }
+                              ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
                            }
                         }
 
@@ -818,7 +847,7 @@ RaParseComplete (int sig)
 
          while (queue->count > 0) {
             if ((input = (struct ArgusInput *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-               ArgusCloseInput(ArgusParser, input);
+//             ArgusCloseInput(ArgusParser, input);
                if (input->hostname != NULL)
                   free (input->hostname);
                if (input->filename != NULL)
@@ -911,14 +940,67 @@ RaParseComplete (int sig)
 #endif
 }
 
-void ArgusGenerateStatusRecords(struct ArgusGenerator *);
-void ArgusProcessStatusRecords(struct ArgusGenerator *);
+void
+ArgusStartGenerator(struct ArgusGenerator *gen)
+{
+   struct ArgusQueueStruct *queue = gen->configs;
+
+   if (queue && queue->count) {
+      struct ArgusGenConfig *config;
+      int i, cnt = queue->count;
+
+      for (i = 0; i < cnt; i++) {
+         if ((config = (struct ArgusGenConfig *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
+            if (!(config->status & ARGUS_STATUS)) {
+               pthread_attr_t attrbuf, *attr = &attrbuf;
+
+               pthread_attr_init(attr);
+               pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
+
+               if (getuid() == 0)
+                  pthread_attr_setschedpolicy(attr, SCHED_RR);
+               else
+                  attr = NULL;
+
+               if ((pthread_create(&config->tid, attr, ArgusProcessStatusRecords, (void *)config)) != 0)
+                  ArgusLog (LOG_ERR, "ArgusGetName() pthread_create error %s\n", strerror(errno));
+               config->status |= ARGUS_STATUS;
+            }
+            ArgusAddToQueue(queue, &config->qhdr, ARGUS_LOCK);
+         }
+      }
+   }
+}
+
+void
+ArgusStopGenerator(struct ArgusGenerator *gen)
+{
+   struct ArgusQueueStruct *queue = gen->configs;
+
+   gen->parser->RaParseDone = 1;
+
+   if (queue && queue->count) {
+      struct ArgusGenConfig *config;
+      int i, cnt = queue->count;
+
+      for (i = 0; i < cnt; i++) {
+         if ((config = (struct ArgusGenConfig *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
+            if (config->status & ARGUS_STATUS) {
+               config->status |= ARGUS_STOP;
+               if (config->tid)
+                  pthread_join(config->tid, NULL);
+            }
+            ArgusAddToQueue(queue, &config->qhdr, ARGUS_LOCK);
+         }
+      }
+   }
+   gen->status |= ARGUS_STOP;
+}
 
 void
 ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
 {
    struct ArgusQueueStruct *queue = gen->configs;
-   struct ArgusParserStruct *parser = gen->parser;
 
    if (queue && queue->count) {
       struct ArgusGenConfig *config;
@@ -965,26 +1047,20 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
    }
 }
 
-void
-ArgusProcessStatusRecords(struct ArgusGenerator *gen)
+void *
+ArgusProcessStatusRecords(void *param)
 {
+   struct ArgusGenConfig *config = (struct ArgusGenConfig *) param;
+   struct ArgusGenerator *gen = config->gen;
    struct ArgusParserStruct *parser = gen->parser;
-   struct ArgusQueueStruct *queue = gen->configs;
 
-   if (queue && queue->count) {
-      struct ArgusGenConfig *config;
-      int i, cnt = queue->count;
-
-      for (i = 0; i < cnt; i++) {
-         if ((config = (struct ArgusGenConfig *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-            if (config->input == NULL) {
+   if (config->input == NULL) {
                config->input = ArgusMalloc(sizeof(*config->input));
                if (config->input == NULL)
                   ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
                if (strcmp (config->finput->tempfile, "-")) {
                   if (strlen(config->finput->tempfile)) {
-
                      if (config->finput->file != NULL)
                         fseek(config->finput->file, 0, SEEK_SET);
 
@@ -1003,48 +1079,48 @@ ArgusProcessStatusRecords(struct ArgusGenerator *gen)
 
                      if ((config->input->file != NULL) && ((ArgusReadConnection (parser, config->input, ARGUS_FILE)) >= 0)) {
 #if defined(ARGUS_THREADS)
-                           pthread_mutex_lock(&parser->lock);
+                        pthread_mutex_lock(&parser->lock);
 #endif
-                           parser->ArgusTotalMarRecords++;
-                           parser->ArgusTotalRecords++;
+                        parser->ArgusTotalMarRecords++;
+                        parser->ArgusTotalRecords++;
 #if defined(ARGUS_THREADS)
-                           pthread_mutex_unlock(&parser->lock);
+                        pthread_mutex_unlock(&parser->lock);
 #endif
-                           if (parser->RaPollMode) {
-                               ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
-                           } else {
-                              if (config->finput->ostart != -1) {
-                                 config->input->offset = config->finput->ostart;
-                                 if (fseek(config->input->file, config->input->offset, SEEK_SET) >= 0)
-                                    ArgusReadFileStream(parser, config->input);
-                              } else {
-                                 ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                        if (parser->RaPollMode) {
+                           ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                        } else {
+                           if (config->finput->ostart != -1) {
+                              config->input->offset = config->finput->ostart;
+                              if (fseek(config->input->file, config->input->offset, SEEK_SET) >= 0)
                                  ArgusReadFileStream(parser, config->input);
-                              }
+                           } else {
+                              ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                              ArgusReadFileStream(parser, config->input);
                            }
-
-                        } else
-                           config->finput->fd = -1;
-                     }
+                        }
+                     } else
+                        config->finput->fd = -1;
+                  }
                }
 
 #ifdef ARGUSDEBUG
-               ArgusDebug (1, "main: ArgusReadFileStream (%s) done", config->finput->tempfile);
+               ArgusDebug (1, "main: ArgusProcessStatusRecord (%s) done", config->finput->tempfile);
 #endif
                RaArgusInputComplete(config->input);
                parser->ArgusCurrentInput = NULL;
                ArgusCloseInput(parser, config->input);
-
                ArgusFree(config->input);
                config->input = NULL;
-            }
-         }
-      }
+               config->status |= ARGUS_STOP;
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusProcessStatusRecord(%p)\n", gen);
+   ArgusDebug (2, "ArgusProcessStatusRecord(%p)\n", config);
 #endif
+#if defined(ARGUS_THREADS)
+   pthread_exit (NULL);
+#endif
+   return (NULL);
 }
 
 
@@ -1072,9 +1148,15 @@ ArgusClientTimeout ()
                ArgusGenerateStatusRecords(gen);
                gen->status |= ARGUS_START;
             } else 
-               ArgusProcessStatusRecords(gen);
-
-            ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
+            if (!(gen->status & ARGUS_STATUS)) {
+               ArgusStartGenerator(gen);
+            } else
+            if (gen->status & ARGUS_STOP) {
+               ArgusDeleteGenerator(gen);
+               gen = NULL;
+            }
+            if (gen != NULL)
+               ArgusPushBackList(ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_NOLOCK);
          }
       }
 

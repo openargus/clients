@@ -327,8 +327,8 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
    int retn = 0, cnt = 0, done = 0;
    int bytes = 0, rbytes = 0;
 
-   if (!(input))
-      return (retn);
+   if (!(input) || parser->RaParseDone)
+      return (1);
 
    bytes = (input->ArgusBufferLen - input->ArgusReadSocketCnt);
    bytes = (bytes > ARGUS_MAX_BUFFER_READ) ? ARGUS_MAX_BUFFER_READ : bytes;
@@ -496,7 +496,6 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
                }
                break;
             }
-
          }
 
          if (rec && !done && !parser->RaParseDone) {
@@ -587,8 +586,7 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
    parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
    parser->status |=   ARGUS_READING_FILES;
       
-   while (input && !done) {
-      
+   while (input && !done && !parser->RaParseDone) {
       switch (input->type & ARGUS_DATA_TYPE) {
          case ARGUS_DATA_SOURCE:
          case ARGUS_V2_DATA_SOURCE:

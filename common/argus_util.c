@@ -3280,22 +3280,22 @@ time that needs to lapse */
                      gettimeofday(&parser->ArgusRealTime, 0);
                      ArgusAdjustGlobalTime(parser, NULL);
 
-                     if ((ArgusParser->ArgusRealTime.tv_sec  > timeoutValue.tv_sec) ||
-                        ((ArgusParser->ArgusRealTime.tv_sec == timeoutValue.tv_sec) &&
-                         (ArgusParser->ArgusRealTime.tv_usec > timeoutValue.tv_usec))) {
+                     if ((parser->ArgusRealTime.tv_sec  > timeoutValue.tv_sec) ||
+                        ((parser->ArgusRealTime.tv_sec == timeoutValue.tv_sec) &&
+                         (parser->ArgusRealTime.tv_usec > timeoutValue.tv_usec))) {
 
                         ArgusClientTimeout ();
 
-                        if (ArgusParser->Tflag) {
-                           if ((ArgusParser->Tflag - 1) == 0) {
+                        if (parser->Tflag) {
+                           if ((parser->Tflag - 1) == 0) {
                               ArgusShutDown(0);
                            }
-                           ArgusParser->Tflag--;
+                           parser->Tflag--;
                         }
 
-                        timeoutValue = ArgusParser->ArgusRealTime;
-                        timeoutValue.tv_sec  += ArgusParser->RaClientTimeout.tv_sec;
-                        timeoutValue.tv_usec += ArgusParser->RaClientTimeout.tv_usec;
+                        timeoutValue = parser->ArgusRealTime;
+                        timeoutValue.tv_sec  += parser->RaClientTimeout.tv_sec;
+                        timeoutValue.tv_usec += parser->RaClientTimeout.tv_usec;
 
                         while (timeoutValue.tv_usec >= 1000000) {
                            timeoutValue.tv_sec  += 1;

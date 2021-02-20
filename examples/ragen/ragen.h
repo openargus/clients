@@ -19,6 +19,8 @@ typedef struct ArgusGenConfig {
    pthread_mutex_t lock;
 #endif
 
+   struct ArgusGenerator *gen;
+
    int status, type, mode, index;
    char *baseline;
    struct timeval startime;
