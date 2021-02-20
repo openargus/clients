@@ -220,6 +220,7 @@ int ArgusGetServerSocket (struct ArgusInput *, int);
 
 int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
 int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+struct ArgusFileInput *ArgusPopBaselineList (struct ArgusParserStruct *);
 void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 
 int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
@@ -340,6 +341,7 @@ extern void ArgusDeleteFileList (struct ArgusParserStruct *);
 
 extern int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern struct ArgusFileInput *ArgusPopBaselineList (struct ArgusParserStruct *);
 extern void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 
 extern int ArgusAddServerList (struct ArgusParserStruct *, char *, int, int);

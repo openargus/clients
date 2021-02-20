@@ -502,7 +502,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
          if (rec && !done && !parser->RaParseDone) {
             int len = 0;
 
-            if ((len = ArgusHandleRecord (ArgusParser, input, rec, 0, &ArgusParser->ArgusFilterCode)) < 0) {
+            if ((len = ArgusHandleRecord (parser, input, rec, 0, &parser->ArgusFilterCode)) < 0) {
                switch (len) {
                   case -1: {
                      input->offset += length;

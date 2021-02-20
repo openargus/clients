@@ -163,6 +163,7 @@ typedef struct ArgusRecord * (*ArgusNetFlowHandler)(struct ArgusParserStruct *, 
 struct ArgusFileInput {
    struct ArgusQueueHeader qhdr;
    char *filename;
+   char *tempfile;
    FILE *file;
    long long ostart;
    long long ostop;

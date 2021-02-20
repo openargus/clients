@@ -30568,6 +30568,25 @@ ArgusDeleteFileList (struct ArgusParserStruct *parser)
 #endif
 }
 
+struct ArgusFileInput *
+ArgusPopBaselineList (struct ArgusParserStruct *parser)
+{
+   struct ArgusFileInput *retn = NULL;
+
+   if (parser && parser->ArgusBaselineList) {
+      retn = parser->ArgusBaselineList;
+
+      parser->ArgusBaselineList = (struct ArgusFileInput *)retn->qhdr.nxt;
+      parser->ArgusBaselineCount--;
+
+      if (parser->ArgusBaselineList == NULL)
+        parser->ArgusBaselineListTail = NULL;
+
+      retn->qhdr.nxt = NULL;
+   }
+   return retn;
+}
+
 int
 ArgusAddBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
 {

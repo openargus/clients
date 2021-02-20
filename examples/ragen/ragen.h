@@ -19,22 +19,22 @@ typedef struct ArgusGenConfig {
    pthread_mutex_t lock;
 #endif
 
-   struct RaBinProcessStruct *bins;
-   struct ArgusClientData *client;
-   struct ArgusOutputStruct *output;
-
+   int status, type, mode, index;
    char *baseline;
-   char *tempfile;
    struct timeval startime;
-   double interval;
+   char *interval;
    double duration;
 
+   struct ArgusInput *input;
+   struct ArgusFileInput *finput;
+/*
    FILE *file;
    long long ostart;
    long long ostop;
    int type;
    int fd;
    struct stat statbuf;
+*/
 } ragen_config_t;
 
 
@@ -47,37 +47,11 @@ struct ArgusGenerator {
    pthread_mutex_t lock;
 #endif
 
-   struct ArgusGenConfig config;
+   struct ArgusParserStruct *parser;
+   struct ArgusClientData *client;
+   struct ArgusOutputStruct *output;
 
-   struct timeval ArgusStartTime, ArgusLastTime;
-   long long ArgusTimeDrift;
-   int ArgusMarInterval;
-   struct stat statbuf;
-   int ArgusBufferLen;
-   unsigned char *ArgusReadBuffer, *ArgusConvBuffer;
-   unsigned char *ArgusReadPtr, *ArgusConvPtr, *ArgusReadBlockPtr;
-   int ArgusReadSocketCnt, ArgusReadSocketSize;
-   int ArgusReadSocketState, ArgusReadCiscoVersion;
-   int ArgusReadSocketNum, ArgusReadSize;
-   ArgusNetFlowHandler ArgusCiscoNetFlowParse;
-
-   struct ArgusRecord ArgusInitCon, ArgusManStart;
-   struct ArgusRecord *ArgusOriginal;
-
-   struct ArgusCanonRecord  ArgusGenerateRecordCanonBuf;
-   struct ArgusRecordStruct ArgusGenerateRecordStructBuf;
-
-   char ArgusGenerateRecordLabelBuf[MAXBUFFERLEN];
-
-   char ArgusOriginalBuffer[MAXARGUSRECORD];
-
-   char ArgusSrcUserData[0x10000];
-   char ArgusDstUserData[0x10000];
-
-   unsigned char ArgusSrcActDist[256];
-   unsigned char ArgusSrcIdleDist[256];
-   unsigned char ArgusDstActDist[256];
-   unsigned char ArgusDstIdleDist[256];
+   struct ArgusQueueStruct *configs;
 };
 
 
