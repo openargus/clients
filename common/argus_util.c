@@ -3266,10 +3266,10 @@ time that needs to lapse */
                   RaDiffTime(&parser->ArgusRealTime, &parser->ArgusLastRealTime, &dRealTime);
                   lastUsec  = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec);
 
-                  while ((deltausec = (thisUsec - lastUsec)) > 0) {
+                  while (!(parser->RaParseDone) && ((deltausec = (thisUsec - lastUsec)) > 0)) {
                      struct timespec ts;
 
-                     thisRate = (deltausec > 50000) ? 50000 : deltausec;
+                     thisRate = (deltausec > 50000) ? 5000 : deltausec;
 #if defined(ARGUSDEBUG)
                      ArgusDebug (6, "ArgusProcessThisRecord () idling needed for %d usecs\n", deltausec);
 #endif
@@ -3317,7 +3317,8 @@ time that needs to lapse */
       }
    }
 
-   RaProcessRecord(parser, ns);
+   if (!(ArgusParser->RaParseDone)) 
+      RaProcessRecord(parser, ns);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "RaScheduleRecord (%p, %p) scheduled\n", parser, ns);

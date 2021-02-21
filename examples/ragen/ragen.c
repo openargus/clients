@@ -348,29 +348,10 @@ void ArgusStopGenerator(struct ArgusGenerator *);
 
 static int RaGenParseResourceLine (struct ArgusParserStruct *, int, char *, int, int);
 struct ArgusListStruct *ArgusGeneratorList = NULL;
-struct ArgusGenerator *ArgusNewGenerator (struct ArgusParserStruct *, struct ArgusClientData *, struct ArgusOutputStruct *);
+struct ArgusGenerator *ArgusNewGenerator (struct ArgusParserStruct *, struct ArgusClientData *, struct ArgusOutputStruct *, char *);
 
 struct ArgusGenerator *
-ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output)
-{
-   struct ArgusGenerator *retn = NULL;
-
-   if ((retn = ArgusCalloc (1, sizeof(*retn))) == NULL) 
-      ArgusLog (LOG_ERR, "%s: ArgusCalloc failed\n", __func__);
-
-   retn->configs = ArgusNewQueue();
-   retn->parser = ArgusNewParser(parser->ArgusProgramName);
-   retn->parser->ProcessRealTime = 1.0;
-   retn->client = client;
-   retn->output = output;
-   retn->parser->ArgusOutput =  retn->output;
-
-   return(retn);
-}
-
-
-static struct ArgusGenerator *
-RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
+ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
 {
    struct ArgusGenerator *gen = NULL, *tgen = NULL;
    struct ArgusQueueStruct *queue;
@@ -414,7 +395,7 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
    if ((file = config->baseline) != NULL) {
       if ((file = realpath (file, NULL)) != NULL) {
 #ifdef ARGUSDEBUG
-         ArgusDebug (2, "RaGenParseGeneratorConfig(%p, %p) sending file %s\n", parser, client, file);
+         ArgusDebug (2, "ArgusNewGenerator(%p, %p) sending file %s\n", parser, client, file);
 #endif
          config->baseline = strdup(file);
       }
@@ -438,9 +419,18 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
    }
 
    if (gen == NULL) {
-      gen = ArgusNewGenerator(parser, client, output);
+      if ((gen = ArgusCalloc (1, sizeof(*gen))) == NULL)
+         ArgusLog (LOG_ERR, "%s: ArgusCalloc failed\n", __func__);
+
+      gen->configs = ArgusNewQueue();
+      gen->parser = ArgusNewParser(parser->ArgusProgramName);
+      gen->parser->ProcessRealTime = 1.0;
+      gen->client = client;
+      gen->output = output;
+      gen->parser->ArgusOutput =  gen->output;
+
       if (!(ArgusPushBackList (ArgusGeneratorList, (struct ArgusListRecord *) gen, ARGUS_LOCK)))
-         ArgusLog(LOG_ERR, "RaGenParseGeneratorConfig: error: file arg %s", file);
+         ArgusLog(LOG_ERR, "ArgusNewGenerator: error: file arg %s", file);
    }
 
    config->gen = gen;
@@ -449,7 +439,7 @@ RaGenParseGeneratorConfig(struct ArgusParserStruct *parser, struct ArgusClientDa
    free(str);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaGenParseGeneratorConfig(%p, %p, %p, '%s') returns %d\n", parser, client, output, ptr, gen);
+   ArgusDebug (1, "ArgusNewGenerator(%p, %p, %p, '%s') returns %d\n", parser, client, output, ptr, gen);
 #endif
 
    return (gen);
@@ -611,8 +601,20 @@ RaGenParseClientMessage (struct ArgusParserStruct *parser, void *o, void *c, cha
                      break;
                   }
 
+/*
+		This is the key to ragen.1 ... get a request to send generated traffic from this client.
+		A generator is a thread that has its own parser and input(s) and writes out to the
+                specific output that the request came from.
+
+                Currently, ragen.1 will take the configuration, generate a source file that contains
+                the requested records, read the file, and then write the data for realtime output. 
+                This compels the approach to have a dedicated ArgusParserStruct and ArgusInput structures.
+
+                When the client exits, we need to delete the generator correctl ...
+*/
+
                   case RAGEN_GEN: {
-                     if ((gen = RaGenParseGeneratorConfig(parser, client, output, &ptr[4])) != NULL) {
+                     if ((gen = ArgusNewGenerator(parser, client, output, &ptr[4])) != NULL) {
                         client->ArgusGeneratorInitialized++;
                         reply = "OK";
                         retn = 1;
@@ -775,10 +777,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    The ArgusClientTimeout() routine will drive all the maintenance
    and so it should be run, probably 4x a second, just for good
    measure.
+
 */
+      parser->ArgusReliableConnection++;
+
       parser->RaClientTimeout.tv_sec  = 0;
       parser->RaClientTimeout.tv_usec = 250000;
-      parser->ArgusReliableConnection++;
 
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
