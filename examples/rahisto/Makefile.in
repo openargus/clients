@@ -86,10 +86,7 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 
 SRC = rahisto.c
 
-PROGS = $(INSTALLBIN)/rahisto \
-	$(INSTALLBIN)/rahisto-querysql \
-	$(INSTALLBIN)/rahisto-updatesql \
-	$(INSTALLBIN)/rahisto-delsql
+PROGS = $(INSTALLBIN)/rahisto
 
 GENERATED = \
 	rahisto-querysql \
