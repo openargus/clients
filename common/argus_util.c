@@ -813,17 +813,18 @@ ArgusShutDown (int sig)
    }
 }
 
-
 void
 ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
 {
+   char *envstr = NULL, *path = NULL;
    int i, cc, noconf = 0;
    time_t tsec;
 
-   char *envstr = NULL;
    struct stat statbuf;
    struct timezone tz;
-   static char path[MAXPATHNAMELEN];
+
+   if ((path = ArgusCalloc(1, MAXPATHNAMELEN)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusMainInit: ArgusCalloc failed %s", strerror(errno));
 
    (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
    (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
@@ -942,6 +943,9 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
    ArgusParseArgs (parser, argc, argv);
    if (parser->ArgusWfileList == NULL)
       (void) signal (SIGPIPE, (void (*)(int)) RaParseComplete);
+
+   if (path != NULL)
+      ArgusFree(path);
 }
 
 static void
@@ -1805,444 +1809,444 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 static int roption = 0;
 
 static int
-RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
-                    char *optarg, int quoted, int idx)
+RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg, int quoted, int idx)
 {
+   char *str = NULL, *ptr = NULL;
    int len;
-   char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
 
-   switch (idx) {
-      case RA_ARGUS_SERVER:
-         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
-            ArgusDeleteServerList(parser);
-                              
-         if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP))) {
-            ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
-         }
-         break;
-
-      case RA_TMP_PATH: {
-         if (parser->RaTempFilePath != NULL) free(parser->RaTempFilePath);
-         parser->RaTempFilePath = strdup(optarg);
-         break;
-      }
-
-      case RA_SOURCE_PORT:
-         parser->ArgusSourcePort = atoi (optarg);
-         break;
-
-      case RATOP_CONTROL_PORT: {
-         if (!(strncmp(parser->ArgusProgramName, "ratop", 5)) ||
-             !(strncmp(parser->ArgusProgramName, "radns", 5))) {
-            parser->ArgusControlPort = atoi (optarg);
-         }
-         break;
-      }
-
-      case RA_CISCONETFLOW_PORT:
-         ++parser->Cflag;
-         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
-            ArgusDeleteServerList(parser);
-                              
-         if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP))) {
-            ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
-         }
-         break;
-
-      case RA_ARGUS_SERVERPORT:
-         parser->ArgusPortNum = atoi (optarg);
-         break;
-
-      case RA_INPUT_FILE: {
-         int type = ARGUS_DATA_SOURCE;
-         if (!(strncmp ("cisco:", optarg, 6))) {
-            parser->Cflag++;
-            optarg += 6;
-         } else
-         if (!(strncmp ("jflow:", optarg, 6))) {
-            type = ARGUS_JFLOW_DATA_SOURCE;
-            parser->Cflag++;
-            optarg += 6;
-         } else
-         if (!(strncmp ("sflow:", optarg, 6))) {
-            type = ARGUS_SFLOW_DATA_SOURCE;
-            optarg += 6;
-         } else
-         if (parser->Cflag)
-            type = ARGUS_CISCO_DATA_SOURCE;
-
-         if ((!roption++) && (parser->ArgusInputFileList != NULL))
-            ArgusDeleteFileList(parser);
-
-         if (!(ArgusAddFileList (parser, optarg, type, -1, -1)))
-            ArgusLog (LOG_ERR, "error: file arg %s\n", optarg);
-         break;
-      }
-
-      case RA_NO_OUTPUT:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->qflag++;
-         else
-            parser->qflag = 0;
-         break;
-
-      case RA_USER_AUTH:
-         if (parser->ustr != NULL)
-            free(parser->ustr);
-         parser->ustr = strdup(optarg);
-         break;
-
-      case RA_AUTH_PASS:
-         if (parser->pstr != NULL)
-            free(parser->pstr);
-         parser->pstr = strdup(optarg);
-         break;
-
-      case RA_OUTPUT_FILE: {
-         char *filter = NULL, *fptr;
- 
-         if ((filter = strchr (optarg, ' ')) != NULL) {
-            *filter++ = '\0';
-
-            if ((fptr = strchr (filter, '"')) != NULL) {
-               *fptr++ = '\0';
-               filter = fptr;
+   if ((str = (char *) ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+      switch (idx) {
+         case RA_ARGUS_SERVER:
+            if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+               ArgusDeleteServerList(parser);
+                                 
+            if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP))) {
+               ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
             }
+            break;
+
+         case RA_TMP_PATH: {
+            if (parser->RaTempFilePath != NULL) free(parser->RaTempFilePath);
+            parser->RaTempFilePath = strdup(optarg);
+            break;
          }
 
-         setArgusWfile(parser, optarg, filter);
-         break;
-      }
+         case RA_SOURCE_PORT:
+            parser->ArgusSourcePort = atoi (optarg);
+            break;
 
-      case RA_EXCEPTION_OUTPUT_FILE:
-         parser->exceptfile = optarg;
-         setArgusWfile(parser, optarg, NULL);
-         break;
-
-      case RA_TIMERANGE:
-         parser->timearg = strdup(optarg);
-         if ((ArgusParseTimeArg (&parser->timearg, NULL,
-                                 0, &parser->RaTmStruct,
-                                 &ArgusTimeRangeStrategy)) < 0)
-            usage ();
-         break;
-
-      case RA_RUN_TIME:
-         parser->Tflag = atoi (optarg);
-         break;
-
-      case RA_FIELD_DELIMITER:
-         if ((ptr = strchr (optarg, '\'')) != NULL) {
-            ptr++;
-            if (ptr[0] == '\'')
-               break;
-         } else {
-            ptr = optarg;
-         }
-
-         if (ptr[0] == '\\') {
-            switch (ptr[1]) {
-               case  'a': parser->RaFieldDelimiter = '\a'; break;
-               case  'b': parser->RaFieldDelimiter = '\b'; break;
-               case  't': parser->RaFieldDelimiter = '\t'; break;
-               case  'n': parser->RaFieldDelimiter = '\n'; break;
-               case  'v': parser->RaFieldDelimiter = '\v'; break;
-               case  'f': parser->RaFieldDelimiter = '\f'; break;
-               case  'r': parser->RaFieldDelimiter = '\r'; break;
-               case '\\': parser->RaFieldDelimiter = '\\'; break;
+         case RATOP_CONTROL_PORT: {
+            if (!(strncmp(parser->ArgusProgramName, "ratop", 5)) ||
+                !(strncmp(parser->ArgusProgramName, "radns", 5))) {
+               parser->ArgusControlPort = atoi (optarg);
             }
-            if (parser->RaFieldDelimiter != '\0')
-               break;
-         } else
-            parser->RaFieldDelimiter = *ptr;
+            break;
+         }
 
-         parser->RaFieldWidth = RA_VARIABLE_WIDTH;
-         break;
+         case RA_CISCONETFLOW_PORT:
+            ++parser->Cflag;
+            if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+               ArgusDeleteServerList(parser);
+                                 
+            if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP))) {
+               ArgusLog (LOG_ERR, "host %s unknown\n", optarg);
+            }
+            break;
 
-      case RA_FIELD_QUOTED:
-         if (!(strncasecmp(optarg, "double", 6)))
-            parser->RaFieldQuoted = RA_DOUBLE_QUOTED;
-         if (!(strncasecmp(optarg, "single", 6)))
-            parser->RaFieldQuoted = RA_SINGLE_QUOTED;
-         break;
+         case RA_ARGUS_SERVERPORT:
+            parser->ArgusPortNum = atoi (optarg);
+            break;
 
-      case RA_FIELD_WIDTH: {
-         if (!(strncasecmp(optarg, "fixed", 5))) {
-            parser->RaFieldWidth = RA_FIXED_WIDTH;
-         } else
-         if (!(strncasecmp(optarg, "variable", 3))) {
+         case RA_INPUT_FILE: {
+            int type = ARGUS_DATA_SOURCE;
+            if (!(strncmp ("cisco:", optarg, 6))) {
+               parser->Cflag++;
+               optarg += 6;
+            } else
+            if (!(strncmp ("jflow:", optarg, 6))) {
+               type = ARGUS_JFLOW_DATA_SOURCE;
+               parser->Cflag++;
+               optarg += 6;
+            } else
+            if (!(strncmp ("sflow:", optarg, 6))) {
+               type = ARGUS_SFLOW_DATA_SOURCE;
+               optarg += 6;
+            } else
+            if (parser->Cflag)
+               type = ARGUS_CISCO_DATA_SOURCE;
+
+            if ((!roption++) && (parser->ArgusInputFileList != NULL))
+               ArgusDeleteFileList(parser);
+
+            if (!(ArgusAddFileList (parser, optarg, type, -1, -1)))
+               ArgusLog (LOG_ERR, "error: file arg %s\n", optarg);
+            break;
+         }
+
+         case RA_NO_OUTPUT:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->qflag++;
+            else
+               parser->qflag = 0;
+            break;
+
+         case RA_USER_AUTH:
+            if (parser->ustr != NULL)
+               free(parser->ustr);
+            parser->ustr = strdup(optarg);
+            break;
+
+         case RA_AUTH_PASS:
+            if (parser->pstr != NULL)
+               free(parser->pstr);
+            parser->pstr = strdup(optarg);
+            break;
+
+         case RA_OUTPUT_FILE: {
+            char *filter = NULL, *fptr;
+    
+            if ((filter = strchr (optarg, ' ')) != NULL) {
+               *filter++ = '\0';
+
+               if ((fptr = strchr (filter, '"')) != NULL) {
+                  *fptr++ = '\0';
+                  filter = fptr;
+               }
+            }
+
+            setArgusWfile(parser, optarg, filter);
+            break;
+         }
+
+         case RA_EXCEPTION_OUTPUT_FILE:
+            parser->exceptfile = optarg;
+            setArgusWfile(parser, optarg, NULL);
+            break;
+
+         case RA_TIMERANGE:
+            parser->timearg = strdup(optarg);
+            if ((ArgusParseTimeArg (&parser->timearg, NULL,
+                                    0, &parser->RaTmStruct,
+                                    &ArgusTimeRangeStrategy)) < 0)
+               usage ();
+            break;
+
+         case RA_RUN_TIME:
+            parser->Tflag = atoi (optarg);
+            break;
+
+         case RA_FIELD_DELIMITER:
+            if ((ptr = strchr (optarg, '\'')) != NULL) {
+               ptr++;
+               if (ptr[0] == '\'')
+                  break;
+            } else {
+               ptr = optarg;
+            }
+
+            if (ptr[0] == '\\') {
+               switch (ptr[1]) {
+                  case  'a': parser->RaFieldDelimiter = '\a'; break;
+                  case  'b': parser->RaFieldDelimiter = '\b'; break;
+                  case  't': parser->RaFieldDelimiter = '\t'; break;
+                  case  'n': parser->RaFieldDelimiter = '\n'; break;
+                  case  'v': parser->RaFieldDelimiter = '\v'; break;
+                  case  'f': parser->RaFieldDelimiter = '\f'; break;
+                  case  'r': parser->RaFieldDelimiter = '\r'; break;
+                  case '\\': parser->RaFieldDelimiter = '\\'; break;
+               }
+               if (parser->RaFieldDelimiter != '\0')
+                  break;
+            } else
+               parser->RaFieldDelimiter = *ptr;
+
             parser->RaFieldWidth = RA_VARIABLE_WIDTH;
-         }
-         break;
-      }
+            break;
 
-      case RA_SET_PID: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            setArguspidflag  (parser, 1);
-         else
-            setArguspidflag  (parser, 0);
-         break;
-      }
+         case RA_FIELD_QUOTED:
+            if (!(strncasecmp(optarg, "double", 6)))
+               parser->RaFieldQuoted = RA_DOUBLE_QUOTED;
+            if (!(strncasecmp(optarg, "single", 6)))
+               parser->RaFieldQuoted = RA_SINGLE_QUOTED;
+            break;
 
-      case RA_PID_PATH: {
-         parser->ArgusPidPath = strdup(optarg);
-         break;
-      }
-
-      case RA_TIME_FORMAT: {
-         struct timeval tv, *tvp = &tv;
-         char tbuf[256];
-
-         if (parser->RaTimeFormat != NULL)
-            free (parser->RaTimeFormat);
-
-         parser->RaTimeFormat = strdup(optarg);
-         if (strstr(parser->RaTimeFormat, ".\%f"))
-            parser->ArgusFractionalDate = 1;
-
-         gettimeofday(tvp, 0L);
-         ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
-
-         if ((len = strlen(tbuf)) > 0)
-            if (len > 128)
-               ArgusLog (LOG_ERR, "%s: date string %s too long", __func__, optarg);
-
-         RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].length = len - parser->pflag;
-         RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].length  = len - parser->pflag;
-         break;
-      }
-
-      case RA_TZ: {
-#ifdef ARGUSDEBUG
-         char *tzvalue = getenv("TZ");
-#endif
-         char tzbuf[128];
-
-         snprintf(tzbuf, sizeof(tzbuf), "TZ=%s", optarg);
-
-         if (parser->RaTimeZone != NULL)
-            free(parser->RaTimeZone);
-         parser->RaTimeZone = strdup(tzbuf);
-#if HAVE_SETENV
-         setenv("TZ", (parser->RaTimeZone + 3), 1);
-#else
-         putenv(parser->RaTimeZone);
-#endif
-         tzset();
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "%s: TZ changed from \"%s\" to \"%s\"", __func__, tzvalue, optarg);
-#endif
-         break;
-      }
- 
-      case RA_USEC_PRECISION:
-         parser->pflag = atoi (optarg);
-         break;
-
-      case RA_PRINT_SUMMARY:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->aflag = 1;
-         else
-            parser->aflag = 0;
-         break;
- 
-      case RA_PRINT_NAMES:
-         if (!(strncasecmp(optarg, "none", 4)))
-            parser->nflag = 3;
-         else if (!(strncasecmp(optarg, "proto", 5)))
-            parser->nflag = 2;
-         else if (!(strncasecmp(optarg, "port", 5)))
-            parser->nflag = 1;
-         else if (!(strncasecmp(optarg, "all", 5)))
-            parser->nflag = 0;
-         break;
-
-      case RA_PRINT_DOMAINONLY:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->domainonly = 1;
-         else
-            parser->domainonly = 0;
-         break;
-
-      case RA_PRINT_LOCALONLY:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            ++parser->nlflag;
-         else
-            parser->nlflag = 0;
-         break;
-
-      case RA_CIDR_ADDRESS_FORMAT:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->cidrflag = RA_ENABLE_CIDR_ADDRESS_FORMAT;
-         else
-         if (!(strncasecmp(optarg, "strict", 3)))
-            parser->cidrflag = RA_STRICT_CIDR_ADDRESS_FORMAT;
-         else
-            parser->cidrflag = 0;
-         break;
-
-      case RA_ASN_PRINT_FORMAT:
-         if (!(strncasecmp(optarg, "asplain", 7)))
-            parser->ArgusAsnFormat = ARGUS_ASN_ASPLAIN;
-         else
-         if (!(strncasecmp(optarg, "asdot+", 6)))
-            parser->ArgusAsnFormat = ARGUS_ASN_ASDOTPLUS;
-         else
-         if (!(strncasecmp(optarg, "asdot", 6)))
-            parser->ArgusAsnFormat = ARGUS_ASN_ASDOT;
-         break;
-
-      case RA_FLOW_MODEL:
-         parser->ArgusFlowModelFile = strdup(optarg);
-         break;
-
-      case RA_GENERATE_BIN_MAR_RECORDS:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusGenerateManRecords++;
-         else
-            parser->ArgusGenerateManRecords = 0;
-         break;
-
-      case RA_PRINT_MAN:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusPrintMan++;
-         else
-            parser->ArgusPrintMan = 0;
-         break;
-
-      case RA_PRINT_EVENT:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusPrintEvent++;
-         else
-            parser->ArgusPrintEvent = 0;
-         break;
-
-      case RA_PRINT_LABELS:
-         parser->Lflag = atoi(optarg);
-         switch (parser->Lflag) {
-            case  0: parser->Lflag = -1; break;
-            case -1: parser->Lflag =  0; break;
-         }
-         break;
-
-      case RA_PRINT_UNIX_TIME:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            ++parser->uflag;
-         else
-            parser->uflag = 0;
-         break;
-
-      case RA_PRINT_TCPSTATES:
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->zflag++;
-         else
-            parser->zflag = 0;
-         break;
-
-      case RA_PRINT_TCPFLAGS:
-            parser->Zflag = *optarg;
-         break;
-
-      case RAMON_MODE:
-         parser->Mflag = optarg;
-         break;
-
-      case RA_NUMBER: {
-/*
-       -N [io]<num>, [io]<start-end>, [io]<start+num>
-           Process the first <num> records, the inclusive range <start - end>, or process <num + 1>
-           records starting at index number <start>.  The optional 1st character indicates  whether
-           the  specification  is applied to the input or the output stream of records, the default
-           is input.  If applied to the input, these are the range of records that match the  input
-           filter.
-*/
-         char *ptr = NULL;
-         int sNflag = 0, eNflag = 0, output = 0;
-
-         if (optarg[0] == 'o') {
-            output = 1;
-            optarg++;
-         }
-         if (optarg[0] == 'i') {
-            output = 0;
-            optarg++;
-         }
-         if ((ptr = strchr (optarg, '-')) != NULL) {
-            char *eptr = ptr + 1;
-            sNflag = strtol(optarg, (char **)&ptr, 10);
-            if (ptr == optarg)
-               usage ();
-            eNflag = strtol(eptr, (char **)&ptr, 10);
-            if (ptr == eptr)
-               usage ();
-
-         } else
-         if ((ptr = strchr (optarg, '+')) != NULL) {
-            char *eptr = ptr + 1;
-            sNflag = strtol(optarg, (char **)&ptr, 10);
-            if (ptr == optarg)
-               usage ();
-            eNflag = strtol(eptr, (char **)&ptr, 10);
-            if (ptr == eptr)
-               usage ();
-            eNflag += sNflag;
-         } else {
-            sNflag = 0;
-            eNflag = strtol(optarg, (char **)&ptr, 10);
-            if (ptr == optarg)
-               usage ();
-         }
-         if (output) {
-            parser->sNoflag = sNflag;
-            parser->eNoflag = eNflag;
-         } else {
-            parser->sNflag = sNflag;
-            parser->eNflag = eNflag;
-         }
-         break;
-      }
-
-      case RA_DEBUG_LEVEL:
-         parser->debugflag = (atoi(optarg));
-         break;
-
-      case RA_USERDATA_ENCODE:
-         if (!(strncasecmp(optarg, "ascii", 5)))
-            parser->eflag = ARGUS_ENCODE_ASCII;
-         else
-         if (!(strncasecmp(optarg, "obfuscate", 3)))
-            parser->eflag = ARGUS_ENCODE_OBFUSCATE;
-         else
-         if (!(strncasecmp(optarg, "hex", 3)))
-            parser->eflag = ARGUS_HEXDUMP;
-         else
-         if (!(strncasecmp(optarg, "encode32", 8)))
-            parser->eflag = ARGUS_ENCODE_32;
-         else
-            parser->eflag = ARGUS_ENCODE_64;
-         break;
-
-      case RA_FILTER: {
-         char *ptr;
-
-         if (parser->ArgusRemoteFilter != NULL)
-            free(parser->ArgusRemoteFilter);
-
-         if ((parser->ArgusRemoteFilter = calloc (1, MAXSTRLEN)) != NULL) {
-            ptr = parser->ArgusRemoteFilter;
-            str = optarg;
-            while (*str) {
-               if ((*str != '\n') && (*str != '"'))
-                  *ptr++ = *str++;
-               else
-                  str++;
+         case RA_FIELD_WIDTH: {
+            if (!(strncasecmp(optarg, "fixed", 5))) {
+               parser->RaFieldWidth = RA_FIXED_WIDTH;
+            } else
+            if (!(strncasecmp(optarg, "variable", 3))) {
+               parser->RaFieldWidth = RA_VARIABLE_WIDTH;
             }
+            break;
          }
+
+         case RA_SET_PID: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               setArguspidflag  (parser, 1);
+            else
+               setArguspidflag  (parser, 0);
+            break;
+         }
+
+         case RA_PID_PATH: {
+            parser->ArgusPidPath = strdup(optarg);
+            break;
+         }
+
+         case RA_TIME_FORMAT: {
+            struct timeval tv, *tvp = &tv;
+            char tbuf[256];
+
+            if (parser->RaTimeFormat != NULL)
+               free (parser->RaTimeFormat);
+
+            parser->RaTimeFormat = strdup(optarg);
+            if (strstr(parser->RaTimeFormat, ".\%f"))
+               parser->ArgusFractionalDate = 1;
+
+            gettimeofday(tvp, 0L);
+            ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
+
+            if ((len = strlen(tbuf)) > 0)
+               if (len > 128)
+                  ArgusLog (LOG_ERR, "%s: date string %s too long", __func__, optarg);
+
+            RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].length = len - parser->pflag;
+            RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].length  = len - parser->pflag;
+            break;
+         }
+
+         case RA_TZ: {
 #ifdef ARGUSDEBUG
-         ArgusDebug (2, "%s: ArgusFilter \"%s\" \n", __func__, parser->ArgusRemoteFilter);
+            char *tzvalue = getenv("TZ");
 #endif
-         break;
-      }
+            char tzbuf[128];
+
+            snprintf(tzbuf, sizeof(tzbuf), "TZ=%s", optarg);
+
+            if (parser->RaTimeZone != NULL)
+               free(parser->RaTimeZone);
+            parser->RaTimeZone = strdup(tzbuf);
+#if HAVE_SETENV
+            setenv("TZ", (parser->RaTimeZone + 3), 1);
+#else
+            putenv(parser->RaTimeZone);
+#endif
+            tzset();
+#ifdef ARGUSDEBUG
+            ArgusDebug (2, "%s: TZ changed from \"%s\" to \"%s\"", __func__, tzvalue, optarg);
+#endif
+            break;
+         }
+    
+         case RA_USEC_PRECISION:
+            parser->pflag = atoi (optarg);
+            break;
+
+         case RA_PRINT_SUMMARY:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->aflag = 1;
+            else
+               parser->aflag = 0;
+            break;
+    
+         case RA_PRINT_NAMES:
+            if (!(strncasecmp(optarg, "none", 4)))
+               parser->nflag = 3;
+            else if (!(strncasecmp(optarg, "proto", 5)))
+               parser->nflag = 2;
+            else if (!(strncasecmp(optarg, "port", 5)))
+               parser->nflag = 1;
+            else if (!(strncasecmp(optarg, "all", 5)))
+               parser->nflag = 0;
+            break;
+
+         case RA_PRINT_DOMAINONLY:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->domainonly = 1;
+            else
+               parser->domainonly = 0;
+            break;
+
+         case RA_PRINT_LOCALONLY:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               ++parser->nlflag;
+            else
+               parser->nlflag = 0;
+            break;
+
+         case RA_CIDR_ADDRESS_FORMAT:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->cidrflag = RA_ENABLE_CIDR_ADDRESS_FORMAT;
+            else
+            if (!(strncasecmp(optarg, "strict", 3)))
+               parser->cidrflag = RA_STRICT_CIDR_ADDRESS_FORMAT;
+            else
+               parser->cidrflag = 0;
+            break;
+
+         case RA_ASN_PRINT_FORMAT:
+            if (!(strncasecmp(optarg, "asplain", 7)))
+               parser->ArgusAsnFormat = ARGUS_ASN_ASPLAIN;
+            else
+            if (!(strncasecmp(optarg, "asdot+", 6)))
+               parser->ArgusAsnFormat = ARGUS_ASN_ASDOTPLUS;
+            else
+            if (!(strncasecmp(optarg, "asdot", 6)))
+               parser->ArgusAsnFormat = ARGUS_ASN_ASDOT;
+            break;
+
+         case RA_FLOW_MODEL:
+            parser->ArgusFlowModelFile = strdup(optarg);
+            break;
+
+         case RA_GENERATE_BIN_MAR_RECORDS:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusGenerateManRecords++;
+            else
+               parser->ArgusGenerateManRecords = 0;
+            break;
+
+         case RA_PRINT_MAN:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusPrintMan++;
+            else
+               parser->ArgusPrintMan = 0;
+            break;
+
+         case RA_PRINT_EVENT:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusPrintEvent++;
+            else
+               parser->ArgusPrintEvent = 0;
+            break;
+
+         case RA_PRINT_LABELS:
+            parser->Lflag = atoi(optarg);
+            switch (parser->Lflag) {
+               case  0: parser->Lflag = -1; break;
+               case -1: parser->Lflag =  0; break;
+            }
+            break;
+
+         case RA_PRINT_UNIX_TIME:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               ++parser->uflag;
+            else
+               parser->uflag = 0;
+            break;
+
+         case RA_PRINT_TCPSTATES:
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->zflag++;
+            else
+               parser->zflag = 0;
+            break;
+
+         case RA_PRINT_TCPFLAGS:
+               parser->Zflag = *optarg;
+            break;
+
+         case RAMON_MODE:
+            parser->Mflag = optarg;
+            break;
+
+         case RA_NUMBER: {
+/*
+          -N [io]<num>, [io]<start-end>, [io]<start+num>
+              Process the first <num> records, the inclusive range <start - end>, or process <num + 1>
+              records starting at index number <start>.  The optional 1st character indicates  whether
+              the  specification  is applied to the input or the output stream of records, the default
+              is input.  If applied to the input, these are the range of records that match the  input
+              filter.
+*/
+            char *ptr = NULL;
+            int sNflag = 0, eNflag = 0, output = 0;
+
+            if (optarg[0] == 'o') {
+               output = 1;
+               optarg++;
+            }
+            if (optarg[0] == 'i') {
+               output = 0;
+               optarg++;
+            }
+            if ((ptr = strchr (optarg, '-')) != NULL) {
+               char *eptr = ptr + 1;
+               sNflag = strtol(optarg, (char **)&ptr, 10);
+               if (ptr == optarg)
+                  usage ();
+               eNflag = strtol(eptr, (char **)&ptr, 10);
+               if (ptr == eptr)
+                  usage ();
+
+            } else
+            if ((ptr = strchr (optarg, '+')) != NULL) {
+               char *eptr = ptr + 1;
+               sNflag = strtol(optarg, (char **)&ptr, 10);
+               if (ptr == optarg)
+                  usage ();
+               eNflag = strtol(eptr, (char **)&ptr, 10);
+               if (ptr == eptr)
+                  usage ();
+               eNflag += sNflag;
+            } else {
+               sNflag = 0;
+               eNflag = strtol(optarg, (char **)&ptr, 10);
+               if (ptr == optarg)
+                  usage ();
+            }
+            if (output) {
+               parser->sNoflag = sNflag;
+               parser->eNoflag = eNflag;
+            } else {
+               parser->sNflag = sNflag;
+               parser->eNflag = eNflag;
+            }
+            break;
+         }
+
+         case RA_DEBUG_LEVEL:
+            parser->debugflag = (atoi(optarg));
+            break;
+
+         case RA_USERDATA_ENCODE:
+            if (!(strncasecmp(optarg, "ascii", 5)))
+               parser->eflag = ARGUS_ENCODE_ASCII;
+            else
+            if (!(strncasecmp(optarg, "obfuscate", 3)))
+               parser->eflag = ARGUS_ENCODE_OBFUSCATE;
+            else
+            if (!(strncasecmp(optarg, "hex", 3)))
+               parser->eflag = ARGUS_HEXDUMP;
+            else
+            if (!(strncasecmp(optarg, "encode32", 8)))
+               parser->eflag = ARGUS_ENCODE_32;
+            else
+               parser->eflag = ARGUS_ENCODE_64;
+            break;
+
+         case RA_FILTER: {
+            char *ptr;
+
+            if (parser->ArgusRemoteFilter != NULL)
+               free(parser->ArgusRemoteFilter);
+
+            if ((parser->ArgusRemoteFilter = calloc (1, MAXSTRLEN)) != NULL) {
+               ptr = parser->ArgusRemoteFilter;
+               str = optarg;
+               while (*str) {
+                  if ((*str != '\n') && (*str != '"'))
+                     *ptr++ = *str++;
+                  else
+                     str++;
+               }
+            }
+#ifdef ARGUSDEBUG
+            ArgusDebug (2, "%s: ArgusFilter \"%s\" \n", __func__, parser->ArgusRemoteFilter);
+#endif
+            break;
+         }
 
                            case RA_LABEL_FORMAT: {
                               if (strcasecmp(optarg, "json") == 0) {
@@ -2259,256 +2263,256 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
                               float value = 0.0;
                               char *endptr = NULL;
 
-         value = strtof(optarg, &endptr);
+            value = strtof(optarg, &endptr);
 
-         if (optarg != endptr) {
-            parser->RaFilterTimeout  = value;
+            if (optarg != endptr) {
+               parser->RaFilterTimeout  = value;
 
                               } else
                                  ArgusLog (LOG_ERR, "ArgusParseResourceFile: filter timeout format error (use float)");
                               break;
                            }
 
-      case RA_FIELD_SPECIFIER: {
-         char *tok = NULL;
+         case RA_FIELD_SPECIFIER: {
+            char *tok = NULL;
 
-         while ((tok = strtok(optarg, " ,")) != NULL) {
-            parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup(tok);
-            if (parser->RaPrintOptionIndex > ARGUS_MAX_S_OPTIONS)
-               ArgusLog (LOG_ERR, "usage: number of -s options exceeds %d", ARGUS_MAX_S_OPTIONS);
-            optarg = NULL;
+            while ((tok = strtok(optarg, " ,")) != NULL) {
+               parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup(tok);
+               if (parser->RaPrintOptionIndex > ARGUS_MAX_S_OPTIONS)
+                  ArgusLog (LOG_ERR, "usage: number of -s options exceeds %d", ARGUS_MAX_S_OPTIONS);
+               optarg = NULL;
+            }
+
+            break;
          }
 
-         break;
-      }
-
-      case RA_MIN_SSF: {
-         if (*optarg != '\0') {
+         case RA_MIN_SSF: {
+            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-            ArgusMinSsf = atoi(optarg);
+               ArgusMinSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-            ArgusDebug (2, "%s: ArgusMinSsf \"%d\" \n", __func__, ArgusMinSsf);
+               ArgusDebug (2, "%s: ArgusMinSsf \"%d\" \n", __func__, ArgusMinSsf);
 #endif
 #endif
+            }
+            break;
          }
-         break;
-      }
 
-      case RA_MAX_SSF: {
-         if (*optarg != '\0') {
+         case RA_MAX_SSF: {
+            if (*optarg != '\0') {
 #ifdef ARGUS_SASL
-            ArgusMaxSsf = atoi(optarg);
+               ArgusMaxSsf = atoi(optarg);
 #ifdef ARGUSDEBUG
-            ArgusDebug (2, "%s: ArgusMaxSsf \"%d\" \n", __func__, ArgusMaxSsf);
+               ArgusDebug (2, "%s: ArgusMaxSsf \"%d\" \n", __func__, ArgusMaxSsf);
 #endif
 #endif
-         }
-         break;
-      }
-
-      case RA_DELEGATED_IP: {
-         parser->ArgusDelegatedIPFile = strdup(optarg);
-         break;
-      }
-
-      case RA_RELIABLE_CONNECT: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusReliableConnection = 1;
-         else
-            parser->ArgusReliableConnection = 0;
-         break;
-      }
-
-
-      case RADIUM_DAEMON:
-      case RADIUM_MONITOR_ID:
-      case RADIUM_MAR_STATUS_INTERVAL:
-      case RADIUM_ADJUST_TIME:
-      case RADIUM_ACCESS_PORT:
-      case RADIUM_ZEROCONF_REGISTER:
-         ArgusLog (LOG_ERR, "radium directive in client configuration (use -f)");
-         break;
-
-      case ARGUS_ARCHIVE:
-         parser->ais = strdup(optarg);
-         break;
-
-      case RA_SRCID_ALIAS: {
-         char *ptr = NULL;
-         if ((ptr = strstr(optarg, "file:")) != NULL) {
-            parser->ArgusAliasFile = strdup(&optarg[5]);
-            ArgusParseAliasFile(parser->ArgusAliasFile);
-         }
-         break;
-      }
-
-      case RA_CONNECT_TIME:
-         parser->ArgusConnectTime = atoi (optarg);
-         break;
-                        
-      case RA_UPDATE_INTERVAL: {
-         double value = 0.0, ivalue, fvalue;
-         char *endptr = NULL;
-
-         value = strtod(optarg, &endptr);
-
-         if (optarg != endptr) {
-            fvalue = modf(value, &ivalue);
-
-            parser->ArgusUpdateInterval.tv_sec  = (int) ivalue;
-            parser->ArgusUpdateInterval.tv_usec = (int) (fvalue * 1000000.0);
-
-         } else
-            ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
-         break;
-      }
-
-      case RA_TIMEOUT_INTERVAL: {
-         double value = 0.0, ivalue, fvalue;
-         char *endptr = NULL;
-
-         value = strtod(optarg, &endptr);
-
-         if (optarg != endptr) {
-            fvalue = modf(value, &ivalue);
-
-            parser->timeout.tv_sec  = (int) ivalue;
-            parser->timeout.tv_usec = (int) (fvalue * 1000000.0);
-
-         } else
-            ArgusLog (LOG_ERR, "%s: format error for timeout interval in client configuration (use float)");
-         break;
-      }
-
-      case RA_DATABASE:
-         if (parser->readDbstr != NULL)
-            free(parser->readDbstr);
-         parser->readDbstr = strdup(optarg);
-         break;
-
-      case RA_DB_USER:
-         if (parser->dbuserstr != NULL)
-            free(parser->dbuserstr);
-         parser->dbuserstr = strdup(optarg);
-         break;
-
-      case RA_DB_PASS:
-         if (parser->dbpassstr != NULL)
-            free(parser->dbpassstr);
-         parser->dbpassstr = strdup(optarg);
-         break;
-
-      case RA_DB_HOST:
-         if (parser->dbhoststr != NULL)
-            free(parser->dbhoststr);
-         parser->dbhoststr = strdup(optarg);
-         break;
-
-      case RA_DB_PORT:
-         if (parser->dbportstr != NULL)
-            free(parser->dbportstr);
-         parser->dbportstr = strdup(optarg);
-         break;
-
-      case RA_AIS_CACHE:
-         if (parser->ais != NULL)
-            free(parser->ais);
-         parser->ais = strdup(optarg);
-         break;
-
-      case RA_SORT_ALGORITHMS: {
-         char *tok = NULL;
-         while ((tok = strtok(optarg, " ,")) != NULL) {
-            parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = strdup(tok);
-            if (parser->RaSortOptionIndex > ARGUS_MAX_S_OPTIONS)
-               ArgusLog (LOG_ERR, "usage: number of -s options exceeds %d", ARGUS_MAX_S_OPTIONS);
-            optarg = NULL;
+            }
+            break;
          }
 
-         break;
-      }
+         case RA_DELEGATED_IP: {
+            parser->ArgusDelegatedIPFile = strdup(optarg);
+            break;
+         }
 
-      case MYSQL_DB_ENGINE: {
+         case RA_RELIABLE_CONNECT: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusReliableConnection = 1;
+            else
+               parser->ArgusReliableConnection = 0;
+            break;
+         }
+
+
+         case RADIUM_DAEMON:
+         case RADIUM_MONITOR_ID:
+         case RADIUM_MAR_STATUS_INTERVAL:
+         case RADIUM_ADJUST_TIME:
+         case RADIUM_ACCESS_PORT:
+         case RADIUM_ZEROCONF_REGISTER:
+            ArgusLog (LOG_ERR, "radium directive in client configuration (use -f)");
+            break;
+
+         case ARGUS_ARCHIVE:
+            parser->ais = strdup(optarg);
+            break;
+
+         case RA_SRCID_ALIAS: {
+            char *ptr = NULL;
+            if ((ptr = strstr(optarg, "file:")) != NULL) {
+               parser->ArgusAliasFile = strdup(&optarg[5]);
+               ArgusParseAliasFile(parser->ArgusAliasFile);
+            }
+            break;
+         }
+
+         case RA_CONNECT_TIME:
+            parser->ArgusConnectTime = atoi (optarg);
+            break;
+                           
+         case RA_UPDATE_INTERVAL: {
+            double value = 0.0, ivalue, fvalue;
+            char *endptr = NULL;
+
+            value = strtod(optarg, &endptr);
+
+            if (optarg != endptr) {
+               fvalue = modf(value, &ivalue);
+
+               parser->ArgusUpdateInterval.tv_sec  = (int) ivalue;
+               parser->ArgusUpdateInterval.tv_usec = (int) (fvalue * 1000000.0);
+
+            } else
+               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+            break;
+         }
+
+         case RA_TIMEOUT_INTERVAL: {
+            double value = 0.0, ivalue, fvalue;
+            char *endptr = NULL;
+
+            value = strtod(optarg, &endptr);
+
+            if (optarg != endptr) {
+               fvalue = modf(value, &ivalue);
+
+               parser->timeout.tv_sec  = (int) ivalue;
+               parser->timeout.tv_usec = (int) (fvalue * 1000000.0);
+
+            } else
+               ArgusLog (LOG_ERR, "%s: format error for timeout interval in client configuration (use float)");
+            break;
+         }
+
+         case RA_DATABASE:
+            if (parser->readDbstr != NULL)
+               free(parser->readDbstr);
+            parser->readDbstr = strdup(optarg);
+            break;
+
+         case RA_DB_USER:
+            if (parser->dbuserstr != NULL)
+               free(parser->dbuserstr);
+            parser->dbuserstr = strdup(optarg);
+            break;
+
+         case RA_DB_PASS:
+            if (parser->dbpassstr != NULL)
+               free(parser->dbpassstr);
+            parser->dbpassstr = strdup(optarg);
+            break;
+
+         case RA_DB_HOST:
+            if (parser->dbhoststr != NULL)
+               free(parser->dbhoststr);
+            parser->dbhoststr = strdup(optarg);
+            break;
+
+         case RA_DB_PORT:
+            if (parser->dbportstr != NULL)
+               free(parser->dbportstr);
+            parser->dbportstr = strdup(optarg);
+            break;
+
+         case RA_AIS_CACHE:
+            if (parser->ais != NULL)
+               free(parser->ais);
+            parser->ais = strdup(optarg);
+            break;
+
+         case RA_SORT_ALGORITHMS: {
+            char *tok = NULL;
+            while ((tok = strtok(optarg, " ,")) != NULL) {
+               parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = strdup(tok);
+               if (parser->RaSortOptionIndex > ARGUS_MAX_S_OPTIONS)
+                  ArgusLog (LOG_ERR, "usage: number of -s options exceeds %d", ARGUS_MAX_S_OPTIONS);
+               optarg = NULL;
+            }
+
+            break;
+         }
+
+         case MYSQL_DB_ENGINE: {
 #if defined(ARGUS_MYSQL)
-         if (parser->MySQLDBEngine != NULL)
-            free(parser->MySQLDBEngine);
-         parser->MySQLDBEngine = strdup(optarg);
+            if (parser->MySQLDBEngine != NULL)
+               free(parser->MySQLDBEngine);
+            parser->MySQLDBEngine = strdup(optarg);
 #endif
-         break;
-      }
-
-      case RA_PRINT_ETHERNET_VENDORS: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusPrintEthernetVendors = 1;
-         else
-            parser->ArgusPrintEthernetVendors = 0;
-         break;
-      }
-
-      case RA_ETHERNET_VENDORS: {
-         if (parser->ArgusEthernetVendorFile != NULL)
-            free (parser->ArgusEthernetVendorFile);
-
-         parser->ArgusEthernetVendorFile = strdup(optarg);
-         break;
-      }
-
-      case RA_PORT_DIRECTION: {
-         if (strstr(optarg, "services"))
-            parser->ArgusDirectionFunction |= ARGUS_PORT_SERVICES;
-         if (strstr(optarg, "wellknown"))
-            parser->ArgusDirectionFunction |= ARGUS_PORT_WELLKNOWN;
-         if (strstr(optarg, "registered"))
-            parser->ArgusDirectionFunction |= ARGUS_PORT_REGISTERED;
-         break;
-      }
-
-      case RA_LOCAL: {
-         if (parser->ArgusLocalLabeler == NULL)
-            if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
-
-         RaReadLocalityConfig (parser, parser->ArgusLocalLabeler, optarg);
-         break;
-      }
-
-      case RA_LOCAL_CORRECT: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusPerformCorrection = 1;
-         else
-            parser->ArgusPerformCorrection = 0;
-         break;
-      }
-
-      case RA_LOCAL_DIRECTION: {
-         char *str = strdup(optarg), *opt = NULL;
-         char *strptr = str;
-
-         while ((opt = strtok(strptr, " \t\n")) != NULL) {
-            if (!(strncasecmp(opt, "time", 4))) {
-               parser->ArgusDirectionFunction |= ARGUS_LOCAL_TIME;
-            } else
-            if (!(strncasecmp(opt, "suggest:", 7))) {
-               if (!(strncasecmp(&opt[8], "src", 3)))
-                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
-               else
-                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
-            } else
-            if (!(strncasecmp(opt, "force:", 6))) {
-               if (!(strncasecmp(&opt[6], "src", 3)))
-                  parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_SRC;
-               else
-                  parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_DST;
-            } else
-            if (!(strncasecmp(opt, "src", 3)))
-               parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
-            if (!(strncasecmp(opt, "dst", 3)))
-               parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
-            strptr = NULL;
+            break;
          }
-         free(str);
-         break;
-      }
+
+         case RA_PRINT_ETHERNET_VENDORS: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusPrintEthernetVendors = 1;
+            else
+               parser->ArgusPrintEthernetVendors = 0;
+            break;
+         }
+
+         case RA_ETHERNET_VENDORS: {
+            if (parser->ArgusEthernetVendorFile != NULL)
+               free (parser->ArgusEthernetVendorFile);
+
+            parser->ArgusEthernetVendorFile = strdup(optarg);
+            break;
+         }
+
+         case RA_PORT_DIRECTION: {
+            if (strstr(optarg, "services"))
+               parser->ArgusDirectionFunction |= ARGUS_PORT_SERVICES;
+            if (strstr(optarg, "wellknown"))
+               parser->ArgusDirectionFunction |= ARGUS_PORT_WELLKNOWN;
+            if (strstr(optarg, "registered"))
+               parser->ArgusDirectionFunction |= ARGUS_PORT_REGISTERED;
+            break;
+         }
+
+         case RA_LOCAL: {
+            if (parser->ArgusLocalLabeler == NULL)
+               if ((parser->ArgusLocalLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+            RaReadLocalityConfig (parser, parser->ArgusLocalLabeler, optarg);
+            break;
+         }
+
+         case RA_LOCAL_CORRECT: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusPerformCorrection = 1;
+            else
+               parser->ArgusPerformCorrection = 0;
+            break;
+         }
+
+         case RA_LOCAL_DIRECTION: {
+            char *str = strdup(optarg), *opt = NULL;
+            char *strptr = str;
+
+            while ((opt = strtok(strptr, " \t\n")) != NULL) {
+               if (!(strncasecmp(opt, "time", 4))) {
+                  parser->ArgusDirectionFunction |= ARGUS_LOCAL_TIME;
+               } else
+               if (!(strncasecmp(opt, "suggest:", 7))) {
+                  if (!(strncasecmp(&opt[8], "src", 3)))
+                     parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
+                  else
+                     parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
+               } else
+               if (!(strncasecmp(opt, "force:", 6))) {
+                  if (!(strncasecmp(&opt[6], "src", 3)))
+                     parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_SRC;
+                  else
+                     parser->ArgusDirectionFunction |= ARGUS_FORCE_LOCAL_DST;
+               } else
+               if (!(strncasecmp(opt, "src", 3)))
+                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_SRC;
+               if (!(strncasecmp(opt, "dst", 3)))
+                  parser->ArgusDirectionFunction |= ARGUS_SUGGEST_LOCAL_DST;
+               strptr = NULL;
+            }
+            free(str);
+            break;
+         }
 
                            case RA_SERVICES_SIGNATURES: {
                               if (parser->ArgusLabeler == NULL) {
@@ -2520,58 +2524,62 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum,
                               break;
                            }
 
-      case RA_COLOR_SUPPORT: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusColorSupport = 1;
-         else
-            parser->ArgusColorSupport = 0;
-         break;
-      }
+         case RA_COLOR_SUPPORT: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusColorSupport = 1;
+            else
+               parser->ArgusColorSupport = 0;
+            break;
+         }
 
-      case RA_COLOR_CONFIG: {
-         if (parser->ArgusColorConfig)
-            free (parser->ArgusColorConfig);
+         case RA_COLOR_CONFIG: {
+            if (parser->ArgusColorConfig)
+               free (parser->ArgusColorConfig);
 
-         parser->ArgusColorConfig = strdup(optarg);
-         break;
-      }
+            parser->ArgusColorConfig = strdup(optarg);
+            break;
+         }
 
-      case RA_CORRELATE_EVENTS: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusCorrelateEvents = 1;
-         else
-            parser->ArgusCorrelateEvents = 0;
-         break;
-      }
+         case RA_CORRELATE_EVENTS: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusCorrelateEvents = 1;
+            else
+               parser->ArgusCorrelateEvents = 0;
+            break;
+         }
 
-      case RA_SEPARATE_ADDR_FROM_PORT_WITH_PERIOD: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->RaSeparateAddrPortWithPeriod = 1;
-         else
-            parser->RaSeparateAddrPortWithPeriod = 0;
-         break;
+         case RA_SEPARATE_ADDR_FROM_PORT_WITH_PERIOD: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->RaSeparateAddrPortWithPeriod = 1;
+            else
+               parser->RaSeparateAddrPortWithPeriod = 0;
+            break;
+         }
+         case RA_RECORD_CORRECTION: {
+            if (!(strncasecmp(optarg, "yes", 3)))
+               parser->ArgusPerformCorrection = 1;
+            else
+               parser->ArgusPerformCorrection = 0;
+            break;
+         }
+         case RA_STATUS_EVENT: {
+            setArgusEventDataRecord (parser, optarg);
+            break;
+         }
+         case RA_HASHTABLE_SIZE: {
+            setArgusHashTableSize (parser, atoi(optarg));
+            break;
+         }
       }
-      case RA_RECORD_CORRECTION: {
-         if (!(strncasecmp(optarg, "yes", 3)))
-            parser->ArgusPerformCorrection = 1;
-         else
-            parser->ArgusPerformCorrection = 0;
-         break;
-      }
-      case RA_STATUS_EVENT: {
-         setArgusEventDataRecord (parser, optarg);
-         break;
-      }
-      case RA_HASHTABLE_SIZE: {
-         setArgusHashTableSize (parser, atoi(optarg));
-         break;
-      }
-   }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "%s(%d,%s%s,%d) returning 0\n", __func__, linenum,
-               ArgusResourceFileStr[idx], optarg, idx);
+      ArgusDebug (1, "%s(%d,%s%s,%d) returning 0\n", __func__, linenum,
+                  ArgusResourceFileStr[idx], optarg, idx);
 #endif
+      if (str != NULL)
+         ArgusFree(str);
+   } else
+      ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
 
    return 0;
 }
@@ -2638,70 +2646,74 @@ RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
 {
    int retn = 0;
    int i, linenum = 0;
-   char strbuf[MAXSTRLEN], *str = strbuf;
+   char *str = NULL;
    FILE *fd;
 
-   roption = 0;
+   if ((str = (char *) ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+      roption = 0;
 
-   if (file) {
-      if ((fd = fopen (file, "r")) != NULL) {
-         size_t soff = 0;
-         char *tmpstr;
+      if (file) {
+         if ((fd = fopen (file, "r")) != NULL) {
+            size_t soff = 0;
+            char *tmpstr;
 
-         while ((tmpstr = fgets(str + soff, MAXSTRLEN - soff, fd)) != NULL)  {
-            size_t spaces = 0;
+            while ((tmpstr = fgets(str + soff, MAXSTRLEN - soff, fd)) != NULL)  {
+               size_t spaces = 0;
 
-            soff += strlen(tmpstr);
-            linenum++;
-            while (*(tmpstr + spaces) && isspace((int)*(tmpstr + spaces)))
-                spaces++;
+               soff += strlen(tmpstr);
+               linenum++;
+               while (*(tmpstr + spaces) && isspace((int)*(tmpstr + spaces)))
+                   spaces++;
 
-            /* remove the leading spaces */
-            if (spaces > 0)
-               memmove(tmpstr, tmpstr + spaces, soff - spaces);
+               /* remove the leading spaces */
+               if (spaces > 0)
+                  memmove(tmpstr, tmpstr + spaces, soff - spaces);
 
-            /* handle blackslash line continuation */
-            if (soff >= 2) {
-               if ((str[soff - 2] == '\\') && (str[soff - 1] == '\n')) {
-                  soff -= 2;		/* backup to the backslash */
-                  str[soff] = 0;	/* replace backslash with null */
-                  continue;		/* soff remains greater than zero */
+               /* handle blackslash line continuation */
+               if (soff >= 2) {
+                  if ((str[soff - 2] == '\\') && (str[soff - 1] == '\n')) {
+                     soff -= 2;		/* backup to the backslash */
+                     str[soff] = 0;	/* replace backslash with null */
+                     continue;		/* soff remains greater than zero */
+                  }
                }
+
+               /* handle backslash line continuation with DOS-style newlines */
+               if (soff >= 3) {
+                  if ((str[soff - 3] == '\\') && (str[soff - 2] == '\r') &&
+                      (str[soff - 1] == '\n')) {
+                     soff -= 3;		/* backup to the backslash */
+                     str[soff] = 0;	/* replace backslash with null */
+                     continue;		/* soff remains greater than zero */
+                  }
+               }
+
+               soff = 0;
+               retn = RaParseResourceStr (parser, str, linenum, directives, items, cb);
             }
 
-            /* handle backslash line continuation with DOS-style newlines */
-            if (soff >= 3) {
-               if ((str[soff - 3] == '\\') && (str[soff - 2] == '\r') &&
-                   (str[soff - 1] == '\n')) {
-                  soff -= 3;		/* backup to the backslash */
-                  str[soff] = 0;	/* replace backslash with null */
-                  continue;		/* soff remains greater than zero */
+            fclose(fd);
+
+            if (enable_soptions && parser->RaPrintOptionIndex > 0) {
+               ArgusProcessSOptions(parser);
+               for (i = 0; i < parser->RaPrintOptionIndex; i++) {
+                  if (parser->RaPrintOptionStrings[i] != NULL) {
+                     free(parser->RaPrintOptionStrings[i]);
+                     parser->RaPrintOptionStrings[i] = NULL;
+                  }
                }
+               parser->RaPrintOptionIndex = 0;
             }
 
-            soff = 0;
-            retn = RaParseResourceStr (parser, str, linenum, directives, items, cb);
-         }
-
-         fclose(fd);
-
-         if (enable_soptions && parser->RaPrintOptionIndex > 0) {
-            ArgusProcessSOptions(parser);
-            for (i = 0; i < parser->RaPrintOptionIndex; i++) {
-               if (parser->RaPrintOptionStrings[i] != NULL) {
-                  free(parser->RaPrintOptionStrings[i]);
-                  parser->RaPrintOptionStrings[i] = NULL;
-               }
-            }
-            parser->RaPrintOptionIndex = 0;
-         }
-
-      } else {
-         retn++;
+         } else {
+            retn++;
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "%s: open %s %s\n", __func__, file, strerror(errno));
+            ArgusDebug (1, "%s: open %s %s\n", __func__, file, strerror(errno));
 #endif
+         }
       }
+      if (str != NULL)
+         ArgusFree(str);
    }
 
 #ifdef ARGUSDEBUG
@@ -2727,13 +2739,17 @@ ArgusParseAliasFile(char *file)
    if (file != NULL) {
       if (stat(file, &statbuf) >= 0) {
          if ((fd = fopen(file, "r")) != NULL) {
-            char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
+            char *strbuf,  *str = NULL, *optarg = NULL;
             char *srcid = NULL, *alias = NULL;
             int lines = 0;
 
+            if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+               ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+            str = strbuf;
             retn = 1;
 
-            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
+            while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
                lines++;
                str = strbuf;
                while (*str && isspace((int)*str))
@@ -2794,6 +2810,8 @@ ArgusParseAliasFile(char *file)
                   }
                }
             }
+            if (str != NULL)
+               ArgusFree(str);
          }
       }
    }
@@ -2844,14 +2862,20 @@ ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
    if (ArgusParserWiresharkManufFileRead == 0) {
       if (stat(file, &statbuf) >= 0) {
          if ((fd = fopen(file, "r")) != NULL) {
-            char strbuf[MAXSTRLEN], *str = strbuf;
+            char *str;
             int lines = 0;
             ArgusWellKnownTag = 0;
+
+            if ((str = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+               ArgusLog(LOG_ERR, "ArgusParserWiresharkManufFile: ArgusCalloc: error %s", strerror(errno));
 
             while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
                ArgusParseWiresharkManufEntry (parser, str);
                lines++;
             }
+
+            if (str != NULL)
+               ArgusFree(str);
 
             retn = 1;
             ArgusParserWiresharkManufFileRead = 1;
@@ -2877,9 +2901,11 @@ ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
 int
 ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str) 
 {
-   char *optarg = NULL;
-   char ptrbuf[MAXSTRLEN];
+   char *optarg = NULL, *ptrbuf;
    int retn = 0, ArgusWellKnownTag = 0;
+
+   if ((ptrbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
 
    while (*str && isspace((int)*str))
       str++;
@@ -2982,10 +3008,13 @@ ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str)
       }
 
    } else {
-                  if (strstr(str, "Well-known addresses.") != NULL)  {
-                     ArgusWellKnownTag++;
-                  }
+      if (strstr(str, "Well-known addresses.") != NULL)  {
+         ArgusWellKnownTag++;
+      }
    }
+
+   if (ptrbuf != NULL)
+      ArgusFree(ptrbuf);
 
    return retn;
 }
@@ -19127,8 +19156,11 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
          break;
 
          default: {
-            char tmpbuf[MAXSTRLEN], *ptr = tmpbuf, *str = parser->RaLabel, lastchr = ' ';
-            bzero (tmpbuf, sizeof(tmpbuf));
+            char *tmpbuf, *ptr = tmpbuf, *str = parser->RaLabel, lastchr = ' ';
+
+            if ((tmpbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+               ArgusLog(LOG_ERR, "ArgusGenerateLabel: ArgusCalloc: error %s", strerror(errno));
+
             lastchr = parser->RaFieldDelimiter;
             while (*str) {
                if (*str == ' ') {
@@ -19161,6 +19193,9 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
                }
             } else
                bcopy (tmpbuf, parser->RaLabel, strlen(tmpbuf));
+
+	    if (tmpbuf != NULL)
+	       ArgusFree(tmpbuf);
          }
       }
    }
@@ -22354,14 +22389,17 @@ ArgusGetString(struct ArgusParserStruct *parser, u_char *ap, int len)
    char *retn  = NULL;
 
    if ((ap != NULL) && (len > 0)) {
-      char buf[MAXSTRLEN];
       int slen = strlen((const char *)ap);
+      char *buf = NULL;
 
-      slen = (slen > len) ? len : slen;
-      bcopy(ap, buf, slen);
-      buf[slen] = 0;
-      if (strlen(buf) > 0) 
-         retn = strdup(buf);
+      if ((buf = (char *)ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+         slen = (slen > len) ? len : slen;
+         bcopy(ap, buf, slen);
+         buf[slen] = 0;
+         if (strlen(buf) > 0) 
+            retn = strdup(buf);
+         ArgusFree(buf);
+      }
    }
 
    return (retn);
@@ -25433,17 +25471,19 @@ void ArgusCopyDebugString (char *, int);
 void ArgusZeroDebugString (void);
 
 #ifdef ARGUSDEBUG
+char ArgusDebugBuf[MAXSTRLEN];
+
 void
 ArgusDebug (int d, char *fmt, ...)
 {
    va_list ap;
-   char buf[MAXSTRLEN];
+   char *buf = ArgusDebugBuf;
    struct timeval tvp;
    size_t len = 0;
-   size_t remain = sizeof(buf);
+   size_t remain = sizeof(ArgusDebugBuf);
    int c;
 
-   if (ArgusParser && (d <= ArgusParser->debugflag)) {
+   if ((ArgusParser != NULL) && (d <= ArgusParser->debugflag)) {
       gettimeofday (&tvp, 0L);
       buf[0] = '\0';
 
@@ -25506,20 +25546,25 @@ ArgusDebug (int d, char *fmt, ...)
 #endif
          openlog (ArgusParser->ArgusProgramName, LOG_PERROR, LOG_DAEMON);
          if (strchr(buf, '%')) {
-            char tbuf[MAXSTRLEN], *tptr = tbuf;
-            int i, len = strlen(buf);
-            memset(tbuf, 0, MAXSTRLEN);
-            for (i = 0; i < len; i++) {
-               if (buf[i] == '%')
-                  *tptr++ = '%';
-               *tptr++ = buf[i];
-            }
+            char *tbuf = NULL, *tptr = NULL;
 
-            strncpy(buf, tbuf, MAXSTRLEN);
-         }
+            if ((tbuf = ArgusCalloc(1, MAXSTRLEN)) != NULL) {
+               tptr = tbuf;
+
+               int i, len = strlen(buf);
+               for (i = 0; i < len; i++) {
+                  if (buf[i] == '%')
+                     *tptr++ = '%';
+                  *tptr++ = buf[i];
+               }
+
+               strncpy(buf, tbuf, MAXSTRLEN);
+               ArgusFree(tbuf);
+            }
          
-         syslog (LOG_DEBUG, "%s", buf);
-         closelog ();
+            syslog (LOG_DEBUG, "%s", buf);
+            closelog ();
+         }
 #endif
       } else
          fprintf (stderr, "%s\n", buf);
@@ -27882,54 +27927,54 @@ ArgusLog (int priority, char *fmt, ...)
    ptr = buf;
    gettimeofday (&now, 0L);
 
-   buf[0] = '\0';
-   gettimeofday (&now, 0L);
+   if ((buf = (char *)ArgusCalloc (1, 1024)) != NULL) {
+      gettimeofday (&now, 0L);
 
 #ifdef ARGUS_SYSLOG
 #ifndef LOG_PERROR
 #define LOG_PERROR      LOG_CONS
 #endif
-   c = ArgusPrintTime(ArgusParser, buf, MAXSTRLEN, &now);
-   if (c > 0) {
-      len += c;
-      remain -= c;
-   }
-   snprintf_append(buf, &len, &remain, " ");
+      c = ArgusPrintTime(ArgusParser, buf, 1024, &now);
+      if (c > 0) {
+         len += c;
+         remain -= c;
+      }
+      snprintf_append(buf, &len, &remain, " ");
 #else
 
 
 #if defined(ARGUS_THREADS)
-   {
-      pthread_t ptid;
-      char pbuf[128];
-      int i;
+      {
+         pthread_t ptid;
+         char pbuf[128];
+         int i;
 
-      pbuf[0] = '\0';
-      ptid = pthread_self();
-      for (i = 0; i < sizeof(ptid); i++) {
-         snprintf (&pbuf[i*2], 3, "%02hhx", ((char *)&ptid)[i]);
+         pbuf[0] = '\0';
+         ptid = pthread_self();
+         for (i = 0; i < sizeof(ptid); i++) {
+            snprintf (&pbuf[i*2], 3, "%02hhx", ((char *)&ptid)[i]);
+         }
+         (void) snprintf_append(buf, &len, &remain, "%s[%d.%s]: ",
+                                ArgusParser->ArgusProgramName, (int)getpid(),
+                                pbuf);
       }
-      (void) snprintf_append(buf, &len, &remain, "%s[%d.%s]: ",
-                             ArgusParser->ArgusProgramName, (int)getpid(),
-                             pbuf);
-   }
 #else
-   (void) snprintf_append(buf, &len, &remain, "%s[%d]: ",
-                          ArgusParser->ArgusProgramName, (int)getpid());
+      (void) snprintf_append(buf, &len, &remain, "%s[%d]: ",
+                             ArgusParser->ArgusProgramName, (int)getpid());
 #endif
 
-   c = ArgusPrintTime(ArgusParser, &buf[len], remain, &now);
-   if (c > 0) {
-      len += c;
-      remain += c;
-   }
-   snprintf_append(buf, &len, &remain, " ");
+      c = ArgusPrintTime(ArgusParser, &buf[len], remain, &now);
+      if (c > 0) {
+         len += c;
+         remain += c;
+      }
+      snprintf_append(buf, &len, &remain, " ");
 #endif
 
 #if defined(__STDC__)
-   va_start(ap, fmt);
+      va_start(ap, fmt);
 #else
-   va_start(ap);
+      va_start(ap);
 #endif
 
    c = vsnprintf(&buf[len], remain, fmt, ap);
@@ -27952,59 +27997,73 @@ ArgusLog (int priority, char *fmt, ...)
          label = ArgusPriorityStr[i].label;
          break;
       }
-   
-   if (ArgusParser->RaCursesMode) {
-      if (priority == LOG_ERR) {
-         ArgusWindowClose();
-         fprintf (stderr, "%s: %s", label, buf);
-      } else {
-#if defined(ARGUS_THREADS)
-#endif
-         snprintf (ArgusParser->RaDebugString, 1024, "%s: %s\n", label, buf);
-         ArgusParser->RaDebugStatus = 0;
-      }
 
+      for (i = 0; i < ARGUSPRIORITYSTR; i++) 
+         if (ArgusPriorityStr[i].priority == priority) {
+            label = ArgusPriorityStr[i].label;
+            break;
+         }
+      
+      if (ArgusParser->RaCursesMode) {
+         if (priority == LOG_ERR) {
+            ArgusWindowClose();
+            fprintf (stderr, "%s: %s", label, buf);
+         } else {
 #if defined(ARGUS_THREADS)
 #endif
-   } else {
-#ifdef ARGUS_SYSLOG
-      if (strchr(buf, '%')) {
-         char tbuf[MAXSTRLEN], *tptr = tbuf;
-         int i, len = strlen(buf);
-         memset(tbuf, 0, MAXSTRLEN);
-         for (i = 0; i < len; i++) {
-            if (buf[i] == '%') 
-               *tptr++ = '%';
-            *tptr++ = buf[i];
+            snprintf (ArgusParser->RaDebugString, MAXSTRLEN, "%s: %s\n", label, buf);
+            ArgusParser->RaDebugStatus = 0;
          }
 
-         strncpy(buf, tbuf, MAXSTRLEN);
-      }
- 
-      if (!ArgusIsatty()) {
-         openlog (ArgusParser->ArgusProgramName, LOG_PID, LOG_DAEMON);
-         syslog (priority, "%s", buf);
-         closelog ();
-      }
-      else {
-         fprintf (stderr, "%s: %s\n", label, buf);
-      }
-#else
-      fprintf (stderr, "%s: %s\n", label, buf);
+#if defined(ARGUS_THREADS)
 #endif
-   }
+      } else {
+#ifdef ARGUS_SYSLOG
+         if (strchr(buf, '%')) {
+            char *tbuf = NULL, *tptr = NULL;
+            int i, len = strlen(buf);
 
-   switch (priority) {
-      case LOG_ERR:
-         ArgusShutDown(-1);
-         break;
+            if ((tbuf = ArgusCalloc(1, MAXSTRLEN)) != NULL) {
+               tptr = tbuf;
 
-      case LOG_ALERT:
-         ArgusParser->ArgusExitStatus = 2;
-         break;
+               for (i = 0; i < len; i++) {
+                  if (buf[i] == '%') 
+                     *tptr++ = '%';
+                  *tptr++ = buf[i];
+               }
 
-      default:
-         break;
+               strncpy(buf, tbuf, MAXSTRLEN);
+               ArgusFree(tbuf);
+            }
+         }
+    
+         if (!ArgusIsatty()) {
+            openlog (ArgusParser->ArgusProgramName, LOG_PID, LOG_DAEMON);
+            syslog (priority, "%s", buf);
+            closelog ();
+         } else {
+            fprintf (stderr, "%s: %s\n", label, buf);
+         }
+#else
+         fprintf (stderr, "%s: %s\n", label, buf);
+#endif
+      }
+
+      switch (priority) {
+         case LOG_ERR:
+            ArgusShutDown(-1);
+            break;
+
+         case LOG_ALERT:
+            ArgusParser->ArgusExitStatus = 2;
+            break;
+
+         default:
+            break;
+      }
+
+      if (buf != NULL)
+         ArgusFree(buf);
    }
 
    if (buf != NULL)
@@ -30093,29 +30152,33 @@ int
 setArgusRemoteFilter(struct ArgusParserStruct *parser, char *str)
 {
    struct ArgusInput *input = NULL;
-   char buf[MAXSTRLEN];
+   char *buf = NULL;
    int retn = 0, len;
 
    if (str != NULL) {
-      if (strcmp(parser->ArgusRemoteFilter, str)) {
-         if (parser->ArgusRemoteFilter != NULL)
-            free(parser->ArgusRemoteFilter);
+      if ((buf = (char *) ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+         if (strcmp(parser->ArgusRemoteFilter, str)) {
+            if (parser->ArgusRemoteFilter != NULL)
+               free(parser->ArgusRemoteFilter);
 
-         parser->ArgusRemoteFilter = str;
+            parser->ArgusRemoteFilter = str;
 
-         if ((input = (struct ArgusInput *)parser->ArgusRemoteHosts->start) != NULL) {
-            do {
-               if ((input->type & ARGUS_DATA_SOURCE) && (input->filename == NULL)) {
-                  snprintf ((char *) buf, MAXSTRLEN-1, "FILTER: man or (%s)",
-                                       (char *) parser->ArgusRemoteFilter);
-                  len = strlen((char *) buf);
-                  if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                     ArgusLog (LOG_ALERT, "%s: write remote filter error %s.", strerror(errno));
+            if ((input = (struct ArgusInput *)parser->ArgusRemoteHosts->start) != NULL) {
+               do {
+                  if ((input->type & ARGUS_DATA_SOURCE) && (input->filename == NULL)) {
+                     snprintf ((char *) buf, MAXSTRLEN-1, "FILTER: man or (%s)",
+                                          (char *) parser->ArgusRemoteFilter);
+                     len = strlen((char *) buf);
+                     if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
+                        ArgusLog (LOG_ALERT, "%s: write remote filter error %s.", strerror(errno));
+                     }
                   }
-               }
-               input = (struct ArgusInput *)input->qhdr.nxt;
-            } while (input != (struct ArgusInput *)parser->ArgusRemoteHosts->start);
+                  input = (struct ArgusInput *)input->qhdr.nxt;
+               } while (input != (struct ArgusInput *)parser->ArgusRemoteHosts->start);
+            }
          }
+         if (buf != NULL)
+            ArgusFree(buf);
       }
    }
 
@@ -30726,7 +30789,8 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi)
 int
 ArgusAddServerList (struct ArgusParserStruct *parser, char *host, int type, int proto)
 {
-   static char *str, strbuf[MAXSTRLEN], msgbuf[MAXSTRLEN];
+   static char *str, *strbuf = NULL, *msgbuf = NULL;
+
    static char *protoStr, portbuf[16];
    char *fptr = NULL, *tptr = NULL, *sptr = NULL;
    char *aptr = NULL, *uptr = NULL, *pptr = NULL;
@@ -30736,6 +30800,12 @@ ArgusAddServerList (struct ArgusParserStruct *parser, char *host, int type, int 
    char *servname = NULL;
    long int portnum = 0;
    int retn = 0;
+
+   if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusAddServerList: ArgusCalloc(1, MAXSTRLEN) failed\n");
+
+   if ((msgbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusAddServerList: ArgusCalloc(1, MAXSTRLEN) failed\n");
 
 #if HAVE_GETADDRINFO
    struct addrinfo hints, *hp = NULL;
@@ -31016,6 +31086,8 @@ ArgusAddServerList (struct ArgusParserStruct *parser, char *host, int type, int 
       } else
          ArgusLog (LOG_ERR, "ArgusAddServerList(%s) ArgusCalloc %s", str, strerror(errno));
    }
+   if (strbuf != NULL) ArgusFree(strbuf);
+   if (msgbuf != NULL) ArgusFree(msgbuf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusAddServerList (0x%x, %s, %d, %d) returning %d\n", parser, host, type, proto, retn);
@@ -32392,9 +32464,13 @@ ArgusProcessLabelOptions(struct ArgusParserStruct *parser, char *label)
          options |= REG_ICASE;
 
       if ((retn = regcomp(&parser->lpreg, label, options)) != 0) {
-         char errbuf[MAXSTRLEN];
-         if (regerror(retn, &parser->lpreg, errbuf, MAXSTRLEN))
-            ArgusLog (LOG_ERR, "ArgusProcessLabelOption: label regex error %s", errbuf);
+         char *errbuf;
+
+         if ((errbuf = ArgusCalloc(1, MAXSTRLEN)) != NULL) {
+            if (regerror(retn, &parser->lpreg, errbuf, MAXSTRLEN))
+               ArgusLog (LOG_ERR, "ArgusProcessLabelOption: label regex error %s", errbuf);
+            ArgusFree(errbuf);
+         }
       }
    }
 }

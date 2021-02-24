@@ -54,6 +54,7 @@
 #include <argus_clientconfig.h>
 
 #include <rabins.h>
+#include <rasplit.h>
 #include <ragen.h>
 
 #if defined(HAVE_ZLIB_H)
@@ -269,8 +270,14 @@ static int RaGenMinSsf = 0;
 static int RaGenMaxSsf = 0;
 static int RaGenAuthLocalhost = 1;
 
+static struct timeval RabinsTimeoutAbs; 
+static int RabinsOldestIndex = 0;
+
+static double RaCurrentBinStartTime = 0;
+static double RaCurrentBinLastTime = 0;
+
 void clearRaGenConfiguration (void);
-const static unsigned int ArgusClientMaxQueueDepth = 500000;
+//const static unsigned int ArgusClientMaxQueueDepth = 500000;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
@@ -353,7 +360,9 @@ struct ArgusGenerator *ArgusNewGenerator (struct ArgusParserStruct *, struct Arg
 struct ArgusGenerator *
 ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
 {
+   time_t tsec = ArgusParser->ArgusRealTime.tv_sec;
    struct ArgusGenerator *gen = NULL, *tgen = NULL;
+   struct ArgusAdjustStruct nadpbuf, *nadp = &nadpbuf;
    struct ArgusQueueStruct *queue;
    struct ArgusGenConfig *config;
    struct tm tmbuf, *tm = &tmbuf;
@@ -392,6 +401,103 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       }
    }
 
+   if (strlen(config->interval) > 0) {
+      if (ArgusParser->tflag)
+         tsec = parser->startime_t.tv_sec;
+
+      bzero(nadp, sizeof(*nadp));
+
+      nadp->mode = ARGUSSPLITTIME;
+      nadp->modify = 1;
+
+      if (isdigit((int)*config->interval)) {
+         char *ptr = NULL;
+         nadp->value = strtod(config->interval, (char **)&ptr);
+
+         switch (*ptr) {
+            case 'y':
+               nadp->qual = ARGUSSPLITYEAR;  
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               nadp->RaStartTmStruct.tm_min = 0;
+               nadp->RaStartTmStruct.tm_hour = 0;
+               nadp->RaStartTmStruct.tm_mday = 1;
+               nadp->RaStartTmStruct.tm_mon = 0;
+               tsec= mktime(&nadp->RaStartTmStruct);
+               nadp->size = nadp->value*3600.0*24.0*7.0*52.0*1000000LL;
+               break;
+
+            case 'M':
+               nadp->qual = ARGUSSPLITMONTH; 
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               nadp->RaStartTmStruct.tm_min = 0;
+               nadp->RaStartTmStruct.tm_hour = 0;
+               nadp->RaStartTmStruct.tm_mday = 1;
+               nadp->RaStartTmStruct.tm_mon = 0;
+               tsec = mktime(&nadp->RaStartTmStruct);
+               nadp->size = nadp->value*3600.0*24.0*7.0*4.0*1000000LL;
+               break;
+
+            case 'w':
+               nadp->qual = ARGUSSPLITWEEK;  
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               nadp->RaStartTmStruct.tm_min = 0;
+               nadp->RaStartTmStruct.tm_hour = 0;
+               nadp->RaStartTmStruct.tm_mday = 1;
+               nadp->RaStartTmStruct.tm_mon = 0;
+               tsec = mktime(&nadp->RaStartTmStruct);
+               nadp->size = nadp->value*3600.0*24.0*7.0*1000000LL;
+               break;
+
+            case 'd':
+               nadp->qual = ARGUSSPLITDAY;   
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               nadp->RaStartTmStruct.tm_min = 0;
+               nadp->RaStartTmStruct.tm_hour = 0;
+               tsec = mktime(&nadp->RaStartTmStruct);
+               nadp->size = nadp->value*3600.0*24.0*1000000LL;
+               break;
+
+            case 'h':
+               nadp->qual = ARGUSSPLITHOUR;  
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               nadp->RaStartTmStruct.tm_min = 0;
+               tsec = mktime(&nadp->RaStartTmStruct);
+               nadp->size = nadp->value*3600.0*1000000LL;
+               break;
+
+            case 'm': {
+               nadp->qual = ARGUSSPLITMINUTE;
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+               nadp->RaStartTmStruct.tm_sec = 0;
+               tsec = nadp->value*60.0*1000000LL;
+               nadp->size = tsec;
+               break;
+            }
+
+            default: 
+            case 's': {
+               long long val = tsec / nadp->value;
+               nadp->qual = ARGUSSPLITSECOND;
+               tsec = val * nadp->value;
+               localtime_r(&tsec, &nadp->RaStartTmStruct);
+//             nadp->start.tv_sec = tsec;
+               nadp->size = nadp->value * 1000000LL;
+               break;
+            }
+         }
+      }
+      nadp->start.tv_sec = 0;
+   }
+
+   if (config->duration > 0) {
+      parser->lasttime_t.tv_sec = parser->startime_t.tv_sec + config->duration;
+   }
+
    if ((file = config->baseline) != NULL) {
       if ((file = realpath (file, NULL)) != NULL) {
 #ifdef ARGUSDEBUG
@@ -422,9 +528,27 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       if ((gen = ArgusCalloc (1, sizeof(*gen))) == NULL)
          ArgusLog (LOG_ERR, "%s: ArgusCalloc failed\n", __func__);
 
+      gen->queue = ArgusNewQueue();
       gen->configs = ArgusNewQueue();
       gen->parser = ArgusNewParser(parser->ArgusProgramName);
-      gen->parser->ProcessRealTime = 1.0;
+
+      if ((gen->bins = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*gen->bins))) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+
+      if ((gen->bins->array = (void *)ArgusCalloc(8, sizeof(void *))) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+
+      bcopy(nadp, &gen->bins->nadp, sizeof(*nadp));
+
+#if defined(ARGUS_THREADS)
+      pthread_mutex_init(&gen->bins->lock, NULL);
+#endif
+      gen->bins->scalesecs = 0;
+
+      if ((gen->parser->ArgusAggregator = ArgusNewAggregator(gen->parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+
+      gen->parser->ProcessRealTime = 0;
       gen->client = client;
       gen->output = output;
       gen->parser->ArgusOutput =  gen->output;
@@ -976,6 +1100,7 @@ ArgusStartGenerator(struct ArgusGenerator *gen)
    }
 }
 
+
 void
 ArgusStopGenerator(struct ArgusGenerator *gen)
 {
@@ -1005,6 +1130,7 @@ void
 ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
 {
    struct ArgusQueueStruct *queue = gen->configs;
+   struct ArgusParserStruct *parser = gen->parser;
 
    if (queue && queue->count) {
       struct ArgusGenConfig *config;
@@ -1013,15 +1139,20 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
       for (i = 0; i < cnt; i++) {
          if ((config = (struct ArgusGenConfig *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
             if (!(config->status & ARGUS_START)) {
-               char cmd[1024];
-               int retn;
-
                if ((config->finput = ArgusCalloc (1, sizeof(*config->finput))) != NULL) {
                   config->finput->filename = strdup(config->baseline);
-                  config->finput->tempfile = strdup("/tmp/ragen.tmp.XXXXXX");
                   config->finput->type = ARGUS_DATA_SOURCE;
                   config->finput->ostart = -1;
                   config->finput->ostop = -1;
+                  config->finput->fd = open(config->finput->filename, O_RDONLY);
+                  config->finput->file = fdopen(config->finput->fd, "r");
+
+/*
+   this code segment uses rabins.1 to generate a complete
+   list of records for the run, but this can be huge and VMs were
+   running out of memory ... so instead, we'll read in the baselines
+   into a generator parser and then create our own rabins.1 output stream.
+
                   config->finput->fd = mkstemp(config->finput->tempfile);
                   config->finput->file = fdopen(config->finput->fd, "r");
 
@@ -1038,7 +1169,93 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
                   if ((retn = system(cmd))  < 0) {
                      ArgusLog (LOG_ERR, "%s: system() failed\n", __func__);
                   }
+*/
                }
+
+               if (config->input == NULL) {
+                  config->input = ArgusMalloc(sizeof(*config->input));
+                  if (config->input == NULL)
+                     ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
+                  if (strcmp (config->finput->filename, "-")) {
+                     if (strlen(config->finput->filename)) {
+                        if (config->finput->file != NULL)
+                           fseek(config->finput->file, 0, SEEK_SET);
+
+                        ArgusInputFromFile(config->input, config->finput);
+                        config->finput->fd = config->finput->fd;
+                        config->input->file = config->finput->file;
+                        config->finput->file = NULL;
+
+                        /*
+                           input->file now "owns" this pointer.  Setting it
+                           to NULL prevents ArgusFileFree() from closing the
+                           file a second time.
+                        */
+
+                        parser->ArgusCurrentInput = config->input;
+
+                        if ((config->input->file != NULL) && ((ArgusReadConnection (parser, config->input, ARGUS_FILE)) >= 0)) {
+#if defined(ARGUS_THREADS)
+                           pthread_mutex_lock(&parser->lock);
+#endif
+                           parser->ArgusTotalMarRecords++;
+                           parser->ArgusTotalRecords++;
+#if defined(ARGUS_THREADS)
+                           pthread_mutex_unlock(&parser->lock);
+#endif
+                           if (parser->RaPollMode) {
+                              ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                           } else {
+                              if (config->finput->ostart != -1) {
+                                 config->input->offset = config->finput->ostart;
+                                 if (fseek(config->input->file, config->input->offset, SEEK_SET) >= 0)
+                                    ArgusReadFileStream(parser, config->input);
+                              } else {
+                                 ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                                 ArgusReadFileStream(parser, config->input);
+                              }
+                           }
+
+                        } else
+                           config->finput->fd = -1;
+                     }
+                  }
+
+#ifdef ARGUSDEBUG
+                  ArgusDebug (1, "main: ArgusProcessStatusRecord (%s) done", config->finput->filename);
+#endif
+                  RaArgusInputComplete(config->input);
+                  parser->ArgusCurrentInput = NULL;
+                  ArgusCloseInput(parser, config->input);
+                  ArgusFree(config->input);
+                  config->input = NULL;
+               }
+
+               if (parser->ArgusAggregator && (parser->ArgusAggregator->queue->count > 0)) {
+                  struct ArgusQueueStruct *que = parser->ArgusAggregator->queue;
+                  int i, cnt = que->count;
+
+                  for (i = 0; i < cnt; i++) {
+                     struct ArgusRecordStruct *ns;
+
+                     if ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(que, ARGUS_LOCK)) != NULL) {
+                        if (ns->bins == NULL) {
+                           if ((ns->bins = ArgusCalloc(1, sizeof(*ns->bins))) != NULL) {
+
+                              if ((ns->bins->array = (void *)ArgusCalloc(8, sizeof(void *))) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+
+                              bcopy(&gen->bins->nadp, &ns->bins->nadp, sizeof(gen->bins->nadp));
+                              ArgusAlignInit(parser, ns, &ns->bins->nadp);
+
+			   } else
+                              ArgusLog(LOG_ERR, "ArgusGenerateStatusRecord: ArgusCalloc error %s\n", strerror(errno));
+			}
+                        ArgusAddToQueue(gen->queue, &ns->qhdr, ARGUS_LOCK);
+	             }
+	          }
+	       }
             }
 
 #ifdef ARGUSDEBUG
@@ -1058,64 +1275,47 @@ ArgusProcessStatusRecords(void *param)
    struct ArgusGenerator *gen = config->gen;
    struct ArgusParserStruct *parser = gen->parser;
 
-   if (config->input == NULL) {
-               config->input = ArgusMalloc(sizeof(*config->input));
-               if (config->input == NULL)
-                  ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+   while (!(parser->RaParseDone)) {
+      struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+      struct ArgusQueueStruct *queue;
 
-               if (strcmp (config->finput->tempfile, "-")) {
-                  if (strlen(config->finput->tempfile)) {
-                     if (config->finput->file != NULL)
-                        fseek(config->finput->file, 0, SEEK_SET);
-
-                     ArgusInputFromFile(config->input, config->finput);
-                     config->finput->fd = config->finput->fd;
-                     config->input->file = config->finput->file;
-
-                     /* input->file now "owns" this pointer.  Setting it
-                     * to NULL prevents ArgusFileFree() from closing the
-                     * file a second time.
-
-                     config->finput->file = NULL;
-                     */
-
-                     parser->ArgusCurrentInput = config->input;
-
-                     if ((config->input->file != NULL) && ((ArgusReadConnection (parser, config->input, ARGUS_FILE)) >= 0)) {
+      if ((queue = gen->queue) != NULL) {
 #if defined(ARGUS_THREADS)
-                        pthread_mutex_lock(&parser->lock);
+         pthread_mutex_lock(&queue->lock);
 #endif
-                        parser->ArgusTotalMarRecords++;
-                        parser->ArgusTotalRecords++;
-#if defined(ARGUS_THREADS)
-                        pthread_mutex_unlock(&parser->lock);
-#endif
-                        if (parser->RaPollMode) {
-                           ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
-                        } else {
-                           if (config->finput->ostart != -1) {
-                              config->input->offset = config->finput->ostart;
-                              if (fseek(config->input->file, config->input->offset, SEEK_SET) >= 0)
-                                 ArgusReadFileStream(parser, config->input);
-                           } else {
-                              ArgusHandleRecord (parser, config->input, &config->input->ArgusInitCon, 0, &parser->ArgusFilterCode);
-                              ArgusReadFileStream(parser, config->input);
-                           }
-                        }
-                     } else
-                        config->finput->fd = -1;
+         if (queue->count > 0) {
+            int i, cnt = queue->count;
+
+            for (i = 0; i < cnt; i++) {
+               struct ArgusRecordStruct *ns;
+
+//  This loop loads up the next ns for this baseline descriptor
+//  Its up to us to figure out when to send it ...
+//  The concept is we should transmit all records whose stime fits in
+//  the current output bin (which is defined by a master nadp) ...
+//  So check the current output bin's time bounds, and if the stime
+//  of any record is in the range, send it on its way ...
+
+               if ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
+                  if (ns->bins->array[0] == NULL) {
+		     ns->bins->array[0] = (void *)ArgusAlignRecord(parser, ns, &ns->bins->nadp);
                   }
-               }
+                  if (ns->bins->array[0] != NULL) {
+	             double t1 = ArgusFetchStartTime((struct ArgusRecordStruct *) ns->bins->array[0]);
+	             if ((t1 >= RaCurrentBinStartTime) && (t1 < RaCurrentBinLastTime)) {
+	                
+		     }
 
-#ifdef ARGUSDEBUG
-               ArgusDebug (1, "main: ArgusProcessStatusRecord (%s) done", config->finput->tempfile);
+		  }
+                  ArgusAddToQueue(gen->queue, &ns->qhdr, ARGUS_NOLOCK);
+               }
+            }
+         }
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&queue->lock);
 #endif
-               RaArgusInputComplete(config->input);
-               parser->ArgusCurrentInput = NULL;
-               ArgusCloseInput(parser, config->input);
-               ArgusFree(config->input);
-               config->input = NULL;
-               config->status |= ARGUS_STOP;
+      }
+      nanosleep (ts, NULL);
    }
 
 #ifdef ARGUSDEBUG
@@ -1321,10 +1521,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       }
 
       if (ns != NULL)
-         ArgusPushBackList(parser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *) ns, ARGUS_LOCK);
+         ArgusAddToQueue(parser->ArgusAggregator->queue, &ns->qhdr, ARGUS_LOCK);
+//       ArgusPushBackList(parser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *) ns, ARGUS_LOCK);
    }
 
 #if defined(ARGUS_THREADS)
+/*
    if (parser->ArgusOutput && parser->ArgusOutput->ArgusOutputList) {
       unsigned int cnt;
 
@@ -1338,6 +1540,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          nanosleep (ts, NULL);
       }
    }
+*/
 
 #else
    ArgusListenProcess(parser);
@@ -2872,4 +3075,36 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
    return (retn);
 }
 #endif 
+
+
+/* timeout functions:
+ *
+ * ragen.1 is about providing a realtime stream of synthetic data
+ * based on a flexible set of baselines.  As a result, we want to
+ * process everything based on realtime processing.
+ *
+ */
+static void
+RabinsSetTimeout(struct RaBinProcessStruct *rbps, struct timeval *timer,
+                 const struct timeval * const interval)
+{
+   int ind = RabinsOldestIndex ? RabinsOldestIndex : rbps->index;
+
+   if (rbps->array && rbps->array[ind])
+      timeradd(&rbps->array[ind]->etime, interval, timer);
+   else {
+      timer->tv_sec = 0;
+      timer->tv_usec = 0;
+   }
+}
+
+static int
+RabinsCheckTimeout(const struct ArgusParserStruct * const parser,
+                   const struct timeval * const timer)
+{
+   if (timer->tv_sec == 0)
+      return 0;
+
+   return !!timercmp(&parser->ArgusRealTime, timer, >);
+}
 

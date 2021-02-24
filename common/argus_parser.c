@@ -296,7 +296,7 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
    if (parser->MySQLDBEngine != NULL)
       free(ArgusParser->MySQLDBEngine);
 
-   parser->debugflag = -1;
+   parser->debugflag = 0;
 
    if (parser->ArgusProgramArgs != NULL)
       ArgusFree(parser->ArgusProgramArgs);

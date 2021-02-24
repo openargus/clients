@@ -52,8 +52,10 @@ struct ArgusGenerator {
    struct ArgusParserStruct *parser;
    struct ArgusClientData *client;
    struct ArgusOutputStruct *output;
+   struct RaBinProcessStruct *bins;
 
    struct ArgusQueueStruct *configs;
+   struct ArgusQueueStruct *queue;
 };
 
 
