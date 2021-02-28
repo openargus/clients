@@ -357,6 +357,22 @@ static int RaGenParseResourceLine (struct ArgusParserStruct *, int, char *, int,
 struct ArgusListStruct *ArgusGeneratorList = NULL;
 struct ArgusGenerator *ArgusNewGenerator (struct ArgusParserStruct *, struct ArgusClientData *, struct ArgusOutputStruct *, char *);
 
+
+// ArgusNewGenerator - this routine creates the complete environment for an argus generator.
+//      An argus generator is a baseline set of flow that output as bins (ala rabins.1 logic).
+//      A generator configuration provides the baseline as a file or sql table, a starting time,
+//      an interval (rabins -M time interval value) and a duration.
+//      
+//      The concept is that the generator is a complete environment, containing parser, inputs,
+//      outputs, and in this case a RaBinsProcess ...
+//      
+//      rabins.1 is not really structured for this task, as it takes in flows and carves them
+//      up completely for processing bins that then are processed as a whole.
+//      
+//      ragen.1 would like to process a large number of baseline flows, but process and output
+//      flow 1 bin at a time, so that we generate a realtime output stream.
+//
+
 struct ArgusGenerator *
 ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *client, struct ArgusOutputStruct *output, char *ptr)
 {
@@ -535,7 +551,7 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       if ((gen->bins = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*gen->bins))) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
-      if ((gen->bins->array = (void *)ArgusCalloc(8, sizeof(void *))) == NULL)
+      if ((gen->bins->array = (void *)ArgusCalloc(4, sizeof(void *))) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
       bcopy(nadp, &gen->bins->nadp, sizeof(*nadp));
@@ -1243,7 +1259,7 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
                         if (ns->bins == NULL) {
                            if ((ns->bins = ArgusCalloc(1, sizeof(*ns->bins))) != NULL) {
 
-                              if ((ns->bins->array = (void *)ArgusCalloc(8, sizeof(void *))) == NULL)
+                              if ((ns->bins->array = (void *)ArgusCalloc(4, sizeof(void *))) == NULL)
                                  ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
                               bcopy(&gen->bins->nadp, &ns->bins->nadp, sizeof(gen->bins->nadp));
@@ -1274,10 +1290,46 @@ ArgusProcessStatusRecords(void *param)
    struct ArgusGenConfig *config = (struct ArgusGenConfig *) param;
    struct ArgusGenerator *gen = config->gen;
    struct ArgusParserStruct *parser = gen->parser;
+   struct RaBinProcessStruct *rbps = gen->bins;
+   int ind = 0;
 
    while (!(parser->RaParseDone)) {
       struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
       struct ArgusQueueStruct *queue;
+      struct RaBinStruct *bin = NULL;
+
+   /*
+    * OK, the concept here is to figure out if we have a new bin, 
+    * and if so, we want to load up the bin with all the records
+    * from the generator list that fit this bin, sort them by
+    * stime, and then print them out.
+    *
+    * So, first step is to establish the bin and its start and
+    * end timestamps.  Then with the generator list, move the ns
+    * into the bin if the time ranges fit.
+    * 
+    * when its stime , transmit the bin.
+    *
+
+      if (gen->bins->array == NULL) 
+         if ((gen->bins->array = (void *)ArgusCalloc(4, sizeof(void *))) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
+    */
+
+      if ((bin = rbps->array[ind]) == NULL) {
+         if (ind > rbps->max)
+            rbps->max = ind;
+
+         if ((rbps->array[ind] = RaNewBin(parser, rbps, NULL,
+                                             /* knock rbps->index off of ind so that the record
+                                              * falls within the bin boundaries. */
+                                             (rbps->start + ((ind - rbps->index) * rbps->size)),
+                                             0)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusInsertRecord: RaNewBin error %s", strerror(errno));
+
+         rbps->count++; /* the number of used array entries */
+         bin = rbps->array[ind];
+      }
 
       if ((queue = gen->queue) != NULL) {
 #if defined(ARGUS_THREADS)
@@ -1344,6 +1396,7 @@ ArgusClientTimeout ()
        * will push it back over the max length and ArgusWriteOutSocket()
        * can later determine if it needs to hang up the connection.
        */
+
       for (i = 0; i < cnt; i++) {
          struct ArgusGenerator *gen;
 
