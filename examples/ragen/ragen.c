@@ -50,6 +50,7 @@
 
 #include <argus_compat.h>
 #include <argus_util.h>
+#include <argus_sort.h>
 #include <argus_output.h>
 #include <argus_clientconfig.h>
 
@@ -402,7 +403,9 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       if (strcasecmp(key, "baseline") == 0) {
          config->baseline = strdup(value);
       } else if ((strcasecmp(key, "startime") == 0) || (strcasecmp(key, "stime") == 0)) {
-         ArgusCheckTimeFormat (tm, value);
+         if (!(strcasecmp(value, "now"))) 
+            bcopy (&parser->RaTmStruct, tm, sizeof(*tm));
+	 
       } else if (strcasecmp(key, "interval") == 0) {
          config->interval = strdup(value);
       } else if (strcasecmp(key, "dur") == 0) {
@@ -417,11 +420,11 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       }
    }
 
+   bzero(nadp, sizeof(*nadp));
+
    if (strlen(config->interval) > 0) {
       if (ArgusParser->tflag)
          tsec = parser->startime_t.tv_sec;
-
-      bzero(nadp, sizeof(*nadp));
 
       nadp->mode = ARGUSSPLITTIME;
       nadp->modify = 1;
@@ -501,17 +504,19 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
                nadp->qual = ARGUSSPLITSECOND;
                tsec = val * nadp->value;
                localtime_r(&tsec, &nadp->RaStartTmStruct);
-//             nadp->start.tv_sec = tsec;
+               nadp->start.tv_sec = tsec;
                nadp->size = nadp->value * 1000000LL;
                break;
             }
          }
       }
-      nadp->start.tv_sec = 0;
    }
 
    if (config->duration > 0) {
+      parser->startime_t = nadp->start;
       parser->lasttime_t.tv_sec = parser->startime_t.tv_sec + config->duration;
+      nadp->end = parser->lasttime_t;
+      localtime_r(&parser->lasttime_t.tv_sec, &nadp->RaEndTmStruct);
    }
 
    if ((file = config->baseline) != NULL) {
@@ -547,6 +552,7 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
       gen->queue = ArgusNewQueue();
       gen->configs = ArgusNewQueue();
       gen->parser = ArgusNewParser(parser->ArgusProgramName);
+      bcopy(ArgusParser, gen->parser, sizeof(*ArgusParser));
 
       if ((gen->bins = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*gen->bins))) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
@@ -555,6 +561,10 @@ ArgusNewGenerator (struct ArgusParserStruct *parser, struct ArgusClientData *cli
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
       bcopy(nadp, &gen->bins->nadp, sizeof(*nadp));
+      gen->bins->size  = nadp->size;
+
+      gen->bins->start = (nadp->start.tv_sec * 1000000LL) + nadp->start.tv_usec;
+      gen->bins->end   = (nadp->end.tv_sec * 1000000LL) + nadp->end.tv_usec;
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_init(&gen->bins->lock, NULL);
@@ -831,6 +841,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       if ((ArgusGeneratorList = ArgusNewList()) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewList error");
 
+      if ((ArgusSorter = ArgusNewSorter(parser)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewSorter error %s", strerror(errno));
+
+      bzero (ArgusSorter->ArgusSortAlgorithms, sizeof (ArgusSorter->ArgusSortAlgorithms));
+      ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortStartTime;
+
       if (parser->ArgusFlowModelFile != NULL) {
          RaParseResourceFile (parser, parser->ArgusFlowModelFile,
                               ARGUS_SOPTIONS_IGNORE, RaGenResourceFileStr,
@@ -1034,6 +1050,9 @@ RaParseComplete (int sig)
          ArgusParser->ArgusOutput = NULL;
       }
 
+      if (ArgusSorter != NULL)
+         ArgusDeleteSorter(ArgusSorter);
+
       if (sig >= 0) {
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal $d)\n", sig);
@@ -1140,6 +1159,43 @@ ArgusStopGenerator(struct ArgusGenerator *gen)
       }
    }
    gen->status |= ARGUS_STOP;
+}
+
+void
+ArgusAdjustRecordTime(struct ArgusParserStruct *parser, struct ArgusQueueStruct *queue)
+{
+   double deltaStartTime = -1;
+   int i, cnt = queue->count;
+
+   for (i = 0; i < cnt; i++) {
+      struct ArgusRecordStruct *ns;
+
+      if ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
+         struct ArgusTimeObject *time = (void *)ns->dsrs[ARGUS_TIME_INDEX];
+         if (time != NULL) {
+            if (deltaStartTime == -1) {
+               double stime = ArgusFetchStartTime(ns);
+               deltaStartTime = parser->startime_t.tv_sec - (int)stime;
+	    }
+	    if (time->hdr.subtype & ARGUS_TIME_SRC_START) {
+               time->src.start.tv_sec += deltaStartTime;
+	    }
+	    if (time->hdr.subtype & ARGUS_TIME_DST_START) {
+               time->dst.start.tv_sec += deltaStartTime;
+	    }
+	    if (time->hdr.subtype & ARGUS_TIME_SRC_END)   {
+               time->src.end.tv_sec += deltaStartTime;
+	    }
+	    if (time->hdr.subtype & ARGUS_TIME_DST_END)   {
+               time->dst.end.tv_sec += deltaStartTime;
+	    }
+	 }
+         ArgusAddToQueue(queue, &ns->qhdr, ARGUS_LOCK);
+      }
+   }
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusAdjustRecordTime(%p, %p)\n", parser, queue);
+#endif
 }
 
 void
@@ -1252,6 +1308,9 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
                   struct ArgusQueueStruct *que = parser->ArgusAggregator->queue;
                   int i, cnt = que->count;
 
+		  ArgusSortQueue(ArgusSorter, que, ARGUS_LOCK);
+		  ArgusAdjustRecordTime(parser, que);
+
                   for (i = 0; i < cnt; i++) {
                      struct ArgusRecordStruct *ns;
 
@@ -1291,12 +1350,12 @@ ArgusProcessStatusRecords(void *param)
    struct ArgusGenerator *gen = config->gen;
    struct ArgusParserStruct *parser = gen->parser;
    struct RaBinProcessStruct *rbps = gen->bins;
+   struct RaBinStruct *bin = NULL;
    int ind = 0;
 
    while (!(parser->RaParseDone)) {
-      struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+      struct timespec tsbuf = {0, 100000000}, *ts = &tsbuf;
       struct ArgusQueueStruct *queue;
-      struct RaBinStruct *bin = NULL;
 
    /*
     * OK, the concept here is to figure out if we have a new bin, 
@@ -1339,7 +1398,7 @@ ArgusProcessStatusRecords(void *param)
             int i, cnt = queue->count;
 
             for (i = 0; i < cnt; i++) {
-               struct ArgusRecordStruct *ns;
+               struct ArgusRecordStruct *ns, *tns = NULL;
 
 //  This loop loads up the next ns for this baseline descriptor
 //  Its up to us to figure out when to send it ...
@@ -1349,13 +1408,17 @@ ArgusProcessStatusRecords(void *param)
 //  of any record is in the range, send it on its way ...
 
                if ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
-                  if (ns->bins->array[0] == NULL) {
+                  if (ns->bins->array[0] == NULL) 
 		     ns->bins->array[0] = (void *)ArgusAlignRecord(parser, ns, &ns->bins->nadp);
-                  }
-                  if (ns->bins->array[0] != NULL) {
-	             double t1 = ArgusFetchStartTime((struct ArgusRecordStruct *) ns->bins->array[0]);
-	             if ((t1 >= RaCurrentBinStartTime) && (t1 < RaCurrentBinLastTime)) {
-	                
+
+                  if ((tns = (struct ArgusRecordStruct *) ns->bins->array[0]) != NULL) {
+	             double t1 = ArgusFetchStartTime(tns);
+	             double st = rbps->array[0]->stime.tv_sec;
+	             double et = rbps->array[0]->etime.tv_sec;
+
+	             if ((t1 >= st) && (t1 < et)) {
+                        ArgusPushBackList(parser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *) tns, ARGUS_LOCK);
+                        ns->bins->array[0] = NULL;
 		     }
 
 		  }
@@ -1367,7 +1430,18 @@ ArgusProcessStatusRecords(void *param)
          pthread_mutex_unlock(&queue->lock);
 #endif
       }
+
       nanosleep (ts, NULL);
+
+      gettimeofday(&parser->ArgusRealTime, 0);
+      parser->ArgusGlobalTime = parser->ArgusRealTime;
+
+      if (bin && (bin->etime.tv_sec <= parser->ArgusRealTime.tv_sec)) {
+	 RaDeleteBin(parser, rbps, 0);
+	 rbps->start = (bin->etime.tv_sec * 1000000LL);
+	 rbps->array[0] = NULL;
+	 bin = NULL;
+      }
    }
 
 #ifdef ARGUSDEBUG
