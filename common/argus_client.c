@@ -5501,7 +5501,7 @@ RaNewBinProcess (struct ArgusParserStruct *parser, int size)
    retn->arraylen = size;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaNewBinProcess(%p, %d) returns %p\n", parser, size, retn);
+   ArgusDebug (6, "RaNewBinProcess(%p, %d) returns %p\n", parser, size, retn);
 #endif
    return (retn);
 }
@@ -5568,7 +5568,7 @@ RaNewBin (struct ArgusParserStruct *parser, struct RaBinProcessStruct *rbps, str
    retn->size  = rbps->size;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaNewBin(%p, %p, %p, %lld, %d) returns %p\n", parser, rbps, ns, startpt, sindex, retn);
+   ArgusDebug (6, "RaNewBin(%p, %p, %p, %lld, %d) returns %p\n", parser, rbps, ns, startpt, sindex, retn);
 #endif
    return (retn);
 }

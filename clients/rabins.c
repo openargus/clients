@@ -728,9 +728,9 @@ ArgusClientTimeout ()
                      argus = ArgusCopyRecordStruct((struct ArgusRecordStruct *) agg->queue->array[0]);
 
                      if (nflag == 0)
-                        cnt = agg->queue->arraylen;
+                        cnt = agg->queue->count;
                      else
-                        cnt = nflag > agg->queue->arraylen ? agg->queue->arraylen : nflag;
+                        cnt = nflag > agg->queue->count ? agg->queue->count : nflag;
 
                      for (i = 1; i < cnt; i++)
                         ArgusMergeRecords (agg, argus, (struct ArgusRecordStruct *)agg->queue->array[i]);

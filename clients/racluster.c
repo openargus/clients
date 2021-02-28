@@ -318,9 +318,9 @@ RaParseComplete (int sig)
                argus = ArgusCopyRecordStruct((struct ArgusRecordStruct *) agg->queue->array[0]);
 
                if (nflag == 0)
-                  ArgusParser->eNflag = agg->queue->arraylen;
+                  ArgusParser->eNflag = agg->queue->count;
                else
-                  ArgusParser->eNflag = nflag > agg->queue->arraylen ? agg->queue->arraylen : nflag;
+                  ArgusParser->eNflag = nflag > agg->queue->count ? agg->queue->count : nflag;
 
                for (i = 1; i < ArgusParser->eNflag; i++)
                   ArgusMergeRecords (agg, argus, (struct ArgusRecordStruct *)agg->queue->array[i]);
