@@ -1417,7 +1417,7 @@ ArgusProcessStatusRecords(void *param)
 	             double et = rbps->array[0]->etime.tv_sec;
 
 	             if ((t1 >= st) && (t1 < et)) {
-                        ArgusPushBackList(parser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *) tns, ARGUS_LOCK);
+                        ArgusAddToQueue(gen->client->queue, (struct ArgusListRecord *) tns, ARGUS_LOCK);
                         ns->bins->array[0] = NULL;
 		     }
 
