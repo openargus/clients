@@ -31,6 +31,8 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADER([include/argus_config.h])
 AC_CANONICAL_TARGET
 
+AC_LBL_C_INIT(V_CCOPT, V_INCLS)
+
 AX_PERL_EXT
 if test x"$PERL" = x; then
     AC_ERROR(["cannot find Perl"])
@@ -38,7 +40,6 @@ fi
 V_PERL=$PERL
 
 # Checks for programs.
-AC_LBL_C_INIT(V_CCOPT, V_INCLS)
 AC_PROG_LN_S
 AC_PROG_LEX
 AC_PROG_INSTALL
@@ -101,7 +102,13 @@ AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([arpa/nameser_compat.h])
 AC_CHECK_HEADERS([stdbool.h])
 
-AC_CHECK_HEADERS([Python.h])
+AM_PATH_PYTHON([3])
+saved_CPPFLAGS=$CPPFLAGS
+adl_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+PYTHON_INCLS="-I"$adl_cv_python_inc
+CPPFLAGS="${saved_CPPFLAGS} ${PYTHON_INCLS}"
+AC_CHECK_HEADERS(Python.h)
+CPPFLAGS="${saved_CPPFLAGS}"
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -473,6 +480,7 @@ AC_SUBST(INCLS)
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
 AC_SUBST(V_INCLS_EXAMPLES)
+AC_SUBST(V_PYTHONINC)
 AC_SUBST(V_RANLIB)
 AC_SUBST(V_YACC)
 AC_SUBST(V_LEX)
