@@ -6614,6 +6614,19 @@ fi
 done
 
 
+for ac_header in Python.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "Python.h" "ac_cv_header_Python_h" "$ac_includes_default"
+if test "x$ac_cv_header_Python_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PYTHON_H 1
+_ACEOF
+
+fi
+
+done
+
+
 # Checks for typedefs, structures, and compiler characteristics.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an ANSI C-conforming const" >&5
 $as_echo_n "checking for an ANSI C-conforming const... " >&6; }
@@ -11037,7 +11050,7 @@ if test "$with_examples" != no; then :
 
 fi
 
-   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
+   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/rapython/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
 
 
 fi
@@ -11775,6 +11788,7 @@ do
     "./examples/rapath/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapath/Makefile" ;;
     "./examples/rapolicy/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapolicy/Makefile" ;;
     "./examples/raports/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raports/Makefile" ;;
+    "./examples/rapython/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapython/Makefile" ;;
     "./examples/raqsort/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raqsort/Makefile" ;;
     "./examples/rarpwatch/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rarpwatch/Makefile" ;;
     "./examples/rascanner/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rascanner/Makefile" ;;

@@ -19156,10 +19156,12 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
          break;
 
          default: {
-            char *tmpbuf, *ptr = tmpbuf, *str = parser->RaLabel, lastchr = ' ';
+            char *tmpbuf, *ptr = NULL, *str = parser->RaLabel, lastchr = ' ';
 
             if ((tmpbuf = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
                ArgusLog(LOG_ERR, "ArgusGenerateLabel: ArgusCalloc: error %s", strerror(errno));
+
+            ptr = tmpbuf;
 
             lastchr = parser->RaFieldDelimiter;
             while (*str) {

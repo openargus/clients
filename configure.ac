@@ -101,6 +101,8 @@ AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([arpa/nameser_compat.h])
 AC_CHECK_HEADERS([stdbool.h])
 
+AC_CHECK_HEADERS([Python.h])
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
@@ -544,6 +546,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile
+      ./examples/rapython/Makefile
       ./examples/raqsort/Makefile
       ./examples/rarpwatch/Makefile
       ./examples/rascanner/Makefile
