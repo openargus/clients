@@ -641,7 +641,7 @@ V_PCRE
 V_FTDEP
 V_THREADS
 V_PERL
-V_PYTHONINC
+V_PYTHON_INCLS
 V_INCLS_EXAMPLES
 V_INCLS
 V_CCOPT
@@ -6901,9 +6901,9 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
 
 
 saved_CPPFLAGS=$CPPFLAGS
-adl_cv_python_inc="/usr/include/python"$PYTHON_VERSION
-PYTHON_INCLS="-I"$adl_cv_python_inc
-CPPFLAGS="${saved_CPPFLAGS} ${PYTHON_INCLS}"
+am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+V_PYTHON_INCLS="-I"$am_cv_python_inc
+CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
 for ac_header in Python.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "Python.h" "ac_cv_header_Python_h" "$ac_includes_default"

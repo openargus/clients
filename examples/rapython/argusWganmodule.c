@@ -32,14 +32,15 @@
 
 #ifdef HAVE_PYTHON_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
 #endif  // HAVE_PYTHON_H
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
+
+
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -66,6 +67,57 @@
 #include <argus_cluster.h>
 
 static int argus_version = ARGUS_VERSION;
+static PyObject *ArgusPyError;
+static PyObject *argusWgan_critic(PyObject *, PyObject *);
+PyMODINIT_FUNC PyInit_argusWgan(void);
+
+static PyMethodDef ArgusMethods[] = {
+    {"critic",  argusWgan_critic, METH_VARARGS, "Score an argus flow."},
+    {NULL, NULL, 0, NULL}        /* Sentinel */
+};
+
+static struct PyModuleDef argusmodule = {
+    PyModuleDef_HEAD_INIT,
+    "argus",   /* name of module */
+    NULL,      /* module documentation, may be NULL */
+    -1,        /* size of per-interpreter state of the module,
+                  or -1 if the module keeps state in global variables. */
+    ArgusMethods
+};
+
+PyMODINIT_FUNC
+PyInit_argusWgan(void)
+{
+   PyObject *m;
+
+   m = PyModule_Create(&argusmodule);
+   if (m == NULL)
+      return NULL;
+
+   ArgusPyError = PyErr_NewException("spam.error", NULL, NULL);
+   Py_XINCREF(ArgusPyError);
+   if (PyModule_AddObject(m, "error", ArgusPyError) < 0) {
+        Py_XDECREF(ArgusPyError);
+        Py_CLEAR(ArgusPyError);
+        Py_DECREF(m);
+        return NULL;
+   }
+
+   return m;
+}
+
+
+static PyObject *
+argusWgan_critic(PyObject *self, PyObject *args)
+{
+    const char *command;
+    int sts;
+
+    if (!PyArg_ParseTuple(args, "s", &command))
+        return NULL;
+    sts = system(command);
+    return PyLong_FromLong(sts);
+}
 
 
 void
