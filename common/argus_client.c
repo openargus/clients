@@ -3243,6 +3243,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   if (!(parser->ArgusDSRFields[x])) {
                      retn->dsrs[x] = NULL;
                      retn->dsrindex &= ~(0x01 << x);
+                     retn->status |= ARGUS_RECORD_MODIFIED;
                   } else {
                      switch (x) {
                         case ARGUS_JITTER_INDEX: {
