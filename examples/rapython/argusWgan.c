@@ -32,15 +32,12 @@
 
 #ifdef HAVE_PYTHON_H
 
-#endif  // HAVE_PYTHON_H
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
-
-
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -502,4 +499,6 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 }
 
 void ArgusWindowClose(void) { } 
+
+#endif  // HAVE_PYTHON_H
 

@@ -104,7 +104,16 @@ AC_CHECK_HEADERS([stdbool.h])
 
 AM_PATH_PYTHON([3])
 saved_CPPFLAGS=$CPPFLAGS
-am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+
+case "$target_os" in
+darwin*)
+	am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
+	;;
+*)
+	am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+        ;;
+esac
+
 V_PYTHON_INCLS="-I"$am_cv_python_inc
 CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
 AC_CHECK_HEADERS(Python.h)
