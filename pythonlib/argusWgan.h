@@ -30,6 +30,8 @@
 void ArgusDebug (int d, char *fmt, ...);
 int argustime (char *time_string, int *start, int *end);
 
+#if defined(argusWgan)
+
 #ifndef Raconvert_h
 #define Raconvert_h
 
@@ -526,6 +528,7 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "dMaxSz",
    "dMinSz",
 };
+#endif
 #endif
 #endif
 

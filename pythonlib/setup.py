@@ -20,6 +20,6 @@ setup (name = 'argusWgan',
        author  = 'Carter Bullard',
        author_email='carter@qosient.com',
        description = 'Time functions from argus client library',
-       ext_modules = [argusWgan],
+       ext_modules = [argusWgan, Extension('_argusWgan', ['argusWgan.c'])],
        py_modules = ["argusWgan"],
     )
