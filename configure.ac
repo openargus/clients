@@ -530,6 +530,7 @@ AC_CONFIG_FILES([
    ./pkg/Makefile
    ./lib/argus-clients.spec
    ./perllib/Makefile
+   ./pythonlib/Makefile
    man/man5/ramanage.conf.5
 ])
 
@@ -571,7 +572,6 @@ AS_IF([test "$with_examples" != no],
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile
-      ./examples/rapython/Makefile
       ./examples/raqsort/Makefile
       ./examples/rarpwatch/Makefile
       ./examples/rascanner/Makefile

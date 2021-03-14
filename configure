@@ -11346,7 +11346,7 @@ if test "$with_examples" != no; then :
 
 fi
 
-   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/rapython/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
+   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
 
 
 fi
@@ -12055,6 +12055,7 @@ do
     "./pkg/Makefile") CONFIG_FILES="$CONFIG_FILES ./pkg/Makefile" ;;
     "./lib/argus-clients.spec") CONFIG_FILES="$CONFIG_FILES ./lib/argus-clients.spec" ;;
     "./perllib/Makefile") CONFIG_FILES="$CONFIG_FILES ./perllib/Makefile" ;;
+    "./pythonlib/Makefile") CONFIG_FILES="$CONFIG_FILES ./pythonlib/Makefile" ;;
     "man/man5/ramanage.conf.5") CONFIG_FILES="$CONFIG_FILES man/man5/ramanage.conf.5" ;;
     "./examples/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/Makefile" ;;
     "./examples/race/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/race/Makefile" ;;
@@ -12084,7 +12085,6 @@ do
     "./examples/rapath/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapath/Makefile" ;;
     "./examples/rapolicy/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapolicy/Makefile" ;;
     "./examples/raports/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raports/Makefile" ;;
-    "./examples/rapython/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapython/Makefile" ;;
     "./examples/raqsort/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raqsort/Makefile" ;;
     "./examples/rarpwatch/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rarpwatch/Makefile" ;;
     "./examples/rascanner/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rascanner/Makefile" ;;

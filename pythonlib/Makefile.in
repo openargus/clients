@@ -19,7 +19,7 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
 pythonextlib = @PYTHON_EXT_LIB@
-PYTHON = @V_PYTHON@
+PYTHON = python3
 PYTHON_CFLAGS = $(shell $(PYTHON)-config --cflags)
 
 # Pathname of directory to install the system binaries
@@ -50,6 +50,7 @@ INSTALL = /usr/bin/install -c
 .PHONY: TOP all depend
         
 all: TOP
+SRC = argusWgan.c
         
 TOP: _argusWgan.cpython-38-darwin.so
 
