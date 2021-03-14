@@ -20,12 +20,7 @@ exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
 pythonextlib = @PYTHON_EXT_LIB@
 PYTHON = @V_PYTHON@
-PYTHON_CFLAGS = $(shell $(PYTHON) -MConfig -e \
-	'print join(" ", @Config{qw(ccflags optimize cccdlflags)}, \
-	"-I$$Config{archlib}/CORE")' )
-pythonvendorarch = $(shell $(PYTHON) -MConfig -e \ 'print $$Config{vendorarch}' )
-pythonvendorarch_qosient = $(pythonvendorarch)/qosient/XS
-pythonvendorarch_auto = $(pythonvendorarch)/auto/qosient/XS/util
+PYTHON_CFLAGS = $(shell $(PYTHON)-config --cflags)
 
 # Pathname of directory to install the system binaries
 SBINDIR = @sbindir@
@@ -49,65 +44,30 @@ COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_F
 MYSQLLIB = @MYSQL_LDFLAGS@ 
 
 # Standard CFLAGS
- CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
-INSTALL = @INSTALL@
-
-ifeq ($(shell uname),Darwin)
- SOEXT = .dylib
-else
- SOEXT = .so
-endif
-
-SRC = ../common/argus_parse_time.c argustime.c \
-      argustime_wrap.c
-
-.PHONY: install install-python uninstall uninstall-python TOP all depend
-
+CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS) '-Wno-error=deprecated-declarations'
+INSTALL = /usr/bin/install -c
+        
+.PHONY: TOP all depend
+        
 all: TOP
+        
+TOP: _argusWgan.cpython-38-darwin.so
 
-install: TOP install-python
-
-TOP: util$(SOEXT) qosient/XS/util.pm
-
-install-python: util$(SOEXT) qosient/XS/util.pm
-	@set -e ; \
-	mkdir -p $(DESTDIR)$(pythonvendorarch_qosient) ; \
-	$(INSTALL) -m 0644 qosient/XS/util.pm \
-	  $(DESTDIR)$(pythonvendorarch_qosient)/util.pm ; \
-	mkdir -p $(DESTDIR)$(pythonvendorarch_auto) ; \
-	$(INSTALL) -m 0755 util$(SOEXT) $(DESTDIR)$(pythonvendorarch_auto)/util$(SOEXT)
-
-uninstall: uninstall-python
-
-uninstall-python:
-	rm -f $(DESTDIR)$(pythonvendorarch_qosient)/util.pm ; \
-	rm -f $(DESTDIR)$(pythonvendorarch)/auto/qosient/XS/util.pm
-	rm -f $(DESTDIR)$(pythonvendorarch_auto)/util$(SOEXT)
-
-util$(SOEXT): argustime.o argustime_wrap.o argus_parse_time.o
-	$(CC) $(CFLAGS) `$(PYTHON) -MConfig -e 'print $$Config{lddlflags}'` $^ -o $@
-argus_parse_time.o: ../common/argus_parse_time.c
-	$(CC) $(CFLAGS) -I../include -I../common $(PYTHON_CFLAGS) -c $(filter %.c, $^)
-argustime.o: argustime.c
-	$(CC) $(CFLAGS) -I../include $(PYTHON_CFLAGS) -c $(filter %.c, $^)
-argustime_wrap.o: argustime_wrap.c
-	$(CC) $(CFLAGS) -Wno-unused-variable -Wno-missing-prototypes \
-	  -I../include $(PYTHON_CFLAGS) -c $(filter %.c, $^)
+_argusWgan.cpython-38-darwin.so:  swig.stamp
 
 # multiple targets (left side of the colon) seems to confuse parallel make.
 # create intermediate file swig.stamp instead.
-argustime_wrap.c: swig.stamp
+argusWgan_wrap.c: swig.stamp
 qosient/XS/util.pm: swig.stamp
-swig.stamp: argustime.i
-	mkdir -p qosient/XS
-	swig -python3 $^
-	mv util.pm qosient/XS
+swig.stamp: argusWgan.i
+	swig -python $^
+	python3 setup.py build_ext --include-dirs=../include --library-dirs=../lib
 	touch swig.stamp
 
 distclean: clean
 	rm -f Makefile
 clean:
-	rm -f *.o argustime_wrap.c qosient/XS/util.pm util$(SOEXT) swig.stamp
+	rm -rf *.o *.so argusWgan_wrap.c argusWgan_module.py swig.stamp build
 
 depend: $(SRC)
 	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_CFLAGS) $(SRC)

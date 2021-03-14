@@ -10,9 +10,9 @@ if _swig_python_version_info < (2, 7, 0):
 
 # Import the low-level C/C++ module
 if __package__ or "." in __name__:
-    from . import _argustime
+    from . import _argusWgan
 else:
-    import _argustime
+    import _argusWgan
 
 try:
     import builtins as __builtin__
@@ -62,7 +62,7 @@ class _SwigNonDynamicMeta(type):
 
 
 
-def argustime(time_string, start, end):
-    return _argustime.argustime(time_string, start, end)
+def argusWgan(time_string, start, end):
+    return _argusWgan.argusWgan(time_string, start, end)
 
 

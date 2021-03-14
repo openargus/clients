@@ -2680,16 +2680,16 @@ static swig_module_info swig_module = {swig_types, 2, 0, 0, 0, 0};
 #define SWIG_TypeQuery SWIG_Python_TypeQuery
 
 /*-----------------------------------------------
-              @(target):= _argustime.so
+              @(target):= _argusWgan.so
   ------------------------------------------------*/
 #if PY_VERSION_HEX >= 0x03000000
-#  define SWIG_init    PyInit__argustime
+#  define SWIG_init    PyInit__argusWgan
 
 #else
-#  define SWIG_init    init_argustime
+#  define SWIG_init    init_argusWgan
 
 #endif
-#define SWIG_name    "_argustime"
+#define SWIG_name    "_argusWgan"
 
 #define SWIGVERSION 0x040002 
 #define SWIG_VERSION SWIGVERSION
@@ -2700,7 +2700,7 @@ static swig_module_info swig_module = {swig_types, 2, 0, 0, 0, 0};
 
 
 #define SWIG_FILE_WITH_INIT
-#include "argustime.h"
+#include "argusWgan.h"
 
 
 SWIGINTERN swig_type_info*
@@ -2837,7 +2837,7 @@ SWIGINTERNINLINE PyObject*
 #ifdef __cplusplus
 extern "C" {
 #endif
-SWIGINTERN PyObject *_wrap_argustime(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_argusWgan(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   char *arg1 = (char *) 0 ;
   int *arg2 = (int *) 0 ;
@@ -2852,23 +2852,23 @@ SWIGINTERN PyObject *_wrap_argustime(PyObject *SWIGUNUSEDPARM(self), PyObject *a
   PyObject *swig_obj[3] ;
   int result;
   
-  if (!SWIG_Python_UnpackTuple(args, "argustime", 3, 3, swig_obj)) SWIG_fail;
+  if (!SWIG_Python_UnpackTuple(args, "argusWgan", 3, 3, swig_obj)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(swig_obj[0], &buf1, NULL, &alloc1);
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "argustime" "', argument " "1"" of type '" "char *""'");
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "argusWgan" "', argument " "1"" of type '" "char *""'");
   }
   arg1 = (char *)(buf1);
   res2 = SWIG_ConvertPtr(swig_obj[1], &argp2,SWIGTYPE_p_int, 0 |  0 );
   if (!SWIG_IsOK(res2)) {
-    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "argustime" "', argument " "2"" of type '" "int *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "argusWgan" "', argument " "2"" of type '" "int *""'"); 
   }
   arg2 = (int *)(argp2);
   res3 = SWIG_ConvertPtr(swig_obj[2], &argp3,SWIGTYPE_p_int, 0 |  0 );
   if (!SWIG_IsOK(res3)) {
-    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "argustime" "', argument " "3"" of type '" "int *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "argusWgan" "', argument " "3"" of type '" "int *""'"); 
   }
   arg3 = (int *)(argp3);
-  result = (int)argustime(arg1,arg2,arg3);
+  result = (int)argusWgan(arg1,arg2,arg3);
   resultobj = SWIG_From_int((int)(result));
   if (alloc1 == SWIG_NEWOBJ) free((char*)buf1);
   return resultobj;
@@ -2880,7 +2880,7 @@ fail:
 
 static PyMethodDef SwigMethods[] = {
 	 { "SWIG_PyInstanceMethod_New", SWIG_PyInstanceMethod_New, METH_O, NULL},
-	 { "argustime", _wrap_argustime, METH_VARARGS, NULL},
+	 { "argusWgan", _wrap_argusWgan, METH_VARARGS, NULL},
 	 { NULL, NULL, 0, NULL }
 };
 

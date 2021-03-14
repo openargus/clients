@@ -29,10 +29,10 @@
 #include "argus_threads.h"
 #include <ctype.h>
 
-#include "argustime.h"
+#include "argusWgan.h"
 
 int
-argustime (char *time_string, int *start, int *end)
+argusWgan (char *time_string, int *start, int *end)
 {
    int retn = 1;
    char *string;
