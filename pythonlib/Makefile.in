@@ -44,7 +44,7 @@ COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_F
 MYSQLLIB = @MYSQL_LDFLAGS@ 
 
 # Standard CFLAGS
-CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS) '-Wno-error=deprecated-declarations'
+CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 INSTALL = /usr/bin/install -c
         
 .PHONY: TOP all depend
@@ -67,7 +67,7 @@ swig.stamp: argusWgan.i
 distclean: clean
 	rm -f Makefile
 clean:
-	rm -rf *.o *.so argusWgan_wrap.c argusWgan_module.py swig.stamp build
+	rm -rf *.o *.so __pycache__ argusWgan.py argusWgan_wrap.c swig.stamp build
 
 depend: $(SRC)
 	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_CFLAGS) $(SRC)

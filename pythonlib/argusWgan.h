@@ -25,6 +25,6 @@
 # endif
 
 void ArgusDebug (int d, char *fmt, ...);
-int argusWgan (char *time_string, int *start, int *end);
+int argustime (char *time_string, int *start, int *end);
 
 #endif

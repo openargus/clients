@@ -8,6 +8,7 @@ from distutils.core import setup, Extension
 
 
 argusWgan = Extension('_argusWgan',
+       extra_compile_args = ['-Wno-deprecated-declarations'], 
        sources=['argusWgan_wrap.c', 'argusWgan.c'],
        include_dirs=['../include'],
        libraries=['m','GeoIP','z','curl'],

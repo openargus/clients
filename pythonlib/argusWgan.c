@@ -23,16 +23,39 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
+
 #include <argus_compat.h>
 #include <argus_util.h>
 #include <argus_main.h>
 #include "argus_threads.h"
-#include <ctype.h>
 
 #include "argusWgan.h"
 
+extern void ArgusLog (int, char *, ...);
+
 int
-argusWgan (char *time_string, int *start, int *end)
+setSchema (char *str)
+{
+   struct ArgusParserStruct *parser = NULL;
+   int retn = 0;
+
+   if ((parser = ArgusParser) == NULL) {
+      if ((ArgusParser = ArgusNewParser("argusWgan")) == NULL)
+         ArgusLog (LOG_ERR, "ArgusNewParser failed %s", strerror(errno));
+      parser = ArgusParser;
+   }
+   if (str != NULL) {
+      
+   }
+
+   return (retn);
+}
+
+
+int
+argustime (char *time_string, int *start, int *end)
 {
    int retn = 1;
    char *string;
