@@ -287,7 +287,7 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
             thistime = mktime (startm);
 
             if ((hptr = strchr (str, '.')) != NULL) {
-               if ((hptr - str) != (strlen(str) - 1)) {
+               if ((unsigned long) (hptr - str) != (strlen(str) - 1)) {
                   *hptr++ = '\0';
                   if (!(isdigit((int)*hptr)) && !(*hptr == '*'))
                      return -1;

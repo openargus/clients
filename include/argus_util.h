@@ -403,7 +403,7 @@ static inline int
 snprintf_append(char *str, size_t *len, size_t *remain, const char *fmt, ...)
 {
    va_list ap;
-   int c;
+   unsigned int c;
 
    va_start(ap, fmt);
    c = vsnprintf(str+(*len), *remain, fmt, ap);

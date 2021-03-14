@@ -476,7 +476,15 @@ AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
 AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
 if test "$HAVE_SWIG" = "1" ; then
-   DIRS="$DIRS ./perllib"
+  case "$target_os" in
+  darwin*)
+   	DIRS="$DIRS ./pythonlib"
+	;;
+  *)
+   	DIRS="$DIRS ./perllib"
+   	DIRS="$DIRS ./pythonlib"
+        ;;
+  esac
 fi
 AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_LIBCARES
