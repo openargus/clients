@@ -24,11 +24,14 @@
 #  include "argus_config.h"
 # endif
 
+#include <tensorflow/c/c_api.h>
+
 #include "argus_int.h"
 #include "argus_util.h"
 
 void ArgusDebug (int d, char *fmt, ...);
 int argustime (char *time_string, int *start, int *end);
+TF_Tensor *argus_critic(TF_Tensor *y_pred, TF_Tensor *y_true);
 
 #if defined(argusWgan)
 

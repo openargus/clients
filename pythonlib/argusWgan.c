@@ -412,20 +412,25 @@ setSchema (char *str)
    return (retn);
 }
 
-int
-argus_critic (char *str)
+TF_Tensor *
+argus_critic (TF_Tensor *y_pred, TF_Tensor *y_true)
 {
    struct ArgusParserStruct *parser = NULL;
-   int retn = -1;
+   TF_Tensor *y_vals = NULL;
 
    if ((parser = ArgusParser) != NULL) {
-      retn = 0;
-      if (str != NULL) {
-         RaConvertParseRecordString (parser, str);
-         retn = 1;
+
+      if ((y_pred != NULL) && (y_true != NULL)) {
+         int ndims = 1;
+         int64_t dims[] = {1};
+         int ndata = sizeof(int32_t);
+         int32_t data[] = {4};
+         y_vals = TF_NewTensor(TF_INT32, dims, ndims, data, ndata, NULL, NULL);
+      
+//       RaConvertParseRecordString (parser, str);
       }
    }
-   return (retn);
+   return (y_vals);
 }
 
 

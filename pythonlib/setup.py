@@ -10,9 +10,9 @@ from distutils.core import setup, Extension
 argusWgan = Extension('_argusWgan',
        extra_compile_args = ['-Wno-deprecated-declarations'], 
        sources=['argusWgan_wrap.c', 'argusWgan.c'],
-       include_dirs=['../include'],
+       include_dirs=['../include', '/usr/local/include'],
        libraries=['m','GeoIP','z','curl'],
-       extra_link_args=['../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a'],
+       extra_link_args=['../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a','/usr/local/lib/libtensorflow.dylib'],
     )
 
 setup (name = 'argusWgan',
