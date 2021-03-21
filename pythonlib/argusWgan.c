@@ -422,16 +422,37 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
 /*
    struct ArgusParserStruct *parser = NULL;
    PyObject *retn = NULL;
+   int yt_dims, yp_dims, yt_size, yp_size;
+   int py_equal;
 
-   PyArrayObject *arrays[2];  /* holds input and output array */
-   NpyIter *iter;
-   npy_uint32 op_flags[2];
+   PyArrayObject *arrays[3];  /* holds input and output array */
+   npy_uint32 op_flags[3];
    npy_uint32 iterator_flags;
-   PyArray_Descr *op_dtypes[2];
+   PyArray_Descr *op_dtypes[3];
 
+   NpyIter_IterNextFunc *iternext;
+   NpyIter *iter;
 
-   arrays[0] = y_true;
-   arrays[1] = NULL;
+   arrays[0] = (PyArrayObject *) y_true;
+   arrays[1] = (PyArrayObject *) y_pred;
+
+   if (PyArray_API == NULL) {
+      import_array(); 
+   }
+
+   if ((yt_dims = PyArray_NDIM(arrays[0])) == 0)
+      return NULL;
+   if ((yp_dims = PyArray_NDIM(arrays[1])) == 0)
+      return NULL;
+   if ((yt_size = PyArray_Size(y_true)) == 0)
+      return NULL;
+   if ((yp_size = PyArray_Size(y_pred)) == 0)
+      return NULL;
+
+   if ((py_equal = PyArray_EquivArrTypes(arrays[0], arrays[1])) == 0)
+      return NULL;
+
+   arrays[2] = NULL;
 
    iterator_flags = (NPY_ITER_ZEROSIZE_OK |
                      NPY_ITER_BUFFERED |
@@ -441,16 +462,80 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
    op_flags[0] = (NPY_ITER_READONLY |
                   NPY_ITER_NBO |
                   NPY_ITER_ALIGNED);
+   op_flags[1] = op_flags[0];
 
     /* Ask the iterator to allocate an array to write the output to */
-    op_flags[1] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
+    op_flags[2] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
 
     /*
      * Ensure the iteration has the correct type, could be checked
      * specifically here.
      */
-    op_dtypes[0] = PyArray_DescrFromType(NPY_DOUBLE);
+    op_dtypes[0] = PyArray_DescrFromType(NPY_FLOAT64);
     op_dtypes[1] = op_dtypes[0];
+    op_dtypes[2] = op_dtypes[0];
+
+    iter = NpyIter_MultiNew(3, arrays, iterator_flags,
+                            /* Use input order for output and iteration */
+                            NPY_KEEPORDER,
+                            /* Allow only byte-swapping of input */
+                            NPY_EQUIV_CASTING, op_flags, op_dtypes);
+
+    Py_DECREF(op_dtypes[0]);
+
+    if (iter == NULL)
+        return NULL;
+
+    iternext = NpyIter_GetIterNext(iter, NULL);
+    if (iternext == NULL) {
+        NpyIter_Deallocate(iter);
+        return NULL;
+    }
+
+/* Fetch the output array which was allocated by the iterator: */
+    retn = (PyObject *)NpyIter_GetOperandArray(iter)[2];
+    Py_INCREF(retn);
+
+    if (NpyIter_GetIterSize(iter) == 0) {
+        /*
+         * If there are no elements, the loop cannot be iterated.
+         * This check is necessary with NPY_ITER_ZEROSIZE_OK.
+         */
+        NpyIter_Deallocate(iter);
+        return retn;
+    }
+
+    /* The location of the data pointer which the iterator may update */
+    char **dataptr = NpyIter_GetDataPtrArray(iter);
+    /* The location of the stride which the iterator may update */
+    npy_intp *strideptr = NpyIter_GetInnerStrideArray(iter);
+    /* The location of the inner loop size which the iterator may update */
+    npy_intp *innersizeptr = NpyIter_GetInnerLoopSizePtr(iter);
+
+    /* iterate over the arrays */
+    do {
+        npy_intp stride = strideptr[0];
+        npy_intp count = *innersizeptr;
+        /* out is always contiguous, so use double */
+        double *out = (double *)dataptr[2];
+        char *in = dataptr[0];
+
+        /* The output is allocated and guaranteed contiguous (out++ works): */
+        assert(strideptr[2] == sizeof(double));
+
+        /*
+         * For optimization it can make sense to add a check for
+         * stride == sizeof(double) to allow the compiler to optimize for that.
+         */
+        while (count--) {
+            *out = cos(*(double *)in);
+            out++;
+            in += stride;
+        }
+    } while (iternext(iter));
+
+    /* Clean up and return the result */
+    NpyIter_Deallocate(iter);
 
    if ((parser = ArgusParser) != NULL) {
 //    RaConvertParseRecordString (parser, str);
