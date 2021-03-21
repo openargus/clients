@@ -31,7 +31,7 @@
 
 void ArgusDebug (int d, char *fmt, ...);
 int argustime (char *time_string, int *start, int *end);
-TF_Tensor *argus_critic(TF_Tensor *y_pred, TF_Tensor *y_true);
+PyObject *argus_critic(PyObject *y_true, PyObject *y_pred);
 
 #if defined(argusWgan)
 

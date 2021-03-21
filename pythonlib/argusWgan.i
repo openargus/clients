@@ -1,9 +1,7 @@
 %module argusWgan
 
 %include "typemaps.i"
-
-%typemap(in) (TF_Tensor *y_pred, TF_Tensor *y_true) {
-}
+%include "numpy.i"
 
 %apply int *OUTPUT {int *start, int *end};
 
@@ -12,11 +10,11 @@
 #include "argusWgan.h"
 
 int setSchema (char *titles);
-TF_Tensor *argus_critic (TF_Tensor *y_pred, TF_Tensor *y_true);
+PyObject *argus_critic (PyObject *y_true, PyObject *y_pred);
 int argustime (char *time_string, int *start, int *end);
 %}
 
 %include "argusWgan.h"
 int setSchema (char *titles);
-TF_Tensor *argus_critic (TF_Tensor *y_pred, TF_Tensor *y_true);
+PyObject *argus_critic (PyObject *y_true, PyObject *y_pred);
 int argustime (char *time_string, int *start, int *end);

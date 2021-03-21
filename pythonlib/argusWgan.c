@@ -416,24 +416,44 @@ setSchema (char *str)
    return (retn);
 }
 
-TF_Tensor *
-argus_critic (TF_Tensor *y_pred, TF_Tensor *y_true)
+PyObject *
+argus_critic (PyObject *y_true, PyObject *y_pred)
 {
 /*
    struct ArgusParserStruct *parser = NULL;
-   TF_Tensor *y_vals = NULL;
+   PyObject *retn = NULL;
+
+   PyArrayObject *arrays[2];  /* holds input and output array */
+   NpyIter *iter;
+   npy_uint32 op_flags[2];
+   npy_uint32 iterator_flags;
+   PyArray_Descr *op_dtypes[2];
+
+
+   arrays[0] = y_true;
+   arrays[1] = NULL;
+
+   iterator_flags = (NPY_ITER_ZEROSIZE_OK |
+                     NPY_ITER_BUFFERED |
+                     NPY_ITER_EXTERNAL_LOOP |
+                     NPY_ITER_GROWINNER);
+
+   op_flags[0] = (NPY_ITER_READONLY |
+                  NPY_ITER_NBO |
+                  NPY_ITER_ALIGNED);
+
+    /* Ask the iterator to allocate an array to write the output to */
+    op_flags[1] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
+
+    /*
+     * Ensure the iteration has the correct type, could be checked
+     * specifically here.
+     */
+    op_dtypes[0] = PyArray_DescrFromType(NPY_DOUBLE);
+    op_dtypes[1] = op_dtypes[0];
 
    if ((parser = ArgusParser) != NULL) {
-
-      if ((y_pred != NULL) && (y_true != NULL)) {
-         int ndims = 1;
-         int64_t dims[] = {1};
-         int ndata = sizeof(int32_t);
-         int32_t data[] = {4};
-         y_vals = TF_NewTensor(TF_INT32, dims, ndims, data, ndata, NULL, NULL);
-      
-//       RaConvertParseRecordString (parser, str);
-      }
+//    RaConvertParseRecordString (parser, str);
    }
    return (y_vals);
 */
