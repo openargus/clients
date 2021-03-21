@@ -16,7 +16,7 @@ argusWgan = Extension('_argusWgan',
     )
 
 setup (name = 'argusWgan',
-       version = '0.1',
+       version = '0.2',
        author  = 'Carter Bullard',
        author_email='carter@qosient.com',
        description = 'Time functions from argus client library',
