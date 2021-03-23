@@ -22,6 +22,9 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
+#include <tensorflow/c/c_api.h>
+
+#include <dlfcn.h>
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
@@ -65,6 +68,45 @@ unsigned int ArgusIdType = 0;
 
 #define RASCII_MAXMODES		1
 #define RASCIIDEBUG		0
+
+const char *sopath = "/usr/local/lib/libtensorflow.so";
+
+static struct PyModuleDef argusWganmodule = {
+    PyModuleDef_HEAD_INIT,
+    "argusWgan",   /* name of module */
+};
+
+typedef char *(*func_ptr_t)(void);
+
+PyMODINIT_FUNC
+PyInit_argusWgan(void) {
+   PyObject *m = PyModule_Create(&argusWganmodule);
+/*
+   void *lib = dlopen(sopath, RTLD_LAZY);
+   const char *func_name = "TF_Version";
+   func_ptr_t func = dlsym(lib, func_name);
+
+   if (m == NULL) {
+      return NULL;
+   }
+*/
+
+   if (PyArray_API == NULL) {
+      import_array(); 
+   }
+
+/*
+   // Open the shared library containing the functions.
+   // Get a reference to the function we call.
+   // Call the function and print out the result.
+
+   printf("PyInit_argusWgan() TF_Version %s\n", func());
+   dlclose(lib);
+*/
+
+   return m;
+}
+
 
 char *RaConvertDaemonModes[RASCII_MAXMODES] = {
    "debug",
@@ -437,7 +479,14 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
    arrays[1] = (PyArrayObject *) y_pred;
 
    if (PyArray_API == NULL) {
-      import_array(); 
+      import_array();
+   }
+
+   if (!(PyArray_Check(arrays[0]) && PyArray_Check(arrays[1]))) {
+      PyObject_Print(y_true, stdout, 0);
+      printf("\n");
+      fflush(stdout);
+      Py_RETURN_NONE;
    }
 
    if ((yt_dims = PyArray_NDIM(arrays[0])) == 0)

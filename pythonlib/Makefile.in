@@ -60,8 +60,8 @@ _argusWgan.cpython-38-darwin.so:  swig.stamp
 # create intermediate file swig.stamp instead.
 argusWgan_wrap.c: swig.stamp
 qosient/XS/util.pm: swig.stamp
-swig.stamp: argusWgan.i
-	swig -python $^
+swig.stamp: argusWgan.i argusWgan.c setup.py
+	swig -python argusWgan.i
 	python3 setup.py build_ext --include-dirs=../include --library-dirs=../lib
 	touch swig.stamp
 
