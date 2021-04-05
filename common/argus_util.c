@@ -2739,17 +2739,16 @@ ArgusParseAliasFile(char *file)
    if (file != NULL) {
       if (stat(file, &statbuf) >= 0) {
          if ((fd = fopen(file, "r")) != NULL) {
-            char *strbuf,  *str = NULL, *optarg = NULL;
+            char *strbuf = NULL,  *str = NULL, *optarg = NULL;
             char *srcid = NULL, *alias = NULL;
             int lines = 0;
 
             if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
                ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
 
-            str = strbuf;
             retn = 1;
 
-            while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
+            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
                lines++;
                str = strbuf;
                while (*str && isspace((int)*str))

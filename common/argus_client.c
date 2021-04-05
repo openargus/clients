@@ -11643,7 +11643,7 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
    if (masklist != NULL) {
       mptr = strdup(masklist);
       ptr = mptr;
-      while ((tok = strtok (ptr, " \t")) != NULL) {
+      while ((tok = strtok (ptr, " ,\t")) != NULL) {
          if ((mode = (struct ArgusModeStruct *) ArgusCalloc (1, sizeof(struct ArgusModeStruct))) != NULL) {
             if ((list = modelist) != NULL) {
                while (list->nxt)

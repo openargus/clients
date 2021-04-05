@@ -356,6 +356,10 @@ ArgusProcessData (void *arg)
       parser = ArgusParser;
    }
 
+   pthread_mutex_lock(&parser->sync);
+   pthread_cond_wait(&parser->cond, &parser->sync);
+   pthread_mutex_unlock(&parser->sync);
+
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusProcessData() starting");
 #endif

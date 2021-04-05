@@ -163,6 +163,8 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&parser->lock, NULL);
+   pthread_mutex_init(&parser->sync, NULL);
+   pthread_cond_init(&parser->cond, NULL);
 #endif
 
    gettimeofday(&parser->ArgusStartRealTime, 0L);

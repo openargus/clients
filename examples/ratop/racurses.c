@@ -90,13 +90,13 @@ main(int argc, char **argv)
       sigdelset(&blocked_signals, SIGALRM);
 
       pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
+ 
+      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
+         ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       if (ArgusCursesEnabled)
          if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, NULL)) != 0)
             ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
- 
-      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
-         ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       pthread_join(RaDataThread, NULL);
 
@@ -199,7 +199,16 @@ ArgusCursesProcess (void *arg)
    int done = 0, cnt = 0;
    struct timeval ntvbuf = {0, }, *ntvp = &ntvbuf;
 
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&ArgusParser->sync);
+#endif
+
    ArgusCursesProcessInit();
+
+#if defined(ARGUS_THREADS)
+   pthread_cond_signal(&ArgusParser->cond);
+   pthread_mutex_unlock(&ArgusParser->sync);
+#endif
 
    while (!done) {
       struct timeval tvbuf, *tvp = &tvbuf;
