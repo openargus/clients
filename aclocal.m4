@@ -1,6 +1,6 @@
-# generated automatically by aclocal 1.16.1 -*- Autoconf -*-
+# generated automatically by aclocal 1.13.4 -*- Autoconf -*-
 
-# Copyright (C) 1996-2018 Free Software Foundation, Inc.
+# Copyright (C) 1996-2013 Free Software Foundation, Inc.
 
 # This file is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
@@ -12,26 +12,152 @@
 # PARTICULAR PURPOSE.
 
 m4_ifndef([AC_CONFIG_MACRO_DIRS], [m4_defun([_AM_CONFIG_MACRO_DIRS], [])m4_defun([AC_CONFIG_MACRO_DIRS], [_AM_CONFIG_MACRO_DIRS($@)])])
-#***************************************************************************
-#                                  _   _ ____  _
-#  Project                     ___| | | |  _ \| |
-#                             / __| | | | |_) | |
-#                            | (__| |_| |  _ <| |___
-#                             \___|\___/|_| \_\_____|
+# ===========================================================================
+#       https://www.gnu.org/software/autoconf-archive/ax_perl_ext.html
+# ===========================================================================
 #
-# Copyright (C) 2006, David Shaw <dshaw@jabberwocky.com>
+# SYNOPSIS
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution. The terms
-# are also available at https://curl.haxx.se/docs/copyright.html.
+#   AX_PERL_EXT
 #
-# You may opt to use, copy, modify, merge, publish, distribute and/or sell
-# copies of the Software, and permit persons to whom the Software is
-# furnished to do so, under the terms of the COPYING file.
+# DESCRIPTION
 #
-# This software is distributed on an "AS IS" basis, WITHOUT WARRANTY OF ANY
-# KIND, either express or implied.
+#   Fetches the linker flags and C compiler flags for compiling and linking
+#   Perl binary extensions.  The macro substitutes PERL_EXT_PREFIX,
+#   PERL_EXT_INC, PERL_EXT_LIB, PERL_EXT_CPPFLAGS, PERL_EXT_LDFLAGS and
+#   PERL_EXT_DLEXT variables if Perl executable was found.  It also checks
+#   the same variables before trying to retrieve them from the Perl
+#   configuration.
 #
+#     PERL_EXT_PREFIX: top-level perl installation path (--prefix)
+#     PERL_EXT_INC: XS include directory
+#     PERL_EXT_LIB: Perl extensions destination directory
+#     PERL_EXT_CPPFLAGS: C preprocessor flags to compile extensions
+#     PERL_EXT_LDFLAGS: linker flags to build extensions
+#     PERL_EXT_DLEXT: extensions suffix for perl modules (e.g. ".so")
+#
+#   Examples:
+#
+#     AX_PERL_EXT
+#     if test x"$PERL" = x; then
+#        AC_ERROR(["cannot find Perl"])
+#     fi
+#
+# LICENSE
+#
+#   Copyright (c) 2011 Stanislav Sedov <stas@FreeBSD.org>
+#   Copyright (c) 2014 Thomas Klausner <tk@giga.or.at>
+#
+#   Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are
+#   met:
+#
+#   1. Redistributions of source code must retain the above copyright
+#   notice, this list of conditions and the following disclaimer.
+#
+#   2. Redistributions in binary form must reproduce the above copyright
+#   notice, this list of conditions and the following disclaimer in the
+#   documentation and/or other materials provided with the distribution.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+#   ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+#   PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE
+#   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+#   THE POSSIBILITY OF SUCH DAMAGE.
+
+#serial 3
+
+AC_DEFUN([AX_PERL_EXT],[
+
+        #
+        # Check if perl executable exists.
+        #
+        AC_PATH_PROGS(PERL, ["${PERL-perl}"], [])
+
+        if test -n "$PERL" ; then
+
+                #
+                # Check for Perl prefix.
+                #
+                AC_ARG_VAR(PERL_EXT_PREFIX, [Perl PREFIX])
+                AC_MSG_CHECKING([for Perl prefix])
+                if test -z "$PERL_EXT_PREFIX" ; then
+                        [PERL_EXT_PREFIX=`$PERL -MConfig -e 'print $Config{prefix};'`];
+                fi
+                AC_MSG_RESULT([$PERL_EXT_PREFIX])
+                AC_SUBST(PERL_EXT_PREFIX)
+
+                #
+                # Check for Perl extensions include path.
+                #
+                AC_ARG_VAR(PERL_EXT_INC, [Directory to include XS headers from])
+                AC_MSG_CHECKING([for Perl extension include path])
+                if test -z "$PERL_EXT_INC" ; then
+                        [PERL_EXT_INC=`$PERL -MConfig -e 'print $Config{archlibexp}, "/CORE";'`];
+                fi
+                AC_MSG_RESULT([$PERL_EXT_INC])
+                AC_SUBST(PERL_EXT_INC)
+
+                #
+                # Check for the extensions target directory.
+                #
+                AC_ARG_VAR(PERL_EXT_LIB, [Directory to install perl files into])
+                AC_MSG_CHECKING([for Perl extension target directory])
+                if test -z "$PERL_EXT_LIB" ; then
+                        [PERL_EXT_LIB=`$PERL -MConfig -e 'print $Config{sitearch};'`];
+                fi
+                AC_MSG_RESULT([$PERL_EXT_LIB])
+                AC_SUBST(PERL_EXT_LIB)
+
+                #
+                # Check for Perl CPP flags.
+                #
+                AC_ARG_VAR(PERL_EXT_CPPFLAGS, [CPPFLAGS to compile perl extensions])
+                AC_MSG_CHECKING([for Perl extensions C preprocessor flags])
+                if test -z "$PERL_EXT_CPPFLAGS" ; then
+                        [PERL_EXT_CPPFLAGS=`$PERL -MConfig -e 'print $Config{cppflags};'`];
+                fi
+                AC_MSG_RESULT([$PERL_EXT_CPPFLAGS])
+                AC_SUBST(PERL_EXT_CPPFLAGS)
+
+                #
+                # Check for Perl extension link flags.
+                #
+                AC_ARG_VAR(PERL_EXT_LDFLAGS, [LDFLAGS to build perl extensions])
+                AC_MSG_CHECKING([for Perl extensions linker flags])
+                if test -z "$PERL_EXT_LDFLAGS" ; then
+                        [PERL_EXT_LDFLAGS=`$PERL -MConfig -e 'print $Config{lddlflags};'`];
+                fi
+                # Fix LDFLAGS for OS X.  We don't want any -arch flags here, otherwise
+                # linking will fail.  Also, OS X Perl LDFLAGS contains "-arch ppc" which
+                # is not supported by XCode anymore.
+                case "${host}" in
+                *darwin*)
+                        PERL_EXT_LDFLAGS=`echo ${PERL_EXT_LDFLAGS} | sed -e "s,-arch [[^ ]]*,,g"`
+                        ;;
+                esac
+                AC_MSG_RESULT([$PERL_EXT_LDFLAGS])
+                AC_SUBST(PERL_EXT_LDFLAGS)
+
+                #
+                # Check for Perl dynamic library extension.
+                #
+                AC_ARG_VAR(PERL_EXT_DLEXT, [Perl dynamic library extension])
+                AC_MSG_CHECKING([for Perl dynamic library extension])
+                if test -z "$PERL_EXT_DLEXT" ; then
+                        [PERL_EXT_DLEXT=`$PERL -MConfig -e 'print ".", $Config{'dlext'};'`];
+                fi
+                AC_MSG_RESULT([$PERL_EXT_DLEXT])
+                AC_SUBST(PERL_EXT_DLEXT)
+        fi
+])
+
 # LIBCURL_CHECK_CONFIG ([DEFAULT-ACTION], [MINIMUM-VERSION],
 #                       [ACTION-IF-YES], [ACTION-IF-NO])
 # ----------------------------------------------------------
@@ -95,7 +221,7 @@ AC_DEFUN([LIBCURL_CHECK_CONFIG],
   AH_TEMPLATE([LIBCURL_PROTOCOL_SMTP],[Defined if libcurl supports SMTP])
 
   AC_ARG_WITH(libcurl,
-     AS_HELP_STRING([--with-libcurl=PREFIX],[look for the curl library in PREFIX/lib and headers in PREFIX/include]),
+     AC_HELP_STRING([--with-libcurl=PREFIX],[look for the curl library in PREFIX/lib and headers in PREFIX/include]),
      [_libcurl_with=$withval],[_libcurl_with=ifelse([$1],,[yes],[$1])])
 
   if test "$_libcurl_with" != "no" ; then
@@ -187,11 +313,11 @@ int x;
 curl_easy_setopt(NULL,CURLOPT_URL,NULL);
 x=CURL_ERROR_SIZE;
 x=CURLOPT_WRITEFUNCTION;
-x=CURLOPT_WRITEDATA;
+x=CURLOPT_FILE;
 x=CURLOPT_ERRORBUFFER;
 x=CURLOPT_STDERR;
 x=CURLOPT_VERBOSE;
-if (x) {;}
+if (x) ;
 ]])],libcurl_cv_lib_curl_usable=yes,libcurl_cv_lib_curl_usable=no)
 
            CPPFLAGS=$_libcurl_save_cppflags
@@ -284,63 +410,32 @@ if (x) {;}
   unset _libcurl_with
 ])dnl
 
-dnl pkg.m4 - Macros to locate and utilise pkg-config.   -*- Autoconf -*-
-dnl serial 11 (pkg-config-0.29.1)
-dnl
-dnl Copyright © 2004 Scott James Remnant <scott@netsplit.com>.
-dnl Copyright © 2012-2015 Dan Nicholson <dbn.lists@gmail.com>
-dnl
-dnl This program is free software; you can redistribute it and/or modify
-dnl it under the terms of the GNU General Public License as published by
-dnl the Free Software Foundation; either version 2 of the License, or
-dnl (at your option) any later version.
-dnl
-dnl This program is distributed in the hope that it will be useful, but
-dnl WITHOUT ANY WARRANTY; without even the implied warranty of
-dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-dnl General Public License for more details.
-dnl
-dnl You should have received a copy of the GNU General Public License
-dnl along with this program; if not, write to the Free Software
-dnl Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-dnl 02111-1307, USA.
-dnl
-dnl As a special exception to the GNU General Public License, if you
-dnl distribute this file as part of a program that contains a
-dnl configuration script generated by Autoconf, you may include it under
-dnl the same distribution terms that you use for the rest of that
-dnl program.
+# pkg.m4 - Macros to locate and utilise pkg-config.            -*- Autoconf -*-
+# serial 1 (pkg-config-0.24)
+# 
+# Copyright © 2004 Scott James Remnant <scott@netsplit.com>.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+#
+# As a special exception to the GNU General Public License, if you
+# distribute this file as part of a program that contains a
+# configuration script generated by Autoconf, you may include it under
+# the same distribution terms that you use for the rest of that program.
 
-dnl PKG_PREREQ(MIN-VERSION)
-dnl -----------------------
-dnl Since: 0.29
-dnl
-dnl Verify that the version of the pkg-config macros are at least
-dnl MIN-VERSION. Unlike PKG_PROG_PKG_CONFIG, which checks the user's
-dnl installed version of pkg-config, this checks the developer's version
-dnl of pkg.m4 when generating configure.
-dnl
-dnl To ensure that this macro is defined, also add:
-dnl m4_ifndef([PKG_PREREQ],
-dnl     [m4_fatal([must install pkg-config 0.29 or later before running autoconf/autogen])])
-dnl
-dnl See the "Since" comment for each macro you use to see what version
-dnl of the macros you require.
-m4_defun([PKG_PREREQ],
-[m4_define([PKG_MACROS_VERSION], [0.29.1])
-m4_if(m4_version_compare(PKG_MACROS_VERSION, [$1]), -1,
-    [m4_fatal([pkg.m4 version $1 or higher is required but ]PKG_MACROS_VERSION[ found])])
-])dnl PKG_PREREQ
-
-dnl PKG_PROG_PKG_CONFIG([MIN-VERSION])
-dnl ----------------------------------
-dnl Since: 0.16
-dnl
-dnl Search for the pkg-config tool and set the PKG_CONFIG variable to
-dnl first found in the path. Checks that the version of pkg-config found
-dnl is at least MIN-VERSION. If MIN-VERSION is not specified, 0.9.0 is
-dnl used since that's the first version where most current features of
-dnl pkg-config existed.
+# PKG_PROG_PKG_CONFIG([MIN-VERSION])
+# ----------------------------------
 AC_DEFUN([PKG_PROG_PKG_CONFIG],
 [m4_pattern_forbid([^_?PKG_[A-Z_]+$])
 m4_pattern_allow([^PKG_CONFIG(_(PATH|LIBDIR|SYSROOT_DIR|ALLOW_SYSTEM_(CFLAGS|LIBS)))?$])
@@ -362,19 +457,18 @@ if test -n "$PKG_CONFIG"; then
 		PKG_CONFIG=""
 	fi
 fi[]dnl
-])dnl PKG_PROG_PKG_CONFIG
+])# PKG_PROG_PKG_CONFIG
 
-dnl PKG_CHECK_EXISTS(MODULES, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
-dnl -------------------------------------------------------------------
-dnl Since: 0.18
-dnl
-dnl Check to see whether a particular set of modules exists. Similar to
-dnl PKG_CHECK_MODULES(), but does not set variables or print errors.
-dnl
-dnl Please remember that m4 expands AC_REQUIRE([PKG_PROG_PKG_CONFIG])
-dnl only at the first occurence in configure.ac, so if the first place
-dnl it's called might be skipped (such as if it is within an "if", you
-dnl have to call PKG_CHECK_EXISTS manually
+# PKG_CHECK_EXISTS(MODULES, [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+#
+# Check to see whether a particular set of modules exists.  Similar
+# to PKG_CHECK_MODULES(), but does not set variables or print errors.
+#
+# Please remember that m4 expands AC_REQUIRE([PKG_PROG_PKG_CONFIG])
+# only at the first occurence in configure.ac, so if the first place
+# it's called might be skipped (such as if it is within an "if", you
+# have to call PKG_CHECK_EXISTS manually
+# --------------------------------------------------------------
 AC_DEFUN([PKG_CHECK_EXISTS],
 [AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
 if test -n "$PKG_CONFIG" && \
@@ -384,10 +478,8 @@ m4_ifvaln([$3], [else
   $3])dnl
 fi])
 
-dnl _PKG_CONFIG([VARIABLE], [COMMAND], [MODULES])
-dnl ---------------------------------------------
-dnl Internal wrapper calling pkg-config via PKG_CONFIG and setting
-dnl pkg_failed based on the result.
+# _PKG_CONFIG([VARIABLE], [COMMAND], [MODULES])
+# ---------------------------------------------
 m4_define([_PKG_CONFIG],
 [if test -n "$$1"; then
     pkg_cv_[]$1="$$1"
@@ -399,11 +491,10 @@ m4_define([_PKG_CONFIG],
  else
     pkg_failed=untried
 fi[]dnl
-])dnl _PKG_CONFIG
+])# _PKG_CONFIG
 
-dnl _PKG_SHORT_ERRORS_SUPPORTED
-dnl ---------------------------
-dnl Internal check to see if pkg-config supports short errors.
+# _PKG_SHORT_ERRORS_SUPPORTED
+# -----------------------------
 AC_DEFUN([_PKG_SHORT_ERRORS_SUPPORTED],
 [AC_REQUIRE([PKG_PROG_PKG_CONFIG])
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -411,17 +502,19 @@ if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
 else
         _pkg_short_errors_supported=no
 fi[]dnl
-])dnl _PKG_SHORT_ERRORS_SUPPORTED
+])# _PKG_SHORT_ERRORS_SUPPORTED
 
 
-dnl PKG_CHECK_MODULES(VARIABLE-PREFIX, MODULES, [ACTION-IF-FOUND],
-dnl   [ACTION-IF-NOT-FOUND])
-dnl --------------------------------------------------------------
-dnl Since: 0.4.0
-dnl
-dnl Note that if there is a possibility the first call to
-dnl PKG_CHECK_MODULES might not happen, you should be sure to include an
-dnl explicit call to PKG_PROG_PKG_CONFIG in your configure.ac
+# PKG_CHECK_MODULES(VARIABLE-PREFIX, MODULES, [ACTION-IF-FOUND],
+# [ACTION-IF-NOT-FOUND])
+#
+#
+# Note that if there is a possibility the first call to
+# PKG_CHECK_MODULES might not happen, you should be sure to include an
+# explicit call to PKG_PROG_PKG_CONFIG in your configure.ac
+#
+#
+# --------------------------------------------------------------
 AC_DEFUN([PKG_CHECK_MODULES],
 [AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
 AC_ARG_VAR([$1][_CFLAGS], [C compiler flags for $1, overriding pkg-config])dnl
@@ -475,40 +568,16 @@ else
         AC_MSG_RESULT([yes])
 	$3
 fi[]dnl
-])dnl PKG_CHECK_MODULES
+])# PKG_CHECK_MODULES
 
 
-dnl PKG_CHECK_MODULES_STATIC(VARIABLE-PREFIX, MODULES, [ACTION-IF-FOUND],
-dnl   [ACTION-IF-NOT-FOUND])
-dnl ---------------------------------------------------------------------
-dnl Since: 0.29
-dnl
-dnl Checks for existence of MODULES and gathers its build flags with
-dnl static libraries enabled. Sets VARIABLE-PREFIX_CFLAGS from --cflags
-dnl and VARIABLE-PREFIX_LIBS from --libs.
-dnl
-dnl Note that if there is a possibility the first call to
-dnl PKG_CHECK_MODULES_STATIC might not happen, you should be sure to
-dnl include an explicit call to PKG_PROG_PKG_CONFIG in your
-dnl configure.ac.
-AC_DEFUN([PKG_CHECK_MODULES_STATIC],
-[AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
-_save_PKG_CONFIG=$PKG_CONFIG
-PKG_CONFIG="$PKG_CONFIG --static"
-PKG_CHECK_MODULES($@)
-PKG_CONFIG=$_save_PKG_CONFIG[]dnl
-])dnl PKG_CHECK_MODULES_STATIC
-
-
-dnl PKG_INSTALLDIR([DIRECTORY])
-dnl -------------------------
-dnl Since: 0.27
-dnl
-dnl Substitutes the variable pkgconfigdir as the location where a module
-dnl should install pkg-config .pc files. By default the directory is
-dnl $libdir/pkgconfig, but the default can be changed by passing
-dnl DIRECTORY. The user can override through the --with-pkgconfigdir
-dnl parameter.
+# PKG_INSTALLDIR(DIRECTORY)
+# -------------------------
+# Substitutes the variable pkgconfigdir as the location where a module
+# should install pkg-config .pc files. By default the directory is
+# $libdir/pkgconfig, but the default can be changed by passing
+# DIRECTORY. The user can override through the --with-pkgconfigdir
+# parameter.
 AC_DEFUN([PKG_INSTALLDIR],
 [m4_pushdef([pkg_default], [m4_default([$1], ['${libdir}/pkgconfig'])])
 m4_pushdef([pkg_description],
@@ -519,18 +588,16 @@ AC_ARG_WITH([pkgconfigdir],
 AC_SUBST([pkgconfigdir], [$with_pkgconfigdir])
 m4_popdef([pkg_default])
 m4_popdef([pkg_description])
-])dnl PKG_INSTALLDIR
+]) dnl PKG_INSTALLDIR
 
 
-dnl PKG_NOARCH_INSTALLDIR([DIRECTORY])
-dnl --------------------------------
-dnl Since: 0.27
-dnl
-dnl Substitutes the variable noarch_pkgconfigdir as the location where a
-dnl module should install arch-independent pkg-config .pc files. By
-dnl default the directory is $datadir/pkgconfig, but the default can be
-dnl changed by passing DIRECTORY. The user can override through the
-dnl --with-noarch-pkgconfigdir parameter.
+# PKG_NOARCH_INSTALLDIR(DIRECTORY)
+# -------------------------
+# Substitutes the variable noarch_pkgconfigdir as the location where a
+# module should install arch-independent pkg-config .pc files. By
+# default the directory is $datadir/pkgconfig, but the default can be
+# changed by passing DIRECTORY. The user can override through the
+# --with-noarch-pkgconfigdir parameter.
 AC_DEFUN([PKG_NOARCH_INSTALLDIR],
 [m4_pushdef([pkg_default], [m4_default([$1], ['${datadir}/pkgconfig'])])
 m4_pushdef([pkg_description],
@@ -541,26 +608,9 @@ AC_ARG_WITH([noarch-pkgconfigdir],
 AC_SUBST([noarch_pkgconfigdir], [$with_noarch_pkgconfigdir])
 m4_popdef([pkg_default])
 m4_popdef([pkg_description])
-])dnl PKG_NOARCH_INSTALLDIR
+]) dnl PKG_NOARCH_INSTALLDIR
 
-
-dnl PKG_CHECK_VAR(VARIABLE, MODULE, CONFIG-VARIABLE,
-dnl [ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
-dnl -------------------------------------------
-dnl Since: 0.28
-dnl
-dnl Retrieves the value of the pkg-config variable for the given module.
-AC_DEFUN([PKG_CHECK_VAR],
-[AC_REQUIRE([PKG_PROG_PKG_CONFIG])dnl
-AC_ARG_VAR([$1], [value of $3 for $2, overriding pkg-config])dnl
-
-_PKG_CONFIG([$1], [variable="][$3]["], [$2])
-AS_VAR_COPY([$1], [pkg_cv_][$1])
-
-AS_VAR_IF([$1], [""], [$5], [$4])dnl
-])dnl PKG_CHECK_VAR
-
-# Copyright (C) 1999-2018 Free Software Foundation, Inc.
+# Copyright (C) 1999-2013 Free Software Foundation, Inc.
 #
 # This file is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
@@ -594,11 +644,8 @@ AC_DEFUN([AM_PATH_PYTHON],
   dnl Find a Python interpreter.  Python versions prior to 2.0 are not
   dnl supported. (2.0 was released on October 16, 2000).
   m4_define_default([_AM_PYTHON_INTERPRETER_LIST],
-[python python2 python3 dnl
- python3.9 python3.8 python3.7 python3.6 python3.5 python3.4 python3.3 dnl
- python3.2 python3.1 python3.0 dnl
- python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 dnl
- python2.0])
+[python python2 python3 python3.3 python3.2 python3.1 python3.0 python2.7 dnl
+ python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0])
 
   AC_ARG_VAR([PYTHON], [the Python interpreter])
 
@@ -798,7 +845,7 @@ for i in list(range(0, 4)): minverhex = (minverhex << 8) + minver[[i]]
 sys.exit(sys.hexversion < minverhex)"
   AS_IF([AM_RUN_LOG([$1 -c "$prog"])], [$3], [$4])])
 
-# Copyright (C) 2001-2018 Free Software Foundation, Inc.
+# Copyright (C) 2001-2013 Free Software Foundation, Inc.
 #
 # This file is free software; the Free Software Foundation
 # gives unlimited permission to copy and/or distribute it,
@@ -815,4 +862,3 @@ AC_DEFUN([AM_RUN_LOG],
    echo "$as_me:$LINENO: \$? = $ac_status" >&AS_MESSAGE_LOG_FD
    (exit $ac_status); }])
 
-m4_include([m4/ax_perl_ext.m4])

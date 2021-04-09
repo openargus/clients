@@ -102,7 +102,6 @@ AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([arpa/nameser_compat.h])
 AC_CHECK_HEADERS([stdbool.h])
 
-AM_PATH_PYTHON([3])
 saved_CPPFLAGS=$CPPFLAGS
 
 case "$target_os" in
@@ -474,6 +473,13 @@ fi
 LIBCURL_CHECK_CONFIG
 AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
+
+AC_QOSIENT_LIBMAXMINDDB
+AC_QOSIENT_LIBCARES
+
+AM_PATH_PYTHON([3],, [:])
+
+if test "$PYTHON_VERSION" = "3"; then
 AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
 if test "$HAVE_SWIG" = "1" ; then
   case "$target_os" in
@@ -486,8 +492,7 @@ if test "$HAVE_SWIG" = "1" ; then
         ;;
   esac
 fi
-AC_QOSIENT_LIBMAXMINDDB
-AC_QOSIENT_LIBCARES
+fi
 
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(PACKAGE_RELEASE)
