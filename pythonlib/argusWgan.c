@@ -486,8 +486,8 @@ setSchema (char *str)
    return (retn);
 }
 
-char ArgusConversionBuffer[1024];
-char ArgusOutputBuffer[MAXSTRLEN];
+char ArgusConBuf[2][MAXARGUSRECORD];
+char ArgusOutBuf[2][MAXSTRLEN];
 
 PyObject *
 argus_critic (PyObject *y_true, PyObject *y_pred)
@@ -604,8 +604,9 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
         npy_intp count = *innersizeptr;
         /* out is always contiguous, so use double */
         double *out = (double *)dataptr[2];
-        char *in = dataptr[0];
-        int i, slen;
+        char *in0 = dataptr[0];
+        char *in1 = dataptr[1];
+        int i = 0, slen0 = 0, slen1 = 0;
 
         /* The output is allocated and guaranteed contiguous (out++ works): */
         assert(strideptr[2] == sizeof(double));
@@ -615,47 +616,48 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
          * stride == sizeof(double) to allow the compiler to optimize for that.
          */
 
-#ifdef ARGUSDEBUG
-        {
-           char *acb = ArgusConversionBuffer;
+        bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
 
-           slen = snprintf (acb, 1024, "ArgusWgan: iterator yt_dims: %d count: %ld shape: ", yt_dims, count);
-           for (i = 0; i < yt_dims; i++) {
-              slen += snprintf (&acb[slen], 1024 - slen, "%ld ", shape[i]);
-           }
-           ArgusDebug (9, "%s\n", acb);
-           bzero (ArgusConversionBuffer, sizeof(ArgusConversionBuffer));
-           slen = 0;
-        }
-#endif
-        i = 0;
         while (count--) {
            if ((i++ % shape[1]) == 0) {
-              if (slen > 0) {
+              if (slen0 > 0) {
 #ifdef ARGUSDEBUG
-                 ArgusDebug (9, "ArgusWgan: flowRecord: '%s'\n", ArgusConversionBuffer);
+                 ArgusDebug (9, "ArgusWgan: flowRecord: '%s'\n", ArgusConBuf[0]);
 #endif
                  if ((parser = ArgusParser) != NULL) {
-                    if (RaConvertParseRecordString (parser, ArgusConversionBuffer)) {
+                    if (RaConvertParseRecordString (parser, ArgusConBuf[0])) {
                        struct ArgusRecordStruct *argus = &parser->argus;
-                       ArgusPrintRecord(parser, ArgusOutputBuffer, argus, MAXSTRLEN);
+                       ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutputBuffer);
+                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutBuf[0]);
+#endif
+                    }
+                    if (RaConvertParseRecordString (parser, ArgusConBuf[1])) {
+                       struct ArgusRecordStruct *argus = &parser->argus;
+                       ArgusPrintRecord(parser, ArgusOutBuf[1], argus, MAXSTRLEN);
+#ifdef ARGUSDEBUG
+                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutBuf[1]);
 #endif
                     }
                  }
 
-                 bzero (ArgusConversionBuffer, sizeof(ArgusConversionBuffer));
-                 slen = 0;
+                 bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
+                 bzero (ArgusConBuf[1], sizeof(ArgusConBuf[1]));
+                 slen0 = 0;
+                 slen1 = 0;
                  i = 1;
               }
            }
-           if (i > 1)
-              slen += snprintf (&ArgusConversionBuffer[slen], sizeof(ArgusConversionBuffer)-slen, ",");
-           slen += snprintf (&ArgusConversionBuffer[slen], sizeof(ArgusConversionBuffer)-slen, "%f", *(double *)in);
-           *out = cos(*(double *)in);
+           if (i > 1) {
+              slen0 += snprintf (&ArgusConBuf[0][slen0], sizeof(ArgusConBuf[0]) - slen0, ",");
+              slen1 += snprintf (&ArgusConBuf[1][slen1], sizeof(ArgusConBuf[1]) - slen1, ",");
+           }
+           slen0 += snprintf (&ArgusConBuf[0][slen0], sizeof(ArgusConBuf[0]) - slen0, "%f", *(double *)in0);
+           slen1 += snprintf (&ArgusConBuf[1][slen1], sizeof(ArgusConBuf[1]) - slen1, "%f", *(double *)in1);
+           *out = cos(*(double *)in0 + *(double *)in1);
            out++;
-           in += stride;
+           in0 += stride;
+           in1 += stride;
         }
     } while (iternext(iter));
 
