@@ -7535,6 +7535,7 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
 {
    struct ArgusCIDRAddr *retn = NULL;
    char *ptr = NULL, *mask = NULL, strbuf[128], *str = strbuf;
+   int decimal = 0;
 
    snprintf (str, sizeof(strbuf), "%s", addr);
    if (parser->ArgusCIDRPtr == NULL)
@@ -7565,7 +7566,16 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
       retn->type = AF_INET6;
    else
    if ((ptr = strchr (str, '.')) != NULL) {
+      int i, slen = strlen(str), cptr = 0;
+      for (i = 0; i < slen; i++) if (str[i] == '.') cptr++;
       if (strlen (str) > 1) {
+         if (cptr == 1) { // assume we were passed a float
+            *ptr = '\0';
+            decimal = 1;
+         } else 
+         if (cptr != 3) { // here we reject if not dot notation addr.
+            return (NULL);
+         }
          retn->type = AF_INET;
       } else
          return (NULL);
@@ -7586,14 +7596,17 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
                if (strlen(ptr) > 0) {
                   if (*ptr++ != '.') {
 #ifdef ARGUSDEBUG
-                     ArgusDebug (2, "RaParseCIDRAddr: format error: IPv4 addr format.\n");
+                     ArgusDebug (0, "RaParseCIDRAddr: format error: IPv4 addr format.\n");
 #endif
                      return(NULL);
                   }
                } else
                   ptr = NULL;
 
-               retn->addr[0] |= (tval << ((len - (i + 1)) * 8));
+               if (decimal)
+                  retn->addr[0] = tval;
+               else
+                  retn->addr[0] |= (tval << ((len - (i + 1)) * 8));
             }
             str = ptr;
          }

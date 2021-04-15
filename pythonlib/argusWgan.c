@@ -177,6 +177,30 @@ ArgusClientInit(struct ArgusParserStruct *parser)
       }
    }
 
+   parser->nflag = 3;
+
+   while (parser->RaPrintOptionIndex > 0) {
+      if (parser->RaPrintOptionStrings[parser->RaPrintOptionIndex-1]) {
+         parser->RaPrintOptionIndex--;
+         free(parser->RaPrintOptionStrings[parser->RaPrintOptionIndex]);
+         parser->RaPrintOptionStrings[parser->RaPrintOptionIndex] = NULL;
+      }
+   }
+
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("stime");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("flgs");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("proto");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("saddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("sport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dir");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("daddr");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("dport");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("pkts");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("bytes");
+   parser->RaPrintOptionStrings[parser->RaPrintOptionIndex++] = strdup("state");
+
+   ArgusProcessSOptions(parser);
+
    ArgusParser->ArgusInitCon.hdr.type                    = (ARGUS_MAR | argus_version);
    ArgusParser->ArgusInitCon.hdr.cause                   = ARGUS_START;
    ArgusParser->ArgusInitCon.hdr.len                     = (unsigned short) (sizeof(struct ArgusRecord) + 3)/4;
@@ -455,8 +479,15 @@ setSchema (char *str)
       retn = 1;
    }
 
+#ifdef ARGUSDEBUG
+   ArgusDebug (0, "ArgusWgan: setSchema('%s') done", str);
+#endif
+
    return (retn);
 }
+
+char ArgusConversionBuffer[1024];
+char ArgusOutputBuffer[MAXSTRLEN];
 
 PyObject *
 argus_critic (PyObject *y_true, PyObject *y_pred)
@@ -468,6 +499,7 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
    int py_equal;
 
    PyArrayObject *arrays[3];  /* holds input and output array */
+   PyArrayObject *results;    /* holds results array */
    npy_uint32 op_flags[3];
    npy_uint32 iterator_flags;
    PyArray_Descr *op_dtypes[3];
@@ -542,8 +574,8 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
     }
 
 /* Fetch the output array which was allocated by the iterator: */
-    retn = (PyObject *)NpyIter_GetOperandArray(iter)[2];
-    Py_INCREF(retn);
+    results = NpyIter_GetOperandArray(iter)[2];
+    Py_INCREF(results);
 
     if (NpyIter_GetIterSize(iter) == 0) {
         /*
@@ -551,15 +583,20 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
          * This check is necessary with NPY_ITER_ZEROSIZE_OK.
          */
         NpyIter_Deallocate(iter);
+        retn = (PyObject *)results;
         return retn;
     }
 
     /* The location of the data pointer which the iterator may update */
     char **dataptr = NpyIter_GetDataPtrArray(iter);
+
     /* The location of the stride which the iterator may update */
     npy_intp *strideptr = NpyIter_GetInnerStrideArray(iter);
+
     /* The location of the inner loop size which the iterator may update */
     npy_intp *innersizeptr = NpyIter_GetInnerLoopSizePtr(iter);
+
+    npy_intp *shape = PyArray_SHAPE(arrays[0]);
 
     /* iterate over the arrays */
     do {
@@ -568,6 +605,7 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
         /* out is always contiguous, so use double */
         double *out = (double *)dataptr[2];
         char *in = dataptr[0];
+        int i, slen;
 
         /* The output is allocated and guaranteed contiguous (out++ works): */
         assert(strideptr[2] == sizeof(double));
@@ -576,10 +614,48 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
          * For optimization it can make sense to add a check for
          * stride == sizeof(double) to allow the compiler to optimize for that.
          */
+
+#ifdef ARGUSDEBUG
+        {
+           char *acb = ArgusConversionBuffer;
+
+           slen = snprintf (acb, 1024, "ArgusWgan: iterator yt_dims: %d count: %ld shape: ", yt_dims, count);
+           for (i = 0; i < yt_dims; i++) {
+              slen += snprintf (&acb[slen], 1024 - slen, "%ld ", shape[i]);
+           }
+           ArgusDebug (9, "%s\n", acb);
+           bzero (ArgusConversionBuffer, sizeof(ArgusConversionBuffer));
+           slen = 0;
+        }
+#endif
+        i = 0;
         while (count--) {
-            *out = cos(*(double *)in);
-            out++;
-            in += stride;
+           if ((i++ % shape[1]) == 0) {
+              if (slen > 0) {
+#ifdef ARGUSDEBUG
+                 ArgusDebug (9, "ArgusWgan: flowRecord: '%s'\n", ArgusConversionBuffer);
+#endif
+                 if ((parser = ArgusParser) != NULL) {
+                    if (RaConvertParseRecordString (parser, ArgusConversionBuffer)) {
+                       struct ArgusRecordStruct *argus = &parser->argus;
+                       ArgusPrintRecord(parser, ArgusOutputBuffer, argus, MAXSTRLEN);
+#ifdef ARGUSDEBUG
+                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutputBuffer);
+#endif
+                    }
+                 }
+
+                 bzero (ArgusConversionBuffer, sizeof(ArgusConversionBuffer));
+                 slen = 0;
+                 i = 1;
+              }
+           }
+           if (i > 1)
+              slen += snprintf (&ArgusConversionBuffer[slen], sizeof(ArgusConversionBuffer)-slen, ",");
+           slen += snprintf (&ArgusConversionBuffer[slen], sizeof(ArgusConversionBuffer)-slen, "%f", *(double *)in);
+           *out = cos(*(double *)in);
+           out++;
+           in += stride;
         }
     } while (iternext(iter));
 
@@ -715,8 +791,10 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
 
    if (retn == NULL)
       Py_RETURN_NONE;
-   else
+   else {
+      retn = (PyObject *)results;
       return (retn);
+   }
 }
 }
 
@@ -937,6 +1015,10 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
 
    parser->canon.time.dst.start.tv_sec  = tvp->tv_sec;
    parser->canon.time.dst.start.tv_usec = tvp->tv_usec;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (9, "ArgusParseStartDateLabel (%p, '%s')\n", parser, buf); 
+#endif
 }
 
 
@@ -1395,6 +1477,9 @@ ArgusParseSrcAddrLabel (struct ArgusParserStruct *parser, char *buf)
          }
       }
    }
+#ifdef ARGUSDEBUG
+   ArgusDebug (9, "ArgusParseSrcAddrLabel (%p, '%s')\n", parser, buf); 
+#endif
 }
 
 void
