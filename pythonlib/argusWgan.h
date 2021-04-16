@@ -32,6 +32,7 @@
 void ArgusDebug (int d, char *fmt, ...);
 int argustime (char *time_string, int *start, int *end);
 PyObject *argus_critic(PyObject *y_true, PyObject *y_pred);
+PyObject *argus_match(PyObject *y_true);
 
 #if defined(argusWgan)
 
