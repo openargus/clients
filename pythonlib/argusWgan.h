@@ -34,6 +34,15 @@ int argustime (char *time_string, int *start, int *end);
 PyObject *argus_critic(PyObject *y_true, PyObject *y_pred);
 PyObject *argus_match(PyObject *y_true);
 
+struct RaCursesProcessStruct {
+   int status, timeout;
+   int value, size;
+   struct ArgusRecordStruct *ns;
+   struct ArgusQueueStruct *queue, *delqueue;
+   struct ArgusHashTable *htable;
+   struct nff_program filter;
+};
+
 #if defined(argusWgan)
 
 #ifndef Raconvert_h
