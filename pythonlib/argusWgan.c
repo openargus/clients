@@ -671,7 +671,7 @@ setSchema (char *str)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (0, "ArgusWgan: setSchema('%s') done", str);
+   ArgusDebug (1, "ArgusWgan: setSchema('%s') done", str);
 #endif
 
    return (retn);
@@ -745,7 +745,7 @@ setBaseline (char *optarg)
    }
 
 #ifdef ARGUSDEBUG 
-   ArgusDebug (0, "ArgusWgan: setBaseline('%s') done ... read %d records", optarg, parser->ArgusTotalRecords);
+   ArgusDebug (1, "ArgusWgan: setBaseline('%s') done ... read %d records", optarg, parser->ArgusTotalRecords);
 #endif
    return (retn);
 }
@@ -854,7 +854,7 @@ ArgusLoadBaselineFiles (struct ArgusParserStruct *parser)
 
    } else {
 #ifdef ARGUSDEBUG
-      ArgusDebug (0, "ArgusLoadBaselineFiles (%p) no list to process", parser);
+      ArgusDebug (1, "ArgusLoadBaselineFiles (%p) no list to process", parser);
 #endif
       parser->status |= ARGUS_BASELINE_LIST_PROCESSED;
    }
@@ -936,7 +936,7 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
    NpyIter *iter;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (0, "argus_critic(%p, %p) called\n", y_true, y_pred);
+   ArgusDebug (1, "argus_critic(%p, %p) called\n", y_true, y_pred);
 #endif
 
    arrays[0] = (PyArrayObject *) y_true;
@@ -1058,14 +1058,14 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
                        struct ArgusRecordStruct *argus = &parser->argus;
                        ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutBuf[0]);
+                       ArgusDebug (1, "ArgusWgan: record:'%s'\n", ArgusOutBuf[0]);
 #endif
                     }
                     if (RaConvertParseRecordString (parser, ArgusConBuf[1])) {
                        struct ArgusRecordStruct *argus = &parser->argus;
                        ArgusPrintRecord(parser, ArgusOutBuf[1], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (0, "ArgusWgan: record:'%s'\n", ArgusOutBuf[1]);
+                       ArgusDebug (1, "ArgusWgan: record:'%s'\n", ArgusOutBuf[1]);
 #endif
                     }
                  }
@@ -1348,7 +1348,7 @@ argus_match (PyObject *y_true)
                        int retn = ArgusFindRecordInBaseline(parser, argus);
                        ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (0, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
+                       ArgusDebug (1, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
 #endif
                        *out++ = retn;
                     }

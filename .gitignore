@@ -67,3 +67,10 @@ include/argus_config.h
 
 # radhcp intermediates
 /examples/radhcp/example-libargus_dhcp
+
+# pythonlib
+/pythonlib/argusWgan.py
+/pythonlib/argusWgan_wrap.c
+/pythonlib/build/
+/pythonlib/swig.stamp
+
