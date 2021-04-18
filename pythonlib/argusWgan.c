@@ -129,13 +129,11 @@ PyInit_argusWgan(void) {
    return m;
 }
 
-
 char *RaConvertDaemonModes[RASCII_MAXMODES] = {
    "debug",
 };
 
 int ArgusDebugMode = 0;
-
 
 #define RASCII_MAXDEBUG		2
 #define RASCII_DEBUGDUMMY	0
@@ -271,7 +269,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       RaProcess->queue->status |= RA_MODIFIED;
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (0, "ArgusProcessRecord () returning\n"); 
+   ArgusDebug (9, "ArgusProcessRecord () returning\n"); 
 #endif
 }
 
@@ -307,7 +305,7 @@ ArgusClientInit(struct ArgusParserStruct *parser)
    int i, x, ind;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaConvertInit()");
+   ArgusDebug (1, "ArgusWganClientInit()");
 #endif
 
    if (parser->ver3flag)
@@ -744,10 +742,6 @@ setBaseline (char *optarg)
 
       ArgusLoadBaselineFiles(parser);
 
-   } else {
-#ifdef ARGUSDEBUG
-      ArgusDebug (0, "setBaseline (%s) no parser", optarg);
-#endif
    }
 
 #ifdef ARGUSDEBUG 
@@ -808,13 +802,8 @@ ArgusLoadBaselineFiles (struct ArgusParserStruct *parser)
 
                if (strcmp (input->filename, "-")) {
                   if (input->fd < 0) {
-                     if ((input->file = fopen(input->filename, "r")) == NULL) {
-#ifdef ARGUSDEBUG
-                        ArgusDebug (0, "ArgusLoadBaselineFiles (%p) fopen failed %s", parser, input->filename);
-#endif
-                     } else {
+                     if ((input->file = fopen(input->filename, "r")) != NULL) {
                      }
-
                   } else {
                      fseek(input->file, 0, SEEK_SET);
                   }
@@ -883,7 +872,6 @@ ArgusFindRecordInBaseline (struct ArgusParserStruct *parser, struct ArgusRecordS
    struct ArgusRecordStruct *pns = NULL, *cns = NULL;
    struct ArgusAggregatorStruct *agg = NULL;
    struct ArgusHashStruct *hstruct = NULL;
-   struct ArgusFlow *flow = NULL;
 
    if ((agg = ArgusBaselineAggregator) != NULL) {
       if (agg->filterstr) {
@@ -1251,7 +1239,6 @@ argus_match (PyObject *y_true)
    PyArrayObject *arrays[2];  // holds input and results array 
    PyArrayObject *results;    // holds results array 
    PyObject *output;          // holds output array 
-   PyArray_Descr *npy_descr = NULL;
    npy_uint32 op_flags[2];
    npy_uint32 iterator_flags;
    PyArray_Descr *op_dtypes[2];
@@ -1261,9 +1248,6 @@ argus_match (PyObject *y_true)
 
    arrays[0] = (PyArrayObject *) y_true;
 
-#ifdef ARGUSDEBUG
-   ArgusDebug (0, "argus_match(%p) called\n", y_true);
-#endif
    if (PyArray_API == NULL) {
       import_array();
    }
@@ -1331,7 +1315,6 @@ argus_match (PyObject *y_true)
 
     npy_intp *shape = PyArray_SHAPE(arrays[0]);
 
-    npy_descr = PyArray_DescrFromType(NPY_FLOAT64);
     output = PyArray_SimpleNew(1, shape, NPY_FLOAT64);
 
     // iterate over the arrays
@@ -1365,7 +1348,7 @@ argus_match (PyObject *y_true)
                        int retn = ArgusFindRecordInBaseline(parser, argus);
                        ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (0, "retn %d: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
+                       ArgusDebug (0, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
 #endif
                        *out++ = retn;
                     }
