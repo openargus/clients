@@ -36,6 +36,9 @@ extern "C" {
 #include <stdio.h>
 #include <argus_int.h>
 
+#define ARGUS_ZLIB_COMPRESS	0x00000001
+#define ARGUS_ZLIB_COMPRESS2	0x00000002
+
 #define RA_MAX_TABLE_ARRAY	0x10000
 #define RA_MAXTABLES		1
 #define RA_MAXTABLES_MASK	0x00001
