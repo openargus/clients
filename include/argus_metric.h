@@ -535,6 +535,32 @@ extern double ArgusFetchAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchAppByteRatio (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchIntFlow (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowStdDev (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdl (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPkt (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdl (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchSrcIntPktActMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktActMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdlMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdlMax (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchDstIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdl (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchDstIntPktActMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktActMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdlMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdlMax (struct ArgusRecordStruct *ns);
+
 extern double ArgusFetchSrcTcpBase (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstTcpBase (struct ArgusRecordStruct *ns);
 extern double ArgusFetchTcpRtt (struct ArgusRecordStruct *ns);

@@ -186,6 +186,144 @@ void ArgusParseTCPSrcBaseLabel (struct ArgusParserStruct *, char *);
 void ArgusParseTCPDstBaseLabel (struct ArgusParserStruct *, char *);
 void ArgusParseTCPRTTLabel (struct ArgusParserStruct *, char *);
 
+double ArgusCompareStartDate (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareLastDate (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSourceID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareFlags (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcMacAddress (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstMacAddress (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareMacAddress (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareProto (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcNet (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstNet (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstAddr (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcPort (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPort (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIpId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIpId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareIpId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcTtl (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstTtl (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTtl (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDir (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePackets (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcPackets (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPackets (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareAppBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcAppBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstAppBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareSrcPktSize (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPktSize (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcPktSizeMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcPktSizeMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPktSizeMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPktSizeMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareSrcIntPkt (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPkt (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareSrcIntPktActive (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktActiveMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktActiveMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktActive (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktActiveMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktActiveMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareSrcIntPktIdle (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktIdleMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcIntPktIdleMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktIdle (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktIdleMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstIntPktIdleMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+double ArgusCompareJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareActiveJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareActiveSrcJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareActiveDstJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareIdleJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareIdleSrcJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareIdleDstJitter (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareState (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaLastTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaSrcPkts (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaDstPkts (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaSrcBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDeltaDstBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePercentDeltaSrcPkts (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePercentDeltaDstPkts (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePercentDeltaSrcBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePercentDeltaDstBytes (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcUserData (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstUserData (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareUserData (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTCPExtensions (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcLoad (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstLoad (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareLoad (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcPercentLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstPercentLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusComparePercentLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcRate (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstRate (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareRate (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTos (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcTos (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstTos (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDSByte (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcDSByte (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstDSByte (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcVLAN (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstVLAN (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareVLAN (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcVID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstVID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareVID (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcVPRI (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstVPRI (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareVPRI (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareWindow (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSrcWindow (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDstWindow (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareJoinDelay (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareLeaveDelay (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareMean (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareStartRange (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareEndRange (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTransactions (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareSequenceNumber (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareBinNumber (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareBins (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareService (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTCPBase (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTCPSrcBase (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTCPDstBase (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+double ArgusCompareTCPRTT (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 
 #define MAX_PARSE_ALG_TYPES	115
 
@@ -424,6 +562,125 @@ void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct
 };
 
 
+double (*RaComparisonAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusRecordStruct *, struct ArgusRecordStruct *) = {
+   ArgusCompareStartDate,
+   ArgusCompareLastDate,
+   ArgusCompareTransactions,
+   ArgusCompareDuration,
+   ArgusCompareMean,
+   ArgusCompareMin,
+   ArgusCompareMax,
+   ArgusCompareSrcAddr,
+   ArgusCompareSrcAddr,
+   ArgusCompareDstAddr,
+   ArgusCompareProto,
+   ArgusCompareSrcPort,
+   ArgusCompareDstPort,
+   ArgusCompareSrcTos,
+   ArgusCompareDstTos,
+   ArgusCompareSrcDSByte,
+   ArgusCompareDstDSByte,
+   ArgusCompareSrcTtl,
+   ArgusCompareDstTtl,
+   ArgusCompareBytes,
+   ArgusCompareSrcBytes,
+   ArgusCompareDstBytes,
+   ArgusCompareAppBytes,
+   ArgusCompareSrcAppBytes,
+   ArgusCompareDstAppBytes,
+   ArgusComparePackets,
+   ArgusCompareSrcPackets,
+   ArgusCompareSrcPackets,
+   ArgusCompareDstPackets,
+   ArgusCompareDstPackets,
+   ArgusCompareLoad,
+   ArgusCompareSrcLoad,
+   ArgusCompareDstLoad,
+   ArgusCompareLoss,
+   ArgusCompareSrcLoss,
+   ArgusCompareDstLoss,
+   ArgusComparePercentLoss,
+   ArgusCompareSrcPercentLoss,
+   ArgusCompareDstPercentLoss,
+   ArgusCompareRate,
+   ArgusCompareSrcRate,
+   ArgusCompareDstRate,
+   ArgusCompareSourceID,
+   ArgusCompareFlags,
+   ArgusCompareSrcMacAddress,
+   ArgusCompareSrcMacAddress,
+   ArgusCompareDstMacAddress,
+   ArgusCompareDir,
+   ArgusCompareSrcIntPkt,
+   ArgusCompareDstIntPkt,
+   ArgusCompareSrcIntPktActive,
+   ArgusCompareDstIntPktActive,
+   ArgusCompareSrcIntPktIdle,
+   ArgusCompareDstIntPktIdle,
+   ArgusCompareSrcIntPktMax,
+   ArgusCompareSrcIntPktMin,
+   ArgusCompareDstIntPktMax,
+   ArgusCompareDstIntPktMin,
+   ArgusCompareSrcIntPktActiveMax,
+   ArgusCompareSrcIntPktActiveMin,
+   ArgusCompareDstIntPktActiveMax,
+   ArgusCompareDstIntPktActiveMin,
+   ArgusCompareSrcIntPktIdleMax,
+   ArgusCompareSrcIntPktIdleMin,
+   ArgusCompareDstIntPktIdleMax,
+   ArgusCompareDstIntPktIdleMin,
+   NULL,
+   ArgusCompareSrcJitter,
+   ArgusCompareDstJitter,
+   ArgusCompareActiveSrcJitter,
+   ArgusCompareActiveDstJitter,
+   ArgusCompareIdleSrcJitter,
+   ArgusCompareIdleDstJitter,
+   ArgusCompareState,
+   ArgusCompareDeltaDuration,
+   ArgusCompareDeltaStartTime,
+   ArgusCompareDeltaLastTime,
+   ArgusCompareDeltaSrcPkts,
+   ArgusCompareDeltaDstPkts,
+   ArgusCompareDeltaSrcBytes,
+   ArgusCompareDeltaDstBytes,
+   ArgusComparePercentDeltaSrcPkts,
+   ArgusComparePercentDeltaDstPkts,
+   ArgusComparePercentDeltaSrcBytes,
+   ArgusComparePercentDeltaDstBytes,
+   ArgusCompareSrcUserData,
+   ArgusCompareDstUserData,
+   ArgusCompareTCPExtensions,
+   ArgusCompareSrcWindow,
+   ArgusCompareDstWindow,
+   ArgusCompareJoinDelay,
+   ArgusCompareLeaveDelay,
+   ArgusCompareSequenceNumber,
+   ArgusCompareBins,
+   ArgusCompareBinNumber,
+   ArgusCompareSrcMpls,
+   ArgusCompareDstMpls,
+   ArgusCompareSrcVLAN,
+   ArgusCompareDstVLAN,
+   ArgusCompareSrcVID,
+   ArgusCompareDstVID,
+   ArgusCompareSrcVPRI,
+   ArgusCompareDstVPRI,
+   ArgusCompareSrcIpId,
+   ArgusCompareDstIpId,
+   ArgusCompareStartRange,
+   ArgusCompareEndRange,
+   ArgusCompareService,
+   ArgusCompareTCPSrcBase,
+   ArgusCompareTCPDstBase,
+   ArgusCompareTCPRTT,
+   ArgusCompareSrcPktSizeMax,
+   ArgusCompareSrcPktSizeMin,
+   ArgusCompareDstPktSizeMax,
+   ArgusCompareDstPktSizeMin,
+};
+
+
 char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "StartTime",
    "LastTime",
@@ -448,8 +705,8 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "SrcBytes",
    "DstBytes",
    "AppBytes",
-   "SrcAppBytes",
-   "DstAppBytes",
+   "SAppBytes",
+   "DAppBytes",
    "TotPkts",
    "SrcPkts",
    "OutPkts",
@@ -473,8 +730,8 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "SrcMac",
    "DstMac",
    "Dir",
-   "SrcIntPkt",
-   "DstIntPkt",
+   "SIntPkt",
+   "DIntPkt",
    "SrcIntPktAct",
    "DstIntPktAct",
    "SrcIntPktIdl",

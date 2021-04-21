@@ -39,6 +39,7 @@
 #include <argus_util.h>
 #include <argus_main.h>
 #include <argus_client.h>
+#include <argus_metric.h>
 #include <argus_filter.h>
 #include <argus_threads.h>
 
@@ -53,7 +54,7 @@ void usage () { }
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) {return 0;}
 void ArgusWindowClose(void) {}
 
-int ArgusFindRecordInBaseline (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+struct ArgusRecordStruct *ArgusFindRecordInBaseline (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusLoadBaselineFiles (struct ArgusParserStruct *);
 
 struct ArgusAggregatorStruct *ArgusBaselineAggregator = NULL;
@@ -305,7 +306,7 @@ ArgusClientInit(struct ArgusParserStruct *parser)
    int i, x, ind;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusWganClientInit()");
+   ArgusDebug (0, "ArgusWganClientInit()");
 #endif
 
    if (parser->ver3flag)
@@ -418,7 +419,11 @@ ArgusClientInit(struct ArgusParserStruct *parser)
 #define ARGUS_MAX_PRINT_FIELDS		512
 
 void (*RaParseLabelAlgorithms[ARGUS_MAX_PRINT_FIELDS])(struct ArgusParserStruct *, char *);
+double (*RaComparisonAlgorithms[ARGUS_MAX_PRINT_FIELDS])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 int RaParseLabelAlgorithmIndex = 0;
+int RaComparisonAlgorithmIndex = 0;
+
 char RaConvertDelimiter[2] = {'\0', '\0'};
 
 
@@ -428,8 +433,8 @@ RaConvertParseTitleString (char *str)
    char buf[MAXSTRLEN], *ptr, *obj;
    int i, len = 0, items = 0;
 
-
    bzero ((char *)RaParseLabelAlgorithms, sizeof(RaParseLabelAlgorithms));
+   bzero ((char *)RaComparisonAlgorithms, sizeof(RaComparisonAlgorithms));
    bzero ((char *)buf, sizeof(buf));
 
    if ((ptr = strchr(str, '\n')) != NULL)
@@ -458,18 +463,29 @@ RaConvertParseTitleString (char *str)
    ptr = buf;
 
    while ((obj = strtok(ptr, RaConvertDelimiter)) != NULL) {
+      int found = 0;
       len = strlen(obj);
       if (len > 0) {
-         for (i = 0; i < MAX_PARSE_ALG_TYPES; i++) {
+         for (i = 0; (i < MAX_PARSE_ALG_TYPES) && !found; i++) {
             if (!(strncmp(RaParseLabelStringTable[i], obj, len))) {
                RaParseLabelAlgorithmIndex++;
+               RaComparisonAlgorithmIndex++;
+
                RaParseLabelAlgorithms[items] = RaParseLabelAlgorithmTable[i];
+               RaComparisonAlgorithms[items] = RaComparisonAlgorithmTable[i];
+
                if (i == ARGUSPARSEDIRLABEL)
                   RaConvertParseDirLabel++;
                if (i == ARGUSPARSESTATELABEL)
                   RaConvertParseStateLabel++;
+               found++;
                break;
             }
+         }
+         if (!found) {
+#ifdef ARGUSDEBUG
+            ArgusDebug (0, "RaConvertParseTitleString() column %s not found", obj);
+#endif
          }
       }
 
@@ -671,7 +687,7 @@ setSchema (char *str)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusWgan: setSchema('%s') done", str);
+   ArgusDebug (0, "ArgusWgan: setSchema('%s') done", str);
 #endif
 
    return (retn);
@@ -745,7 +761,7 @@ setBaseline (char *optarg)
    }
 
 #ifdef ARGUSDEBUG 
-   ArgusDebug (1, "ArgusWgan: setBaseline('%s') done ... read %d records", optarg, parser->ArgusTotalRecords);
+   ArgusDebug (0, "ArgusWgan: setBaseline('%s') done ... read %d records", optarg, parser->ArgusTotalRecords);
 #endif
    return (retn);
 }
@@ -864,12 +880,12 @@ ArgusLoadBaselineFiles (struct ArgusParserStruct *parser)
    return (retn);
 }
 
-int
+struct ArgusRecordStruct *
 ArgusFindRecordInBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
-   int retn = 0, tretn = 0, fretn = -1, lretn = -1;
+   int tretn = 0, fretn = -1, lretn = -1;
 
-   struct ArgusRecordStruct *pns = NULL, *cns = NULL;
+   struct ArgusRecordStruct *retn = NULL, *cns = NULL;
    struct ArgusAggregatorStruct *agg = NULL;
    struct ArgusHashStruct *hstruct = NULL;
 
@@ -903,9 +919,7 @@ ArgusFindRecordInBaseline (struct ArgusParserStruct *parser, struct ArgusRecordS
             agg->ArgusMaskDefs = NULL;
 
             if ((hstruct = ArgusGenerateHashStruct(agg, cns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
-               if ((pns = ArgusFindRecord(RaBaselineProcess->htable, hstruct)) == NULL) {
-               } else 
-                  retn++;
+               retn = ArgusFindRecord(RaBaselineProcess->htable, hstruct);
             }
          }
          ArgusDeleteRecordStruct(ArgusParser, cns);
@@ -1238,7 +1252,6 @@ argus_match (PyObject *y_true)
 
    PyArrayObject *arrays[2];  // holds input and results array 
    PyArrayObject *results;    // holds results array 
-   PyObject *output;          // holds output array 
    npy_uint32 op_flags[2];
    npy_uint32 iterator_flags;
    PyArray_Descr *op_dtypes[2];
@@ -1296,10 +1309,10 @@ argus_match (PyObject *y_true)
     }
 
     results = NpyIter_GetOperandArray(iter)[1];
+    Py_INCREF(results);
 
     if (NpyIter_GetIterSize(iter) == 0) {
         NpyIter_Deallocate(iter);
-        Py_INCREF(results);
         retn = (PyObject *)results;
         return retn;
     }
@@ -1315,15 +1328,15 @@ argus_match (PyObject *y_true)
 
     npy_intp *shape = PyArray_SHAPE(arrays[0]);
 
-    output = PyArray_SimpleNew(1, shape, NPY_FLOAT64);
+    // output = PyArray_SimpleNew(1, shape, NPY_FLOAT64);
 
     // iterate over the arrays
     do {
         npy_intp stride = strideptr[0];
         npy_intp count = *innersizeptr;
         // out is always contiguous, so use double 
-        double *out = (double *) PyArray_DATA((PyArrayObject *) output);
 
+        double *out = (double *)dataptr[1];
         char *in0 = dataptr[0];
         int i = 0, slen0 = 0, cnt = 0;
 
@@ -1344,13 +1357,23 @@ argus_match (PyObject *y_true)
                  if ((parser = ArgusParser) != NULL) {
                     cnt++;
                     if (RaConvertParseRecordString (parser, ArgusConBuf[0])) {
-                       struct ArgusRecordStruct *argus = &parser->argus;
-                       int retn = ArgusFindRecordInBaseline(parser, argus);
+                       struct ArgusRecordStruct *argus = &parser->argus, *retn;
+                       int x;
+                       retn = ArgusFindRecordInBaseline(parser, argus);
+
+                       for (x = 0; x < shape[1]; x++) {
+                          if (retn != NULL) {
+                          if (RaComparisonAlgorithms[x] != NULL)
+                             *out = RaComparisonAlgorithms[x](argus, retn);
+                          } else
+                             *out = 0.0;
+                          out++;
+                       }
+
                        ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
 #ifdef ARGUSDEBUG
-                       ArgusDebug (1, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
+                       ArgusDebug (1, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, (retn != NULL) ? 1 : 0, ArgusOutBuf[0]);
 #endif
-                       *out++ = retn;
                     }
                  }
                  bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
@@ -1372,10 +1395,9 @@ argus_match (PyObject *y_true)
    if (results == NULL)
       Py_RETURN_NONE;
    else {
-      retn = (PyObject *)output;
+      retn = (PyObject *)results;
       return (retn);
    }
-   Py_RETURN_NONE;
 }
 
 
@@ -2956,15 +2978,6 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseTCPBaseLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   ArgusParseTCPSrcBaseLabel (parser, buf);
-   ArgusParseTCPDstBaseLabel (parser, buf);
-*/
-}
-
-void
 ArgusParseTCPSrcBaseLabel (struct ArgusParserStruct *parser, char *buf)
 {
 /*
@@ -3705,5 +3718,1640 @@ ArgusParseBinsLabel (struct ArgusParserStruct *parser, char *buf)
    sprintf (&buf[strlen(buf)], "%*sBins%*s ", (len - 4)/2, " ", (len - 4)/2, " ");
    if (!(len & 0x01)) sprintf (&buf[strlen(buf)], " ");
 */
+}
+
+
+double
+ArgusCompareStartDate (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+  if (argus && match) 
+     retn = ArgusFetchStartTime(argus) - ArgusFetchStartTime(match);
+   
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareLastDate (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+  if (argus && match) 
+     retn = ArgusFetchLastTime(argus) - ArgusFetchLastTime(match);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSourceID (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareFlags (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcMacAddress (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstMacAddress (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareMacAddress (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareProto (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareAddr (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcNet (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcAddr (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstNet (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstAddr (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPort (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPort (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIpId (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIpId (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareIpId (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcTtl (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstTtl (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTtl (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDir (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePackets (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPackets (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+   if (argus && match) {
+      double adur = ArgusFetchDuration(argus);
+      double acnt = ArgusFetchSrcRate(argus);
+      double mcnt = ArgusFetchSrcRate(match);
+      retn = (acnt - mcnt) * adur;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPackets (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+  if (argus && match) {
+     double adur = ArgusFetchDuration(argus);
+     double acnt = ArgusFetchDstRate(argus);
+     double mcnt = ArgusFetchDstRate(match);
+     retn = (acnt - mcnt) * adur;
+  }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+  if (argus && match) {
+     double adur = ArgusFetchDuration(argus);
+     double asld = ArgusFetchSrcLoad(argus);
+     double msld = ArgusFetchSrcLoad(match);
+     retn = (asld - msld) * adur;
+  }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+  if (argus && match) {
+     double adur = ArgusFetchDuration(argus);
+     double asld = ArgusFetchDstLoad(argus);
+     double msld = ArgusFetchDstLoad(match);
+     retn = (asld - msld) * adur;
+  }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareAppBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcAppBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+  if (argus && match) {
+     double adur = ArgusFetchDuration(argus);
+     double mdur = ArgusFetchDuration(match);
+     double asab = ArgusFetchSrcAppByteCount(argus);
+     double msab = ArgusFetchSrcAppByteCount(match);
+     if ((mdur > 0) && (adur > 0))
+        retn = asab - (msab * adur) / mdur;
+     else {
+        retn = adur ? asab : -msab;
+     }
+  }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstAppBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+  if (argus && match) {
+     double adur = ArgusFetchDuration(argus);
+     double mdur = ArgusFetchDuration(match);
+     double asab = ArgusFetchSrcAppByteCount(argus);
+     double msab = ArgusFetchSrcAppByteCount(match);
+     if ((mdur > 0) && (adur > 0))
+        retn = asab - (msab * adur) / mdur;
+     else {
+        retn = adur ? asab : -msab;
+     }
+  }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPktSize (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPktSize (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPktSizeMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPktSizeMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPktSizeMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPktSizeMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPkt (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+   if (argus && match) {
+      double asip = ArgusFetchSrcIntPkt(argus);
+      double msip = ArgusFetchSrcIntPkt(match);
+      retn = asip - msip;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPkt (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+   if (argus && match) {
+      double asip = ArgusFetchDstIntPkt(argus);
+      double msip = ArgusFetchDstIntPkt(match);
+      retn = asip - msip;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+   if (argus && match) {
+      double asip = ArgusFetchSrcIntPkt(argus);
+      double msip = ArgusFetchSrcIntPkt(match);
+      retn = asip - msip;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktActive (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktActiveMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktActiveMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktActive (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktActiveMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktActiveMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktIdle (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktIdleMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcIntPktIdleMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktIdle (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktIdleMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstIntPktIdleMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareActiveJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareActiveSrcJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareActiveDstJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareIdleJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareIdleSrcJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareIdleDstJitter (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareState (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaDuration (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaStartTime (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaLastTime (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaSrcPkts (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaDstPkts (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaSrcBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDeltaDstBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePercentDeltaSrcPkts (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePercentDeltaDstPkts (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePercentDeltaSrcBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePercentDeltaDstBytes (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcUserData (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstUserData (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareUserData (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTCPExtensions (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcLoad (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstLoad (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareLoad (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcPercentLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstPercentLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusComparePercentLoss (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcRate (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstRate (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareRate (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTos (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcTos (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstTos (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDSByte (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcDSByte (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstDSByte (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcVLAN (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstVLAN (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareVLAN (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcVID (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstVID (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareVID (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcVPRI (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstVPRI (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareVPRI (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcMpls (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstMpls (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareMpls (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareWindow (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSrcWindow (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDstWindow (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareJoinDelay (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareLeaveDelay (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareMean (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareMax (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareMin (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareStartRange (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareEndRange (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareDuration (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+   if (argus && match) {
+      double adur = ArgusFetchDuration(argus);
+      double mdur = ArgusFetchDuration(match) / ;
+      retn = (acnt - mcnt) * adur;
+   }
+   
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTransactions (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareSequenceNumber (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareBinNumber (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareBins (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareService (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTCPBase (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTCPSrcBase (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTCPDstBase (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
+}
+
+
+double
+ArgusCompareTCPRTT (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *match)
+{
+   double retn = 1.0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "%s (%p, %p)", __func__, argus, match);
+#endif
+   return retn;
 }
 
