@@ -24,7 +24,7 @@
 #  include "argus_config.h"
 # endif
 
-#include <tensorflow/c/c_api.h>
+//#include <tensorflow/c/c_api.h>
 
 #include "argus_int.h"
 #include "argus_util.h"
