@@ -393,7 +393,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          parser->NonBlockingDNS = 1;
          parser->RaCumulativeMerge = 1;
 
-         if ((parser->timeout.tv_sec == -1) && (parser->timeout.tv_sec == 0)) {
+         if ((parser->timeout.tv_sec == -1) && (parser->timeout.tv_usec == 0)) {
             parser->timeout.tv_sec  = 60;
             parser->timeout.tv_usec = 0;
          }
