@@ -399,7 +399,7 @@ ArgusProcessCommand (struct ArgusParserStruct *parser, int status, int ch)
       wclear(RaCurrentWindow->window);
 
       RaInputString = RANEWCOMMANDSTR;
-      bzero(RaCommandInputStr, MAXSTRLEN);
+      bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
       RaCommandIndex = 0;
       RaCursorOffset = 0;
       RaWindowCursorY = 0;
@@ -1469,7 +1469,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (RaCommandInputStr == endptr) {
                switch (*RaCommandInputStr) {
                   case 'q': {
-                     bzero (RaCommandInputStr, MAXSTRLEN);
+                     bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
                      RaParseComplete(SIGINT);
                      break;
@@ -1527,7 +1527,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
                retn = RAGOTslash;
                RaInputString = RANEWCOMMANDSTR;
-               bzero(RaCommandInputStr, MAXSTRLEN);
+               bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                RaCommandIndex = 0;
                RaCursorOffset = 0;
                RaWindowCursorY = 0;
@@ -1635,7 +1635,7 @@ int
 ArgusProcessError(WINDOW *win, int status, int ch)
 {
    RaInputString = RANEWCOMMANDSTR;
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
    RaCursorOffset = 0;
    RaWindowCursorY = 0;
@@ -1774,7 +1774,7 @@ ArgusProcessEndofTransmission (WINDOW *win, int status, int ch)
 {
    int retn = status;
 
-   bzero (RaCommandInputStr, MAXSTRLEN);
+   bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
    RaCursorOffset = 0;
 
@@ -2010,7 +2010,7 @@ ArgusProcessDeleteLine (WINDOW *win, int status, int ch)
 {
    int retn = status;
 
-   bzero (RaCommandInputStr, MAXSTRLEN);
+   bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
    RaCursorOffset = 0;
 
@@ -2108,7 +2108,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   olddir = ArgusSearchDirection;
                   ArgusSearchDirection = (ArgusSearchDirection == ARGUS_FORWARD) ?  ARGUS_BACKWARD : ARGUS_FORWARD;
                case 'n': {
-                  char *ArgusSearchString = ArgusParser->ArgusSearchString, sbuf[1024];
+                  char *ArgusSearchString = ArgusParser->ArgusSearchString, sbuf[2048];
 
                   if ((retn == RAGOTslash) && ((ArgusSearchString != NULL) && strlen(ArgusSearchString))) {
                      int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
@@ -2469,7 +2469,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   retn = RAGETTINGslash;
                   RaInputString = "?";
                   ArgusSearchDirection = ARGUS_BACKWARD;
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
@@ -2483,7 +2483,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   retn = RAGETTINGslash;
                   RaInputString = "/";
                   ArgusSearchDirection = ARGUS_FORWARD;
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
@@ -2496,7 +2496,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
 #else
                   retn = RAGETTINGcolon;
                   RaInputString = ":";
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
@@ -3135,7 +3135,7 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
 
                   } else {
                      int linenum, cursx, cursy;
-                     char sbuf[1024];
+                     char sbuf[2048];
 
                      cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
                      if ((linenum = RaSearchDisplay(ArgusParser, RaCursesProcess->queue, ArgusSearchDirection, &cursx, &cursy, parser->ArgusSearchString, ARGUS_NOLOCK)) < 0) {
@@ -3322,7 +3322,7 @@ ArgusCursesProcessClose()
 int 
 RaInitCurses ()
 {
-   char sbuf[1024];
+   char sbuf[2048];
 #if defined(ARGUS_CURSES) && (defined(ARGUS_READLINE) || defined(ARGUS_EDITLINE))
 
 #if defined(ARGUS_READLINE)
@@ -3690,7 +3690,7 @@ argus_getsearch_string(int dir)
    RaInputStatus = RAGETTINGslash;
    RaInputString = (dir == ARGUS_FORWARD) ? "/" : "?";
    ArgusSearchDirection = dir;
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    ArgusReadlinePoint = 0;
@@ -3748,11 +3748,11 @@ argus_getsearch_string(int dir)
          RaWindowCursorX = cursx;
 
       } else {
-         char sbuf[1024];
+         char sbuf[2048];
          sprintf (sbuf, "Pattern not found: %s", ArgusParser->ArgusSearchString);
          ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
          RaInputString = RANEWCOMMANDSTR;
-         bzero(RaCommandInputStr, MAXSTRLEN);
+         bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
          RaCommandIndex = 0;
       }
 
@@ -3786,7 +3786,7 @@ argus_command_string(void)
 
    RaInputStatus = RAGETTINGcolon;
    RaInputString = ":";
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    ArgusReadlinePoint = 0;
@@ -3803,7 +3803,7 @@ argus_command_string(void)
    }
 
    if (*RaCommandInputStr == 'q') {
-      bzero (RaCommandInputStr, MAXSTRLEN);
+      bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
       ArgusTouchScreen();
       RaParseComplete(SIGINT);
    }
@@ -4892,7 +4892,7 @@ argus_command_string(void)
             if (RaCommandInputStr == endptr) {
                switch (*RaCommandInputStr) {
                   case 'q': {
-                     bzero (RaCommandInputStr, MAXSTRLEN);
+                     bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
                      RaParseComplete(SIGINT);
                      break;
@@ -4920,7 +4920,7 @@ argus_command_string(void)
 
    RaInputStatus = RAGOTcolon;
    RaInputString = RANEWCOMMANDSTR;
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    cbreak();
@@ -5615,8 +5615,8 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
    bzero (preg, sizeof(*preg));
 
    if ((rege = regcomp(preg, pattern, options)) != 0) {
-      char errbuf[MAXSTRLEN];
-      if (regerror(rege, preg, errbuf, MAXSTRLEN))
+      char errbuf[512];
+      if (regerror(rege, preg, errbuf, 512))
          sprintf (sbuf, "RaHighlightDisplay %s", errbuf);
       ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
       return retn;
@@ -5693,8 +5693,8 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    bzero (preg, sizeof(*preg));
 
    if ((rege = regcomp(preg, pattern, options)) != 0) {
-      char errbuf[MAXSTRLEN];
-      if (regerror(rege, preg, errbuf, MAXSTRLEN))
+      char errbuf[512];
+      if (regerror(rege, preg, errbuf, 512))
          sprintf (buf, "RaSearchDisplay %s", errbuf);
       ArgusSetDebugString (buf, LOG_ERR, ARGUS_LOCK);
       return retn;
