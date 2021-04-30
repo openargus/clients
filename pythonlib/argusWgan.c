@@ -931,6 +931,7 @@ ArgusFindRecordInBaseline (struct ArgusParserStruct *parser, struct ArgusRecordS
 char ArgusConBuf[2][MAXARGUSRECORD];
 char ArgusOutBuf[2][MAXSTRLEN];
 
+
 PyObject *
 argus_critic (PyObject *y_true, PyObject *y_pred)
 {
@@ -1243,6 +1244,162 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
 }
 }
 
+// This matching function returns an N x 1 array with binary scores ...
+
+PyObject *
+argus_match (PyObject *y_true)
+{
+   struct ArgusParserStruct *parser = NULL;
+   PyObject *retn = NULL;
+   int yt_dims, yt_size;
+
+   PyArrayObject *arrays[2];  // holds input and results array 
+   PyArrayObject *results;    // holds results array 
+   PyObject *output;          // holds output array 
+   npy_uint32 op_flags[2];
+   npy_uint32 iterator_flags;
+   PyArray_Descr *op_dtypes[2];
+
+   NpyIter_IterNextFunc *iternext;
+   NpyIter *iter;
+
+   arrays[0] = (PyArrayObject *) y_true;
+
+   if (PyArray_API == NULL) {
+      import_array();
+   }
+
+   if (!(PyArray_Check(arrays[0]))) {
+      PyObject_Print(y_true, stdout, 0);
+      printf("\n");
+      fflush(stdout);
+      Py_RETURN_NONE;
+   }
+
+   if ((yt_dims = PyArray_NDIM(arrays[0])) == 0)
+      return NULL;
+   if ((yt_size = PyArray_Size(y_true)) == 0)
+      return NULL;
+
+   arrays[1] = NULL;
+
+   iterator_flags = (NPY_ITER_ZEROSIZE_OK |
+                     NPY_ITER_BUFFERED |
+                     NPY_ITER_EXTERNAL_LOOP |
+                     NPY_ITER_GROWINNER);
+
+   op_flags[0] = (NPY_ITER_READONLY |
+                  NPY_ITER_NBO |
+                  NPY_ITER_ALIGNED);
+   op_flags[1] = op_flags[0];
+
+   op_flags[1] = NPY_ITER_WRITEONLY | NPY_ITER_ALLOCATE;
+
+   op_dtypes[0] = PyArray_DescrFromType(NPY_FLOAT64);
+   op_dtypes[1] = op_dtypes[0];
+
+   iter = NpyIter_MultiNew(2, arrays, iterator_flags,
+                            NPY_KEEPORDER,
+                            NPY_EQUIV_CASTING, op_flags, op_dtypes);
+    Py_DECREF(op_dtypes[0]);
+
+    if (iter == NULL)
+        return NULL;
+
+    iternext = NpyIter_GetIterNext(iter, NULL);
+    if (iternext == NULL) {
+        NpyIter_Deallocate(iter);
+        return NULL;
+    }
+
+    results = NpyIter_GetOperandArray(iter)[1];
+
+    if (NpyIter_GetIterSize(iter) == 0) {
+        NpyIter_Deallocate(iter);
+        Py_INCREF(results);
+        retn = (PyObject *)results;
+        return retn;
+    }
+
+    // The location of the data pointer which the iterator may update 
+    char **dataptr = NpyIter_GetDataPtrArray(iter);
+
+    // The location of the stride which the iterator may update 
+    npy_intp *strideptr = NpyIter_GetInnerStrideArray(iter);
+
+    // The location of the inner loop size which the iterator may update 
+    npy_intp *innersizeptr = NpyIter_GetInnerLoopSizePtr(iter);
+
+    npy_intp *shape = PyArray_SHAPE(arrays[0]);
+
+    output = PyArray_SimpleNew(1, shape, NPY_FLOAT64);
+
+    // iterate over the arrays
+    do {
+        npy_intp stride = strideptr[0];
+        npy_intp count = *innersizeptr;
+        // out is always contiguous, so use double 
+        double *out = (double *) PyArray_DATA((PyArrayObject *) output);
+
+        char *in0 = dataptr[0];
+        int i = 0, slen0 = 0, cnt = 0;
+
+        // The output is allocated and guaranteed contiguous (out++ works):
+        assert(strideptr[1] == sizeof(double));
+
+        //
+        // For optimization it can make sense to add a check for
+        // stride == sizeof(double) to allow the compiler to optimize for that.
+        //
+
+        bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
+        bzero (ArgusOutBuf[0], sizeof(ArgusOutBuf[0]));
+
+        while (count-- >= 0) {
+           struct ArgusRecordStruct *argus = NULL, *retn = NULL;
+           if ((i++ % shape[1]) == 0) {
+              if (slen0 > 0) {
+                 if ((parser = ArgusParser) != NULL) {
+                    cnt++;
+                    if (RaConvertParseRecordString (parser, ArgusConBuf[0])) {
+                       argus = &parser->argus;
+                       retn = ArgusFindRecordInBaseline(parser, argus);
+                       ArgusPrintRecord(parser, ArgusOutBuf[0], argus, MAXSTRLEN);
+#ifdef ARGUSDEBUG
+                       ArgusDebug (1, "argus_match(%2.2d): retn: %d :: '%s'\n", cnt, retn, ArgusOutBuf[0]);
+#endif
+                    }
+                 }
+                 *out++ = (retn != NULL) ? 1 : 0;
+                 bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
+                 slen0 = 0;
+                 i = 1;
+              }
+           }
+           if (i > 1) {
+              slen0 += snprintf (&ArgusConBuf[0][slen0], sizeof(ArgusConBuf[0]) - slen0, ",");
+           }
+           slen0 += snprintf (&ArgusConBuf[0][slen0], sizeof(ArgusConBuf[0]) - slen0, "%f", *(double *)in0);
+           in0 += stride;
+        }
+    } while (iternext(iter));
+
+    // Clean up and generate the output 
+    NpyIter_Deallocate(iter);
+
+   if (results == NULL)
+      Py_RETURN_NONE;
+   else {
+      retn = (PyObject *)output;
+      return (retn);
+   }
+   Py_RETURN_NONE;
+}
+
+/*
+
+This matching function scores individual cells in the N x M matrix passed...
+
 PyObject *
 argus_match (PyObject *y_true)
 {
@@ -1399,6 +1556,7 @@ argus_match (PyObject *y_true)
       return (retn);
    }
 }
+*/
 
 
 int
