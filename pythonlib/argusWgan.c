@@ -533,6 +533,9 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str)
    numfields = ((char *)ap - (char *)argv)/sizeof(ap);
 
    for (i = 0; i < numfields; i++) {
+      if ((strcasecmp(argv[i], "-nan") == 0) || (strcasecmp(argv[i], "nan") == 0)) {
+         return(0);
+      } else
       if (RaParseLabelAlgorithms[i] != NULL) {
          if (argv[i] != NULL) {
             RaParseLabelAlgorithms[i](ArgusParser, argv[i]);
