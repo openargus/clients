@@ -312,6 +312,9 @@ ArgusClientInit(struct ArgusParserStruct *parser)
    if (parser->ver3flag)
       argus_version = ARGUS_VERSION_3;
 
+   if (parser->RaTimeFormat == NULL)
+      parser->RaTimeFormat = strdup("%Y-%m-%dT%H:%M:%S.%f");
+
    if ((mode = ArgusParser->ArgusModeList) != NULL) {
       while (mode) {
          for (i = 0, ind = -1; i < RASCII_MAXMODES; i++) {
@@ -1697,7 +1700,6 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       tvp->tv_usec = useconds;
    }
 
-
    if (RaDateFormat != NULL) {
       if ((ptr = strptime(date, RaDateFormat, RaConvertTmPtr)) != NULL) {
          if (*ptr == '\0') {
@@ -1724,9 +1726,11 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       } else {
          if (RaConvertTimeFormats[0] == NULL) {
             char *sptr;
-            RaConvertTimeFormats[0] = strdup(parser->RaTimeFormat);
-            if ((sptr = strstr(RaConvertTimeFormats[0], ".%f")) != NULL)
-               *sptr = '\0';
+            if (parser->RaTimeFormat) {
+               RaConvertTimeFormats[0] = strdup(parser->RaTimeFormat);
+               if ((sptr = strstr(RaConvertTimeFormats[0], ".%f")) != NULL)
+                  *sptr = '\0';
+            }
          }
 
          for (i = 0; (i < RACONVERTTIME) && (!done); i++) {
@@ -1744,11 +1748,12 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
          if (done) {
             tvp->tv_sec = mktime(RaConvertTmPtr);
          } else {
-            ArgusLog (LOG_ERR, "ArgusParseStartTime(0x%xs, %s) time format not defined\n", parser, buf);
+            tvp->tv_sec  = 0;
+            tvp->tv_usec = 0;
+            done++;
          }
       }
    }
-
 
    if (parser->canon.time.hdr.type == 0) {
       parser->canon.time.hdr.type    = ARGUS_TIME_DSR;	
