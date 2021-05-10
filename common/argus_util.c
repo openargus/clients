@@ -7600,8 +7600,10 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
 #endif
                      return(NULL);
                   }
-               } else
+               } else {
+                  decimal = 1;
                   ptr = NULL;
+               }
 
                if (decimal)
                   retn->addr[0] = tval;
