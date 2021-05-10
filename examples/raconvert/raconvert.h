@@ -56,43 +56,36 @@ void ArgusParseDirLabel (struct ArgusParserStruct *, char *);
 void ArgusParsePacketsLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcPacketsLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstPacketsLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseBytesLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcBytesLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstBytesLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseAppBytesLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcAppBytesLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstAppBytesLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseSrcPktSizeLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstPktSizeLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcPktSizeMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcPktSizeMinLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstPktSizeMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstPktSizeMinLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseSrcIntPktLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktMinLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktMinLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseSrcIntPktActiveLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktActiveMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktActiveMinLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktActiveLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktActiveMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktActiveMinLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseSrcIntPktIdleLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktIdleMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcIntPktIdleMinLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktIdleLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktIdleMaxLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstIntPktIdleMinLabel (struct ArgusParserStruct *, char *);
-
 void ArgusParseJitterLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSrcJitterLabel (struct ArgusParserStruct *, char *);
 void ArgusParseDstJitterLabel (struct ArgusParserStruct *, char *);
