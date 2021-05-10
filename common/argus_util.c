@@ -7577,6 +7577,7 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
             return (NULL);
          }
          retn->type = AF_INET;
+         decimal = 0;
       } else
          return (NULL);
    }
@@ -7601,7 +7602,8 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
                      return(NULL);
                   }
                } else {
-                  decimal = 1;
+                  if (i == 0)
+                     decimal = 1;
                   ptr = NULL;
                }
 
