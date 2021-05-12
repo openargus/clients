@@ -23,7 +23,6 @@
 #include "argus_config.h"
 #endif
 
-#if defined(ARGUS_GEOIP) || defined(ARGUS_GEOIP2)
 
 #ifndef ArgusLabel
 #define ArgusLabel
