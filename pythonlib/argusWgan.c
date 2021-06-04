@@ -1259,6 +1259,7 @@ argus_match (PyObject *y_true)
    PyObject *retn = NULL;
    int yt_dims, yt_size;
 
+
    PyArrayObject *arrays[2];  // holds input and results array 
    PyArrayObject *results;    // holds results array 
    PyObject *output;          // holds output array 
@@ -1269,6 +1270,10 @@ argus_match (PyObject *y_true)
    NpyIter_IterNextFunc *iternext;
    NpyIter *iter;
 
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "argus_match(%p): called\n", y_true);
+#endif
+
    arrays[0] = (PyArrayObject *) y_true;
 
    if (PyArray_API == NULL) {
@@ -1276,6 +1281,9 @@ argus_match (PyObject *y_true)
    }
 
    if (!(PyArray_Check(arrays[0]))) {
+#ifdef ARGUSDEBUG
+      ArgusDebug (1, "argus_match(%p): array doesn't checkout\n", y_true);
+#endif
       PyObject_Print(y_true, stdout, 0);
       printf("\n");
       fflush(stdout);
@@ -1376,7 +1384,7 @@ argus_match (PyObject *y_true)
 #endif
                     }
                  }
-                 *out++ = (retn != NULL) ? 1 : 0;
+                 *out++ = (retn != NULL) ? 2 : -2;
                  bzero (ArgusConBuf[0], sizeof(ArgusConBuf[0]));
                  slen0 = 0;
                  i = 1;
@@ -1392,6 +1400,10 @@ argus_match (PyObject *y_true)
 
     // Clean up and generate the output 
     NpyIter_Deallocate(iter);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "argus_match(%p): done\n", y_true);
+#endif
 
    if (results == NULL)
       Py_RETURN_NONE;
@@ -2054,7 +2066,8 @@ void
 ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
-   if (isdigit((int)*buf)) {
+
+   if (isdigit((int)*buf) || (*buf == '-')) {
       ArgusThisProto = atoi(buf);
       parser->canon.flow.hdr.type     = ARGUS_FLOW_DSR;
       parser->canon.flow.hdr.subtype  = ARGUS_FLOW_CLASSIC5TUPLE;
