@@ -212,6 +212,7 @@ struct ArgusDomainQueryStruct {
    struct ArgusListStruct *soa;
    struct ArgusListStruct *ns;
    struct ArgusListStruct *ptr;
+   struct ArgusListStruct *mx;
 };
 
 struct ArgusDomainStruct {
