@@ -140,11 +140,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseAggregator error");
         
-      } else 
-         parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
-
-//       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
-//          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+      } else {
+         if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+      }
 
       if (parser->ArgusAggregator != NULL) {
          if (correct >= 0) {

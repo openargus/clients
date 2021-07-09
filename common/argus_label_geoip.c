@@ -23,6 +23,7 @@
 #include "argus_config.h"
 #endif
 
+#if defined(ARGUS_GEOIP) || defined(ARGUS_GEOIP2)
 
 #ifndef ArgusLabel
 #define ArgusLabel
@@ -415,9 +416,10 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
    *found = _found;
    return 1;
 }
-# elif !defined(ARGUS_GEOIP) && defined(ARGUS_GEOIP2)
-#  include <maxminddb.h>
-#  include "maxminddb-compat-util.h"
+
+#elif !defined(ARGUS_GEOIP) && defined(ARGUS_GEOIP2)
+#include <maxminddb.h>
+#include "maxminddb-compat-util.h"
 
 typedef int (*geoip2_fmt_dsr_func)(struct ArgusParserStruct *,
                                    struct ArgusRecordStruct *,
