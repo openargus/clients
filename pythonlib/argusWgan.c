@@ -305,6 +305,8 @@ ArgusClientInit(struct ArgusParserStruct *parser)
    struct ArgusModeStruct *mode = NULL;
    int i, x, ind;
 
+   parser->debugflag = 4;
+
 #ifdef ARGUSDEBUG
    ArgusDebug (0, "ArgusWganClientInit()");
 #endif
@@ -443,7 +445,6 @@ RaConvertParseTitleString (char *str)
 
    bzero ((char *)RaParseLabelAlgorithms, sizeof(RaParseLabelAlgorithms));
    bzero ((char *)RaComparisonAlgorithms, sizeof(RaComparisonAlgorithms));
-   bzero ((char *)buf, sizeof(buf));
 
    if ((ptr = strchr(str, '\n')) != NULL)
       *ptr = '\0';
@@ -686,7 +687,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str)
    ArgusFree (buf);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (9, "RaConvertParseRecordString('%s') returning %d", str, retn);
+   ArgusDebug (1, "RaConvertParseRecordString('%s') returning %d", str, retn);
 #endif
 
    return (retn);
@@ -960,7 +961,7 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
 /*
    struct ArgusParserStruct *parser = NULL;
    PyObject *retn = NULL;
-   int yt_dims, yp_dims, yt_size, yp_size;
+   int yt_dims, yt_size, yp_size;
    int py_equal;
 
    PyArrayObject *arrays[3];  /* holds input and output array */
@@ -990,9 +991,7 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
       Py_RETURN_NONE;
    }
 
-   if ((yt_dims = PyArray_NDIM(arrays[0])) == 0)
-      return NULL;
-   if ((yp_dims = PyArray_NDIM(arrays[1])) == 0)
+   if ((yt_dims = PyArray_NDIM(arrays[1])) == 0)
       return NULL;
    if ((yt_size = PyArray_Size(y_true)) == 0)
       return NULL;
@@ -1067,10 +1066,16 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
 
     npy_intp *shape = PyArray_SHAPE(arrays[0]);
 
+
     /* iterate over the arrays */
     do {
         npy_intp stride = strideptr[0];
         npy_intp count = *innersizeptr;
+
+#ifdef ARGUSDEBUG
+        ArgusDebug (1, "ArgusWgan: numpyParse: stride:%d count:%d\n", stride, count);
+#endif
+
         /* out is always contiguous, so use double */
         double *out = (double *)dataptr[2];
         char *in0 = dataptr[0];

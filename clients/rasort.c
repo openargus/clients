@@ -210,17 +210,20 @@ RaParseComplete (int sig)
 
          if (count > 0) {
             ArgusSortQueue (ArgusSorter, ArgusSorter->ArgusRecordQueue, ARGUS_LOCK);
-            count = ArgusSorter->ArgusRecordQueue->arraylen;
  
             for (i = 0; i < count; i++) {
-               struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) ArgusSorter->ArgusRecordQueue->array[i];
-               ns->rank = rank++;
+               struct ArgusRecordStruct *ns = (void *) ArgusPopQueue(ArgusSorter->ArgusRecordQueue, ARGUS_LOCK);
+               if (ns != NULL) {
+                  ns->rank = rank++;
 
-               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (ns->rank + 1)) && (ArgusParser->sNoflag <= (ns->rank + 1))))
-                  RaSendArgusRecord (ns);
-               else
-                  if (ArgusParser->eNoflag < (ns->rank + 1)) 
-                     break;
+                  if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (ns->rank + 1)) && (ArgusParser->sNoflag <= (ns->rank + 1))))
+                     RaSendArgusRecord (ns);
+                  else
+                     if (ArgusParser->eNoflag < (ns->rank + 1)) 
+                        break;
+
+                  ArgusDeleteRecordStruct (ArgusParser, ns);
+               }
             }
          }
       }
