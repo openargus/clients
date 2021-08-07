@@ -11878,7 +11878,8 @@ ArgusNewAggregator (struct ArgusParserStruct *parser, char *masklist, int type)
 
                      case ARGUS_MASK_SPORT:
                      case ARGUS_MASK_DPORT:
-                        if (action > 0) retn->mask |= (0x01LL << ARGUS_MASK_PROTO); else retn->mask &= ~(0x01LL << ARGUS_MASK_PROTO); 
+                        if (action > 0) 
+                           retn->mask |= (0x01LL << ARGUS_MASK_PROTO); 
                         break;
                   }
                   break;
