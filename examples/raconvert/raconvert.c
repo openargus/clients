@@ -2299,7 +2299,10 @@ ArgusParseSrcIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 
    meanval = strtof(buf, &endptr);
    parser->canon.jitter.src.act.meanval = meanval;
+   parser->canon.jitter.src.act.minval = meanval;
+   parser->canon.jitter.src.act.maxval = meanval;
    parser->canon.jitter.src.act.n = 1;
+   parser->canon.jitter.hdr.argus_dsrvl8.qual |= ARGUS_SRC_ACTIVE_JITTER;
 
    if (endptr == buf)
       ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
@@ -2348,7 +2351,11 @@ ArgusParseDstIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 
    meanval = strtof(buf, &endptr);
    parser->canon.jitter.dst.act.meanval = meanval;
+   parser->canon.jitter.dst.act.minval = meanval;
+   parser->canon.jitter.dst.act.maxval = meanval;
    parser->canon.jitter.dst.act.n = 1;
+
+   parser->canon.jitter.hdr.argus_dsrvl8.qual |= ARGUS_DST_ACTIVE_JITTER;
 
    if (endptr == buf)
       ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
