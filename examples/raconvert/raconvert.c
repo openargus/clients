@@ -2113,7 +2113,7 @@ ArgusParsePacketsLabel (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.pkts = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParsePacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 void
@@ -2281,8 +2281,30 @@ ArgusParseDstAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
 void
 ArgusParseSrcIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 {
+   struct ArgusRecordStruct *argus = &parser->argus;
+   struct ArgusJitterStruct *jitter = NULL;
+   float meanval;
+   char *endptr;
+
+   if (argus->dsrs[ARGUS_JITTER_INDEX] == NULL) {
+      jitter = (struct ArgusJitterStruct *) &parser->canon.jitter;
+      memset(jitter, 0, sizeof(*jitter));
+      argus->dsrs[ARGUS_JITTER_INDEX]    = (struct ArgusDSRHeader *) jitter;
+      jitter->hdr.type                  = ARGUS_JITTER_DSR;
+      jitter->hdr.subtype               = 0;
+      jitter->hdr.argus_dsrvl8.len      = 1;
+
+      argus->dsrindex |= 1 << ARGUS_JITTER_INDEX;
+   }
+
+   meanval = strtof(buf, &endptr);
+   parser->canon.jitter.src.act.meanval = meanval;
+   parser->canon.jitter.src.act.n = 1;
+
+   if (endptr == buf)
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+
 /*
-   int len = RaPrintAlgorithmTable[ARGUSPRINTSRCINTPKT].length;
    sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "SrcIntPkt");
 */
 }
@@ -2308,6 +2330,30 @@ ArgusParseSrcIntPktMinLabel (struct ArgusParserStruct *parser, char *buf)
 void
 ArgusParseDstIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 {
+   struct ArgusRecordStruct *argus = &parser->argus;
+   struct ArgusJitterStruct *jitter = NULL;
+   float meanval;
+   char *endptr;
+
+   if (argus->dsrs[ARGUS_JITTER_INDEX] == NULL) {
+      jitter = (struct ArgusJitterStruct *) &parser->canon.jitter;
+      memset(jitter, 0, sizeof(*jitter));
+      argus->dsrs[ARGUS_JITTER_INDEX]    = (struct ArgusDSRHeader *) jitter;
+      jitter->hdr.type                  = ARGUS_JITTER_DSR;
+      jitter->hdr.subtype               = 0;
+      jitter->hdr.argus_dsrvl8.len      = 1;
+
+      argus->dsrindex |= 1 << ARGUS_JITTER_INDEX;
+   }
+
+   meanval = strtof(buf, &endptr);
+   parser->canon.jitter.dst.act.meanval = meanval;
+   parser->canon.jitter.dst.act.n = 1;
+
+   if (endptr == buf)
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+
+
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTINTPKT].length;
    sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "DstIntPkt");
@@ -2688,7 +2734,7 @@ ArgusParseTCPRTTLabel (struct ArgusParserStruct *parser, char *buf)
    tcprtt = strtol(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseTCPRTTLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 
    if (argus->dsrs[ARGUS_NETWORK_INDEX] == NULL) {
       argus->dsrs[ARGUS_NETWORK_INDEX] = &parser->canon.net.hdr;
