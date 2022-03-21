@@ -4489,7 +4489,7 @@ ArgusPrintRecordHeader (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_DATASUP:  ArgusTypeStr = "supplement"; break;
       case ARGUS_ARCHIVAL: ArgusTypeStr = "archive"; break;
       case ARGUS_EVENT:    ArgusTypeStr = "event"; break;
-      case ARGUS_VFLOW:    ArgusTypeStr = "vflow"; break;
+      case ARGUS_ZEEK:     ArgusTypeStr = "z.conn"; break;
       default:             ArgusTypeStr = "unknown"; break;
    }   
 
@@ -4522,7 +4522,7 @@ ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct Argu
                case ARGUS_DATASUP:  snprintf (ArgusTypeBuf, 32, "Supplement"); break;
                case ARGUS_ARCHIVAL: snprintf (ArgusTypeBuf, 32, "Archive"); break;
                case ARGUS_EVENT:    snprintf (ArgusTypeBuf, 32, "Event"); break;
-               case ARGUS_VFLOW:    snprintf (ArgusTypeBuf, 32, "Vflow"); break;
+               case ARGUS_ZEEK:     snprintf (ArgusTypeBuf, 32, "Z.con"); break;
                default:             snprintf (ArgusTypeBuf, 32, "Unknown"); break;
             }
             snprintf(&buf[strlen(buf)], len, "></Argus%sRecord>", ArgusTypeStr);

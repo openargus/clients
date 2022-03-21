@@ -148,7 +148,7 @@ extern "C" {
 #define ARGUS_EVENT				0x40   /* New Argus Event/Message Record */
 #define ARGUS_DATASUP				0x50   /* New Supplemental Argus Data Record */
 #define ARGUS_ARCHIVAL				0x60   /* New Archival Argus Data Record */
-#define ARGUS_VFLOW   				0x70   /* Pluribus Vflow Record Type*/
+#define ARGUS_ZEEK   				0x70   /* New Zeek Originated Record */
 
 
 /*
