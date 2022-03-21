@@ -8,6 +8,7 @@ build/*
 
 # osx noise
 .DS_Store
+._.DS_Store
 profile
 
 argus-clients.xcodeproj/project.xcworkspace/

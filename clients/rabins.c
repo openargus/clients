@@ -839,6 +839,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_ZEEK:
       case ARGUS_FAR: {
          struct ArgusTimeObject *time = (void *)ns->dsrs[ARGUS_TIME_INDEX];
 

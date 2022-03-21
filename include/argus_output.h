@@ -193,8 +193,6 @@ int getArgusPortNum(struct ArgusParserStruct *);
 void setArgusOflag(struct ArgusParserStruct *, unsigned int);
 unsigned int getArgusIDType(struct ArgusParserStruct *);
 void setArgusBindAddr (struct ArgusParserStruct *, char *);
-void setArgusID(struct ArgusParserStruct *, void *, unsigned int);
-unsigned int getArgusID(struct ArgusParserStruct *);
 void clearRadiumConfiguration (void);
 
 struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);

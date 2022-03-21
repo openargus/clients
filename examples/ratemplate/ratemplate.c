@@ -302,6 +302,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       case ARGUS_NETFLOW:
          fprintf (stdout, "ratemplate processing netflow record\n");
          break;
+      case ARGUS_ZEEK:
+         fprintf (stdout, "ratemplate processing zeek conn.log record\n");
+         break;
       case ARGUS_FAR:
          fprintf (stdout, "ratemplate processing flow record\n");
          break;

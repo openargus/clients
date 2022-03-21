@@ -436,6 +436,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
+      case ARGUS_ZEEK:
       case ARGUS_FAR: {
          struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
 
@@ -668,7 +669,7 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                            if (optarg && quoted) {   // Argus ID is a string.  Limit to date is 4 characters.
                               int slen = strlen(optarg);
                               if (slen > 4) optarg[4] = '\0';
-                              setArgusID (parser, optarg, ARGUS_IDIS_STRING);
+                              setParserArgusID (parser, optarg, 4, ARGUS_IDIS_STRING);
  
                            } else {
                            if (optarg && (*optarg == '`')) {
@@ -711,7 +712,7 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                        struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
                                        unsigned int addr;
                                        bcopy ((char *)&sa->sin_addr, (char *)&addr, 4);
-                                       setArgusID (ArgusParser, &addr, ARGUS_IDIS_IPV4);
+                                       setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
                                        break;
                                     }
                                     default:
@@ -745,12 +746,12 @@ RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                  if ((host->h_addrtype == 2) && (host->h_length == 4)) {
                                     unsigned int addr;
                                     bcopy ((char *) *host->h_addr_list, (char *)&addr, host->h_length);
-                                    setArgusID (parser, &addr, ARGUS_IDIS_IPV4);
+                                    setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
                                  } else
                                     ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) host '%s' error %s\n", file, optarg, strerror(errno));
                               } else
                                  if (optarg && isdigit((int)*optarg)) {
-                                    setArgusID (parser, optarg, ARGUS_IDIS_INT);
+                                    setParserArgusID (parser, optarg, 4, ARGUS_IDIS_INT);
                                  } else
                                     ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
 
@@ -976,7 +977,7 @@ void
 clearRadiumConfiguration (void)
 {
    ArgusParser->dflag = 0;
-   setArgusID (ArgusParser, 0, 0);
+   setParserArgusID (ArgusParser, 0, 0, 0);
 
    ArgusParser->ArgusPortNum = 0;
 

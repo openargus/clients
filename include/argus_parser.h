@@ -282,6 +282,8 @@ struct ArgusParserStruct {
    char *ArgusProgramName, *RaTimeFormat, *RaTimeZone;
    char *ArgusProgramArgs, *ArgusProgramOptions;
    char *ArgusSQLStatement, *MySQLDBEngine;
+   char *ArgusSourceIDString, *RaMarInfName;
+   char *RaTempFilePath, *ArgusBaseLineFile;
    char *ArgusSearchString;
 
    struct timeval ArgusRealTime, ArgusGlobalTime;
@@ -360,6 +362,7 @@ struct ArgusParserStruct {
    char *ArgusMatchLabel;
 
    unsigned int ArgusID, ArgusIDType;
+   struct ArgusTransportStruct trans;
 
    struct timeval ArgusReportTime;
    struct timeval ArgusUpdateInterval;

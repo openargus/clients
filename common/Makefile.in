@@ -92,14 +92,14 @@ OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
 
 
-COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c $(GENSRC) $(VSRC)
-COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o scanner.o grammar.o version.o
+COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c argus_clientconfig.c $(GENSRC) $(VSRC)
+COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o argus_clientconfig.o scanner.o grammar.o version.o
 
 PARSESRC  = argus_main.c
 PARSEOBJ  = argus_main.o
 
-CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c
-CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o
+CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_json.c
+CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_json.o
 
 OUTPUTSRC = argus_output.c
 OUTPUTOBJ = argus_output.o

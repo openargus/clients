@@ -258,6 +258,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_ZEEK:
       case ARGUS_FAR: {
          struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
          if (metric != NULL) {

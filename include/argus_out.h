@@ -190,8 +190,10 @@ struct ArgusMarStruct {
    unsigned int status, argusid;
    unsigned int localnet, netmask, nextMrSequenceNum; 
    struct ArgusTime startime, now;
+
    unsigned char  major_version, minor_version; 
    unsigned char interfaceType, interfaceStatus;
+
    unsigned short reportInterval, argusMrInterval;
    unsigned long long pktsRcvd, bytesRcvd;
    long long drift;
@@ -200,8 +202,22 @@ struct ArgusMarStruct {
    unsigned int queue, output, clients;
    unsigned int bufs, bytes;
    unsigned short suserlen, duserlen;
-   unsigned int pad[3];
-   unsigned int thisid, record_len;
+
+   union {
+      unsigned int value;
+      unsigned int ipv4;
+      unsigned char ethersrc[6];
+      unsigned char str[4];
+      unsigned char uuid[16];
+      unsigned int ipv6[4];
+
+      struct {
+         unsigned int pad[3];
+         unsigned int thisid;
+      };
+   };
+
+   unsigned int record_len;
 };
 
 struct ArgusMarSupStruct {
@@ -661,11 +677,11 @@ struct ArgusAddrStruct {
       unsigned int value;
       unsigned int ipv4;
       unsigned char str[4];
-/*
-      unsigned int ipv6[4];
       unsigned char ethersrc[6];
-*/
+      unsigned int ipv6[4];
+      unsigned char uuid[16];
    } a_un;
+   unsigned char inf[4];
 };
 
 struct ArgusTransportStruct {

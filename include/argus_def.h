@@ -291,9 +291,12 @@ extern "C" {
 
 #define ARGUS_INIT_MAR				0x00100000
 
-#define ARGUS_IDIS_STRING			0x00200000
-#define ARGUS_IDIS_INT				0x00400000
-#define ARGUS_IDIS_IPV4				0x00800000
+#define ARGUS_ID_INC_INF                        0x00100000
+#define ARGUS_IDIS_STRING                       0x00200000
+#define ARGUS_IDIS_INT                          0x00400000
+#define ARGUS_IDIS_IPV6                         0x00600000
+#define ARGUS_IDIS_IPV4                         0x00800000
+#define ARGUS_IDIS_UUID                         0x00A00000
  
  
 /* Argus Record Data Specific Record (DSR) Types */
@@ -441,10 +444,12 @@ extern "C" {
 #define ARGUS_TYPE_ISIS                         0x0A
 #define ARGUS_TYPE_IB_LOCAL                     0x0B
 #define ARGUS_TYPE_IB_GLOBAL                    0x0C
+
+#define ARGUS_TYPE_INTERFACE                    0x10
  
 #define ARGUS_TYPE_INT				0x20
 #define ARGUS_TYPE_STRING			0x21
-
+#define ARGUS_TYPE_UUID                         0x22
 
 /* Flow Descriptor Option Qualifiers */
 #define ARGUS_ANON				0x20
@@ -1581,10 +1586,13 @@ extern "C" {
 #define ARGUS_SRC_OUTOFORDER    	0x00010000
 #define ARGUS_DST_OUTOFORDER    	0x00020000
 
-
 #define ARGUS_DUPLICATES                0x000C0000
 #define ARGUS_SRC_DUPLICATES            0x00040000
 #define ARGUS_DST_DUPLICATES            0x00080000
+
+#define ARGUS_GAP                       0x00C00000
+#define ARGUS_SRC_GAP                   0x00400000
+#define ARGUS_DST_GAP                   0x00800000
 
 #define ARGUS_TCP_OPTIONS		0xFFF00000
 #define ARGUS_TCP_MAXSEG		0x00100000

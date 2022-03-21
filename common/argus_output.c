@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/clients/radium.c#7 $
+ * $Id: //depot/argus/clients/common/argus_output.c#7 $
  * $DateTime: 2012/12/13 11:07:52 $
  * $Change: 2514 $
  */
@@ -49,6 +49,7 @@
 #endif
 
 #include <argus_compat.h>
+#include <argus_util.h>
 #include <argus_output.h>
 
 
@@ -748,6 +749,7 @@ ArgusOutputProcess(void *arg)
                      break;
 
                   case ARGUS_NETFLOW:
+                  case ARGUS_ZEEK:
                   case ARGUS_FAR: {
                      struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
                      if (trans != NULL) {
@@ -1321,8 +1323,9 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
 struct ArgusRecord *
 ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
 {
-   struct ArgusRecord *retn;
+   struct ArgusAddrStruct asbuf, *asptr = &asbuf;
    struct timeval tbuf, *tptr = &tbuf;
+   struct ArgusRecord *retn;
 
    if ((retn = (struct ArgusRecord *) ArgusCalloc (1, sizeof(struct ArgusRecord))) == NULL)
      ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
@@ -1354,8 +1357,20 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
    retn->argus_mar.minor_version = VERSION_MINOR;
    retn->argus_mar.reportInterval = 0;
 
+   if (getParserArgusID(ArgusParser, asptr)) {
+         struct cnamemem *cp;
+         extern struct cnamemem converttable[HASHNAMESIZE];
 
-   retn->argus_mar.thisid = htonl(getArgusID(ArgusParser));
+         cp = check_cmem(converttable, (const u_char *) ArgusParser->ArgusSourceIDString);
+         retn->argus_mar.status &= ~(ARGUS_IDIS_UUID | ARGUS_IDIS_IPV6 | ARGUS_IDIS_STRING | ARGUS_IDIS_INT | ARGUS_IDIS_IPV4);
+
+         if (cp != NULL) {
+            retn->argus_mar.thisid = cp->addr.a_un.value;
+            retn->argus_mar.status |= cp->type;
+         } else {
+            retn->argus_mar.thisid = asptr->a_un.value;
+         }
+   }
    retn->argus_mar.record_len = htonl(-1);
 
 #ifdef ARGUSDEBUG
@@ -1365,70 +1380,11 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output)
    return (retn);
 }
 
-
-struct ArgusRecordStruct *
-ArgusGenerateInitialMarRecord (struct ArgusOutputStruct *output)
-{
-   struct ArgusRecordStruct *retn;
-   struct ArgusRecord *rec;
-   struct timeval now;
-
-   if ((retn = (struct ArgusRecordStruct *) ArgusCalloc (1, sizeof(*retn))) == NULL)
-     ArgusLog (LOG_ERR, "ArgusGenerateInitialMarRecord(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
-
-   retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION;
-   retn->hdr.cause = ARGUS_START;
-   retn->hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
-
-   if ((rec = (struct ArgusRecord *) ArgusCalloc(1, sizeof(*rec))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusGenerateInitialMarRecord: ArgusCalloc error %s", strerror(errno));
-
-   retn->dsrs[0] = (void *)rec;
-
-   rec->hdr = retn->hdr;
-   rec->argus_mar.argusid = htonl(ARGUS_COOKIE);
-   rec->argus_mar.thisid = getArgusID(ArgusParser);
-   rec->argus_mar.status  |= getArgusIDType(ArgusParser);
-
-   gettimeofday (&now, 0L);
-
-   rec->argus_mar.now.tv_sec  = now.tv_sec;
-   rec->argus_mar.now.tv_usec = now.tv_usec;
-
-   rec->argus_mar.major_version = VERSION_MAJOR;
-   rec->argus_mar.minor_version = VERSION_MINOR;
-   rec->argus_mar.reportInterval = 0;
-
-   rec->argus_mar.localnet = 0;
-   rec->argus_mar.netmask = 0;
-
-   rec->argus_mar.record_len = -1;
-
-   if (output) {
-      rec->argus_mar.argusMrInterval = output->ArgusMarReportInterval.tv_sec;
-
-      rec->argus_mar.startime.tv_sec  = output->ArgusStartTime.tv_sec;
-      rec->argus_mar.startime.tv_usec = output->ArgusStartTime.tv_usec;
-
-      rec->argus_mar.argusMrInterval = output->ArgusMarReportInterval.tv_sec;
-      rec->argus_mar.localnet = output->ArgusLocalNet;
-      rec->argus_mar.netmask = output->ArgusNetMask;
- 
-      rec->argus_mar.nextMrSequenceNum = output->ArgusOutputSequence;
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (4, "ArgusGenerateInitialMar() returning\n");
-#endif
-
-   return (retn);
-}
-
-
 struct ArgusRecordStruct *
 ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char status)
 {
    extern int ArgusAllocTotal, ArgusFreeTotal, ArgusAllocBytes;
+   struct ArgusAddrStruct asbuf, *asptr = &asbuf;
    struct ArgusRecordStruct *retn;
    struct ArgusRecord *rec;
    struct timeval now;
@@ -1446,8 +1402,40 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
    retn->dsrs[0] = (void *)rec;
 
    rec->hdr = retn->hdr;
-   rec->argus_mar.argusid  = getArgusID(ArgusParser);
-   rec->argus_mar.status  |= getArgusIDType(ArgusParser);
+
+   if (getParserArgusID(ArgusParser, asptr)) {
+            switch (getArgusIDType(ArgusParser) & ~ARGUS_TYPE_INTERFACE) {
+               case ARGUS_TYPE_STRING: {
+                  rec->argus_mar.status |= ARGUS_IDIS_STRING;
+                  bcopy (&asptr->a_un.str, &rec->argus_mar.str, 4);
+                  break;
+               }
+               case ARGUS_TYPE_INT: {
+                  rec->argus_mar.status |= ARGUS_IDIS_INT;
+                  bcopy (&asptr->a_un.value, &rec->argus_mar.value, sizeof(rec->argus_mar.value));
+                  break;
+               }
+               case ARGUS_TYPE_IPV4: {
+                  rec->argus_mar.status |= ARGUS_IDIS_IPV4;
+                  bcopy (&asptr->a_un.ipv4, &rec->argus_mar.ipv4, sizeof(rec->argus_mar.ipv4));
+                  break;
+               }
+               case ARGUS_TYPE_IPV6: {
+                  rec->argus_mar.status |= ARGUS_IDIS_IPV6;
+                  bcopy (&asptr->a_un.ipv6, &rec->argus_mar.ipv6, sizeof(rec->argus_mar.ipv6));
+                  break;
+               }
+               case ARGUS_TYPE_UUID: {
+                  rec->argus_mar.status |= ARGUS_IDIS_UUID;
+                  bcopy (&asptr->a_un.uuid, &rec->argus_mar.uuid, sizeof(rec->argus_mar.uuid));
+                  break;
+               }
+            }
+            if (getArgusManInf(ArgusParser) != NULL)
+               rec->argus_mar.status |=  ARGUS_ID_INC_INF;
+
+            rec->argus_mar.status  |= getArgusIDType(ArgusParser);
+   }
 
    gettimeofday (&now, 0L);
 
@@ -1554,34 +1542,10 @@ getArgusPortNum(struct ArgusParserStruct *parser)
    return(parser->ArgusPortNum);
 }
 
-
-void
-setArgusID(struct ArgusParserStruct *parser, void *ptr, unsigned int type)
-{
-   switch (type) {
-      case ARGUS_IDIS_STRING: bcopy((char *)ptr, &parser->ArgusID, strlen((char *)ptr)); break;
-      case ARGUS_IDIS_INT:    parser->ArgusID = atoi((char *)ptr); break;
-      case ARGUS_IDIS_IPV4:   parser->ArgusID = ntohl(*(unsigned int *)ptr); break;
-   }
-   parser->ArgusIDType = type;
-}
-
-unsigned int
-getArgusID(struct ArgusParserStruct *parser) {
-   return (parser->ArgusID);
-}
-
-
 void
 setArgusOflag(struct ArgusParserStruct *parser, unsigned int value)
 {
    parser->Oflag = value;
-}
-
-unsigned int
-getArgusIDType(struct ArgusParserStruct *parser)
-{
-   return (parser->ArgusIDType);
 }
 
 

@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2014 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,14 +20,18 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/raconvert/raconvert.h#8 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/argus/clients/examples/raconvert/raconvert.h#5 $
+ * $DateTime: 2014/05/12 10:49:40 $
+ * $Change: 2818 $
  */
 
 #ifndef Rascii_h
 #define Rascii_h
 
+#include <argus_json.h>
+
+void ArgusParseRankLabel (struct ArgusParserStruct *, char *);
+void ArgusParseAutoIdLabel (struct ArgusParserStruct *, char *);
 void ArgusParseStartDateLabel (struct ArgusParserStruct *, char *);
 void ArgusParseLastDateLabel (struct ArgusParserStruct *, char *);
 void ArgusParseSourceIDLabel (struct ArgusParserStruct *, char *);
@@ -165,126 +169,18 @@ void ArgusParseTCPBaseLabel (struct ArgusParserStruct *, char *);
 void ArgusParseTCPSrcBaseLabel (struct ArgusParserStruct *, char *);
 void ArgusParseTCPDstBaseLabel (struct ArgusParserStruct *, char *);
 void ArgusParseTCPRTTLabel (struct ArgusParserStruct *, char *);
+void ArgusParseLabelLabel (struct ArgusParserStruct *, char *);
+void ArgusParseSrcTcpFlagsLabel (struct ArgusParserStruct *, char *);
+void ArgusParseDstTcpFlagsLabel (struct ArgusParserStruct *, char *);
+void ArgusParseSrcCountryCodeLabel (struct ArgusParserStruct *, char *);
+void ArgusParseDstCountryCodeLabel (struct ArgusParserStruct *, char *);
 
-#define MAX_PARSE_ALG_TYPES	115
 
-#define ARGUSPARSESTARTDATELABEL		0
-#define ARGUSPARSELASTDATELABEL			1
-#define ARGUSPARSETRANSACTIONSLABEL		2
-#define ARGUSPARSEDURATIONLABEL			3
-#define ARGUSPARSEMEANLABEL			4
-#define ARGUSPARSEMINLABEL			5
-#define ARGUSPARSEMAXLABEL			6
-#define ARGUSPARSEADDRLABEL			7
-#define ARGUSPARSESRCADDRLABEL			8
-#define ARGUSPARSEDSTADDRLABEL			9
-#define ARGUSPARSEPROTOLABEL			10
-#define ARGUSPARSESRCPORTLABEL			11
-#define ARGUSPARSEDSTPORTLABEL			12
-#define ARGUSPARSESRCTOSLABEL			13
-#define ARGUSPARSEDSTTOSLABEL			14
-#define ARGUSPARSESRCDSBYTELABEL		15
-#define ARGUSPARSEDSTDSBYTELABEL		16
-#define ARGUSPARSESRCTTLLABEL			17
-#define ARGUSPARSEDSTTTLLABEL			18
-#define ARGUSPARSEBYTESLABEL			19
-#define ARGUSPARSESRCBYTESLABEL			20
-#define ARGUSPARSEDSTBYTESLABEL			21
-#define ARGUSPARSEAPPBYTESLABEL			22
-#define ARGUSPARSESRCAPPBYTESLABEL		23
-#define ARGUSPARSEDSTAPPBYTESLABEL		24
-#define ARGUSPARSETOTALPACKETSLABEL		25
-#define ARGUSPARSESRCPACKETSLABEL		26
-#define ARGUSPARSEOUTPACKETSLABEL		27
-#define ARGUSPARSEDSTPACKETSLABEL		28
-#define ARGUSPARSEINPACKETSLABEL		29
-#define ARGUSPARSELOADLABEL			30
-#define ARGUSPARSESRCLOADLABEL			31
-#define ARGUSPARSEDSTLOADLABEL			32
-#define ARGUSPARSELOSSLABEL			33
-#define ARGUSPARSESRCLOSSLABEL			34
-#define ARGUSPARSEDSTLOSSLABEL			35
-#define ARGUSPARSEPERCENTLOSSLABEL		36
-#define ARGUSPARSESRCPERCENTLOSSLABEL		37
-#define ARGUSPARSEDSTPERCENTLOSSLABEL		38
-#define ARGUSPARSERATELABEL			39
-#define ARGUSPARSESRCRATELABEL			40
-#define ARGUSPARSEDSTRATELABEL			41
-#define ARGUSPARSESOURCEIDLABEL			42
-#define ARGUSPARSEFLAGSLABEL			43
-#define ARGUSPARSEMACADDRESSLABEL		44
-#define ARGUSPARSESRCMACADDRESSLABEL		45
-#define ARGUSPARSEDSTMACADDRESSLABEL		46
-#define ARGUSPARSEDIRLABEL			47
-#define ARGUSPARSESRCINTPKTLABEL		48
-#define ARGUSPARSEDSTINTPKTLABEL		49
-#define ARGUSPARSESRCINTPKTACTIVELABEL		50
-#define ARGUSPARSEDSTINTPKTACTIVELABEL		51
-#define ARGUSPARSESRCINTPKTIDLELABEL		52
-#define ARGUSPARSEDSTINTPKTIDLELABEL		53
-#define ARGUSPARSESRCINTPKTMAXLABEL		54
-#define ARGUSPARSESRCINTPKTMINLABEL		55
-#define ARGUSPARSEDSTINTPKTMAXLABEL		56
-#define ARGUSPARSEDSTINTPKTMINLABEL		57
-#define ARGUSPARSESRCINTPKTACTIVEMAXLABEL	58
-#define ARGUSPARSESRCINTPKTACTIVEMINLABEL	59
-#define ARGUSPARSEDSTINTPKTACTIVEMAXLABEL	60
-#define ARGUSPARSEDSTINTPKTACTIVEMINLABEL	61
-#define ARGUSPARSESRCINTPKTIDLEMAXLABEL		62
-#define ARGUSPARSESRCINTPKTIDLEMINLABEL		63
-#define ARGUSPARSEDSTINTPKTIDLEMAXLABEL		64
-#define ARGUSPARSEDSTINTPKTIDLEMINLABEL		65
-
-#define ARGUSPARSESRCJITTERLABEL		67
-#define ARGUSPARSEDSTJITTERLABEL		68
-#define ARGUSPARSEACTIVESRCJITTERLABEL		69
-#define ARGUSPARSEACTIVEDSTJITTERLABEL		70
-#define ARGUSPARSEIDLESRCJITTERLABEL		71
-#define ARGUSPARSEIDLEDSTJITTERLABEL		72
-#define ARGUSPARSESTATELABEL			73
-#define ARGUSPARSEDELTADURATIONLABEL		74
-#define ARGUSPARSEDELTASTARTTIMELABEL		75
-#define ARGUSPARSEDELTALASTTIMELABEL		76
-#define ARGUSPARSEDELTASRCPKTSLABEL		77
-#define ARGUSPARSEDELTADSTPKTSLABEL		78
-#define ARGUSPARSEDELTASRCBYTESLABEL		79
-#define ARGUSPARSEDELTADSTBYTESLABEL		80
-#define ARGUSPARSEPERCENTDELTASRCPKTSLABEL	81
-#define ARGUSPARSEPERCENTDELTADSTPKTSLABEL	82
-#define ARGUSPARSEPERCENTDELTASRCBYTESLABEL	83
-#define ARGUSPARSEPERCENTDELTADSTBYTESLABEL	84
-#define ARGUSPARSESRCUSERDATALABEL		85
-#define ARGUSPARSEDSTUSERDATALABEL		86
-#define ARGUSPARSETCPEXTENSIONSLABEL		87
-#define ARGUSPARSESRCWINDOWLABEL		88
-#define ARGUSPARSEDSTWINDOWLABEL		89
-#define ARGUSPARSEJOINDELAYLABEL		90
-#define ARGUSPARSELEAVEDELAYLABEL		91
-#define ARGUSPARSESEQUENCENUMBERLABEL		92
-#define ARGUSPARSEBINSLABEL			93
-#define ARGUSPARSEBINNUMBERLABEL		94
-#define ARGUSPARSESRCMPLSLABEL			95
-#define ARGUSPARSEDSTMPLSLABEL			96
-#define ARGUSPARSESRCVLANLABEL			97
-#define ARGUSPARSEDSTVLANLABEL			98
-#define ARGUSPARSESRCVIDLABEL			99
-#define ARGUSPARSEDSTVIDLABEL			100
-#define ARGUSPARSESRCVPRILABEL			101
-#define ARGUSPARSEDSTVPRILABEL			102
-#define ARGUSPARSESRCIPIDLABEL			103
-#define ARGUSPARSEDSTIPIDLABEL			104
-#define ARGUSPARSESTARTRANGELABEL		105
-#define ARGUSPARSEENDRANGELABEL			106
-#define ARGUSPARSESERVICELABEL			107
-#define ARGUSPARSETCPSRCBASELABEL		108
-#define ARGUSPARSETCPDSTBASELABEL		109
-#define ARGUSPARSETCPRTTLABEL			110
-#define ARGUSPARSESRCPKTSIZEMAXLABEL		111
-#define ARGUSPARSESRCPKTSIZEMINLABEL		112
-#define ARGUSPARSEDSTPKTSIZEMAXLABEL		113
-#define ARGUSPARSEDSTPKTSIZEMINLABEL		114
+#define MAX_PARSE_ALG_TYPES	122
 
 void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct *, char *) = {
+   ArgusParseRankLabel,
+   ArgusParseAutoIdLabel,
    ArgusParseStartDateLabel,
    ArgusParseLastDateLabel,
    ArgusParseTransactionsLabel,
@@ -352,6 +248,7 @@ void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct
    ArgusParseDstIntPktIdleMaxLabel,
    ArgusParseDstIntPktIdleMinLabel,
    NULL,
+
    ArgusParseSrcJitterLabel,
    ArgusParseDstJitterLabel,
    ArgusParseActiveSrcJitterLabel,
@@ -401,10 +298,17 @@ void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct
    ArgusParseSrcPktSizeMinLabel,
    ArgusParseDstPktSizeMaxLabel,
    ArgusParseDstPktSizeMinLabel,
+   ArgusParseLabelLabel,
+   ArgusParseSrcTcpFlagsLabel,
+   ArgusParseDstTcpFlagsLabel,
+   ArgusParseSrcCountryCodeLabel,
+   ArgusParseDstCountryCodeLabel,
 };
 
 
 char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
+   "Rank",
+   "AutoId",
    "StartTime",
    "LastTime",
    "Trans",
@@ -499,7 +403,6 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "DstWin",
    "JDelay",
    "LDelay",
-
    "Seq",
    "Bins",
    "Bin",
@@ -523,6 +426,11 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "sMinSz",
    "dMaxSz",
    "dMinSz",
+   "Label",
+   "sTcpF",
+   "dTcpF",
+   "sCo",
+   "dCo",
 };
 
 extern struct ArgusTokenStruct llcsap_db[];

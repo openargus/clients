@@ -32,6 +32,9 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+#include <sys/stat.h>
+
 #include <argus_os.h>
 #include <argus_compat.h>
 
@@ -91,6 +94,69 @@ struct ArgusQueueStruct {
    struct ArgusQueueHeader *start, *end;
    struct ArgusQueueHeader **array;
 };
+
+struct ArgusFileInput {
+   struct ArgusQueueHeader qhdr;
+   char *filename;
+   char *tempfile;
+   FILE *file;
+   long long ostart;
+   long long ostop;
+   int type;
+   int fd;
+   struct stat statbuf;
+};
+
+struct anamemem {
+   struct anamemem *n_nxt;
+   unsigned int status, hashval, secs, ref;
+   char *name, *alias;
+};
+
+struct gnamemem {
+   struct gnamemem *g_nxt;
+   unsigned int status, hashval, secs, ref;
+   char *name;
+   void *group;
+};
+
+struct snamemem {
+   struct snamemem *s_nxt;
+   unsigned int status, hashval, secs, ref;
+   char *name;
+   void *service;
+};
+
+struct dbtblmem {
+   struct dbtblmem *p_nxt;
+   unsigned int hashval;
+   char *name;
+};
+
+struct cnamemem {
+   struct cnamemem *n_nxt;
+   unsigned int status, hashval, secs, ref;
+   char *name;
+   unsigned int type;
+   struct ArgusAddrStruct addr;
+};
+
+struct nnamemem {
+   struct nnamemem *n_nxt;
+   unsigned int status, hashval, ref, index;
+   struct timeval stime, rtime, ltime;
+
+   char *n_name, *d_name, *tld_name;
+   struct ArgusListStruct *refers;
+   struct ArgusListStruct *cidrs;
+   struct ArgusListStruct *cnames;
+   struct ArgusListStruct *aliases;
+   struct ArgusListStruct *ptrs;
+   struct ArgusListStruct *mxs;
+   struct ArgusListStruct *servers;
+   struct ArgusListStruct *clients;
+};
+
 
 struct enamemem {
    u_short e_addr0;
@@ -275,6 +341,20 @@ void ArgusParseArgs (struct ArgusParserStruct *, int, char **);
 
 char *ArgusTrimString (char *str);
 char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
+
+void setArgusHashTableSize (struct ArgusParserStruct *, int);
+void setArgusID(struct ArgusAddrStruct *, void *, int, unsigned int);
+void setTransportArgusID(struct ArgusTransportStruct *, void *, int, unsigned int);
+void setParserArgusID(struct ArgusParserStruct *, void *, int, unsigned int);
+
+void setArgusManInf (struct ArgusParserStruct *, char *);
+char *getArgusManInf (struct ArgusParserStruct *);
+
+int getParserArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
+unsigned int getArgusIDType(struct ArgusParserStruct *);
+int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
+                              struct ArgusParserStruct *, char *);
+void ArgusParseSourceID (struct ArgusParserStruct *, char *);
 
 
 void ArgusPrintBssid (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -1297,6 +1377,24 @@ void ArgusHtoN (struct ArgusRecord *);
 void ArgusV2NtoH (struct ArgusV2Record *);
 void ArgusV2HtoN (struct ArgusV2Record *);
 
+extern unsigned int getnamehash(const u_char *);
+extern struct cnamemem *check_cmem(struct cnamemem *, const u_char *);
+extern struct cnamemem *lookup_cmem(struct cnamemem *, const u_char *);
+extern struct nnamemem *lookup_nmem(struct nnamemem *, const u_char *);
+extern struct nnamemem *check_nmem(struct nnamemem *, const u_char *);
+extern struct dbtblmem *lookup_dbtbl(struct dbtblmem *, const u_char *);
+extern struct dbtblmem *check_dbtbl(struct dbtblmem *, const u_char *);
+extern struct gnamemem *check_group(struct gnamemem *, const u_char *);
+extern struct gnamemem *lookup_group(struct gnamemem *, const u_char *);
+extern struct snamemem *check_service(struct snamemem *, const u_char *);
+extern struct snamemem *lookup_service(struct snamemem *, const u_char *);
+
+extern char *lookup_srcid(const u_char *, struct anamemem *);
+extern char *lookup_alias(const u_char *, struct anamemem *);
+
+void ArgusFileFree(struct ArgusFileInput *afi);
+void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
+
 #else
 #define ARGUSPRINTSTARTDATE		0
 #define ARGUSPRINTLASTDATE		1
@@ -1522,8 +1620,29 @@ extern void ArgusFreeLlcsaparray(void);
 
 extern char *ip_proto_string [];
 extern char *icmptypestr[];
+extern char *icmptypelongstr[];
 
+extern unsigned int getnamehash(const u_char *);
+extern struct cnamemem *lookup_cmem(struct cnamemem *, const u_char *);
+extern struct cnamemem *check_cmem(struct cnamemem *, const u_char *);
+extern struct nnamemem *lookup_nmem(struct nnamemem *, const u_char *);
+extern struct nnamemem *check_nmem(struct nnamemem *, const u_char *);
+extern struct dbtblmem *lookup_dbtbl(struct dbtblmem *, const u_char *);
+extern struct dbtblmem *check_dbtbl(struct dbtblmem *, const u_char *);
 extern struct enamemem *lookup_emem(struct enamemem *, const u_char *);
+extern struct enamemem *check_emem(struct enamemem *, const u_char *);
+
+extern struct gnamemem *lookup_group(struct gnamemem *, const u_char *);
+extern struct gnamemem *check_group(struct gnamemem *, const u_char *);
+
+extern struct snamemem *lookup_service(struct snamemem *, const u_char *);
+extern struct snamemem *check_service(struct snamemem *, const u_char *);
+
+extern char *lookup_srcid(const u_char *, struct anamemem *);
+extern char *lookup_alias(const u_char *, struct anamemem *);
+
+
+
 
 extern unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
@@ -1567,6 +1686,22 @@ extern int RaDiffTime (struct timeval *, struct timeval *, struct timeval *);
 extern float RaDeltaFloatTime (struct timeval *, struct timeval *);
 
 extern char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
+
+extern void setArgusHashTableSize (struct ArgusParserStruct *, int);
+extern void setArgusID(struct ArgusAddrStruct *, void *, int, unsigned int);
+extern void setTransportArgusID(struct ArgusTransportStruct *, void *, int, unsigned int);
+extern void setParserArgusID(struct ArgusParserStruct *, void *, int, unsigned int);
+
+extern void setArgusManInf (struct ArgusParserStruct *, char *);
+extern char *getArgusManInf (struct ArgusParserStruct *);
+
+extern int getParserArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
+extern unsigned int getArgusIDType(struct ArgusParserStruct *);
+extern int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
+                              struct ArgusParserStruct *, char *);
+extern void ArgusParseSourceID (struct ArgusParserStruct *, char *);
+
+
 
 extern void ArgusPrintTime(struct ArgusParserStruct *, char *, struct timeval *);
 extern char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);
