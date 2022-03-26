@@ -1940,7 +1940,7 @@ ArgusParseDstPortLabel (struct ArgusParserStruct *parser, char *buf)
                      value = port;
                } 
                parser->canon.flow.flow_un.ipv6.dport = value;
-               parser->canon.flow.flow_un.ip.ip_p = ArgusThisProto;
+               parser->canon.flow.flow_un.ipv6.ip_p = ArgusThisProto;
                break;
 
             case IPPROTO_ESP:
