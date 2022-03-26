@@ -443,7 +443,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if (parser->RaMonMode) {
             struct ArgusRecordStruct *tns = ArgusCopyRecordStruct(argus);
