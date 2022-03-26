@@ -1421,13 +1421,13 @@ ArgusGenerateStatusMarRecord (struct ArgusOutputStruct *output, unsigned char st
                   break;
                }
                case ARGUS_TYPE_IPV6: {
-                  rec->argus_mar.status |= ARGUS_IDIS_IPV6;
-                  bcopy (&asptr->a_un.ipv6, &rec->argus_mar.ipv6, sizeof(rec->argus_mar.ipv6));
+//                rec->argus_mar.status |= ARGUS_IDIS_IPV6;
+//                bcopy (&asptr->a_un.ipv6, &rec->argus_mar.ipv6, sizeof(rec->argus_mar.ipv6));
                   break;
                }
                case ARGUS_TYPE_UUID: {
-                  rec->argus_mar.status |= ARGUS_IDIS_UUID;
-                  bcopy (&asptr->a_un.uuid, &rec->argus_mar.uuid, sizeof(rec->argus_mar.uuid));
+//                rec->argus_mar.status |= ARGUS_IDIS_UUID;
+//                bcopy (&asptr->a_un.uuid, &rec->argus_mar.uuid, sizeof(rec->argus_mar.uuid));
                   break;
                }
             }

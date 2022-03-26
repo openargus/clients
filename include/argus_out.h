@@ -677,11 +677,11 @@ struct ArgusAddrStruct {
       unsigned int value;
       unsigned int ipv4;
       unsigned char str[4];
-      unsigned char ethersrc[6];
-      unsigned int ipv6[4];
-      unsigned char uuid[16];
+//    unsigned char ethersrc[6];
+//    unsigned int ipv6[4];
+//    unsigned char uuid[16];
    } a_un;
-   unsigned char inf[4];
+// unsigned char inf[4];
 };
 
 struct ArgusTransportStruct {

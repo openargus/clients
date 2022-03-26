@@ -26737,8 +26737,8 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
          case ARGUS_TYPE_STRING: bcopy((char *)ptr, &srcid->a_un.str, 4); break;
          case ARGUS_TYPE_INT:    srcid->a_un.value = atoi((char *)ptr); offset = sizeof(unsigned int); break;
          case ARGUS_TYPE_IPV4:   srcid->a_un.ipv4 = ntohl(*(unsigned int *)ptr); offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &srcid->a_un.ipv6, 16); offset = sizeof(srcid->a_un.ipv6); break;
-         case ARGUS_TYPE_UUID:  bcopy((char *)ptr, &srcid->a_un.uuid, 16); offset = sizeof(srcid->a_un.uuid); break;
+//       case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &srcid->a_un.ipv6, 16); offset = sizeof(srcid->a_un.ipv6); break;
+//       case ARGUS_TYPE_UUID:  bcopy((char *)ptr, &srcid->a_un.uuid, 16); offset = sizeof(srcid->a_un.uuid); break;
       }
 
       if (type & ARGUS_TYPE_INTERFACE) {
@@ -26769,8 +26769,8 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
          case ARGUS_TYPE_STRING: break;
          case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
          case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
-         case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
+//       case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
+//       case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
       }
 
       setArgusID(&trans->srcid, ptr, len, type);
@@ -26872,13 +26872,13 @@ ArgusCommonParseSourceID(struct ArgusAddrStruct *srcid,
          optarg = ptr;
 
          if (!(strcmp(prefix, "uuid"))) {
-            type = ARGUS_TYPE_UUID;
+//          type = ARGUS_TYPE_UUID;
          } else
          if (!(strcmp(prefix, "ipv4"))) {
             type = ARGUS_TYPE_IPV4;
          } else
          if (!(strcmp(prefix, "ipv6"))) {
-            type = ARGUS_TYPE_IPV6;
+//          type = ARGUS_TYPE_IPV6;
          } else
          if (!(strcmp(prefix, "int"))) {
             type = ARGUS_TYPE_INT;
@@ -26928,16 +26928,16 @@ ArgusCommonParseSourceID(struct ArgusAddrStruct *srcid,
                break;
             }
             case ARGUS_TYPE_IPV6: {
-               slen = sizeof(srcid->a_un.ipv6);
-               bcopy(&srcid->a_un.ipv6, buf, slen);
-               type = ARGUS_TYPE_IPV6;
+//             slen = sizeof(srcid->a_un.ipv6);
+//             bcopy(&srcid->a_un.ipv6, buf, slen);
+//             type = ARGUS_TYPE_IPV6;
                break;
             }
 
             case ARGUS_TYPE_UUID  : {
-               slen = sizeof(srcid->a_un.uuid);
-               bcopy(&srcid->a_un.uuid, buf, slen);
-               type = ARGUS_TYPE_UUID;
+//             slen = sizeof(srcid->a_un.uuid);
+//             bcopy(&srcid->a_un.uuid, buf, slen);
+//             type = ARGUS_TYPE_UUID;
                break;
             }
          }
