@@ -1082,8 +1082,15 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
 
    if (RaConvertTmPtr == NULL) {
       gettimeofday(tvp, 0);
-      if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
+
+      if (strchr(date, 'Z')) {
+         if ((RaConvertTmPtr = gmtime(&tvp->tv_sec)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
+      } else {
+         if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) gmtime error\n", parser, buf, strerror(errno));
+      }
+
       bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
       RaConvertTmPtr = &timebuf;
    }
@@ -1109,7 +1116,7 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       }
          
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 9 - precision;
+         int n, power = 6 - precision;
 
          for (n = 0; n < power; n++)
             useconds *= 10;
@@ -3238,7 +3245,7 @@ ArgusParseDurationLabel (struct ArgusParserStruct *parser, char *buf)
          ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
 
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 9 - precision;
+         int n, power = 6 - precision;
 
          for (n = 0; n < power; n++)
             tvp->tv_usec *= 10;
