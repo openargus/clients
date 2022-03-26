@@ -903,7 +903,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *time = (void *)ns->dsrs[ARGUS_TIME_INDEX];
          struct ArgusRecordStruct *tns = NULL;
@@ -1091,7 +1091,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
       case ARGUS_MAR: 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if (agg != NULL) {
             struct ArgusRecordStruct *ns = ArgusCopyRecordStruct(argus);

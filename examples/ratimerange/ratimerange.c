@@ -196,7 +196,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
 

@@ -100,6 +100,7 @@
 #define RACONVERT_FIELD_QUOTED		7
 #define RACONVERT_CONVERSION_MAP	8	
 
+#define ARGUS_ZEEK			1
 #define ARGUS_MAX_CONVERSION		256
 
 int ArgusInputType = 0;

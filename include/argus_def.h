@@ -146,9 +146,9 @@ extern "C" {
 #define ARGUS_INDEX   				0x20   /* New Argus Index Record */
 #define ARGUS_NETFLOW  				0x30   /* Argus Cisco Netflow Originated Record */
 #define ARGUS_EVENT				0x40   /* New Argus Event/Message Record */
-#define ARGUS_DATASUP				0x50   /* New Supplemental Argus Data Record */
-#define ARGUS_ARCHIVAL				0x60   /* New Archival Argus Data Record */
-#define ARGUS_ZEEK   				0x70   /* New Zeek Originated Record */
+#define ARGUS_AFLOW				0x50   /* New Argus Any Flow/Metric Record ... for things not argus flows */
+#define ARGUS_DATASUP				0x60   /* New Supplemental Argus Data Record */
+#define ARGUS_ARCHIVAL				0x70   /* New Archival Argus Data Record */
 
 
 /*

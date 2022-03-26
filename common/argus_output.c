@@ -749,7 +749,7 @@ ArgusOutputProcess(void *arg)
                      break;
 
                   case ARGUS_NETFLOW:
-                  case ARGUS_ZEEK:
+                  case ARGUS_AFLOW:
                   case ARGUS_FAR: {
                      struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
                      if (trans != NULL) {

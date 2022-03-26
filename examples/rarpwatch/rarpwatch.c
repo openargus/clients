@@ -417,7 +417,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_EVENT:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_NETFLOW:
          break;
 

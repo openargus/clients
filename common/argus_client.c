@@ -989,7 +989,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
             portnum = htons(input->portnum);
 
          bzero ((char *)&argus, sizeof(argus));
-         argus.hdr.type          = ARGUS_MAR | ARGUS_NETFLOW | ARGUS_ZEEK | ARGUS_VERSION;
+         argus.hdr.type          = ARGUS_MAR | ARGUS_NETFLOW | ARGUS_AFLOW | ARGUS_VERSION;
          argus.hdr.cause         = ARGUS_START;
          argus.hdr.len           = sizeof (argus) / 4;
          argus.argus_mar.argusid = ARGUS_COOKIE;
@@ -1542,7 +1542,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
          case ARGUS_EVENT:
          case ARGUS_NETFLOW:
-         case ARGUS_ZEEK:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             struct ArgusDSRHeader *dsr = (struct ArgusDSRHeader *) (hdr + 1);
             int dsrlen = hdr->len * 4;
@@ -3487,7 +3487,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
 
             case ARGUS_EVENT:
             case ARGUS_NETFLOW:
-            case ARGUS_ZEEK:
+            case ARGUS_AFLOW:
             case ARGUS_FAR: {
                if ((retn->dsrindex = rec->dsrindex)) {
                   int i;
@@ -3655,7 +3655,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
             }
          }
 
-         if (retn->hdr.type & (ARGUS_FAR | ARGUS_NETFLOW | ARGUS_ZEEK))
+         if (retn->hdr.type & (ARGUS_FAR | ARGUS_NETFLOW | ARGUS_AFLOW))
             retn->rank = rec->rank;
 
          if (rec->correlates) {
@@ -3830,7 +3830,7 @@ ArgusGenerateRecord (struct ArgusRecordStruct *rec, unsigned char state, char *b
 
          case ARGUS_EVENT:
          case ARGUS_NETFLOW:
-         case ARGUS_ZEEK:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             retn->hdr  = rec->hdr;
             retn->hdr.type  |= ARGUS_VERSION;
@@ -4837,7 +4837,7 @@ ArgusGenerateCiscoRecord (struct ArgusRecordStruct *rec, unsigned char state, ch
             break;
 
          case ARGUS_NETFLOW:
-         case ARGUS_ZEEK:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             struct ArgusDSRHeader *dsr;
             int y, ind, dsrindex = 0;
@@ -5200,7 +5200,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
 
          case ARGUS_EVENT:
          case ARGUS_NETFLOW: 
-         case ARGUS_ZEEK:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             struct ArgusFlow *tflow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
             int i, len, tlen = 0, s = sizeof(unsigned short);
@@ -9699,7 +9699,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
          }
 
          case ARGUS_NETFLOW:
-         case ARGUS_ZEEK:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             agr = (void *)ns->dsrs[ARGUS_AGR_INDEX];
             if ((metric = (void *)ns->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
@@ -10526,7 +10526,7 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
                      }
 
                      case ARGUS_NETFLOW: 
-                     case ARGUS_ZEEK:
+                     case ARGUS_AFLOW:
                      case ARGUS_FAR: {
                         struct ArgusRecordStruct *tns;
 
@@ -11829,7 +11829,7 @@ ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns)
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (void *)ns->dsrs[ARGUS_TIME_INDEX];
 
@@ -12192,7 +12192,7 @@ ArgusFetchSrcAddr (struct ArgusRecordStruct *argus)
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((flow = (void *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
             switch (flow->hdr.subtype & 0x3F) {
@@ -12314,7 +12314,7 @@ ArgusFetchDstAddr (struct ArgusRecordStruct *argus)
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((flow = (void *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
             switch (flow->hdr.subtype & 0x3F) {
@@ -13025,7 +13025,7 @@ ArgusAdjustTransactions (struct ArgusRecordStruct *ns, double ptrans, double ppk
       }
 
       case ARGUS_NETFLOW:
-      case ARGUS_ZEEK:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusAgrStruct *agr = (void *)ns->dsrs[ARGUS_AGR_INDEX];
          double tpkts = ArgusFetchPktsCount(ns);
