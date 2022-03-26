@@ -1509,7 +1509,10 @@ ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
             argus->hdr.type = ARGUS_EVENT;
             return;
          } else
-            argus->hdr.type = ARGUS_FAR | ArgusInputType;
+            switch (ArgusInputType) {
+               case ARGUS_NETFLOW: argus->hdr.type = ARGUS_FAR | ARGUS_NETFLOW; break;
+               case ARGUS_ZEEK:    argus->hdr.type = ARGUS_FAR | ARGUS_AFLOW; break;
+            }
 
          if ((proto = getprotobyname(buf)) != NULL) {
             ArgusThisProto = proto->p_proto;
@@ -1528,7 +1531,10 @@ ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
    if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
       argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
       argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
-      argus->hdr.type = ARGUS_FAR | ArgusInputType;
+      switch (ArgusInputType) {
+         case ARGUS_NETFLOW: argus->hdr.type = ARGUS_FAR | ARGUS_NETFLOW; break;
+         case ARGUS_ZEEK:    argus->hdr.type = ARGUS_FAR | ARGUS_AFLOW; break;
+      }
 
       parser->canon.flow.hdr.type = ARGUS_FLOW_DSR;
 
@@ -1747,8 +1753,8 @@ ArgusParseDstAddrLabel (struct ArgusParserStruct *parser, char *buf)
                }
 
                default:
-                  parser->canon.flow.flow_un.ip.ip_dst    = *taddr->addr;
-                  parser->canon.flow.flow_un.ip.dmask     =  taddr->masklen;
+                  parser->canon.flow.flow_un.ip.ip_dst = *taddr->addr;
+                  parser->canon.flow.flow_un.ip.dmask  =  taddr->masklen;
                   break;
             }
             break;
@@ -3555,12 +3561,12 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                         if (optarg) {
                            switch (i) {
                               case RACONVERT_SOURCE: {
-	                      if (strcasecmp(optarg, "argus") == 0) {
-			      } else if (strcasecmp(optarg, "netflow") == 0) {
-			         ArgusInputType = ARGUS_NETFLOW;
-			      } else if (strcasecmp(optarg, "zeek") == 0) {
-			         ArgusInputType = ARGUS_ZEEK;
-			      }
+	                         if (strcasecmp(optarg, "argus") == 0) {
+			         } else if (strcasecmp(optarg, "netflow") == 0) {
+			            ArgusInputType = ARGUS_NETFLOW;
+			         } else if (strcasecmp(optarg, "zeek") == 0) {
+			            ArgusInputType = ARGUS_ZEEK;
+			         }
                                  break;
                               }
 

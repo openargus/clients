@@ -6445,7 +6445,7 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
             buf[0] = 'N';
 
          if ((argus->hdr.type & 0xF0) == ARGUS_AFLOW)
-            buf[0] = 'Z';
+            buf[0] = 'A';
 
          if ((time = (void *)argus->dsrs[ARGUS_TIME_INDEX]) != NULL)
             if (time->hdr.argus_dsrvl8.qual & ARGUS_TIMEADJUST)
@@ -26757,13 +26757,16 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
 void
 setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsigned int type)
 {
-   bzero (trans, sizeof(*trans));
+   int tsize = sizeof(*trans);
+
+   bzero (trans, tsize);
 
    if (len > 0) {
+      int offset = 0;
+
       trans->hdr.type              = ARGUS_TRANSPORT_DSR;
       trans->hdr.subtype           = ARGUS_SRCID | ARGUS_SEQ;
       trans->hdr.argus_dsrvl8.qual = type;
-      int offset                   = 0;
 
       switch (type & ~ARGUS_TYPE_INTERFACE) {
          case ARGUS_TYPE_STRING: break;
@@ -26775,7 +26778,7 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
 
       setArgusID(&trans->srcid, ptr, len, type);
 
-      trans->hdr.argus_dsrvl8.len  = (offset + 3)/4 + 1;
+      trans->hdr.argus_dsrvl8.len  = (tsize + 3)/4;
 
       if (type & ARGUS_TYPE_INTERFACE) {
          trans->hdr.subtype |= ARGUS_TYPE_INTERFACE;
