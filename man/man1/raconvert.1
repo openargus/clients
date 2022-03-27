@@ -1,4 +1,4 @@
-.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" Copyright (c) 2000-2022 QoSient, LLC
 .\" All rights reserved.
 .\" 
 .\" This program is free software; you can redistribute it and/or modify
@@ -15,31 +15,59 @@
 .\" along with this program; if not, write to the Free Software
 .\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 .\"
-.TH RACONVERT 1 "07 October 2003" "raconvert 3.0.8"
+.TH RACONVERT 1 "27 Margch 2022" "raconvert 3.0.8"
 .SH NAME
-\fBraconvert\fP \- convert comma-separated ASCII \fBargus(8)\fP data, to binary \fBargus(8)\fP data.
+\fBraconvert\fP \- convert CSV and JSON formatted ASCII flow data to binary \fBargus(8)\fP data.
 .SH SYNOPSIS
 .B raconvert
-\fB\-r\fP \fIinput\fP \fB\-w\fP \fIoutput\fP
+[\fB-f\fP \fIconversion.map\fP] \fB\-r\fP \fIinput\fP \fB\-w\fP \fIoutput\fP
 .SH DESCRIPTION
-.IX  "raconvert command"  ""  "\fLraconvert\fP \(em argus data"
+.IX  "raconvert command"  ""  "\fLraconvert\fP \(em to argus data"
 .LP
 .B Raconvert
-reads comman separated ASCII
-.BR argus
-data from a file or stdin, and converts the ASCII representation to binary format.
-In order for \fBraconver\fP to process the delimited data correctly, the file should
-be created by \fBra.1\fP like programs, using the "-c <char>" option to specify
-a field separator.  Column delimiters can be any non-ambiguous character, and are
-automatically discovered from the files title string.
+reads comma separated (csv) and JSON formatted flow data from a file or stdin, and 
+converts the ASCII representation to binary \fBargus\fP format.  
 
-Because \fBraconvert.1\fP expects the first valid string in the file to be a
-\fBra.1\fP column title line, the \fBra.1\fP program must use the equivalent
-of the "-L 0" option.  
 
-The file can present its column oriented data in any order, and \fBraconvert\fP will
+There are two primary modes of operation, converting native \fBargus\fP ASCII output back to binary,
+and converting other flow data ASCII formats to \fBargus\fP data.  These differ based on the conversion
+map used to convert and assign data to \fBargus\fP data attributes.  For native \fBargus\fP data, the
+conversion map is integrated into the raconvert algorithms.  For non-native flow data, \fBraconvert.1\fP
+needs a conversion map, that identifies the (key,value) pairs in the imported data, validates the data
+types, and assigns the values to the mapped Argus data attributes.  For (key,value) pairs that do
+not have a representative native Argus data attribute, (key,value) pairs can be added to the \fBargus\fP
+flow label structure.
+
+.nf
+.B Native Argus Data
+
+.fi
+
+\fBRaconvert.1\fP is designed to ingest most formats of printed \fBargus\P data.  CSV format
+is the easiest to work with, and \fBraconvert.1\fP will automatically identify fields, based
+on the column titles in the file.  For best results, to process the delimited data correctly,
+the file should be created by \fBra.1\fP like programs, using the "-c <char>" option to specify
+a field separator.  For CSV, it would be "-c ,".  Column delimiters can be any non-ambiguous
+character, and are automatically discovered from the files title string.  The delimiter 
+chosen should not be a normally occurring character, such as '.'.
+
+Because \fBraconvert.1\fP expects the first valid string in the file to be a \fBra.1\fP column 
+title line, the \fBra.1\fP program should use the equivalent of the "-L 0" option.  
+
+The file can present its column oriented data in any order, and \fBraconvert.1\fP will
 accomodate.  Duplicate columns on the same line are allowed, but the final value
 in the resulting argus record with be the last value encountered.
+
+
+.nf
+.B Foriegn Flow Data
+
+.fi
+\fBRaconvert.1\fP can convert non-argus flow data to \fBargus\fP binary formats.  Using the
+"-f conversion.map" option, any ascii string can be imported into \fBargus\fP binary foratted
+data.  See \fBraconvert.zeek.conf.5\fP to view the structure of a \fBraconvert.1\fP conversion
+map.
+
 
 \fBraconvert.1\fP can read gzip and bzip2 compressed files, based on the file extension.
 
@@ -48,21 +76,32 @@ in the resulting argus record with be the last value encountered.
 is predominately used for reading ASCII represented archive data.  Argus data is
 routinely converted to ASCII for inspection and archiving, due to the good
 compressibility offered by gzip and others.  Argus data is also converted from binary
-to ASCII and back to binary, as a routine process to enforce content policies.
-The conversion, with ASCII inspection ensures that specific data of interest isn't
-leaked.
+to ASCII and back to binary, as a routine process to enforce content policies, especially
+when sharing data.  Printing the records in ASCII enables standard tools to look for keywords,
+specific addresses, etc ...  that may not be sharable, based on policy.  Converting the inspected
+traffic is the best way to prevent unintentional leakage.
+
+Editing flow records, or creating artificial flow data using text editors is a important part
+of developing training data for flow data analytics and machine learning.  Creating/editing in ascii
+and then converting to binary \fBargus\fP data, enables the full set of Argus processing on
+generated data.
+
+And importing foreign flow data formats, such as \fBzeek\fP into \fBargus\fP data formats enables
+a larger set of sensors to contribute to the \fBargus\fP data analytics systems.
 
 .SH INVOCATION
 .nf
 \fBra\fP -L0 c , -r argusfile > argus.ascii.csv 
 \fBraconvert\fP -r argus.ascii.csv -w argusfile
+\fBraconvert\fP -f raconvert.zeek.conf -r zeek.conn.log -w argusfile
 .fi
 
 .SH COPYRIGHT
-Copyright (c) 2000-2016 QoSient. All rights reserved.
+Copyright (c) 2000-2022 QoSient. All rights reserved.
 .SH SEE ALSO
 .BR ra(1),
 .BR rarc(5),
+.BR raconvert.zeek.conf(5),
 .BR argus(8),
 .SH FILES
 
