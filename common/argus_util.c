@@ -1588,8 +1588,8 @@ ArgusParseArgs (struct ArgusParserStruct *parser, int argc, char **argv)
       free(cmdbuf);
    }
 
-   if (parser->RaPrintOptionIndex > 0)
-      ArgusProcessSOptions(parser);
+// if (parser->RaPrintOptionIndex > 0)
+//    ArgusProcessSOptions(parser);
  
    if (parser->ArgusRemoteFilter != NULL)
       if (ArgusFilterCompile (&parser->ArgusFilterCode, parser->ArgusRemoteFilter, parser->Oflag) < 0) {
