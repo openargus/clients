@@ -140,7 +140,7 @@ char *ArgusAbbreviateMetric(struct ArgusParserStruct *, char *, int, double);
 
 void RaClearConfiguration (struct ArgusParserStruct *);
 
-#define ARGUS_RCITEMS                           74
+#define ARGUS_RCITEMS                           75
 
 #define RA_ARGUS_SERVER                         0
 #define RA_SOURCE_PORT				1
@@ -216,6 +216,7 @@ void RaClearConfiguration (struct ArgusParserStruct *);
 #define RA_GENERATE_BIN_MAR_RECORDS		71
 #define RA_ASN_PRINT_FORMAT			72
 #define RA_FILTER_TIMEOUT  			73
+#define RA_LABEL_FORMAT				74
 
 
 char *ArgusResourceFileStr [] = {
@@ -293,6 +294,7 @@ char *ArgusResourceFileStr [] = {
    "RA_GENERATE_BIN_MAR_RECORDS=",
    "RA_ASN_PRINT_FORMAT=",
    "RA_FILTER_TIMEOUT=",
+   "RA_LABEL_FORMAT=",
 };
 
 #include <ctype.h>
@@ -2063,6 +2065,15 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
                               break;
                            }
 
+                           case RA_LABEL_FORMAT: {
+                              if (strcasecmp(optarg, "json") == 0) {
+                              } else 
+                              if (strcasecmp(optarg, "legacy") == 0) {
+                              } else 
+                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: label format specification error: %s invalid", optarg);
+                              break;
+                           }
+
                            case RA_FILTER_TIMEOUT: {
                               float value = 0.0;
                               char *endptr = NULL;
@@ -2073,7 +2084,7 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                  parser->RaFilterTimeout = value;
 
                               } else
-                                 ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: filter timeout format error (use float)");
                               break;
                            }
 
