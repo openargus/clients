@@ -97,6 +97,10 @@ extern "C" {
 #define ARGUS_ASN_ASDOTPLUS	1
 #define ARGUS_ASN_ASDOT    	2
 
+#define ARGUS_LABEL_LEGACY	1
+#define ARGUS_LABEL_JSON	2
+
+
 /* the ArgusRecordStruct (ns) is a single point data structure
    for clients to use to process and report on ARGUS flow data.  
    To support this rather nebulous function, the ns  provides
@@ -348,7 +352,7 @@ struct ArgusParserStruct {
    int ArgusPrintXml, ArgusAsnFormat;
    int ArgusPrintJson, ArgusPrintD3;
    int ArgusPrintJsonEmptyString;
-   char RaOutputStarted;
+   int ArgusLabelFormat;
    int RaXMLStarted; 
    int ArgusSrvInit;
    int ArgusGrepSource;
@@ -381,6 +385,7 @@ struct ArgusParserStruct {
    long long ArgusTotalPkts, ArgusTotalSrcPkts, ArgusTotalDstPkts;
    long long ArgusTotalBytes, ArgusTotalSrcBytes, ArgusTotalDstBytes;
 
+   signed char RaOutputStarted;
    signed char aflag, Aflag, bflag, cidrflag;
    signed char cflag, Cflag, dflag, Dflag, eflag, Eflag;
    signed char fflag, Fflag, gflag, Gflag, Hflag;

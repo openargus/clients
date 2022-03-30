@@ -2067,8 +2067,10 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
 
                            case RA_LABEL_FORMAT: {
                               if (strcasecmp(optarg, "json") == 0) {
+                                 parser->ArgusLabelFormat = ARGUS_LABEL_JSON;
                               } else 
                               if (strcasecmp(optarg, "legacy") == 0) {
+                                 parser->ArgusLabelFormat = ARGUS_LABEL_LEGACY;
                               } else 
                                  ArgusLog (LOG_ERR, "ArgusParseResourceFile: label format specification error: %s invalid", optarg);
                               break;
