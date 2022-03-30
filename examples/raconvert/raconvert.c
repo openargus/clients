@@ -1022,15 +1022,17 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 }
 
 
-char *RaDateFormat = "%m/%d.%H:%M:%S";
+char *RaDateFormat = NULL;
 
-#define RACONVERTTIME	6
+#define RACONVERTTIME	8
 
 char *RaConvertTimeFormats[RACONVERTTIME] = {
    NULL,
    "%Y/%m/%d %T",
    "%Y/%m/%d.%T",
    "%Y/%m/%d.%H:%M:%S",
+   "%Y-%m-%d.%H:%M:%S",
+   "%Y-%m-%dT%H:%M:%S",
    "%H:%M:%S",
    "%T",
 };
@@ -1079,16 +1081,17 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
    bzero (tvp, sizeof(*tvp));
    bcopy (buf, date, strlen(buf));
 
-   if (RaDateFormat != NULL) {
-      if (strcmp(RaDateFormat, "%f") == 0) {
+   gettimeofday(tvp, 0);
+
+   if (RaDateFormat != NULL)
+      if (strcmp(RaDateFormat, "%f") == 0)
          unixtime = 1;
-      } else 
-         gettimeofday(tvp, 0);
-   }
 
    if (unixtime == 0) {
       if (RaConvertTmPtr == NULL) {
-         if (strchr(date, 'Z')) {
+         char *ptr = NULL;
+         if ((ptr = strchr(date, 'Z')) != NULL) {
+            *ptr = '\0';
             if ((RaConvertTmPtr = gmtime(&tvp->tv_sec)) == NULL)
                ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
          } else {
@@ -1156,18 +1159,15 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
             ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) fractonal format error\n", parser, buf);
       } else {
          if (RaConvertTimeFormats[0] == NULL) {
-            char *sptr;
-            RaConvertTimeFormats[0] = strdup(RaDateFormat);
-            if ((sptr = strstr(RaConvertTimeFormats[0], ".%f")) != NULL) {
-               
-            }
+            if (RaDateFormat != NULL)
+               RaConvertTimeFormats[0] = strdup(RaDateFormat);
          }
 
          for (i = 0; (i < RACONVERTTIME) && (!done); i++) {
             char *format = NULL;
             if ((format = RaConvertTimeFormats[i]) != NULL) {
                if ((ptr = strptime(date, format, RaConvertTmPtr)) != NULL) {
-                  if (*ptr == '\0') {
+                  if ((*ptr == '\0') || (*ptr == 'Z')) {
                      done++;
                      RaDateFormat = format;
                   }
