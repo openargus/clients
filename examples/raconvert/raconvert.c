@@ -607,7 +607,7 @@ RaConvertJsonValue (struct ArgusParserStruct *parser, ArgusJsonValue *parent) {
             case ARGUS_JSON_DOUBLE:
             case ARGUS_JSON_STRING: {
                if (state == ARGUS_PARSING_VALUE) {
-                  retn = ArgusProcessJsonItem(parser, key, item);
+                  retn += ArgusProcessJsonItem(parser, key, item);
                   state = ARGUS_PARSING_KEY;
 	       }
                break;
@@ -1071,28 +1071,34 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
    struct ArgusRecordStruct *argus = &parser->argus;
    char *ptr, date[128], *frac;
    struct timeval tvpbuf, *tvp = &tvpbuf;
-   int i, len, unixtime = 1;
+   int i, len, unixtime = 0;
    char *endptr;
    int done = 0;
 
    bzero (date, sizeof(date));
    bzero (tvp, sizeof(*tvp));
-
    bcopy (buf, date, strlen(buf));
 
-   if (RaConvertTmPtr == NULL) {
-      gettimeofday(tvp, 0);
+   if (RaDateFormat != NULL) {
+      if (strcmp(RaDateFormat, "%f") == 0) {
+         unixtime = 1;
+      } else 
+         gettimeofday(tvp, 0);
+   }
 
-      if (strchr(date, 'Z')) {
-         if ((RaConvertTmPtr = gmtime(&tvp->tv_sec)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
-      } else {
-         if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) gmtime error\n", parser, buf, strerror(errno));
+   if (unixtime == 0) {
+      if (RaConvertTmPtr == NULL) {
+         if (strchr(date, 'Z')) {
+            if ((RaConvertTmPtr = gmtime(&tvp->tv_sec)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
+         } else {
+            if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) gmtime error\n", parser, buf, strerror(errno));
+         }
+
+         bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
+         RaConvertTmPtr = &timebuf;
       }
-
-      bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
-      RaConvertTmPtr = &timebuf;
    }
 
    if ((frac = strrchr(date, '.')) != NULL) {
@@ -1125,7 +1131,7 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       tvp->tv_usec = useconds;
    }
 
-   if (RaDateFormat != NULL) {
+   if ((unixtime == 0) && (RaDateFormat != NULL)) {
       if ((ptr = strptime(date, RaDateFormat, RaConvertTmPtr)) != NULL) {
          if (*ptr == '\0') {
             done++;
