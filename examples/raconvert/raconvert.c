@@ -1145,6 +1145,7 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
    } else {
       ptr = date;
       len = strlen(ptr);
+      unixtime = 1;
 
       for (i = 0; i < len; i++) {
          if (!(isdigit((int)ptr[i]))) {
