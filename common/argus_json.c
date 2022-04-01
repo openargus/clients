@@ -597,20 +597,8 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                   if (strcmp(p2data[x].value.string, key) == 0) {
                      ArgusJsonValue *p2value = &p2data[x + 1];
                      json_merge_value(p1value, p2value);
-                     ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
-                     ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
-/*
-                     if (p1value->status & ARGUS_JSON_MODIFIED) {
-                        json_zero_value(&p2data[x]);
-                        json_zero_value(&p2data[x + 1]);
-                        p1value->status &= ~ARGUS_JSON_MODIFIED;
-                     }
-                     if (p2value->status & ARGUS_JSON_MODIFIED) {
-                        json_zero_value(&p1data[x]);
-                        json_zero_value(&p1data[x + 1]);
-                        p2value->status &= ~ARGUS_JSON_MODIFIED;
-                     }
-*/
+                     json_zero_value(&p2data[x]);
+                     json_zero_value(&p2data[x + 1]);
                   }
                }
             }
@@ -619,6 +607,8 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                if (((ArgusJsonValue *)&p2data[x])->type) {
                   vector_push_back(&p1->value.array, &p2data[x]);
                   vector_push_back(&p1->value.array, &p2data[x + 1]);
+                  json_zero_value(&p2data[x]);
+                  json_zero_value(&p2data[x + 1]);
                   p1->status |= ARGUS_JSON_MODIFIED;
                }
             }

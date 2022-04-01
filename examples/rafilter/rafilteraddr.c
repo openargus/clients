@@ -96,11 +96,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "debug.mol", 9))) {
-               ArgusLabelerStatus |= ARGUS_MOL;
-
-               exit(0);
-            }
             if (!(strncasecmp (mode->mode, "debug", 5))) {
                ArgusLabelerStatus |= ARGUS_TREE_DEBUG;
 

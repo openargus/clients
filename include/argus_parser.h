@@ -496,6 +496,8 @@ struct ArgusParserStruct {
    struct ArgusModeStruct *ArgusMaskList;
    struct ArgusInput *ArgusInputFileList;
    struct ArgusInput *ArgusRemoteHostList;
+
+   struct ArgusListStruct *ArgusLabelerFileList;
    struct ArgusListStruct *ArgusWfileList;
 
    struct ArgusInput *ArgusCurrentInput;

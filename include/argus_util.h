@@ -157,17 +157,22 @@ struct nnamemem {
    struct ArgusListStruct *clients;
 };
 
+#define e_bs e_nsap        /* for byestringtable */
 
 struct enamemem {
-   u_short e_addr0;
-   u_short e_addr1;
-   u_short e_addr2;
+   struct enamemem *e_nxt;
+   int category, rank;
+
+   u_int16_t e_addr[3];
+   u_int16_t masklen;
+
    char *e_oui;
    char *e_name;
+   char *e_numeric;
    char *e_ouiname;
    u_char *e_nsap;         /* used only for nsaptable[] */
-#define e_bs e_nsap        /* for byestringtable */
-   struct enamemem *e_nxt;
+
+   struct RaAddressStruct *addrs;
 };
 
 struct protoidmem {
@@ -1312,6 +1317,12 @@ struct ArgusRecordStruct *ArgusSubtractRecord (struct ArgusRecordStruct *, struc
 void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int); 
 
+int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+
 struct ArgusQueueStruct *ArgusNewQueue (void);
 void ArgusDeleteQueue (struct ArgusQueueStruct *);
 int ArgusGetQueueCount(struct ArgusQueueStruct *);
@@ -1666,6 +1677,12 @@ extern struct ArgusRecordStruct *ArgusSubtractRecord (struct ArgusRecordStruct *
 
 extern void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int); 
+
+extern int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 
 extern struct ArgusQueueStruct *ArgusNewQueue (void);
 extern void ArgusDeleteQueue (struct ArgusQueueStruct *);
