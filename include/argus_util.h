@@ -796,6 +796,7 @@ void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
 #define ARGUS_PTYPE_UINT        1
 #define ARGUS_PTYPE_DOUBLE      2
 #define ARGUS_PTYPE_STRING      4
+#define ARGUS_PTYPE_JSON        5
 
 
 struct ArgusPrintFieldStruct 

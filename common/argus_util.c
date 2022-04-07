@@ -4699,15 +4699,21 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
                      if ((slen = strlen(tmpbuf)) > 0) {
                         if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
-                          int ival = 0;
+                           int ival = 0;
+                           float fval = 0.0;
+
                            int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
+                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+
                            if (iret) {
                               thistype = ARGUS_PTYPE_INT;
-                           } else {
-                              float fval = 0.0;
-                              int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
-                              if (fret) thistype = ARGUS_PTYPE_DOUBLE;
-                           }
+                           } else 
+			   if (fret) {
+                              thistype = ARGUS_PTYPE_DOUBLE;
+                           } else
+                              if (tmpbuf[0] == '{') {
+                                 thistype = ARGUS_PTYPE_JSON;
+                              }
                         }
 
                         dlen = sizeof(tmpbuf) - slen;
