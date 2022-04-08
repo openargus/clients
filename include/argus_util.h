@@ -54,6 +54,11 @@ extern "C" {
 #define ARGUS_MAX_PRINT_ALG     	201
 #define MAX_PRINT_ALG_TYPES     	201
 
+#define ARGUS_PTYPE_INT			0
+#define ARGUS_PTYPE_UINT		1
+#define ARGUS_PTYPE_DOUBLE		2
+#define ARGUS_PTYPE_STRING		4
+#define ARGUS_PTYPE_JSON		5
 
 #include <argus/CflowdFlowPdu.h>
 
@@ -791,12 +796,6 @@ void ArgusPrintResponseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
-
-#define ARGUS_PTYPE_INT         0
-#define ARGUS_PTYPE_UINT        1
-#define ARGUS_PTYPE_DOUBLE      2
-#define ARGUS_PTYPE_STRING      4
-#define ARGUS_PTYPE_JSON        5
 
 
 struct ArgusPrintFieldStruct 

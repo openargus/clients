@@ -2838,28 +2838,36 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                      case ARGUS_LABEL_DSR: {
                         struct ArgusLabelStruct *tlabel = (struct ArgusLabelStruct *) dsr;
-                        int llen = ((tlabel->hdr.argus_dsrvl8.len - 1) * 4);
-                        char *clabel = NULL;
+                        int tlen = 0, llen = ((tlabel->hdr.argus_dsrvl8.len - 1) * 4);
+                        char *lstr = NULL, *clabel = NULL;
 
                         if (tlabel->hdr.argus_dsrvl8.len <= 0) {
                            retn = NULL;
                            break;
                         }
                         bzero((char *)&canon->label, sizeof(*tlabel));
-                        bzero((char *)label, llen + 1);
+                        bzero((char *)label, llen + 128);
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
+
+                        llen = (tlabel->hdr.argus_dsrvl8.len - 1) * 4;
+                        lstr = strdup((char *)&tlabel->l_un.label);
+                        tlen = strlen(lstr);
+
+                        tlen = tlen > llen ? llen : tlen;
+                        lstr[tlen] = '\0';
+
                         canon->label.l_un.label = label;
 
-                        if ((clabel = ArgusUpgradeLabel((char *)&tlabel->l_un.label, label, 2048)) == (char *)&tlabel->l_un.label) {
-                           bcopy((char *)&tlabel->l_un.label, (char *)canon->label.l_un.label, llen);
+                        if ((clabel = ArgusUpgradeLabel(lstr, label, MAXBUFFERLEN)) == lstr) {
+                           bcopy(lstr, (char *)canon->label.l_un.label, tlen);
 			} else {
                            int clen = (((strlen(clabel) + 3) / 4) * 4);
                            canon->label.hdr.argus_dsrvl8.len = (clen / 4) + 1;
 			}
 
+                        free(lstr);
                         retn->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
                         retn->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
-
 
                         break;
                      }

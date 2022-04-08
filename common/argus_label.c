@@ -86,6 +86,7 @@
 #include "argus_label_geoip.h"
 #endif
 
+extern char *ArgusTrimString (char *);
 
 struct ArgusLabelerStruct *ArgusLabeler;
 
@@ -576,12 +577,24 @@ ArgusAddToRecordLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 {
    struct ArgusLabelStruct *l1 = (void *) argus->dsrs[ARGUS_LABEL_INDEX], *l2 = NULL;
    char *buf, *label = NULL;
-   int len = 0, retn = 0, tlen = strlen(tlabel);
+   int len = 0, retn = 0, tlen = 0;
+   int llen = 0;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusAddToRecordLabel (%p, %p, %s)\n", parser, argus, tlabel);
+#endif
+
+   tlen = strlen(tlabel);
+
+   if (l1 != NULL) {
+      llen = (l1->hdr.argus_dsrvl8.len - 1) * 4;
+      tlen = tlen > llen ? llen : tlen;
+   }
 
    if ((buf = (char *) ArgusCalloc(1, MAXSTRLEN)) == NULL)
       ArgusLog (LOG_ERR, "ArgusAddToRecordLabel: ArgusCalloc error %s", strerror(errno));
 
-   len = 4 * ((tlen + 3)/4);
+   len = 4 * ((tlen + 3)/4) + 1;
    if ((l2 = ArgusCalloc(1, sizeof(*l2))) == NULL)
       ArgusLog (LOG_ERR, "ArgusAddToRecordLabel: ArgusCalloc error %s", strerror(errno));
 
@@ -589,7 +602,7 @@ ArgusAddToRecordLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruc
       ArgusLog (LOG_ERR, "ArgusAddToRecordLabel: calloc error %s", strerror(errno));
 
    l2->hdr.type             = ARGUS_LABEL_DSR;
-   l2->hdr.argus_dsrvl8.len = 1 + ((len + 3)/4);
+   l2->hdr.argus_dsrvl8.len = ((len + 3)/4);
    bcopy (tlabel, l2->l_un.label, tlen);
 
    if (l1 != NULL) {
@@ -991,21 +1004,31 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
 // We'll chose not to downgrade the label if its already in JSON mode.
 // So, if LEGACY, then return immediately.  If JSON, then run this routine.
 //
-   if (ArgusParser->ArgusLabelFormat == ARGUS_LABEL_LEGACY)
-      return retn;
+   if (ArgusParser->ArgusLabelFormat == ARGUS_LABEL_LEGACY) {
+#ifdef ARGUSDEBUG
+      ArgusDebug (4, "ArgusUpgradeLabel (%p, %p, %d) legacy format %p\n", label, buf, len, retn);
+#endif
+      return label;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusUpgradeLabel (\"%s\", %p, %d) upgrade\n", label, buf, len);
+#endif
+
+   bzero(buf, len);
 
 // First is to correct key '=' value to key ':' value.
 // If we find '=', we'll assume legacy label format and
 // convert ':' object delimiters as well.
 
    if (!(strchr(label, '{'))) {
-      if (strchr(label, '=')) {
-         char *tlabel = strdup(label);
-         char *tvalue;
+      char *tlabel = strdup(label);
+      char *tvalue = NULL;
 
-         if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
+      if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
 
+      if (strchr(tlabel, '=')) {
          char *tptr, *sptr = tlabel;
          char *key = NULL, *value = NULL;
          int cnt = 0;
@@ -1015,73 +1038,71 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
 
          while ((tptr = strtok(sptr, ":")) != NULL) {
             char *nptr;
+            if (cnt > 0) {
+               snprintf (&buf[slen], MAXSTRLEN - slen, ",");
+               slen++;
+	    }
             if ((nptr = strchr(tptr, '=')) != NULL) {
+               int ival = 0, tlen = 0, iret, fret, thistype = 0;
+               float fval = 0.0;
                *nptr++ = '\0';
                key = tptr;
                value = nptr;
+
+               iret = ((sscanf(value, "%d %n", &ival, &tlen) == 1) && (!value[tlen] || (value[tlen] == ',')));
+               fret = ((sscanf(value, "%f %n", &fval, &tlen) == 1) && (!value[tlen] || (value[tlen] == ',')));
+
+               if (iret) {
+                  thistype = ARGUS_PTYPE_INT;
+               } else
+               if (fret) {
+                  thistype = ARGUS_PTYPE_DOUBLE;
+               } else
+               if (value[0] == '{') {
+                  thistype = ARGUS_PTYPE_JSON;
+               } else {
+                  thistype = ARGUS_PTYPE_STRING;
+               }
 
                if (strchr(value, ',')) {
                   if (!(strchr(value, '['))) {
                      snprintf(tvalue, 1024, "[%s]", value);
                      value = tvalue;
                   }
+               } else {
+                  value = ArgusTrimString(value);
+                  if (thistype == ARGUS_PTYPE_STRING) {
+                     snprintf(tvalue, 1024, "\"%s\"", value);
+                     value = tvalue;
+		  }
                }
 
-               slen = strlen(buf);
                if (*key != '\"') {
                   snprintf (&buf[slen], MAXSTRLEN - slen, "\"%s\":%s", key, value);
                } else {
                   snprintf (&buf[slen], MAXSTRLEN - slen, "%s:%s", key, value);
                }
+               slen = strlen(buf);
+               bzero(tvalue, MAXSTRLEN);
             }
             sptr = NULL;
             cnt++;
          }
 
          slen = strlen(buf);
-         snprintf(buf, (len - slen), "}");
+         snprintf(&buf[slen], (len - slen), "}");
          free(tlabel);
          ArgusFree(tvalue);
       }
 
-      if (strchr(buf, '{')) {
-      } else {
-         char *tlabel = strdup(label);
-         char *tvalue;
-
-         if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
-
-         char *sptr = tlabel;
-         char *key = NULL, *value = NULL;
-
-         if ((sptr = strchr(tlabel, ':')) != NULL) {
-            *sptr++ = '\0';
-            key = tlabel;
-            value = sptr;
-
-            if (strchr(value, ',')) {
-               if (!(strchr(value, '['))) {
-                  snprintf(tvalue, 1024, "[%s]", value);
-                  value = tvalue;
-               }
-            }
-
-            slen = strlen(buf);
-            if (*key != '\"') {
-               snprintf (&buf[slen], 1024 - slen, "{ \"%s\":%s }", key, value);
-            } else {
-               snprintf (&buf[slen], 1024 - slen, "{ %s:%s }", key, value);
-            }
-         }
-         free(tlabel);
-         ArgusFree(tvalue);
-      }
-
-      if (strlen(buf) > 0) {
+      if (strlen(buf) > 0) 
          retn = buf;
-      }
-   }
+   } else
+      retn = label;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (4, "ArgusUpgradeLabel (%p, %p, %d) returning %p\n", label, buf, len, retn);
+#endif
    return retn;
 }
 
