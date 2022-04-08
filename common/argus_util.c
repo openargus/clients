@@ -20649,7 +20649,12 @@ ArgusPrintLabel (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          labelbuf = label->l_un.label;
 
       if (parser->ArgusPrintXml) {
-         sprintf (buf, " Label = \"%s\"", labelbuf);
+         if (strchr(labelbuf, '\"')) {
+            char ebuf[MAXSTRLEN];
+            labelbuf = ArgusEscapeString(labelbuf, ebuf, MAXSTRLEN);
+            sprintf (buf, " Label = \"%s\"", labelbuf);
+	 } else
+            sprintf (buf, " Label = \"%s\"", labelbuf);
       } else {
          if (parser->RaFieldWidth != RA_FIXED_WIDTH)
             len = strlen(labelbuf);
@@ -27201,7 +27206,7 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
    bzero (trans, tsize);
 
    if (len > 0) {
-      int offset = 0;
+//    int offset = 0;
 
       trans->hdr.type              = ARGUS_TRANSPORT_DSR;
       trans->hdr.subtype           = ARGUS_SRCID | ARGUS_SEQ;
@@ -27209,8 +27214,8 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
 
       switch (type & ~ARGUS_TYPE_INTERFACE) {
          case ARGUS_TYPE_STRING: break;
-         case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
+//       case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
+//       case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
 //       case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
 //       case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
       }
@@ -28391,6 +28396,24 @@ ArgusTrimString (char *str)
    }
    return (retn);
 }
+
+char *
+ArgusEscapeString (char *str, char *buf, int len)
+{
+   char *sptr = str, *bptr = buf;
+   char *bend = buf + len;
+
+   while ((sptr != NULL) && (strlen(sptr) > 0) && (bptr < bend)) {
+      while ((*sptr != '\"') && *sptr != '\0' && (bptr < bend)) *bptr++ = *sptr++;
+      if (*sptr == '\"') {
+         *bptr++ = '\\';
+         *bptr++ = *sptr++;
+      }
+   }
+   *bptr++ = '\0';
+   return (buf);
+}
+
 
 
 #if !defined(HAVE_TIMEGM)

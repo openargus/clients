@@ -350,6 +350,7 @@ long thiszone;
 void ArgusParseArgs (struct ArgusParserStruct *, int, char **);
 
 char *ArgusTrimString (char *str);
+char *ArgusEscapeString (char *, char *, int);
 char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
 
 void setArgusHashTableSize (struct ArgusParserStruct *, int);
