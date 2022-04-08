@@ -301,9 +301,9 @@ composed of a list of key=value pairs separated by ':'.  Multiple values
 withing a key value are separated by ','. Keys and values are not
 normally enclosed by quotes.
 
-There is an optional format where the label is standard JSON format.
-This solves a number of problems, such as inclusion of values that
-contain ':'s.
+Argus clients support an optional format, converting the label to standard
+JSON format.  This solves a number of problems, such as inclusion of values
+that contain ':'s, such as IPv6 addresses.
 
 Starting with Argus 4.0, the default label format will be JSON, and
 legacy formats will be converted on the fly.
