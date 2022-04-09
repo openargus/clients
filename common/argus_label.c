@@ -990,11 +990,19 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
    return (retn);
 }
 
+
+struct ArgusKeyValuePairs {
+   char *key, *value, *result;
+};
+ 
+#define MAXKEYVALUEPAIRS 	1024
+struct ArgusKeyValuePairs kvpairs[MAXKEYVALUEPAIRS];
+
 char *
 ArgusUpgradeLabel(char *label, char *buf, int len)
 {
    char *retn = label;
-   int slen;
+   int blen = 0;
 
 // First lets figure out what were going to do ...
 // If the output mode is ARGUS_LABEL_LEGACY, then either we do nothing
@@ -1015,90 +1023,103 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
    ArgusDebug (2, "ArgusUpgradeLabel (\"%s\", %p, %d) upgrade\n", label, buf, len);
 #endif
 
-   bzero(buf, len);
-
-// First is to correct key '=' value to key ':' value.
-// If we find '=', we'll assume legacy label format and
-// convert ':' object delimiters as well.
+// First is to correct key '=' value to key ':' value.  If we find '=', we'll 
+// assume legacy label format and convert ':' object delimiters as well.
+// Need to figure out how many key value pairs there are and then find
+// where legitimate ':' seperator are ...
+//
 
    if (!(strchr(label, '{'))) {
+      char *eptr = NULL, *nptr = NULL, *tptr = NULL;
       char *tlabel = strdup(label);
-      char *tvalue = NULL;
+      int i, kvindex = 0, cnt = 0;
 
-      if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
+      bzero(kvpairs, sizeof(kvpairs));
+      bzero(buf, len);
 
-      if (strchr(tlabel, '=')) {
-         char *tptr, *sptr = tlabel;
-         char *key = NULL, *value = NULL;
-         int cnt = 0;
+      snprintf(buf, len, "{");
+      blen = 1;
 
-         snprintf(buf, len, "{");
-         slen = 1;
+      nptr = tlabel;
 
-         while ((tptr = strtok(sptr, ":")) != NULL) {
-            char *nptr;
+      while ((eptr = strchr(nptr, '=')) != NULL) {
+	 *eptr++ = '\0';      
+
+         if ((tptr = strrchr(nptr, ':')) != NULL) 
+            *tptr++ = '\0';
+	 else
+            tptr = nptr;
+
+	 kvpairs[kvindex].key   = tptr;
+	 kvpairs[kvindex].value = eptr;
+	 kvindex++;
+	 nptr = eptr;
+      }
+
+      for (i = 0; i < kvindex; i++) {
+         int ival = 0, tlen = 0, iret, fret, thistype = 0, slen = 0;
+         char *vals = kvpairs[i].value;
+         char *tvalue = NULL; 
+         float fval = 0.0;
+
+         if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
+
+         while ((vals = strtok(vals, ",")) != NULL) {
             if (cnt > 0) {
-               snprintf (&buf[slen], MAXSTRLEN - slen, ",");
+               snprintf (&tvalue[slen], MAXSTRLEN - slen, ",");
                slen++;
 	    }
-            if ((nptr = strchr(tptr, '=')) != NULL) {
-               int ival = 0, tlen = 0, iret, fret, thistype = 0;
-               float fval = 0.0;
-               *nptr++ = '\0';
-               key = tptr;
-               value = nptr;
+            iret = ((sscanf(vals, "%d %n", &ival, &tlen) == 1) && (!vals[tlen]));
+            fret = ((sscanf(vals, "%f %n", &fval, &tlen) == 1) && (!vals[tlen]));
 
-               iret = ((sscanf(value, "%d %n", &ival, &tlen) == 1) && (!value[tlen] || (value[tlen] == ',')));
-               fret = ((sscanf(value, "%f %n", &fval, &tlen) == 1) && (!value[tlen] || (value[tlen] == ',')));
-
-               if (iret) {
-                  thistype = ARGUS_PTYPE_INT;
-               } else
-               if (fret) {
-                  thistype = ARGUS_PTYPE_DOUBLE;
-               } else
-               if (value[0] == '{') {
-                  thistype = ARGUS_PTYPE_JSON;
-               } else {
-                  thistype = ARGUS_PTYPE_STRING;
-               }
-
-               if (strchr(value, ',')) {
-                  if (!(strchr(value, '['))) {
-                     snprintf(tvalue, 1024, "[%s]", value);
-                     value = tvalue;
-                  }
-               } else {
-                  value = ArgusTrimString(value);
-                  if (thistype == ARGUS_PTYPE_STRING) {
-                     snprintf(tvalue, 1024, "\"%s\"", value);
-                     value = tvalue;
-		  }
-               }
-
-               if (*key != '\"') {
-                  snprintf (&buf[slen], MAXSTRLEN - slen, "\"%s\":%s", key, value);
-               } else {
-                  snprintf (&buf[slen], MAXSTRLEN - slen, "%s:%s", key, value);
-               }
-               slen = strlen(buf);
-               bzero(tvalue, MAXSTRLEN);
+            if (iret) {
+               thistype = ARGUS_PTYPE_INT;
+            } else
+            if (fret) {
+               thistype = ARGUS_PTYPE_DOUBLE;
+            } else
+            if (*vals == '{') {
+               thistype = ARGUS_PTYPE_JSON;
+            } else {
+               thistype = ARGUS_PTYPE_STRING;
             }
-            sptr = NULL;
+
+            if (thistype == ARGUS_PTYPE_STRING) {
+               slen += snprintf(&tvalue[slen], MAXSTRLEN - slen, "\"%s\"", ArgusTrimString(vals));
+            } else {
+               slen += snprintf(&tvalue[slen], MAXSTRLEN - slen, "%s", ArgusTrimString(vals));
+            }
             cnt++;
+            vals = NULL;
          }
 
-         slen = strlen(buf);
-         snprintf(&buf[slen], (len - slen), "}");
-         free(tlabel);
+         kvpairs[i].result = strdup(tvalue);
+
+         if (cnt > 1) {
+            snprintf(tvalue, 1024, "[%s]", kvpairs[i].result);
+            kvpairs[i].value = tvalue;
+         } else {
+            kvpairs[i].value = ArgusTrimString(kvpairs[i].result);
+         }
+
+         if (*kvpairs[i].key != '\"') {
+            snprintf (&buf[blen], MAXSTRLEN - blen, "\"%s\":%s", kvpairs[i].key, kvpairs[i].value);
+         } else {
+            snprintf (&buf[blen], MAXSTRLEN - blen, "%s:%s", kvpairs[i].key, kvpairs[i].value);
+         }
+         free(kvpairs[i].result);
+         blen = strlen(buf);
          ArgusFree(tvalue);
       }
 
-      if (strlen(buf) > 0) 
-         retn = buf;
-   } else
-      retn = label;
+      blen = strlen(buf);
+      snprintf(&buf[blen], (len - blen), "}");
+      free(tlabel);
+   }
+
+   if (strlen(buf) > 0) 
+      retn = buf;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (4, "ArgusUpgradeLabel (%p, %p, %d) returning %p\n", label, buf, len, retn);
