@@ -97,8 +97,8 @@ extern "C" {
 #define ARGUS_ASN_ASDOTPLUS	1
 #define ARGUS_ASN_ASDOT    	2
 
-#define ARGUS_LABEL_LEGACY	1
-#define ARGUS_LABEL_JSON	2
+#define ARGUS_LABEL_LEGACY	0
+#define ARGUS_LABEL_JSON	1
 
 
 /* the ArgusRecordStruct (ns) is a single point data structure

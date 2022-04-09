@@ -4811,6 +4811,9 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                                              tmpbuf, parser->RaFieldDelimiter);
 				       }
                                     }
+                                 } else {
+                                    slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c%c", 
+                                       parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
                                  }
                               }
 
