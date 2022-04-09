@@ -1031,8 +1031,8 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
 
    if (!(strchr(label, '{'))) {
       char *eptr = NULL, *nptr = NULL, *tptr = NULL;
+      int i, kvindex = 0, bcnt = 0;
       char *tlabel = strdup(label);
-      int i, kvindex = 0, cnt = 0;
 
       bzero(kvpairs, sizeof(kvpairs));
       bzero(buf, len);
@@ -1057,13 +1057,19 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
       }
 
       for (i = 0; i < kvindex; i++) {
-         int ival = 0, tlen = 0, iret, fret, thistype = 0, slen = 0;
+         int ival = 0, tlen = 0, iret, fret, thistype = 0;
+         int cnt = 0, slen = 0;
          char *vals = kvpairs[i].value;
          char *tvalue = NULL; 
          float fval = 0.0;
 
          if ((tvalue = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
             ArgusLog (LOG_ERR, "ArgusUpgradeLabel: ArgusCalloc error %s\n", strerror(errno));
+
+         if (i > 0) {
+            snprintf (&buf[blen], MAXSTRLEN - blen, ",");
+            blen++;
+	 }
 
          while ((vals = strtok(vals, ",")) != NULL) {
             if (cnt > 0) {
@@ -1110,6 +1116,7 @@ ArgusUpgradeLabel(char *label, char *buf, int len)
          }
          free(kvpairs[i].result);
          blen = strlen(buf);
+         bcnt++;
          ArgusFree(tvalue);
       }
 
