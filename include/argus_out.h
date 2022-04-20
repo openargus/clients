@@ -907,7 +907,13 @@ struct ArgusSiteLocation {
 
 struct ArgusGeoLocationStruct {
    struct ArgusDSRHeader hdr;
-   struct ArgusSiteLocation src, dst;
+   struct ArgusCoordinates src, dst, inode;
+};
+
+struct ArgusNetspatialStruct {
+   struct ArgusDSRHeader hdr;
+   unsigned short status;
+   signed char sloc, dloc;
 };
 
 struct ArgusLabelStruct {

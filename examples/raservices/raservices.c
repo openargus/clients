@@ -303,7 +303,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
                         bzero(buf, 4);
 
-                        ArgusMergeLabel(l1, label, buf, MAXSTRLEN, ARGUS_UNION);
+                        ArgusMergeLabel(l1->l_un.label, label->l_un.label, buf, MAXSTRLEN, ARGUS_UNION);
 
                         if ((blen = strlen(buf)) > 0) {
                            int len = (blen >= (MAXSTRLEN - 1)) ? MAXSTRLEN - 1 : blen;

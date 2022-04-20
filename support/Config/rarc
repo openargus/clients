@@ -392,6 +392,24 @@ RA_USERDATA_ENCODE=Ascii
 #RA_USERDATA_ENCODE=Encode64
 
 
+# Argus supports extending flow records using argus labels.  Labels are
+# metadata strings that can be modified for flow data enhancements.
+# Argus 3.0 and earlier supports a format that follows standard metadata
+# composed of a list of key=value pairs separated by ':'.  Multiple values
+# withing a key value are separated by ','. Keys and values are not
+# normally enclosed by quotes.
+# 
+# There is an optional format where the label is standard JSON format.
+# This solves a number of problems, such as inclusion of values that
+# contain ':'s.
+#
+# Starting with Argus 4.0, the default label format will be JSON, and
+# legacy formats will be converted on the fly.
+#
+#RA_LABEL_FORMAT=Legacy
+#RA_LABEL_FORMAT=Json
+
+
 # If compiled to support this option, ra* clients are capable
 # of generating a lot of use [full | less | whatever] debug
 # information.  The default value is zero (0).

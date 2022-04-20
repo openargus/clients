@@ -143,7 +143,6 @@ extern void ArgusCopyDebugString (char *, int);
 extern void ArgusZeroDebugString (void);
 
 struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-void RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerStruct *labeler, char *);
 int RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *, unsigned int *, int, int);
 void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 

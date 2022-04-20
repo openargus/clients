@@ -1727,10 +1727,28 @@ extern "C" {
 /* Argus ASN SubTypes */
 #define ARGUS_ASN_ORIGIN                0x01
 #define ARGUS_ASN_PEER                  0x02
+#define ARGUS_ASN_LOCAL                 0x04
 
 #define ARGUS_SRC_ADDR			0x01
 #define ARGUS_DST_ADDR			0x02
 #define ARGUS_INODE_ADDR		0x04
+
+/* Argus GEO DSR */
+#define ARGUS_GEO_DSR                   0x68
+#define ARGUS_GEO_INDEX                 22
+
+/* Argus GEO DSR Qualifier */
+#define ARGUS_SRC_GEO                   0x01
+#define ARGUS_DST_GEO                   0x02
+#define ARGUS_INODE_GEO                 0x04
+
+/* Argus Netspatial LOCAL DSR */
+#define ARGUS_LOCAL_DSR                 0x6A
+#define ARGUS_LOCAL_INDEX               23
+
+/* Argus Netspatial DSR Qualifier */
+#define ARGUS_SRC_LOCAL                 0x01
+#define ARGUS_DST_LOCAL                 0x02
 
 #define ARGUS_ADDR_MASK         	0x07
 
