@@ -150,7 +150,7 @@ RaParseComplete (int sig)
    struct ArgusParserStruct *parser = ArgusParser;
    struct ArgusRecordStruct *ns = NULL;
    struct ArgusAgrStruct *tagr = NULL;
-   int i, freq, cum = 0, class = 1, start = 999999999, end = 0;
+   int i, freq, class = 1, start = 999999999, end = 0;
    double bs = 0.0, be = 0.0, bf = 0.0;
    float rel, relcum = 0.0;
 
@@ -405,7 +405,6 @@ RaParseComplete (int sig)
                               }
                               ArgusPrintRecord (parser, buf, argus, MAXSTRLEN);
 
-                              cum    += freq;
                               relcum += rel;
 
                               if (i > parser->RaHistoBins) {
