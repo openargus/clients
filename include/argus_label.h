@@ -1,25 +1,26 @@
 /*
- * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2017 QoSient, LLC
+ * Argus Software Common include files -  label structures
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
- * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
- * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
- * EXPRESS PERMISSION OF QoSIENT, LLC.
- *
- * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
- * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
- * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
- * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
- * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
- * THIS SOFTWARE.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
 
 /* 
- * $Id: //depot/gargoyle/clients/include/argus_label.h#32 $
+ * $Id: //depot/clients/include/argus_label.h#32 $
  * $DateTime: 2016/06/01 10:28:03 $
  * $Change: 3143 $
  */
