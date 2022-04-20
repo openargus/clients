@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -54,6 +54,11 @@ extern "C" {
 #define ARGUS_MAX_PRINT_ALG     	201
 #define MAX_PRINT_ALG_TYPES     	201
 
+#define ARGUS_PTYPE_INT			0
+#define ARGUS_PTYPE_UINT		1
+#define ARGUS_PTYPE_DOUBLE		2
+#define ARGUS_PTYPE_STRING		4
+#define ARGUS_PTYPE_JSON		5
 
 #include <argus/CflowdFlowPdu.h>
 
@@ -157,17 +162,22 @@ struct nnamemem {
    struct ArgusListStruct *clients;
 };
 
+#define e_bs e_nsap        /* for byestringtable */
 
 struct enamemem {
-   u_short e_addr0;
-   u_short e_addr1;
-   u_short e_addr2;
+   struct enamemem *e_nxt;
+   int category, rank;
+
+   u_int16_t e_addr[3];
+   u_int16_t masklen;
+
    char *e_oui;
    char *e_name;
+   char *e_numeric;
    char *e_ouiname;
    u_char *e_nsap;         /* used only for nsaptable[] */
-#define e_bs e_nsap        /* for byestringtable */
-   struct enamemem *e_nxt;
+
+   struct RaAddressStruct *addrs;
 };
 
 struct protoidmem {
@@ -340,6 +350,7 @@ long thiszone;
 void ArgusParseArgs (struct ArgusParserStruct *, int, char **);
 
 char *ArgusTrimString (char *str);
+char *ArgusEscapeString (char *, char *, int);
 char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
 
 void setArgusHashTableSize (struct ArgusParserStruct *, int);
@@ -786,11 +797,6 @@ void ArgusPrintResponseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
-
-#define ARGUS_PTYPE_INT         0
-#define ARGUS_PTYPE_UINT        1
-#define ARGUS_PTYPE_DOUBLE      2
-#define ARGUS_PTYPE_STRING      4
 
 
 struct ArgusPrintFieldStruct 
@@ -1312,6 +1318,12 @@ struct ArgusRecordStruct *ArgusSubtractRecord (struct ArgusRecordStruct *, struc
 void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int); 
 
+int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+
 struct ArgusQueueStruct *ArgusNewQueue (void);
 void ArgusDeleteQueue (struct ArgusQueueStruct *);
 int ArgusGetQueueCount(struct ArgusQueueStruct *);
@@ -1666,6 +1678,12 @@ extern struct ArgusRecordStruct *ArgusSubtractRecord (struct ArgusRecordStruct *
 
 extern void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int); 
+
+extern int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
+extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 
 extern struct ArgusQueueStruct *ArgusNewQueue (void);
 extern void ArgusDeleteQueue (struct ArgusQueueStruct *);

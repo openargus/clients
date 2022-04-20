@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1094,7 +1094,7 @@ void usage (void);
 
 void RaClearConfiguration (struct ArgusParserStruct *);
 
-char *ArgusMergeLabel(struct ArgusLabelStruct *, struct ArgusLabelStruct *, char *buf, int len, int type);
+char *ArgusMergeLabel(char *, char *, char *buf, int len, int type);
 struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
 void RaDeleteArgusRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
@@ -1260,7 +1260,7 @@ extern void ArgusClientTimeout (void);
 extern void parse_arg (int, char**);
 extern void usage (void);
 
-extern char *ArgusMergeLabel(struct ArgusLabelStruct *, struct ArgusLabelStruct *, char *buf, int len, int type);
+extern char *ArgusMergeLabel(char *, char *, char *buf, int len, int type);
 extern struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
 extern void RaDeleteArgusRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 

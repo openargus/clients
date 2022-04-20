@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -123,6 +123,20 @@
 #define INET6_ADDRSTRLEN	46
 #endif
 
+#define EXTRACT_FLOAT(p)        (*(float *)p)
+#define EXTRACT_DOUBLE(p)       (*(double *)p)
+#define EXTRACT_LONGLONG(p)     (*(unsigned long long *)p)
+
+
+struct enamemem *ArgusEtherMaskArray[49];
+struct enamemem enametable[HASHNAMESIZE];
+struct enamemem nsaptable[HASHNAMESIZE];
+struct enamemem bytestringtable[HASHNAMESIZE];
+ 
+struct protoidmem protoidtable[HASHNAMESIZE];
+struct enamemem *check_emem(struct enamemem *table, const u_char *ep);
+struct enamemem *lookup_emem(struct enamemem *table, const u_char *ep);
+
 int target_flags = 0;
 extern void ArgusLog (int, char *, ...);
 extern void RaParseComplete (int);
@@ -140,7 +154,7 @@ char *ArgusAbbreviateMetric(struct ArgusParserStruct *, char *, int, double);
 
 void RaClearConfiguration (struct ArgusParserStruct *);
 
-#define ARGUS_RCITEMS                           74
+#define ARGUS_RCITEMS                           75
 
 #define RA_ARGUS_SERVER                         0
 #define RA_SOURCE_PORT				1
@@ -216,6 +230,7 @@ void RaClearConfiguration (struct ArgusParserStruct *);
 #define RA_GENERATE_BIN_MAR_RECORDS		71
 #define RA_ASN_PRINT_FORMAT			72
 #define RA_FILTER_TIMEOUT  			73
+#define RA_LABEL_FORMAT				74
 
 
 char *ArgusResourceFileStr [] = {
@@ -293,6 +308,7 @@ char *ArgusResourceFileStr [] = {
    "RA_GENERATE_BIN_MAR_RECORDS=",
    "RA_ASN_PRINT_FORMAT=",
    "RA_FILTER_TIMEOUT=",
+   "RA_LABEL_FORMAT=",
 };
 
 #include <ctype.h>
@@ -2063,6 +2079,17 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
                               break;
                            }
 
+                           case RA_LABEL_FORMAT: {
+                              if (strcasecmp(optarg, "json") == 0) {
+                                 parser->ArgusLabelFormat = ARGUS_LABEL_JSON;
+                              } else 
+                              if (strcasecmp(optarg, "legacy") == 0) {
+                                 parser->ArgusLabelFormat = ARGUS_LABEL_LEGACY;
+                              } else 
+                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: label format specification error: %s invalid", optarg);
+                              break;
+                           }
+
                            case RA_FILTER_TIMEOUT: {
                               float value = 0.0;
                               char *endptr = NULL;
@@ -2073,7 +2100,7 @@ ArgusParseResourceFile (struct ArgusParserStruct *parser, char *file)
                                  parser->RaFilterTimeout = value;
 
                               } else
-                                 ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: filter timeout format error (use float)");
                               break;
                            }
 
@@ -3118,6 +3145,346 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 
    return (retn);
 }
+
+int
+RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   int retn = 0, label = 1, src = 0, dst = 0;
+
+   if (mode & ARGUS_LABEL_RECORD) {
+      label = 1;
+      mode &= ~ARGUS_LABEL_RECORD;
+   }
+   if (mode & ARGUS_MASK_SADDR_INDEX) {
+      src = 1;
+      mode &= ~ARGUS_MASK_SADDR_INDEX;
+   }
+   if (mode & ARGUS_MASK_DADDR_INDEX) {
+      dst = 1;
+      mode &= ~ARGUS_MASK_DADDR_INDEX;
+   }
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct node;
+            bzero ((char *)&node, sizeof(node));
+
+            node.addr.type = AF_INET;
+            node.addr.len = 4;
+            node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+            node.addr.masklen = mask;
+
+            /* always try exact match first? */
+            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
+               if (mode != ARGUS_EXACT_MATCH)
+                  raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode);
+
+            if (raddr != NULL) {
+               if (label && (src || dst)) {
+                  char *buf;
+                  if ((buf = (char *) ArgusCalloc (1, 2048)) == NULL)
+                     ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+                  if (raddr->label != NULL) {
+                     char *clabel = ArgusUpgradeLabel(raddr->label, buf, 2048);
+
+                     if (clabel != NULL) {
+                        free(raddr->label);
+                        raddr->label = strdup(clabel);
+                     }
+
+                     if (src) {
+                        snprintf (buf, 2048, "\"saddr\":%s", raddr->label);
+                     }
+                     if (dst) {
+                        snprintf (buf, 2048, "\"daddr\":%s", raddr->label);
+                     }
+                     ArgusAddToRecordLabel (parser, argus, buf);
+                     argus->status |= ARGUS_RECORD_MODIFIED;
+                  }
+                  ArgusFree(buf);
+               }
+               retn = 1;
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaProcessAddressLabel (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+
+// The mode bitmap passed to RaProcessAddressLocality indicates the type of match to be done,
+// but also it passes an indication if the routine should add to the label, information
+// regarding the match.
+
+int
+RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   int retn = 0, label = 0, src = 0, dst = 0;
+
+   if (mode & ARGUS_LABEL_RECORD) {
+      label = 1;
+      mode &= ~ARGUS_LABEL_RECORD;
+   }
+   if (mode & ARGUS_MASK_SADDR_INDEX) {
+      src = 1;
+      mode &= ~ARGUS_MASK_SADDR_INDEX;
+   }
+   if (mode & ARGUS_MASK_DADDR_INDEX) {
+      dst = 1;
+      mode &= ~ARGUS_MASK_DADDR_INDEX;
+   }
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct node;
+            bzero ((char *)&node, sizeof(node));
+
+            node.addr.type = AF_INET;
+            node.addr.len = 4;
+            node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+            node.addr.masklen = mask;
+
+            /* always try exact match first? */
+            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
+               retn = ARGUS_MY_ADDRESS;
+            else if (mode != ARGUS_EXACT_MATCH)
+               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
+                  if (raddr->locality > 1)
+                     retn = ARGUS_MY_NETWORK;
+                  if (*addr < 255)
+                     retn = ARGUS_MY_NETWORK;
+               }
+
+            if (raddr != NULL) {
+               if (label && (src || dst)) {
+                  char buf[128];
+                  if (raddr->label != NULL) {
+                     if (src) {
+                        snprintf (buf, 128, "{ sloc:%s }", raddr->label);
+                     }
+                     if (dst) {
+                        snprintf (buf, 128, "{ dloc:%s }", raddr->label);
+                     }
+                     ArgusAddToRecordLabel (parser, argus, buf);
+                     argus->status |= ARGUS_RECORD_MODIFIED;
+                  }
+               }
+            }
+            break;
+         }
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaProcessAddressLocality (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+int
+RaFetchAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   int retn = -1;
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            if (*addr < 8) {
+               retn = 4;
+
+            } else {
+               struct RaAddressStruct node;
+               bzero ((char *)&node, sizeof(node));
+
+               node.addr.type = AF_INET;
+               node.addr.len = 4;
+               node.addr.addr[0] = *addr;
+               node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+               node.addr.masklen = mask;
+
+               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_SUPER_MATCH)) == NULL)
+                  if (mode == ARGUS_NODE_MATCH)
+                     raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+
+               if (raddr != NULL) {
+                  retn = raddr->locality;
+               }
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaFetchAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+char *RaPrintLocalityLabel (struct RaAddressStruct *, char *, int);
+
+char *
+RaPrintLocalityLabel (struct RaAddressStruct *raddr, char *buf, int len)
+{
+   int llen, slen;
+
+   if (raddr->p != NULL) {
+      RaPrintLocalityLabel(raddr->p, buf, len);
+   }
+   if (raddr->label && ((llen = strlen(raddr->label)) > 0)) {
+      if ((slen = strlen(buf)) > 0) {
+         if ((slen + llen) < len) {
+            sprintf (&buf[slen], ",%s", raddr->label);
+         }
+      } else {
+         if (llen < len)
+            sprintf (buf, "%s", raddr->label);
+      }
+   }
+   return (buf);
+}
+
+char *
+RaFetchAddressLocalityLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   char sbuf[2048];
+   char *retn = NULL;
+
+   bzero(sbuf, 2048);
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct node;
+            bzero ((char *)&node, sizeof(node));
+
+            node.addr.type = AF_INET;
+            node.addr.len = 4;
+            node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+            node.addr.masklen = mask;
+
+            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_SUPER_MATCH)) == NULL)
+               if (mode == ARGUS_NODE_MATCH)
+                  raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+
+            if (raddr != NULL) {
+               // concatenate the group labels from above to below.
+               RaPrintLocalityLabel(raddr, sbuf, 2048);
+               if (strlen(sbuf) > 0)
+                  retn = strdup(sbuf);
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaFetchAddressLocalityLabel (%p, %p, %p, %d, %d) returning %s\n", parser, labeler, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
+
+char *RaPrintLocalityGroup (struct RaAddressStruct *, char *, int);
+
+char *
+RaPrintLocalityGroup (struct RaAddressStruct *raddr, char *buf, int len)
+{
+   int llen, slen;
+
+   if (raddr->p != NULL) {
+      RaPrintLocalityGroup(raddr->p, buf, len);
+   }
+   if (raddr->group && ((llen = strlen(raddr->group)) > 0)) {
+      if ((slen = strlen(buf)) > 0) {
+         if ((slen + llen) < len) {
+            sprintf (&buf[slen], ",%s", raddr->group);
+         }
+      } else {
+         if (llen < len)
+            sprintf (buf, "%s", raddr->group);
+      }
+   }
+   return (buf);
+}
+
+
+char *
+RaFetchAddressLocalityGroup (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
+{
+   struct RaAddressStruct *raddr;
+   char sbuf[2048];
+   char *retn = NULL;
+
+   bzero(sbuf, 2048);
+
+   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
+      switch (type) {
+         case ARGUS_TYPE_IPV4: {
+            struct RaAddressStruct node;
+            bzero ((char *)&node, sizeof(node));
+
+            node.addr.type = AF_INET;
+            node.addr.len = 4;
+            node.addr.addr[0] = *addr;
+            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
+            node.addr.masklen = mask;
+
+            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_SUPER_MATCH)) == NULL)
+               if (mode == ARGUS_NODE_MATCH)
+                  raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH);
+
+            if (raddr != NULL) {
+               // get the group label from above to below.
+               RaPrintLocalityGroup(raddr, sbuf, 2048);
+               if (strlen(sbuf) > 0)
+                  retn = strdup(sbuf);
+            }
+            break;
+         }
+
+         case ARGUS_TYPE_IPV6:
+            break;
+      }
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (5, "RaFetchAddressLocalityGroup (%p, %p, %p, %d, %d) returning %s\n", parser, labeler, addr, type, mode, retn);
+#endif
+   }
+
+   return (retn);
+}
+
 
 void
 ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
@@ -4332,15 +4699,21 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
                      if ((slen = strlen(tmpbuf)) > 0) {
                         if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
-                          int ival = 0;
+                           int ival = 0;
+                           float fval = 0.0;
+
                            int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
+                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+
                            if (iret) {
                               thistype = ARGUS_PTYPE_INT;
-                           } else {
-                              float fval = 0.0;
-                              int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
-                              if (fret) thistype = ARGUS_PTYPE_DOUBLE;
-                           }
+                           } else 
+			   if (fret) {
+                              thistype = ARGUS_PTYPE_DOUBLE;
+                           } else
+                              if (tmpbuf[0] == '{') {
+                                 thistype = ARGUS_PTYPE_JSON;
+                              }
                         }
 
                         dlen = sizeof(tmpbuf) - slen;
@@ -4438,6 +4811,9 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                                              tmpbuf, parser->RaFieldDelimiter);
 				       }
                                     }
+                                 } else {
+                                    slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c%c", 
+                                       parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
                                  }
                               }
 
@@ -17933,12 +18309,6 @@ extern int ether_hostton(char *, struct ether_addr *);
 #endif
 #endif
 
-struct enamemem enametable[HASHNAMESIZE];
-struct enamemem nsaptable[HASHNAMESIZE];
-struct enamemem bytestringtable[HASHNAMESIZE];
-
-struct protoidmem protoidtable[HASHNAMESIZE];
-
 /*
  * A faster replacement for inet_ntoa().
  */
@@ -18416,10 +18786,8 @@ lookup_nmem(struct nnamemem *table, const u_char *np)
 
 /* Find the hash node that corresponds the ether address 'ep'. */
 
-struct enamemem *lookup_emem(struct enamemem *table, const u_char *ep);
-
 struct enamemem *
-lookup_emem(struct enamemem *table, const u_char *ep)
+check_emem(struct enamemem *table, const u_char *ep)
 {
    u_int i, j, k;
    struct enamemem *tp;
@@ -18430,19 +18798,41 @@ lookup_emem(struct enamemem *table, const u_char *ep)
 
    tp = &table[(i ^ j) % (HASHNAMESIZE-1)];
    while (tp->e_nxt)
-      if (tp->e_addr0 == i &&
-          tp->e_addr1 == j &&
-          tp->e_addr2 == k)
+      if (tp->e_addr[0] == i && tp->e_addr[1] == j && tp->e_addr[2] == k)
          return tp;
       else
          tp = tp->e_nxt;
-   tp->e_addr0 = i;
-   tp->e_addr1 = j;
-   tp->e_addr2 = k;
-   tp->e_nxt = (struct enamemem *)calloc(1, sizeof(*tp));
+   return NULL;
+}
 
+struct enamemem *
+lookup_emem(struct enamemem *table, const u_char *ep)
+{
+   u_int16_t i, j, k;
+   struct enamemem *tp;
+   u_int ind;
+
+   k = (ep[0] << 8) | ep[1];
+   j = (ep[2] << 8) | ep[3];
+   i = (ep[4] << 8) | ep[5];
+
+   ind = (i ^ j) % (HASHNAMESIZE - 1);
+
+   tp = &table[ind];
+   while (tp->e_nxt) {
+      if (tp->e_addr[0] == i && tp->e_addr[1] == j && tp->e_addr[2] == k)
+         return tp;
+      else
+         tp = tp->e_nxt;
+   }
+
+   tp->e_addr[0] = i;
+   tp->e_addr[1] = j;
+   tp->e_addr[2] = k;
+   tp->e_nxt = (struct enamemem *)calloc(1, sizeof(*tp));
    return tp;
 }
+
 
 /*
  * Find the hash node that corresponds to the bytestring 'bs'
@@ -18468,15 +18858,15 @@ lookup_bytestring(register const u_char *bs, const unsigned int nlen)
 
    tp = &bytestringtable[(i ^ j) & (HASHNAMESIZE-1)];
    while (tp->e_nxt)
-      if (tp->e_addr0 == i && tp->e_addr1 == j && tp->e_addr2 == k &&
+      if (tp->e_addr[0] == i && tp->e_addr[1] == j && tp->e_addr[2] == k &&
             memcmp((const char *)bs, (const char *)(tp->e_bs), nlen) == 0)
          return tp;
       else
          tp = tp->e_nxt;
 
-   tp->e_addr0 = i;
-   tp->e_addr1 = j;
-   tp->e_addr2 = k;
+   tp->e_addr[0] = i;
+   tp->e_addr[1] = j;
+   tp->e_addr[2] = k;
 
    tp->e_bs = (u_char *) calloc(1, nlen + 1);
    memcpy(tp->e_bs, bs, nlen);
@@ -18500,24 +18890,21 @@ lookup_nsap(const u_char *nsap)
       k = (ensap[0] << 8) | ensap[1];
       j = (ensap[2] << 8) | ensap[3];
       i = (ensap[4] << 8) | ensap[5];
-   }
-   else
+   } else
       i = j = k = 0;
 
    tp = &nsaptable[(i ^ j) % (HASHNAMESIZE-1)];
    while (tp->e_nxt)
-      if (tp->e_addr0 == i &&
-          tp->e_addr1 == j &&
-          tp->e_addr2 == k &&
+      if (tp->e_addr[0] == i && tp->e_addr[1] == j && tp->e_addr[2] == k &&
           tp->e_nsap[0] == nlen &&
           bcmp((char *)&(nsap[1]),
          (char *)&(tp->e_nsap[1]), nlen) == 0)
          return tp;
       else
          tp = tp->e_nxt;
-   tp->e_addr0 = i;
-   tp->e_addr1 = j;
-   tp->e_addr2 = k;
+   tp->e_addr[0] = i;
+   tp->e_addr[1] = j;
+   tp->e_addr[2] = k;
    tp->e_nsap = (u_char *) calloc(1, nlen + 1);
    bcopy(nsap, tp->e_nsap, nlen + 1);
    tp->e_nxt = (struct enamemem *)calloc(1, sizeof(*tp));
@@ -18553,21 +18940,65 @@ lookup_protoid(const u_char *pi)
    return tp;
 }
 
+int ArgusEtherArrayInited = 0;
+
 char *
 etheraddr_string(struct ArgusParserStruct *parser, u_char *ep)
 {
+   struct enamemem *tp, *group = NULL;
    char *retn = NULL;
-   struct enamemem *tp;
-   u_char *lp = ep;
    char *cp, *oui;
-   u_int i, j;
+   u_char *lp = ep;
+   u_int i, x, j;
 
-   tp = lookup_emem(enametable, ep);
-   if (tp->e_name) {
-      if (parser->ArgusPrintEthernetVendors)
-         return (tp->e_ouiname);
-      else
-         return (tp->e_name);
+   if (ArgusEtherArrayInited == 0)
+      ArgusInitEtherarray();
+
+   if ((tp = check_emem(enametable, ep)) != NULL) {
+      if (parser->ArgusPrintEthernetVendors) {
+         if (tp->e_ouiname != NULL)
+            return (tp->e_ouiname);
+      } else {
+         if (parser->nflag >= 1) {
+            if (tp->e_numeric != NULL)
+               return (tp->e_numeric);
+         } else {
+            if (tp->e_name != NULL)
+               return (tp->e_name);
+         }
+      }
+   }
+
+   if (tp == NULL) {
+      for (i = 0; i < 48; i++) {  // check the masked addresses first
+         struct enamemem *etable = ArgusEtherMaskArray[i];
+         if (etable != NULL) {
+            u_char taddr[6], value = '\0';
+            int index = 0, masklen = i;
+
+            bzero(taddr, 6);
+
+            while (masklen >= 8) {
+               taddr[index] = ep[index];
+               masklen -= 8;
+               index++;
+            }
+
+            if (masklen > 0) {
+               for (x = 0; x < masklen; x++) {  // masklen at this point is less than 8
+                 u_char mask = (0x01 << (8 - (x + 1)));
+                 value |= ep[index] & mask;
+               }
+               taddr[index] = value;
+            }
+
+            if ((tp = check_emem(etable, taddr)) != NULL) {
+               group = tp;
+               break;
+            }
+         }
+      }
+      tp = lookup_emem(enametable, ep);
    }
 
 #if defined(ETHER_SERVICE) && !defined(linux) && !defined(CYGWIN)
@@ -18575,44 +19006,55 @@ etheraddr_string(struct ArgusParserStruct *parser, u_char *ep)
       char buf[128];
       if (ether_ntohost(buf, (struct ether_addr *)ep) == 0) {
          tp->e_name = strdup(buf);
-         return (tp->e_name);
       }
    }
 #endif
-   tp->e_name = cp = (char *)calloc(1, sizeof("00:00:00:00:00:00"));
+   if (tp != NULL) {
+      if (tp->e_numeric == NULL) {
+         tp->e_numeric = cp = (char *)calloc(1, sizeof("00:00:00:00:00:00"));
 
-   j = *lp >> 4;
-   *cp++ = hex[j];
-   *cp++ = hex[*lp++ & 0xf];
-   for (i = 5; (int)--i >= 0;) {
-      *cp++ = ':';
-      j = *lp >> 4;
-      *cp++ = hex[j];
-      *cp++ = hex[*lp++ & 0xf];
+         j = *lp >> 4;
+         *cp++ = hex[j];
+         *cp++ = hex[*lp++ & 0xf];
+         for (i = 5; (int)--i >= 0;) {
+            *cp++ = ':';
+            j = *lp >> 4;
+            *cp++ = hex[j];
+            *cp++ = hex[*lp++ & 0xf];
+         }
+         *cp = '\0';
+      }
+
+      if (tp->e_oui == NULL) {
+         oui = etheraddr_oui(parser, ep);
+         if ((oui != NULL)  || (group != NULL)) {
+            if (oui == NULL) {
+               if ((oui = group->e_oui) == NULL)
+                  oui = group->e_name;
+            }
+            if (tp->e_oui == NULL)
+               tp->e_oui = strdup(oui);
+         }
+      }
+
+      if (tp->e_ouiname == NULL) {
+         if (tp->e_oui != NULL) {
+            char vendor[16];
+            sprintf (vendor, "%*.*s", 8, 8, tp->e_oui);
+            if (tp->e_ouiname != NULL)
+               free(tp->e_ouiname);
+            tp->e_ouiname = strdup(tp->e_numeric);
+            bcopy(vendor, tp->e_ouiname, 8);
+            tp->e_ouiname[8] = '_';
+         } else
+            tp->e_ouiname = strdup(tp->e_numeric);
+      }
+
+      retn =  (parser->ArgusPrintEthernetVendors) ? tp->e_ouiname : ((parser->nflag >= 1) ? tp->e_numeric : (tp->e_name ? tp->e_name : tp->e_numeric));
    }
-   *cp = '\0';
-
-   oui = etheraddr_oui(parser, ep);
-   if (oui != NULL) {
-      char vendor[16];
-      sprintf (vendor, "%*.*s", 8, 8, oui);
-
-      if (tp->e_oui == NULL)
-         tp->e_oui = oui;
-
-      if (tp->e_ouiname != NULL)
-         free(tp->e_ouiname);
-
-      tp->e_ouiname = strdup(tp->e_name);
-      bcopy(vendor, tp->e_ouiname, 8);
-      tp->e_ouiname[8] = '_';
-
-   } else
-      tp->e_ouiname = strdup(tp->e_name);
-
-   retn =  (parser->ArgusPrintEthernetVendors) ? tp->e_ouiname : tp->e_name;
    return (retn);
 }
+
 
 char *
 linkaddr_string(struct ArgusParserStruct *parser, const unsigned char *ep, unsigned int len)
@@ -20210,7 +20652,12 @@ ArgusPrintLabel (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          labelbuf = label->l_un.label;
 
       if (parser->ArgusPrintXml) {
-         sprintf (buf, " Label = \"%s\"", labelbuf);
+         if (strchr(labelbuf, '\"')) {
+            char ebuf[MAXSTRLEN];
+            labelbuf = ArgusEscapeString(labelbuf, ebuf, MAXSTRLEN);
+            sprintf (buf, " Label = \"%s\"", labelbuf);
+	 } else
+            sprintf (buf, " Label = \"%s\"", labelbuf);
       } else {
          if (parser->RaFieldWidth != RA_FIXED_WIDTH)
             len = strlen(labelbuf);
@@ -26762,7 +27209,7 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
    bzero (trans, tsize);
 
    if (len > 0) {
-      int offset = 0;
+//    int offset = 0;
 
       trans->hdr.type              = ARGUS_TRANSPORT_DSR;
       trans->hdr.subtype           = ARGUS_SRCID | ARGUS_SEQ;
@@ -26770,8 +27217,8 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
 
       switch (type & ~ARGUS_TYPE_INTERFACE) {
          case ARGUS_TYPE_STRING: break;
-         case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
+//       case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
+//       case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
 //       case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
 //       case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
       }
@@ -27952,6 +28399,24 @@ ArgusTrimString (char *str)
    }
    return (retn);
 }
+
+char *
+ArgusEscapeString (char *str, char *buf, int len)
+{
+   char *sptr = str, *bptr = buf;
+   char *bend = buf + len;
+
+   while ((sptr != NULL) && (strlen(sptr) > 0) && (bptr < bend)) {
+      while ((*sptr != '\"') && *sptr != '\0' && (bptr < bend)) *bptr++ = *sptr++;
+      if (*sptr == '\"') {
+         *bptr++ = '\\';
+         *bptr++ = *sptr++;
+      }
+   }
+   *bptr++ = '\0';
+   return (buf);
+}
+
 
 
 #if !defined(HAVE_TIMEGM)

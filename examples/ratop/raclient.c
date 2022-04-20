@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,6 @@
 void ArgusThreadsInit(pthread_attr_t *);
 
 struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-void RaInsertAddressTree (struct ArgusParserStruct *, struct ArgusLabelerStruct *labeler, char *);
 
 extern int ArgusCloseDown;
 
@@ -2003,111 +2002,6 @@ ArgusProcessBins (struct ArgusRecordStruct *ns, struct RaBinProcessStruct *rbps)
    return (retn);
 }
 
-#if defined(HAVE_NET_IF_DL_H) && HAVE_NET_IF_DL_H
-#include <net/if_dl.h>
-#endif
-
-void
-ArgusGetInterfaceAddresses(struct ArgusParserStruct *parser)
-{
-#if defined(HAVE_IFADDRS_H) && HAVE_IFADDRS_H
-   struct ArgusLabelerStruct *labeler = NULL;
-   struct ifaddrs *ifa = NULL, *p;
-   
-   if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-      if (getifaddrs(&ifa) != 0) 
-         ArgusLog (LOG_ERR, "ArgusGetInterfaceAddrs: getifaddrs error %s", strerror(errno));
-
-      for (p = ifa; p != NULL; p = p->ifa_next) {
-         if (p->ifa_addr != NULL) {
-
-#if defined(ARGUS_SOLARIS)
-            int s, family = p->ifa_addr->ss_family;
-#else
-            int s, family = p->ifa_addr->sa_family;
-#endif
-
-            switch (family) {
-               case AF_INET: {
-                  char ip_addr[NI_MAXHOST];
-                  uint32_t tmask, mask = ((struct sockaddr_in *)(p->ifa_netmask))->sin_addr.s_addr;
-                  int i, cidrlen = 0;
-
-                  if ((s = getnameinfo((void *)p->ifa_addr, sizeof(struct sockaddr_in), ip_addr, sizeof(ip_addr), NULL, 0, NI_NUMERICHOST)) != 0)
-                     ArgusLog (LOG_ERR, "ArgusGetInerfaceAddresses: error %s\n", strerror(errno));
-
-                  mask = ntohl(mask);
-                  for (i = 0, tmask = 0xffffffff; i < 32; i++) {
-                     if ((tmask << i) == mask) {
-                        cidrlen = 32 - i;
-                     }
-                  }
-
-                  RaInsertAddressTree (parser, labeler, ip_addr);
-                  sprintf(&ip_addr[strlen(ip_addr)], "/%d", cidrlen);
-                  RaInsertAddressTree (parser, labeler, ip_addr);
-
-#if defined(ARGUSDEBUG)
-                  ArgusDebug (5, "ArgusGetInterfaceAddresses: %-7s: %s", p->ifa_name, ip_addr);
-#endif
-                  break;
-               }
-
-
-               case AF_INET6: {
-#if defined(ARGUSDEBUG)
-                  ArgusDebug (5, "ArgusGetInterfaceAddresses: %-7s: family AF_INET6", p->ifa_name);
-#endif
-                  break;
-               }
-
-#if defined(AF_LINK)
-               case AF_LINK: {
-                  extern struct enamemem elabeltable[HASHNAMESIZE];
-                  struct sockaddr_dl *sdp = (struct sockaddr_dl *) p->ifa_addr; 
-                  static struct argus_etherent e;
-                  struct enamemem *tp;
-
-                  char *macstr = NULL;
-
-                  bzero((char *)&e, sizeof(e));
-                  bcopy((unsigned char *)(sdp->sdl_data + sdp->sdl_nlen), e.addr, 6);
-
-                  tp = lookup_emem(elabeltable, e.addr);
-                  if (tp->e_name == NULL) {
-                     macstr = etheraddr_string (parser, e.addr);
-                     tp->e_name = savestr(macstr);
-                  }
-#if defined(ARGUSDEBUG)
-                  ArgusDebug (5, "ArgusGetInterfaceAddresses: %-7s: family AF_LINK: %s", p->ifa_name, macstr);
-#endif
-                  break;
-               }
-#endif
-
-               default: {
-#if defined(ARGUSDEBUG)
-#if defined(ARGUS_SOLARIS)
-                  ArgusDebug (5, "ArgusGetInterfaceAddresses: %-7s: family %d", p->ifa_name, p->ifa_addr->ss_family);
-#else
-                  ArgusDebug (5, "ArgusGetInterfaceAddresses: %-7s: family %d", p->ifa_name, p->ifa_addr->sa_family);
-#endif
-#endif
-                  break;
-               }
-            }
-         }
-      }
-      freeifaddrs(ifa);
-   }
-#endif
-
-#if defined(ARGUSDEBUG)
-   ArgusDebug (4, "ArgusGetInterfaceAddresses () done"); 
-#endif
-}
-
-
 extern struct ArgusRecordStruct *ArgusSearchHitRecord;
 
 int
@@ -2323,7 +2217,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                char buf[MAXSTRLEN], *label = NULL;
                bzero(buf, sizeof(buf));
 
-               if ((label = ArgusMergeLabel(l1, l2, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
+               if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
                   int slen = strlen(label);
                   int len = 4 * ((slen + 3)/4);
 

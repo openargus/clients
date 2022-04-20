@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -2838,19 +2838,37 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                      case ARGUS_LABEL_DSR: {
                         struct ArgusLabelStruct *tlabel = (struct ArgusLabelStruct *) dsr;
-                        int llen = ((tlabel->hdr.argus_dsrvl8.len - 1) * 4);
+                        int tlen = 0, llen = ((tlabel->hdr.argus_dsrvl8.len - 1) * 4);
+                        char *lstr = NULL, *clabel = NULL;
 
                         if (tlabel->hdr.argus_dsrvl8.len <= 0) {
                            retn = NULL;
                            break;
                         }
                         bzero((char *)&canon->label, sizeof(*tlabel));
-                        bzero((char *)label, llen + 1);
+                        bzero((char *)label, llen + 128);
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
+
+                        llen = (tlabel->hdr.argus_dsrvl8.len - 1) * 4;
+                        lstr = strdup((char *)&tlabel->l_un.label);
+                        tlen = strlen(lstr);
+
+                        tlen = tlen > llen ? llen : tlen;
+                        lstr[tlen] = '\0';
+
                         canon->label.l_un.label = label;
-                        bcopy((char *)&tlabel->l_un.label, (char *)canon->label.l_un.label, llen);
+
+                        if ((clabel = ArgusUpgradeLabel(lstr, label, MAXBUFFERLEN)) == lstr) {
+                           bcopy(lstr, (char *)canon->label.l_un.label, tlen);
+			} else {
+                           int clen = (((strlen(clabel) + 3) / 4) * 4);
+                           canon->label.hdr.argus_dsrvl8.len = (clen / 4) + 1;
+			}
+
+                        free(lstr);
                         retn->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
                         retn->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
+
                         break;
                      }
 
@@ -6987,243 +7005,6 @@ ArgusMergeAddress(unsigned int *a1, unsigned int *a2, int type, int dir, unsigne
 }
 
 
-// Merging the label object is either an intersection of the label objects in
-// the two records,  or a union of the two labels.
-//
-// OK, the label syntax is:
-//    label[:label]
-//    label :: [object=]word[,word[;[object=]word[,word]]]
-//
-// So when we merge these together, we'd like to preserve the labels and the object
-// specification, and by default we'll do the union, to see that that goes.
-
-
-#define ARGUS_MAX_LABEL_VALUES		32
-struct ArgusLabelObject {
-   char *object;
-   char *values[ARGUS_MAX_LABEL_VALUES]; 
-};
-
-
-char *ArgusMergeLabel(struct ArgusLabelStruct *, struct ArgusLabelStruct *, char *buf, int len, int type);
-
-// char *ArgusMergeLabel(struct ArgusLabelStruct *l1, struct ArgusLabelStruct *l2, char *buf, int len, int type)
-//
-// This routine merges argus label meta-data.  The types of merging possible are:
-//    ARGUS_UNION    Union - Where all the attributes and values are simple added to the label
-//    ARGUS_INTER    Intersection - Where only the attributes that are in common are retained
-//    ARGUS_REPLACE  Replace - When the attributes are in common, the values are replaced.
-
-
-
-char *
-ArgusMergeLabel(struct ArgusLabelStruct *l1, struct ArgusLabelStruct *l2, char *buf, int len, int type)
-{
-   struct ArgusLabelObject *l1labs = NULL, *l2labs = NULL;
-   char *l1buf = NULL, *l2buf = NULL;
-   int l1labsindex = 0, l2labsindex = 0;
-   char *retn = NULL, *ptr, *sptr, *obj;
-   int l1len, l2len;
-   int i, y, z; 
-
-   if (l1 != NULL) {
-      if ((l1labs = calloc(256, sizeof(struct ArgusLabelObject))) == NULL)
-         ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
-
-      if ((l1buf = calloc(1, MAXBUFFERLEN)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
-
-      if (l1->l_un.label != NULL) {
-         if ((l1len = strlen(l1->l_un.label)) > MAXBUFFERLEN)
-            ArgusLog (LOG_ERR, "ArgusMergeLabel: l1len gt MAXBUFFERLEN");
-
-         bcopy(l1->l_un.label, l1buf, l1len);
-      }
-   }
-   if (l2 != NULL) {
-      if ((l2labs = calloc(256, sizeof(struct ArgusLabelObject))) == NULL)
-         ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
-
-      if ((l2buf = calloc(1, MAXBUFFERLEN)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusMergeLabel: calloc error %s", strerror(errno));
-
-      if (l2->l_un.label != NULL) {
-         if ((l2len = strlen(l2->l_un.label)) > MAXBUFFERLEN)
-            ArgusLog (LOG_ERR, "ArgusMergeLabel: l2len gt MAXBUFFERLEN");
-         
-         bcopy(l2->l_un.label, l2buf, l2len);
-      }
-   }
-
-
-// first parse all the attributes and values. This system limits the 
-// number of attributes to 256 and ARGUS_MAX_LABEL_VALUES per attribute.
-
-   if (l1 != NULL) {
-      ptr = l1buf;
-      while ((obj = strtok(ptr, ":")) != NULL) {
-         if (l1labsindex < 256) {
-            l1labs[l1labsindex].object = obj;
-            l1labsindex++;
-         }     
-         ptr = NULL; 
-      }
-
-      for (i = 0; i < l1labsindex; i++) {
-         if ((obj =  l1labs[i].object) != NULL) {
-            if ((sptr = strchr(obj, '=')) != NULL) {
-               int vind = 0;
-               char *val;
-
-               *sptr++ = '\0';
-               while ((val = strtok(sptr, ",")) != NULL) {
-                  l1labs[i].values[vind++] = val;
-                  sptr = NULL;
-               }
-            }
-         }
-      }
-   }
-
-   if (l2 != NULL) {
-      ptr = l2buf;
-      while ((obj = strtok(ptr, ":")) != NULL) {
-         if (l2labsindex < 256) {
-            l2labs[l2labsindex].object = obj;
-            l2labsindex++;
-         }
-         ptr = NULL;
-      }
-
-      for (i = 0; i < l2labsindex; i++) {
-         if ((obj =  l2labs[i].object) != NULL) {
-            if ((sptr = strchr(obj, '=')) != NULL) {
-               int vind = 0;
-               char *val;
-      
-               *sptr++ = '\0';
-               while ((val = strtok(sptr, ",")) != NULL) {
-                  l2labs[i].values[vind++] = val;
-                  sptr = NULL;
-               }
-            }
-         }
-      }
-   }
-
-// OK, now based on the merge type, setup l1abs to hold the
-// results of any union or replace operations for attributes
-// that l1 and l2 share.  Leave attributes that l1 does not
-// contain in l2 for now..
-
-// first gather entries from l2 into l1 for union or replace.
-
-   if ((l1 != NULL) && (l2 != NULL)) {
-      for (i = 0; i < l2labsindex; i++) {
-         int found = 0;
-
-         if (l2labs[i].object != NULL) {
-            for (y = 0; y < l1labsindex && !found; y++) {
-               if (l1labs[y].object != NULL) {
-                  if (!(strcmp(l1labs[y].object, l2labs[i].object))) {
-                     //  we have matching attributes.  based on type
-                     //  add, replace or remove values in 1.
-                     switch (type) {
-                        case ARGUS_REPLACE: {
-                           bcopy(l2labs[i].values, l1labs[y].values, sizeof(l1labs[y].values));
-                           break;
-                        }
-
-                        case ARGUS_INTERSECT:
-                        case ARGUS_UNION: {
-                           char *v1ptr, *v2ptr;
-                           int v2ind = 0;
-                           while ((v2ptr = l2labs[i].values[v2ind]) != NULL) {
-                              int v1ind = 0, vfound = 0;
-                              while (!vfound && ((v1ptr = l1labs[y].values[v1ind]) != NULL)) {
-                                 if (!(strcmp(v1ptr, v2ptr))) {
-                                    vfound = 1;
-                                    break;
-                                 }
-                                 v1ind++;
-                              }
-                              if (!vfound) {
-                                 if (type == ARGUS_UNION) {
-                                    int xind = (v1ind < ARGUS_MAX_LABEL_VALUES) ? v1ind : ARGUS_MAX_LABEL_VALUES - 1;
-                                    l1labs[y].values[xind] = v2ptr;
-                                 } else
-                                    bzero(l1labs[y].values, sizeof(l1labs[y].values));
-                              }
-                              v2ind++;
-                           }
-                           break;
-                        }
-                     }
-                     l2labs[i].object = NULL;
-                     found = 1;
-                  }
-               }
-            }
-         }
-      }
-   }
-
-// OK, at this point were ready to go, just go through all the attributes
-// first in l1 and then in l2, and create the actual label string.
-
-   z = 0;
-   if (l1 != NULL) {
-      for (i = 0; i < l1labsindex; i++) {
-         if (l1labs[i].object != NULL) {
-            if (z == 0)
-               sprintf (&buf[strlen(buf)], "%s", l1labs[i].object);
-            else
-               sprintf (&buf[strlen(buf)], ":%s", l1labs[i].object);
-
-            if (l1labs[i].values[0] != NULL) {
-               int y = 1;
-               sprintf (&buf[strlen(buf)], "=%s", l1labs[i].values[0]);
-               while ((y < ARGUS_MAX_LABEL_VALUES) && (l1labs[i].values[y] != NULL)) {
-                  sprintf (&buf[strlen(buf)], ",%s", l1labs[i].values[y]);
-                  y++;
-               }
-            }
-            z++;
-         }
-         retn = buf;
-      }
-      free(l1labs);
-      free(l1buf);
-   }
-
-   if (l2 != NULL) {
-      for (i = 0; i < l2labsindex; i++) {
-         if (l2labs[i].object != NULL) {
-            if (z == 0)
-               sprintf (&buf[strlen(buf)], "%s", l2labs[i].object);
-            else
-               sprintf (&buf[strlen(buf)], ":%s", l2labs[i].object);
-
-            if (l2labs[i].values[0] != NULL) {
-               int y = 1;
-               sprintf (&buf[strlen(buf)], "=%s", l2labs[i].values[0]);
-               while ((y < ARGUS_MAX_LABEL_VALUES) && (l2labs[i].values[y] != NULL)) {
-                  sprintf (&buf[strlen(buf)], ",%s", l2labs[i].values[y]);
-                  y++;
-               }
-            }
-            z++;
-         }
-         retn = buf;
-      }
-      free(l2labs);
-      free(l2buf);
-   }
-
-   return (retn);
-}
-
-
 void
 ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
 {
@@ -8683,7 +8464,7 @@ ArgusMergeRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *n
                      if (strcmp(l1->l_un.label, l2->l_un.label)) {
                         char *buf = calloc(1, MAXBUFFERLEN);
 
-                        if ((ArgusMergeLabel(l1, l2, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
+                        if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
                            free(l1->l_un.label);
                            l1->l_un.label = strdup(buf);
                         }

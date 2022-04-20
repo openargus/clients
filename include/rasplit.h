@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,7 +20,7 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/rasplit.h#16 $
+ * $Id: //depot/argus/clients/include/rasplit.h#22 $
  * $DateTime: 2016/06/01 15:17:28 $
  * $Change: 3148 $
  */

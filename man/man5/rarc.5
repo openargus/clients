@@ -1,4 +1,4 @@
-.\" Copyright (c) 2000-2016 QoSient, LLC
+.\" Copyright (c) 2000-2022 QoSient, LLC
 .\" All rights reserved.
 .\" 
 .\" This program is free software; you can redistribute it and/or modify
@@ -292,6 +292,30 @@ Commandline equivalent: -M printer=<printer>
 \fBRA_USERDATA_ENCODE=\fPAscii
 
 
+.SH RA_LABEL_FORMAT
+
+Argus supports extending flow records using argus labels.  Labels are
+metadata strings that can be modified for flow data enhancements.
+Argus 3.0 and earlier supports a format that follows standard metadata
+composed of a list of key=value pairs separated by ':'.  Multiple values
+withing a key value are separated by ','. Keys and values are not
+normally enclosed by quotes.
+
+Argus clients support an optional format, converting the label to standard
+JSON format.  This solves a number of problems, such as inclusion of values
+that contain ':'s, such as IPv6 addresses.
+
+Starting with Argus 4.0, the default label format will be JSON, and
+legacy formats will be converted on the fly.
+
+No Commandline equivalent
+
+.nf
+\fBRA_LABEL_FORMAT=\fPLegacy
+\fBRA_LABEL_FORMAT=\fPJson
+.fi
+
+
 .SH RA_FILTER
 
 You can provide a filter expression here, if you like.
@@ -575,7 +599,7 @@ The syntax is:
 
 .RE
 .SH COPYRIGHT
-Copyright (c) 2000-2016 QoSient. All rights reserved.
+Copyright (c) 2000-2022 QoSient. All rights reserved.
 .RE
 .SH SEE ALSO
 .BR ra (1)

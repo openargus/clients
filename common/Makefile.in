@@ -1,6 +1,6 @@
 #
 #  Argus Software
-#  Copyright (c) 2000-2016 QoSient, LLC
+#  Copyright (c) 2000-2022 QoSient, LLC
 #  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify
@@ -98,8 +98,8 @@ COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o
 PARSESRC  = argus_main.c
 PARSEOBJ  = argus_main.o
 
-CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_json.c
-CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_json.o
+CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_json.c argus_label_geoip.c
+CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_json.o argus_label_geoip.o
 
 OUTPUTSRC = argus_output.c
 OUTPUTOBJ = argus_output.o

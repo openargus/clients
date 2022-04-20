@@ -18,7 +18,7 @@ Buildroot: %{_tmppath}/%{name}-%{ver}-root
 
 %description
 Argus Clients contains a number of programs that process Argus data.
-Copyright: 2000-2016 QoSient, LLC
+Copyright: 2000-2022 QoSient, LLC
 
 %define argusdir        /usr
 %define argusman        /usr/share/man

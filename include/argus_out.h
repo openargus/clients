@@ -1,6 +1,6 @@
 /*
  * Argus Software
- * Copyright (c) 2000-2016 QoSient, LLC
+ * Copyright (c) 2000-2022 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -907,7 +907,13 @@ struct ArgusSiteLocation {
 
 struct ArgusGeoLocationStruct {
    struct ArgusDSRHeader hdr;
-   struct ArgusSiteLocation src, dst;
+   struct ArgusCoordinates src, dst, inode;
+};
+
+struct ArgusNetspatialStruct {
+   struct ArgusDSRHeader hdr;
+   unsigned short status;
+   signed char sloc, dloc;
 };
 
 struct ArgusLabelStruct {
