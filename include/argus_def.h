@@ -301,7 +301,7 @@ extern "C" {
  
 /* Argus Record Data Specific Record (DSR) Types */
 
-#define ARGUSMAXDSRTYPE				24
+#define ARGUSMAXDSRTYPE				25
 
 /* Argus Data Specific Record (DSR) Formats
       There are two types of DSR, 1) a Type Value (TV) record
@@ -1615,6 +1615,13 @@ extern "C" {
 
 #define ARGUS_SRC_VLAN                   0x01
 #define ARGUS_DST_VLAN                   0x02
+
+/* VxLan Transport DSR Type */
+#define ARGUS_VXLAN_DSR                  0x43
+#define ARGUS_VXLAN_INDEX                24
+
+#define ARGUS_SRC_VXLAN                  0x01
+#define ARGUS_DST_VXLAN                  0x02
 
  
 /* Mpls Transport DSR Type */

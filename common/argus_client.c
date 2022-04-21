@@ -2523,6 +2523,19 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
+                     case ARGUS_VXLAN_DSR: {
+                        struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)dsr;
+                        int vxlanLen = sizeof(*vxlan);
+                        int vlen = (cnt < vxlanLen) ? cnt : (cnt > vxlanLen) ? vxlanLen : cnt;
+
+                        if (cnt == vlen) {
+                           bcopy((char *)vxlan, (char *)&canon->vxlan, cnt);
+                           retn->dsrs[ARGUS_VXLAN_INDEX] = (struct ArgusDSRHeader *)&canon->vxlan;
+                           retn->dsrindex |= (0x01 << ARGUS_VXLAN_INDEX);
+                        }
+                        break;
+                     }
+
                      case ARGUS_MPLS_DSR: {
                         struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                         unsigned int *mlabel = (unsigned int *)(dsr + 1);
@@ -16097,6 +16110,42 @@ int ArgusSortDstVlan (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
                ((v2->hdr.argus_dsrvl8.qual & ARGUS_DST_VLAN) ? -1 : 0);
       }
 
+   } else
+      retn = (v1) ? 1 : ((v2) ? -1 : 0);
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int ArgusSortSrcVnid(struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusVxLanStruct *v1 = (struct ArgusVxLanStruct *)n1->dsrs[ARGUS_VXLAN_INDEX];
+   struct ArgusVxLanStruct *v2 = (struct ArgusVxLanStruct *)n2->dsrs[ARGUS_VXLAN_INDEX];
+   int retn = 0;
+
+   if (v1 && v2) {
+      if ((v1->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN) && (v2->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN)) {
+         retn = v1->svnid - v2->svnid;
+      } else {
+         retn = (v1->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN) ? 1 : ((v2->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN) ? -1 : 0);
+      }
+   } else
+      retn = (v1) ? 1 : ((v2) ? -1 : 0);
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int ArgusSortDstVnid(struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusVxLanStruct *v1 = (struct ArgusVxLanStruct *)n1->dsrs[ARGUS_VXLAN_INDEX];
+   struct ArgusVxLanStruct *v2 = (struct ArgusVxLanStruct *)n2->dsrs[ARGUS_VXLAN_INDEX];
+   int retn = 0;
+
+   if (v1 && v2) {
+      if ((v1->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN) && (v2->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN)) {
+         retn = v1->dvnid - v2->dvnid;
+      } else {
+         retn = (v1->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN) ? 1 : ((v2->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN) ? -1 : 0);
+      }
    } else
       retn = (v1) ? 1 : ((v2) ? -1 : 0);
 

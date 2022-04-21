@@ -3801,6 +3801,7 @@ ArgusUniDirectionalRecord (struct ArgusRecordStruct *argus)
          case ARGUS_ENCAPS_INDEX:
          case ARGUS_LABEL_INDEX:
          case ARGUS_VLAN_INDEX:
+         case ARGUS_VXLAN_INDEX:
          case ARGUS_MPLS_INDEX:
          case ARGUS_IPATTR_INDEX:
          case ARGUS_COCODE_INDEX:
@@ -4253,6 +4254,24 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                   qual |= ARGUS_SRC_VLAN;
 
                vlan->hdr.argus_dsrvl8.qual = qual;
+               break;
+            }
+
+            case ARGUS_VXLAN_INDEX: {
+               struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)argus->dsrs[ARGUS_VXLAN_INDEX];
+               unsigned int tsvnid = vxlan->svnid;
+               unsigned char qual = vxlan->hdr.argus_dsrvl8.qual & ~(ARGUS_SRC_VXLAN | ARGUS_DST_VXLAN);
+
+               vxlan->svnid = vxlan->dvnid;
+               vxlan->dvnid = tsvnid;
+
+               if (vxlan->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN)
+                  qual |= ARGUS_DST_VXLAN;
+
+               if (vxlan->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN)
+                  qual |= ARGUS_SRC_VXLAN;
+
+               vxlan->hdr.argus_dsrvl8.qual = qual;
                break;
             }
 
@@ -6857,6 +6876,7 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
                      case ARGUS_ENCAPS_TEREDO:    buf[1] = 'T'; break;
                      case ARGUS_ENCAPS_JUNIPER:   buf[1] = 'J'; break;
                      case ARGUS_ENCAPS_ERSPAN_II: buf[1] = 'E'; break;
+                     case ARGUS_ENCAPS_VXLAN:     buf[1] = 'x'; break;
                   }
                }
             }
@@ -6871,6 +6891,8 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
                buf[1] = 'e';
             if (argus->dsrs[ARGUS_VLAN_INDEX] != NULL)
                buf[1] = 'v';
+            if (argus->dsrs[ARGUS_VXLAN_INDEX] != NULL)
+               buf[1] = 'x';
          }
 
          if ((mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX]) != NULL) {
@@ -14367,6 +14389,60 @@ ArgusPrintMpls (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
 }
 */
 
+void 
+ArgusPrintSrcVirtualNID(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)argus->dsrs[ARGUS_VXLAN_INDEX];
+   char vstr[16];
+
+   bzero(vstr, sizeof(vstr));
+   if (vxlan != NULL)
+      if ((vxlan->hdr.argus_dsrvl8.qual & ARGUS_SRC_VXLAN) || (vxlan->svnid > 0))
+         sprintf(vstr, "%d", vxlan->svnid);
+
+   if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+      len = strlen(vstr);
+   } else {
+      if (strlen(vstr) > len) {
+         vstr[len - 1] = '*';
+         vstr[len] = '\0';
+      }
+   }
+   sprintf(buf, "%*.*s ", len, len, vstr);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug(10, "ArgusPrintSrcVirtualNID (%p, %p)", buf, argus);
+#endif
+}
+
+void 
+ArgusPrintDstVirtualNID(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)argus->dsrs[ARGUS_VXLAN_INDEX];
+   char vstr[16];
+
+   bzero(vstr, sizeof(vstr));
+   if (vxlan != NULL)
+      if ((vxlan->hdr.argus_dsrvl8.qual & ARGUS_DST_VXLAN) || (vxlan->dvnid > 0))
+         sprintf(vstr, "%d", vxlan->dvnid);
+
+   if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+      len = strlen(vstr);
+   } else {
+      if (strlen(vstr) > len) {
+         vstr[len - 1] = '*';
+         vstr[len] = '\0';
+      }
+   }
+   sprintf(buf, "%*.*s ", len, len, vstr);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug(10, "ArgusPrintDstVirtualNID (%p, %p)", buf, argus);
+#endif
+}
+
+
+
 #include <netinet/igmp.h>
 
 void
@@ -15679,6 +15755,7 @@ ArgusPrintSrcEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   case ARGUS_ENCAPS_TEREDO:    ebuf[ind++] = 'T'; break;
                   case ARGUS_ENCAPS_JUNIPER:   ebuf[ind++] = 'J'; break;
                   case ARGUS_ENCAPS_ERSPAN_II: ebuf[ind++] = 'E'; break;
+                  case ARGUS_ENCAPS_VXLAN:     ebuf[ind++] = 'x'; break;
             }
          }
       }
@@ -15739,6 +15816,7 @@ ArgusPrintDstEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   case ARGUS_ENCAPS_TEREDO:    ebuf[ind++] = 'T'; break;
                   case ARGUS_ENCAPS_JUNIPER:   ebuf[ind++] = 'J'; break;
                   case ARGUS_ENCAPS_ERSPAN_II: ebuf[ind++] = 'E'; break;
+                  case ARGUS_ENCAPS_VXLAN:     ebuf[ind++] = 'x'; break;
             }
          }
       }
@@ -17058,6 +17136,15 @@ ArgusPrintDstVlanLabel (struct ArgusParserStruct *parser, char *buf, int len)
    sprintf (buf, "%*.*s ", len, len, "dVlan");
 }
 
+void ArgusPrintSrcVirtualNIDLabel(struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf(buf, "%*.*s ", len, len, "sVnid");
+}
+
+void ArgusPrintDstVirtualNIDLabel(struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf(buf, "%*.*s ", len, len, "dVnid");
+}
 
 void
 ArgusPrintSrcVIDLabel (struct ArgusParserStruct *parser, char *buf, int len)
@@ -21913,6 +22000,13 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
+                  case ARGUS_VXLAN_DSR: {
+                     struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)dsr;
+                     vxlan->svnid = ntohl(vxlan->svnid);
+                     vxlan->dvnid = ntohl(vxlan->dvnid);
+                     break;
+                  }
+
                   case ARGUS_MPLS_DSR: {
                      struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                      unsigned int *label = (unsigned int *)(dsr + 1);
@@ -22499,6 +22593,13 @@ ArgusHtoN (struct ArgusRecord *argus)
                      struct ArgusVlanStruct *vlan = (struct ArgusVlanStruct *) dsr;
                      vlan->sid = htons(vlan->sid);
                      vlan->did = htons(vlan->did);
+                     break;
+                  }
+
+                  case ARGUS_VXLAN_DSR: {
+                     struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *)dsr;
+                     vxlan->svnid = htonl(vxlan->svnid);
+                     vxlan->dvnid = htonl(vxlan->dvnid);
                      break;
                   }
 

@@ -51,8 +51,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	201
-#define MAX_PRINT_ALG_TYPES     	201
+#define ARGUS_MAX_PRINT_ALG     	203
+#define MAX_PRINT_ALG_TYPES     	203
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -586,7 +586,8 @@ void ArgusPrintResponse (struct ArgusParserStruct *, char *, struct ArgusRecordS
 void ArgusPrintSrcOui (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstOui (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintCor (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
-
+void ArgusPrintSrcVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 void ArgusPrintBssidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSsidLabel (struct ArgusParserStruct *, char *, int);
@@ -797,7 +798,8 @@ void ArgusPrintResponseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstOuiLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
-
+void ArgusPrintSrcVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 
 struct ArgusPrintFieldStruct 
 RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
@@ -1203,6 +1205,10 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "dtf", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTDSTTRANSEFFICIENCY, ArgusPrintDstTransEfficiency, ArgusPrintDstTransEfficiencyLabel, "double", 0},
 #define ARGUSPRINTINODECOUNTRYCODE	200
    { "ico", "", 3 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTINODECOUNTRYCODE, ArgusPrintInodeCountryCode, ArgusPrintInodeCountryCodeLabel, "varchar(2)", 0},
+#define ARGUSPRINTSRCVNID               201
+   { "svnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVNID, ArgusPrintSrcVirtualNID, ArgusPrintSrcVirtualNIDLabel, "int", 0},
+#define ARGUSPRINTDSTVNID               202
+   { "dvnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVNID, ArgusPrintDstVirtualNID, ArgusPrintDstVirtualNIDLabel, "int", 0},
 };
 
 

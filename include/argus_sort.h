@@ -32,8 +32,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		75
-#define MAX_SORT_ALG_TYPES		75
+#define ARGUS_MAX_SORT_ALG		77
+#define MAX_SORT_ALG_TYPES		77
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -159,6 +159,8 @@ int ArgusSortInode (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortProtocol (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstMpls (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortSrcVnid (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstVnid (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcVlan (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstVlan (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortSrcIpId (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -306,6 +308,8 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortInode,
    ArgusSortSrcGap,
    ArgusSortDstGap,
+   ArgusSortSrcVnid,
+   ArgusSortDstVnid,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -384,6 +388,8 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "inode",
    "sgap",
    "dgap",
+   "svnid",
+   "dvnid",
 };
 
 #else
