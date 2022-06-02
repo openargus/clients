@@ -280,14 +280,16 @@ RaParseComplete (int sig)
 
                if (parser->ArgusWfileList == NULL) {
                   if (ArgusParser->RaLabel == NULL) {
-                     char rangebuf[128], c;
-                     int size = parser->pflag;
-                     int rblen = 0;
+                     char rangeval[32], rangebuf[128], c;
+                     int size = 0, rblen = 0;
+
+                     size = parser->pflag > 16 ? 16 : parser->pflag;
+                     snprintf (rangeval, 32, "%*.*e", size, size, be);
 
                      if (ArgusPrintInterval) 
-                        sprintf (rangebuf, "%*.*e-%*.*e ", size, size, be, size, size, be);
+                        snprintf (rangebuf, 256, "%s-%s ", rangeval, rangeval);
                      else
-                        sprintf (rangebuf, "%*.*e ", size, size, be);
+                        snprintf (rangebuf, 256, "%s ", rangeval);
 
                      rblen = ((strlen(rangebuf) - strlen("Interval"))/4) * 2;
 
