@@ -3098,6 +3098,7 @@ RaInitCurses ()
 
 #if defined(ARGUS_READLINE)
    int keytimeout;
+   rl_outstream = NULL;
 #endif
 
    rl_initialize();
@@ -3118,8 +3119,6 @@ RaInitCurses ()
    rl_set_keyboard_input_timeout (keytimeout);
 #endif
 #endif
-
-   rl_outstream = NULL;
 
 #if defined(HAVE_DECL_RL_CATCH_SIGNALS) && HAVE_DECL_RL_CATCH_SIGNALS
    rl_catch_signals = 0;
@@ -3468,7 +3467,7 @@ argus_getsearch_string(int dir)
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline("")) != NULL) {
+   if ((line = readline(NULL)) != NULL) {
       int linenum = RaWindowCursorY;
       int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
 
@@ -3564,7 +3563,7 @@ argus_command_string(void)
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline("")) != NULL) {
+   if ((line = readline(NULL)) != NULL) {
       if (strlen(line) > 0) {
          strcpy (RaCommandInputStr, line);
          free(line);
