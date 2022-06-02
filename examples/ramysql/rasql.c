@@ -1909,8 +1909,10 @@ ArgusCreateSQLSaveTable(char *table)
          }
       }
 
-      if (strlen(kbuf))
-         sprintf (&sbuf[strlen(sbuf)], ", %s", kbuf);
+      if (strlen(kbuf)) {
+         int sblen = strlen(sbuf);
+         snprintf (&sbuf[sblen], MAXSTRLEN - sblen, ", %s", kbuf);
+      }
 
       if (ArgusSOptionRecord)
          sprintf (&sbuf[strlen(sbuf)], ", record blob");
