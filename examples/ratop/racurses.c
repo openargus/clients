@@ -3119,8 +3119,6 @@ RaInitCurses ()
 #endif
 #endif
 
-   rl_outstream = NULL;
-
 #if defined(HAVE_DECL_RL_CATCH_SIGNALS) && HAVE_DECL_RL_CATCH_SIGNALS
    rl_catch_signals = 0;
    rl_catch_sigwinch = 0;
