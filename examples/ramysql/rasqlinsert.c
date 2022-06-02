@@ -5841,7 +5841,7 @@ RaOutputModifyScreen ()
    int i = 0;
    werase(RaCurrentWindow->window);
    for (i = RaMinCommandLines; i < (RaMaxCommandLines + 1); i++) {
-      mvwprintw (RaCurrentWindow->window, i, 1, RaCommandArray[i - RaMinCommandLines]);
+      mvwprintw (RaCurrentWindow->window, i, 1, "%s", RaCommandArray[i - RaMinCommandLines]);
       if (i == RaMinCommandLines)
          wstandout(RaCurrentWindow->window);
       wprintw (RaCurrentWindow->window, "%s", RaCommandValueArray[i - RaMinCommandLines]());
@@ -7605,8 +7605,10 @@ ArgusCreateSQLSaveTable(char *db, char *table)
          }
       }
 
-      if (strlen(kbuf))
-         sprintf (&sbuf[strlen(sbuf)], ", %s", kbuf);
+      if (strlen(kbuf)) {
+         int sblen = strlen(sbuf);
+         snprintf (&sbuf[sblen], MAXSTRLEN-sblen, ", %s", kbuf);
+      }
 
       if (ArgusSOptionRecord)
          sprintf (&sbuf[strlen(sbuf)], ", record blob");
