@@ -1820,7 +1820,7 @@ ArgusCreateSQLSaveTable(char *table)
 {
    int retn = 0, cindex = 0, ind = 0, i, x, exists = 0;
    struct ArgusMaskStruct *ArgusMaskDefs = ArgusIpV4MaskDefs; 
-   char stable[256], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN];
+   char stable[256], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN - 32];
 
    sprintf (stable, "%s", table);
 
