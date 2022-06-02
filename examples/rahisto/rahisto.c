@@ -287,9 +287,9 @@ RaParseComplete (int sig)
                      snprintf (rangeval, 32, "%*.*e", size, size, be);
 
                      if (ArgusPrintInterval) 
-                        snprintf (rangebuf, 256, "%s-%s ", rangeval, rangeval);
+                        snprintf (rangebuf, 128, "%s-%s ", rangeval, rangeval);
                      else
-                        snprintf (rangebuf, 256, "%s ", rangeval);
+                        snprintf (rangebuf, 128, "%s ", rangeval);
 
                      rblen = ((strlen(rangebuf) - strlen("Interval"))/4) * 2;
 
