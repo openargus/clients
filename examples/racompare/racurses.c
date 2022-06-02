@@ -3335,6 +3335,7 @@ RaInitCurses ()
    int keytimeout;
 #endif
 
+   rl_outstream = NULL;
    rl_initialize();
 #if defined(ARGUS_HISTORY)
    using_history();
@@ -3353,8 +3354,6 @@ RaInitCurses ()
    rl_set_keyboard_input_timeout (keytimeout);
 #endif
 #endif
-
-   rl_outstream = NULL;
 
 #if defined(HAVE_DECL_RL_CATCH_SIGNALS) && HAVE_DECL_RL_CATCH_SIGNALS
    rl_catch_signals = 0;
