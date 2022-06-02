@@ -279,6 +279,11 @@ struct evendmem {
    char *name;
 };
 
+enum argus_file_sort_e {
+   ARGUS_FILES_NOSORT = 0,
+   ARGUS_FILES_SORT = 1,
+};
+
 
 #define Version1        1
 #define Version5        5
@@ -307,7 +312,13 @@ struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct Ar
 #define ARGUS_IPFIX_DATA_SOURCE		0x40
 #define ARGUS_FLOW_TOOLS_SOURCE		0x80
 
-#define ARGUS_NAMED_PIPE_SOURCE		0x100
+#define ARGUS_DOMAIN_SOURCE		0x100
+#define ARGUS_NAMED_PIPE_SOURCE		0x200
+#define ARGUS_BASELINE_SOURCE		0x800
+
+#if defined(ARGUS_MYSQL)
+#define ARGUS_DBASE_SOURCE		0x1000
+#endif
 
 #define ARGUS_MY_ADDRESS        1
 #define ARGUS_MY_NETWORK        2

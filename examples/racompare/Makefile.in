@@ -88,11 +88,11 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 
 SRC = racurses.c raclient.c
 
-PROGS = $(INSTALLBIN)/ratop
+PROGS = $(INSTALLBIN)/racompare
 
 all: $(PROGS)
 
-$(INSTALLBIN)/ratop: $(OBJ) $(LIB)
+$(INSTALLBIN)/racompare: $(OBJ) $(LIB)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
@@ -100,10 +100,10 @@ CLEANFILES = $(OBJ) $(PROGS)
 install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
-	$(INSTALL) $(INSTALLBIN)/ratop $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/racompare $(DESTDIR)$(BINDIR)
 
 uninstall: force all
-	rm -f $(DESTDIR)$(BINDIR)/ratop
+	rm -f $(DESTDIR)$(BINDIR)/racompare
 
 clean:
 	rm -f $(CLEANFILES)
