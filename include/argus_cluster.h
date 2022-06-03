@@ -1074,6 +1074,7 @@ void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStru
  
 unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
 void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 #else
@@ -1095,6 +1096,7 @@ extern void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRec
  
 extern unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
 extern void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 #endif

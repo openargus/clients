@@ -219,7 +219,7 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
 
 void
 RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
-                 int ArgusAutoId, int argus_version,
+                 int ArgusAutoId,
                  const char **ArgusTableColumnName)
 {
    unsigned int start, stop;
@@ -255,12 +255,11 @@ RaSQLQueryTable (MYSQL *RaMySQL, const char **tables,
    pthread_mutex_init(&ArgusInput->lock, NULL);
 #endif
 
-   ArgusInput->ArgusInitCon.hdr.type  = ARGUS_MAR | argus_version;
+   ArgusInput->ArgusInitCon.hdr.type  = ARGUS_MAR | ARGUS_VERSION;
    ArgusInput->ArgusInitCon.hdr.cause = ARGUS_START;
    ArgusInput->ArgusInitCon.hdr.len   = htons((unsigned short) sizeof(struct ArgusRecord)/4);
 
-   ArgusInput->ArgusInitCon.argus_mar.argusid = (argus_version == ARGUS_VERSION_3)
-                                                ? htonl(ARGUS_V3_COOKIE) : htonl(ARGUS_COOKIE);
+   ArgusInput->ArgusInitCon.argus_mar.argusid = htonl(ARGUS_COOKIE);
 
    gettimeofday (&now, 0L);
 

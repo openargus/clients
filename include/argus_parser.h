@@ -503,6 +503,10 @@ struct ArgusParserStruct {
 
    struct ArgusModeStruct *ArgusModeList;
    struct ArgusModeStruct *ArgusMaskList;
+
+   char *ArgusBaseLineMask;
+   char *ArgusSampleMask;
+
    struct ArgusInput *ArgusInputFileList;
    struct ArgusInput *ArgusRemoteHostList;
    struct ArgusInput *ArgusBaselineList;

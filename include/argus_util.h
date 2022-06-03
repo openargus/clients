@@ -326,6 +326,35 @@ struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct Ar
 
 #define ipaddr_string(p) ArgusGetName(ArgusParser, (u_char *)(p))
 
+#include <stdarg.h>
+static inline int
+snprintf_append(char *str, size_t *len, size_t *remain, const char *fmt, ...)
+{
+   va_list ap;
+   unsigned int c;
+
+   va_start(ap, fmt);
+   c = vsnprintf(str+(*len), *remain, fmt, ap);
+   if (c > 0) {
+      if (c <= *remain) {
+         *remain -= c;
+         *len += c;
+      } else {
+         *len += *remain;
+         *remain = 0;
+      }
+   }
+   va_end(ap);
+   return c;
+}
+
+typedef int (*ResourceCallback)(struct ArgusParserStruct *, int, char *, int, int);
+
+#define ARGUS_SOPTIONS_IGNORE	0
+#define ARGUS_SOPTIONS_PROCESS	1
+
+int RaParseOptHStr(const char * const);
+
 #ifdef ArgusUtil
 
 void ArgusHandleSig (int);
@@ -341,7 +370,9 @@ extern char *ArgusCreatePIDFile (struct ArgusParserStruct *, char *);
 void ArgusMainInit (struct ArgusParserStruct *, int, char **);
 
 int RaDescend(char *);
+int ArgusMkdirPath(const char * const);
 int RaProcessRecursiveFiles (char *);
+
 
 #define RAENVITEMS      2
 
@@ -1670,9 +1701,6 @@ extern struct snamemem *check_service(struct snamemem *, const u_char *);
 extern char *lookup_srcid(const u_char *, struct anamemem *);
 extern char *lookup_alias(const u_char *, struct anamemem *);
 
-
-
-
 extern unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
 extern void ArgusFree (void *buf);
@@ -1736,7 +1764,7 @@ extern int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
                               struct ArgusParserStruct *, char *);
 extern void ArgusParseSourceID (struct ArgusParserStruct *, char *);
 
-
+extern int ArgusMkdirPath(const char *);
 
 extern void ArgusPrintTime(struct ArgusParserStruct *, char *, struct timeval *);
 extern char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);

@@ -86,7 +86,7 @@ OBJ =	$(SRC:.c=.o)
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = racurses.c raclient.c
+SRC = racurses.c raclient.c rasql_common.c
 
 PROGS = $(INSTALLBIN)/racompare
 

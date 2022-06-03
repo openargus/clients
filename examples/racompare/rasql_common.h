@@ -24,7 +24,7 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
                               const char * const table);
 
 void
-RaSQLQueryTable (MYSQL *, const char **, int, int, const char **); 
+RaSQLQueryTable (MYSQL *, const char **, int, const char **); 
 
 int
 RaSQLManageGetColumns(MYSQL *, const char * const, char **, size_t , size_t *);

@@ -70,6 +70,7 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <wordexp.h>
 #include <grp.h>
 
 #include <argus_compat.h>
@@ -381,6 +382,71 @@ time_t timegm (struct tm *);
 #endif
 
 void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
+#ifdef __sun
+# pragma weak RaParseOptHStr
+#endif
+int RaParseOptHStr(const char *const str)
+#ifdef __GNUC__
+ __attribute__((weak));
+#endif
+
+int RaParseOptHStr(const char *const str)
+{
+   return 0;
+}
+
+int ArgusMkdirPath(const char * const path)
+{
+   struct stat statbuf;
+   char *cpy = strdup(path);
+   char *tptr;
+   char *pptr;
+   int rv = 0;
+
+   if (cpy == NULL)
+      ArgusLog(LOG_ERR, "%s unable to allocate path name\n", __func__);
+
+   if ((tptr = strrchr(cpy, (int) '/')) != NULL) {   /* if there is a path */
+      *tptr = '\0';
+      pptr = tptr;
+
+      while ((pptr != NULL) && ((stat(cpy, &statbuf)) < 0)) {
+         switch (errno) {
+            case ENOENT:
+               if ((pptr = strrchr(cpy, (int) '/')) != NULL) {
+                  if (pptr != cpy) {
+                     *pptr = '\0';
+                  } else {
+                     pptr = NULL;
+                  }
+               }
+               break;
+
+            default:
+               ArgusLog (LOG_ERR, "stat: %s %s\n", cpy, strerror(errno));
+               rv = -1;
+               goto out;
+         }
+      }
+
+      while (&cpy[strlen(cpy)] <= tptr) {
+         if ((mkdir(cpy, 0777)) < 0) {
+            if (errno != EEXIST) {
+               ArgusLog (LOG_ERR, "mkdir: %s %s\n", cpy, strerror(errno));
+               rv = -1;
+               goto out;
+            }
+         }
+         cpy[strlen(cpy)] = '/';
+      }
+      *tptr = '/';
+   }
+
+out:
+   free(cpy);
+   return rv;
+}
 
 int
 RaProcessRecursiveFiles (char *path)
@@ -26519,6 +26585,115 @@ ArgusDeleteFileList (struct ArgusParserStruct *parser)
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusDeleteFileList () returning\n");
+#endif
+}
+
+struct ArgusFileInput *ArgusPopBaselineList (struct ArgusParserStruct *parser);
+
+struct ArgusFileInput *
+ArgusPopBaselineList (struct ArgusParserStruct *parser)
+{
+   struct ArgusFileInput *retn = NULL;
+
+   if (parser && parser->ArgusBaselineList)
+      retn = (struct ArgusFileInput *)ArgusPopFrontList((struct ArgusListStruct *)parser->ArgusBaselineList, ARGUS_LOCK);
+   
+   return retn;
+}
+
+
+int
+ArgusAddBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
+{
+   struct ArgusInput *file, *list;
+   char *str = NULL;
+   int retn = 0;
+
+   if (ptr) {
+      switch(type) {
+#if defined(ARGUS_MYSQL)
+         case ARGUS_DBASE_SOURCE:
+            str = ptr;
+            break;
+#endif
+         default: {
+            if (strlen(ptr)) {
+               wordexp_t p;
+               if (wordexp (ptr, &p, 0) == 0) {
+                  char *wstr = p.we_wordv[0];
+                  if (wstr != NULL)
+                     str = strdup(wstr);
+                  wordfree (&p);
+               }
+            }
+            break;
+         }
+      }
+
+      if (str) {
+         if ((file = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) != NULL) {
+            if ((list = parser->ArgusBaselineList) != NULL) {
+               while (list->qhdr.nxt)
+                  list = (struct ArgusInput *)list->qhdr.nxt;
+               list->qhdr.nxt = &file->qhdr;
+            } else
+               parser->ArgusBaselineList = file;
+   
+            file->ArgusOriginal = (struct ArgusRecord *)&file->ArgusOriginalBuffer;
+            file->type = type;
+            file->ostart = ostart;
+            file->ostop = ostop;
+            file->filename = strdup(str);
+            file->fd = -1;
+            retn = 1;
+         }
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusAddBaselineList (0x%x, %s, %d, %d, %d) returning %d\n", parser, ptr, type, ostart, ostop, retn);
+#endif
+
+   return (retn);
+}
+
+int
+ArgusPushBaselineList (struct ArgusParserStruct *parser, char *ptr, int type, long long ostart, long long ostop)
+{
+   int retn = 0;
+   struct ArgusFileInput *file;
+
+   if (ptr) 
+      ArgusAddBaselineList (parser, ptr, type, ostart, ostop);
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusPushBaselineList (0x%x, %s, %d, %d, %d) returning %d\n", parser, ptr, type, ostart, ostop, retn);
+#endif
+
+   return (retn);
+}
+
+void
+ArgusDeleteBaselineList (struct ArgusParserStruct *parser) 
+{
+   if (parser && parser->ArgusBaselineList) {
+      struct ArgusFileInput *addr = (struct ArgusFileInput *)parser->ArgusBaselineList;
+
+      while (addr) {
+        struct ArgusFileInput *naddr = NULL;
+        if (addr->filename)
+           free(addr->filename);
+        naddr = addr;
+        addr = (struct ArgusFileInput *)addr->qhdr.nxt;
+
+        ArgusFree(naddr);
+      }
+   }
+
+   parser->ArgusBaselineList = NULL;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusDeleteBaselineList () returning\n");
 #endif
 }
 

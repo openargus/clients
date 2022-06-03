@@ -206,6 +206,8 @@ int ArgusAddModeList (struct ArgusParserStruct *, char *);
 void ArgusDeleteModeList (struct ArgusParserStruct *);
 int ArgusAddMaskList (struct ArgusParserStruct *, char *);
 void ArgusDeleteMaskList (struct ArgusParserStruct *);
+int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 
 extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
 
@@ -314,6 +316,8 @@ extern int ArgusAddModeList (struct ArgusParserStruct *, char *);
 extern void ArgusDeleteModeList (struct ArgusParserStruct *);
 extern int ArgusAddMaskList (struct ArgusParserStruct *, char *);
 extern void ArgusDeleteMaskList (struct ArgusParserStruct *);
+extern int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern void ArgusDeleteBaselineList (struct ArgusParserStruct *);
 
 extern int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *, struct ArgusWfileStruct *, struct ArgusRecord *);
 

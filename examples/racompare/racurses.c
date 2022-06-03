@@ -43,7 +43,6 @@ void RaResizeAlarmHandler(int);
 #define RA_CURSES_MAIN
 #include <racurses.h>
 
-extern struct ArgusWirelessStruct *ArgusWireless;
 extern struct ArgusAggregatorStruct *ArgusBaselineAggregator;
 extern struct ArgusAggregatorStruct *ArgusSampleAggregator;
 
@@ -1146,7 +1145,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (strlen(strbuf) > 0) {
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
-                  RaProcessRecursiveFiles (ptr, ARGUS_FILES_SORT);
+                  RaProcessRecursiveFiles (ptr);
                   str = NULL;
                }
             }
@@ -4528,7 +4527,7 @@ argus_command_string(void)
             if (strlen(strbuf) > 0) {
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
-                  RaProcessRecursiveFiles (ptr, ARGUS_FILES_SORT);
+                  RaProcessRecursiveFiles (ptr);
                   str = NULL;
                }
             }
@@ -5487,12 +5486,6 @@ RaUpdateHeaderWindow(WINDOW *win)
    gettimeofday (tvp, NULL);
    bzero(bssid, 128);
    bzero(ssid, 128);
-
-   if (ArgusWireless->bssid != NULL)
-      sprintf(bssid, "bssid:%s", ArgusWireless->bssid);
-
-   if (ArgusWireless->ssid != NULL)
-      sprintf(ssid, "ssid:%s", ArgusWireless->ssid);
 
    if (tvp->tv_sec > 0) {
       time_t tsec =  tvp->tv_sec;
