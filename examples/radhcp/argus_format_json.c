@@ -68,6 +68,7 @@ static ssize_t __newline(char *out, size_t len, const char * const label)
    return snprintf(out, len, "\n");
 }
 
+/*
 const struct ArgusFormatterTable ArgusJsonFormatterTable = {
    .docStart = __json_doc_start,
    .recordStart = __json_record_start,
@@ -93,3 +94,4 @@ const struct ArgusFormatterTable ArgusJsonObjOnlyFormatterTable = {
    .recordEnd = __json_record_end,
    .docEnd = NULL,
 };
+*/

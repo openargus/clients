@@ -55,6 +55,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <ifaddrs.h>
+#include <arpa/inet.h>
 
 #include <argus_compat.h>
 
@@ -71,8 +72,6 @@
 #include <rasplit.h>
 
 
-#include <rasplit.h>
-
 #if defined(__OpenBSD__)
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
@@ -88,6 +87,11 @@
 #endif
 
 extern char *ArgusTrimString (char *);
+
+extern struct cnamemem *lookup_cmem(struct cnamemem *, const u_char *);
+extern struct cnamemem ipv6cidrtable[];
+
+struct enamemem elabeltable[HASHNAMESIZE];
 
 struct ArgusLabelerStruct *ArgusLabeler;
 
@@ -1607,31 +1611,47 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
    struct RaAddressStruct *retn = NULL;
    int done = 0;
 
-   while (tree && !done) {
+   while (!done) {
      unsigned int mask, taddr, naddr;
 
-      switch (tree->addr.type) {
+      switch (node->addr.type) {
          case AF_INET: {
-            if (tree->addr.masklen > 0)
-               mask = 0xFFFFFFFF << (32 - tree->addr.masklen);
-            else
-               mask = 0;
+            if (tree != NULL) {
+               if (tree->addr.masklen > 0)
+                  mask = 0xFFFFFFFF << (32 - tree->addr.masklen);
+               else
+                  mask = 0;
 
-            taddr = tree->addr.addr[0] & mask;
-            naddr = node->addr.addr[0] & mask;
+               taddr = tree->addr.addr[0] & mask;
+               naddr = node->addr.addr[0] & mask;
 
-            if (taddr == naddr) {
-               switch (mode) {
-                  case ARGUS_NODE_MATCH: 
-                     if ((tree->l == NULL) && (tree->r == NULL)) {
-                        retn = tree;
-                        done++;
-                        break;
-                     }
+               if (taddr == naddr) {
+                  switch (mode) {
+                     case ARGUS_NODE_MATCH: 
+                        if ((tree->l == NULL) && (tree->r == NULL)) {
+                           retn = tree;
+                           done++;
+                           break;
+                        }
 
-                  case ARGUS_MASK_MATCH: 
-                     if (tree->addr.masklen >= node->addr.masklen) {
-                        retn = tree;
+                     case ARGUS_MASK_MATCH: 
+                        if (tree->addr.masklen >= node->addr.masklen) {
+                           retn = tree;
+                           done++;
+                           break;
+                        }
+
+                     case ARGUS_EXACT_MATCH: 
+                        if ((node->addr.masklen == tree->addr.masklen) &&
+                            (node->addr.addr[0] == tree->addr.addr[0]))
+                           retn = tree;
+                        else
+                        if (tree->l || tree->r) {
+                           if ((node->addr.addr[0] >> (32 - (tree->addr.masklen + 1))) & 0x01)
+                             retn = RaFindAddress (parser, tree->l, node, mode);
+                           else
+                             retn = RaFindAddress (parser, tree->r, node, mode);
+                        }
                         done++;
                         break;
 */
@@ -1644,19 +1664,22 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
                         break;
                      }
 
-                  case ARGUS_EXACT_MATCH: 
-                     if ((node->addr.masklen == tree->addr.masklen) &&
-                         (node->addr.addr[0] == tree->addr.addr[0]))
-                        retn = tree;
-                     else
-                     if (tree->l || tree->r) {
-                        if ((node->addr.addr[0] >> (32 - (tree->addr.masklen + 1))) & 0x01)
-                          retn = RaFindAddress (parser, tree->l, node, mode);
+                     case ARGUS_SUPER_MATCH: 
+                        if ((node->addr.masklen == tree->addr.masklen) &&
+                            (node->addr.addr[0] == tree->addr.addr[0]))
+                           retn = tree;
                         else
-                          retn = RaFindAddress (parser, tree->r, node, mode);
-                     }
-                     done++;
-                     break;
+                        if ((tree->l == NULL) && (tree->r == NULL)) {
+                           retn = tree;
+                        } else
+                        if (tree->l || tree->r) {
+                           if ((node->addr.addr[0] >> (32 - (tree->addr.masklen + 1))) & 0x01)
+                             retn = RaFindAddress (parser, tree->l, node, mode);
+                           else
+                             retn = RaFindAddress (parser, tree->r, node, mode);
+                        }
+                        done++;
+                        break;
 
                   case ARGUS_SUPER_MATCH: 
                      if ((node->addr.masklen == tree->addr.masklen) &&
@@ -1683,41 +1706,51 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
                      done++;
                      break;
                   
-                  case ARGUS_ANY_MATCH:
-                     retn = tree;
-                     done++;
-                     break;
-               }
-               
-               if ((mode == ARGUS_NODE_MATCH) && (retn == NULL)) {
+                  if ((mode == ARGUS_NODE_MATCH) && (retn == NULL)) {
 
 // In one case we went down the tree and no matches ... this node matches however, and has a label,
 // we should return this node as a match ...
 
-                  if ((tree->addr.masklen > 16) || ((tree->addr.masklen + 4) > node->addr.masklen) || (tree->label != NULL))
-                     retn = tree;
+                     if ((tree->addr.masklen > 16) || ((tree->addr.masklen + 4) > node->addr.masklen) || (tree->label != NULL))
+                        retn = tree;
+                     done++;
+                  }
+
+               } else  {
+                  if (mode == ARGUS_MASK_MATCH) {
+                     if (tree->addr.masklen > node->addr.masklen) {
+                        if (node->addr.masklen > 0)
+                           mask = 0xFFFFFFFF << (32 - node->addr.masklen);
+                        else
+                           mask = 0;
+                        taddr = tree->addr.addr[0] & mask;
+                        naddr = node->addr.addr[0] & mask;
+                        if (taddr == naddr)
+                           retn = tree;
+                     }
+                  }
                   done++;
                }
-
-            } else  {
-               if (mode == ARGUS_MASK_MATCH) {
-                  if (tree->addr.masklen > node->addr.masklen) {
-                     if (node->addr.masklen > 0)
-                        mask = 0xFFFFFFFF << (32 - node->addr.masklen);
-                     else
-                        mask = 0;
-                     taddr = tree->addr.addr[0] & mask;
-                     naddr = node->addr.addr[0] & mask;
-                     if (taddr == naddr)
-                        retn = tree;
-                  }
-               }
+            } else
                done++;
-            }
             break;
          }
 
          case AF_INET6: {
+            struct in6_addr naddr = *(struct in6_addr *)node->addr.addr;
+            char ntop_buf[INET6_ADDRSTRLEN];
+            const char *cp;
+ 
+            if ((cp = inet_ntop(AF_INET6, (const void *) &naddr, ntop_buf, sizeof(ntop_buf))) != NULL) {
+               struct cnamemem *cptr;
+               extern struct cnamemem ipv6cidrtable[HASHNAMESIZE];
+  
+               cptr = check_cmem(ipv6cidrtable, (const u_char *) cp);
+  
+               if (cptr != NULL) {
+                  retn = cptr->node;
+               }
+            }
             done++;
             break;
          }
@@ -1731,7 +1764,7 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
 int
 ArgusNodesAreEqual (struct RaAddressStruct *tree, struct RaAddressStruct *node)
 {
-   int retn = 0;
+   int retn = 1;
    if (tree && node)
       retn = bcmp(&tree->addr, &node->addr, sizeof(tree->addr));
 
@@ -1757,15 +1790,24 @@ RaInsertAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *la
       return (retn);
 
    if ((tree == NULL) && (ArgusAddrTree[node->addr.type] == NULL)) {
-      ArgusAddrTree[node->addr.type] = node;
-      node->status |= ARGUS_NODE | status;
-      labeler->count = 1;
-      return (node);
+      switch (node->addr.type) {
+         case AF_INET: {
+            ArgusAddrTree[node->addr.type] = node;
+            node->status |= ARGUS_NODE | status;
+            labeler->count = 1;
+            return (node);
+            break;
+         }
+         case AF_INET6: {
+            break;
+         }
+      }
    }
 
-   if (tree == NULL) tree = ArgusAddrTree[node->addr.type];
-
-// OK, so we need to decend into the tree, and insert this record,
+// OK, IPv4 and IPv6 address trees are handled differently ...
+// For the moment, we'll use patricia trees for IPv4 and a hashed array for IPv6
+//
+// So we need to decend into the tree, and insert this record,
 // and any additional interior nodes, needed.
 // As long as the new node, and the current nodes masked addrs
 // are equal, then we just needed to decend either left of right.
@@ -1779,11 +1821,13 @@ RaInsertAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *la
       unsigned int taddr, naddr;
       unsigned int tmask, nmask;
 
-      tree->status |= status;
-      node->status |= status;
-
-      switch (tree->addr.type) {
+      switch (node->addr.type) {
          case AF_INET: {
+            if (tree == NULL) tree = ArgusAddrTree[node->addr.type];
+
+            tree->status |= status;
+            node->status |= status;
+
             tmask = tree->addr.mask[0];
             taddr = tree->addr.addr[0] & tmask;
             naddr = node->addr.addr[0] & tmask;
@@ -2112,7 +2156,29 @@ RaInsertAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *la
          }
 
          case AF_INET6: {
-            retn = node;
+// So we'll do a hash table for the time being and figure out the best 
+// patricia way a little later
+// get the address string and then hash it as a generic string.
+
+            struct in6_addr naddr = *(struct in6_addr *)node->addr.addr;
+            char ntop_buf[INET6_ADDRSTRLEN];
+            const char *cp;
+ 
+            if ((cp = inet_ntop(AF_INET6, (const void *) &naddr, ntop_buf, sizeof(ntop_buf))) != NULL) {
+               struct cnamemem *cptr;
+               extern struct cnamemem ipv6cidrtable[HASHNAMESIZE];
+  
+               cptr = check_cmem(ipv6cidrtable, (const u_char *) cp);
+  
+               if (cptr != NULL) {
+                  retn = cptr->node;
+               } else {
+                  cptr = lookup_cmem(ipv6cidrtable, (const u_char *) cp);
+                  cptr->node = node;
+                  retn = node;
+               }
+            }
+
             break;
          }
       }
@@ -3033,9 +3099,12 @@ RaLabelAddressGroup(struct RaAddressStruct *addr, char *group) {
    if (addr->r != NULL) RaLabelAddressGroup(addr->r, group);
 }
 
+
+
 int
 RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, char *str)
 {
+   extern struct enamemem elabeltable[HASHNAMESIZE];
    struct RaAddressStruct *saddr = NULL, *node;
    struct ArgusCIDRAddr *cidr, scidr, dcidr;
    char *sptr = NULL, *eptr = NULL, *ptr = NULL;
@@ -3048,6 +3117,8 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
 
    if (labeler != NULL) {
       int state = ARGUS_PARSING_START_ADDRESS;
+      struct enamemem *tp = NULL;
+      char *macstr = NULL;
 
       snprintf (tstrbuf, MAXSTRLEN, "%s", str);
       ptr = tstrbuf;
@@ -3058,14 +3129,20 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
                if ((eptr = strchr(sptr, '-')) != NULL)
                   *eptr++ = '\0';
 
-               if (sptr && ((cidr = RaParseCIDRAddr (parser, sptr)) != NULL))
-                  bcopy ((char *)cidr, (char *)&scidr, sizeof (*cidr));
+               if (RaIsEtherAddr (parser, sptr)) {
+                  tp = lookup_emem(elabeltable, sptr);
+                  if (tp->e_name == NULL) {
+                     tp->e_name = savestr(sptr);
+                  }
+               } else {
+                  if (sptr && ((cidr = RaParseCIDRAddr (parser, sptr)) != NULL))
+                     bcopy ((char *)cidr, (char *)&scidr, sizeof (*cidr));
 
-               if (eptr && ((cidr = RaParseCIDRAddr (parser, eptr)) != NULL))
-                  bcopy ((char *)cidr, (char *)&dcidr, sizeof (*cidr));
-               else
-                  bcopy ((char *)&scidr, (char *)&dcidr, sizeof (scidr));
-
+                  if (eptr && ((cidr = RaParseCIDRAddr (parser, eptr)) != NULL))
+                     bcopy ((char *)cidr, (char *)&dcidr, sizeof (*cidr));
+                  else
+                     bcopy ((char *)&scidr, (char *)&dcidr, sizeof (scidr));
+               }
                state = ARGUS_PARSING_LOCALITY;
                break;
             }
@@ -3138,116 +3215,120 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
 //  OK, so we've got the range of addresses to load up into the tree.      
 //  Lets figure out a good starting point for the netmask.
 
-      {
-         long long slen = 0, len = dcidr.addr[0] - scidr.addr[0];
+      if (tp != NULL) {
+         tp->loc = locality;
+      } else {
+         {
+            long long slen = 0, len = dcidr.addr[0] - scidr.addr[0];
 
-         if (len > 0) {
-            while ((len / 2) >= 2) {
-               slen++;
-               len = len >> 1;
+            if (len > 0) {
+               while ((len / 2) >= 2) {
+                  slen++;
+                  len = len >> 1;
+               }
+
+               while (slen && ((scidr.addr[0] & (0xFFFFFFFF << slen)) != scidr.addr[0]))
+                  slen--;
+
+               masklen = 32 - slen;
             }
-
-            while (slen && ((scidr.addr[0] & (0xFFFFFFFF << slen)) != scidr.addr[0]))
-               slen--;
-
-            masklen = 32 - slen;
          }
-      }
 
-      if (masklen < scidr.masklen) {
-         scidr.masklen = masklen;
-         scidr.mask[0] = 0xFFFFFFFF << (32 - masklen);
-      }
+         if (masklen < scidr.masklen) {
+            scidr.masklen = masklen;
+            scidr.mask[0] = 0xFFFFFFFF << (32 - masklen);
+         }
 
-      for (i = scidr.addr[0]; i <= dcidr.addr[0]; i += step) {
-         struct RaAddressStruct *paddr = saddr;
+         for (i = scidr.addr[0]; i <= dcidr.addr[0]; i += step) {
+            struct RaAddressStruct *paddr = saddr;
 
-         if ((saddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*saddr))) != NULL) {
-            unsigned int taddr;
+            if ((saddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*saddr))) != NULL) {
+               unsigned int taddr;
 
-            if (paddr != NULL) {
-               bcopy ((char *)&paddr->addr, (char *)&saddr->addr, sizeof (*cidr));
-               saddr->addr.addr[0] = i;
+               if (paddr != NULL) {
+                  bcopy ((char *)&paddr->addr, (char *)&saddr->addr, sizeof (*cidr));
+                  saddr->addr.addr[0] = i;
 
-               do {
-                  arange  = dcidr.addr[0] - saddr->addr.addr[0];
-                  arange -= (0xFFFFFFFF >> saddr->addr.masklen);
+                  do {
+                     arange  = dcidr.addr[0] - saddr->addr.addr[0];
+                     arange -= (0xFFFFFFFF >> saddr->addr.masklen);
 
-                  if (arange < 0) {
-                     if (saddr->addr.masklen < dcidr.masklen)
-                        saddr->addr.masklen++;
-                     else {
-                        arange = (dcidr.addr[0] - saddr->addr.addr[0]);
-                        break;
+                     if (arange < 0) {
+                        if (saddr->addr.masklen < dcidr.masklen)
+                           saddr->addr.masklen++;
+                        else {
+                           arange = (dcidr.addr[0] - saddr->addr.addr[0]);
+                           break;
+                        }
+                     }
+                  } while (arange < 0);
+
+                  taddr = saddr->addr.addr[0] + ((0xFFFFFFFF >> saddr->addr.masklen) + 1);
+    
+                  if (taddr != (taddr & (0xFFFFFFFF << (32 - (saddr->addr.masklen - 1))))) {
+                     int carry = dcidr.addr[0] - (saddr->addr.addr[0] + (0xFFFFFFFF >> (saddr->addr.masklen - 1)));
+                     if ((carry > 0) && (arange >= carry)) {
+                        saddr->addr.masklen--;
+                     } else {
+                        if (arange == 1) {
+                        }
                      }
                   }
-               } while (arange < 0);
+                  saddr->addr.mask[0] = 0xFFFFFFFF << (32 - saddr->addr.masklen);
+                  saddr->addr.addr[0] &= saddr->addr.mask[0];
 
-               taddr = saddr->addr.addr[0] + ((0xFFFFFFFF >> saddr->addr.masklen) + 1);
- 
-               if (taddr != (taddr & (0xFFFFFFFF << (32 - (saddr->addr.masklen - 1))))) {
-                  int carry = dcidr.addr[0] - (saddr->addr.addr[0] + (0xFFFFFFFF >> (saddr->addr.masklen - 1)));
-                  if ((carry > 0) && (arange >= carry)) {
-                     saddr->addr.masklen--;
-                  } else {
-                     if (arange == 1) {
-                     }
+               } else {
+                  bcopy ((char *)&scidr, (char *)&saddr->addr, sizeof (*cidr));
+                  saddr->addr.addr[0] = i;
+               }
+
+               if ((node = RaFindAddress (parser, labeler->ArgusAddrTree[saddr->addr.type], saddr, ARGUS_EXACT_MATCH)) == NULL) {
+                  if ((node = RaInsertAddress (parser, labeler, NULL, saddr, ARGUS_VISITED)) != saddr) {
+                     ArgusFree(saddr);
+                     saddr = node;
                   }
                }
-               saddr->addr.mask[0] = 0xFFFFFFFF << (32 - saddr->addr.masklen);
-               saddr->addr.addr[0] &= saddr->addr.mask[0];
 
-            } else {
-               bcopy ((char *)&scidr, (char *)&saddr->addr, sizeof (*cidr));
-               saddr->addr.addr[0] = i;
-            }
+               if (saddr != NULL) {
+                  if (tptr) {
+                     if (saddr->addr.str != NULL) free(saddr->addr.str);
+                     saddr->addr.str = strdup(tptr);
+                  }
 
-            if ((node = RaFindAddress (parser, labeler->ArgusAddrTree[saddr->addr.type], saddr, ARGUS_EXACT_MATCH)) == NULL) {
-               if ((node = RaInsertAddress (parser, labeler, NULL, saddr, ARGUS_VISITED)) != saddr) {
-                  ArgusFree(saddr);
-                  saddr = node;
+                  RaLabelSuperAddresses(saddr);
+
+                  if (label != NULL) {
+                     labeler->prune |= ARGUS_TREE_PRUNE_LABEL;
+                     if (saddr->label) free(saddr->label);
+                     saddr->label = strdup(label);
+                  }
+
+                  if (locality >= 0) {
+                     labeler->prune |= ARGUS_TREE_PRUNE_LOCALITY;
+                     RaLabelAddressLocality(saddr, locality);
+                  }
+                  if (asn >= 0) {
+                     labeler->prune |= ARGUS_TREE_PRUNE_ASN;
+                     RaLabelAddressAsn(saddr, asn);
+                  }
+                  if (group != NULL) {
+                     labeler->prune |= ARGUS_TREE_PRUNE_GROUP;
+                     RaLabelAddressGroup(saddr, group);
+                  }
+
+                  if (labeler->status & ARGUS_LABELER_DEBUG_NODE) {
+                     RaPrintLabelTree (labeler, labeler->ArgusAddrTree[AF_INET], 0, 0);
+                     printf("\n");
+                  }
                }
             }
 
             if (saddr != NULL) {
-               if (tptr) {
-                  if (saddr->addr.str != NULL) free(saddr->addr.str);
-                  saddr->addr.str = strdup(tptr);
-               }
-
-               RaLabelSuperAddresses(saddr);
-
-               if (label != NULL) {
-                  labeler->prune |= ARGUS_TREE_PRUNE_LABEL;
-                  if (saddr->label) free(saddr->label);
-                  saddr->label = strdup(label);
-               }
-
-               if (locality >= 0) {
-                  labeler->prune |= ARGUS_TREE_PRUNE_LOCALITY;
-                  RaLabelAddressLocality(saddr, locality);
-               }
-               if (asn >= 0) {
-                  labeler->prune |= ARGUS_TREE_PRUNE_ASN;
-                  RaLabelAddressAsn(saddr, asn);
-               }
-               if (group != NULL) {
-                  labeler->prune |= ARGUS_TREE_PRUNE_GROUP;
-                  RaLabelAddressGroup(saddr, group);
-               }
-
-               if (labeler->status & ARGUS_LABELER_DEBUG_NODE) {
-                  RaPrintLabelTree (labeler, labeler->ArgusAddrTree[AF_INET], 0, 0);
-                  printf("\n");
-               }
+               mstep = pow (2.0, (32 - saddr->addr.masklen));
+               step = mstep;
+            } else {
+               break;
             }
-         }
-
-         if (saddr != NULL) {
-            mstep = pow (2.0, (32 - saddr->addr.masklen));
-            step = mstep;
-         } else {
-            break;
          }
       }
    }
@@ -3441,10 +3522,8 @@ RaReadLocalityConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
                   }
 
                   default:
-                     if (isdigit((int)*ptr)) {
-                        if (RaInsertLocalityTree (parser, labeler, ptr))
-                           ArgusLog (LOG_ERR, "RaReadLocalityConfig: Syntax error: file %s line number %d\n", file, linenum);
-                     }
+                     if (RaInsertLocalityTree (parser, labeler, ptr))
+                        ArgusLog (LOG_ERR, "RaReadLocalityConfig: Syntax error: file %s line number %d\n", file, linenum);
                      break;
                }
             }
@@ -3485,7 +3564,6 @@ RaReadLocalityConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    return (retn);
 }
 
-struct enamemem elabeltable[HASHNAMESIZE];
 extern struct enamemem *lookup_emem(struct enamemem *, const unsigned char *);
 
 int

@@ -74,8 +74,8 @@
 
 int ArgusDebugTree = 0;
 int RaPrintTraceTreeLevel = 1000000;
-char RaAddrTreeArray[MAXSTRLEN];
 static int argus_version = ARGUS_VERSION;
+extern char RaAddrTreeArray[];
 
 void RaPrintTraceTree (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int);
 
@@ -376,6 +376,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
 
          if (parser->RaMonMode) {
@@ -550,6 +551,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          break;
       }
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if (flow) {
             switch (flow->hdr.subtype & 0x3F) {

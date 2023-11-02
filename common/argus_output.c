@@ -1153,6 +1153,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
          case ARGUS_EVENT:
          case ARGUS_NETFLOW:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             retn->hdr  = rec->hdr;
             retn->hdr.type  &= ~ARGUS_VERSION_5;
@@ -2273,6 +2274,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
          case ARGUS_EVENT:
          case ARGUS_NETFLOW:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             retn->hdr  = rec->hdr;
             retn->hdr.type  |= ARGUS_VERSION;
@@ -3680,6 +3682,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                      break;
 
                   case ARGUS_NETFLOW:
+                  case ARGUS_AFLOW:
                   case ARGUS_FAR: {
                      struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
                      if (trans != NULL) {

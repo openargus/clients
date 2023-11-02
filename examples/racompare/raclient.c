@@ -1440,6 +1440,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
 
@@ -1955,6 +1956,7 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
 
       switch (ns->hdr.type & 0xF0) {
          case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
          case ARGUS_FAR: {
             tns = ArgusCopyRecordStruct(cns);
             if (pns) {

@@ -284,7 +284,6 @@ int RaCursorY = 0;
 
 struct ArgusQueueStruct *ArgusModelerQueue;
 struct ArgusQueueStruct *ArgusFileQueue;
-struct ArgusQueueStruct *ArgusProbeQueue;
 
 void RaResizeHandler (int);
 void * ArgusCursesProcess (void *);

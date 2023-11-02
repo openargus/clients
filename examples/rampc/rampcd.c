@@ -1080,6 +1080,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *time = (void *)argus->dsrs[ARGUS_TIME_INDEX];
 
@@ -1295,6 +1296,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((probe = ArgusProcessProbe (parser, ns)) != NULL) {
             if ((count = ArgusProbeQueue->count) > 1) {

@@ -1292,6 +1292,7 @@ extern void RaParseComplete (int);
 extern int RaParseType (char *);
 extern struct ArgusISOAddr *RaParseISOAddr (struct ArgusParserStruct *, char *);
 extern struct ArgusCIDRAddr *RaParseCIDRAddr (struct ArgusParserStruct *, char *);
+extern int RaIsEtherAddr (struct ArgusParserStruct *, char *);
 
 extern void ArgusClientTimeout (void);
 extern void parse_arg (int, char**);

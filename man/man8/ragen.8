@@ -1,5 +1,6 @@
 .\"
 .\" Gargoyle Software
+<<<<<<< HEAD
 .\" Copyright (c) 2000-2016 QoSient, LLC
 .\" All rights reserved.
 .\"
@@ -9,12 +10,24 @@
 radium \- argus record multiplexor
 .SH SYNOPSIS
 .B radium
+=======
+.\" Copyright (c) 2000-2021 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RAGEN 8 "21 March 2021" "ragen 5.0.3"
+.SH NAME
+ragen \- argus record generator
+.SH SYNOPSIS
+.B ragen
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 [
 .B options
 ] [
 .B raoptions
 ]
 .SH DESCRIPTION
+<<<<<<< HEAD
 .IX  "radium command"  ""  "\fLradium\fP \(em Internet audit facility"
 .IX  servers  radium  ""  "\fLradium\fP \(em Internet audit facility"
 .LP
@@ -27,11 +40,27 @@ is a combination of the features of ra.1 and argus.8, supporting access
 for upto 128 client programs to argus records originating from remote
 data sources and/or local managed argus data files.  Using
 .B radium
+=======
+.IX  "ragen command"  ""  "\fLragen\fP \(em Internet audit facility"
+.IX  servers  ragen  ""  "\fLragen\fP \(em Internet audit facility"
+.LP
+.B Ragen
+is a real-time Argus Record generator that generates synthetic Argus records
+and outputs them to any number of client programs and files.
+.B Ragen
+is a combination of the features of ra.1, rabins.1 and argus.8, supporting access
+for upto 128 client programs to argus records generated from remote
+data sources, local managed argus data files and/or database tables.  Like
+.B radium
+using
+.B ragen
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 you can construct complex distribution networks for collecting and
 processing argus data, and providing a single point of access to
 archived argus data.
 .LP
 Designed to run as a daemon,
+<<<<<<< HEAD
 .B radium
 generally reads argus records directly from a remote argus, and writes the
 transaction status information to a log file or open socket connected to an
@@ -39,6 +68,15 @@ transaction status information to a log file or open socket connected to an
 client (such as
 .BR ra(1) ).
 .B Radium
+=======
+.B ragen
+reads data source specifications from ra clients requesting data generation,
+and writes the resulting argus data records to a log file or open socket connected to an
+.B argus
+client (such as
+.BR ra(1) ).
+.B Ragen
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 provides the same data access controls as argus.8, including
 remote filtering, source address based access control, indivual
 oriented strong authentication and confidentiality protection for
@@ -46,6 +84,7 @@ the distributed data, using \fBSASL\fP and \fBtcp_wrapper\fP
 technology.  Please refer to the INSTALL and README files for
 each distribution for a complete description.
 .LP
+<<<<<<< HEAD
 .B Radium
 is normally configured from a system \fB/etc/radium.conf\fP configuration file,
 or from a configuration file either in the \fB$RADIUMHOME\fP directory, or specified
@@ -56,6 +95,18 @@ a number of \fBra options\fP including remote data access, reading
 from multiple files and filtering of input argus records through a
 terminating filter expression.
 \fBradium(8)\fP specific options are:
+=======
+.B Ragen
+is normally configured from a system \fB/etc/ragen.conf\fP configuration file,
+or from a configuration file either in the \fB$RAGENHOME\fP directory, or specified
+on the command line.
+.SH RAGEN SPECIFIC OPTIONS
+Ragen, like all ra based clients, supports
+a number of \fBra options\fP including remote data access, reading
+from multiple files and filtering of input argus records through a
+terminating filter expression.
+\fBragen(8)\fP specific options are:
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .SH OPTIONS
 .TP 5 5
 .B \-B <addr>
@@ -64,6 +115,7 @@ are IP version 4 addresses.  The default is to bind to INADDR_ANY
 address.
 .TP 5 5
 .BI \-d
+<<<<<<< HEAD
 Run radium as a daemon.  This will cause radium to do the things that
 Unix daemons do and return, if there were no errors, with radium
 running as a detached process.
@@ -77,6 +129,21 @@ Use \fIradium.conf\fP as a source of configuration information.
 Options set in this file override any other specification, and so 
 this is the last word on option values. This file is read after the
 system /etc/radium.conf file is processed. See \fIradium.conf.5\fP for
+=======
+Run ragen as a daemon.  This will cause ragen to do the things that
+Unix daemons do and return, if there were no errors, with ragen
+running as a detached process.
+.TP 5 5
+.B \-e <value>
+Specify the source identifier for this \fBragen\fP.  Acceptable values are
+numbers, hostnames or ip address.
+.TP 5 5
+.B \-f <ragen.conf>
+Use \fIragen.conf\fP as a source of configuration information.
+Options set in this file override any other specification, and so 
+this is the last word on option values. This file is read after the
+system /etc/ragen.conf file is processed. See \fIragen.conf.5\fP for
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 the configuration file format.
 .TP 5 5
 .B \-O
@@ -85,6 +152,7 @@ you think the optimizer generates bad code.
 .TP 5 5
 .B \-p
 Override the persistent connection facility.
+<<<<<<< HEAD
 .B Radium
 provides a fault tolerant feature for its remote argus data access 
 facility.  If the remote argus data source closes, 
@@ -93,6 +161,16 @@ will maintain its client connections, and attempt to reestablish
 its connection with remote source.  This option overrides this behavior,
 causing
 .B radium
+=======
+.B Ragen
+provides a fault tolerant feature for its remote argus data access 
+facility.  If the remote argus data source closes, 
+.B ragen
+will maintain its client connections, and attempt to reestablish
+its connection with remote source.  This option overrides this behavior,
+causing
+.B ragen
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 to terminate if any of its remote sources closes.
 .TP 5 5
 .B \-P <portnum>
@@ -106,20 +184,32 @@ facility.
 Attach to a specific remote \fIhost\fP to receive argus records. Append
 an optional port specifier to attach to a port value other than the default 561.
 Without the optional full pathname, 
+<<<<<<< HEAD
 .B radium 
 will continuously transmit a stream of real-time flow records as they are received.
 With the optional filename,
 .B radium
+=======
+.B ragen 
+will continuously transmit a stream of real-time flow records as they are received.
+With the optional filename,
+.B ragen
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 will open the argus datafile specified, and stream the contents, closing
 the connection with the file EOF.
 
 .TP 5 5
 .B \-T threshold[smh] (secs)
+<<<<<<< HEAD
 Indicate that \fIradium\fP should correct the timestamps of
+=======
+Indicate that \fIragen\fP should correct the timestamps of
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 received \fIargus\fP records, if they are out of sync by threshold
 secconds.  Threshold can be specified with the extensions s, m, or
 h for seconds, minutes or hours.
 .B \-X
+<<<<<<< HEAD
 Clear existing radium configuration.  This removes any initialization done prior
 to encountering this flag.  Allows you to eliminate the effects of the
 \fI/etc/radium.conf\fP file, or any radium.conf files that may have been loaded.
@@ -137,22 +227,54 @@ will cause \fBradium\fP to turn off all \fBdebug\fP reporting.
 .nf
 $RADIUMHOME - Radium Root directory
 $RADIUMPATH - Radium.conf search path (/etc:$RADIUMHOME:$HOME)
+=======
+Clear existing ragen configuration.  This removes any initialization done prior
+to encountering this flag.  Allows you to eliminate the effects of the
+\fI/etc/ragen.conf\fP file, or any ragen.conf files that may have been loaded.
+
+.SH SIGNALS
+\fBRagen\fP catches a number of \fBsignal(3)\fP events.
+The three signals \fBSIGHUP\fP, \fBSIGINT\fP, and \fBSIGTERM\fP
+cause \fBragen\fP to exit, writing TIMEDOUT status records for
+all currently active transactions.  The signal \fBSIGUSR1\fP
+will turn on \fBdebug\fP reporting, and subsequent \fBSIGUSR1\fP
+signals, will increment the \fBdebug-level\fP. The signal \fBSIGUSR2\fP
+will cause \fBragen\fP to turn off all \fBdebug\fP reporting.
+
+.SH ENVIRONMENT
+.nf
+$RAGENHOME - Ragen Root directory
+$RAGENPATH - Ragen.conf search path (/etc:$RAGENHOME:$HOME)
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 
 .SH FILES
 .nf
+<<<<<<< HEAD
 /etc/radium.conf         - radium daemon configuration file 
 /var/run/radium.#.#.pid  - PID file 
+=======
+/etc/ragen.conf         - ragen daemon configuration file 
+/var/run/ragen.#.#.pid  - PID file 
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 
 .SH EXAMPLES
 .LP
+<<<<<<< HEAD
 Run \fBradium\fP as a daemon, reading records from a remote host,
+=======
+Run \fBragen\fP as a daemon, reading records from a remote host,
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 using port 561, and writing all its transaction status reports to
 \fIoutput-file\fP.  This is a typical mode.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -S remotehost:561 -d -e `hostname` -w \fIoutput-file\fP
+=======
+\fBragen -S remotehost:561 -d -e `hostname` -w \fIoutput-file\fP
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 .RE
 .LP
@@ -161,7 +283,11 @@ Collect records from multiple argi, using port 561 on one and port
 programs on port 562.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -S host1:561 -S host2:430 -de `hostname` -P 562
+=======
+\fBragen -S host1:561 -S host2:430 -de `hostname` -P 562
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 .RE
 .LP
@@ -170,12 +296,21 @@ the default port, and make the resulting argus records available
 on port 562.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -C -S host1 -S host2 -de `hostname` -P 562
 .fi
 .RE
 .LP
 Radium supports both input filtering and output filtering,
 and radium supports multiple output streams, each with their
+=======
+\fBragen -C -S host1 -S host2 -de `hostname` -P 562
+.fi
+.RE
+.LP
+Ragen supports both input filtering and output filtering,
+and ragen supports multiple output streams, each with their
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 own independant filters.
 
 If you are interested in distributing IP traffic only (input
@@ -184,7 +319,11 @@ based on traffic type, this simple example separates ICMP
 traffic from other traffic.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -w \fIfile1\fP "icmp" -w \fIfile2\fP "not icmp" - ip
+=======
+\fBragen -w \fIfile1\fP "icmp" -w \fIfile2\fP "not icmp" - ip
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 .RE
 .LP
@@ -194,7 +333,11 @@ gateway routers, whose ethernet addresses are 00:08:03:2D:42:01 and
 port 430/tcp.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -S source -P 430 - ether host (0:8:3:2d:42:1 and 0:0:c:18:29:f1)\fP &
+=======
+\fBragen -S source -P 430 - ether host (0:8:3:2d:42:1 and 0:0:c:18:29:f1)\fP &
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 .RE
 .LP
@@ -202,21 +345,33 @@ Process argus records from a remote source only between 9am and 5pm every day
 and provide access to this stream on port 562.
 .RS
 .nf
+<<<<<<< HEAD
 \fBradium -S remotehost -t 9-17 -P 562
+=======
+\fBragen -S remotehost -t 9-17 -P 562
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .fi
 
 .RE
 .SH COPYRIGHT
+<<<<<<< HEAD
 Copyright (c) 2000-2016 QoSient, LLC   All rights reserved.
+=======
+Copyright (c) 2000-2021 QoSient, LLC   All rights reserved.
+>>>>>>> 6d0d6484 (updated for merge problems ....)
 .RE
 .SH AUTHORS
 .nf
 Carter Bullard (carter@qosient.com)
 .RE
 .SH SEE ALSO
+<<<<<<< HEAD
 .BR radium.conf (5),
 .BR argus (8),
 .BR hosts_access (5),
 .BR hosts_options (5),
 .BR tcpd (8),
 .BR tcpdump (1)
+=======
+.BR ragen.conf (5),
+>>>>>>> 6d0d6484 (updated for merge problems ....)

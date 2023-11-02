@@ -329,6 +329,7 @@ RaProcessMatrixData (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 {
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
          struct ArgusHashStruct *hstruct = NULL;
@@ -430,6 +431,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusMetricStruct *metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX];
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusProbeAggregator;
@@ -2197,6 +2199,7 @@ ArgusRaHostsHandleRecord (struct ArgusParserStruct *parser,
                break;
       
             case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
             case ARGUS_FAR:
                parser->ArgusTotalFarRecords++;
                break;

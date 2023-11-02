@@ -1626,6 +1626,10 @@ extern "C" {
 #define ARGUS_SRC_GAP                   0x00400000
 #define ARGUS_DST_GAP                   0x00800000
 
+#define ARGUS_GAP			0x00C00000
+#define ARGUS_SRC_GAP		    	0x00400000
+#define ARGUS_DST_GAP		    	0x00800000
+
 #define ARGUS_TCP_OPTIONS		0xFFF00000
 #define ARGUS_TCP_MAXSEG		0x00100000
 #define ARGUS_TCP_WSCALE		0x00200000

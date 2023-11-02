@@ -35,14 +35,16 @@
  * $DateTime: 2014/05/12 10:49:40 $
  * $Change: 2818 $
  */
-
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
+#include <argus_compat.h>
 
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+
+#include <netinet/tcp.h>
 
 #include <netinet/tcp.h>
 
@@ -289,7 +291,7 @@ main (int argc, char **argv) {
             }
 
 #ifdef ARGUSDEBUG
-            ArgusDebug (1, "main: RaConvertReadFile(%s) done", input->filename);
+            ArgusDebug (1, "main: RaConvertReadFile(%s) done", file->filename);
 #endif
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
@@ -360,7 +362,7 @@ ArgusClientInit(struct ArgusParserStruct *parser)
 
          switch (ind) {
             case RASCIIDEBUG: {
-               for (x = 0, ind = -1; x < RASCII_MAXMODES; x++) {
+               for (x = 0, ind = -1; x < RASCII_MAXDEBUG; x++) {
                   if (!(strncasecmp (mode->mode, RaConvertDaemonModes[x], 3))) {
                      ArgusDebugMode |= 0x01 << x;
                      switch (ind) {
@@ -415,8 +417,7 @@ struct ArgusMarStruct {
    ArgusParser->ArgusInitCon.hdr.cause                   = ARGUS_START;
    ArgusParser->ArgusInitCon.hdr.len                     = (unsigned short) (sizeof(struct ArgusMarStruct) + 4)/4;
    ArgusParser->ArgusInitCon.argus_mar.thisid            = ArgusSourceId;
-   ArgusParser->ArgusInitCon.argus_mar.argusid           = (argus_version == ARGUS_VERSION_3)
-                                                           ? ARGUS_V3_COOKIE : ARGUS_COOKIE;
+   ArgusParser->ArgusInitCon.argus_mar.argusid           = ARGUS_COOKIE;
  
    ArgusParser->ArgusInitCon.argus_mar.startime.tv_sec   = ArgusParser->ArgusRealTime.tv_sec;
    ArgusParser->ArgusInitCon.argus_mar.startime.tv_usec  = ArgusParser->ArgusRealTime.tv_usec;
@@ -807,6 +808,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
 
 int RaPrintCounter = 1;
 
+int RaPrintCounter = 1;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 void
@@ -900,6 +902,11 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                if (RaConvertParseRecordString(parser, str, slen)) {
                   struct ArgusRecordStruct *argus = &parser->argus;
 
+         if ((*str != '#') && (slen > 1)) {
+            if (ArgusProcessTitleString) {
+               struct ArgusRecordStruct *argus = &parser->argus;
+
+               if (RaConvertParseRecordString(parser, str, slen)) {
                   if (parser->ArgusWfileList != NULL) {
                      struct ArgusWfileStruct *wfile = NULL;
                      struct ArgusListObjectStruct *lobj = NULL;
@@ -1019,6 +1026,8 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
       }
       free(strbuf);
 
+      ArgusFree(strbuf);
+
       if (!(feof(fd)) && ferror(fd))
          ArgusLog (LOG_ERR, "getline: error %s", strerror(errno));
    }
@@ -1035,7 +1044,7 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 }
 
 
-char *RaDateFormat = NULL;
+char *RaDateFormat = "%m/%d.%H:%M:%S";
 
 #define RACONVERTTIME	8
 
@@ -1138,7 +1147,7 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       }
          
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 6 - precision;
+         int n, power = 9 - precision;
 
          for (n = 0; n < power; n++)
             useconds *= 10;
@@ -3318,7 +3327,7 @@ ArgusParseDurationLabel (struct ArgusParserStruct *parser, char *buf)
          ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
 
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 6 - precision;
+         int n, power = 9 - precision;
 
          for (n = 0; n < power; n++)
             tvp->tv_usec *= 10;

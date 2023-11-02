@@ -470,7 +470,9 @@ oname:     TCPOPT               { $$ = Q_TCPOPT; }
 	;
 
 other:	  pqual TK_BROADCAST	{ $$ = Argusgen_broadcast($1); }
+	| ptype TK_BROADCAST	{ $$ = Argusgen_broadcast($1); }
 	| pqual TK_MULTICAST	{ $$ = Argusgen_multicast($1); }
+	| ptype TK_MULTICAST	{ $$ = Argusgen_multicast($1); }
 	| INTRANET		{ $$ = Argusgen_intranet(); }
 	| INTERNET		{ $$ = Argusgen_internet(); }
 	| INBOUND		{ $$ = Argusgen_inbound(0); }

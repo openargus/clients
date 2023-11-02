@@ -24,6 +24,7 @@
  * $Change: 2818 $
  */
 
+
 #ifndef Raconvert_h
 #define Raconvert_h
 
@@ -247,6 +248,7 @@ void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct
    ArgusParseActiveDstJitterLabel,
    ArgusParseIdleSrcJitterLabel,
    ArgusParseIdleDstJitterLabel,
+
    ArgusParseStateLabel,
    ArgusParseDeltaDurationLabel,
    ArgusParseDeltaStartTimeLabel,
@@ -373,6 +375,7 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "ActDstJitter",
    "IdlSrcJitter",
    "IdlDstJitter",
+
    "State",
    "dDur",
    "dsTime",
@@ -382,6 +385,7 @@ char *RaParseLabelStringTable[MAX_PARSE_ALG_TYPES] = {
    "dsBytes",
    "ddBytes",
    "pdsPkt",
+
    "pddPkt",
    "pdsByte",
    "pddByte",

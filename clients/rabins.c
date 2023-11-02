@@ -1022,6 +1022,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          case ARGUS_EVENT:
          case ARGUS_MAR:
          case ARGUS_NETFLOW:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             if (agg->grepstr) {
                struct ArgusLabelStruct *label;
@@ -1066,6 +1067,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      break;
 
                   case ARGUS_NETFLOW:
+                  case ARGUS_AFLOW:
                   case ARGUS_FAR: {
                      struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 

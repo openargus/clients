@@ -1331,7 +1331,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    struct PerFlowHistoData *data;
    struct ArgusHashStruct *hstruct;
 
-   if (record_type != ARGUS_NETFLOW && record_type != ARGUS_FAR)
+   if (record_type != ARGUS_NETFLOW && record_type != ARGUS_AFLOW && record_type != ARGUS_FAR)
       return;
 
    if (parser->ArgusAggregator == NULL) {

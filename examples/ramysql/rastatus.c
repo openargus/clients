@@ -1537,7 +1537,7 @@ ArgusCheckSQLCache(struct ArgusParserStruct *parser, struct RaBinStruct *bin, st
 #endif
 
 
-                     if ((buf->hdr.type & ARGUS_FAR) || (buf->hdr.type & ARGUS_NETFLOW)) {
+                     if ((buf->hdr.type & ARGUS_FAR) || (buf->hdr.type & ARGUS_AFLOW) || (buf->hdr.type & ARGUS_NETFLOW)) {
 #ifdef _LITTLE_ENDIAN
                         ArgusNtoH(buf);
 #endif

@@ -153,7 +153,7 @@ if ($uri) {
    }
 
    if (grep -d, glob "/home/dns/*/*/$time") {
-      $Program = "$rasql -t $time -r mysql://root\@localhost/$flows -w - | $radns $options";
+      $Program = "$rasql -t $time -R /home/dns/*/*/$time -w - | $radns $options";
    } else {
       $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
    }

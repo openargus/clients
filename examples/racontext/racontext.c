@@ -596,7 +596,11 @@ RaProcessRecord(struct ArgusParserStruct *parser,
    struct RacontextTree *e;
    unsigned char type = argus->hdr.type & 0xf0;
 
+<<<<<<< HEAD
    if (type != ARGUS_NETFLOW && type != ARGUS_FAR)
+=======
+   if (type != ARGUS_NETFLOW && type != ARGUS_AFLOW && type != ARGUS_FAR )
+>>>>>>> 6d0d6484 (updated for merge problems ....)
       return;
 
    e = NULL;

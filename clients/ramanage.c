@@ -203,7 +203,6 @@ static const size_t RAMANAGE_RCITEMS =
    sizeof(RamanageResourceFileStr)/sizeof(RamanageResourceFileStr[0]);
 
 static configuration_t global_config;
-struct ArgusParserStruct *ArgusParser;
 static int noconf = 0;
 static const int SHA1_INPUT_BUFLEN = 32*1024;
 static const char * const state_filename = SHAREDSTATEDIR"/ramanage/timestamp";
@@ -1029,10 +1028,11 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    rstr->remain = PATH_MAX;
    rstr->len = 0;
 
+# ifdef ARGUS_CURLEXE
    if (config->upload_auth && (strcasecmp(config->upload_auth, "spnego") == 0)) {
       authStr = "--negotiate";
       auth = 1;
-   } else 
+   } else
    if (config->upload_auth && (strcasecmp(config->upload_auth, "digest") == 0)) {
       authStr = "--digest";
       auth = 1;
@@ -1041,6 +1041,7 @@ __upload_init(CURL **hnd, const configuration_t * const config)
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain,
                           "%s --fail --silent --show-error -k -u %s %s > /dev/null",
                           curlexe, userpwd, auth ? authStr : "");
+#endif
    free(curlexe);
    if (slen >= PATH_MAX) {
       ArgusFree(userpwd);
@@ -1180,7 +1181,11 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
 # ifdef CYGWIN
    char *winpath = ArgusCygwinConvPath2Win(filename);
 # else
+#ifdef ARGUS_CURLEXE
    char *escaped = __shell_escape(filename);
+# else
+   char *escaped = NULL;
+#endif
 # endif /* CYGWIN */
 
    slen = snprintf_append(rstr->str, &rstr->len, &rstr->remain, " -T \"%s\" %s",

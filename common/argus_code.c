@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -142,7 +142,7 @@ static struct ablock *Argusgen_mcmp(int, u_int, u_int, u_int, u_int, u_int, int)
 static struct ablock *Argusgen_bcmp(int, u_int, u_int, u_char *, int);
 static struct ablock *Argusgen_prototype(u_int, u_int);
 static struct ablock *Argusgen_hostop(u_int *, u_int *, int, int, u_int);
-static struct ablock *Argusgen_ehostop(u_char *, int);
+static struct ablock *Argusgen_ehostop(u_char *, int, int);
 static struct ablock *Argusgen_host(u_int *, u_int *, int, int, int);
 static struct ablock *Argusgen_srcid(u_int *, u_int, int);
 static struct ablock *Argusgen_inf(char *);
@@ -1323,7 +1323,7 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
 
 
 static struct ablock *
-Argusgen_ehostop( u_char *eaddr, int dir)
+Argusgen_ehostop( u_char *eaddr, int dir, int len)
 {
    struct ablock *b0 = NULL, *b1 = NULL;
    struct ArgusMacStruct mac;
@@ -1336,26 +1336,25 @@ Argusgen_ehostop( u_char *eaddr, int dir)
    switch (dir) {
       case Q_SRC: {
          offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_shost - (char *)&mac);
-         
-         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, 6, eaddr, Q_DEFAULT);
+         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, len, eaddr, Q_DEFAULT);
       }
 
       case Q_DST: {
          offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_dhost - (char *)&mac);
-         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, 6, eaddr, Q_DEFAULT);
+         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, len, eaddr, Q_DEFAULT);
       }
 
       case Q_AND: {
-         b0 = Argusgen_ehostop(eaddr, Q_SRC);
-         b1 = Argusgen_ehostop(eaddr, Q_DST);
+         b0 = Argusgen_ehostop(eaddr, Q_SRC, len);
+         b1 = Argusgen_ehostop(eaddr, Q_DST, len);
          Argusgen_and(b0, b1);
          return b1;
       }
 
       case Q_DEFAULT:
       case Q_OR: {
-         b0 = Argusgen_ehostop(eaddr, Q_SRC);
-         b1 = Argusgen_ehostop(eaddr, Q_DST);
+         b0 = Argusgen_ehostop(eaddr, Q_SRC, len);
+         b1 = Argusgen_ehostop(eaddr, Q_DST, len);
          Argusgen_or(b0, b1);
          return b1;
       }
@@ -1622,7 +1621,7 @@ Argusgen_gateway( u_char *eaddr, u_int *alist, int type, int proto, int dir)
       case Q_ARP:
       case Q_RARP:
          *mask = 0xffffffffL;
-         b0 = Argusgen_ehostop(eaddr, Q_OR);
+         b0 = Argusgen_ehostop(eaddr, Q_OR, 6);
          b1 = Argusgen_host(alist, mask, type, proto, Q_OR);
          Argusgen_not(b1);
          Argusgen_and(b0, b1);
@@ -4739,7 +4738,7 @@ Argusgen_scode(char *name, struct qual q)
                eaddr = argus_ether_hostton(name);
                if (eaddr == NULL)
                   ArgusLog(LOG_ERR, "unknown ether host '%s'", name);
-               b = Argusgen_ehostop(eaddr, dir);
+               b = Argusgen_ehostop(eaddr, dir, 6);
                break;
             }
             case Q_DECNET: {
@@ -5634,7 +5633,7 @@ Argusgen_ecode( u_char *eaddr, struct qual q)
       case Q_LINK:
       case Q_ETHER:
          if (q.addr == Q_HOST || q.addr == Q_DEFAULT)
-            b0 = Argusgen_ehostop(eaddr, (int)q.dir);
+            b0 = Argusgen_ehostop(eaddr, (int)q.dir, 6);
          break;
 
       case Q_ARP:
@@ -6098,34 +6097,17 @@ Argusgen_broadcast(proto)
 int proto;
 {
    struct ablock *b0 = NULL, *b1 = NULL;
-   static u_char ebroadcast[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-   u_int netaddr = 0xffffffffL, mask;
-/*
-   u_int classmask = 0xffffffffL;
-*/
 
    switch (proto) {
-      case Q_LINK:
-         b0 = Argusgen_ehostop(ebroadcast, Q_OR);
+      case Q_LINK: {
+         static u_char ebroadcast[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+         b0 = Argusgen_ehostop(ebroadcast, Q_OR, 6);
          break;
+      }
 
-      case Q_IP:
+      case Q_IP: {
+         u_int netaddr = 0xffffffffL, mask;
          mask = 0xffffffffL;
-/*
-         if (ArgusParser->ArgusCurrentInput) {
-            netaddr = ArgusParser->ArgusLocalNet & ArgusParser->ArgusNetMask;
-            classmask = ipaddrtonetmask(ArgusParser->ArgusLocalNet);
-            b1 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-            netaddr |= ~(~0 & ArgusNetMask);
-            b0 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-            Argusgen_or(b1, b0);
-            if (classmask != ArgusNetMask) {
-               netaddr = ArgusParser->ArgusLocalNet & classmask;
-               b1 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-               Argusgen_or(b1, b0);
-            }
-         }
-*/
          netaddr = ~0;
          b1 = Argusgen_host( (u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
          if (b0 != NULL)
@@ -6133,6 +6115,7 @@ int proto;
          else
             b0 = b1;
          break;
+      }
 
       case Q_DEFAULT:
          ArgusLog(LOG_ERR, "only ether/ip broadcast filters supported");
@@ -6150,27 +6133,16 @@ Argusgen_multicast(proto)
 int proto;
 {
    register struct ablock *b0 = NULL, *b1 = NULL;
-   register struct slist *s;
 
    switch (proto) {
-      case Q_LINK:
-         s = new_stmt(NFF_LD|NFF_B|NFF_ABS);
-         s->s.data.k = 92;
-         b0 = new_block(JMP(NFF_JSET));
-         b0->s.data.k = 1;
-         b0->stmts = s;
-
-         s = new_stmt(NFF_LD|NFF_B|NFF_ABS);
-         s->s.data.k = 98;
-         b1 = new_block(JMP(NFF_JSET));
-         b1->s.data.k = 1;
-         b1->stmts = s;
-   
-         Argusgen_or(b0, b1);
+      case Q_ETHER:
+      case Q_LINK: {
+         static u_char emulticast[] = { 0x33, 0x33, 0xff, 0xff, 0xff, 0xff };
+         b1 = Argusgen_ehostop(emulticast, Q_OR, 2);
          break;
+      }
 
-      case Q_IP:
-      case Q_DEFAULT: {
+      case Q_IP: {
          struct ArgusFlow flow;
          int src_off = 0, dst_off = 0;
 
@@ -6186,6 +6158,9 @@ int proto;
          Argusgen_and(b0, b1);
          break;
       }
+
+      case Q_DEFAULT:
+         ArgusLog(LOG_ERR, "only ether/ip multicast filters supported");
    }
 
 #if defined(ARGUSDEBUG)
@@ -6265,7 +6240,7 @@ int dir;
            dir);
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_multicast (0x%x) returns %p\n", dir, b0);
+   ArgusDebug (4, "Argusgen_inbound (0x%x) returns %p\n", dir, b0);
 #endif
 
    return (b0);

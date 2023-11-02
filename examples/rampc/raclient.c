@@ -1001,6 +1001,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          break;
 
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if (parser->RaMonMode) {
             struct ArgusFlow *flow;
@@ -1430,6 +1431,7 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
 
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          tns = ArgusCopyRecordStruct(cns);
          if (pns) {
@@ -1732,6 +1734,7 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 // if (strchr(dbuf, '?')) {
       switch (ns->hdr.type & 0xF0) {
          case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
          case ARGUS_FAR: {
             struct ArgusMacStruct *mac = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX];
             struct ArgusFlow *flow     = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];

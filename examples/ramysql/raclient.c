@@ -1480,6 +1480,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             case ARGUS_EVENT:
             case ARGUS_MAR:
             case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
             case ARGUS_FAR: {
                if (agg->grepstr) {
                   struct ArgusLabelStruct *label;
@@ -1526,6 +1527,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    the bin to database table cache concurrency.
 */
                      case ARGUS_NETFLOW:
+                     case ARGUS_AFLOW:
                      case ARGUS_FAR: {
                         struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 
@@ -1703,6 +1705,7 @@ RaProcessThisEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordSt
 
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          tns = ArgusCopyRecordStruct(cns);
          if (pns) {
@@ -2083,6 +2086,7 @@ RaLookupDBCache (struct ArgusParserStruct *parser, struct ArgusAggregatorStruct 
                            for (x = 0; x < retn; x++) {
                               bcopy (row[x], buf, (int) lengths[x]);
                               if ((((struct ArgusRecord *)buf)->hdr.type & ARGUS_FAR) ||
+                                  (((struct ArgusRecord *)buf)->hdr.type & ARGUS_AFLOW) || 
                                   (((struct ArgusRecord *)buf)->hdr.type & ARGUS_NETFLOW)) {
 #ifdef _LITTLE_ENDIAN
                                  ArgusNtoH((struct ArgusRecord *) buf);

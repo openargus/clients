@@ -520,6 +520,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if (!(ArgusSecondPass)) {
             struct ArgusQsortStruct *obj = NULL;
