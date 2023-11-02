@@ -2034,7 +2034,7 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
                if ((tptr = nptr) != NULL) {
                   struct RaAddressStruct *raddr = NULL, node;
                   struct ArgusCIDRAddr *cidr = NULL;
-                  char addrbuf[128], *addr = addrbuf, *a[16];
+                  char addrbuf[128], *addr = addrbuf, *a[32];
                   int ind = 0;
 
                   bzero(addrbuf, sizeof(addrbuf));
@@ -2050,7 +2050,7 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
                         tptr = NULL;
                      }
                      sprintf (addr, "%s.%s.%s.%s", a[3], a[2], a[1], a[0]);
-                     for (i = 0; i < ind; i++) if (a[i] != NULL) free(a[i]);
+                     for (i = 0; i < ind; i++) if (a[i] != NULL) {free(a[i]); a[i] = NULL;}
 
                   } else
                   if ((sptr = strstr(tptr, ".ip6.arpa")) != NULL) {
@@ -2075,6 +2075,7 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
                               next = 0;
                            }
                            free(a[i]);
+                           a[i] = NULL;
                         }
                      }
                   }
