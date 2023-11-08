@@ -831,7 +831,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             int mretn = 0;
             char *tzptr;
 
-            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+            strncpy(strbuf, RaCommandInputStr, 1024);
 
             if ((tzptr = strstr(str, "TZ=")) != NULL) {
                if (ArgusParser->RaTimeZone)
@@ -3791,7 +3791,7 @@ argus_command_string(void)
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline(NULL)) != NULL) {
+   if ((line = readline("")) != NULL) {
       if (strlen(line) > 0) {
          strcpy (RaCommandInputStr, line);
          free(line);
