@@ -11072,16 +11072,16 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
                addrstr = addrbuf;
             }
 
-            switch (parser->cidrflag) {
-               case RA_ENABLE_CIDR_ADDRESS_FORMAT:
-                  if ((masklen == 128) || (masklen == 0))
-                     break;
+               switch (parser->cidrflag) {
+                  case RA_ENABLE_CIDR_ADDRESS_FORMAT:
+                     if ((masklen == 128) || (masklen == 0))
+                        break;
 
 //  deliberately fall through
-               case RA_STRICT_CIDR_ADDRESS_FORMAT:
-                  sprintf(addrbuf, "%s/%d", addrstr, masklen);
-                  if (addrstr != addrbuf) free(addrstr);
-                  addrstr = addrbuf;
+                  case RA_STRICT_CIDR_ADDRESS_FORMAT:
+                     sprintf(addrbuf, "%s/%d", addrstr, masklen);
+                     addrstr = addrbuf;
+               }
             }
 
             break;
