@@ -4023,15 +4023,12 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                     if (label->l_un.label != NULL) {
                                        struct ArgusLabelStruct *tlabel = (void *)retn->dsrs[i];
 
+                                       tlabel->l_un.label = NULL;
                                        if ((slen = strlen(label->l_un.label)) > 0) {
                                           int blen = (label->hdr.argus_dsrvl8.len - 1) * 4;
 
                                           tlabel->l_un.label = calloc(1, blen + 1);
                                           bcopy((char *)label->l_un.label, tlabel->l_un.label, (blen > slen) ? slen : blen);
-
-                                       } else {
-                                          free(tlabel->l_un.label);
-                                          tlabel->l_un.label = NULL;
                                        }
                                     }
                                     break;
@@ -4153,11 +4150,14 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
          switch (i) {
             case ARGUS_LABEL_INDEX: {
                struct ArgusLabelStruct *label = (void *)ns->dsrs[i];
-               if (label != NULL)
-                  if (label->l_un.label != NULL) {
+               extern char ArgusCanonLabelBuffer[];
+
+               if (label != NULL) {
+                  if (label->l_un.label != ArgusCanonLabelBuffer) {
                      free(label->l_un.label);
-                     label->l_un.label = NULL;
                   }
+                  label->l_un.label = NULL;
+               }
                break;
             }
 
@@ -9006,22 +9006,28 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                         struct ArgusLabelStruct *l2 = (void *) ns2->dsrs[ARGUS_LABEL_INDEX];
 
                         if (l1 && l2) {
-                           if (l1->l_un.label && l2->l_un.label) {
+                           if ((l1->l_un.label != NULL) && (l2->l_un.label != NULL)) {
                               if (strcmp(l1->l_un.label, l2->l_un.label)) {
                                  char *buf = calloc(1, MAXBUFFERLEN);
                                  int len;
 
                                  if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
+/*
                                     free(l1->l_un.label);
                                     l1->l_un.label = strdup(buf);
                                     len = 1 + ((strlen(buf) + 3)/4);
                                     l1->hdr.argus_dsrvl8.len  = len;
+*/
                                  }
                                  free(buf);
                               }
                            } else {
-                              if (l2->l_un.label)
+                              if (l2->l_un.label != NULL) {
+/*
+                                 if (l1->l_un.label != NULL) free (l1->l_un.label);
                                  l1->l_un.label = strdup(l2->l_un.label);
+*/
+                              }
                            }
 
                         } else {
@@ -9030,6 +9036,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                               l1 = (void *) ns1->dsrs[ARGUS_LABEL_INDEX];
 
                               bcopy(l2, l1, sizeof(*l2));
+                              l1->l_un.label = NULL;
 
                         if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
                            free(l1->l_un.label);

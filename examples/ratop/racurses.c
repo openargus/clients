@@ -43,6 +43,7 @@ void RaResizeAlarmHandler(int);
 #define RA_CURSES_MAIN
 #include <racurses.h>
 
+int ArgusDisplayColorsInitialized = 0;
 extern struct ArgusWirelessStruct *ArgusWireless;
 
 #if defined(ARGUS_CURSES) && defined(ARGUS_COLOR_SUPPORT)
@@ -61,6 +62,7 @@ extern void RaMySQLInit (void);
 extern int ArgusReadSQLTables (struct ArgusParserStruct *);
 #endif
 
+int ArgusCursesProcessInitialized = 0;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
@@ -91,11 +93,11 @@ main(int argc, char **argv)
 
       pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
  
-      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
+      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, ArgusParser)) != 0)
          ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       if (ArgusCursesEnabled)
-         if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, NULL)) != 0)
+         if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, ArgusParser)) != 0)
             ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
 
       pthread_join(RaDataThread, NULL);
@@ -196,18 +198,21 @@ void RaUpdateStatusWindow(WINDOW *);
 void *
 ArgusCursesProcess (void *arg)
 {
+   struct ArgusParserStruct *parser = (struct ArgusParserStruct *) arg;
    int done = 0, cnt = 0;
    struct timeval ntvbuf = {0, }, *ntvp = &ntvbuf;
 
 #if defined(ARGUS_THREADS)
-   pthread_mutex_lock(&ArgusParser->sync);
+   pthread_mutex_lock(&parser->sync);
 #endif
 
    ArgusCursesProcessInit();
 
 #if defined(ARGUS_THREADS)
-   pthread_cond_signal(&ArgusParser->cond);
-   pthread_mutex_unlock(&ArgusParser->sync);
+   if (pthread_cond_signal(&parser->cond) != 0)
+      ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_cond_signal error %s", strerror(errno));
+   if (pthread_mutex_unlock(&parser->sync) != 0)
+      ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_mutex_unlock error %s", strerror(errno));
 #endif
 
    while (!done) {
@@ -3295,6 +3300,8 @@ ArgusCursesProcessInit()
    if ((pthread_create(&RaCursesInputThread, NULL, ArgusProcessCursesInput, NULL)) != 0)
       ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
 #endif
+
+   ArgusCursesProcessInitialized = 1;
 }
 
 
@@ -6444,7 +6451,6 @@ ArgusColorGeoLocation(struct ArgusParserStruct *parser, struct ArgusRecordStruct
    return (retn);
 }
 
-int ArgusDisplayColorsInitialized = 0;
 
 void
 ArgusInitializeColorMap(struct ArgusParserStruct *parser, WINDOW *win)
