@@ -1329,6 +1329,7 @@ ArgusClientTimeout ()
            (ArgusParser->RaClientUpdate.tv_usec < tvp->tv_usec)))) {
 
          ArgusProcessQueue(RaCursesProcess->queue);
+         ArgusProcessQueue(RaEventProcess->queue);
 
          ArgusParser->RaClientUpdate.tv_sec  =  tvp->tv_sec + RaProcessQueueTimer.tv_sec;
          ArgusParser->RaClientUpdate.tv_usec = tvp->tv_usec + RaProcessQueueTimer.tv_usec;
