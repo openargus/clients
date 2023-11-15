@@ -50,6 +50,8 @@
 #include <zlib.h>
 #endif
 
+int RaCursesDeleteProcess (struct ArgusParserStruct *, struct RaCursesProcessStruct *);
+
 #if defined(ARGUS_MYSQL)
 #include <rasplit.h>
 
@@ -1264,12 +1266,15 @@ RaParseComplete (int sig)
             case SIGINT:
             case SIGTERM:
             case SIGQUIT: {
-               struct ArgusWfileStruct *wfile = NULL;
+//             struct ArgusWfileStruct *wfile = NULL;
 
                ArgusParser->RaParseDone = 1;
                ArgusCloseDown = 1;
-               ArgusShutDown(sig);
 
+               RaCursesDeleteProcess (ArgusParser, RaEventProcess);
+               RaEventProcess = NULL;
+               ArgusShutDown(sig);
+/*
                if (ArgusParser->ArgusWfileList != NULL) {
                   struct ArgusListObjectStruct *lobj = NULL;
                   int i, count = ArgusParser->ArgusWfileList->count;
@@ -1290,12 +1295,17 @@ RaParseComplete (int sig)
                      }
                   }
                }
+*/
                break;
             }
          }
       }
    }
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "RaParseComplete(%d) ... Done\n", sig);
+#endif
 }
+
 
 
 struct timeval RaProcessQueueTimer = {0, 250000};
@@ -1303,7 +1313,6 @@ struct timeval RaProcessQueueTimer = {0, 250000};
 void
 ArgusClientTimeout ()
 {
-   struct ArgusQueueStruct *queue = RaCursesProcess->queue;
    struct timeval tvbuf, *tvp = &tvbuf;
 
    if (!(ArgusParser->Pauseflag)) {
@@ -1319,7 +1328,7 @@ ArgusClientTimeout ()
           ((ArgusParser->RaClientUpdate.tv_sec == tvp->tv_sec) &&
            (ArgusParser->RaClientUpdate.tv_usec < tvp->tv_usec)))) {
 
-         ArgusProcessQueue(queue);
+         ArgusProcessQueue(RaCursesProcess->queue);
 
          ArgusParser->RaClientUpdate.tv_sec  =  tvp->tv_sec + RaProcessQueueTimer.tv_sec;
          ArgusParser->RaClientUpdate.tv_usec = tvp->tv_usec + RaProcessQueueTimer.tv_usec;
@@ -2026,6 +2035,10 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
 
    gettimeofday (&RaCursesStopTime, 0L);
 
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&RaEventProcess->queue->lock);
+#endif
+
    while (agg && !found) {
       struct nff_insn *fcode = agg->filter.bf_insns;
 
@@ -2073,7 +2086,12 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
                      if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
                         ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
 
-                     pns = ArgusFindRecord(RaEventProcess->htable, hstruct);
+                     if ((pns = ArgusFindRecord(RaEventProcess->htable, hstruct)) == NULL) {
+                        ArgusReverseRecord (cns);
+                        ArgusGenerateNewFlow(agg, cns);
+                        if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
+                           ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                     }
                   }
                }
             }
@@ -2140,6 +2158,10 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
       cns->htblhdr = ArgusAddHashEntry (RaEventProcess->htable, cns, hstruct);
       ArgusAddToQueue (RaEventProcess->queue, &cns->qhdr, ARGUS_NOLOCK);
    }
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&RaEventProcess->queue->lock);
+#endif
    RaWindowModified = RA_MODIFIED;
 
 #if defined(ARGUSDEBUG)
@@ -3038,6 +3060,41 @@ RaCursesNewProcess(struct ArgusParserStruct *parser)
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "RaCursesNewProcess(0x%x) returns 0x%x\n", parser, retn);
+#endif
+   return (retn);
+}
+
+int
+RaCursesDeleteProcess (struct ArgusParserStruct *parser, struct RaCursesProcessStruct *process)
+{
+   struct ArgusQueueStruct *queue = process->queue;
+   int retn = 0, x, z, count;
+   
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&queue->lock);
+#endif      
+
+   if (queue != NULL) {
+      struct ArgusRecordStruct *ns;
+
+      count = process->queue->count;
+      for (x = 0, z = count; x < z; x++) {
+         if ((ns = (void *)ArgusPopQueue(process->queue, ARGUS_NOLOCK)) != NULL)
+            ArgusDeleteRecordStruct(parser, ns);
+      }
+#if defined(ARGUS_THREADS)
+      pthread_mutex_unlock(&queue->lock);
+#endif      
+      ArgusDeleteQueue (process->queue);
+      process->queue = NULL;
+   }
+
+   ArgusDeleteQueue (process->delqueue);
+   ArgusDeleteHashTable (process->htable);
+   ArgusFree(process);
+ 
+#ifdef ARGUSDEBUG
+   ArgusDebug (5, "RaCursesNewProcess(%p) returns 0x%x\n", process, retn);
 #endif
    return (retn);
 }
