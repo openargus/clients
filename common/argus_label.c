@@ -973,21 +973,19 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
    if (l1 != NULL) {
       if ((l1buf = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
          ArgusLog (LOG_ERR, "ArgusMergeLabel: ArgusCalloc error %s\n", strerror(errno));
-/*
-      if ((l1str = ArgusConvertLabelToJson(l1, l1buf, MAXSTRLEN)) != NULL)
+
+      if ((l1str = ArgusConvertLabelToJson(l1, l1buf, MAXSTRLEN)) != NULL) {
          res1 = ArgusJsonParse(l1str, &l1root);
-*/
+      }
    }
 
    if (l2 != NULL) {
       if ((l2buf = (void *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
          ArgusLog (LOG_ERR, "ArgusMergeLabel: ArgusCalloc error %s\n", strerror(errno));
 
-/*
-      if ((l1str = ArgusConvertLabelToJson(l1, l1buf, MAXSTRLEN)) != NULL)
-      if ((l2str = ArgusConvertLabelToJson(l2, l2buf, MAXSTRLEN)) != NULL) 
+      if ((l2str = ArgusConvertLabelToJson(l2, l2buf, MAXSTRLEN)) != NULL) {
          res2 = ArgusJsonParse(l2str, &l2root);
-*/
+      }
    }
 
 // OK, at this point were ready to go, just go through all the attributes
@@ -997,6 +995,7 @@ ArgusMergeLabel(char *l1, char *l2, char *buf, int len, int type)
       ArgusJsonValue *result;
       if ((result = ArgusJsonMergeValues(res1, res2)) != NULL) {
          retn = ArgusJsonPrint(result, buf, len);
+         json_free_value(result);
       }
    }
 
