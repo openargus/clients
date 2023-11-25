@@ -219,14 +219,13 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
       ArgusJsonValue value = { .type = ARGUS_JSON_NULL };
       retn = json_parse_value(cursor, &key);
       retn = retn && has_char(cursor, ':');
+      retn = 0;
       retn = retn && json_parse_value(cursor, &value);
-
       if (retn) {
          vector_push_back(&result.value.object, &key);
          vector_push_back(&result.value.object, &value);
       } else {
          json_free_value(&key);
-         break;
       }
       skip_whitespace(cursor);
       if (has_char(cursor, '}')) break;
@@ -271,6 +270,7 @@ json_free_value(ArgusJsonValue *val) {
    if (!val) return;
 
    switch (val->type) {
+      case ARGUS_JSON_KEY:
       case ARGUS_JSON_STRING:
          if (val->value.string != NULL) {
             free(val->value.string);
@@ -353,9 +353,11 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
             memcpy(new_string, start, len);
             new_string[len] = '\0';
 
-            if (parent->type == ARGUS_JSON_STRING)
+            if ((parent->type == ARGUS_JSON_KEY) ||
+                (parent->type == ARGUS_JSON_STRING)) {
                if (parent->value.string != NULL)
                   free (parent->value.string);
+            }
 
             if (parent->type != ARGUS_JSON_KEY) {
                parent->type = ARGUS_JSON_STRING;
@@ -372,6 +374,7 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
          skip_whitespace(cursor);
          retn = json_parse_object(cursor, parent);
          break;
+
       case '[':
          parent->type = ARGUS_JSON_ARRAY;
          vector_init(&parent->value.array, sizeof(ArgusJsonValue));
@@ -422,9 +425,11 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
                memcpy(new_string, start, len);
                new_string[len] = '\0';
 
-               if (parent->type == ARGUS_JSON_STRING)
+               if ((parent->type == ARGUS_JSON_KEY) ||
+                   (parent->type == ARGUS_JSON_STRING)) {
                   if (parent->value.string != NULL)
                      free (parent->value.string);
+               }
 
                if (parent->type != ARGUS_JSON_KEY) {
                   parent->type = ARGUS_JSON_STRING;
@@ -703,10 +708,10 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
 ArgusJsonValue *
 ArgusJsonParse(const char* input, ArgusJsonValue *result) {
    ArgusJsonValue *retn = NULL;
-   
-   if (json_parse_value(&input, result)) {
+
+   if (json_parse_value(&input, result))
       retn = result;
-   }
+
    return (retn);
 }
 
