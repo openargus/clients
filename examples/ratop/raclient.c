@@ -2166,7 +2166,7 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
    RaWindowModified = RA_MODIFIED;
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "RaProcessThisLsOfEventRecord () returning\n");
+   ArgusDebug (2, "RaProcessThisLsOfEventRecord () returning\n");
 #endif
 }
 
@@ -2309,7 +2309,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          dptr = ptr;
 #else
 #if defined(ARGUSDEBUG)
-         ArgusDebug (5, "RaProcessEventRecord: unable to decompress payload\n");
+         ArgusDebug (2, "RaProcessEventRecord: unable to decompress payload\n");
 #endif
          return;
 #endif
@@ -2326,7 +2326,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
       ArgusCorrelateQueue (RaCursesProcess->queue);
    }
 #if defined(ARGUSDEBUG)
-   ArgusDebug (6, "RaProcessEventRecord (%p, %p)\n", parser, argus);
+   ArgusDebug (4, "RaProcessEventRecord (%p, %p)\n", parser, argus);
 #endif
 }
 
@@ -2675,7 +2675,7 @@ RaParseLsOfEventRecord (struct ArgusParserStruct *parser, char *dptr, struct Arg
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "RaParseLsOfEventRecord (%p, %p)\n", parser, argus);
+   ArgusDebug (3, "RaParseLsOfEventRecord (%p, %p)\n", parser, argus);
 #endif
 }
 
@@ -2989,6 +2989,13 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 
                      l1->hdr.argus_dsrvl8.len = 1 + len;
                      bcopy (label, l1->l_un.label, slen + 1);
+#if defined(ARGUSDEBUG)
+                     ArgusDebug (3, "ArgusCorrelateRecord (0x%x) merged label: %s", pns, label); 
+#endif
+                  } else {
+#if defined(ARGUSDEBUG)
+                     ArgusDebug (3, "ArgusCorrelateRecord (0x%x) ArgusMergeLabel returned NULL", pns); 
+#endif
                   }
                   ns->status |= ARGUS_RECORD_MODIFIED;
                   ArgusFree(buf);
@@ -3007,9 +3014,6 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                   bcopy (label, l1->l_un.label, slen + 1);
 	       }
             }
-#if defined(ARGUSDEBUG)
-            ArgusDebug (3, "ArgusCorrelateRecord (0x%x) merged label", pns); 
-#endif
 
          } else {
             if (l2 && (l1 == NULL)) {
@@ -3024,7 +3028,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 	       }
                ns->dsrindex |= (0x1 << ARGUS_LABEL_INDEX);
 #if defined(ARGUSDEBUG)
-               ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label", pns); 
+               ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label '%s'", pns, l1->l_un.label); 
 #endif
             }
          }

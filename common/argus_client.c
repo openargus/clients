@@ -9015,21 +9015,17 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  int len;
 
                                  if ((ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXBUFFERLEN, ARGUS_UNION)) != NULL) {
-/*
                                     free(l1->l_un.label);
                                     l1->l_un.label = strdup(buf);
                                     len = 1 + ((strlen(buf) + 3)/4);
                                     l1->hdr.argus_dsrvl8.len  = len;
-*/
                                  }
                                  free(buf);
                               }
                            } else {
                               if (l2->l_un.label != NULL) {
-/*
                                  if (l1->l_un.label != NULL) free (l1->l_un.label);
                                  l1->l_un.label = strdup(l2->l_un.label);
-*/
                               }
                            }
 
