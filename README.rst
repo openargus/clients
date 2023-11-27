@@ -3,10 +3,7 @@
 
 Argus is the first netflow technology, started in 1984 at Georgia Tech, and adapted for cyber security operations in 1990 at the Computer Emergency Response Team (CERT) at Carnegie Mellon University's Software Engineering Institute.  While argus has a long history, we still think of argus as innovative and leading edge technology.  Comprehensive network transaction auditing is an extremely powerful network tool, supporting network operational awareness, performance analytics, cyber security and most recently AI/ML cyber autonomy. 
 
-This package contains the argus network audit sensor that processes raw packet data, from either a file or from a network inteface(s), and generates
-network flow activity status records.  The status records can be available for near real-time analytic processing, as you would want for operational fault analysis or intrusion detection, or can be stored and used to generate a network activity audit information system.  Argus is a comprehensive network flow system, in that it classifies and accounts for any and all network activity, not just IP traffic, or just DNS or HTTP traffic.
-
-Use the accompaning argus-clients-5.0 tools to collect, process, print, graph, store, filter, compare, archive and manage the data that Argus generates.
+This package contains the programs that read, collect, parse, graph, store, filter, compare, archive, process and manage argus network audit data and comprise the client part of the Audit Record Generation and Utilization System.  The status records can be available for near real-time analytic processing, as you would want for operational fault analysis or intrusion detection, or can be stored and used to generate a network activity audit information system.  The programs in this package support this type of processing.
 
 To install the software and get started, see the ./INSTALL file.  For answers to many questions, please see the argus web site at http://qosient.com/argus.
 
