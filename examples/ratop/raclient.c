@@ -1346,6 +1346,8 @@ ArgusClientTimeout ()
    } else
       ArgusParser->RaClientUpdate.tv_sec = ArgusParser->ArgusGlobalTime.tv_sec;
 
+   ArgusCorrelateQueue (RaCursesProcess->queue);
+
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");
 #endif
@@ -2894,7 +2896,7 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
    int retn = 0;
 
    if (ns != NULL) {
-      struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+      struct ArgusAggregatorStruct *agg = ArgusEventAggregator;
       struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
       struct ArgusRecordStruct *cns = ArgusCopyRecordStruct(ns);
       struct ArgusRecordStruct *pns = NULL;
@@ -3017,15 +3019,23 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 
          } else {
             if (l2 && (l1 == NULL)) {
+               char *label = NULL;
+
                l1 = (struct ArgusLabelStruct *) calloc(1, sizeof(struct ArgusLabelStruct));
                ns->dsrs[ARGUS_LABEL_INDEX] = (void *) l1;
 
                bcopy(l2, l1, sizeof(*l2));
 
-               if (l2->l_un.label) {
-                  l1->l_un.label = l2->l_un.label;
-                  l2->l_un.label = NULL;
-	       }
+               if ((label = l2->l_un.label) != NULL) {
+                  int slen = strlen(label);
+                  int len = (slen + 3)/4;
+
+                  if ((l1->l_un.label = calloc(1, (len * 4) + 1)) == NULL)
+                     ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
+      
+                  l1->hdr.argus_dsrvl8.len = 1 + len;
+                  bcopy (label, l1->l_un.label, slen + 1);
+               }
                ns->dsrindex |= (0x1 << ARGUS_LABEL_INDEX);
 #if defined(ARGUSDEBUG)
                ArgusDebug (3, "ArgusCorrelateRecord (0x%x) added label '%s'", pns, l1->l_un.label); 
