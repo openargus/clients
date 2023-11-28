@@ -474,6 +474,8 @@ extern void * ArgusTimeoutProcess (void *);
          if (addr->tid != (pthread_t) 0) {
             pthread_join(addr->tid, &retn);
          }
+         if (addr->hostname != NULL)
+            free (addr->hostname);
          ArgusFree(addr);
       }
 
@@ -481,6 +483,8 @@ extern void * ArgusTimeoutProcess (void *);
          if (addr->tid != (pthread_t) 0) {
             pthread_join(addr->tid, &retn);
          }
+         if (addr->hostname != NULL)
+            free (addr->hostname);
          ArgusFree(addr);
       }
    }

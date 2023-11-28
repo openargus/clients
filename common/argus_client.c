@@ -1215,7 +1215,6 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                      if (hp->ai_addr->sa_family == PF_INET) {
                         struct sockaddr_in *sinaddr = (struct sockaddr_in *)hp->ai_addr;
                         struct in_addr ia;
-//                      int reuse = 1;
 
                         bcopy(&sinaddr->sin_addr, &ia, sizeof(ia));
 
