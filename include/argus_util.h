@@ -1519,11 +1519,11 @@ void ArgusInitLlcsaparray(void);
 
 void ArgusFreeServarray(struct ArgusParserStruct *);
 void ArgusFreeProtoidarray(void);
+void ArgusFreeHostarray(void);
 void ArgusFreeEtherarray(void);
 void ArgusFreeLlcsaparray(void);
 void ArgusSetLocalNet(u_int localnet, u_int mask);
 void ArgusInitAddrtoname(struct ArgusParserStruct *);
-
 
 unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
@@ -1914,6 +1914,7 @@ extern void ArgusInitLlcsaparray(void);
 extern void ArgusFreeServarray(struct ArgusParserStruct *);
 extern void ArgusFreeProtoidarray(void);
 extern void ArgusFreeEtherarray(void);
+extern void ArgusFreeHostarray(void);
 extern void ArgusFreeLlcsaparray(void);
 extern void ArgusSetLocalNet(u_int localnet, u_int mask);
 extern void ArgusInitAddrtoname(struct ArgusParserStruct *);

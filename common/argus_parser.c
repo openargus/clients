@@ -214,6 +214,7 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
    pthread_mutex_lock(&parser->lock);
 #endif
 
+   ArgusFreeHostarray();
    ArgusFreeEtherarray();
    ArgusFreeServarray(parser);
    ArgusFreeProtoidarray();

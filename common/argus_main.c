@@ -327,7 +327,10 @@ main (int argc, char **argv)
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
             ArgusCloseInput(ArgusParser, input);
-
+            if (input->filename != NULL) {
+               free(input->filename);
+               input->filename = NULL;
+            }
             file = (struct ArgusFileInput *)file->qhdr.nxt;
 
             /* Only free items from the file list during the last pass over
