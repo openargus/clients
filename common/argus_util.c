@@ -11075,10 +11075,10 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
             if ((format != NULL) && (strlen(format) > 0)) {
                char bbuf[64], *tptr = bbuf;
                sprint128(tptr, format, (uint128 *)addr);
-               snprintf (abuf, sizeof(addrbuf), "%s", tptr);
+               snprintf (abuf, sizeof(abuf), "%s", tptr);
                addrstr = abuf;
             } else {
-               snprintf (abuf, sizeof(addrbuf), "%s", ArgusGetV6Name (parser, (unsigned char *)addr));
+               snprintf (abuf, sizeof(abuf), "%s", ArgusGetV6Name (parser, (unsigned char *)addr));
                addrstr = abuf;
             }
 
