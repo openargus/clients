@@ -2290,7 +2290,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      }
 
                      case ARGUS_METER_DSR: {
-                        int offset = 1;
+//                      int offset = 1;
                         if (subtype & ARGUS_METER_PKTS_BYTES) {
                            canon->metric.src.appbytes = 0;
                            canon->metric.dst.appbytes = 0;
@@ -2301,21 +2301,21 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.src.bytes = ((unsigned char *)(dsr + 1))[1];
                                  canon->metric.dst.pkts  = ((unsigned char *)(dsr + 1))[2];
                                  canon->metric.dst.bytes = ((unsigned char *)(dsr + 1))[3];
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_SRCDST_SHORT:
                                  canon->metric.src.pkts  = (((unsigned short *)(dsr + 1))[0]);
                                  canon->metric.src.bytes = (((unsigned short *)(dsr + 1))[1]);
                                  canon->metric.dst.pkts  = (((unsigned short *)(dsr + 1))[2]);
                                  canon->metric.dst.bytes = (((unsigned short *)(dsr + 1))[3]);
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_SRCDST_INT:
                                  canon->metric.src.pkts  = (((unsigned int *)(dsr + 1))[0]);
                                  canon->metric.src.bytes = (((unsigned int *)(dsr + 1))[1]);
                                  canon->metric.dst.pkts  = (((unsigned int *)(dsr + 1))[2]);
                                  canon->metric.dst.bytes = (((unsigned int *)(dsr + 1))[3]);
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                               case ARGUS_SRCDST_LONGLONG:
 #if defined(LBL_ALIGN)
@@ -2330,47 +2330,47 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts  = (((unsigned long long *)(dsr + 1))[2]);
                                  canon->metric.dst.bytes = (((unsigned long long *)(dsr + 1))[3]);
 #endif
-                                 offset += 8;
+//                               offset += 8;
                                  break;
                               case ARGUS_SRC_SHORT:
                                  canon->metric.src.pkts  = (((unsigned short *)(dsr + 1))[0]);
                                  canon->metric.src.bytes = (((unsigned short *)(dsr + 1))[1]);
                                  canon->metric.dst.pkts  = 0;
                                  canon->metric.dst.bytes = 0;
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_SRC_INT:
                                  canon->metric.src.pkts  = (((unsigned int *)(dsr + 1))[0]);
                                  canon->metric.src.bytes = (((unsigned int *)(dsr + 1))[1]);
                                  canon->metric.dst.pkts  = 0;
                                  canon->metric.dst.bytes = 0;
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_SRC_LONGLONG:
                                  bcopy((char *)(dsr + 1), (char *)&canon->metric.src, 16);
                                  canon->metric.dst.pkts  = 0;
                                  canon->metric.dst.bytes = 0;
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                               case ARGUS_DST_SHORT:
                                  canon->metric.src.pkts  = 0;
                                  canon->metric.src.bytes = 0;
                                  canon->metric.dst.pkts  = (((unsigned short *)(dsr + 1))[0]);
                                  canon->metric.dst.bytes = (((unsigned short *)(dsr + 1))[1]);
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_DST_INT:
                                  canon->metric.src.pkts  = 0;
                                  canon->metric.src.bytes = 0;
                                  canon->metric.dst.pkts  = (((unsigned int *)(dsr + 1))[0]);
                                  canon->metric.dst.bytes = (((unsigned int *)(dsr + 1))[1]);
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_DST_LONGLONG:
                                  canon->metric.src.pkts  = 0;
                                  canon->metric.src.bytes = 0;
                                  bcopy((char *)(dsr + 1), (char *)&canon->metric.dst, 16);
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                            }
 
@@ -2384,7 +2384,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = ((unsigned char *)(dsr + 1))[3];
                                  canon->metric.dst.bytes    = ((unsigned char *)(dsr + 1))[4];
                                  canon->metric.dst.appbytes = ((unsigned char *)(dsr + 1))[5];
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_SRCDST_SHORT:
                                  canon->metric.src.pkts     = (((unsigned short *)(dsr + 1))[0]);
@@ -2393,7 +2393,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = (((unsigned short *)(dsr + 1))[3]);
                                  canon->metric.dst.bytes    = (((unsigned short *)(dsr + 1))[4]);
                                  canon->metric.dst.appbytes = (((unsigned short *)(dsr + 1))[5]);
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_SRCDST_INT:
                                  canon->metric.src.pkts     = (((unsigned int *)(dsr + 1))[0]);
@@ -2402,7 +2402,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = (((unsigned int *)(dsr + 1))[3]);
                                  canon->metric.dst.bytes    = (((unsigned int *)(dsr + 1))[4]);
                                  canon->metric.dst.appbytes = (((unsigned int *)(dsr + 1))[5]);
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                               case ARGUS_SRCDST_LONGLONG:
 #if defined(LBL_ALIGN)
@@ -2415,7 +2415,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.bytes    = (((long long *)(dsr + 1))[4]);
                                  canon->metric.dst.appbytes = (((long long *)(dsr + 1))[5]);
 #endif
-                                 offset += 8;
+//                               offset += 8;
                                  break;
                               case ARGUS_SRC_BYTE:
                                  canon->metric.src.pkts     = (((unsigned char *)(dsr + 1))[0]);
@@ -2424,7 +2424,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = 0;
                                  canon->metric.dst.bytes    = 0;
                                  canon->metric.dst.appbytes = 0;
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_SRC_SHORT:
                                  canon->metric.src.pkts     = (((unsigned short *)(dsr + 1))[0]);
@@ -2433,7 +2433,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = 0;
                                  canon->metric.dst.bytes    = 0;
                                  canon->metric.dst.appbytes = 0;
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_SRC_INT:
                                  canon->metric.src.pkts     = (((unsigned int *)(dsr + 1))[0]);
@@ -2442,14 +2442,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = 0;
                                  canon->metric.dst.bytes    = 0;
                                  canon->metric.dst.appbytes = 0;
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_SRC_LONGLONG:
                                  bcopy((char *)(dsr + 1), (char *)&canon->metric.src, 24);
                                  canon->metric.dst.pkts     = 0;
                                  canon->metric.dst.bytes    = 0;
                                  canon->metric.dst.appbytes = 0;
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                               case ARGUS_DST_BYTE:
                                  canon->metric.src.pkts     = 0;
@@ -2458,7 +2458,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = (((unsigned char *)(dsr + 1))[0]);
                                  canon->metric.dst.bytes    = (((unsigned char *)(dsr + 1))[1]);
                                  canon->metric.dst.appbytes = (((unsigned char *)(dsr + 1))[2]);
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_DST_SHORT:
                                  canon->metric.src.pkts     = 0;
@@ -2467,7 +2467,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = (((unsigned short *)(dsr + 1))[0]);
                                  canon->metric.dst.bytes    = (((unsigned short *)(dsr + 1))[1]);
                                  canon->metric.dst.appbytes = (((unsigned short *)(dsr + 1))[2]);
-                                 offset++;
+//                               offset++;
                                  break;
                               case ARGUS_DST_INT:
                                  canon->metric.src.pkts     = 0;
@@ -2476,14 +2476,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  canon->metric.dst.pkts     = (((unsigned int *)(dsr + 1))[0]);
                                  canon->metric.dst.bytes    = (((unsigned int *)(dsr + 1))[1]);
                                  canon->metric.dst.appbytes = (((unsigned int *)(dsr + 1))[2]);
-                                 offset += 2;
+//                               offset += 2;
                                  break;
                               case ARGUS_DST_LONGLONG:
                                  canon->metric.src.pkts     = 0;
                                  canon->metric.src.bytes    = 0;
                                  canon->metric.src.appbytes = 0;
                                  bcopy((char *)(dsr + 1), (char *)&canon->metric.dst, 24);
-                                 offset += 4;
+//                               offset += 4;
                                  break;
                            }
                         }

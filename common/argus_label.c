@@ -1478,7 +1478,8 @@ RaReadFlowLabels (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
    char *filter = NULL, *label = NULL, *color = NULL;
    char *ptr, *end;
 
-   int retn = 1, linenum = 0;
+   int retn = 1;
+   int linenum = 0;
    FILE *fd =  NULL;
 
    if (labeler != NULL) {
@@ -1492,7 +1493,6 @@ RaReadFlowLabels (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
       if ((fd = fopen (file, "r")) != NULL) {
          while ((ptr = fgets (strbuf, MAXSTRLEN, fd)) != NULL) {
             linenum++;
-
             if (*ptr) while (isspace((int)*ptr)) ptr++;
 
             if (*ptr && (*ptr != '\n') && (*ptr != '!')) {
@@ -3461,7 +3461,8 @@ int
 RaReadLocalityConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, char *file)
 {
    char strbuf[MAXSTRLEN], *str = strbuf, *ptr;
-   int retn = 1, linenum = 0, found = 0;
+   int retn = 1, found = 0;
+   int linenum = 0;
    FILE *fd =  NULL;
 
    if (labeler != NULL) {

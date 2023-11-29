@@ -83,6 +83,8 @@ int argus_get_lineno (void);
 FILE *argus_get_in (void);
 FILE *argus_get_out (void);
 
+int xdtoi(int);
+
 static YY_BUFFER_STATE in_buffer;
 #else
 static char *in_buffer;
@@ -395,8 +397,7 @@ yywrap()
 
 /* Hex digit to integer. */
 int
-xdtoi(c)
-int c;
+xdtoi(int c)
 {
    if (isdigit((int)c))
       return c - '0';

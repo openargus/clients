@@ -1715,7 +1715,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                         if (type) {
                            unsigned char value = 0, tmp = 0, *ptr;
-                           int max, i, cnt;
+                           int max, i;
+//                         int cnt;
 
                            dsr = (struct ArgusDSRHeader *)dsrptr;
                            dsr->type    = ARGUS_PSIZE_DSR;
@@ -1754,8 +1755,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            if (dsr->subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
                               ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
 
-                              for (cnt = 0, i = 0; i < 8; i++)
-                                 cnt += psize->src.psize[i];
+//                            for (cnt = 0, i = 0; i < 8; i++)
+//                               cnt += psize->src.psize[i];
 
                               dsr->subtype |= ARGUS_PSIZE_HISTO;
 
@@ -1794,8 +1795,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            if (dsr->subtype & ARGUS_PSIZE_DST_MAX_MIN) {
                               ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
 
-                              for (cnt = 0, i = 0; i < 8; i++)
-                                 cnt += psize->dst.psize[i];
+//                            for (cnt = 0, i = 0; i < 8; i++)
+//                               cnt += psize->dst.psize[i];
 
                               dsr->subtype |= ARGUS_PSIZE_HISTO;
 
@@ -1873,7 +1874,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                         unsigned char value = 0, tmp = 0, *ptr;
                         unsigned int fdist = 0;
-                        int max, i, cnt;
+                        int max, i;
+//                      int cnt;
 
                         *dsrptr++ = *(unsigned int *)dsr;
                         tjit->hdr.argus_dsrvl8.len = 1;
@@ -1890,8 +1892,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->src.act.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->src.act.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->src.act.dist_union.fdist[i])
@@ -1946,8 +1948,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->src.idle.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->src.idle.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->src.idle.dist_union.fdist[i])
@@ -2002,8 +2004,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->dst.act.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->dst.act.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->dst.act.dist_union.fdist[i])
@@ -2058,8 +2060,8 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->dst.idle.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->dst.idle.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->dst.idle.dist_union.fdist[i])
@@ -2785,7 +2787,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                         if (type) {
                            unsigned char value = 0, tmp = 0, *ptr;
-                           int max, i, cnt;
+                           int max, i;
+//                         int cnt;
 
                            dsr = (struct ArgusDSRHeader *)dsrptr;
                            dsr->type    = ARGUS_PSIZE_DSR;
@@ -2824,8 +2827,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            if (dsr->subtype & ARGUS_PSIZE_SRC_MAX_MIN) {
                               ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
 
-                              for (cnt = 0, i = 0; i < 8; i++)
-                                 cnt += psize->src.psize[i];
+//                            for (cnt = 0, i = 0; i < 8; i++)
+//                               cnt += psize->src.psize[i];
 
                               dsr->subtype |= ARGUS_PSIZE_HISTO;
 
@@ -2864,8 +2867,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            if (dsr->subtype & ARGUS_PSIZE_DST_MAX_MIN) {
                               ptr = (unsigned char *)(dsr + dsr->argus_dsrvl8.len);
 
-                              for (cnt = 0, i = 0; i < 8; i++)
-                                 cnt += psize->dst.psize[i];
+//                            for (cnt = 0, i = 0; i < 8; i++)
+//                               cnt += psize->dst.psize[i];
 
                               dsr->subtype |= ARGUS_PSIZE_HISTO;
 
@@ -2943,7 +2946,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                         unsigned char value = 0, tmp = 0, *ptr;
                         unsigned int fdist = 0;
-                        int max, i, cnt;
+                        int max, i;
+//                      int cnt;
 
                         *dsrptr++ = *(unsigned int *)dsr;
                         tjit->hdr.argus_dsrvl8.len = 1;
@@ -2960,8 +2964,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->src.act.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->src.act.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->src.act.dist_union.fdist[i])
@@ -3016,8 +3020,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->src.idle.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->src.idle.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->src.idle.dist_union.fdist[i])
@@ -3072,8 +3076,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->dst.act.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->dst.act.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->dst.act.dist_union.fdist[i])
@@ -3128,8 +3132,8 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               case ARGUS_HISTO_EXP: {
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
-                                 for (cnt = 0, i = 0; i < 8; i++)
-                                    cnt += jitter->dst.idle.dist_union.fdist[i];
+//                               for (cnt = 0, i = 0; i < 8; i++)
+//                                  cnt += jitter->dst.idle.dist_union.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
                                     if (max < jitter->dst.idle.dist_union.fdist[i])

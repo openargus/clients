@@ -158,6 +158,10 @@ struct enamemem bytestringtable[HASHNAMESIZE];
 struct protoidmem protoidtable[HASHNAMESIZE];
 struct cnamemem ipv6cidrtable[HASHNAMESIZE];
 
+u_int getnetnumber(u_int);
+u_int ipaddrtonetmask(u_int);
+char *copy_argv(char **);
+
 struct enamemem *check_emem(struct enamemem *table, const u_char *ep);
 struct enamemem *lookup_emem(struct enamemem *table, const u_char *ep);
 
@@ -2771,7 +2775,6 @@ ArgusParseAliasFile(char *file)
          if ((fd = fopen(file, "r")) != NULL) {
             char *strbuf = NULL,  *str = NULL, *optarg = NULL;
             char *srcid = NULL, *alias = NULL;
-            int lines = 0;
 
             if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
                ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
@@ -2779,7 +2782,6 @@ ArgusParseAliasFile(char *file)
             retn = 1;
 
             while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               lines++;
                str = strbuf;
                while (*str && isspace((int)*str))
                    str++;
@@ -2892,7 +2894,6 @@ ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
       if (stat(file, &statbuf) >= 0) {
          if ((fd = fopen(file, "r")) != NULL) {
             char *str;
-            int lines = 0;
             ArgusWellKnownTag = 0;
 
             if ((str = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
@@ -2900,7 +2901,6 @@ ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
 
             while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
                ArgusParseWiresharkManufEntry (parser, str);
-               lines++;
             }
 
             if (str != NULL)
@@ -5631,6 +5631,7 @@ void ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser);
 void
 ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser)
 {
+/*
    int i, dtime = 0, agg = 0, flow = 0, attr = 0,  metrics = 0, trans = 0;
    int mac = 0, encaps = 0, label = 0, state = 0, igmp = 0, psize = 0;
    int vlan = 0, mpls = 0, cor = 0, user = 0, tcp = 0, sfile = 0;
@@ -5773,6 +5774,7 @@ ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser)
          }
       }
    }
+*/
 }
 
 int ArgusPrintRecordHeader (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -11019,7 +11021,7 @@ isis_print_id(const u_int8_t *cp, int id_len)
 void
 ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *addr, int objlen, unsigned char masklen, int len, int dir)
 {
-   char addrbuf[128], abuf[64], *addrstr = NULL;
+   char addrbuf[256], abuf[128], *addrstr = NULL;
    char *dirstr, *dptr = NULL;
 
    switch (dir) {
@@ -22088,8 +22090,7 @@ savestr(const char *str)
  * Copy arg vector into a new argus_strbuffer, concatenating arguments with spaces.
  */
 char *
-copy_argv(argv)
-char **argv;
+copy_argv(char **argv)
 {
    char **p;
    int len = 0;
@@ -22136,8 +22137,7 @@ u_int *addr;
  */
 
 u_int
-ipaddrtonetmask(addr)
-u_int addr;
+ipaddrtonetmask(u_int addr)
 {
    if (IN_CLASSA (addr)) return IN_CLASSA_NET;
    if (IN_CLASSB (addr)) return IN_CLASSB_NET;
@@ -22148,8 +22148,7 @@ u_int addr;
 
 
 u_int
-getnetnumber(addr)
-u_int addr;
+getnetnumber(u_int addr)
 {
    if (IN_CLASSA (addr)) return (addr >> 24 );
    if (IN_CLASSB (addr)) return (addr >> 16 );
@@ -32292,15 +32291,12 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
          }
       } else
       if (strchr(optarg, '.')) {
-         int done = 0;
-
 #if defined(HAVE_INET_ATON)
          struct in_addr pin;
  
          if (inet_aton(optarg, &pin)) {
             bcopy(&pin.s_addr, (char *)buf, 4);
             slen = 4;
-            done++;
          }
 #else 
 #if defined(HAVE_GETADDRINFO)
@@ -32319,7 +32315,6 @@ ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
                      bcopy ((char *)&sa->sin_addr, (char *)buf, 4);
                      slen = 4;
                      type = ARGUS_TYPE_IPV4;
-                     done++;
                      break;
                   }
                }
@@ -32828,7 +32823,6 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
       char *RaNewFormat = NULL;
 
       if ((soption = parser->RaPrintOptionStrings[i]) != NULL) {
-         int found = 0;
          RaOptionOperation = RA_ADD_OPTION;
          RaOptionRank = -1;
          if ((*soption == '+') || (*soption == '-')) {
@@ -32960,7 +32954,6 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                            break;
                         }
                      }
-                     found++;
                      break;
                   }
                }
