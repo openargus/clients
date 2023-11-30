@@ -197,7 +197,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 {
    struct ArgusModeStruct *mode = NULL, *pmode = NULL;;
    struct timeval tvpbuf, *tvp = &tvpbuf;
-   int retn, cnt, ind = 0, x, y, count = 0, shiftcount = 0, start;
+   int retn, ind = 0, x, y;
+   int shiftcount = 0, start;
    unsigned short i, value, startport = 0;
    char *ptr = NULL;
 
@@ -440,7 +441,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 */
          for (i = startport, start = startport; i < RA_MAX_PORT; i++) {
             if (shiftcount > 5) {
-               cnt = 0;
                shiftcount = 0;
                y = start;
                bzero ((char *) RaPortTemp, sizeof(RaPortTemp));
@@ -449,7 +449,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      if (RaPortRandom[y]) {
                         RaPortTemp[x] = RaPortRandom[y];
                         RaPortRandom[y] = 0;
-                        cnt++;
                      } else
                         break;
                }
@@ -480,7 +479,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if ((value = RaPortRandom[ind])) {
                RaPortMapping[i] = value;
                RaPortRandom[ind] = 0;
-               count++;
             }
          }
 

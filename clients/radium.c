@@ -1024,12 +1024,10 @@ RadiumParseSrcidConversionFile (char *file)
          if ((fd = fopen(file, "r")) != NULL) {
             char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
             char *srcid = NULL, *convert = NULL;
-            int lines = 0;
 
             retn = 1;
 
             while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               lines++;
                str = strbuf;
                while (*str && isspace((int)*str))
                    str++;
