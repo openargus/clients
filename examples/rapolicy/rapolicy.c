@@ -415,8 +415,7 @@ char *RaParseErrorStr [POLICYERRORNUM] = {
 int
 RaPolicyParseResourceFile (struct ArgusParserStruct *parser, char *file, struct RaPolicyPolicyStruct **policy)
 {
-   int retn = 0;
-   int i, len, done = 0, linenum = 0;
+   int retn = 0, i, len, done = 0;
    struct RaPolicyPolicyStruct *pol;
    char strbuf[MAXSTRLEN], *str = strbuf, *optarg;
    FILE *fd;
@@ -424,7 +423,7 @@ RaPolicyParseResourceFile (struct ArgusParserStruct *parser, char *file, struct 
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
          while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-            done = 0;  linenum++;
+            done = 0;
             while (*str && isspace((int)*str))
                 str++;
 

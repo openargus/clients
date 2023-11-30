@@ -676,7 +676,6 @@ PrintHistograms(struct PerFlowHistoData *data)
       if (RaHistoRecords == NULL)
          continue;
 
-      cum = 0;
       class = 1;
       start = 999999999;
       end = 0;
@@ -972,7 +971,6 @@ PrintHistograms(struct PerFlowHistoData *data)
                            memmove(buf, sptr, slen);
                         }
 
-                        cum    += freq;
                         relcum += rel;
 
                         if (i > RaHistoConfig->RaHistoBins) {

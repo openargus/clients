@@ -1117,7 +1117,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
    struct ArgusHashStruct *hstruct = NULL;
    struct ArgusProbeStruct *probe = NULL, *mpc = NULL;
-   int count, i, found = 0, mpccachemiss = 0;
+   int count, i, found = 0;
    struct ArgusFlow *flow = NULL;
 
    while (ArgusParser->Pauseflag) {
@@ -1163,7 +1163,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      found++;
                   }
 */
-                  mpccachemiss++;
                }
 
                ArgusAddToQueue (ArgusProbeQueue, &mpc->qhdr, ARGUS_LOCK);

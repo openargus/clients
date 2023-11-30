@@ -271,11 +271,11 @@ static int RaGenMinSsf = 0;
 static int RaGenMaxSsf = 0;
 static int RaGenAuthLocalhost = 1;
 
-static struct timeval RabinsTimeoutAbs; 
-static int RabinsOldestIndex = 0;
+//static struct timeval RabinsTimeoutAbs; 
+//static int RabinsOldestIndex = 0;
 
-static double RaCurrentBinStartTime = 0;
-static double RaCurrentBinLastTime = 0;
+//static double RaCurrentBinStartTime = 0;
+//static double RaCurrentBinLastTime = 0;
 
 void clearRaGenConfiguration (void);
 //const static unsigned int ArgusClientMaxQueueDepth = 500000;
@@ -1161,6 +1161,8 @@ ArgusStopGenerator(struct ArgusGenerator *gen)
    gen->status |= ARGUS_STOP;
 }
 
+void ArgusAdjustRecordTime(struct ArgusParserStruct *, struct ArgusQueueStruct *);
+
 void
 ArgusAdjustRecordTime(struct ArgusParserStruct *parser, struct ArgusQueueStruct *queue)
 {
@@ -1417,7 +1419,7 @@ ArgusProcessStatusRecords(void *param)
 	             double et = rbps->array[0]->etime.tv_sec;
 
 	             if ((t1 >= st) && (t1 < et)) {
-                        ArgusAddToQueue(gen->output->ArgusOutputList, (struct ArgusListRecord *) tns, ARGUS_LOCK);
+                        ArgusAddToQueue((struct ArgusQueueStruct *) gen->output->ArgusOutputList, (struct ArgusQueueHeader *) tns, ARGUS_LOCK);
                         ns->bins->array[0] = NULL;
 		     }
 
@@ -2008,12 +2010,10 @@ RaGenParseSrcidConversionFile (char *file)
          if ((fd = fopen(file, "r")) != NULL) {
             char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
             char *srcid = NULL, *convert = NULL;
-            int lines = 0;
 
             retn = 1;
 
             while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               lines++;
                str = strbuf;
                while (*str && isspace((int)*str))
                    str++;
@@ -3212,6 +3212,7 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
  * process everything based on realtime processing.
  *
  */
+/*
 static void
 RabinsSetTimeout(struct RaBinProcessStruct *rbps, struct timeval *timer,
                  const struct timeval * const interval)
@@ -3235,4 +3236,4 @@ RabinsCheckTimeout(const struct ArgusParserStruct * const parser,
 
    return !!timercmp(&parser->ArgusRealTime, timer, >);
 }
-
+*/

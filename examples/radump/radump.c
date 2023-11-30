@@ -292,7 +292,7 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    int type, proto, process = 0;
    struct ArgusDataStruct *user = NULL;
    u_char *bp = NULL;
-   int slen = 0, done = 0;
+   int slen = 0;
 
    if ((user = (struct ArgusDataStruct *)argus->dsrs[ind]) == NULL)
       return (ArgusBuf);
@@ -333,7 +333,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            igmp_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -343,7 +342,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            pim_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -366,7 +364,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            pim_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -380,7 +377,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                   if (ind == ARGUS_DSTUSERDATA_INDEX) {
                      arp_dst_print(parser, argus);
                   }
-                  done++;
                   break;
                }
 /*
@@ -404,7 +400,6 @@ struct ArgusMacFlow {
                         }
                      }
                   }
-                  done++;
                   break;
                }
             }
@@ -421,7 +416,6 @@ struct ArgusMacFlow {
                   if (ind == ARGUS_DSTUSERDATA_INDEX) {
                      arp_dst_print(parser, argus);
                   }
-                  done++;
                   break;
             }
          }

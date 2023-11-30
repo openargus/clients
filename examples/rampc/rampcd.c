@@ -871,7 +871,6 @@ ArgusClientTimeout ()
             if (rbps->array != NULL) {
                if ((bin = rbps->array[rbps->index]) != NULL) {
                   struct ArgusAggregatorStruct *agg = bin->agg;
-                  int tcnt = 0;
 
                   if (ArgusParser->ArgusGenerateManRecords) {
                      struct ArgusRecordStruct *man =
@@ -914,7 +913,6 @@ ArgusClientTimeout ()
                            ArgusDeleteRecordStruct(ArgusParser, argus);
 
                         ArgusParser->ns = NULL;
-                        tcnt += cnt;
                      }
                      agg = agg->nxt;
                   }
@@ -2034,7 +2032,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
    if (ArgusParser->RaParseDone || ((ArgusParser->timeout.tv_sec > 0) || (ArgusParser->timeout.tv_usec > 0))) {
       struct ArgusRecordStruct *ns;
       struct timeval lasttime;
-      int count, deleted = 0;
+      int count;
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&queue->lock);
@@ -2055,7 +2053,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
 
                if (!(ns->status & ARGUS_NSR_STICKY)) {
                   ArgusDeleteRecordStruct (ArgusParser, ns);
-                  deleted++;
                } else 
                   ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
 
@@ -2499,12 +2496,10 @@ RadiumParseSrcidConversionFile (char *file)
          if ((fd = fopen(file, "r")) != NULL) {
             char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
             char *srcid = NULL, *convert = NULL;
-            int lines = 0;
 
             retn = 1;
 
             while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               lines++;
                str = strbuf;
                while (*str && isspace((int)*str))
                    str++;

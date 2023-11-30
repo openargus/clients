@@ -70,14 +70,13 @@ int ArgusTotalMatches = 0;
 int
 ArgusParseGrepExpressionFile(struct ArgusParserStruct *parser, char *file) {
    char buffer [ARGUS_GREP_STRLEN];
-   int eop = 0, retn = 0, linenum = 0;
+   int eop = 0, retn = 0;
    char *sptr = NULL, *eptr = NULL;
    FILE *fd;
 
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
          while (fgets (buffer, ARGUS_GREP_STRLEN, fd)) {
-            linenum++;
             if ((*buffer != '#') && (*buffer != '\n') && (*buffer != '!') && strlen(buffer)) {
                int slen = strlen(buffer);
 

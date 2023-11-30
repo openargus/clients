@@ -2581,7 +2581,7 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
    if (process) {
       struct ArgusRecordStruct *ns;
       struct timeval lasttime;
-      int count, modified = 0, deleted = 0;
+      int count, deleted = 0;
       unsigned int status = 0;
 
       if (ArgusTimeoutQueue == NULL)
@@ -2657,7 +2657,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                         }
                         ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
                         ns->qhdr.lasttime = lasttime;
-                        modified++;
                      }
                      break;
                   }
@@ -2672,7 +2671,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
 //                   ArgusProcessingComplete = 1;
 //                   RaProcessThisRecord (ArgusParser, cns);
 //                   ArgusProcessingComplete = 0;
-                     modified++;
                      break;
                   }
 
@@ -2684,7 +2682,6 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue, int type)
                   case ARGUS_PROCESS_COMPLETE: {
                      RaProcessThisRecord (ArgusParser, ns);
                      ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
-                     modified++;
                      break;
                   }
 

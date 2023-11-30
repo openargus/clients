@@ -56,10 +56,9 @@ RabootpParseQueryString(const struct QueryOptsStruct * const qopts,
 {
    char *str1, *token;
    char *saveptr1;
-   int j;
    int err;
 
-   for (j = 1, str1 = in; ; j++, str1 = NULL) {
+   for (str1 = in; ; str1 = NULL) {
        token = strtok_r(str1, ",", &saveptr1);
        if (token == NULL)
            break;
