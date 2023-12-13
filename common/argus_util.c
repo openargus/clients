@@ -30415,18 +30415,18 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
       free (input->servname);
       input->servname = NULL;
    }
-
+/*
    if (input->hostname  != NULL) {
       free (input->hostname);
       input->hostname = NULL;
    }
-
 #if HAVE_GETADDRINFO
    if (input->host != NULL) {
       freeaddrinfo(input->host);
       input->host = NULL;
    }
 #endif
+*/
 
    if (input->fd > 0) {
       if (close (input->fd))
@@ -30440,7 +30440,6 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
          parser->ArgusReliableConnection = 0;
    }
  
-/*
    if (!(parser->RaShutDown) && (parser->ArgusReliableConnection)) {
       if (input->qhdr.queue != NULL) {
          ArgusRemoveFromQueue(input->qhdr.queue, &input->qhdr, ARGUS_LOCK);
@@ -30449,7 +30448,6 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
          parser->ArgusRemotes--;
       }
    }
-*/
 
    if (input->ArgusReadBuffer != NULL) {
       ArgusFree(input->ArgusReadBuffer);
@@ -31230,6 +31228,8 @@ ArgusDeleteServerList (struct ArgusParserStruct *parser)
 
    while ((prv = input) != NULL) {
       ArgusCloseInput(parser, input);
+      if (input->hostname != NULL)
+         free (input->hostname);
       input = (struct ArgusInput *)input->qhdr.nxt; 
       ArgusFree(prv);
    }

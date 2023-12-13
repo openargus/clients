@@ -1050,8 +1050,12 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
 
             input->portnum = ntohs(portnum);
 
-         } else
+         } else {
+            if (!ArgusParser->ArgusPortNum)
+               ArgusParser->ArgusPortNum = input->portnum;
+
             portnum = htons(input->portnum);
+         }
 
          break;
       }
@@ -1086,8 +1090,10 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
                   portnum = htons(ARGUS_DEFAULTCISCOPORT);
             } else
                portnum = htons(ArgusParser->ArgusPortNum);
-         } else
+         } else {
+            ArgusParser->ArgusPortNum = input->portnum;
             portnum = htons(input->portnum);
+         } 
 
          bzero ((char *)&argus, sizeof(argus));
          argus.hdr.type          = ARGUS_MAR | ARGUS_NETFLOW | ARGUS_AFLOW | ARGUS_VERSION;
