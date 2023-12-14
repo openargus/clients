@@ -235,13 +235,11 @@ main (int argc, char **argv)
       struct ArgusInput *input;
       struct ArgusFileInput *file;
 
-      input = ArgusMalloc(sizeof(*input));
-      if (input == NULL)
-         ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
       while (ArgusParser->ArgusPassNum) {
-         file = ArgusParser->ArgusInputFileList;
+         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
+         file = ArgusParser->ArgusInputFileList;
 
          while (file && ArgusParser->eNflag) {
             if (strcmp (file->filename, "-")) {
@@ -326,11 +324,8 @@ main (int argc, char **argv)
 #endif
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
-            ArgusCloseInput(ArgusParser, input);
-            if (input->filename != NULL) {
-               free(input->filename);
-               input->filename = NULL;
-            }
+            ArgusDeleteInput(ArgusParser, input);
+
             file = (struct ArgusFileInput *)file->qhdr.nxt;
 
             /* Only free items from the file list during the last pass over
@@ -424,8 +419,7 @@ extern void * ArgusTimeoutProcess (void *);
                      ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
 
                      if (ArgusParser->RaPollMode) {
-                        ArgusCloseInput (ArgusParser, addr);
-                        ArgusFree(addr);
+                        ArgusDeleteInput (ArgusParser, addr);
                      } else {
                         ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
                         ArgusParser->ArgusHostsActive++;

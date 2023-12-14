@@ -701,33 +701,8 @@ ArgusShutDown (int sig)
       if (ArgusParser->ArgusActiveHosts != NULL) {
          struct ArgusQueueStruct *queue =  ArgusParser->ArgusActiveHosts;
          struct ArgusInput *input = NULL;
-#if defined(ARGUS_THREADS)
-         void *retn;
-#endif
          while ((input = (void *)ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-            ArgusCloseInput(ArgusParser, input);
-            if (input->hostname != NULL)
-               free (input->hostname);
-            if (input->filename != NULL)
-               free (input->filename);
-            if (input->user != NULL)
-               free (input->user);
-            if (input->pass != NULL)
-               free (input->pass);
-#if HAVE_GETADDRINFO
-            if (input->host != NULL)
-               freeaddrinfo (input->host);
-#endif
-#if defined(ARGUS_THREADS)
-            pthread_mutex_destroy(&input->lock);
-#endif
-#if defined(ARGUS_THREADS) 
-            if (input->tid != (pthread_t) 0)
-               pthread_join(input->tid, &retn);
-#endif
-
-            ArgusDeleteQueue(input->queue);
-            input->queue = NULL;
+            ArgusDeleteInput(ArgusParser, input);
             ArgusFree(input);
          }
 
@@ -741,25 +716,7 @@ ArgusShutDown (int sig)
  
          while (queue->count > 0) {
             if ((input = (struct ArgusInput *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-               ArgusCloseInput(ArgusParser, input);
-               if (input->hostname != NULL)
-                  free (input->hostname);
-               if (input->filename != NULL)
-                  free (input->filename);
-               if (input->user != NULL)
-                  free (input->user);
-               if (input->pass != NULL)
-                  free (input->pass);
-#if HAVE_GETADDRINFO
-               if (input->host != NULL)
-                  freeaddrinfo (input->host);
-#endif
-#if defined(ARGUS_THREADS)
-               pthread_mutex_destroy(&input->lock);
-#endif
-               ArgusDeleteQueue(input->queue);
-               input->queue = NULL;
-               ArgusFree(input);
+               ArgusDeleteInput(ArgusParser, input);
             }
          }
          ArgusDeleteQueue(queue);
@@ -30408,32 +30365,14 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
    if (parser->Sflag)
       ArgusWriteConnection (parser, input, (u_char *)"DONE: ", strlen("DONE: "));
 
-   input->ArgusReadSocketCnt = 0;
-   input->ArgusReadSocketSize = 0;
-
-   if (input->servname  != NULL) {
-      free (input->servname);
-      input->servname = NULL;
-   }
-/*
-   if (input->hostname  != NULL) {
-      free (input->hostname);
-      input->hostname = NULL;
-   }
-#if HAVE_GETADDRINFO
-   if (input->host != NULL) {
-      freeaddrinfo(input->host);
-      input->host = NULL;
-   }
-#endif
-*/
-
    if (input->fd > 0) {
       if (close (input->fd))
          ArgusLog (LOG_ERR, "ArgusCloseInput: close error %s", strerror(errno));
 
       input->fd = -1;
    }
+
+   input->ArgusReadSocketCnt = 0;
 
    if ((parser->eNflag >= 0) && (parser->ArgusTotalRecords > parser->eNflag)) {
       if (parser->ArgusReliableConnection)
@@ -30449,10 +30388,59 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
       }
    }
 
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&input->lock);
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusCloseInput(0x%x) done\n", input);
+#endif
+}
+
+
+void
+ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
+{
+#if defined(ARGUS_THREADS)
+   void *retn;
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusDeleteInput(0x%x) closing", input);
+#endif
+
+   ArgusCloseInput(parser, input);
+
+   if (input->hostname != NULL)
+      free (input->hostname);
+   if (input->servname  != NULL)
+      free (input->servname);
+   if (input->filename != NULL)
+      free (input->filename);
+   if (input->user != NULL)
+      free (input->user);
+   if (input->pass != NULL)
+      free (input->pass);
+#if HAVE_GETADDRINFO
+   if (input->host != NULL)
+      freeaddrinfo (input->host);
+#endif
+#if defined(ARGUS_THREADS)
+   pthread_mutex_destroy(&input->lock);
+#endif
+#if defined(ARGUS_THREADS)
+   if (input->tid != (pthread_t) 0)
+      pthread_join(input->tid, &retn);
+#endif 
+   
+   ArgusDeleteQueue(input->queue);
+   input->queue = NULL;
+
    if (input->ArgusReadBuffer != NULL) {
       ArgusFree(input->ArgusReadBuffer);
       input->ArgusReadBuffer = NULL;
-   } 
+      input->ArgusReadSocketSize = 0;
+   }
    if (input->ArgusConvBuffer != NULL) {
      ArgusFree(input->ArgusConvBuffer);
      input->ArgusConvBuffer = NULL;
@@ -30465,14 +30453,14 @@ ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
    }
 #endif /* ARGUS_SASL */
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&input->lock);
-#endif
+   ArgusFree(input);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (3, "ArgusCloseInput(0x%x) done\n", input);
+   ArgusDebug (3, "ArgusDeleteInput(%p) done\n", input);
 #endif
 }
+
+
 
 #define HEXDUMP_BYTES_PER_LINE 16
 #define HEXDUMP_SHORTS_PER_LINE (HEXDUMP_BYTES_PER_LINE / 2)
@@ -31227,11 +31215,8 @@ ArgusDeleteServerList (struct ArgusParserStruct *parser)
    struct ArgusInput *input = parser->ArgusRemoteServerList, *prv;
 
    while ((prv = input) != NULL) {
-      ArgusCloseInput(parser, input);
-      if (input->hostname != NULL)
-         free (input->hostname);
       input = (struct ArgusInput *)input->qhdr.nxt; 
-      ArgusFree(prv);
+      ArgusDeleteInput(parser, prv);
    }
 
    parser->ArgusRemoteServerList = NULL;

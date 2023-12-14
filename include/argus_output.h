@@ -255,6 +255,7 @@ void ArgusDeleteSocket (struct ArgusOutputStruct *, struct ArgusClientData *);
 
 extern void ArgusLoadList(struct ArgusListStruct *, struct ArgusListStruct *);
 extern void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
+extern void ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 
 extern struct ArgusOutputStruct *ArgusOutputTask;
 

@@ -401,10 +401,6 @@ ArgusProcessData (void *arg)
          RaCursesStopTime.tv_sec   = 0;
          RaCursesStopTime.tv_usec  = 0;
 
-         input = ArgusMalloc(sizeof(*input));
-         if (input == NULL)
-            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
          /* Process the baseline files first */
          if ((!(parser->status & ARGUS_BASELINE_LIST_PROCESSED)) && ((file = parser->ArgusBaselineList) != NULL))
             ArgusLoadBaselineFiles(parser);
@@ -414,6 +410,9 @@ ArgusProcessData (void *arg)
             ArgusProcessingSample = 1;
 
             while (file && parser->eNflag) {
+               if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+                  ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
                switch (file->type) {
 #if defined(ARGUS_MYSQL)
                   case ARGUS_DBASE_SOURCE: {
@@ -486,16 +485,13 @@ ArgusProcessData (void *arg)
                }
                RaArgusInputComplete(input);
                ArgusParser->ArgusCurrentInput = NULL;
-               ArgusCloseInput(ArgusParser, input);
+               ArgusDeleteInput(ArgusParser, input);
 
                file = (struct ArgusFileInput *)file->qhdr.nxt;
             }
-            parser->ArgusCurrentInput = NULL;
             parser->status |= ARGUS_FILE_LIST_PROCESSED;
          }
-/*
-         ArgusFree(input);
-*/
+
          input = NULL;
 
 // Then process the realtime stream input, if any
@@ -4252,95 +4248,94 @@ ArgusLoadBaselineFiles (struct ArgusParserStruct *parser)
    if ((file = parser->ArgusBaselineList) != NULL) {
       ArgusProcessingSample = 0;
 
-      input = ArgusMalloc(sizeof(*input));
-      if (input == NULL)
-         ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
       while (file && parser->eNflag) {
-               ArgusProcessingBaseline = 1;
-               switch (file->type & 0x17FF) {
+         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
+         ArgusProcessingBaseline = 1;
+         switch (file->type & 0x17FF) {
 #if defined(ARGUS_MYSQL)
-                  case ARGUS_DBASE_SOURCE: {
-                     if (RaTables == NULL)
-                        if ((RaTables = ArgusCalloc(sizeof(void *), 2)) == NULL)
-                           ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+            case ARGUS_DBASE_SOURCE: {
+               if (RaTables == NULL)
+                  if ((RaTables = ArgusCalloc(sizeof(void *), 2)) == NULL)
+                     ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
-                     RaTables[0] = strdup(file->filename);
-                     ArgusReadSQLTables (parser);
-                     ArgusFree(RaTables);
-                     RaTables = NULL;
-                     break;
-                  }
+               RaTables[0] = strdup(file->filename);
+               ArgusReadSQLTables (parser);
+               ArgusFree(RaTables);
+               RaTables = NULL;
+               break;
+            }
 #endif
-                  case ARGUS_DATA_SOURCE:
-                  case ARGUS_V2_DATA_SOURCE:
-                  case ARGUS_NAMED_PIPE_SOURCE:
-                  case ARGUS_DOMAIN_SOURCE:
-                  case ARGUS_BASELINE_SOURCE:
-                  case ARGUS_DATAGRAM_SOURCE:
-                  case ARGUS_SFLOW_DATA_SOURCE:
-                  case ARGUS_JFLOW_DATA_SOURCE:
-                  case ARGUS_CISCO_DATA_SOURCE:
-                  case ARGUS_IPFIX_DATA_SOURCE:
-                  case ARGUS_FLOW_TOOLS_SOURCE: {
-                     ArgusInputFromFile(input, file);
-                     parser->ArgusCurrentInput = input;
+            case ARGUS_DATA_SOURCE:
+            case ARGUS_V2_DATA_SOURCE:
+            case ARGUS_NAMED_PIPE_SOURCE:
+            case ARGUS_DOMAIN_SOURCE:
+            case ARGUS_BASELINE_SOURCE:
+            case ARGUS_DATAGRAM_SOURCE:
+            case ARGUS_SFLOW_DATA_SOURCE:
+            case ARGUS_JFLOW_DATA_SOURCE:
+            case ARGUS_CISCO_DATA_SOURCE:
+            case ARGUS_IPFIX_DATA_SOURCE:
+            case ARGUS_FLOW_TOOLS_SOURCE: {
+               ArgusInputFromFile(input, file);
+               parser->ArgusCurrentInput = input;
 
-                     if (strcmp (input->filename, "-")) {
-                        if (input->fd < 0) {
-                           if ((input->file = fopen(input->filename, "r")) == NULL) {
-                              sprintf (sbuf, "open '%s': %s", input->filename, strerror(errno));
-                              ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
-                           }
-
-                        } else {
-                           fseek(input->file, 0, SEEK_SET);
-                        }
-
-                        if ((input->file != NULL) && ((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
-                           parser->ArgusTotalMarRecords++;
-                           parser->ArgusTotalRecords++;
-
-                           if (parser->RaPollMode) {
-                               ArgusHandleRecord (parser, input, &input->ArgusInitCon, 0, &parser->ArgusFilterCode);
-                           } else {
-                              if (input->ostart != -1) {
-                                 input->offset = input->ostart;
-                                 if (fseek(input->file, input->offset, SEEK_SET) >= 0)
-                                    ArgusReadFileStream(parser, input);
-                              } else
-                                 ArgusReadFileStream(parser, input);
-                           }
-
-                           sprintf (sbuf, "RaCursesLoop() Processing Input File %s done.", input->filename);
-                           ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
-
-                        } else {
-                           input->fd = -1;
-                           sprintf (sbuf, "ArgusReadConnection '%s': %s", input->filename, strerror(errno));
-                           ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
-                        }
-
-                     } else {
-                        input->file = stdin;
-                        input->ostart = -1;
-                        input->ostop = -1;
-
-                        if (((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
-                           parser->ArgusTotalMarRecords++;
-                           parser->ArgusTotalRecords++;
-                           fcntl(fileno(stdin), F_SETFL, O_NONBLOCK);
-                           ArgusReadFileStream(parser, input);
-                        }
+               if (strcmp (input->filename, "-")) {
+                  if (input->fd < 0) {
+                     if ((input->file = fopen(input->filename, "r")) == NULL) {
+                        sprintf (sbuf, "open '%s': %s", input->filename, strerror(errno));
+                        ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
                      }
-                     break;
+
+                  } else {
+                     fseek(input->file, 0, SEEK_SET);
+                  }
+
+                  if ((input->file != NULL) && ((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
+                     parser->ArgusTotalMarRecords++;
+                     parser->ArgusTotalRecords++;
+
+                     if (parser->RaPollMode) {
+                         ArgusHandleRecord (parser, input, &input->ArgusInitCon, 0, &parser->ArgusFilterCode);
+                     } else {
+                        if (input->ostart != -1) {
+                           input->offset = input->ostart;
+                           if (fseek(input->file, input->offset, SEEK_SET) >= 0)
+                              ArgusReadFileStream(parser, input);
+                        } else
+                           ArgusReadFileStream(parser, input);
+                     }
+
+                     sprintf (sbuf, "RaCursesLoop() Processing Input File %s done.", input->filename);
+                     ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
+
+                  } else {
+                     input->fd = -1;
+                     sprintf (sbuf, "ArgusReadConnection '%s': %s", input->filename, strerror(errno));
+                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                  }
+
+               } else {
+                  input->file = stdin;
+                  input->ostart = -1;
+                  input->ostop = -1;
+
+                  if (((ArgusReadConnection (parser, input, ARGUS_FILE)) >= 0)) {
+                     parser->ArgusTotalMarRecords++;
+                     parser->ArgusTotalRecords++;
+                     fcntl(fileno(stdin), F_SETFL, O_NONBLOCK);
+                     ArgusReadFileStream(parser, input);
                   }
                }
-               RaArgusInputComplete(input);
-               ArgusParser->ArgusCurrentInput = NULL;
-               ArgusCloseInput(ArgusParser, input);
+               break;
+            }
+         }
+         RaArgusInputComplete(input);
+         ArgusParser->ArgusCurrentInput = NULL;
+         ArgusDeleteInput(ArgusParser, input);
 
-               file = (struct ArgusFileInput *)file->qhdr.nxt;
+         file = (struct ArgusFileInput *)file->qhdr.nxt;
       }
       parser->ArgusCurrentInput = NULL;
       parser->status |= ARGUS_BASELINE_LIST_PROCESSED;

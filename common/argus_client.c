@@ -981,7 +981,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             }
          }
 #endif
-
       }
    }
 

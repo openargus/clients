@@ -388,14 +388,13 @@ ArgusProcessData (void *arg)
          RaCursesStopTime.tv_sec   = 0;
          RaCursesStopTime.tv_usec  = 0;
 
-         input = ArgusMalloc(sizeof(*input));
-         if (input == NULL)
-            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
          /* Process the input files first */
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
+               if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+                  ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
                switch (file->type) {
 #if defined(ARGUS_MYSQL)
                   case ARGUS_DBASE_SOURCE: {
@@ -467,8 +466,6 @@ ArgusProcessData (void *arg)
                   }
                }
                RaArgusInputComplete(input);
-//             ArgusParser->ArgusCurrentInput = NULL;
-//             ArgusCloseInput(ArgusParser, input);
 
                file = (struct ArgusFileInput *)file->qhdr.nxt;
             }
@@ -1328,8 +1325,11 @@ ArgusClientTimeout ()
           ((ArgusParser->RaClientUpdate.tv_sec == tvp->tv_sec) &&
            (ArgusParser->RaClientUpdate.tv_usec < tvp->tv_usec)))) {
 
-         ArgusProcessQueue(RaCursesProcess->queue);
-         ArgusProcessQueue(RaEventProcess->queue);
+         if (RaCursesProcess != NULL)
+            ArgusProcessQueue(RaCursesProcess->queue);
+
+         if (RaEventProcess != NULL)
+            ArgusProcessQueue(RaEventProcess->queue);
 
          ArgusParser->RaClientUpdate.tv_sec  =  tvp->tv_sec + RaProcessQueueTimer.tv_sec;
          ArgusParser->RaClientUpdate.tv_usec = tvp->tv_usec + RaProcessQueueTimer.tv_usec;

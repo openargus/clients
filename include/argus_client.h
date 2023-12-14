@@ -1158,6 +1158,7 @@ void *ArgusConnectRemotes (void *);
 void *ArgusConnectRemote (void *);
  
 void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
+void ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 int ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *);
 
 extern void ArgusLog (int, char *, ...);
@@ -1338,6 +1339,7 @@ extern void *ArgusConnectRemotes (void *);
 extern void *ArgusConnectRemote (void *);
  
 extern void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
+extern void ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 extern int ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *);
 
 extern void ArgusLog (int, char *, ...);
