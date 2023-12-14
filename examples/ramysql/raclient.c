@@ -224,14 +224,13 @@ ArgusProcessData (void *arg)
          RaCursesStopTime.tv_sec   = 0;
          RaCursesStopTime.tv_usec  = 0;
 
-         input = ArgusMalloc(sizeof(*input));
-         if (input == NULL)
-            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
          /* Process the input files first */
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
+               if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+                  ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
                ArgusInputFromFile(input, file);
                ArgusParser->ArgusCurrentInput = input;
 
@@ -288,7 +287,7 @@ ArgusProcessData (void *arg)
 
                RaArgusInputComplete(input);
                ArgusParser->ArgusCurrentInput = NULL;
-               ArgusCloseInput(ArgusParser, input);
+               ArgusDeleteInput(ArgusParser, input);
                file = (struct ArgusFileInput *)file->qhdr.nxt;
             }
 
@@ -296,7 +295,6 @@ ArgusProcessData (void *arg)
             parser->status |= ARGUS_FILE_LIST_PROCESSED;
          }
 
-         ArgusFree(input);
          input = NULL;
 
 // Then process the realtime stream input, if any

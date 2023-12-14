@@ -276,11 +276,10 @@ main (int argc, char **argv) {
       struct ArgusInput *input;
       struct ArgusFileInput *file;
 
-      input = ArgusMalloc(sizeof(*input));
-      if (input == NULL)
-         ArgusLog(LOG_ERR, "unable to allocate input structure\n");
-
       while (ArgusParser->ArgusPassNum) {
+         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+
          file = ArgusParser->ArgusInputFileList;
          while (file && ArgusParser->eNflag) {
             if (strcmp (file->filename, "-")) {
@@ -295,14 +294,13 @@ main (int argc, char **argv) {
 #endif
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
-            ArgusCloseInput(ArgusParser, input);
+            ArgusDeleteInput(ArgusParser, input);
             file = (struct ArgusFileInput *)file->qhdr.nxt;
          }
 
          ArgusParser->ArgusPassNum--;
       }
 
-      ArgusFree(input);
       input = NULL;
    }
 

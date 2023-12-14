@@ -456,7 +456,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   sprintf (strbuf, "%s:%d", input->hostname, input->portnum);
                   if ((strstr (RaCommandInputStr, strbuf))) {
                      ArgusRemoveFromQueue (ArgusParser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
-                     ArgusCloseInput(ArgusParser, input);
+                     ArgusDeleteInput(ArgusParser, input);
                      break;
                   }
                   input = (void *)input->qhdr.nxt;
@@ -3666,7 +3666,7 @@ argus_command_string(void)
                   sprintf (strbuf, "%s:%d", input->hostname, input->portnum);
                   if ((strstr (RaCommandInputStr, strbuf))) {
                      ArgusRemoveFromQueue (ArgusParser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
-                     ArgusCloseInput(ArgusParser, input);
+                     ArgusDeleteInput(ArgusParser, input);
                      break;
                   }
                   input = (void *)input->qhdr.nxt;

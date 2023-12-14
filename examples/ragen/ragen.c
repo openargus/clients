@@ -1007,16 +1007,7 @@ RaParseComplete (int sig)
 
          while (queue->count > 0) {
             if ((input = (struct ArgusInput *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-//             ArgusCloseInput(ArgusParser, input);
-               if (input->hostname != NULL)
-                  free (input->hostname);
-               if (input->filename != NULL)
-                  free (input->filename);
-#if defined(HAVE_GETADDRINFO)
-               if (input->host != NULL)
-                  freeaddrinfo (input->host);
-#endif
-               ArgusFree(input);
+               ArgusDeleteInput(ArgusParser, input);
             }
          }
          ArgusDeleteQueue(queue);
@@ -1301,8 +1292,7 @@ ArgusGenerateStatusRecords(struct ArgusGenerator *gen)
 #endif
                   RaArgusInputComplete(config->input);
                   parser->ArgusCurrentInput = NULL;
-                  ArgusCloseInput(parser, config->input);
-                  ArgusFree(config->input);
+                  ArgusDeleteInput(parser, config->input);
                   config->input = NULL;
                }
 
