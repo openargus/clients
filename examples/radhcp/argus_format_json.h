@@ -2,7 +2,7 @@
 # define __ARGUS_FORMAT_JSON_H
 # include "argus_print.h"
 
-const struct ArgusFormatterTable ArgusJsonFormatterTable;
-const struct ArgusFormatterTable ArgusJsonObjOnlyFormatterTable;
+extern const struct ArgusFormatterTable ArgusJsonFormatterTable;
+extern const struct ArgusFormatterTable ArgusJsonObjOnlyFormatterTable;
 
 #endif

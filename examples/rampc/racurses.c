@@ -5534,7 +5534,7 @@ RaOutputModifyScreen ()
    int i = 0;
    werase(RaCurrentWindow->window);
    for (i = RaMinCommandLines; i < (RaMaxCommandLines + 1); i++) {
-      mvwprintw (RaCurrentWindow->window, i, 1, RaCommandArray[i - RaMinCommandLines]);
+      mvwprintw (RaCurrentWindow->window, i, 1, "%s", RaCommandArray[i - RaMinCommandLines]);
       if (i == RaMinCommandLines)
          wstandout(RaCurrentWindow->window);
       wprintw (RaCurrentWindow->window, "%s", RaCommandValueArray[i - RaMinCommandLines]());
