@@ -71,7 +71,7 @@ int RaConvertParseRecordString (struct ArgusParserStruct *, char *);
 int ArgusParseDirStatus = -1;
 int ArgusParseTCPState = -1;
 int ArgusParseState = -1;
-u_short ArgusThisProto = -1;
+extern u_short ArgusThisProto;
 
 int RaFlagsIndicationStatus[64];
 int RaConvertParseDirLabel = 0;
