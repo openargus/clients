@@ -937,8 +937,11 @@ static int
 __upload_init(CURL **hnd, const configuration_t * const config)
 {
    char *userpwd;
-   long auth = 0;
    int slen;
+
+#ifdef HAVE_LIBCURL
+   long auth = 0;
+#endif
 
 # ifdef ARGUS_CURLEXE
    char *authStr = "";

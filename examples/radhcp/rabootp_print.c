@@ -336,7 +336,7 @@ RabootpPrintDhcp(const struct ArgusParserStruct * const parser,
    }
 
    for (n = 0; n < nitems; n++) {
-      char leasestr[16];
+      char leasestr[32];
 
       snprintf(leasestr, sizeof(leasestr), "%zu", n);
 

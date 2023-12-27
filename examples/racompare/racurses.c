@@ -857,7 +857,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             }
 
             if (strlen(str) > 0) {
-               char strtokbuf[1024], *stbuf = strtokbuf;
+               char strtokbuf[MAXSTRLEN], *stbuf = strtokbuf;
                sprintf (stbuf, "%s", str);
 
                while ((tok = strtok(stbuf, " \t\n")) != NULL) {
@@ -5984,7 +5984,7 @@ RaOutputModifyScreen ()
    int i = 0;
    werase(RaCurrentWindow->window);
    for (i = RaMinCommandLines; i < (RaMaxCommandLines + 1); i++) {
-      mvwprintw (RaCurrentWindow->window, i, 1, RaCommandArray[i - RaMinCommandLines]);
+      mvwprintw (RaCurrentWindow->window, i, 1, "%s", RaCommandArray[i - RaMinCommandLines]);
       if (i == RaMinCommandLines)
          wstandout(RaCurrentWindow->window);
       wprintw (RaCurrentWindow->window, "%s", RaCommandValueArray[i - RaMinCommandLines]());

@@ -1698,7 +1698,7 @@ Rotation is separate from addition to prevent recomputation.
 
 void MD5Init (MD5_CTX *);
 void MD5Update ( MD5_CTX *, unsigned char *, unsigned int);
-void MD5Final (unsigned char *, MD5_CTX *);
+void MD5Final (unsigned char [16], MD5_CTX *);
 
 static void MD5Transform (UINT4 [4], unsigned char [64]);
 static void Encode (unsigned char *, UINT4 *, unsigned int);
@@ -1764,7 +1764,7 @@ MD5Update ( MD5_CTX *context, unsigned char *input, unsigned int inputLen)
   the message digest and zeroizing the context.
  */
 void
-MD5Final (unsigned char *digest, MD5_CTX *context)
+MD5Final (unsigned char digest[16], MD5_CTX *context)
 {
   unsigned char bits[8];
   unsigned int index, padLen;
@@ -1791,7 +1791,7 @@ MD5Final (unsigned char *digest, MD5_CTX *context)
 /* MD5 basic transformation. Transforms state based on block.
  */
 static
-void MD5Transform (UINT4 *state, unsigned char *block)
+void MD5Transform (UINT4 state[4], unsigned char block[64])
 {
   UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
