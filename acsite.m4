@@ -2,7 +2,7 @@ dnl
 dnl Copyright (C) 2000-2022 QoSient, LLC.
 dnl
 dnl Gargoyle Client Software. Tools to read, analyze and manage Argus data.
-dnl Copyright (c) 2000-2013 QoSient, LLC
+dnl Copyright (c) 2000-2024 QoSient, LLC
 dnl All rights reserved.
 dnl
 dnl THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
