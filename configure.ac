@@ -23,25 +23,25 @@
 #
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
+AC_PREREQ([2.71])
 AC_INIT([Gargoyle Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_SRCDIR([clients/ra.c])
 AC_CONFIG_AUX_DIR([config])
-AC_CONFIG_HEADER([include/argus_config.h])
+AC_CONFIG_HEADERS([include/argus_config.h])
 AC_CANONICAL_TARGET
 
 AC_LBL_C_INIT(V_CCOPT, V_INCLS)
 
 AX_PERL_EXT
 if test x"$PERL" = x; then
-    AC_ERROR(["cannot find Perl"])
+    AC_MSG_ERROR("cannot find Perl")
 fi
 V_PERL=$PERL
 
 # Checks for programs.
 AC_PROG_LN_S
-AC_PROG_LEX
+AC_PROG_LEX(yywrap)
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_YACC
@@ -88,7 +88,9 @@ fi
 
 # Checks for header files.
 AC_HEADER_DIRENT
-AC_HEADER_STDC
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_HEADER_SYS_WAIT
 
 AC_CHECK_HEADERS([sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h stdbool.h])
@@ -140,7 +142,8 @@ AC_TYPE_UID_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 
-AC_HEADER_TIME
+AC_CHECK_HEADERS_ONCE([sys/time.h])
+
 AC_STRUCT_TM
 AC_STRUCT_TIMEZONE
 
@@ -156,7 +159,6 @@ AC_FUNC_MEMCMP
 AC_FUNC_MKTIME
 AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
-AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD

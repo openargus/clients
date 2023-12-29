@@ -101,7 +101,7 @@ m4_define([AC_LBL_C_INIT],
     AC_ARG_WITH(gcc, [  --without-gcc           don't use gcc])
     AC_ARG_WITH(examples, [  --without-examples      don't compile examples])
     AC_ARG_WITH(pluribus,
-            [AC_HELP_STRING([--with-pluribus],[Compile for pluribus])],
+            [AS_HELP_STRING([--with-pluribus],[Compile for pluribus])],
             with_pluribus="yes",
             with_pluribus="no")
     $1="-O"
@@ -159,9 +159,9 @@ m4_define([AC_LBL_C_INIT],
     else
        AC_MSG_CHECKING(that $CC handles ansi prototypes)
        AC_CACHE_VAL(ac_cv_lbl_cc_ansi_prototypes,
-       AC_TRY_COMPILE(
-          [#include <sys/types.h>],
-          [int frob(int, char *)],
+
+       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <sys/types.h>],
+                                          [int frob(int, char *)])],
           ac_cv_lbl_cc_ansi_prototypes=yes,
           ac_cv_lbl_cc_ansi_prototypes=no))
        AC_MSG_RESULT($ac_cv_lbl_cc_ansi_prototypes)
@@ -173,11 +173,13 @@ m4_define([AC_LBL_C_INIT],
              savedcflags="$CFLAGS"
              CFLAGS="-Aa -D_HPUX_SOURCE $CFLAGS"
              AC_CACHE_VAL(ac_cv_lbl_cc_hpux_cc_aa,
-            AC_TRY_COMPILE(
-                [#include <sys/types.h>],
-                [int frob(int, char *)],
-                ac_cv_lbl_cc_hpux_cc_aa=yes,
-                ac_cv_lbl_cc_hpux_cc_aa=no))
+
+             AC_COMPILE_IFELSE(
+               [AC_LANG_PROGRAM([#include <sys/types.h>],
+                               [int frob(int, char *)])],
+                [ac_cv_lbl_cc_hpux_cc_aa=yes],
+                [ac_cv_lbl_cc_hpux_cc_aa=no]))
+
              AC_MSG_RESULT($ac_cv_lbl_cc_hpux_cc_aa)
              if test $ac_cv_lbl_cc_hpux_cc_aa = no ; then
                 AC_MSG_ERROR(see the INSTALL doc for more info)
@@ -208,10 +210,9 @@ m4_define([AC_LBL_C_INIT],
        ultrix*)
           AC_MSG_CHECKING(that Ultrix $CC hacks const in prototypes)
           AC_CACHE_VAL(ac_cv_lbl_cc_const_proto,
-          AC_TRY_COMPILE(
-             [#include <sys/types.h>],
-             [struct a { int b; };
-             void c(const struct a *)],
+          AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <sys/types.h>],
+                                             [struct a { int b; };
+                                              void c(const struct a *)])],
              ac_cv_lbl_cc_const_proto=yes,
              ac_cv_lbl_cc_const_proto=no))
           AC_MSG_RESULT($ac_cv_lbl_cc_const_proto)
@@ -422,7 +423,7 @@ dnl
  
 AC_DEFUN([AC_QOSIENT_THREADS],
   [AC_ARG_WITH(threads,
-    [AC_HELP_STRING([--without-threads],[don't use native threads package])],
+    [AS_HELP_STRING([--without-threads],[don't use native threads package])],
       with_threads="$withval",
       with_threads="yes")
 
@@ -491,7 +492,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_FLOWTOOLS], [
    AC_ARG_WITH(libft,
-            [AC_HELP_STRING([--with-libft=DIR],[Compile with libft in <DIR>])],
+            [AS_HELP_STRING([--with-libft=DIR],[Compile with libft in <DIR>])],
             with_libft="$withval",
             with_libft="yes")
    dnl
@@ -634,14 +635,14 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_PCRE], [
    AC_ARG_WITH(libpcre,
-            [AC_HELP_STRING([--with-libpcre=DIR],[Compile with libpcre in <DIR>])],
+            [AS_HELP_STRING([--with-libpcre=DIR],[Compile with libpcre in <DIR>])],
             with_libpcre="$withval",
             with_libpcre="no")
 
    if test ${with_libpcre} != "no"; then
       AC_MSG_CHECKING(for pcre library)
       AC_ARG_WITH(pcre-config, 
-            [AC_HELP_STRING([--with-pcre-config=PATH], [Location of PCRE pcre-config (auto)])],
+            [AS_HELP_STRING([--with-pcre-config=PATH], [Location of PCRE pcre-config (auto)])],
             with_pcre_config="$withval", 
             with_pcre_config="yes")
 
@@ -663,10 +664,10 @@ AC_DEFUN([AC_QOSIENT_PCRE], [
          $1=$PCRE_LIBS;
          $2="$PCRE_CFLAGS $$2"
       else
-         AC_CHECK_HEADERS(regex.h,, AC_ERROR(neither pcre nor regex found))
+         AC_CHECK_HEADERS(regex.h,, AC_MSG_ERROR(neither pcre nor regex found))
       fi
    else
-      AC_CHECK_HEADERS(regex.h,, AC_ERROR(regex not found))
+      AC_CHECK_HEADERS(regex.h,, AC_MSG_ERROR(regex not found))
    fi
 ])
 
@@ -685,7 +686,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_READLINE], [
    AC_ARG_WITH(readline,
-            [AC_HELP_STRING([--with-readline=DIR],[Compile with readline in <DIR>])],
+            [AS_HELP_STRING([--with-readline=DIR],[Compile with readline in <DIR>])],
             with_readline="$withval",
             with_readline="yes")
 
@@ -713,12 +714,12 @@ AC_DEFUN([AC_QOSIENT_READLINE], [
      fi
 
      AC_CHECK_HEADERS(readline/readline.h,
-       AC_CHECK_DECLS([rl_event_hook, rl_catch_signals, rl_done, rl_set_keyboard_input_timeout, rl_replace_line, rl_delete_text, rl_resize_terminal, rl_save_prompt  ], [] , [] ,
-               [
-                  #include <stdlib.h>
-                  #include <stdio.h>
-                  #include <readline/readline.h>
-               ]), ac_cv_found_readline=no)
+       [AC_CHECK_DECLS([rl_event_hook, rl_catch_signals, rl_done, rl_set_keyboard_input_timeout, rl_replace_line, rl_delete_text, rl_resize_terminal, rl_save_prompt  ], [] , [] ,
+         [
+           #include <stdlib.h>
+           #include <stdio.h>
+           #include <readline/readline.h>
+         ])], ac_cv_found_readline=no)
  
      if test "$ac_cv_found_readline" != no; then
        $1="-lreadline"
@@ -955,13 +956,15 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
          LIBS="-lwrap"
          INCS=$$2
          $2=" "
-         AC_TRY_COMPILE(
+
+         AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
             [#include <tcpd.h>
              int deny_severity = 0, allow_severity = 0;],
             [struct request_info request;
-             fromhost(&request);],
+             fromhost(&request);])],
             ac_cv_qosient_wrapper=yes,
             ac_cv_qosient_wrapper=no)
+
          LIBS="$ac_save_LIBS"
          $2=$INCS])
       AC_MSG_RESULT($ac_cv_qosient_wrapper)
@@ -1168,8 +1171,11 @@ AC_DEFUN([CMU_CHECK_HEADER_NOCACHE],
 [dnl Do the transliteration at runtime so arg 1 can be a shell variable.
 ac_safe=`echo "$1" | sed 'y%./+-%__p_%'`
 AC_MSG_CHECKING([for $1])
-AC_TRY_CPP([#include <$1>], eval "ac_cv_header_$ac_safe=yes",
+
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([#include <$1>])],
+  eval "ac_cv_header_$ac_safe=yes",
   eval "ac_cv_header_$ac_safe=no")
+
 if eval "test \"`echo '$ac_cv_header_'$ac_safe`\" = yes"; then
   AC_MSG_RESULT(yes)
   ifelse([$2], , :, [$2])
@@ -1182,7 +1188,7 @@ fi
 
 AC_DEFUN([CMU_FIND_LIB_SUBDIR],
 [dnl
-AC_ARG_WITH([lib-subdir], AC_HELP_STRING([--with-lib-subdir=DIR],[Find libraries in DIR instead of lib]))
+AC_ARG_WITH([lib-subdir], AS_HELP_STRING([--with-lib-subdir=DIR],[Find libraries in DIR instead of lib]))
 AC_CHECK_SIZEOF(long)
 AC_CACHE_CHECK([what directory libraries are found in], [ac_cv_cmu_lib_subdir],
 [test "X$with_lib_subdir" = "Xyes" && with_lib_subdir=
@@ -1284,7 +1290,7 @@ if test ${with_sasl} != "no"; then
 	if test "$ac_cv_found_sasl" = yes; then
 	  LIB_SASL="$LIB_SASL -lsasl"
 	else
-          AC_ERROR( sasl not found )
+          AC_MSG_ERROR( sasl not found )
 	  LIB_SASL=""
 	  SASLFLAGS=""
 	fi
@@ -1296,7 +1302,7 @@ fi
 AC_DEFUN([CMU_SASL_REQUIRED],
 [AC_REQUIRE([CMU_SASL])
 if test "$ac_cv_found_sasl" != "yes"; then
-        AC_ERROR([Cannot continue without libsasl.
+        AC_MSG_ERROR([Cannot continue without libsasl.
 Get it from ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/.])
 fi])
 
@@ -1311,12 +1317,12 @@ AC_DEFUN([SASL_GSSAPI_CHK],
 [AC_REQUIRE([SASL2_CRYPT_CHK])
 AC_REQUIRE([CMU_SOCKETS])
 AC_ARG_ENABLE([gssapi],
-              [AC_HELP_STRING([--enable-gssapi=<DIR>],
+              [AS_HELP_STRING([--enable-gssapi=<DIR>],
                               [enable GSSAPI authentication [yes]])],
               [gssapi=$enableval],
               [gssapi=yes])
 AC_ARG_WITH([gss_impl],
-            [AC_HELP_STRING([--with-gss_impl={heimdal|mit|cybersafe|seam|auto}],
+            [AS_HELP_STRING([--with-gss_impl={heimdal|mit|cybersafe|seam|auto}],
                             [choose specific GSSAPI implementation [[auto]]])],
             [gss_impl=$withval],
             [gss_impl=auto])
@@ -1343,7 +1349,7 @@ if test "$gssapi" != no; then
       ;;
     *)
       if test "$gss_impl" = "cybersafe"; then
-        AC_ERROR([CyberSafe was forced, cannot continue as platform is not supported])
+        AC_MSG_ERROR([CyberSafe was forced, cannot continue as platform is not supported])
       fi
       ;;
   esac
@@ -1592,12 +1598,12 @@ AC_DEFUN([SASL_SET_GSSAPI_LIBS],
 AC_DEFUN([CMU_SASL2],
 [
    AC_ARG_WITH(sasl,
-            [AC_HELP_STRING([--with-sasl=DIR],[Compile with libsasl2 in <DIR>])],
+            [AS_HELP_STRING([--with-sasl=DIR],[Compile with libsasl2 in <DIR>])],
             with_sasl="$withval",
             with_sasl="no")
 
    AC_ARG_WITH(staticsasl,
-            [AC_HELP_STRING([--with-staticsasl=DIR],
+            [AS_HELP_STRING([--with-staticsasl=DIR],
                             [Compile with staticly linked libsasl in <DIR>])],
             [with_staticsasl="$withval";
              if test $with_staticsasl != "no"; then
@@ -1644,13 +1650,13 @@ AC_DEFUN([CMU_SASL2],
             done
          if test ! "$ac_cv_found_sasl" = "yes"; then
             AC_MSG_CHECKING([for static libsasl])
-            AC_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
+            AC_MSG_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
          fi])])
 
       if test "$ac_cv_found_sasl" = "yes"; then
          AC_MSG_RESULT([found])
       else
-         AC_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
+         AC_MSG_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
       fi
    fi
 
@@ -1692,7 +1698,7 @@ AC_DEFUN([CMU_SASL2],
          AC_SUBST(LIB_SASL)
          AC_SUBST(SASLFLAGS)
       else
-         AC_ERROR([Could not find sasl2])
+         AC_MSG_ERROR([Could not find sasl2])
       fi
    fi
 
@@ -1711,11 +1717,11 @@ AC_DEFUN([CMU_SASL2_REQUIRE_VER],
 cmu_saved_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS $SASLFLAGS"
 
-AC_TRY_CPP([
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([
 #include <sasl/sasl.h>
 
 #ifndef SASL_VERSION_MAJOR
-#error SASL_VERSION_MAJOR not defined
+#error SASL_VERSION_MAJOR not defined 
 #endif
 #ifndef SASL_VERSION_MINOR
 #error SASL_VERSION_MINOR not defined
@@ -1723,12 +1729,13 @@ AC_TRY_CPP([
 #ifndef SASL_VERSION_STEP
 #error SASL_VERSION_STEP not defined
 #endif
-
+         
 #if SASL_VERSION_MAJOR < $1 || SASL_VERSION_MINOR < $2 || SASL_VERSION_STEP < $3
 #error SASL version is less than $1.$2.$3
-#endif
-],,
-           [AC_ERROR([Incorrect SASL headers found.  This package requires SASL $1.$2.$3 or newer.])])
+#endif      
+])],,
+           [AC_MSG_ERROR([Incorrect SASL headers found.  This package requires SASL $1.$2.$3 or newer.])])
+
 
 CPPFLAGS=$cmu_saved_CPPFLAGS
 ])# CMU_SASL2_REQUIRE_VER
@@ -1833,7 +1840,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_GEOIP], [
    AC_ARG_WITH(GeoIP,
-            [AC_HELP_STRING([--with-GeoIP=DIR],[Compile with GeoIP in <DIR>])],
+            [AS_HELP_STRING([--with-GeoIP=DIR],[Compile with GeoIP in <DIR>])],
             with_geoip="$withval",
             with_geoip="yes",
             with_geoip="no")
@@ -1981,7 +1988,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_CURLEXE],
   [AC_ARG_WITH(curlexe,
-    [AC_HELP_STRING([--with-curlexe=PATH],[location of the curl binary to be run from ramanage])],
+    [AS_HELP_STRING([--with-curlexe=PATH],[location of the curl binary to be run from ramanage])],
     [
       AC_MSG_CHECKING([for curl binary])
       if ! test -f "$withval" ; then
