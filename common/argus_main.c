@@ -324,7 +324,7 @@ main (int argc, char **argv)
 #endif
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
-            ArgusDeleteInput(ArgusParser, input);
+            ArgusCloseInput(ArgusParser, input);
 
             file = (struct ArgusFileInput *)file->qhdr.nxt;
 
@@ -343,7 +343,7 @@ main (int argc, char **argv)
       }
 
       ArgusSetLocalNet(input->ArgusLocalNet, input->ArgusNetMask);
-      ArgusFree(input);
+      ArgusDeleteInput(ArgusParser, input);
       input = NULL;
    }
 
