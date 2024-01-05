@@ -1550,7 +1550,7 @@ RaProcessARecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *dn
                   }
 
                   bcopy(cidr, &node.addr, sizeof(*cidr));
-                  if (node.addr.str != NULL)
+                  if (cidr->str != NULL)
                      node.addr.str = strdup(cidr->str);
 
                   bcopy(cidr, &rr->cidr, sizeof(*cidr));
@@ -2356,12 +2356,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      case ARGUS_TYPE_IPV6: {
                         process++;
 
+                        saddr = &flow->ipv6_flow.ip_src;
+                        daddr = &flow->ipv6_flow.ip_dst;
+                        proto = flow->ipv6_flow.ip_p;
+
                         switch (flow->ipv6_flow.ip_p) {
                            case IPPROTO_TCP:
                            case IPPROTO_UDP: {
-                              saddr = &flow->ipv6_flow.ip_src;
-                              daddr = &flow->ipv6_flow.ip_dst;
-                              proto = flow->ipv6_flow.ip_p;
                               sport = flow->ipv6_flow.sport;
                               dport = flow->ipv6_flow.dport;
                               break;

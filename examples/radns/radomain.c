@@ -412,6 +412,7 @@ struct ArgusDomainResourceRecord {
             break;
 
          case T_AAAA:
+            bzero(ArgusBuf, 0x4000);
             if (!TTEST2(*cp, sizeof(struct in6_addr)))
                return(NULL);
             sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ArgusGetV6Name(ArgusParser, (unsigned char *)cp));
