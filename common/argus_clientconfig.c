@@ -46,8 +46,12 @@
 #if defined(HAVE_UUID_UUID_H)
 #include <uuid/uuid.h>
 #else
+#if defined(HAVE_LINUX_UUID_H)
+#include <linux/uuid.h>
+#else
 #if defined(HAVE_UUID_H)
 #include <uuid.h>
+#endif
 #endif
 #endif
 
@@ -84,6 +88,40 @@ __wmic_get_uuid(char *uuidstr, size_t len)
    }
 
 close_out:
+   fclose(fp);
+   return res;
+}
+#endif
+
+
+#ifdef HAVE_MACHINE_ID
+static int
+__linux_get_machine_id_uuid(char *uuidstr, size_t len)
+{
+   FILE *fp;
+   char str[64];
+   int res = -1;
+
+   if (len < 37)
+      /* need 37 bytes, including terminating null, to hold uuid string */
+      return -1;
+
+   if ((fp = fopen("/var/lib/dbus/machine-id", "r")) == NULL)
+      if (fgets(str, sizeof(str), fp) == NULL)
+         goto linux_close_out;
+
+   if (strncmp(str, "UUID", 4) == 0) {
+      if (fgets(str, sizeof(str), fp) == NULL)
+         goto linux_close_out;
+
+      if (strlen(str) >= 37) {
+         strncpy(uuidstr, str, 36);
+         uuidstr[36] = '\0';
+         res = 0;
+      }
+   }
+
+linux_close_out:
    fclose(fp);
    return res;
 }
@@ -140,8 +178,8 @@ ArgusExpandBackticks(const char * const in)
       } else
          ArgusLog (LOG_ERR, "%s: System error: popen() %s\n", __func__, strerror(errno));
    } else
-#ifdef HAVE_GETHOSTUUID
    if (!(strcmp (optarg, "hostuuid"))) {
+#ifdef HAVE_GETHOSTUUID
       uuid_t id;
       struct timespec ts = {0,0};
       if (gethostuuid(id, &ts) == 0) {
@@ -150,20 +188,26 @@ ArgusExpandBackticks(const char * const in)
          res = strdup(sbuf);
       } else
          ArgusLog (LOG_ERR, "%s: System error: gethostuuid() %s\n", __func__, strerror(errno));
-   } else
 #else
-# ifdef CYGWIN
+# ifdef HAVE_MACHINE_ID
+      char uuidstr[64];
 
-   if (!(strcmp (optarg, "hostuuid"))) {
+      if (__linux_get_machine_id_uuid(uuidstr, 37) == 0)
+         res = strdup(uuidstr);
+      else
+         ArgusLog(LOG_ERR, "%s: unable to read system UUID\n", __func__);
+# else
+#  ifdef CYGWIN
       char uuidstr[64];
 
       if (__wmic_get_uuid(uuidstr, 37) == 0)
          res = strdup(uuidstr);
       else
          ArgusLog(LOG_ERR, "%s: unable to read system UUID\n", __func__);
-   } else
+#  endif
 # endif
 #endif
+   } else
       ArgusLog (LOG_ERR, "%s: unsupported command `%s`.\n", __func__, in);
 
    free(optargstart);

@@ -1942,6 +1942,15 @@ AC_DEFUN([AC_QOSIENT_LIBUUID],[
    ])
 ])
 
+AC_DEFUN([AC_QOSIENT_MACHINE_ID],[
+   AC_MSG_CHECKING([whether machine-id is found]);
+   AC_CHECK_FILE("/var/lib/dbus/machine-id", 
+      [with_machine_id="yes"], no)
+   if test $with_machine_id = yes ; then
+      AC_DEFINE([HAVE_MACHINE_ID], [], [Description])
+   fi
+])
+
 AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
    AC_ARG_WITH([libmaxminddb],
                [AS_HELP_STRING([--with-libmaxminddb],

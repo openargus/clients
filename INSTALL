@@ -55,6 +55,10 @@ required, readline is recommended.
 For some OS's, such as Mac OS X, which does not ship with readline, due to
 licensing issues, installing these packages is optional.
 
+Argus 5.0 supports the use of uuid's as source id's.  To use uuid's effective,
+argus clients uses libuuid-devel to parse and generate uuid strings.
+This will need to be installed to turn on all features.
+
 Some argi are configured to use strong authentication and encryption 
 when transporting it data over the wire.  Argus clients can be compiled
 to support this strong authentication strategy by compiling with ARGUS_SASL

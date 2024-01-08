@@ -60,6 +60,10 @@
 #else
 #if defined(HAVE_UUID_H)
 #include <uuid.h>
+#else
+#if defined(HAVE_LINUX_UUID_H)
+#include <linux/uuid.h>
+#endif
 #endif
 #endif
 

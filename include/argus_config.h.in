@@ -145,6 +145,9 @@
    */
 #undef HAVE_DIRENT_H
 
+/* Define to 1 if you have machine-id file. */
+#undef HAVE_MACHINE_ID
+
 /* Define to 1 if you have the <dns_sd.h> header file. */
 #undef HAVE_DNS_SD_H
 
@@ -484,6 +487,9 @@
 
 /* Define to 1 if you have the <uuid/uuid.h> header file. */
 #undef HAVE_UUID_UUID_H
+
+/* Define to 1 if you have the <linux/uuid.h> header file. */
+#undef HAVE_LINUX_UUID_H
 
 /* Define to 1 if you have the <values.h> header file. */
 #undef HAVE_VALUES_H

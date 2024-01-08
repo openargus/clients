@@ -23,7 +23,7 @@
 #
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.71])
+AC_PREREQ([2.68])
 AC_INIT([Gargoyle Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_SRCDIR([clients/ra.c])
@@ -98,7 +98,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h libintl.h malloc.h mem
 AC_CHECK_HEADERS([stdlib.h stddef.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h])
 
 AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h dns_sd.h])
-AC_CHECK_HEADERS([uuid/uuid.h uuid.h])
+AC_CHECK_HEADERS([uuid/uuid.h linux/uuid.h uuid.h])
 AC_CHECK_HEADERS([sys/systm.h])
 AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([arpa/nameser_compat.h])
@@ -472,8 +472,10 @@ AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
 fi
 
 LIBCURL_CHECK_CONFIG
+
 AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
+AC_QOSIENT_MACHINE_ID
 
 AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_LIBCARES
