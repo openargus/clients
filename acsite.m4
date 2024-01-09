@@ -707,8 +707,10 @@ AC_DEFUN([AC_QOSIENT_READLINE], [
                 ;;
         darwin*)
                 dnl Workaround to look for readline on mac os x and solaris in /opt/local
-                CPPFLAGS="${saved_CPPFLAGS} -I/opt/local/include"
-                LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
+                if test -f /opt/local/include; then
+                   CPPFLAGS="${saved_CPPFLAGS} -I/opt/local/include"
+                   LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
+                fi
                 ;;
         esac
      fi
