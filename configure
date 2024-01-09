@@ -7964,7 +7964,7 @@ rm -f os-proto.h
              if test "$ac_cv_prog_cc_g" = yes ; then
                 V_CCOPT="-g $V_CCOPT"
              fi
-             V_CCOPT="$V_CCOPT -Wall -Wmissing-prototypes"
+             V_CCOPT="$V_CCOPT -Wall -Wmissing-prototypes -Wno-format-overflow"
           fi
        else
           V_CCOPT=`echo $V_CCOPT | sed -e 's/-O//'`

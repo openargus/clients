@@ -368,7 +368,7 @@ AC_DEFUN([AC_LBL_DEVEL],
              if test "$ac_cv_prog_cc_g" = yes ; then
                 $1="-g $$1"
              fi
-             $1="$$1 -Wall -Wmissing-prototypes"
+             $1="$$1 -Wall -Wmissing-prototypes -Wno-format-overflow"
           fi
        else
           $1=`echo $$1 | sed -e 's/-O//'`

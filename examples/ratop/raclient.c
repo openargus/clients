@@ -104,9 +104,9 @@ struct timeval dTime     = {0, 0};
 long long thisUsec = 0;
 long long lastUsec = 0;
  
-struct ArgusQueueStruct *ArgusModelerQueue;
-struct ArgusQueueStruct *ArgusFileQueue;
-struct ArgusQueueStruct *ArgusProbeQueue;
+extern struct ArgusQueueStruct *ArgusModelerQueue;
+extern struct ArgusQueueStruct *ArgusFileQueue;
+extern struct ArgusQueueStruct *ArgusProbeQueue;
  
 char ArgusArchiveBuf[4098];
  
