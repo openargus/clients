@@ -98,31 +98,34 @@ close_out:
 static int
 __linux_get_machine_id_uuid(char *uuidstr, size_t len)
 {
+   char str[64], *sptr = str;
+   int slen, res = -1;
    FILE *fp;
-   char str[64];
-   int res = -1;
 
    if (len < 37)
       /* need 37 bytes, including terminating null, to hold uuid string */
       return -1;
 
-   if ((fp = fopen("/var/lib/dbus/machine-id", "r")) == NULL)
+   if ((fp = fopen("/var/lib/dbus/machine-id", "r")) != NULL) {
       if (fgets(str, sizeof(str), fp) == NULL)
          goto linux_close_out;
 
-   if (strncmp(str, "UUID", 4) == 0) {
-      if (fgets(str, sizeof(str), fp) == NULL)
-         goto linux_close_out;
+      if (strncmp(sptr, "UUID", 4) == 0) 
+         sptr += 4;
 
-      if (strlen(str) >= 37) {
-         strncpy(uuidstr, str, 36);
-         uuidstr[36] = '\0';
+      if (sptr[strlen(sptr) - 1] == '\n') 
+         sptr[strlen(sptr) - 1] = '\0';
+
+      if ((slen = strlen(sptr)) >= 32) {
+         strncpy(uuidstr, sptr, 32);
+         uuidstr[33] = '\0';
          res = 0;
       }
-   }
 
 linux_close_out:
-   fclose(fp);
+      fclose(fp);
+   }
+
    return res;
 }
 #endif
