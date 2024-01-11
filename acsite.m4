@@ -555,7 +555,7 @@ AC_DEFUN([AC_QOSIENT_FLOWTOOLS], [
          else
             AC_MSG_CHECKING(for local ft library)
             places=`ls $srcdir/.. | sed -e 's,/$,,' -e "s,^,$srcdir/../," | \
-               egrep '/flow-tools-[[0-9]]*.[[0-9]]*.[[0-9]]*'`
+               grep -E '/flow-tools-[[0-9]]*.[[0-9]]*.[[0-9]]*'`
       
             for dir in $places/lib ; do
                if test -r $dir/libft.a ; then
@@ -944,7 +944,7 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
    libwrap=FAIL
    lastdir=FAIL
    pwdir=`pwd`
-   places=`ls .. | sed -e 's,/$,,' -e 's,^,../,' | egrep 'tcp_wrappers'`
+   places=`ls .. | sed -e 's,/$,,' -e 's,^,../,' | grep -E 'tcp_wrappers'`
    for dir in $places; do
       if test $lastdir = $dir ; then
          dnl skip alphas when an actual release is present
@@ -1888,7 +1888,7 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
             if test $geoip = FAIL; then
                AC_MSG_CHECKING(for local GeoIP library and includes)
                places=`ls $srcdir/.. | sed -e 's,/$,,' -e "s,^,$srcdir/../," | \
-                  egrep '/GeoIP-[[0-9]]*.[[0-9]]*(.[[0-9]]*)?([[ab]][[0-9]]*)?$'`
+                  grep -E '/GeoIP-[[0-9]]*.[[0-9]]*(.[[0-9]]*)?([[ab]][[0-9]]*)?$'`
 
                for dir in $places ; do
                   basedir=`echo $dir | sed -e 's/[[ab]][[0-9]]*$//'`
