@@ -680,9 +680,9 @@ pkgpyexecdir
 pyexecdir
 pkgpythondir
 pythondir
-PYTHON_PLATFORM
 PYTHON_EXEC_PREFIX
 PYTHON_PREFIX
+PYTHON_PLATFORM
 PYTHON_VERSION
 PYTHON
 LIBCARES_LIBS
@@ -813,6 +813,9 @@ with_libcurl
 with_curlexe
 with_libmaxminddb
 with_c_ares
+with_python_sys_prefix
+with_python_prefix
+with_python_exec_prefix
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1486,6 +1489,11 @@ Optional Packages:
   --with-curlexe=PATH     location of the curl binary to be run from ramanage
   --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
   --with-c-ares           Build with c-ares for name resolution
+  --with-python-sys-prefix
+                          use Python's sys.prefix and sys.exec_prefix values
+  --with-python_prefix    override the default PYTHON_PREFIX
+  --with-python_exec_prefix
+                          override the default PYTHON_EXEC_PREFIX
 
 Some influential environment variables:
   CC          C compiler command
@@ -2966,6 +2974,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 PACKAGE_RELEASE='3.6'
+
 
 
 ac_config_headers="$ac_config_headers include/argus_config.h"
@@ -11122,6 +11131,7 @@ V_INCLS_EXAMPLES=`echo $V_INCLS | sed -e 's/\.\./..\/../'`
 
 
 
+
 if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
 	if test -n "$ac_tool_prefix"; then
   # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
@@ -11245,7 +11255,9 @@ printf "%s\n" "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
-if test -n "$PKG_CONFIG"; then
+
+if test -d "/usr/lib/systemd"; then
+  if test -n "$PKG_CONFIG"; then
 
 # Check whether --with-systemdsystemunitdir was given.
 if test ${with_systemdsystemunitdir+y}
@@ -11255,7 +11267,7 @@ else $as_nop
   with_systemdsystemunitdir=auto
 fi
 
-if test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"
+  if test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"
 then :
 
      def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
@@ -11271,11 +11283,12 @@ else $as_nop
   with_systemdsystemunitdir="$def_systemdsystemunitdir"
 fi
 fi
-if test "x$with_systemdsystemunitdir" != "xno"
+  if test "x$with_systemdsystemunitdir" != "xno"
 then :
   systemdsystemunitdir=$with_systemdsystemunitdir
 
 fi
+  fi
 fi
 
 
@@ -11529,7 +11542,7 @@ printf "%s\n" "$libcurl_cv_lib_version_ok" >&6; }
 
      if test $_libcurl_try_link = yes ; then
 
-        # we didn't find curl-config, so let's see if the user-supplied
+        # we did not find curl-config, so let's see if the user-supplied
         # link line (or failing that, "-lcurl") is enough.
         LIBCURL=${LIBCURL-"$_libcurl_ldflags -lcurl"}
 
@@ -11553,16 +11566,16 @@ main (void)
 {
 
 /* Try and use a few common options to force a failure if we are
-   missing symbols or can't link. */
+   missing symbols or cannot link. */
 int x;
 curl_easy_setopt(NULL,CURLOPT_URL,NULL);
 x=CURL_ERROR_SIZE;
 x=CURLOPT_WRITEFUNCTION;
-x=CURLOPT_FILE;
+x=CURLOPT_WRITEDATA;
 x=CURLOPT_ERRORBUFFER;
 x=CURLOPT_STDERR;
 x=CURLOPT_VERBOSE;
-if (x) ;
+if (x) {;}
 
   ;
   return 0;
@@ -11596,8 +11609,9 @@ printf "%s\n" "$libcurl_cv_lib_curl_usable" >&6; }
            _libcurl_save_libs=$LIBS
            LIBS="$LIBS $LIBCURL"
 
-           ac_fn_c_check_func "$LINENO" "curl_free" "ac_cv_func_curl_free"
-if test "x$ac_cv_func_curl_free" = xyes
+           ac_fn_check_decl "$LINENO" "curl_free" "ac_cv_have_decl_curl_free" "#include <curl/curl.h>
+" "$ac_c_undeclared_builtin_options" "CFLAGS"
+if test "x$ac_cv_have_decl_curl_free" = xyes
 then :
 
 else $as_nop
@@ -11605,7 +11619,6 @@ else $as_nop
 printf "%s\n" "#define curl_free free" >>confdefs.h
 
 fi
-
 
            CPPFLAGS=$_libcurl_save_cppflags
            LIBS=$_libcurl_save_libs
@@ -11628,14 +11641,14 @@ _ACEOF
 
            if test "x$_libcurl_protocols" = "x" ; then
 
-              # We don't have --protocols, so just assume that all
+              # We do not have --protocols, so just assume that all
               # protocols are available
               _libcurl_protocols="HTTP FTP FILE TELNET LDAP DICT TFTP"
 
               if test x$libcurl_feature_SSL = xyes ; then
                  _libcurl_protocols="$_libcurl_protocols HTTPS"
 
-                 # FTPS wasn't standards-compliant until version
+                 # FTPS was not standards-compliant until version
                  # 7.11.0 (0x070b00 == 461568)
                  if test $_libcurl_version -ge 461568; then
                     _libcurl_protocols="$_libcurl_protocols FTPS"
@@ -11684,7 +11697,6 @@ _ACEOF
   unset _libcurl_with
 
 
-
 # Check whether --with-curlexe was given.
 if test ${with_curlexe+y}
 then :
@@ -11696,7 +11708,6 @@ printf %s "checking for curl binary... " >&6; }
       fi
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: found" >&5
 printf "%s\n" "found" >&6; }
-      with_flexlm="$withval"
 
 printf "%s\n" "#define ARGUS_CURLEXE \"$withval\"" >>confdefs.h
 
@@ -11754,9 +11765,11 @@ fi
 
 
 
-   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether machine-id is found" >&5
-printf %s "checking whether machine-id is found... " >&6; };
-   as_ac_File=`printf "%s\n" "ac_cv_file_"/var/lib/dbus/machine-id"" | $as_tr_sh`
+      case "$target_os" in
+         linux*)
+           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether machine_id is found" >&5
+printf %s "checking whether machine_id is found... " >&6; };
+           as_ac_File=`printf "%s\n" "ac_cv_file_"/var/lib/dbus/machine-id"" | $as_tr_sh`
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for \"/var/lib/dbus/machine-id\"" >&5
 printf %s "checking for \"/var/lib/dbus/machine-id\"... " >&6; }
 if eval test \${$as_ac_File+y}
@@ -11776,16 +11789,50 @@ eval ac_res=\$$as_ac_File
 printf "%s\n" "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"
 then :
-  with_machine_id="yes"
+
+printf "%s\n" "#define HAVE_MACHINE_ID /**/" >>confdefs.h
+
 else $as_nop
   no
 fi
 
-   if test $with_machine_id = yes ; then
+         ;;
+
+         cygwin*)
+         ;;
+
+        *bsd*)
+           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether machine_id is found" >&5
+printf %s "checking whether machine_id is found... " >&6; };
+           as_ac_File=`printf "%s\n" "ac_cv_file_"/etc/machine-id"" | $as_tr_sh`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for \"/etc/machine-id\"" >&5
+printf %s "checking for \"/etc/machine-id\"... " >&6; }
+if eval test \${$as_ac_File+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""/etc/machine-id""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"
+then :
 
 printf "%s\n" "#define HAVE_MACHINE_ID /**/" >>confdefs.h
 
-   fi
+else $as_nop
+  no
+fi
+
+         ;;
+      esac
 
 
 
@@ -11806,8 +11853,8 @@ printf "%s\n" "cannot compile with both libmaxminddb and GeoIP" >&6; }
       if test "x$with_libmaxminddb" = "xyes"; then
 
 pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for LIBMAXMINDDB" >&5
-printf %s "checking for LIBMAXMINDDB... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libmaxminddb >= 1.2.0" >&5
+printf %s "checking for libmaxminddb >= 1.2.0... " >&6; }
 
 if test -n "$LIBMAXMINDDB_CFLAGS"; then
     pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
@@ -11847,7 +11894,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-   	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -11874,7 +11921,7 @@ Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
 and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-     	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -11914,8 +11961,8 @@ fi
       if test "x$with_c_ares" = "xyes"; then
 
 pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for LIBCARES" >&5
-printf %s "checking for LIBCARES... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libcares >= 1.10.0" >&5
+printf %s "checking for libcares >= 1.10.0... " >&6; }
 
 if test -n "$LIBCARES_CFLAGS"; then
     pkg_cv_LIBCARES_CFLAGS="$LIBCARES_CFLAGS"
@@ -11955,7 +12002,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-   	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -11982,7 +12029,7 @@ Alternatively, you may set the environment variables LIBCARES_CFLAGS
 and LIBCARES_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-     	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -12051,7 +12098,7 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-	for am_cv_pathless_PYTHON in python python2 python3 python3.3 python3.2 python3.1 python3.0 python2.7  python2.6 python2.5 python2.4 python2.3 python2.2 python2.1 python2.0 none; do
+	for am_cv_pathless_PYTHON in python python2 python3  python3.9 python3.8 python3.7 python3.6 python3.5 python3.4 python3.3  python3.2 python3.1 python3.0  python2.7 python2.6 python2.5 python2.4 python2.3 python2.2 python2.1  python2.0 none; do
 	  test "$am_cv_pathless_PYTHON" = none && break
 	  prog="import sys
 # split strings by '.' and convert to numeric.  Append some zeros
@@ -12129,31 +12176,23 @@ fi
 
 
   if test "$PYTHON" = :; then
-      :
+        :
   else
 
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON version" >&5
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON version" >&5
 printf %s "checking for $am_display_PYTHON version... " >&6; }
 if test ${am_cv_python_version+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  am_cv_python_version=`$PYTHON -c "import sys; sys.stdout.write(sys.version[:3])"`
+  am_cv_python_version=`$PYTHON -c "import sys; print ('%u.%u' % sys.version_info[:2])"`
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_version" >&5
 printf "%s\n" "$am_cv_python_version" >&6; }
   PYTHON_VERSION=$am_cv_python_version
 
 
-
-  PYTHON_PREFIX='${prefix}'
-
-  PYTHON_EXEC_PREFIX='${exec_prefix}'
-
-
-
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON platform" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON platform" >&5
 printf %s "checking for $am_display_PYTHON platform... " >&6; }
 if test ${am_cv_python_platform+y}
 then :
@@ -12166,7 +12205,143 @@ printf "%s\n" "$am_cv_python_platform" >&6; }
   PYTHON_PLATFORM=$am_cv_python_platform
 
 
-  # Just factor out some code duplication.
+                            if test "x$prefix" = xNONE; then
+    am__usable_prefix=$ac_default_prefix
+  else
+    am__usable_prefix=$prefix
+  fi
+
+  # Allow user to request using sys.* values from Python,
+  # instead of the GNU $prefix values.
+
+# Check whether --with-python-sys-prefix was given.
+if test ${with_python_sys_prefix+y}
+then :
+  withval=$with_python_sys_prefix; am_use_python_sys=:
+else $as_nop
+  am_use_python_sys=false
+fi
+
+
+  # Allow user to override whatever the default Python prefix is.
+
+# Check whether --with-python_prefix was given.
+if test ${with_python_prefix+y}
+then :
+  withval=$with_python_prefix; am_python_prefix_subst=$withval
+   am_cv_python_prefix=$withval
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for explicit $am_display_PYTHON prefix" >&5
+printf %s "checking for explicit $am_display_PYTHON prefix... " >&6; }
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_prefix" >&5
+printf "%s\n" "$am_cv_python_prefix" >&6; }
+else $as_nop
+
+   if $am_use_python_sys; then
+     # using python sys.prefix value, not GNU
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for python default $am_display_PYTHON prefix" >&5
+printf %s "checking for python default $am_display_PYTHON prefix... " >&6; }
+if test ${am_cv_python_prefix+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  am_cv_python_prefix=`$PYTHON -c "import sys; sys.stdout.write(sys.prefix)"`
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_prefix" >&5
+printf "%s\n" "$am_cv_python_prefix" >&6; }
+
+               case $am_cv_python_prefix in
+     $am__usable_prefix*)
+       am__strip_prefix=`echo "$am__usable_prefix" | sed 's|.|.|g'`
+       am_python_prefix_subst=`echo "$am_cv_python_prefix" | sed "s,^$am__strip_prefix,\\${prefix},"`
+       ;;
+     *)
+       am_python_prefix_subst=$am_cv_python_prefix
+       ;;
+     esac
+   else # using GNU prefix value, not python sys.prefix
+     am_python_prefix_subst='${prefix}'
+     am_python_prefix=$am_python_prefix_subst
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for GNU default $am_display_PYTHON prefix" >&5
+printf %s "checking for GNU default $am_display_PYTHON prefix... " >&6; }
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_python_prefix" >&5
+printf "%s\n" "$am_python_prefix" >&6; }
+   fi
+fi
+
+  # Substituting python_prefix_subst value.
+  PYTHON_PREFIX=$am_python_prefix_subst
+
+
+  # emacs-page Now do it all over again for Python exec_prefix, but with yet
+  # another conditional: fall back to regular prefix if that was specified.
+
+# Check whether --with-python_exec_prefix was given.
+if test ${with_python_exec_prefix+y}
+then :
+  withval=$with_python_exec_prefix; am_python_exec_prefix_subst=$withval
+   am_cv_python_exec_prefix=$withval
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for explicit $am_display_PYTHON exec_prefix" >&5
+printf %s "checking for explicit $am_display_PYTHON exec_prefix... " >&6; }
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_exec_prefix" >&5
+printf "%s\n" "$am_cv_python_exec_prefix" >&6; }
+else $as_nop
+
+   # no explicit --with-python_exec_prefix, but if
+   # --with-python_prefix was given, use its value for python_exec_prefix too.
+   if test -n "$with_python_prefix"
+then :
+  am_python_exec_prefix_subst=$with_python_prefix
+    am_cv_python_exec_prefix=$with_python_prefix
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for python_prefix-given $am_display_PYTHON exec_prefix" >&5
+printf %s "checking for python_prefix-given $am_display_PYTHON exec_prefix... " >&6; }
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_exec_prefix" >&5
+printf "%s\n" "$am_cv_python_exec_prefix" >&6; }
+else $as_nop
+
+    # Set am__usable_exec_prefix whether using GNU or Python values,
+    # since we use that variable for pyexecdir.
+    if test "x$exec_prefix" = xNONE; then
+      am__usable_exec_prefix=$am__usable_prefix
+    else
+      am__usable_exec_prefix=$exec_prefix
+    fi
+    #
+    if $am_use_python_sys; then # using python sys.exec_prefix, not GNU
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for python default $am_display_PYTHON exec_prefix" >&5
+printf %s "checking for python default $am_display_PYTHON exec_prefix... " >&6; }
+if test ${am_cv_python_exec_prefix+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  am_cv_python_exec_prefix=`$PYTHON -c "import sys; sys.stdout.write(sys.exec_prefix)"`
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_exec_prefix" >&5
+printf "%s\n" "$am_cv_python_exec_prefix" >&6; }
+                        case $am_cv_python_exec_prefix in
+      $am__usable_exec_prefix*)
+        am__strip_prefix=`echo "$am__usable_exec_prefix" | sed 's|.|.|g'`
+        am_python_exec_prefix_subst=`echo "$am_cv_python_exec_prefix" | sed "s,^$am__strip_prefix,\\${exec_prefix},"`
+        ;;
+      *)
+        am_python_exec_prefix_subst=$am_cv_python_exec_prefix
+        ;;
+     esac
+   else # using GNU $exec_prefix, not python sys.exec_prefix
+     am_python_exec_prefix_subst='${exec_prefix}'
+     am_python_exec_prefix=$am_python_exec_prefix_subst
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for GNU default $am_display_PYTHON exec_prefix" >&5
+printf %s "checking for GNU default $am_display_PYTHON exec_prefix... " >&6; }
+     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_python_exec_prefix" >&5
+printf "%s\n" "$am_python_exec_prefix" >&6; }
+   fi
+fi
+fi
+
+  # Substituting python_exec_prefix_subst.
+  PYTHON_EXEC_PREFIX=$am_python_exec_prefix_subst
+
+
+  # Factor out some code duplication into this shell variable.
   am_python_setup_sysconfig="\
 import sys
 # Prefer sysconfig over distutils.sysconfig, for better compatibility
@@ -12187,40 +12362,39 @@ except ImportError:
     pass"
 
 
-            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON script directory" >&5
-printf %s "checking for $am_display_PYTHON script directory... " >&6; }
+              { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON script directory (pythondir)" >&5
+printf %s "checking for $am_display_PYTHON script directory (pythondir)... " >&6; }
 if test ${am_cv_python_pythondir+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  if test "x$prefix" = xNONE
-     then
-       am_py_prefix=$ac_default_prefix
-     else
-       am_py_prefix=$prefix
-     fi
-     am_cv_python_pythondir=`$PYTHON -c "
+  if test "x$am_cv_python_prefix" = x; then
+     am_py_prefix=$am__usable_prefix
+   else
+     am_py_prefix=$am_cv_python_prefix
+   fi
+   am_cv_python_pythondir=`$PYTHON -c "
 $am_python_setup_sysconfig
 if can_use_sysconfig:
-    sitedir = sysconfig.get_path('purelib', vars={'base':'$am_py_prefix'})
+  sitedir = sysconfig.get_path('purelib', vars={'base':'$am_py_prefix'})
 else:
-    from distutils import sysconfig
-    sitedir = sysconfig.get_python_lib(0, 0, prefix='$am_py_prefix')
+  from distutils import sysconfig
+  sitedir = sysconfig.get_python_lib(0, 0, prefix='$am_py_prefix')
 sys.stdout.write(sitedir)"`
-     case $am_cv_python_pythondir in
-     $am_py_prefix*)
-       am__strip_prefix=`echo "$am_py_prefix" | sed 's|.|.|g'`
-       am_cv_python_pythondir=`echo "$am_cv_python_pythondir" | sed "s,^$am__strip_prefix,$PYTHON_PREFIX,"`
-       ;;
-     *)
-       case $am_py_prefix in
-         /usr|/System*) ;;
-         *)
-	  am_cv_python_pythondir=$PYTHON_PREFIX/lib/python$PYTHON_VERSION/site-packages
-	  ;;
-       esac
-       ;;
+   #
+   case $am_cv_python_pythondir in
+   $am_py_prefix*)
+     am__strip_prefix=`echo "$am_py_prefix" | sed 's|.|.|g'`
+     am_cv_python_pythondir=`echo "$am_cv_python_pythondir" | sed "s,^$am__strip_prefix,\\${PYTHON_PREFIX},"`
+     ;;
+   *)
+     case $am_py_prefix in
+       /usr|/System*) ;;
+       *) am_cv_python_pythondir="\${PYTHON_PREFIX}/lib/python$PYTHON_VERSION/site-packages"
+          ;;
      esac
+     ;;
+   esac
 
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_pythondir" >&5
@@ -12228,44 +12402,42 @@ printf "%s\n" "$am_cv_python_pythondir" >&6; }
   pythondir=$am_cv_python_pythondir
 
 
+          pkgpythondir=\${pythondir}/$PACKAGE
 
-  pkgpythondir=\${pythondir}/$PACKAGE
 
-
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON extension module directory" >&5
-printf %s "checking for $am_display_PYTHON extension module directory... " >&6; }
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $am_display_PYTHON extension module directory (pyexecdir)" >&5
+printf %s "checking for $am_display_PYTHON extension module directory (pyexecdir)... " >&6; }
 if test ${am_cv_python_pyexecdir+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
-  if test "x$exec_prefix" = xNONE
-     then
-       am_py_exec_prefix=$am_py_prefix
-     else
-       am_py_exec_prefix=$exec_prefix
-     fi
-     am_cv_python_pyexecdir=`$PYTHON -c "
+  if test "x$am_cv_python_exec_prefix" = x; then
+     am_py_exec_prefix=$am__usable_exec_prefix
+   else
+     am_py_exec_prefix=$am_cv_python_exec_prefix
+   fi
+   am_cv_python_pyexecdir=`$PYTHON -c "
 $am_python_setup_sysconfig
 if can_use_sysconfig:
-    sitedir = sysconfig.get_path('platlib', vars={'platbase':'$am_py_prefix'})
+  sitedir = sysconfig.get_path('platlib', vars={'platbase':'$am_py_exec_prefix'})
 else:
-    from distutils import sysconfig
-    sitedir = sysconfig.get_python_lib(1, 0, prefix='$am_py_prefix')
+  from distutils import sysconfig
+  sitedir = sysconfig.get_python_lib(1, 0, prefix='$am_py_exec_prefix')
 sys.stdout.write(sitedir)"`
-     case $am_cv_python_pyexecdir in
-     $am_py_exec_prefix*)
-       am__strip_prefix=`echo "$am_py_exec_prefix" | sed 's|.|.|g'`
-       am_cv_python_pyexecdir=`echo "$am_cv_python_pyexecdir" | sed "s,^$am__strip_prefix,$PYTHON_EXEC_PREFIX,"`
-       ;;
-     *)
-       case $am_py_exec_prefix in
-         /usr|/System*) ;;
-         *)
-	   am_cv_python_pyexecdir=$PYTHON_EXEC_PREFIX/lib/python$PYTHON_VERSION/site-packages
-	   ;;
-       esac
-       ;;
+   #
+   case $am_cv_python_pyexecdir in
+   $am_py_exec_prefix*)
+     am__strip_prefix=`echo "$am_py_exec_prefix" | sed 's|.|.|g'`
+     am_cv_python_pyexecdir=`echo "$am_cv_python_pyexecdir" | sed "s,^$am__strip_prefix,\\${PYTHON_EXEC_PREFIX},"`
+     ;;
+   *)
+     case $am_py_exec_prefix in
+       /usr|/System*) ;;
+       *) am_cv_python_pyexecdir="\${PYTHON_EXEC_PREFIX}/lib/python$PYTHON_VERSION/site-packages"
+          ;;
      esac
+     ;;
+   esac
 
 fi
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $am_cv_python_pyexecdir" >&5
@@ -12273,13 +12445,11 @@ printf "%s\n" "$am_cv_python_pyexecdir" >&6; }
   pyexecdir=$am_cv_python_pyexecdir
 
 
-
-  pkgpyexecdir=\${pyexecdir}/$PACKAGE
+      pkgpyexecdir=\${pyexecdir}/$PACKAGE
 
 
 
   fi
-
 
 
 if test "$PYTHON_VERSION" = "3"; then

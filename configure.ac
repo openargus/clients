@@ -26,6 +26,7 @@
 AC_PREREQ([2.68])
 AC_INIT([Gargoyle Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
+AC_CONFIG_MACRO_DIR([./m4])
 AC_CONFIG_SRCDIR([clients/ra.c])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([include/argus_config.h])
@@ -454,12 +455,15 @@ fi
 V_INCLS_EXAMPLES=`echo $V_INCLS | sed -e 's/\.\./..\/../'`
 
 # from https://www.freedesktop.org/software/systemd/man/daemon.html
+
 PKG_PROG_PKG_CONFIG
-if test -n "$PKG_CONFIG"; then
-AC_ARG_WITH([systemdsystemunitdir],
+
+if test -d "/usr/lib/systemd"; then
+  if test -n "$PKG_CONFIG"; then
+  AC_ARG_WITH([systemdsystemunitdir],
      [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
      [with_systemdsystemunitdir=auto])
-AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+  AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
      def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
 
      AS_IF([test "x$def_systemdsystemunitdir" = "x"],
@@ -467,12 +471,12 @@ AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitd
     [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
     with_systemdsystemunitdir=no],
    [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
-AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+  AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
       [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+  fi
 fi
 
 LIBCURL_CHECK_CONFIG
-
 AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
 AC_QOSIENT_MACHINE_ID

@@ -312,6 +312,7 @@ distclean: clean
 	rm -f lib/*.a
 	rm -f bin/ra*
 	rm -f Makefile
+	rm -f *~
 	@for i in $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
@@ -323,16 +324,20 @@ clobber realclean: force
 	rm -f lib/*.a
 	rm -f include/argus_config.h
 	rm -f include/tm.h
+	rm -f include/*~
 	rm -f bin/ra*
 	rm -f pkg/osx/*.pkg
 	rm -rf pkg/osx/BUILDROOT/
 	rm -rf log
+	rm -rf autom4te.cache
 
 	@for i in $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
 	done
+
+	rm -f *~
 	rm -f ./Makefile config.*
 
 dist: $(DISTFILES) distclean
