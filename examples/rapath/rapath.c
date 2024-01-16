@@ -323,64 +323,72 @@ struct RaPathNode *
 RaPathBuildPath (struct ArgusQueueStruct *queue)
 {
    struct RaPathNode *path = NULL, *node = NULL;
-   struct ArgusRecordStruct *argus;
-   unsigned int pttl, tttl, as;
+   struct ArgusRecordStruct *ns, *argus;
+   int count = 0;
 
-   if (queue->count > 0) {
-      while ((argus = (struct ArgusRecordStruct *) ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
-         struct ArgusIPAttrStruct *attr = (void *)argus->dsrs[ARGUS_IPATTR_INDEX];
-         struct ArgusAsnStruct *asn = (void *)argus->dsrs[ARGUS_ASN_INDEX];
+   if ((count = queue->count) > 0) {
+      unsigned int pttl, tttl, as;
+      int i = 0;
 
-         tttl = attr->src.ttl;
+      for (i = 0; i < count; i++) {
+         if  ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
+            if ((argus = ArgusCopyRecordStruct(ns)) != NULL) {
+               struct ArgusIPAttrStruct *attr = (void *)argus->dsrs[ARGUS_IPATTR_INDEX];
+               struct ArgusAsnStruct *asn = (void *)argus->dsrs[ARGUS_ASN_INDEX];
 
-         if (path == NULL) {
-            if ((path = (struct RaPathNode *) ArgusCalloc (1, sizeof (*node))) == NULL)
-               ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+               tttl = attr->src.ttl;
 
-            node = path;
-            node->ttl = tttl;
-
-            if ((asn !=  NULL) && (asn->hdr.argus_dsrvl8.len > 2)) 
-               if ((as = asn->inode_as) != 0) {
-                  node->as = as;
-               }
-
-            if ((node->nodes = ArgusNewQueue()) == NULL)
-               ArgusLog (LOG_ERR, "ArgusNewQueue error %s", strerror(errno));
-
-            ArgusAddToQueue (node->nodes, &argus->qhdr, ARGUS_NOLOCK);
-
-         } else {
-            struct ArgusIPAttrStruct *pattr = (void *)((struct ArgusRecordStruct *)node->nodes->start)->dsrs[ARGUS_IPATTR_INDEX];
-
-            if ((pattr != NULL) && (attr != NULL)) {
-               pttl = pattr->src.ttl;
-
-               if (pttl == tttl) {
-                  ArgusAddToQueue (node->nodes, &argus->qhdr, ARGUS_NOLOCK);
-
-                  if ((asn !=  NULL) && (asn->hdr.argus_dsrvl8.len > 2))
-                     if (node->as != asn->inode_as)
-                        node->as = -1;
-               } else {
-                  struct RaPathNode *prv = node;
-
-                  if ((node = (struct RaPathNode *) ArgusCalloc (1, sizeof (*node))) == NULL)
+               if (path == NULL) {
+                  if ((path = (struct RaPathNode *) ArgusCalloc (1, sizeof (*node))) == NULL)
                      ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
 
+                  node = path;
                   node->ttl = tttl;
 
                   if ((asn !=  NULL) && (asn->hdr.argus_dsrvl8.len > 2)) 
-                     if ((as = asn->inode_as) != 0)
+                     if ((as = asn->inode_as) != 0) {
                         node->as = as;
-
-                  prv->nxt = node;
+                     }
 
                   if ((node->nodes = ArgusNewQueue()) == NULL)
                      ArgusLog (LOG_ERR, "ArgusNewQueue error %s", strerror(errno));
 
                   ArgusAddToQueue (node->nodes, &argus->qhdr, ARGUS_NOLOCK);
+
+               } else {
+                  struct ArgusIPAttrStruct *pattr = (void *)((struct ArgusRecordStruct *)node->nodes->start)->dsrs[ARGUS_IPATTR_INDEX];
+
+                  if ((pattr != NULL) && (attr != NULL)) {
+                     pttl = pattr->src.ttl;
+
+                     if (pttl == tttl) {
+                        ArgusAddToQueue (node->nodes, &argus->qhdr, ARGUS_NOLOCK);
+
+                        if ((asn !=  NULL) && (asn->hdr.argus_dsrvl8.len > 2))
+                           if (node->as != asn->inode_as)
+                              node->as = -1;
+                     } else {
+                        struct RaPathNode *prv = node;
+
+                        if ((node = (struct RaPathNode *) ArgusCalloc (1, sizeof (*node))) == NULL)
+                           ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+                        node->ttl = tttl;
+
+                        if ((asn !=  NULL) && (asn->hdr.argus_dsrvl8.len > 2)) 
+                           if ((as = asn->inode_as) != 0)
+                              node->as = as;
+
+                        prv->nxt = node;
+
+                        if ((node->nodes = ArgusNewQueue()) == NULL)
+                           ArgusLog (LOG_ERR, "ArgusNewQueue error %s", strerror(errno));
+
+                        ArgusAddToQueue (node->nodes, &argus->qhdr, ARGUS_NOLOCK);
+                     }
+                  }
                }
+               ArgusPushQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
             }
          }
       }
@@ -618,12 +626,12 @@ RaParseComplete (int sig)
                   tns = (struct ArgusRecordStruct *) agg->queue->array[i];
 
                   if (tns->agg != NULL) {
-                     int count = tns->agg->queue->count;
+                     int cnt = tns->agg->queue->count;
                      char nodeChar = 'A';
 
                      ArgusSortQueue (ArgusSorter, tns->agg->queue, ARGUS_LOCK);
 
-                     for (x = 0; x < count; x++) {
+                     for (x = 0; x < cnt; x++) {
                         cns = (struct ArgusRecordStruct *) tns->agg->queue->array[x];
                         cns->autoid = nodeChar;
                         nodeChar = ((nodeChar == 'Z') ? 'a' : nodeChar + 1);
@@ -631,10 +639,16 @@ RaParseComplete (int sig)
 
                      if (ArgusParser->Aflag) {
                         struct RaPathNode *path = RaPathBuildPath (tns->agg->queue);
-                        char RaTreeBuffer[MAXSTRLEN];
+                        char *sbuf = NULL, *RaTreeBuffer = NULL;
 
                         if (path) {
                            char srcId[32], srcAddr[32], dstAddr[32];
+
+                           if ((sbuf = calloc(1, MAXSTRLEN)) == NULL)
+                              ArgusLog (LOG_ERR, "RaParseComplete: calloc error %s", strerror(errno));
+
+                           if ((RaTreeBuffer = calloc(1, MAXSTRLEN)) == NULL)
+                              ArgusLog (LOG_ERR, "RaParseComplete: calloc error %s", strerror(errno));
 
                            if (RaPrintTreeNode)
                               RaPathInsertTree(RaTreeNode, path);
@@ -655,12 +669,15 @@ RaParseComplete (int sig)
                            srcAddr[strlen(srcAddr) - 1] = '\0';
                            dstAddr[strlen(dstAddr) - 1] = '\0';
 
-                           printf("%s(%s::%s) %s\n", srcId, srcAddr, dstAddr, RaTreeBuffer);
+                           sprintf(sbuf, "%s(%s::%s) %s\n", srcId, srcAddr, dstAddr, RaTreeBuffer);
+                           printf("%s\n", sbuf);
                            RaPathDeletePath(path);
                         }
+                        if (RaTreeBuffer) free (RaTreeBuffer);
+                        if (sbuf) free (sbuf);
                      }
 
-                     for (x = 0; x < count; x++) {
+                     for (x = 0; x < cnt; x++) {
                         cns = (struct ArgusRecordStruct *) tns->agg->queue->array[x];
                         RaSendArgusRecord (cns);
                      }

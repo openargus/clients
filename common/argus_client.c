@@ -3880,8 +3880,10 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
 
    if (rec) {
       if ((retn = (struct ArgusRecordStruct *) ArgusCalloc (1, sizeof(*retn))) != NULL) {
-         retn->status = rec->status;
-         retn->input  = rec->input;
+         retn->status  = rec->status;
+         retn->input   = rec->input;
+         retn->autoid  = rec->autoid;
+
          bcopy ((char *)&rec->hdr, (char *)&retn->hdr, sizeof (rec->hdr));
 
          switch (rec->hdr.type & 0xF0) {
