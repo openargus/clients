@@ -118,6 +118,23 @@ of flex and bison are available via anonymous ftp:
         ftp://prep.ai.mit.edu/pub/gnu/bison-*.tar.gz
         ftp://prep.ai.mit.edu/pub/non-gnu/flex/flex-*.tar.gz
 
+
+In order to support some specific DSR processing, argus clients needs
+the XDR library, which is now provided in the libtirpc-devel package
+on Linux. Without the XDR functions, argus-clients will not be able
+to process the ARGUS_JITTER_DSR metrics, but argus-clients will build
+without the library.
+
+Getting this library is different for most platforms. For 
+Centos Stream 9, as an example, libtirpc is available in the Base OS
+repository, but the needed libtirpc-devel package in is the CRB
+repository.  You will need to configure 'dnf' to add CRB to the
+repo lists.
+
+  # dnf config-manager --set-enabled crb
+  # dnf install libtirpc-devel
+
+
 Now, if you are still having problems, ..., well its hard to say
 from here what it might be.  So, you may want to send us some email.
 
