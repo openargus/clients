@@ -1,8 +1,8 @@
 package qosient::radhcp;
 
-#   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
-#   Copyright (c) 2017-2018 QoSient, LLC
-#   All Rights Reserved
+#  Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2017-2024 QoSient, LLC
+#  All Rights Reserved
 #
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
 #  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT

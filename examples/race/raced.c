@@ -1,6 +1,6 @@
 /*
  * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2014 QoSient, LLC
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -19,7 +19,7 @@
 
 /*
  * Race Client Software.  Tools to read, analyze and manage Race data.
- * Copyright (C) 2000-2014 QoSient, LLC.
+ * Copyright (C) 2000-2024 QoSient, LLC.
  * All Rights Reserved
  *
  * raced - this is the RACE daemon.

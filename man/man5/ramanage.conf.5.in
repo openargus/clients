@@ -1,6 +1,6 @@
 .\"
 .\" Gargoyle Software
-.\" Copyright (c) 2000-2018 QoSient, LLC
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
 .\"
 .\"
@@ -239,4 +239,4 @@ key and its properties if a graphical interface is preferred.
 .BR ramanage (1),\  rastream (1)
 
 .SH COPYRIGHT
-Copyright (c) 2000-2018 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.

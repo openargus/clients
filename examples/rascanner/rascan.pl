@@ -1,7 +1,7 @@
 #!@PERLBIN@
 # 
 #  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
-#  Copyright (c) 2000-2014 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -651,7 +651,7 @@ sub createTmpConfig {
    print CONFFILE <<_EOCONFIG_ ;
  
 #
-#  Copyright (c) 2000-2004 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 #  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
@@ -678,7 +678,7 @@ sub createTmpRaclusterPass4Config {
    open(CONFFILE, "> $tmpp4conf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -703,7 +703,7 @@ sub createTmpRaclusterPass3Config {
    open(CONFFILE, "> $tmpp3conf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -729,7 +729,7 @@ sub createTmpRaclusterPass2Config {
    open(CONFFILE, "> $tmpp2conf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 # Racluster Aggregation Policy Configuration
@@ -759,7 +759,7 @@ sub createTmpRaclusterPass1Config {
    open(CONFFILE, "> $tmpp1conf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -788,7 +788,7 @@ sub createTmpAggConfig {
    open(CONFFILE, "> $tmpraconf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -814,7 +814,7 @@ sub createTmpRaclusterTimeoutConfig {
    open(CONFFILE, "> $tmpraconf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -840,7 +840,7 @@ sub createTmpRaclusterNoTimeoutConfig {
    open(CONFFILE, "> $tmpraconf");
    print CONFFILE <<_EOCONFIG_ ;
 # 
-#  Copyright (c) 2000-2012 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 # Racluster Aggregation Policy Configuration
@@ -866,7 +866,7 @@ sub createTmpRaisConfig {
    open(CONFFILE, "> $tmpraisconf");
    print CONFFILE <<_EOCONFIG_ ;
 #
-#  Copyright (c) 2000-2004 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,

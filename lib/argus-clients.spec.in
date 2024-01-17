@@ -308,7 +308,7 @@ Requires: cyrus-sasl-devel
 
 %description devel
 Argus Clients contains a number of programs that process Argus data.
-Copyright 2000-2016 QoSient, LLC
+Copyright 2000-2024 QoSient, LLC
 
 %files devel
 %defattr(-,root,root)
@@ -325,7 +325,7 @@ Requires: argus-clients%{?_workstation:-workstation}
 
 %description graph
 Tool to graph Argus data
-Copyright 2000-2016 QoSient, LLC
+Copyright 2000-2024 QoSient, LLC
 
 %files graph
 %defattr(-,root,root)
@@ -340,7 +340,7 @@ Requires: argus-clients, mariadb-libs
 
 %description sql
 Tools to view modify Argus data in SQL databases
-Copyright 2000-2016 QoSient, LLC
+Copyright 2000-2024 QoSient, LLC
 
 %files sql
 %defattr(-,root,root)
@@ -390,7 +390,7 @@ Group: Applications/Internet
 Requires: argus-clients, mariadb-libs
 %description policy
 Tools to evaluate argus flow data for policy conformance
-Copyright 2018 QoSient, LLC
+Copyright 2024 QoSient, LLC
 %files policy
 %{_bindir}/raup
 
