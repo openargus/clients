@@ -388,7 +388,7 @@ RaPathBuildPath (struct ArgusQueueStruct *queue)
                      }
                   }
                }
-               ArgusPushQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+               ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
             }
          }
       }
@@ -642,7 +642,7 @@ RaParseComplete (int sig)
                         char *sbuf = NULL, *RaTreeBuffer = NULL;
 
                         if (path) {
-                           char srcId[32], srcAddr[32], dstAddr[32];
+                           char srcId[64], srcAddr[32], dstAddr[32];
 
                            if ((sbuf = calloc(1, MAXSTRLEN)) == NULL)
                               ArgusLog (LOG_ERR, "RaParseComplete: calloc error %s", strerror(errno));
@@ -664,7 +664,6 @@ RaParseComplete (int sig)
                            ArgusPrintDstAddr (ArgusParser, dstAddr, cns, 0);
 
                            RaPrintPath (path, RaTreeBuffer, sizeof(RaTreeBuffer));
-                           
                            srcId[strlen(srcId) - 1] = '\0';
                            srcAddr[strlen(srcAddr) - 1] = '\0';
                            dstAddr[strlen(dstAddr) - 1] = '\0';
@@ -673,6 +672,7 @@ RaParseComplete (int sig)
                            printf("%s\n", sbuf);
                            RaPathDeletePath(path);
                         }
+
                         if (RaTreeBuffer) free (RaTreeBuffer);
                         if (sbuf) free (sbuf);
                      }
@@ -685,7 +685,10 @@ RaParseComplete (int sig)
                         printf ("\n");
                   }
                }
-               ArgusFree(ArgusParser->ns);
+
+               if (ArgusParser->ns != NULL)
+                  ArgusFree(ArgusParser->ns);
+               ArgusParser->ns = NULL;
             }
          }
 
@@ -739,10 +742,6 @@ RaParseComplete (int sig)
    }
 
    ArgusParser->eNflag = nflag;
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (6, "RaParseComplete(%d) done", sig);
-#endif
 }
 
 void
