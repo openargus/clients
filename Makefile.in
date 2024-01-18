@@ -58,12 +58,13 @@ docdir = @datadir@/doc/argus-clients-5.0
 SHELL = /bin/sh
 
 DIRS = @DIRS@
-INSTDIRS = @DIRS@ ./include ./pkg
+INSTDIRS = @DIRS@ ./include
 OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
 
-DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in README VERSION \
-	include lib man support aclocal.m4 acsite.m4 config configure configure.ac .threads \
-	bin clients examples common debian pkg perllib pythonlib
+DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \
+	include lib man support aclocal.m4 acsite.m4 config configure configure.ac \
+	.threads bin clients examples common debian pkg perllib pythonlib \
+	README.rst README.osx README.win7 VERSION 
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -179,7 +180,7 @@ endif
 		(mkdir -p $(DESTDIR)@prefix@; chmod 755 $(DESTDIR)@prefix@)
 	[ -d $(DESTDIR)$(docdir) ] || \
 		(mkdir -p $(DESTDIR)$(docdir); chmod 755 $(DESTDIR)$(docdir))
-	$(INSTALL) -m 0644 $(srcdir)/README $(DESTDIR)$(docdir)
+	$(INSTALL) -m 0644 $(srcdir)/README.rst $(DESTDIR)$(docdir)
 
 install-perl:
 ifndef WORKSTATION_BUILD
