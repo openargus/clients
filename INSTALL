@@ -52,8 +52,18 @@ curses development package installed, such as "ncurses-devel".
 Ratop would like to use the readline library, if available.  While not
 required, readline is recommended.
 
+For Debian, you will need to install readline-dev.
+
+  # apt install readline-dev
+
+For other Linux, you may need to install it as 
+
+  # apt install readline-devel
+
 For some OS's, such as Mac OS X, which does not ship with readline, due to
-licensing issues, installing these packages is optional.
+licensing issues, installing these packages is optional.  Using Brew to
+install needed packages for compiling argus and argus-clients is recommended.
+That's what we do.
 
 Argus 5.0 supports the use of uuid's as source id's.  To use uuid's effective,
 argus clients uses libuuid-devel to parse and generate uuid strings.
@@ -127,11 +137,15 @@ without the library.
 
 Getting this library is different for most platforms. For 
 Centos Stream 9, as an example, libtirpc is available in the Base OS
-repository, but the needed libtirpc-devel package in is the CRB
-repository.  You will need to configure 'dnf' to add CRB to the
+repository using 'dnf', but the needed libtirpc-devel package is in
+the CRB repository.  You will need to configure 'dnf' to add CRB to the
 repo lists.
 
   # dnf config-manager --set-enabled crb
+
+For other Linux that use 'dnf', you won't need the above command, but
+you will need to install libtirpc.
+
   # dnf install libtirpc-devel
 
 
