@@ -305,13 +305,6 @@ enum argus_file_sort_e {
 };
 
 
-#define Version1        1
-#define Version5        5
-#define Version6        6
-#define Version7        7
-#define Version8        8
-
-
 struct ArgusRecord *ArgusNetFlowCallRecord (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);
 struct ArgusRecord *ArgusNetFlowDetailInt  (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);
 struct ArgusRecord *ArgusParseCiscoRecord (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);

@@ -56,6 +56,11 @@
 
 #include <netinet/tcp.h>
 
+#define Version1        1
+#define Version5        5
+#define Version6        6
+#define Version7        7
+#define Version8        8
 
 struct ArgusRecord *ArgusNetFlowCallRecord (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);
 struct ArgusRecord *ArgusNetFlowDetailInt  (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);

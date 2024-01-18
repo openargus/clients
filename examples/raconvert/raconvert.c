@@ -183,7 +183,9 @@ unsigned int ArgusIdType = 0;
 
 int
 main (int argc, char **argv) {
+#if !defined(CYGWIN)
    extern char *optarg;
+#endif
    int ArgusExitStatus;
    int i, cc;
 
