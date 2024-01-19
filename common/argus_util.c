@@ -28365,6 +28365,7 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
    /* time - [time] explicit timestamp range */  
    /* time + [time] explicit timestamp with range offset */
 
+
    if (strlen(str) <= 128) {
       bzero (buf, sizeof(buf));
       strncpy (buf, str, 128);
@@ -28392,9 +28393,11 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
             buf[strlen(buf) - 1] = 0;
          while (isspace((int) *ptr))
             ptr++;
-         
-         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac, 0)) > 0)
-            ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, &ArgusParser->RaStartFilter, ptr, mode, &lastfrac, 1);
+
+         if ((retn = ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaStartFilter, tm, buf, ' ', &startfrac, 0)) > 0) {
+            bcopy(&ArgusParser->RaStartFilter, tm, sizeof(*tm));
+            ArgusParseTime (&ArgusParser->RaWildCardDate, &ArgusParser->RaLastFilter, tm, ptr, mode, &lastfrac, 1);
+         }
 
          if (retn >= 0)
             retn = 0;

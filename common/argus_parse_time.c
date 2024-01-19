@@ -262,11 +262,12 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
 
          if (!(strpbrk(str, "/:"))) {
             int value = atoi(str);
-            unixt = 1;
             if (value > 10000000) {
+               unixt = 1;
                thistime = value;
                retn = 1;
             } else {
+               unixt = 0;
                retn = -1;
             }
          }
@@ -417,6 +418,8 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
                   if (hour < 24) {
                      retn = ARGUS_HOUR;
                   }
+                  if (mode == '+')
+                     hour += startm->tm_hour;
                } else
                   hour = 0;
 
@@ -464,7 +467,7 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
                case ARGUS_SEC:    break;
             }
 
-            if (hour > 24) {
+            if (unixt) {
                time_t value = hour;
                bzero(startm, sizeof(*startm));
                localtime_r (&value, startm);
