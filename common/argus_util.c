@@ -3852,7 +3852,7 @@ RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStru
 int
 RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
 {
-   struct RaAddressStruct *raddr;
+   struct RaAddressStruct *raddr = NULL;
    int retn = 0, label = 0, src = 0, dst = 0;
 
    if (mode & ARGUS_LABEL_RECORD) {
@@ -3883,33 +3883,58 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
             /* always try exact match first? */
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
                retn = ARGUS_MY_ADDRESS;
-            else if (mode != ARGUS_EXACT_MATCH)
+            else if (mode != ARGUS_EXACT_MATCH) {
                if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
                   if (raddr->locality > 1)
                      retn = ARGUS_MY_NETWORK;
                   if (*addr < 255)
                      retn = ARGUS_MY_NETWORK;
                }
+            }
+            break;
+         }
 
-            if (raddr != NULL) {
-               if (label && (src || dst)) {
-                  char buf[128];
-                  if (raddr->label != NULL) {
-                     if (src) {
-                        snprintf (buf, 128, "{ sloc:%s }", raddr->label);
+         case ARGUS_TYPE_IPV6: {
+            struct ArgusCIDRAddr *cidr;
+            char ntop_buf[INET6_ADDRSTRLEN];
+            char *cp;
+
+            if ((cp = (char *) inet_ntop(AF_INET6, (const void *) addr, ntop_buf, sizeof(ntop_buf))) != NULL) {
+               if ((cidr = RaParseCIDRAddr (parser, cp)) != NULL) {
+                  struct RaAddressStruct node;
+                  bzero ((char *)&node, sizeof(node));
+                  bcopy(cidr, &node.addr, sizeof(node.addr));
+
+                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
+                     retn = ARGUS_MY_ADDRESS;
+                  else if (mode != ARGUS_EXACT_MATCH) {
+                     if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
+                        if (raddr->locality > 1)
+                           retn = ARGUS_MY_NETWORK;
+                        if (*addr < 255)
+                           retn = ARGUS_MY_NETWORK;
                      }
-                     if (dst) {
-                        snprintf (buf, 128, "{ dloc:%s }", raddr->label);
-                     }
-                     ArgusAddToRecordLabel (parser, argus, buf);
-                     argus->status |= ARGUS_RECORD_MODIFIED;
                   }
                }
             }
             break;
          }
-         case ARGUS_TYPE_IPV6:
-            break;
+      }
+
+      if (raddr != NULL) {
+         if (label && (src || dst)) {
+            char buf[128];
+            if (raddr->label != NULL) {
+               if (src) {
+                  snprintf (buf, 128, "{ sloc:%s }", raddr->label);
+               }
+               if (dst) {
+                  snprintf (buf, 128, "{ dloc:%s }", raddr->label);
+               }
+               ArgusAddToRecordLabel (parser, argus, buf);
+               argus->status |= ARGUS_RECORD_MODIFIED;
+            }
+         }
       }
 
 #ifdef ARGUSDEBUG
