@@ -1346,7 +1346,8 @@ ArgusClientTimeout ()
    } else
       ArgusParser->RaClientUpdate.tv_sec = ArgusParser->ArgusGlobalTime.tv_sec;
 
-   ArgusCorrelateQueue (RaCursesProcess->queue);
+   if (ArgusParser->ArgusCorrelateEvents)
+      ArgusCorrelateQueue (RaCursesProcess->queue);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");
@@ -2864,23 +2865,28 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
    int retn = 0, x, z, count;
    struct timeval lasttime;
 
-#if defined(ARGUS_THREADS)
-   pthread_mutex_lock(&queue->lock);
-#endif
-   count = queue->count;
-   for (x = 0, z = count; x < z; x++) {
-      if ((ns = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
-         lasttime = ns->qhdr.lasttime;
-         *tvp = lasttime;
-         ArgusCorrelateRecord(ns);
-         ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
-         ns->qhdr.lasttime = lasttime;
-      }
-   }
+   if (RaEventProcess != NULL) {
+      if (RaEventProcess->queue->count) {
 
 #if defined(ARGUS_THREADS)
-   pthread_mutex_unlock(&queue->lock);
+         pthread_mutex_lock(&queue->lock);
 #endif
+         count = queue->count;
+         for (x = 0, z = count; x < z; x++) {
+            if ((ns = (void *)ArgusPopQueue(queue, ARGUS_NOLOCK)) != NULL) {
+               lasttime = ns->qhdr.lasttime;
+               *tvp = lasttime;
+               ArgusCorrelateRecord(ns);
+               ArgusAddToQueue (queue, &ns->qhdr, ARGUS_NOLOCK);
+               ns->qhdr.lasttime = lasttime;
+            }
+         }
+
+#if defined(ARGUS_THREADS)
+         pthread_mutex_unlock(&queue->lock);
+#endif
+      }
+   }
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (5, "ArgusCorrelateQueue (0x%x) returning %d", queue, retn);
