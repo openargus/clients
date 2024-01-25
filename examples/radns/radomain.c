@@ -415,7 +415,7 @@ struct ArgusDomainResourceRecord {
             bzero(ArgusBuf, 0x4000);
             if (!TTEST2(*cp, sizeof(struct in6_addr)))
                return(NULL);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ArgusGetV6Name(ArgusParser, (unsigned char *)cp));
+            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ArgusGetV6Name(ArgusParser, (unsigned char *)cp));
             rr->data = strdup(ArgusBuf);
             break;
 

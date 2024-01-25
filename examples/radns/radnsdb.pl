@@ -45,6 +45,7 @@ use Data::Dumper;
 my $VERSION = "5.0.3";
 
 my $debug   = 0;
+my $drop    = 0;
 my $quiet   = 0;
 my $uri     = 0;
 my $time    = "-1d";
@@ -63,12 +64,12 @@ my @arglist = ();
 ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-debug//         && do { $debug++; next ARG; };
+      s/^-drop//          && do { $drop++; next ARG; };
       s/^-t//             && do { $time = shift (@ARGV); next ARG; };
       s/^-time//          && do { $time = shift (@ARGV); next ARG; };
       s/^-mode//          && do { $mode = shift (@ARGV); next ARG; };
       s/^-node//          && do { $node = shift (@ARGV); next ARG; };
       s/^-flows//         && do { $flows = shift (@ARGV); next ARG; };
-
       s/^-q//             && do { $quiet++; next ARG; };
       s/^-w//             && do { $uri = shift (@ARGV); next ARG; };
       /^-M/               && do {
@@ -84,7 +85,7 @@ ARG: while (my $arg = shift(@ARGV)) {
    $arglist[@arglist + 0] = $arg;
 }
 
-print "DEBUG: RaDNSDb: starting\n" if $debug;
+print "DEBUG: RaDNSDb: starting for time $time\n" if $debug;
 
 # Start the program
 
@@ -145,7 +146,7 @@ if ($uri) {
 
    switch ($db) {
       case /^dnsNames/ {
-         $options = "-u -f /usr/argus/radns.conf -qM json search:0.0.0.0/0";
+         $options = "-u -f /usr/argus/radns.conf -qM json search:0.0.0.0/0,::/0";
       }
       case /^dnsAddrs/ {
          $options = "-u -f /usr/argus/radns.conf -qM json search:'.'";
@@ -153,7 +154,7 @@ if ($uri) {
    }
 
    if (grep -d, glob "/home/dns/*/*/$time") {
-      $Program = "$rasql -t $time -R /home/dns/*/*/$time -w - | $radns $options";
+      $Program = "$radns $options -t $time -R /home/dns/*/*/$time";
    } else {
       $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
    }
@@ -181,6 +182,9 @@ if ($uri) {
       case /^dnsNames/ {
          if (scalar(@{$results_ref}) > 0) {
             # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+            if ($drop > 0) {
+               $dbh->do("DROP TABLE $table");
+            }
 
             print "DEBUG: RaDnsDB: CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
             $dbh->do("CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
@@ -200,6 +204,9 @@ if ($uri) {
       case /^dnsAddrs/ {
          if (scalar(@{$results_ref}) > 0) {
             # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+            if ($drop > 0) {
+               $dbh->do("DROP TABLE $table");
+            }
 
             my $SQL  = "CREATE TABLE IF NOT EXISTS $table (";
                $SQL .= "`name` varchar(128) NOT NULL,";

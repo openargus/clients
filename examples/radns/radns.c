@@ -177,223 +177,467 @@ ArgusHandleTreeCommand (struct ArgusOutputStruct *output, char *command)
 }
 
 
-void ArgusPrintAddressResponse(char *, struct RaAddressStruct *, char ***, int *, int *);
+void ArgusPrintAddressResponse(char *, struct RaAddressStruct *, char ***, int *, int *, int);
 
 void
-ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***result, int *rind, int *reslen)
+ArgusPrintAddressResponse(char *string, struct RaAddressStruct *raddr, char ***result, int *rind, int *reslen, int type)
 {
    struct ArgusListStruct *dns = raddr->dns;
 
-   if (raddr->r != NULL) ArgusPrintAddressResponse(string, raddr->r, result, rind, reslen);
-   if (raddr->l != NULL) ArgusPrintAddressResponse(string, raddr->l, result, rind, reslen);
+   switch (type) {
+      case AF_INET: {
+         if (raddr->r != NULL) ArgusPrintAddressResponse(string, raddr->r, result, rind, reslen, type);
+         if (raddr->l != NULL) ArgusPrintAddressResponse(string, raddr->l, result, rind, reslen, type);
 
-   if (dns != NULL) {
-      struct ArgusListObjectStruct *tdns;
-      struct timeval tvbuf, *tvp = &tvbuf;
-      char tbuf[128], rbuf[128], *resbuf;
-      int ind = *rind;
+         if (dns != NULL) {
+            struct ArgusListObjectStruct *tdns;
+            struct timeval tvbuf, *tvp = &tvbuf;
+            char tbuf[128], rbuf[128], *resbuf;
+            int ind = *rind;
 
-      if ((resbuf = ArgusMalloc(ARGUS_MAX_RESPONSE)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusPrintAddressResponse: ArgusMalloc error %s\n", strerror(errno));
+            if ((resbuf = ArgusMalloc(ARGUS_MAX_RESPONSE)) == NULL)
+               ArgusLog (LOG_ERR, "ArgusPrintAddressResponse: ArgusMalloc error %s\n", strerror(errno));
 
-      bzero(tbuf, sizeof(tbuf));
-      bzero(rbuf, sizeof(rbuf));
+            bzero(tbuf, sizeof(tbuf));
+            bzero(rbuf, sizeof(rbuf));
 
-      ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
-      ArgusPrintTime(ArgusParser, rbuf, sizeof(rbuf), &raddr->rtime);
+            ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
+            ArgusPrintTime(ArgusParser, rbuf, sizeof(rbuf), &raddr->rtime);
 
-      RaDiffTime (&raddr->rtime, &raddr->atime, tvp);
+            RaDiffTime (&raddr->rtime, &raddr->atime, tvp);
 
-      if (raddr->addr.str == NULL) 
-         raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
+            if (raddr->addr.str == NULL) 
+               raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
 
-      if (ArgusParser->ArgusPrintJson) {
-         sprintf (resbuf, "{ \"stime\":\"%s\", \"rtime\":\"%s\", \"addr\":\"%s\"", tbuf, rbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
-      } else {
-         sprintf (resbuf, "%s: \"%s\" ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
-      }
+            if (ArgusParser->ArgusPrintJson) {
+               sprintf (resbuf, "{ \"stime\":\"%s\", \"rtime\":\"%s\", \"addr\":\"%s\"", tbuf, rbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+            } else {
+               sprintf (resbuf, "%s: \"%s\" ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+            }
 
 #if defined(ARGUS_THREADS)
-      if (pthread_mutex_lock(&raddr->dns->lock) == 0) {
+            if (pthread_mutex_lock(&raddr->dns->lock) == 0) {
 #endif
-         int auth = 0, refer = 0, ptr = 0;
-         int x, cnt = raddr->dns->count;
-         int len = strlen(resbuf);
+               int auth = 0, refer = 0, ptr = 0;
+               int x, cnt = raddr->dns->count;
+               int len = strlen(resbuf);
 
-         tdns = raddr->dns->start;
-         for (x = 0; x < cnt; x++) {
-            if (tdns->status & ARGUS_DNS_AUTH)     auth++;
-            if (tdns->status & ARGUS_DNS_REFERER)  refer++;
-            if (tdns->status & ARGUS_DNS_PTR)      ptr++;
-            tdns = tdns->nxt;
-         }
-
-         if (auth > 0) {
-            int tref = 0;
-            tdns = raddr->dns->start;
-            if (ArgusParser->ArgusPrintJson) {
-               char *buf = ", \"auth\":";
-               sprintf (&resbuf[len], "%s", buf);
-               len += strlen(buf);
-            } else {
-               sprintf (&resbuf[len], "%s", "A: ");
-               len += 3;
-            }
-
-            if (auth > 1) {
-               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
-               len++;
-            }
-  
-            for (x = 0; x < cnt; x++) {
-               if (tdns->status & ARGUS_DNS_AUTH) {
-                  struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
-
-                  RaDiffTime (&tname->ltime, &tname->stime, tvp);
-
-                  if (strlen(tname->n_name) > 0) {
-                     if (tref++ > 0) {
-                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
-                        len++;
-                     }
-
-                     if (ArgusParser->ArgusPrintJson) {
-                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
-                        len = strlen(resbuf);
-                     } else {
-                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
-                        len = strlen(resbuf);
-                     }
-                  }
+               tdns = raddr->dns->start;
+               for (x = 0; x < cnt; x++) {
+                  if (tdns->status & ARGUS_DNS_AUTH)     auth++;
+                  if (tdns->status & ARGUS_DNS_REFERER)  refer++;
+                  if (tdns->status & ARGUS_DNS_PTR)      ptr++;
+                  tdns = tdns->nxt;
                }
-               tdns = tdns->nxt;
-            }
 
-            if (auth > 1)
-               sprintf (&resbuf[len++], "]");
-         }
-
-         if (refer > 0) {
-            int tref = 0;
-            tdns = raddr->dns->start;
-            if (ArgusParser->ArgusPrintJson) {
-               char *buf = ", \"refer\":";
-               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
-               len += strlen(buf);
-            } else {
-               char *buf;
-               if (auth > 0) 
-                  buf = " REF: ";
-               else
-                  buf = "REF: ";
-               snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
-               len += strlen(buf);
-            }
-
-            if (refer > 1)
-               sprintf (&resbuf[len++], "[");
-
-            for (x = 0; x < cnt; x++) {
-               if (tdns->status & ARGUS_DNS_REFERER) {
-                  struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
-
-                  RaDiffTime (&tname->ltime, &tname->stime, tvp);
-
-                  if (strlen(tname->n_name) > 0) {
-                  if (tref++ > 0)
-                     sprintf (&resbuf[len++], ",");
-
+               if (auth > 0) {
+                  int tref = 0;
+                  tdns = raddr->dns->start;
                   if (ArgusParser->ArgusPrintJson) {
-                     sprintf (&resbuf[len], "\"%s\"", tname->n_name);
-                     len = strlen(resbuf);
+                     char *buf = ", \"auth\":";
+                     sprintf (&resbuf[len], "%s", buf);
+                     len += strlen(buf);
                   } else {
-                     sprintf (&resbuf[len], "\"%s\"", tname->n_name);
-                     len = strlen(resbuf);
+                     sprintf (&resbuf[len], "%s", "A: ");
+                     len += 3;
                   }
+
+                  if (auth > 1) {
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+                     len++;
+                  }
+        
+                  for (x = 0; x < cnt; x++) {
+                     if (tdns->status & ARGUS_DNS_AUTH) {
+                        struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+
+                        RaDiffTime (&tname->ltime, &tname->stime, tvp);
+
+                        if (strlen(tname->n_name) > 0) {
+                           if (tref++ > 0) {
+                              snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                              len++;
+                           }
+
+                           if (ArgusParser->ArgusPrintJson) {
+                              snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                              len = strlen(resbuf);
+                           } else {
+                              snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                              len = strlen(resbuf);
+                           }
+                        }
+                     }
+                     tdns = tdns->nxt;
+                  }
+
+                  if (auth > 1)
+                     sprintf (&resbuf[len++], "]");
+               }
+
+               if (refer > 0) {
+                  int tref = 0;
+                  tdns = raddr->dns->start;
+                  if (ArgusParser->ArgusPrintJson) {
+                     char *buf = ", \"refer\":";
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                     len += strlen(buf);
+                  } else {
+                     char *buf;
+                     if (auth > 0) 
+                        buf = " REF: ";
+                     else
+                        buf = "REF: ";
+                     snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                     len += strlen(buf);
+                  }
+
+                  if (refer > 1)
+                     sprintf (&resbuf[len++], "[");
+
+                  for (x = 0; x < cnt; x++) {
+                     if (tdns->status & ARGUS_DNS_REFERER) {
+                        struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+
+                        RaDiffTime (&tname->ltime, &tname->stime, tvp);
+
+                        if (strlen(tname->n_name) > 0) {
+                        if (tref++ > 0)
+                           sprintf (&resbuf[len++], ",");
+
+                        if (ArgusParser->ArgusPrintJson) {
+                           sprintf (&resbuf[len], "\"%s\"", tname->n_name);
+                           len = strlen(resbuf);
+                        } else {
+                           sprintf (&resbuf[len], "\"%s\"", tname->n_name);
+                           len = strlen(resbuf);
+                        }
+                        }
+                     }
+                     tdns = tdns->nxt;
+                  }
+
+                  if (refer > 1)
+                     sprintf (&resbuf[len++], "]");
+               }
+
+               if (ptr > 0) {
+                  int tref = 0;
+                  tdns = raddr->dns->start;
+                  if (ArgusParser->ArgusPrintJson) {
+                     char *buf = ", \"ptr\":";
+                     int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                     len += slen;
+                  } else {
+                     char *buf;
+                     if ((auth > 0) || (refer > 0)) 
+                        buf = " PTR: ";
+                     else
+                        buf = "PTR: ";
+                     int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                     len += slen;
+                  }
+
+                  if (ptr > 1) {
+                     int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+                     len += slen;
+                  }
+
+                  for (x = 0; x < cnt; x++) {
+                     if (tdns->status & ARGUS_DNS_PTR) {
+                        struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+                        if (strlen(tname->n_name) > 0) {
+                           if (tref++ > 0) {
+                              int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                              len += slen;
+                           }
+
+                           if (ArgusParser->ArgusPrintJson) {
+                              snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                           } else {
+                              snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                           }
+                        }
+                        len = strlen(resbuf);
+                     }
+                     tdns = tdns->nxt;
+                  }
+
+                  if (ptr > 1) {
+                     int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
+                     len += slen;
                   }
                }
-               tdns = tdns->nxt;
-            }
 
-            if (refer > 1)
-               sprintf (&resbuf[len++], "]");
-         }
-
-         if (ptr > 0) {
-            int tref = 0;
-            tdns = raddr->dns->start;
-            if (ArgusParser->ArgusPrintJson) {
-               char *buf = ", \"ptr\":";
-               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
-               len += slen;
-            } else {
-               char *buf;
-               if ((auth > 0) || (refer > 0)) 
-                  buf = " PTR: ";
-               else
-                  buf = "PTR: ";
-               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
-               len += slen;
-            }
-
-            if (ptr > 1) {
-               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
-               len += slen;
-            }
-
-            for (x = 0; x < cnt; x++) {
-               if (tdns->status & ARGUS_DNS_PTR) {
-                  struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
-                  if (strlen(tname->n_name) > 0) {
-                     if (tref++ > 0) {
-                        int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
-                        len += slen;
-                     }
-
-                     if (ArgusParser->ArgusPrintJson) {
-                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
-                     } else {
-                        snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
-                     }
-                  }
-                  len = strlen(resbuf);
+               if (ArgusParser->ArgusPrintJson) {
+                  int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "}");
+                  len += slen;
+               } else {
+                  int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
+                  len += slen;
                }
-               tdns = tdns->nxt;
-            }
 
-            if (ptr > 1) {
-               int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
-               len += slen;
-            }
-         }
+               if (ind >= *reslen) {
+                  int blen = *reslen * sizeof(char *);
+                  int nlen = ARGUS_DEFAULT_RESULTLEN * sizeof(char *);
 
-         if (ArgusParser->ArgusPrintJson) {
-            int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "}");
-            len += slen;
-         } else {
-            int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
-            len += slen;
-         }
+                  if ((*result = ArgusRealloc(*result, blen + nlen)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
 
-         if (ind >= *reslen) {
-            int blen = *reslen * sizeof(char *);
-            int nlen = ARGUS_DEFAULT_RESULTLEN * sizeof(char *);
+                  bzero(&(*result)[blen], nlen);
+                  *reslen += ARGUS_DEFAULT_RESULTLEN;
+               }
 
-            if ((*result = ArgusRealloc(*result, blen + nlen)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
-
-            bzero(&(*result)[blen], nlen);
-            *reslen += ARGUS_DEFAULT_RESULTLEN;
-         }
-
-         (*result)[ind++] = strdup(resbuf);
+               (*result)[ind++] = strdup(resbuf);
 
 #if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&raddr->dns->lock);
-      }
+               pthread_mutex_unlock(&raddr->dns->lock);
+            }
 #endif
-      ArgusFree(resbuf);
-      *rind = ind;
+            ArgusFree(resbuf);
+            *rind = ind;
+         }
+         break;
+      }
+
+      case AF_INET6: {
+         extern struct cnamemem ipv6cidrtable[HASHNAMESIZE];
+         int i, match = 0;
+
+         if (strcmp(string, "::/0") == 0) 
+            match = 1;
+
+// all match ... dump the complete hash table
+         for (i = 0; i < HASHNAMESIZE; i++) {
+            struct cnamemem *tp;
+            int tmatch = match;
+
+            if ((tp = &ipv6cidrtable[i]) != NULL) {
+               while (tp->n_nxt) {
+                  if (tmatch == 0)
+                     if (!strncmp(string, tp->name, strlen(string)))
+                        tmatch = 1;
+
+                  if (tmatch) {
+                     if ((raddr = tp->node) != NULL) {
+                        struct ArgusListStruct *dns = raddr->dns;
+
+                        if (dns != NULL) {
+                           struct ArgusListObjectStruct *tdns;
+                           struct timeval tvbuf, *tvp = &tvbuf;
+                           char tbuf[128], rbuf[128], *resbuf;
+                           int ind = *rind;
+
+                           if ((resbuf = ArgusMalloc(ARGUS_MAX_RESPONSE)) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusPrintAddressResponse: ArgusMalloc error %s\n", strerror(errno));
+
+                           bzero(tbuf, sizeof(tbuf));
+                           bzero(rbuf, sizeof(rbuf));
+
+                           ArgusPrintTime(ArgusParser, tbuf, sizeof(tbuf), &raddr->atime);
+                           ArgusPrintTime(ArgusParser, rbuf, sizeof(rbuf), &raddr->rtime);
+
+                           RaDiffTime (&raddr->rtime, &raddr->atime, tvp);
+
+                           if (raddr->addr.str == NULL) 
+                              raddr->addr.str = strdup(ArgusGetName (ArgusParser, (unsigned char *)&raddr->addr.addr[0]));
+
+                           if (ArgusParser->ArgusPrintJson) {
+                              sprintf (resbuf, "{ \"stime\":\"%s\", \"rtime\":\"%s\", \"addr\":\"%s\"", tbuf, rbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+                           } else {
+                              sprintf (resbuf, "%s: \"%s\" ", tbuf, (raddr->addr.str != NULL) ? raddr->addr.str : string);
+                           }
+
+#if defined(ARGUS_THREADS)
+                           if (pthread_mutex_lock(&raddr->dns->lock) == 0) {
+#endif
+                              int auth = 0, refer = 0, ptr = 0;
+                              int x, cnt = raddr->dns->count;
+                              int len = strlen(resbuf);
+
+                              tdns = raddr->dns->start;
+                              for (x = 0; x < cnt; x++) {
+                                 if (tdns->status & ARGUS_DNS_AUTH)     auth++;
+                                 if (tdns->status & ARGUS_DNS_REFERER)  refer++;
+                                 if (tdns->status & ARGUS_DNS_PTR)      ptr++;
+                                 tdns = tdns->nxt;
+                              }
+
+                              if (auth > 0) {
+                                 int tref = 0;
+                                 tdns = raddr->dns->start;
+                                 if (ArgusParser->ArgusPrintJson) {
+                                    char *buf = ", \"auth\":";
+                                    sprintf (&resbuf[len], "%s", buf);
+                                    len += strlen(buf);
+                                 } else {
+                                    sprintf (&resbuf[len], "%s", "A: ");
+                                    len += 3;
+                                 }
+
+                                 if (auth > 1) {
+                                    snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+                                    len++;
+                                 }
+                       
+                                 for (x = 0; x < cnt; x++) {
+                                    if (tdns->status & ARGUS_DNS_AUTH) {
+                                       struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+
+                                       RaDiffTime (&tname->ltime, &tname->stime, tvp);
+
+                                       if (strlen(tname->n_name) > 0) {
+                                          if (tref++ > 0) {
+                                             snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                                             len++;
+                                          }
+
+                                          if (ArgusParser->ArgusPrintJson) {
+                                             snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                                             len = strlen(resbuf);
+                                          } else {
+                                             snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                                             len = strlen(resbuf);
+                                          }
+                                       }
+                                    }
+                                    tdns = tdns->nxt;
+                                 }
+
+                                 if (auth > 1)
+                                    sprintf (&resbuf[len++], "]");
+                              }
+
+                              if (refer > 0) {
+                                 int tref = 0;
+                                 tdns = raddr->dns->start;
+                                 if (ArgusParser->ArgusPrintJson) {
+                                    char *buf = ", \"refer\":";
+                                    snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                                    len += strlen(buf);
+                                 } else {
+                                    char *buf;
+                                    if (auth > 0) 
+                                       buf = " REF: ";
+                                    else
+                                       buf = "REF: ";
+                                    snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                                    len += strlen(buf);
+                                 }
+
+                                 if (refer > 1)
+                                    sprintf (&resbuf[len++], "[");
+
+                                 for (x = 0; x < cnt; x++) {
+                                    if (tdns->status & ARGUS_DNS_REFERER) {
+                                       struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+
+                                       RaDiffTime (&tname->ltime, &tname->stime, tvp);
+
+                                       if (strlen(tname->n_name) > 0) {
+                                       if (tref++ > 0)
+                                          sprintf (&resbuf[len++], ",");
+
+                                       if (ArgusParser->ArgusPrintJson) {
+                                          sprintf (&resbuf[len], "\"%s\"", tname->n_name);
+                                          len = strlen(resbuf);
+                                       } else {
+                                          sprintf (&resbuf[len], "\"%s\"", tname->n_name);
+                                          len = strlen(resbuf);
+                                       }
+                                       }
+                                    }
+                                    tdns = tdns->nxt;
+                                 }
+
+                                 if (refer > 1)
+                                    sprintf (&resbuf[len++], "]");
+                              }
+
+                              if (ptr > 0) {
+                                 int tref = 0;
+                                 tdns = raddr->dns->start;
+                                 if (ArgusParser->ArgusPrintJson) {
+                                    char *buf = ", \"ptr\":";
+                                    int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                                    len += slen;
+                                 } else {
+                                    char *buf;
+                                    if ((auth > 0) || (refer > 0)) 
+                                       buf = " PTR: ";
+                                    else
+                                       buf = "PTR: ";
+                                    int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "%s", buf);
+                                    len += slen;
+                                 }
+
+                                 if (ptr > 1) {
+                                    int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "[");
+                                    len += slen;
+                                 }
+
+                                 for (x = 0; x < cnt; x++) {
+                                    if (tdns->status & ARGUS_DNS_PTR) {
+                                       struct nnamemem *tname = (struct nnamemem *) tdns->list_obj;
+                                       if (strlen(tname->n_name) > 0) {
+                                          if (tref++ > 0) {
+                                             int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, ",");
+                                             len += slen;
+                                          }
+
+                                          if (ArgusParser->ArgusPrintJson) {
+                                             snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                                          } else {
+                                             snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "\"%s\"", tname->n_name);
+                                          }
+                                       }
+                                       len = strlen(resbuf);
+                                    }
+                                    tdns = tdns->nxt;
+                                 }
+
+                                 if (ptr > 1) {
+                                    int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
+                                    len += slen;
+                                 }
+                              }
+
+                              if (ArgusParser->ArgusPrintJson) {
+                                 int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "}");
+                                 len += slen;
+                              } else {
+                                 int slen = snprintf (&resbuf[len], ARGUS_MAX_RESPONSE - len, "]");
+                                 len += slen;
+                              }
+
+                              if (ind >= *reslen) {
+                                 int blen = *reslen * sizeof(char *);
+                                 int nlen = ARGUS_DEFAULT_RESULTLEN * sizeof(char *);
+
+                                 if ((*result = ArgusRealloc(*result, blen + nlen)) == NULL)
+                                    ArgusLog (LOG_ERR, "ArgusHandleSearchCommand: ArgusCalloc error %s\n", strerror(errno));
+
+                                 bzero(&(*result)[blen], nlen);
+                                 *reslen += ARGUS_DEFAULT_RESULTLEN;
+                              }
+
+                              (*result)[ind++] = strdup(resbuf);
+
+#if defined(ARGUS_THREADS)
+                              pthread_mutex_unlock(&raddr->dns->lock);
+                           }
+#endif
+                           ArgusFree(resbuf);
+                           *rind = ind;
+                        }
+                     }
+                  }
+                  tp = tp->n_nxt;
+               }
+            }
+         }
+         break;
+      }
    }
 }
 
@@ -482,7 +726,7 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
          struct RaAddressStruct node;
          int matchMode = ARGUS_EXACT_MATCH;
 
-         if (cidr->masklen != 32)
+         if (!((cidr->masklen == 32) || (cidr->masklen == 128)))
             matchMode = ARGUS_MASK_MATCH;
          
          bzero ((char *)&node, sizeof(node));
@@ -490,12 +734,21 @@ ArgusHandleSearchCommand (struct ArgusOutputStruct *output, char *command)
          if (node.addr.str != NULL)
             node.addr.str = strdup(cidr->str);
 
-         if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[cidr->type], &node, matchMode)) != NULL) {
-            ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen);
-         } else {
+         switch (cidr->type) {
+            case AF_INET: {
+               if ((raddr = RaFindAddress (ArgusParser, labeler->ArgusAddrTree[cidr->type], &node, matchMode)) != NULL) {
+                  ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen, AF_INET);
+               } else {
 #ifdef ARGUSDEBUG
-            ArgusDebug (1, "ArgusHandleSearchCommand: address search %s returned not found", sptr);
+                  ArgusDebug (1, "ArgusHandleSearchCommand: address search %s returned not found", sptr);
 #endif
+               }
+               break;
+            }
+            case AF_INET6: {
+               ArgusPrintAddressResponse(sptr, &node, &retn, &rind, &reslen, AF_INET6);
+               break;
+            }
          }
 
       } else {
