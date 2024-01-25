@@ -574,7 +574,6 @@ void ArgusWindowClose(void) {
 void
 RaMySQLInit ()
 {
-   my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    unsigned int RaTableFlags = 0;
    int retn = 0, x;
    char *sptr = NULL, *ptr;
@@ -671,7 +670,6 @@ RaMySQLInit ()
       ArgusLog(LOG_INFO, "mysql not thread-safe");
 
    mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
-   mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
 
    if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
       ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
@@ -1355,8 +1353,8 @@ These notices must be retained in any copies of any part of this
 documentation and/or software.
  */
 
-#include <argus/global.h>
-#include <argus/md5.h>
+#include "global.h"
+#include "md5.h"
 
 /* Constants for MD5Transform routine.
  */
@@ -1377,12 +1375,6 @@ documentation and/or software.
 #define S42 10
 #define S43 15
 #define S44 21
-
-static void MD5Transform (UINT4 [4], unsigned char [64]);
-static void Encode (unsigned char *, UINT4 *, unsigned int);
-static void Decode (UINT4 *, unsigned char *, unsigned int);
-static void MD5_memcpy (POINTER, POINTER, unsigned int);
-static void MD5_memset (POINTER, int, unsigned int);
 
 static unsigned char PADDING[64] = {
   0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1426,14 +1418,26 @@ Rotation is separate from addition to prevent recomputation.
  (a) += (b); \
   }
 
+void MD5Init (MD5_CTX *);
+void MD5Update ( MD5_CTX *, unsigned char *, unsigned int);
+void MD5Final (unsigned char [16], MD5_CTX *);
+
+char *MDString (char *);
+char *MDFile (char *);
+
+static void MD5Transform (UINT4 [4], unsigned char [64]);
+static void Encode (unsigned char *, UINT4 *, unsigned int);
+static void Decode (UINT4 *, unsigned char *, unsigned int);
+static void MD5_memcpy (POINTER, POINTER, unsigned int);
+static void MD5_memset (POINTER, int, unsigned int);
+
 /* MD5 initialization. Begins an MD5 operation, writing a new context.
  */
-void MD5Init (context)
-MD5_CTX *context;                                        /* context */
+void
+MD5Init (MD5_CTX *context)
 {
   context->count[0] = context->count[1] = 0;
-  /* Load magic initialization constants.
-*/
+  /* Load magic initialization constants.  */
   context->state[0] = 0x67452301;
   context->state[1] = 0xefcdab89;
   context->state[2] = 0x98badcfe;
@@ -1444,10 +1448,8 @@ MD5_CTX *context;                                        /* context */
   operation, processing another message block, and updating the
   context.
  */
-void MD5Update (context, input, inputLen)
-MD5_CTX *context;                                        /* context */
-unsigned char *input;                                /* input block */
-unsigned int inputLen;                     /* length of input block */
+void
+MD5Update ( MD5_CTX *context, unsigned char *input, unsigned int inputLen)
 {
   unsigned int i, index, partLen;
 
@@ -1486,9 +1488,8 @@ unsigned int inputLen;                     /* length of input block */
 /* MD5 finalization. Ends an MD5 message-digest operation, writing the
   the message digest and zeroizing the context.
  */
-void MD5Final (digest, context)
-unsigned char digest[16];                         /* message digest */
-MD5_CTX *context;                                       /* context */
+void
+MD5Final (unsigned char digest[16], MD5_CTX *context)
 {
   unsigned char bits[8];
   unsigned int index, padLen;
@@ -1496,8 +1497,7 @@ MD5_CTX *context;                                       /* context */
   /* Save number of bits */
   Encode (bits, context->count, 8);
 
-  /* Pad out to 56 mod 64.
-*/
+  /* Pad out to 56 mod 64.  */
   index = (unsigned int)((context->count[0] >> 3) & 0x3f);
   padLen = (index < 56) ? (56 - index) : (120 - index);
   MD5Update (context, PADDING, padLen);
@@ -1515,9 +1515,8 @@ MD5_CTX *context;                                       /* context */
 
 /* MD5 basic transformation. Transforms state based on block.
  */
-static void MD5Transform (state, block)
-UINT4 state[4];
-unsigned char block[64];
+static
+void MD5Transform (UINT4 state[4], unsigned char block[64])
 {
   UINT4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
 
@@ -1608,10 +1607,8 @@ unsigned char block[64];
 /* Encodes input (UINT4) into output (unsigned char). Assumes len is
   a multiple of 4.
  */
-static void Encode (output, input, len)
-unsigned char *output;
-UINT4 *input;
-unsigned int len;
+static void 
+Encode ( unsigned char *output, UINT4 *input, unsigned int len)
 {
   unsigned int i, j;
 
@@ -1626,10 +1623,8 @@ unsigned int len;
 /* Decodes input (unsigned char) into output (UINT4). Assumes len is
   a multiple of 4.
  */
-static void Decode (output, input, len)
-UINT4 *output;
-unsigned char *input;
-unsigned int len;
+static void 
+Decode ( UINT4 *output, unsigned char *input, unsigned int len)
 {
   unsigned int i, j;
 
@@ -1641,10 +1636,8 @@ unsigned int len;
 /* Note: Replace "for loop" with standard memcpy if possible.
  */
 
-static void MD5_memcpy (output, input, len)
-POINTER output;
-POINTER input;
-unsigned int len;
+static void 
+MD5_memcpy ( POINTER output, POINTER input, unsigned int len)
 {
   unsigned int i;
 
@@ -1654,10 +1647,8 @@ unsigned int len;
 
 /* Note: Replace "for loop" with standard memset if possible.
  */
-static void MD5_memset (output, value, len)
-POINTER output;
-int value;
-unsigned int len;
+static void
+MD5_memset ( POINTER output, int value, unsigned int len)
 {
   unsigned int i;
 
@@ -1692,7 +1683,7 @@ documentation and/or software.
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#include <strings.h>
+#include "global.h"
 #if MD == 2
 #include "md2.h"
 #endif
@@ -1700,6 +1691,7 @@ documentation and/or software.
 #include "md4.h"
 #endif
 #if MD == 5
+#include "md5.h"
 #endif
 
 
@@ -1728,6 +1720,33 @@ documentation and/or software.
 
 
 char MDFileBuf[128];
+
+char *
+MDString (char *str)
+{
+  unsigned char digest[16];
+  unsigned char buffer[1024];
+  MD_CTX context;
+  int i;
+
+  bzero (MDFileBuf, sizeof(MDFileBuf));
+  bzero (buffer, sizeof(buffer));
+  sprintf ((char *)buffer, "%s", str);
+
+  MDInit (&context);
+  MDUpdate (&context, buffer, strlen((char *)buffer));
+  MDFinal (digest, &context);
+
+  for (i = 0; i < 16; i++)
+     sprintf (&MDFileBuf[strlen(MDFileBuf)], "%02x", digest[i]);
+
+  return(MDFileBuf);
+}
+
+/* 
+   Digests a file and prints the result.
+ */
+
 
 char *
 MDFile (char *filename)

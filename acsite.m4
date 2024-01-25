@@ -714,11 +714,9 @@ AC_DEFUN([AC_QOSIENT_READLINE], [
                 LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
                 ;;
         darwin*)
-                dnl Workaround to look for readline on mac os x and solaris in /opt/local
-                if test -f /opt/local/include; then
-                   CPPFLAGS="${saved_CPPFLAGS} -I/opt/local/include"
-                   LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
-                fi
+                dnl Workaround to look for readline on mac os x and solaris in /usr/local
+                CPPFLAGS="${saved_CPPFLAGS} -I/usr/local/include"
+                LDFLAGS="${save_LDFLAGS} -L/usr/local/lib"
                 ;;
         esac
      fi
@@ -732,7 +730,7 @@ AC_DEFUN([AC_QOSIENT_READLINE], [
          ])], ac_cv_found_readline=no)
  
      if test "$ac_cv_found_readline" != no; then
-       $1="-lreadline"
+       $1="${LDFLAGS} -lreadline"
        $2="${CPPFLAGS} $$2"
        AC_DEFINE([ARGUS_READLINE], [], [Using System Readline Library])
      else

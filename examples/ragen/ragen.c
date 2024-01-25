@@ -2077,7 +2077,7 @@ RaGenParseSrcidConversionFile (char *file)
 void
 RaMySQLInit ()
 {
-   my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
+// my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
    char *sptr = NULL, *ptr;
    MYSQL_RES *mysqlRes;
@@ -2205,7 +2205,7 @@ RaMySQLInit ()
             ArgusLog(LOG_INFO, "mysql not thread-safe");
 
          mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
-         mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
+//       mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
 
          if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) != NULL) {
             bzero(sbuf, sizeof(sbuf));
@@ -3002,11 +3002,9 @@ ArgusCreateSQLSaveTable(char *table)
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
 
          long long mask = 0;
-         int status = 0;
 
          while (agg != NULL) {
             mask |= agg->mask;
-            status |= agg->status;
             agg = agg->nxt;
          }
 
@@ -3096,7 +3094,7 @@ ArgusCreateSQLSaveTable(char *table)
 int
 ArgusReadSQLTables (struct ArgusParserStruct *parser)
 {
-   int retn = 0, found = 0, tableIndex;
+   int retn = 0, tableIndex;
    char *table = NULL;
    MYSQL_RES *mysqlRes;
 
@@ -3142,7 +3140,6 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
 #endif
                }
             } else {
-               found++;
                break;
             }
          } else

@@ -432,7 +432,6 @@ void ArgusWindowClose(void) {
 void
 RaMySQLInit ()
 {
-   my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
    char *sptr = NULL, *ptr;
    MYSQL_RES *mysqlRes;
@@ -552,7 +551,6 @@ RaMySQLInit ()
       ArgusLog(LOG_INFO, "mysql not thread-safe");
 
    mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, ArgusParser->ArgusProgramName);
-   mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
 
    if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
       ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
@@ -1910,11 +1908,9 @@ ArgusCreateSQLSaveTable(char *table)
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
 
          long long mask = 0;
-         int status = 0;
 
          while (agg != NULL) {
             mask |= agg->mask;
-            status |= agg->status;
             agg = agg->nxt;
          }
 

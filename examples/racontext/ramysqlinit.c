@@ -54,7 +54,7 @@ RaMySQLGetMaxPacketSize(void)
 void
 RaMySQLInit(struct ArgusParserStruct *parser)
 {
-   my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
+// my_bool reconnectbuf = 1, *reconnect = &reconnectbuf;
    char userbuf[1024], sbuf[1024], db[1024], *dbptr = NULL;
    char *sptr = NULL, *ptr;
    MYSQL_RES *mysqlRes;
@@ -167,7 +167,7 @@ RaMySQLInit(struct ArgusParserStruct *parser)
       ArgusLog(LOG_INFO, "mysql not thread-safe");
 
    mysql_options(RaMySQL, MYSQL_READ_DEFAULT_GROUP, parser->ArgusProgramName);
-   mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
+// mysql_options(RaMySQL, MYSQL_OPT_RECONNECT, reconnect);
 
    if ((mysql_real_connect(RaMySQL, RaHost, RaUser, RaPass, NULL, RaPort, NULL, 0)) == NULL)
       ArgusLog(LOG_ERR, "mysql_connect error %s", mysql_error(RaMySQL));
