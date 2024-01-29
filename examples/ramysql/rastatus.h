@@ -1,5 +1,5 @@
 /*
- * Gargoyle Software. Argus files - Events include files
+ * Argus-5.0 Software. Argus files - Events include files
  * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *

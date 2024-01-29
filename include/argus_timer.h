@@ -1,5 +1,5 @@
 /*
- * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
  * Copyright (c) 2018-2024 QoSient, LLC
  * All rights reserved.
  *
@@ -19,7 +19,7 @@
  */
 
 /*
- * Gargoyle timer library
+ * Argus-5.0 timer library
  * Eric Kinzie <eric@qosient.com>
  *
  */

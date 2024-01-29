@@ -6,7 +6,7 @@
 %if %{?srcext:0}%{!?srcext:1}
 %define srcext .gz
 %endif
-Summary: Gargoyle Client Software
+Summary: Argus-5.0 Client Software
 Name: argus-clients%{?_workstation:-workstation}
 Version: %ver
 Release: %rel%{dist}.3

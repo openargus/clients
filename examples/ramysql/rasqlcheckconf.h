@@ -1,5 +1,5 @@
 /*
- * Gargoyle Software.  Argus files - Modeler includes
+ * Argus-5.0 Software.  Argus files - Modeler includes
  * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
@@ -40,7 +40,7 @@
 
 
 /*
- * Gargoyle Software.  Argus files - Modeler includes
+ * Argus-5.0 Software.  Argus files - Modeler includes
  * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *

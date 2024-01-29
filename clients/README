@@ -18,10 +18,10 @@
  *
  */
 
-Gargoyle Clients 5.0
+Argus-5.0 Clients
 QoSient, LLC
 argus@qosient.com
-http:/qosient.com
+http://openargus.org
 
 This directory contains source code for the core client programs that 
 demonstrate fundamental reading, parsing, conditioning, fitlering,

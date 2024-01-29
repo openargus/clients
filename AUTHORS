@@ -8,6 +8,7 @@
 #  $Change: 2825 $
 
 Argus and its client software are written by Carter Bullard <carter@qosient.com>
+and Eric Kinzie <eric@qosient.com>.
 
 Many contributions of fixes, bug reports and design have been submitted to the
 argus developers mailing list over the years, please see the ./CREDITS file for

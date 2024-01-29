@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # 
-#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
 #  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 

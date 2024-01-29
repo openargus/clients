@@ -19,7 +19,7 @@
  */
 
 /*
- * Gargoyle Client Library
+ * Argus-5.0 Client Library
  *
  * written by Carter Bullard
  * QoSient, LLC

@@ -1,6 +1,6 @@
 package qosient::rahisto;
 
-#   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
+#   Argus-5.0 Client Software.  Tools to read, analyze and manage Argus data.
 #   Copyright (c) 2017-2024 QoSient, LLC
 #   All Rights Reserved
 #

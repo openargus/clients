@@ -805,7 +805,7 @@ total 16
 
 ./pkg/rhel/libexec:
 total 0
-drwxr-xr-x  4 carter  staff  128 Nov  3 10:47 argus-clients
+drwxr-xr-x+ 4 carter  staff  128 Jan  9 15:25 argus-clients
 
 ./pkg/rhel/libexec/argus-clients:
 total 16

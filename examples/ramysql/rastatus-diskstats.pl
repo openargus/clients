@@ -1,6 +1,6 @@
 #!@PERLBIN@
 #
-#  Gargoyle Software.  Argus Event scripts - lsof
+#  Argus-5.0 Software.  Argus Event scripts - lsof
 #  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
