@@ -12511,17 +12511,17 @@ ac_config_files="$ac_config_files Makefile ./common/Makefile ./include/Makefile 
 
 if test "$with_examples" != no
 then :
-  ac_config_files="$ac_config_files ./examples/Makefile ./examples/race/Makefile ./examples/racompare/Makefile ./examples/raconvert/Makefile ./examples/radbase/Makefile ./examples/radecode/Makefile ./examples/radns/Makefile ./examples/radhcp/Makefile ./examples/radhcp/radhcp-query ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragen/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/ralabel/Makefile"
+  ac_config_files="$ac_config_files ./examples/Makefile ./examples/raconvert/Makefile ./examples/radbase/Makefile ./examples/radecode/Makefile ./examples/radump/Makefile ./examples/raevent/Makefile ./examples/rafilter/Makefile ./examples/ragraph/Makefile ./examples/ragrep/Makefile ./examples/rahisto/Makefile ./examples/ralabel/Makefile"
 
 
    if test "$ARGUS_MYSQL_MAKEFILE" != no
 then :
-  ac_config_files="$ac_config_files ./examples/ramysql/Makefile ./examples/rahosts/Makefile ./examples/rahisto/rahisto-querysql ./examples/rahisto/rahisto-updatesql ./examples/rahisto/rahisto-delsql"
+  ac_config_files="$ac_config_files ./examples/ramysql/Makefile ./examples/rahosts/Makefile"
 
 
 fi
 
-   ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rampc/Makefile ./examples/rap/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/rascanner/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile ./examples/ratod/Makefile ./examples/ratop/Makefile ./examples/ratrace/Makefile ./examples/ratree/Makefile ./examples/raup/Makefile"
+   ac_config_files="$ac_config_files ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratop/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile"
 
 
 fi
@@ -13235,45 +13235,28 @@ do
     "./lib/argus-clients.spec") CONFIG_FILES="$CONFIG_FILES ./lib/argus-clients.spec" ;;
     "man/man5/ramanage.conf.5") CONFIG_FILES="$CONFIG_FILES man/man5/ramanage.conf.5" ;;
     "./examples/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/Makefile" ;;
-    "./examples/race/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/race/Makefile" ;;
-    "./examples/racompare/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/racompare/Makefile" ;;
     "./examples/raconvert/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raconvert/Makefile" ;;
     "./examples/radbase/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radbase/Makefile" ;;
     "./examples/radecode/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radecode/Makefile" ;;
-    "./examples/radns/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radns/Makefile" ;;
-    "./examples/radhcp/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radhcp/Makefile" ;;
-    "./examples/radhcp/radhcp-query") CONFIG_FILES="$CONFIG_FILES ./examples/radhcp/radhcp-query" ;;
     "./examples/radump/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/radump/Makefile" ;;
     "./examples/raevent/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raevent/Makefile" ;;
     "./examples/rafilter/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rafilter/Makefile" ;;
-    "./examples/ragen/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ragen/Makefile" ;;
     "./examples/ragraph/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ragraph/Makefile" ;;
     "./examples/ragrep/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ragrep/Makefile" ;;
     "./examples/rahisto/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/Makefile" ;;
     "./examples/ralabel/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ralabel/Makefile" ;;
     "./examples/ramysql/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/Makefile" ;;
     "./examples/rahosts/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rahosts/Makefile" ;;
-    "./examples/rahisto/rahisto-querysql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-querysql" ;;
-    "./examples/rahisto/rahisto-updatesql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-updatesql" ;;
-    "./examples/rahisto/rahisto-delsql") CONFIG_FILES="$CONFIG_FILES ./examples/rahisto/rahisto-delsql" ;;
-    "./examples/ramatrix/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ramatrix/Makefile" ;;
-    "./examples/rampc/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rampc/Makefile" ;;
-    "./examples/rap/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rap/Makefile" ;;
     "./examples/rapath/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapath/Makefile" ;;
     "./examples/rapolicy/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rapolicy/Makefile" ;;
     "./examples/raports/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raports/Makefile" ;;
     "./examples/raqsort/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raqsort/Makefile" ;;
     "./examples/rarpwatch/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rarpwatch/Makefile" ;;
-    "./examples/rascanner/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rascanner/Makefile" ;;
     "./examples/raservices/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raservices/Makefile" ;;
     "./examples/rastrip/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/rastrip/Makefile" ;;
+    "./examples/ratop/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratop/Makefile" ;;
     "./examples/ratimerange/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratimerange/Makefile" ;;
     "./examples/ratemplate/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratemplate/Makefile" ;;
-    "./examples/ratod/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratod/Makefile" ;;
-    "./examples/ratop/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratop/Makefile" ;;
-    "./examples/ratrace/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratrace/Makefile" ;;
-    "./examples/ratree/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratree/Makefile" ;;
-    "./examples/raup/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/raup/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: '$ac_config_target'" "$LINENO" 5;;
   esac

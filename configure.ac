@@ -516,18 +516,12 @@ AC_CONFIG_FILES([
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
       ./examples/Makefile
-      ./examples/race/Makefile
-      ./examples/racompare/Makefile
       ./examples/raconvert/Makefile
       ./examples/radbase/Makefile
       ./examples/radecode/Makefile
-      ./examples/radns/Makefile
-      ./examples/radhcp/Makefile
-      ./examples/radhcp/radhcp-query
       ./examples/radump/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
-      ./examples/ragen/Makefile
       ./examples/ragraph/Makefile
       ./examples/ragrep/Makefile
       ./examples/rahisto/Makefile
@@ -538,31 +532,20 @@ AS_IF([test "$with_examples" != no],
       [AC_CONFIG_FILES([
          ./examples/ramysql/Makefile
          ./examples/rahosts/Makefile
-         ./examples/rahisto/rahisto-querysql
-         ./examples/rahisto/rahisto-updatesql
-         ./examples/rahisto/rahisto-delsql
       ])
    ])
    
    AC_CONFIG_FILES([
-      ./examples/ramatrix/Makefile
-      ./examples/rampc/Makefile
-      ./examples/rap/Makefile
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile
       ./examples/raqsort/Makefile
       ./examples/rarpwatch/Makefile
-      ./examples/rascanner/Makefile
       ./examples/raservices/Makefile
       ./examples/rastrip/Makefile
+      ./examples/ratop/Makefile
       ./examples/ratimerange/Makefile
       ./examples/ratemplate/Makefile
-      ./examples/ratod/Makefile
-      ./examples/ratop/Makefile
-      ./examples/ratrace/Makefile
-      ./examples/ratree/Makefile
-      ./examples/raup/Makefile
    ])
 ])
 

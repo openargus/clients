@@ -44,17 +44,9 @@ docdir = @datadir@/doc/argus-clients-3.0
 
 SHELL = /bin/sh
 
-DIRS = ./race ./raconvert ./racompare ./radecode ./radns ./radhcp ./radump ./raevent ./rafilter \
-	./ragen ./ragraph ./ragrep ./rahisto ./ralabel ./rampc ./ramatrix ./rap ./rapath ./rapolicy \
-	./raqsort ./rarpwatch ./raservices ./rastrip ./ratop ./rasdn ./ratod ./ratrace ./ratree ./ratimerange \
+DIRS = ./raconvert ./radecode ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto ./ralabel \
+	./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip ./ratop ./ratimerange \
 	./ratemplate @ARGUS_MYSQL@
-
-ifndef WORKSTATION_BUILD
-DIRS += ./raports
-DIRS += ./rascanner
-DIRS += ./radbase
-DIRS += ./raup
-endif
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -72,37 +64,24 @@ all: force
 .PHONY: all
 
 race: ../common
-racompare: ../common
 raconvert: ../common
 radark: ../common
-racurses: ../common
-rascanner: ../common
-radns: ../common
-radhcp: ../common
 radump: ../common
 raevent: ../common
 rafilter: ../common
-raup: ../common
 ragraph: ../common
 ragrep: ../common
 rahisto: ../common
 rahosts: ../common
 ralabel: ../common
-ramatrix: ../common
-rampc: ../common
 ramysql: ../common
-rap: ../common
 rapath: ../common
 rapolicy: ../common
 raports: ../common
 rarpwatch: ../common
 raservices: ../common
-rasnort: ../common
 rastrip: ../common
-ratrace: ../common
-ratree: ../common
 ratop: ../common
-rasdn: ../common
 ratimerange: ../common
 ratemplate: ../common
 

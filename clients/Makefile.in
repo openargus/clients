@@ -83,11 +83,11 @@ YACC = @V_YACC@
 LIB = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a
 
 SRC = ra.c radium.c racount.c rasort.c rastream.c rabins.c racluster.c \
-      ranonymize.c ramanage.c
+      ranonymize.c
 
 PROGS = @INSTALL_BIN@/ra @INSTALL_BIN@/radium @INSTALL_BIN@/racount @INSTALL_BIN@/rasort \
 	@INSTALL_BIN@/rastream @INSTALL_BIN@/rabins @INSTALL_BIN@/racluster \
-	@INSTALL_BIN@/ranonymize @INSTALL_BIN@/ramanage
+	@INSTALL_BIN@/ranonymize
 
 all: $(PROGS)
 
@@ -115,18 +115,12 @@ all: $(PROGS)
 @INSTALL_BIN@/rastream: rastream.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rastream.o $(LIB) $(COMPATLIB)
 
-@INSTALL_BIN@/ramanage: ramanage.o ramanage_sha1.o $(LIB)
-	$(CC) $(CFLAGS) -o $@ ramanage.o ramanage_sha1.o $(LIB) $(COMPATLIB) @LIBCURL@ @LIBCARES_LIBS@
-
-ramanage_sha1.o: ../common/sha1.c
-	$(CC) $(CFLAGS) -c $^ -o $@
-
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
 
 OBJ =	$(SRC:.c=.o)
 
-CLEANFILES = $(OBJ) $(PROGS) ramanage_sha1.o
+CLEANFILES = $(OBJ) $(PROGS)
 
 install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
@@ -141,7 +135,6 @@ install: force all
 	$(INSTALL) @INSTALL_BIN@/ranonymize $(DESTDIR)$(BINDIR)/ranonymize
 	$(INSTALL) @INSTALL_BIN@/rasort $(DESTDIR)$(BINDIR)/rasort
 	$(INSTALL) @INSTALL_BIN@/rastream $(DESTDIR)$(BINDIR)/rastream
-	$(INSTALL) @INSTALL_BIN@/ramanage $(DESTDIR)$(BINDIR)/ramanage
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/ra
@@ -152,7 +145,6 @@ uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/ranonymize
 	rm -f $(DESTDIR)$(BINDIR)/rasort
 	rm -f $(DESTDIR)$(BINDIR)/rastream
-	rm -f $(DESTDIR)$(BINDIR)/ramanage
 
 clean:
 	rm -f $(CLEANFILES)
