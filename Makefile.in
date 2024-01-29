@@ -8,7 +8,7 @@
 #  the Free Software Foundation; either version 2, or (at your option)
 #  any later version.
 # 
-#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
 #  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
@@ -246,43 +246,6 @@ installdirs:
 	  $(DESTDIR)@infodir@ \
           $(DESTDIR)$(prefix)/argus \
 	  $(DESTDIR)@datarootdir@/argus-clients
-
-# build with OSXSIGN="--sign "Developer ID Installer" to generate
-# signed package
-osxpackage:
-	( \
-        $(MAKE) install DESTDIR=`pwd`/pkg/osx/BUILDROOT/Contents/MacOS \
-                        INSTDIRS="$(OSXPACKAGE_INSTDIRS)" && \
-        ( find pkg/osx/BUILDROOT/Contents/MacOS -type f | xargs file \
-           | awk -F: '/Mach-O.*executable/{print $$1}' \
-           | xargs strip ) && \
-        cp -f -L -R pkg/osx/osx-pkg/* pkg/osx/BUILDROOT/  && \
-        codesign -vvvv -s "Developer ID Application: Carter Bullard" --timestamp --options runtime pkg/osx/BUILDROOT/Contents/MacOS/usr/local/sbin/radium && \
-        codesign -vvvv -s "Developer ID Application: Carter Bullard" --timestamp --options runtime pkg/osx/BUILDROOT/Contents/MacOS/usr/local/bin/ra* && \
-        pkgbuild --root pkg/osx/BUILDROOT/Contents/MacOS \
-	         --identifier com.qosient.argus-clients \
-	         --version $(VERSION) \
-	         --ownership recommended \
-	         --scripts pkg/osx/scripts pkg/osx/output.pkg && \
-	productbuild --distribution pkg/osx/distribution.xml \
-	             --resources pkg/osx/resources \
-	             --package-path pkg/osx \
-	             --version $(VERSION) \
-	             $(OSXSIGN) \
-	             pkg/osx/argus-clients-$(VERSION).pkg && \
-	rm -f pkg/osx/output.pkg \
-	)
-
-win7package:
-	( \
-	$(MAKE) install DESTDIR=`pwd`/pkg/win7/BUILDROOT \
-	                INSTDIRS="$(OSXPACKAGE_INSTDIRS)" && \
-	( find pkg/win7/BUILDROOT -type f | xargs file \
-	   | awk -F: '/PE32 executable/{print $$1}' \
-	   | xargs strip ) && \
-	$(MAKE) -C pkg/win7 \
-	)
-
 
 Makefile: Makefile.in config.status
 	$(SHELL) config.status

@@ -1,4 +1,0 @@
-#!/bin/sh
-set -e
-/bin/launchctl load "/Library/LaunchDaemons/com.qosient.radium.plist"
-/bin/launchctl load "/Library/LaunchDaemons/com.qosient.rastream.plist"

@@ -24,7 +24,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([Gargoyle Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_MACRO_DIR([./m4])
 AC_CONFIG_SRCDIR([clients/ra.c])
@@ -506,11 +506,8 @@ AC_CONFIG_FILES([
    ./clients/Makefile 
    ./lib/argus-clients.pc
    ./pkg/rhel/systemd/rasqlinsert-setup
-   ./pkg/win/argus-clients.wxs
-   ./pkg/win/Makefile
    ./pkg/Makefile
    ./lib/argus-clients.spec
-   man/man5/ramanage.conf.5
 ])
 
 AS_IF([test "$with_examples" != no],

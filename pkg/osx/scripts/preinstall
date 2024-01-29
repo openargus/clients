@@ -1,8 +1,0 @@
-#!/bin/bash
-set -e
-if /bin/launchctl list "com.qosient.rastream" &> /dev/null; then
-    /bin/launchctl unload "/Library/LaunchDaemons/com.qosient.rastream.plist"
-fi
-if /bin/launchctl list "com.qosient.radium" &> /dev/null; then
-    /bin/launchctl unload "/Library/LaunchDaemons/com.qosient.radium.plist"
-fi
