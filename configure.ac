@@ -107,20 +107,6 @@ AC_CHECK_HEADERS([stdbool.h])
 
 saved_CPPFLAGS=$CPPFLAGS
 
-case "$target_os" in
-darwin*)
-	am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
-	;;
-*)
-	am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
-        ;;
-esac
-
-V_PYTHON_INCLS="-I"$am_cv_python_inc
-CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
-AC_CHECK_HEADERS(Python.h)
-CPPFLAGS="${saved_CPPFLAGS}"
-
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
@@ -484,23 +470,6 @@ AC_QOSIENT_MACHINE_ID
 AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_LIBCARES
 
-AM_PATH_PYTHON([3],, [:])
-
-if test "$PYTHON_VERSION" = "3"; then
-AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
-if test "$HAVE_SWIG" = "1" ; then
-  case "$target_os" in
-  darwin*)
-   	DIRS="$DIRS ./pythonlib"
-	;;
-  *)
-   	DIRS="$DIRS ./perllib"
-   	DIRS="$DIRS ./pythonlib"
-        ;;
-  esac
-fi
-fi
-
 AC_SUBST(PACKAGE_VERSION)
 AC_SUBST(PACKAGE_RELEASE)
 AC_SUBST(LIBS)
@@ -509,7 +478,6 @@ AC_SUBST(INCLS)
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
 AC_SUBST(V_INCLS_EXAMPLES)
-AC_SUBST(V_PYTHON_INCLS)
 AC_SUBST(V_RANLIB)
 AC_SUBST(V_YACC)
 AC_SUBST(V_LEX)
@@ -538,12 +506,10 @@ AC_CONFIG_FILES([
    ./clients/Makefile 
    ./lib/argus-clients.pc
    ./pkg/rhel/systemd/rasqlinsert-setup
-   ./pkg/win7/argus-clients.wxs
-   ./pkg/win7/Makefile
+   ./pkg/win/argus-clients.wxs
+   ./pkg/win/Makefile
    ./pkg/Makefile
    ./lib/argus-clients.spec
-   ./perllib/Makefile
-   ./pythonlib/Makefile
    man/man5/ramanage.conf.5
 ])
 

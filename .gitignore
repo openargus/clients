@@ -39,7 +39,7 @@ include/argus_config.h
 /autom4te.cache
 /argus-clients-*.tar.gz
 /lib/argus-clients.spec
-/pkg/win7/argus-clients.wxs
+/pkg/win/argus-clients.wxs
 /pkg/osx/BUILDROOT
 /examples/radhcp/radhcp-query
 /examples/rahisto/rahisto-delsql
