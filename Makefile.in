@@ -66,7 +66,8 @@ OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \
 	include lib man support aclocal.m4 acsite.m4 config configure configure.ac \
-	.threads bin clients examples common debian pkg README.rst VERSION 
+	.threads bin clients examples common debian pkg pythonlib \
+	README.rst VERSION 
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
