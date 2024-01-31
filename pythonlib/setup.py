@@ -12,9 +12,9 @@ import numpy as np
 argusPython = Extension('_argusPython',
        extra_compile_args = ['-fPIC','-Wno-deprecated-declarations'], 
        sources=['argusPython_wrap.c', 'argusPython.c'],
-       include_dirs=['../include', '/usr/local/include', np.get_include(), '/Users/carter/miniforge3/envs/env_tf/lib/python3.9/site-packages/tensorflow/include'],
-       libraries=['m','z', 'curl','dl'],
-       extra_link_args=['-Wl,-rpath,/Users/carter/miniforge3/envs/env_tf/lib/python3.9/site-packages/tensorflow', '/Users/carter/miniforge3/envs/env_tf/lib/python3.9/site-packages/tensorflow/libtensorflow_framework.2.dylib','../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a']
+       include_dirs=['../include', '/usr/local/include', np.get_include()],
+       libraries=['m','z', 'curl','dl','tensorflow_framework'],
+       extra_link_args=['-L../../../Library/Python/2.7/lib/python/site-packages/tensorflow_core','../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a']
     )
 
 setup (name = 'argusPython',
