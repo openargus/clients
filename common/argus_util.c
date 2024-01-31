@@ -29734,7 +29734,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                      if ((argus = ArgusParseFlowToolsRecord (ArgusParser, input, &cur)) != NULL) {
                         if (argus && !done && !parser->RaParseDone) {
                            int len = 0;
-                           if ((len = ArgusHandleRecord (ArgusParser, input, argus, &ArgusParser->ArgusFilterCode)) < 0) {
+                           if ((len = ArgusHandleRecord (ArgusParser, input, argus, 0, &ArgusParser->ArgusFilterCode)) < 0) {
                               retn = 1;
                               done = 1;
                            } else {
