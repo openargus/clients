@@ -65,6 +65,12 @@ swig.stamp: argusPython.i argusPython.c setup.py
 	python3 setup.py build_ext --include-dirs=../include --library-dirs=../lib
 	touch swig.stamp
 
+install: _argusPython.cpython-38-darwin.so
+	python3 -m pip install .
+
+uninstall: all
+	python3 -m pip uninstall .
+
 distclean: clean
 	rm -f Makefile
 clean:
