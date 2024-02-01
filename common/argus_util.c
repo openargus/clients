@@ -3569,7 +3569,7 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusHandleRecord (%p, %p) returning %d\n", ptr, filter, retn);
+   ArgusDebug (4, "ArgusHandleRecord (%p, %p) returning %d\n", ptr, filter, retn);
 #endif
 
    return (retn);

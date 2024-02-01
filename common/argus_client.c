@@ -370,7 +370,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
                if (parser->fflag) {
                   struct timespec tsbuf = {0, 250000000}, *ts = &tsbuf;
 #ifdef ARGUSDEBUG
-                  ArgusDebug (2, "ArgusGetPackets () pcap_dispatch read 0 packets...sleeping", retn);
+                  ArgusDebug (2, "ArgusReadStreamSocket () -fflag set ...sleeping", retn);
 #endif
                   nanosleep(ts, NULL);
                   gettimeofday (&parser->ArgusGlobalTime, NULL);
@@ -555,7 +555,7 @@ ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *inpu
 
          } else {
 #ifdef ARGUSDEBUG
-            ArgusDebug (6, "ArgusReadStreamSocket (%p) DONE rec %p flag %d signal %d\n", input, rec, done, parser->RaParseDone);
+            ArgusDebug (4, "ArgusReadStreamSocket (%p) DONE rec %p flag %d signal %d\n", input, rec, done, parser->RaParseDone);
 #endif
             done = 1;
          }

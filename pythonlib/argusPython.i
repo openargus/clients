@@ -6,8 +6,10 @@
 %{
 #define SWIG_FILE_WITH_INIT
 #include "argusPython.h"
-int setSchema (char *titles);
-int setBaseline (char *baseline);
+int argusInit (void);
+int readArgusData (char *datafile);
+int setArgusSchema (char *titles);
+int setArgusBaseline (char *baseline);
 PyObject *argus_critic (PyObject *y_true, PyObject *y_pred);
 PyObject *argus_match (PyObject *y_true);
 int argustime (char *time_string, int *start, int *end);
@@ -19,8 +21,10 @@ int argustime (char *time_string, int *start, int *end);
     import_array();
 %}
 
-int setSchema (char *titles);
-int setBaseline (char *baseline);
+int argusInit (void);
+int readArgusData (char *datafile);
+int setArgusSchema (char *titles);
+int setArgusBaseline (char *baseline);
 PyObject *argus_critic (PyObject *y_true, PyObject *y_pred);
 PyObject *argus_match (PyObject *y_true);
 int argustime (char *time_string, int *start, int *end);
