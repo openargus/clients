@@ -13,8 +13,8 @@ argusPython = Extension('_argusPython',
        extra_compile_args = ['-fPIC','-Wno-deprecated-declarations'], 
        sources=['argusPython_wrap.c', 'argusPython.c'],
        include_dirs=['../include', '/usr/local/include', np.get_include()],
-       libraries=['m','z', 'curl','dl','tensorflow_framework'],
-       extra_link_args=['-L../../../Library/Python/2.7/lib/python/site-packages/tensorflow_core','../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a']
+       libraries=['m','z', 'curl','dl'],
+       extra_link_args=['../lib/argus_common.a','../lib/argus_client.a','../lib/argus_parse.a']
     )
 
 setup (name = 'argusPython',

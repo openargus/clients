@@ -22,7 +22,6 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
-//#include <tensorflow/c/c_api.h>
 
 #include <dlfcn.h>
 
@@ -44,7 +43,6 @@
 #include <argus_threads.h>
 
 #include "argusPython.h"
-
 
 void RaArgusInputComplete (struct ArgusInput *input) { return; }
 void RaParseComplete (int sig) { }
@@ -92,8 +90,6 @@ unsigned int ArgusIdType = 0;
 #define RASCII_MAXMODES		1
 #define RASCIIDEBUG		0
 
-const char *sopath = "/usr/local/lib/libtensorflow.so";
-
 static struct PyModuleDef argusPythonmodule = {
     PyModuleDef_HEAD_INIT,
     "argusPython",   /* name of module */
@@ -104,29 +100,10 @@ typedef char *(*func_ptr_t)(void);
 PyMODINIT_FUNC
 PyInit_argusPython(void) {
    PyObject *m = PyModule_Create(&argusPythonmodule);
-/*
-   void *lib = dlopen(sopath, RTLD_LAZY);
-   const char *func_name = "TF_Version";
-   func_ptr_t func = dlsym(lib, func_name);
-
-   if (m == NULL) {
-      return NULL;
-   }
-*/
 
    if (PyArray_API == NULL) {
       import_array(); 
    }
-
-/*
-   // Open the shared library containing the functions.
-   // Get a reference to the function we call.
-   // Call the function and print out the result.
-
-   printf("PyInit_argusPython() TF_Version %s\n", func());
-   dlclose(lib);
-*/
-
    return m;
 }
 
@@ -840,7 +817,6 @@ ArgusLoadBaselineFiles (struct ArgusParserStruct *parser)
             case ARGUS_FLOW_TOOLS_SOURCE: {
                ArgusInputFromFile(input, file);
                parser->ArgusCurrentInput = input;
-
 
                if (strcmp (input->filename, "-")) {
                   if (input->fd < 0) {

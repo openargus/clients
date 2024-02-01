@@ -68,7 +68,8 @@ swig.stamp: argusPython.i argusPython.c setup.py
 distclean: clean
 	rm -f Makefile
 clean:
-	rm -rf *.o *.so __pycache__ argusPython.py argusPython_wrap.c swig.stamp build
+	rm -rf __pycache__ argusPython.egg-info build
+	rm -f *.o *.so argusPython.py argusPython_wrap.c swig.stamp
 
 depend: $(SRC)
 	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_CFLAGS) $(SRC)
