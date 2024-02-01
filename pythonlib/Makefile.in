@@ -69,7 +69,7 @@ install: _argusPython.cpython-38-darwin.so
 	python3 -m pip install .
 
 uninstall: all
-	python3 -m pip uninstall .
+	python3 -m pip uninstall argusPython
 
 distclean: clean
 	rm -f Makefile
