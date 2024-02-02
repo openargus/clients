@@ -296,13 +296,13 @@ main (int argc, char **argv) {
 #endif
             RaArgusInputComplete(input);
             ArgusParser->ArgusCurrentInput = NULL;
-            ArgusDeleteInput(ArgusParser, input);
             file = (struct ArgusFileInput *)file->qhdr.nxt;
          }
 
          ArgusParser->ArgusPassNum--;
       }
 
+      ArgusDeleteInput(ArgusParser, input);
       input = NULL;
    }
 
@@ -892,9 +892,9 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
          line++;
 
          if (line == 1) {
-            if (*str == '{') {
+            ArgusProcessTitleString = 0;
+            if (*str == '{')
                ArgusProcessTitleString = 1;
-            }
          }
 
          if ((*str != '#') && (slen > 1)) {
@@ -1019,8 +1019,7 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                            ArgusLog (LOG_ERR, "RaConvertReadFile: ArgusCalloc: error %s", strerror(errno));
                      }
                   }
-               }
-            } else
+            } else {
                RaConvertParseTitleString(str);
          }
       }
@@ -1147,7 +1146,7 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
       }
          
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 9 - precision;
+         int n, power = 6 - precision;
 
          for (n = 0; n < power; n++)
             useconds *= 10;
@@ -1285,6 +1284,8 @@ ArgusParseFlagsLabel (struct ArgusParserStruct *parser, char *buf)
 
    bcopy (buf, str, len);
 
+   if (str[0] == 'N') ArgusInputType = ARGUS_NETFLOW;
+   if (str[0] == 'A') ArgusInputType = ARGUS_AFLOW;
    if (str[0] == 'T') parser->canon.time.hdr.argus_dsrvl8.qual |= ARGUS_TIMEADJUST;
 
    if (str[1] != ' ') {
@@ -1682,20 +1683,20 @@ ArgusParseSrcAddrLabel (struct ArgusParserStruct *parser, char *buf)
       if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
          argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
          argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
+      }
 
-         parser->canon.flow.hdr.type              = ARGUS_FLOW_DSR;
-         parser->canon.flow.hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
-         switch (taddr->type) {
-            case AF_INET: {
-               parser->canon.flow.hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV4 | ARGUS_MASKLEN;
-               parser->canon.flow.hdr.argus_dsrvl8.len   = 5;
-               break;
-            }
-            case AF_INET6: {
-               parser->canon.flow.hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV6;
-               parser->canon.flow.hdr.argus_dsrvl8.len   = 11;
-               break;
-            }
+      parser->canon.flow.hdr.type              = ARGUS_FLOW_DSR;
+      parser->canon.flow.hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
+      switch (taddr->type) {
+         case AF_INET: {
+            parser->canon.flow.hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV4 | ARGUS_MASKLEN;
+            parser->canon.flow.hdr.argus_dsrvl8.len   = 5;
+            break;
+         }
+         case AF_INET6: {
+            parser->canon.flow.hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV6;
+            parser->canon.flow.hdr.argus_dsrvl8.len   = 11;
+            break;
          }
       }
 
@@ -3327,7 +3328,7 @@ ArgusParseDurationLabel (struct ArgusParserStruct *parser, char *buf)
          ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
 
       if ((precision = strlen(frac)) > 0) {
-         int n, power = 9 - precision;
+         int n, power = 6 - precision;
 
          for (n = 0; n < power; n++)
             tvp->tv_usec *= 10;
