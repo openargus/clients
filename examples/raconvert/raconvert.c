@@ -944,9 +944,8 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
  
                            lobj = lobj->nxt;
                         }
-                     }
+                     } else {
 
-                  } else {
                      if (!parser->qflag) {
                         char *buf = NULL;
                         if ((buf = ArgusCalloc (1, ARGUSMAXSTR)) != NULL) {
@@ -1022,6 +1021,7 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                            ArgusLog (LOG_ERR, "RaConvertReadFile: ArgusCalloc: error %s", strerror(errno));
                      }
                   }
+               }
             } else {
                RaConvertParseTitleString(str);
          }
@@ -1451,6 +1451,7 @@ ArgusParseFlagsLabel (struct ArgusParserStruct *parser, char *buf)
          argus->dsrs[ARGUS_IPATTR_INDEX] = &parser->canon.attr.hdr;
          argus->dsrindex |= 0x1 << ARGUS_IPATTR_INDEX;
          parser->canon.attr.hdr.type = ARGUS_IPATTR_DSR;
+         parser->canon.attr.hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC_OPTIONS;
          parser->canon.attr.hdr.argus_dsrvl8.len   = (sizeof(parser->canon.attr) + 3)/4;
       }
 
@@ -1578,7 +1579,9 @@ ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
       parser->canon.flow.hdr.type = ARGUS_FLOW_DSR;
 
       switch (ArgusThisProto) {
+         case IPPROTO_IGMP:
          case IPPROTO_ICMP:
+         case IPPROTO_ESP:
          case IPPROTO_UDP:
          case IPPROTO_TCP: {
             parser->canon.flow.hdr.subtype  = ARGUS_FLOW_CLASSIC5TUPLE;
@@ -2590,6 +2593,7 @@ ArgusParseIdleJitterLabel (struct ArgusParserStruct *parser, char *buf)
 void
 ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
 {
+   struct ArgusRecordStruct *argus = &parser->argus;
    int match = 0;
 
    if (ArgusInputType == ARGUS_ZEEK) {
@@ -2679,6 +2683,7 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
        */
 
    } else {
+      if (!(strcmp (buf, "INT"))) {  ArgusParseState |= ARGUS_START; match++; }
       if (!(strcmp (buf, "REQ"))) {  ArgusParseState |= ARGUS_SAW_SYN; match++; }
       if (!(strcmp (buf, "ACC"))) {  ArgusParseState |= ARGUS_SAW_SYN_SENT; match++; }
       if (!(strcmp (buf, "CON"))) {  ArgusParseState |= ARGUS_CON_ESTABLISHED; match++; }
@@ -2706,6 +2711,8 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
          if (strchr (buf, 'R')) ArgusParseDirStatus |= ARGUS_RESET;
       }
    }
+   if (ArgusParseState & ARGUS_START)
+      argus->hdr.cause = ARGUS_START;
 }
 
 void
