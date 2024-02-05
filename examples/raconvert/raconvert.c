@@ -1227,6 +1227,26 @@ ArgusParseLastDate (struct ArgusParserStruct *parser, char *buf)
 {
 }
 
+void
+ArgusParseType (struct ArgusParserStruct *parser, char *buf)
+{
+   struct ArgusRecordStruct *argus = &parser->argus;
+   int found = 0;
+
+   if (strcmp("man", buf) == 0)  { argus->hdr.type |= ARGUS_MAR; found++; }
+   if (strcmp("flow", buf) == 0) { argus->hdr.type |= ARGUS_FAR; found++; }
+   if (strcmp("aflow", buf) == 0) { argus->hdr.type |= ARGUS_AFLOW; found++; }
+   if (strcmp("nflow", buf) == 0) { argus->hdr.type |= ARGUS_NETFLOW; found++; }
+   if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
+   if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
+   if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("unknown", buf) == 0) { found++; }
+
+   if (!found)
+      ArgusLog (LOG_ERR, "ArgusParseType(0x%xs, %s) type not found\n", parser, buf);
+}
+
 /*
    ArgusParseSourceID is provided in common/argus_util.c
 
