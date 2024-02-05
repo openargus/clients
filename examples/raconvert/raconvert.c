@@ -1227,6 +1227,9 @@ ArgusParseLastDate (struct ArgusParserStruct *parser, char *buf)
 {
 }
 
+/*
+   ArgusParseSourceID is provided in common/argus_util.c
+
 void
 ArgusParseType (struct ArgusParserStruct *parser, char *buf)
 {
