@@ -460,8 +460,8 @@ RaConvertParseTitleString (char *str)
 // Lets determine the delimiter, if we need to.  This will make this go a bit faster
 
       for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-         len = strlen(RaParseAlgorithmTable[i].field);
-         if (!(strncmp(RaParseAlgorithmTable[i].field, ptr, len))) {
+         len = strlen(RaParseAlgorithmTable[i].title);
+         if (!(strncmp(RaParseAlgorithmTable[i].title, ptr, len))) {
             ptr += len;
             if (RaConvertFieldDelimiter[0] == '\0')
                RaConvertFieldDelimiter[0] = *ptr++;
@@ -480,7 +480,7 @@ RaConvertParseTitleString (char *str)
          len = strlen(obj);
          if (len > 0) {
             for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-               if (!(strncmp(RaParseAlgorithmTable[i].field, obj, len))) {
+               if (!(strncmp(RaParseAlgorithmTable[i].title, obj, len))) {
                   RaParseAlgorithmIndex++;
                   RaParseAlgorithms[items] = &RaParseAlgorithmTable[i];
                   if (strcmp("Dir",obj) == 0)   RaConvertParseDirLabel++;
@@ -709,17 +709,17 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
 */
 
          for (i = 0; i < numfields; i++) {
-            if (RaParseAlgorithmTable[i].field != NULL) {
+            if (RaParseAlgorithms[i] != NULL) {
                if ((argv[i] != NULL) && strlen(argv[i]) && strcmp(argv[i], "-")) {
                   char *value = NULL;
                   if ((value = (char *)ArgusCalloc(1, ARGUSMAXSTR)) != NULL) {
-                     if (RaParseAlgorithmTable[i].parse == ArgusParseLabel) {
+                     if (RaParseAlgorithms[i]->parse == ArgusParseLabel) {
                         snprintf (value, ARGUSMAXSTR, "%s=%s", RaConvertOptionStrings[i], argv[i]);
 	             } else {
                         snprintf(value, ARGUSMAXSTR, "%s", argv[i]);
 	             }
 
-                     RaParseAlgorithmTable[i].parse(ArgusParser, value);
+                     RaParseAlgorithms[i]->parse(ArgusParser, value);
                      ArgusFree(value);
                      switch (parser->argus.hdr.type) {
                         case ARGUS_MAR:
@@ -897,6 +897,13 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
          line++;
 
          if (line == 1) {
+            for (i = 0; i < slen; i++) {
+               if (!(isascii((int) str[i]))) {
+                  ArgusLog (LOG_INFO, "RaConvertReadFile: file '%s' not ascii", file);
+                  done++;
+                  break;
+               }
+            }
             ArgusProcessTitleString = 0;
             if (*str == '{')
                ArgusProcessTitleString = 1;
