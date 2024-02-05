@@ -131,6 +131,12 @@ char *ArgusConvertResourceFileStr[] = {
     "RACONVERT_CONVERSION_MAP=",
 };
 
+#define ARGUS_MAX_PRINT_FIELDS		512
+
+struct ArgusParseFieldStruct (*RaParseAlgorithms[ARGUS_MAX_PRINT_FIELDS]);
+int RaParseAlgorithmIndex = 0;
+char RaConvertFieldDelimiter[32] = {'\0', '\0'};
+
 #define ARGUSMAXSTR	0x10000
 
 char ArgusConvertTitleString[ARGUSMAXSTR];
@@ -434,11 +440,6 @@ struct ArgusMarStruct {
    ArgusHtoN(&ArgusParser->ArgusInitCon);
 }
 
-#define ARGUS_MAX_PRINT_FIELDS		512
-
-void (*RaParseLabelAlgorithms[ARGUS_MAX_PRINT_FIELDS])(struct ArgusParserStruct *, char *);
-int RaParseLabelAlgorithmIndex = 0;
-char RaConvertFieldDelimiter[32] = {'\0', '\0'};
 
 void
 RaConvertParseTitleString (char *str)
@@ -447,7 +448,7 @@ RaConvertParseTitleString (char *str)
    int i, len = 0, items = 0;
 
    if ((buf = ArgusCalloc (1, ARGUSMAXSTR)) != NULL) {
-      bzero ((char *)RaParseLabelAlgorithms, sizeof(RaParseLabelAlgorithms));
+      bzero ((char *)RaParseAlgorithms, sizeof(RaParseAlgorithms));
 
       if ((ptr = strchr(str, '\n')) != NULL)
          *ptr = '\0';
@@ -458,9 +459,9 @@ RaConvertParseTitleString (char *str)
 
 // Lets determine the delimiter, if we need to.  This will make this go a bit faster
 
-      for (i = 0; i < MAX_PARSE_ALG_TYPES; i++) {
-         len = strlen(RaParseLabelStringTable[i]);
-         if (!(strncmp(RaParseLabelStringTable[i], ptr, len))) {
+      for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+         len = strlen(RaParseAlgorithmTable[i].field);
+         if (!(strncmp(RaParseAlgorithmTable[i].field, ptr, len))) {
             ptr += len;
             if (RaConvertFieldDelimiter[0] == '\0')
                RaConvertFieldDelimiter[0] = *ptr++;
@@ -478,10 +479,10 @@ RaConvertParseTitleString (char *str)
          int found = 0;
          len = strlen(obj);
          if (len > 0) {
-            for (i = 0; i < MAX_PARSE_ALG_TYPES; i++) {
-               if (!(strncmp(RaParseLabelStringTable[i], obj, len))) {
-                  RaParseLabelAlgorithmIndex++;
-                  RaParseLabelAlgorithms[items] = RaParseLabelAlgorithmTable[i];
+            for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+               if (!(strncmp(RaParseAlgorithmTable[i].field, obj, len))) {
+                  RaParseAlgorithmIndex++;
+                  RaParseAlgorithms[items] = &RaParseAlgorithmTable[i];
                   if (strcmp("Dir",obj) == 0)   RaConvertParseDirLabel++;
                   if (strcmp("State",obj) == 0)   RaConvertParseStateLabel++;
                   found++;
@@ -564,7 +565,7 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
 
          if ((value = ArgusCalloc (1, ARGUSMAXSTR)) != NULL) {
             if (val != NULL) {
-               if (RaConversionMapTable[i].func == ArgusParseLabelLabel) {
+               if (RaConversionMapTable[i].func == ArgusParseLabel) {
                   snprintf (value, ARGUSMAXSTR, "%s=%s", key, val);
                   val = value;
                }
@@ -674,6 +675,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
 
       if (strchr (ptr, '{')) {
          ArgusJsonValue l1root, *res1 = NULL;
+         bzero(&l1root, sizeof(l1root));
 
          if ((res1 = ArgusJsonParse(ptr, &l1root)) != NULL) {
             retn = RaConvertJsonValue(parser, res1);
@@ -707,17 +709,17 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
 */
 
          for (i = 0; i < numfields; i++) {
-            if (RaParseLabelAlgorithms[i] != NULL) {
+            if (RaParseAlgorithmTable[i].field != NULL) {
                if ((argv[i] != NULL) && strlen(argv[i]) && strcmp(argv[i], "-")) {
                   char *value = NULL;
                   if ((value = (char *)ArgusCalloc(1, ARGUSMAXSTR)) != NULL) {
-                     if (RaParseLabelAlgorithms[i] == ArgusParseLabelLabel) {
+                     if (RaParseAlgorithmTable[i].parse == ArgusParseLabel) {
                         snprintf (value, ARGUSMAXSTR, "%s=%s", RaConvertOptionStrings[i], argv[i]);
 	             } else {
                         snprintf(value, ARGUSMAXSTR, "%s", argv[i]);
 	             }
 
-                     RaParseLabelAlgorithms[i](ArgusParser, value);
+                     RaParseAlgorithmTable[i].parse(ArgusParser, value);
                      ArgusFree(value);
                      switch (parser->argus.hdr.type) {
                         case ARGUS_MAR:
@@ -763,7 +765,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
                   case ARGUS_TCP_STATUS:
                   case ARGUS_TCP_PERF: {
                      struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                     tcp->status |= ArgusParseState;
+                     tcp->status |= ArgusConvertParseState;
                   }
                }
             }
@@ -1065,7 +1067,7 @@ struct tm timebuf, *RaConvertTmPtr = NULL;
 extern char *strptime(const char *s, const char *format, struct tm *tm);
 
 void
-ArgusParseRankLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseRank (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -1078,7 +1080,7 @@ ArgusParseRankLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseAutoIdLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseAutoId (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -1092,7 +1094,7 @@ ArgusParseAutoIdLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *ptr, date[128], *frac;
@@ -1231,12 +1233,15 @@ ArgusParseStartDateLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseLastDateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseLastDate (struct ArgusParserStruct *parser, char *buf)
 {
 }
 
+/*
+   ArgusParseSourceID is provided in common/argus_util.c
+
 void
-ArgusParseSourceIDLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSourceID (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusCIDRAddr *taddr = NULL;
@@ -1268,13 +1273,14 @@ ArgusParseSourceIDLabel (struct ArgusParserStruct *parser, char *buf)
 
    }
 }
+*/
 
 
 #include <argus_encapsulations.h>
 
 
 void
-ArgusParseFlagsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseFlags (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char str[16];
@@ -1472,7 +1478,7 @@ ArgusParseFlagsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcMacAddressLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcMacAddress (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *)argus->dsrs[ARGUS_MAC_INDEX];
@@ -1496,7 +1502,7 @@ ArgusParseSrcMacAddressLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstMacAddressLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstMacAddress (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *)argus->dsrs[ARGUS_MAC_INDEX];
@@ -1520,16 +1526,16 @@ ArgusParseDstMacAddressLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseMacAddressLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseMacAddress (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcMacAddressLabel (parser, buf);
-   ArgusParseDstMacAddressLabel (parser, buf);
+   ArgusParseSrcMacAddress (parser, buf);
+   ArgusParseDstMacAddress (parser, buf);
 */
 }
 
 void
-ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
 
@@ -1636,7 +1642,7 @@ ArgusParseProtoLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseSrcNetLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcNet (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCADDR].length;
@@ -1667,7 +1673,7 @@ RaParseEtherAddr (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcAddrLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcAddr (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusCIDRAddr *taddr = NULL;
@@ -1730,7 +1736,7 @@ ArgusParseSrcAddrLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstNetLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstNet (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTADDR].length;
@@ -1740,7 +1746,7 @@ ArgusParseDstNetLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstAddrLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstAddr (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusCIDRAddr *taddr = NULL;
@@ -1810,7 +1816,7 @@ ArgusParseDstAddrLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcPortLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    int value = -1;
@@ -1893,7 +1899,7 @@ ArgusParseSrcPortLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstPortLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    int value = -1;
@@ -1984,7 +1990,7 @@ ArgusParseDstPortLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIpIdLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcIpId (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCIPID].length;
@@ -1993,7 +1999,7 @@ ArgusParseSrcIpIdLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIpIdLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstIpId (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTIPID].length;
@@ -2002,16 +2008,16 @@ ArgusParseDstIpIdLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseIpIdLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIpId (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcIpIdLabel (parser, buf);
-   ArgusParseDstIpIdLabel (parser, buf);
+   ArgusParseSrcIpId (parser, buf);
+   ArgusParseDstIpId (parser, buf);
 */
 }
 
 void
-ArgusParseSrcDSByteLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcDSByte (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTOS].length;
@@ -2020,7 +2026,7 @@ ArgusParseSrcDSByteLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstDSByteLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstDSByte (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTTOS].length;
@@ -2029,15 +2035,7 @@ ArgusParseDstDSByteLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDSByteLabel (struct ArgusParserStruct *parser, char *buf)
-{
-   ArgusParseSrcDSByteLabel (parser, buf);
-   ArgusParseDstDSByteLabel (parser, buf);
-}
-
-
-void
-ArgusParseSrcTosLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcTos (struct ArgusParserStruct *parser, char *buf)
 {  
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTOS].length;
@@ -2046,7 +2044,7 @@ ArgusParseSrcTosLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstTosLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstTos (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTTOS].length;
@@ -2054,17 +2052,8 @@ ArgusParseDstTosLabel (struct ArgusParserStruct *parser, char *buf)
 */
 }
    
-void  
-ArgusParseTosLabel (struct ArgusParserStruct *parser, char *buf)
-{     
-/*
-   ArgusParseSrcTosLabel (parser, buf);
-   ArgusParseDstTosLabel (parser, buf);
-*/
-}
-
 void
-ArgusParseSrcTtlLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcTtl (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTTL].length;
@@ -2073,7 +2062,7 @@ ArgusParseSrcTtlLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstTtlLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstTtl (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTTL].length;
@@ -2082,17 +2071,17 @@ ArgusParseDstTtlLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseTtlLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTtl (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcTtlLabel (parser, buf);
-   ArgusParseDstTtlLabel (parser, buf);
+   ArgusParseSrcTtl (parser, buf);
+   ArgusParseDstTtl (parser, buf);
 */
 }
 
 
 void
-ArgusParseDirLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDirection (struct ArgusParserStruct *parser, char *buf)
 {
    ArgusParseDirStatus = 0;
    if (!(strcmp (buf, " ->"))) {
@@ -2105,7 +2094,7 @@ ArgusParseDirLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParsePacketsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePackets (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2125,7 +2114,7 @@ ArgusParsePacketsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcPacketsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcPackets (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2145,7 +2134,7 @@ ArgusParseSrcPacketsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstPacketsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstPackets (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2166,7 +2155,7 @@ ArgusParseDstPacketsLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2186,7 +2175,7 @@ ArgusParseBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2206,7 +2195,7 @@ ArgusParseSrcBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2227,7 +2216,7 @@ ArgusParseDstBytesLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseAppBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2247,7 +2236,7 @@ ArgusParseAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcAppBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2267,7 +2256,7 @@ ArgusParseSrcAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstAppBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -2287,7 +2276,7 @@ ArgusParseDstAppBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusJitterStruct *jitter = NULL;
@@ -2321,7 +2310,7 @@ ArgusParseSrcIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCINTPKT].length;
@@ -2330,7 +2319,7 @@ ArgusParseSrcIntPktMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCINTPKT].length;
@@ -2339,7 +2328,7 @@ ArgusParseSrcIntPktMinLabel (struct ArgusParserStruct *parser, char *buf)
 }
  
 void
-ArgusParseDstIntPktLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusJitterStruct *jitter = NULL;
@@ -2376,7 +2365,7 @@ ArgusParseDstIntPktLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTINTPKT].length;
@@ -2385,7 +2374,7 @@ ArgusParseDstIntPktMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTINTPKT].length;
@@ -2395,7 +2384,7 @@ ArgusParseDstIntPktMinLabel (struct ArgusParserStruct *parser, char *buf)
  
 
 void
-ArgusParseSrcIntPktActiveLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveSrcIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVESRCINTPKT].length;
@@ -2404,7 +2393,7 @@ ArgusParseSrcIntPktActiveLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktActiveMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveSrcIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVESRCINTPKT].length;
@@ -2413,7 +2402,7 @@ ArgusParseSrcIntPktActiveMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktActiveMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveSrcIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVESRCINTPKT].length;
@@ -2423,7 +2412,7 @@ ArgusParseSrcIntPktActiveMinLabel (struct ArgusParserStruct *parser, char *buf)
 
  
 void
-ArgusParseDstIntPktActiveLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveDstIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVEDSTINTPKT].length;
@@ -2432,7 +2421,7 @@ ArgusParseDstIntPktActiveLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktActiveMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVEDSTINTPKT].length;
@@ -2441,7 +2430,7 @@ ArgusParseDstIntPktActiveMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktActiveMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVEDSTINTPKT].length;
@@ -2452,7 +2441,7 @@ ArgusParseDstIntPktActiveMinLabel (struct ArgusParserStruct *parser, char *buf)
  
 
 void
-ArgusParseSrcIntPktIdleLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleSrcIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLESRCINTPKT].length;
@@ -2461,7 +2450,7 @@ ArgusParseSrcIntPktIdleLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktIdleMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLESRCINTPKT].length;
@@ -2470,7 +2459,7 @@ ArgusParseSrcIntPktIdleMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcIntPktIdleMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLESRCINTPKT].length;
@@ -2480,7 +2469,7 @@ ArgusParseSrcIntPktIdleMinLabel (struct ArgusParserStruct *parser, char *buf)
 
  
 void
-ArgusParseDstIntPktIdleLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleDstIntPkt (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLEDSTINTPKT].length;
@@ -2489,7 +2478,7 @@ ArgusParseDstIntPktIdleLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktIdleMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLEDSTINTPKT].length;
@@ -2498,7 +2487,7 @@ ArgusParseDstIntPktIdleMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstIntPktIdleMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleDstIntPktMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLEDSTINTPKT].length;
@@ -2508,7 +2497,7 @@ ArgusParseDstIntPktIdleMinLabel (struct ArgusParserStruct *parser, char *buf)
 
  
 void
-ArgusParseSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCJITTER].length;
@@ -2517,7 +2506,7 @@ ArgusParseSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTJITTER].length;
@@ -2525,17 +2514,9 @@ ArgusParseDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
 */
 }
 
-void
-ArgusParseJitterLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   ArgusParseSrcJitterLabel(parser,buf);
-   ArgusParseDstJitterLabel(parser,buf);
-*/
-}
 
 void
-ArgusParseActiveSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveSrcJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVESRCJITTER].length;
@@ -2544,7 +2525,7 @@ ArgusParseActiveSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseActiveDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseActiveDstJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTACTIVEDSTJITTER].length;
@@ -2553,16 +2534,7 @@ ArgusParseActiveDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseActiveJitterLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   ArgusParseActiveSrcJitterLabel(parser,buf);
-   ArgusParseActiveDstJitterLabel(parser,buf);
-*/
-}
-
-void
-ArgusParseIdleSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleSrcJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLESRCJITTER].length;
@@ -2571,7 +2543,7 @@ ArgusParseIdleSrcJitterLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseIdleDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseIdleDstJitter (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTIDLEDSTJITTER].length;
@@ -2579,19 +2551,10 @@ ArgusParseIdleDstJitterLabel (struct ArgusParserStruct *parser, char *buf)
 */
 }
 
-void
-ArgusParseIdleJitterLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   ArgusParseIdleSrcJitterLabel(parser,buf);
-   ArgusParseIdleDstJitterLabel(parser,buf);
-*/
-}
-
 
 
 void
-ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseState (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    int match = 0;
@@ -2603,22 +2566,22 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
       short srcflags = 0; 
       short dstflags = 0; 
 
-      if (!(strcmp (buf, "S0")))     {  ArgusParseState |= (ARGUS_SAW_SYN); match++; } else
-      if (!(strcmp (buf, "S1")))     {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED); match++; } else
-      if (!(strcmp (buf, "SF")))     {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED | ARGUS_NORMAL_CLOSE); match++; } else
-      if (!(strcmp (buf, "REJ")))    {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_RESET); match++; } else
-      if (!(strcmp (buf, "S2")))     {  ArgusParseState |= (ARGUS_SAW_SYN); match++; } else
-      if (!(strcmp (buf, "S3")))     {  ArgusParseState |= (ARGUS_SAW_SYN); match++; } else
-      if (!(strcmp (buf, "RSTO")))   {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED | ARGUS_RESET); match++; } else
-      if (!(strcmp (buf, "RSTR")))   {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_CON_ESTABLISHED | ARGUS_RESET); match++; } else
-      if (!(strcmp (buf, "RSTOS0"))) {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_RESET); match++; } else
-      if (!(strcmp (buf, "RSTRH")))  {  ArgusParseState |= (ARGUS_SAW_SYN_SENT | ARGUS_RESET); match++; } else
-      if (!(strcmp (buf, "SH")))     {  ArgusParseState |= (ARGUS_SAW_SYN | ARGUS_FIN); match++; } else
-      if (!(strcmp (buf, "SHR")))    {  ArgusParseState |= (ARGUS_SAW_SYN_SENT | ARGUS_FIN); match++; } else
-      if (!(strcmp (buf, "OTH")))    {  ArgusParseState |= (ARGUS_CON_ESTABLISHED); match++; }
+      if (!(strcmp (buf, "S0")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN); match++; } else
+      if (!(strcmp (buf, "S1")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED); match++; } else
+      if (!(strcmp (buf, "SF")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED | ARGUS_NORMAL_CLOSE); match++; } else
+      if (!(strcmp (buf, "REJ")))    {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_RESET); match++; } else
+      if (!(strcmp (buf, "S2")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN); match++; } else
+      if (!(strcmp (buf, "S3")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN); match++; } else
+      if (!(strcmp (buf, "RSTO")))   {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_SAW_SYN_SENT | ARGUS_CON_ESTABLISHED | ARGUS_RESET); match++; } else
+      if (!(strcmp (buf, "RSTR")))   {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_CON_ESTABLISHED | ARGUS_RESET); match++; } else
+      if (!(strcmp (buf, "RSTOS0"))) {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_RESET); match++; } else
+      if (!(strcmp (buf, "RSTRH")))  {  ArgusConvertParseState |= (ARGUS_SAW_SYN_SENT | ARGUS_RESET); match++; } else
+      if (!(strcmp (buf, "SH")))     {  ArgusConvertParseState |= (ARGUS_SAW_SYN | ARGUS_FIN); match++; } else
+      if (!(strcmp (buf, "SHR")))    {  ArgusConvertParseState |= (ARGUS_SAW_SYN_SENT | ARGUS_FIN); match++; } else
+      if (!(strcmp (buf, "OTH")))    {  ArgusConvertParseState |= (ARGUS_CON_ESTABLISHED); match++; }
 
       if (match) {
-	 ArgusParseDirStatus = ArgusParseState;
+	 ArgusParseDirStatus = ArgusConvertParseState;
       } else {
 /*
 	 if (strchr (buf, 's')) ArgusParseDirStatus |= ARGUS_SAW_SYN;
@@ -2683,14 +2646,14 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
        */
 
    } else {
-      if (!(strcmp (buf, "INT"))) {  ArgusParseState |= ARGUS_START; match++; }
-      if (!(strcmp (buf, "REQ"))) {  ArgusParseState |= ARGUS_SAW_SYN; match++; }
-      if (!(strcmp (buf, "ACC"))) {  ArgusParseState |= ARGUS_SAW_SYN_SENT; match++; }
-      if (!(strcmp (buf, "CON"))) {  ArgusParseState |= ARGUS_CON_ESTABLISHED; match++; }
-      if (!(strcmp (buf, "TIM"))) {  ArgusParseState |= ARGUS_TIMEOUT; match++; }
-      if (!(strcmp (buf, "CLO"))) {  ArgusParseState |= ARGUS_NORMAL_CLOSE; match++; }
-      if (!(strcmp (buf, "FIN"))) {  ArgusParseState |= ARGUS_FIN; match++; }
-      if (!(strcmp (buf, "RST"))) {  ArgusParseState |= ARGUS_RESET; match++; }
+      if (!(strcmp (buf, "INT"))) {  ArgusConvertParseState |= ARGUS_START; match++; }
+      if (!(strcmp (buf, "REQ"))) {  ArgusConvertParseState |= ARGUS_SAW_SYN; match++; }
+      if (!(strcmp (buf, "ACC"))) {  ArgusConvertParseState |= ARGUS_SAW_SYN_SENT; match++; }
+      if (!(strcmp (buf, "CON"))) {  ArgusConvertParseState |= ARGUS_CON_ESTABLISHED; match++; }
+      if (!(strcmp (buf, "TIM"))) {  ArgusConvertParseState |= ARGUS_TIMEOUT; match++; }
+      if (!(strcmp (buf, "CLO"))) {  ArgusConvertParseState |= ARGUS_NORMAL_CLOSE; match++; }
+      if (!(strcmp (buf, "FIN"))) {  ArgusConvertParseState |= ARGUS_FIN; match++; }
+      if (!(strcmp (buf, "RST"))) {  ArgusConvertParseState |= ARGUS_RESET; match++; }
 
       if (!match) {
          int i;
@@ -2711,21 +2674,12 @@ ArgusParseStateLabel (struct ArgusParserStruct *parser, char *buf)
          if (strchr (buf, 'R')) ArgusParseDirStatus |= ARGUS_RESET;
       }
    }
-   if (ArgusParseState & ARGUS_START)
+   if (ArgusConvertParseState & ARGUS_START)
       argus->hdr.cause = ARGUS_START;
 }
 
 void
-ArgusParseTCPBaseLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   ArgusParseTCPSrcBaseLabel (parser, buf);
-   ArgusParseTCPDstBaseLabel (parser, buf);
-*/
-}
-
-void
-ArgusParseTCPSrcBaseLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTCPSrcBase (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTTCPSRCBASE].length;
@@ -2734,7 +2688,7 @@ ArgusParseTCPSrcBaseLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseTCPDstBaseLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTCPDstBase (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTTCPDSTBASE].length;
@@ -2743,7 +2697,7 @@ ArgusParseTCPDstBaseLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseTCPRTTLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTCPRTT (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) &parser->canon.net;
@@ -2772,17 +2726,9 @@ ArgusParseTCPRTTLabel (struct ArgusParserStruct *parser, char *buf)
    }
 }
 
-void
-ArgusParseServiceLabel (struct ArgusParserStruct *parser, char *buf)
-{
-/*
-   int len = RaPrintAlgorithmTable[ARGUSPRINTSERVICE].length;
-   sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "Service");
-*/
-}
 
 void
-ArgusParseDeltaDurationLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaDuration (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTADURATION].length;
@@ -2791,7 +2737,7 @@ ArgusParseDeltaDurationLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaStartTimeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaStartTime (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTASTARTTIME].length;
@@ -2800,7 +2746,7 @@ ArgusParseDeltaStartTimeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaLastTimeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaLastTime (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTALASTTIME].length;
@@ -2809,7 +2755,7 @@ ArgusParseDeltaLastTimeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaSrcPktsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaSrcPkts (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTASRCPKTS].length;
@@ -2818,7 +2764,7 @@ ArgusParseDeltaSrcPktsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaDstPktsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaDstPkts (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTADSTPKTS].length;
@@ -2827,7 +2773,7 @@ ArgusParseDeltaDstPktsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaSrcBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaSrcBytes (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTASRCBYTES].length;
@@ -2836,7 +2782,7 @@ ArgusParseDeltaSrcBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDeltaDstBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDeltaDstBytes (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDELTADSTBYTES].length;
@@ -2845,7 +2791,7 @@ ArgusParseDeltaDstBytesLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParsePercentDeltaSrcPktsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentDeltaSrcPkts (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTPERCENTDELTASRCPKTS].length;
@@ -2854,7 +2800,7 @@ ArgusParsePercentDeltaSrcPktsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParsePercentDeltaDstPktsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentDeltaDstPkts (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTPERCENTDELTADSTPKTS].length;
@@ -2863,7 +2809,7 @@ ArgusParsePercentDeltaDstPktsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParsePercentDeltaSrcBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentDeltaSrcBytes (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTPERCENTDELTASRCBYTES].length;
@@ -2872,7 +2818,7 @@ ArgusParsePercentDeltaSrcBytesLabel (struct ArgusParserStruct *parser, char *buf
 }
 
 void
-ArgusParsePercentDeltaDstBytesLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentDeltaDstBytes (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTPERCENTDELTADSTBYTES].length;
@@ -2881,7 +2827,7 @@ ArgusParsePercentDeltaDstBytesLabel (struct ArgusParserStruct *parser, char *buf
 }
 
 void
-ArgusParseSrcUserDataLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcUserData (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCUSERDATA].length;
@@ -2908,7 +2854,7 @@ ArgusParseSrcUserDataLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstUserDataLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstUserData (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTUSERDATA].length;
@@ -2935,21 +2881,21 @@ ArgusParseDstUserDataLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseUserDataLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseUserData (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcUserDataLabel (parser, buf);
-   ArgusParseDstUserDataLabel (parser, buf);
+   ArgusParseSrcUserData (parser, buf);
+   ArgusParseDstUserData (parser, buf);
 */
 }
 
 void
-ArgusParseTCPExtensionsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTCPExtensions (struct ArgusParserStruct *parser, char *buf)
 {
 }
 
 void
-ArgusParseSrcLoadLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcLoad (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCLOAD].length;
@@ -2958,7 +2904,7 @@ ArgusParseSrcLoadLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstLoadLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstLoad (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTLOAD].length;
@@ -2967,7 +2913,7 @@ ArgusParseDstLoadLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseLoadLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseLoad (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTLOAD].length;
@@ -2977,7 +2923,7 @@ ArgusParseLoadLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseSrcLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCLOSS].length;
@@ -2986,7 +2932,7 @@ ArgusParseSrcLossLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTLOSS].length;
@@ -2995,17 +2941,17 @@ ArgusParseDstLossLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcLossLabel (parser, buf);
-   ArgusParseDstLossLabel (parser, buf);
+   ArgusParseSrcLoss (parser, buf);
+   ArgusParseDstLoss (parser, buf);
 
 */
 }
 
 void
-ArgusParseSrcPercentLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentSrcLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCPERCENTLOSS].length;
@@ -3014,7 +2960,7 @@ ArgusParseSrcPercentLossLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstPercentLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentDstLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTPERCENTLOSS].length;
@@ -3024,16 +2970,16 @@ ArgusParseDstPercentLossLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParsePercentLossLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParsePercentLoss (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcPercentLossLabel (parser, buf);
-   ArgusParseDstPercentLossLabel (parser, buf);
+   ArgusParseSrcPercentLoss (parser, buf);
+   ArgusParseDstPercentLoss (parser, buf);
 */
 }
 
 void
-ArgusParseSrcPktSizeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCPKTSIZE].length;
@@ -3045,7 +2991,7 @@ ArgusParseSrcPktSizeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstPktSizeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTPKTSIZE].length;
@@ -3058,7 +3004,7 @@ ArgusParseDstPktSizeLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseSrcPktSizeMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcMaxPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCPKTSIZEMAX].length;
@@ -3067,7 +3013,7 @@ ArgusParseSrcPktSizeMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcPktSizeMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcMinPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCPKTSIZEMIN].length;
@@ -3077,7 +3023,7 @@ ArgusParseSrcPktSizeMinLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseDstPktSizeMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstMaxPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTPKTSIZEMAX].length;
@@ -3086,7 +3032,7 @@ ArgusParseDstPktSizeMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstPktSizeMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstMinPktSize (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTPKTSIZEMIN].length;
@@ -3096,7 +3042,7 @@ ArgusParseDstPktSizeMinLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseSrcRateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcRate (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCRATE].length;
@@ -3111,7 +3057,7 @@ ArgusParseSrcRateLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstRateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstRate (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTRATE].length;
@@ -3126,7 +3072,7 @@ ArgusParseDstRateLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseRateLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseRate (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTRATE].length;
@@ -3140,7 +3086,7 @@ ArgusParseRateLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcMplsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcMpls (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCMPLS].length;
@@ -3160,7 +3106,7 @@ ArgusParseSrcMplsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstMplsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstMpls (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTMPLS].length;
@@ -3180,16 +3126,16 @@ ArgusParseDstMplsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseMplsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseMpls (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcMplsLabel (parser, buf);
-   ArgusParseDstMplsLabel (parser, buf);
+   ArgusParseSrcMpls (parser, buf);
+   ArgusParseDstMpls (parser, buf);
 */
 }
 
 void
-ArgusParseSrcVLANLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcVLAN (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCVLAN].length;
@@ -3198,7 +3144,7 @@ ArgusParseSrcVLANLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstVLANLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstVLAN (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTVLAN].length;
@@ -3207,14 +3153,15 @@ ArgusParseDstVLANLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseVLANLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseVLAN (struct ArgusParserStruct *parser, char *buf)
 {
-   ArgusParseSrcVLANLabel (parser, buf);
-   ArgusParseDstVLANLabel (parser, buf);
+   ArgusParseSrcVLAN (parser, buf);
+   ArgusParseDstVLAN (parser, buf);
 }
 
+
 void
-ArgusParseSrcVIDLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcVID (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCVID].length;
@@ -3223,7 +3170,7 @@ ArgusParseSrcVIDLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstVIDLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstVID (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTVID].length;
@@ -3232,16 +3179,16 @@ ArgusParseDstVIDLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseVIDLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseVID (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcVIDLabel (parser, buf);
-   ArgusParseDstVIDLabel (parser, buf);
+   ArgusParseSrcVID (parser, buf);
+   ArgusParseDstVID (parser, buf);
 */
 }
 
 void
-ArgusParseSrcVPRILabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcVPRI (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    sprintf (&buf[strlen(buf)], " sVpri ");
@@ -3249,24 +3196,25 @@ ArgusParseSrcVPRILabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstVPRILabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstVPRI (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    sprintf (&buf[strlen(buf)], " dVpri ");
 */
 }
 
+
 void
-ArgusParseVPRILabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseVPRI (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcVPRILabel (parser, buf);
-   ArgusParseDstVPRILabel (parser, buf);
+   ArgusParseSrcVPRI (parser, buf);
+   ArgusParseDstVPRI (parser, buf);
 */
 }
 
 void
-ArgusParseJoinDelayLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseJoinDelay (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTJOINDELAY].length;
@@ -3276,7 +3224,7 @@ ArgusParseJoinDelayLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseLeaveDelayLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseLeaveDelay (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTJOINDELAY].length;
@@ -3287,16 +3235,16 @@ ArgusParseLeaveDelayLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseWindowLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseWindow (struct ArgusParserStruct *parser, char *buf)
 {
 /*
-   ArgusParseSrcWindowLabel (parser, buf);
-   ArgusParseDstWindowLabel (parser, buf);
+   ArgusParseSrcWindow (parser, buf);
+   ArgusParseDstWindow (parser, buf);
 */
 }
 
 void
-ArgusParseSrcWindowLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcWindow (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSRCWINDOW].length;
@@ -3305,7 +3253,7 @@ ArgusParseSrcWindowLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstWindowLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstWindow (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTDSTWINDOW].length;
@@ -3314,7 +3262,7 @@ ArgusParseDstWindowLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDurationLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDuration (struct ArgusParserStruct *parser, char *buf)
 {
    struct timeval tvpbuf, *tvp = &tvpbuf;
    char date[128], *frac;
@@ -3361,7 +3309,7 @@ ArgusParseDurationLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseMeanLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseMean (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTAVGDURATION].length;
@@ -3371,7 +3319,7 @@ ArgusParseMeanLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseMaxLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseMax (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTAVGDURATION].length;
@@ -3381,7 +3329,7 @@ ArgusParseMaxLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseMinLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseMin (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTAVGDURATION].length;
@@ -3392,7 +3340,7 @@ ArgusParseMinLabel (struct ArgusParserStruct *parser, char *buf)
 
 
 void
-ArgusParseStartRangeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseStartRange (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTSTARTRANGE].length;
@@ -3401,7 +3349,7 @@ ArgusParseStartRangeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseEndRangeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseEndRange (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTENDRANGE].length;
@@ -3410,7 +3358,7 @@ ArgusParseEndRangeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseTransactionsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseTransactions (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTTRANSACTIONS].length;
@@ -3424,7 +3372,7 @@ ArgusParseTransactionsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSequenceNumberLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSequenceNumber (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *endptr;
@@ -3446,7 +3394,7 @@ ArgusParseSequenceNumberLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseBinNumberLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseBinNumber (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTBINNUMBER].length;
@@ -3456,7 +3404,7 @@ ArgusParseBinNumberLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseBinsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseBins (struct ArgusParserStruct *parser, char *buf)
 {
 /*
    int len = RaPrintAlgorithmTable[ARGUSPRINTBINNUMBER].length;
@@ -3466,15 +3414,19 @@ ArgusParseBinsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseLabelLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseLabel (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
 
    ArgusAddToRecordLabel(parser, argus, buf);
 }
 
+
+void ArgusParseSrcTcpFlags (struct ArgusParserStruct *, char *);
+void ArgusParseDstTcpFlags (struct ArgusParserStruct *, char *);
+
 void
-ArgusParseSrcTcpFlagsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcTcpFlags (struct ArgusParserStruct *parser, char *buf)
 {
    if (buf != NULL) {
       unsigned short flags = 0;
@@ -3500,7 +3452,7 @@ ArgusParseSrcTcpFlagsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstTcpFlagsLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstTcpFlags (struct ArgusParserStruct *parser, char *buf)
 {
    if (buf != NULL) {
       unsigned short flags = 0;
@@ -3526,7 +3478,7 @@ ArgusParseDstTcpFlagsLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseSrcCountryCodeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseSrcCountryCode (struct ArgusParserStruct *parser, char *buf)
 {
    if (buf != NULL) {
       struct ArgusRecordStruct *argus = &parser->argus;
@@ -3547,7 +3499,7 @@ ArgusParseSrcCountryCodeLabel (struct ArgusParserStruct *parser, char *buf)
 }
 
 void
-ArgusParseDstCountryCodeLabel (struct ArgusParserStruct *parser, char *buf)
+ArgusParseDstCountryCode (struct ArgusParserStruct *parser, char *buf)
 {
    if (buf != NULL) {
       struct ArgusRecordStruct *argus = &parser->argus;
@@ -3566,6 +3518,1042 @@ ArgusParseDstCountryCodeLabel (struct ArgusParserStruct *parser, char *buf)
       bcopy(buf, &cocode->dst[0], 2);
    }
 }
+
+
+void
+ArgusParseActiveDstIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseActiveSrcIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseAppByteRatio (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseBssid (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseByteOffset (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseCause (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseCor (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstAsn (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstDuration (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstEncaps (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstGap (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstGroup (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstHopCount (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstLastDate (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstLatitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstLocal (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstLongitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstMaxSeg (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstMeanPktSize (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstName (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstOui (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstStartDate (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstTransEfficiency (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstVirtualNID (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseDstVlan (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseEtherType (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseHashIndex (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseHashRef (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIcmpId (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleDstIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleMax (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleMean (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleMin (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleSrcIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleStdDeviation (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIdleTime (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInf (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInode (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInodeAsn (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInodeCountryCode (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInodeLatitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseInodeLongitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIntFlow (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIntFlowMax (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIntFlowMin (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseIntFlowStdDev (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseKeyStrokeDstNStroke (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseKeyStrokeNStroke (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseKeyStrokeSrcNStroke (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseLocal (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseLocalAddr (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseLocalNet (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseNode (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentDstFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentDstNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentDstRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentDstSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentSrcFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentSrcNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentSrcRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParsePercentSrcSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseProducerConsumerRatio (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseRelativeDate (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseRemoteAddr (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseRemoteNet (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseResponse (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseRunTime (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSID (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseScore (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcAsn (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcDuration (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcEncaps (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcFirst (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcGap (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcGroup (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcHopCount (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcIntPktDist (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcLastDate (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcLatitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcLocal (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcLongitude (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcMaxSeg (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcMeanPktSize (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcNacks (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcName (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcOui (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcRetrans (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcSolo (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcStartDate (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcTransEfficiency (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcVirtualNID (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSrcVlan (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSsid (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseStatus (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseStdDeviation (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseSum (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTCPAckDat (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTCPDstMax (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTCPOptions (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTCPSrcMax (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTCPSynAck (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
+
+void
+ArgusParseTransEfficiency (struct ArgusParserStruct *parser, char *buf)
+{
+/*
+   int len = RaParseAlgorithmTable[].length;
+*/
+}
+
 
 
 void ArgusClientTimeout () { return; }
@@ -3802,9 +4790,9 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
 	          int x, y, found = 0;
 	          for (x = 0; (x < RaConversionMapIndex) && !found; x++) {
 	             if (strcmp(RaConvertOptionStrings[i], RaConversionMapTable[x].field) == 0) {
-                           for (y = 0; y < MAX_PARSE_ALG_TYPES; y++) {
-                              if (!(strcmp(RaParseLabelStringTable[y], RaConversionMapTable[x].value))) {
-                                 RaConversionMapTable[x].func = RaParseLabelAlgorithmTable[y];
+                           for (y = 0; y < MAX_PRINT_ALG_TYPES; y++) {
+                              if (!(strcmp(RaParseAlgorithmTable[y].field, RaConversionMapTable[x].value))) {
+                                 RaConversionMapTable[x].func = RaParseAlgorithmTable[y].parse;
                                  break;
                               }
                            }

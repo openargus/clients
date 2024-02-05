@@ -31785,8 +31785,9 @@ void
 setParserArgusID(struct ArgusParserStruct *parser, void *ptr, int len, unsigned int type)
 {
    struct ArgusTransportStruct *trans = &parser->trans;
-   
    setTransportArgusID(trans, ptr, len, type);
+   bcopy(trans, &parser->canon.trans, sizeof(*trans));
+   
    parser->ArgusSourceIDString = strdup(ptr);
    parser->ArgusIDType = type;
 

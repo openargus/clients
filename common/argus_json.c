@@ -44,9 +44,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int json_parse_value(const char **cursor, ArgusJsonValue *parent);
-static char *json_print_value(ArgusJsonValue *parent, char *, int);
-static int json_merge_value(ArgusJsonValue *, ArgusJsonValue *);
+int json_parse_value(const char **cursor, ArgusJsonValue *parent);
+char *json_print_value(ArgusJsonValue *parent, char *, int);
+int json_merge_value(ArgusJsonValue *, ArgusJsonValue *);
 
 // Allocate the data structure for the vector
 void
@@ -194,13 +194,13 @@ vector_foreach(const vector* v, ArgusJsonValue *parent, vector_foreach_t fp) {
    }
 }
 
-static void
+void
 skip_whitespace(const char** cursor) {
    if (**cursor == '\0') return;
    while (iscntrl(**cursor) || isspace(**cursor)) ++(*cursor);
 }
 
-static int
+int
 has_char(const char** cursor, char character) {
    skip_whitespace(cursor);
    int retn = **cursor == character;
@@ -208,7 +208,7 @@ has_char(const char** cursor, char character) {
    return retn;
 }
 
-static int
+int
 json_parse_object(const char** cursor, ArgusJsonValue *parent) {
    ArgusJsonValue result = { .type = ARGUS_JSON_OBJECT };
    vector_init(&result.value.object, sizeof(ArgusJsonValue));
@@ -220,7 +220,7 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
       retn = json_parse_value(cursor, &key);
       retn = retn && has_char(cursor, ':');
       retn = 0;
-      retn = retn && json_parse_value(cursor, &value);
+      retn = json_parse_value(cursor, &value);
       if (retn) {
          vector_push_back(&result.value.object, &key);
          vector_push_back(&result.value.object, &value);
@@ -243,7 +243,7 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
    return 1;
 }
 
-static int
+int
 json_parse_array(const char** cursor, ArgusJsonValue *parent) {
    int retn = 1;
    if (**cursor == ']') {
@@ -332,7 +332,7 @@ json_is_literal(const char** cursor, const char* literal) {
    return 0;
 }
 
-static int
+int
 json_parse_value(const char** cursor, ArgusJsonValue *parent) {
    // Eat whitespace
    int retn = 0;
@@ -485,9 +485,9 @@ json_print_value(ArgusJsonValue *parent, char *buf, int len) {
    return retn;
 }
 
-static int json_add_value(ArgusJsonValue *, ArgusJsonValue *);
+int json_add_value(ArgusJsonValue *, ArgusJsonValue *);
 
-static int
+int
 json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    int retn = 0;
    if ((p1->type != ARGUS_JSON_OBJECT) && (p1->type != ARGUS_JSON_ARRAY)) {
@@ -538,7 +538,7 @@ json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    return retn;
 }
 
-static int
+int
 json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    int retn = 0;
 
