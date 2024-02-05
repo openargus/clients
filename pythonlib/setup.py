@@ -19,9 +19,10 @@ argusPython = Extension('_argusPython',
 
 setup (name = 'argusPython',
        version = '0.2',
+       url="https://github.com/openargus/argusPython/",
        author  = 'Carter Bullard',
        author_email='carter@qosient.com',
-       description = 'Time functions from argus client library',
+       description = 'Read, process and time functions from argus client library',
        ext_modules = [argusPython, Extension('_argusPython', ['argusPython.c'])],
        py_modules = ["argusPython"],
     )
