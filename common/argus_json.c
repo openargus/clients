@@ -35,9 +35,15 @@
  * $Change: 3226 $
  */
 
+
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <ctype.h>
 #include <stddef.h>
 
+#include "argus_debug.h"
 #include "argus_json.h"
 
 #include <stdio.h>
@@ -226,6 +232,11 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
       retn = retn && has_char(cursor, ':');
       retn = 0;
       retn = json_parse_value(cursor, &value);
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (3, "json_parse_object: pushing (%s)", key.value.string);
+#endif
+
       if (retn) {
          vector_push_back(&result.value.object, &key);
          vector_push_back(&result.value.object, &value);
@@ -352,6 +363,10 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
          ++*cursor;
          const char* start = *cursor;
          char* end = strchr(*cursor, '"');
+         while ((end[-1] == '\\') && (end[-2] != '\\')) {
+            end = strchr(++end, '"');
+         }
+
          if (end) {
             size_t len = end - start;
             char *new_string = malloc((len + 1) * sizeof(char));

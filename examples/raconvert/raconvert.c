@@ -583,7 +583,7 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
       ArgusFree(value);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessJsonItem(%p, '%s', %s) returning %d", parser, key, val, retn);
+   ArgusDebug (1, "ArgusProcessJsonItem(%p, '%s', '%s') returning %d", parser, key, val, retn);
 #endif
    return retn;
 }
