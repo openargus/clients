@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	242
-#define MAX_PRINT_ALG_TYPES     	242
+#define ARGUS_MAX_PRINT_ALG     	243
+#define MAX_PRINT_ALG_TYPES     	243
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -738,6 +738,7 @@ void ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *, char *, struct
 void ArgusPrintSrcVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstVirtualNID (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
+void ArgusPrintTypeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintBssidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSsidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCauseLabel (struct ArgusParserStruct *, char *, int);

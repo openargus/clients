@@ -6485,6 +6485,29 @@ ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct Argu
    return (retn);
 }
 
+void
+ArgusPrintType (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char ArgusTypeBuf[32], *ArgusTypeStr = ArgusTypeBuf;
+
+   bzero (ArgusTypeBuf, 32);
+
+   if (argus != NULL) {
+      switch (argus->hdr.type & 0xF0) {
+         case ARGUS_MAR:      snprintf (ArgusTypeBuf, 32, "man"); break;
+         case ARGUS_FAR:      snprintf (ArgusTypeBuf, 32, "flow"); break;
+         case ARGUS_AFLOW:    snprintf (ArgusTypeBuf, 32, "aflo"); break;
+         case ARGUS_NETFLOW:  snprintf (ArgusTypeBuf, 32, "nflo"); break;
+         case ARGUS_INDEX:    snprintf (ArgusTypeBuf, 32, "indx"); break;
+         case ARGUS_DATASUP:  snprintf (ArgusTypeBuf, 32, "supp"); break;
+         case ARGUS_ARCHIVAL: snprintf (ArgusTypeBuf, 32, "arch"); break;
+         case ARGUS_EVENT:    snprintf (ArgusTypeBuf, 32, "evnt"); break;
+         default:             snprintf (ArgusTypeBuf, 32, "unkn"); break;
+      }
+   }
+         
+   snprintf(buf, len, "%s", ArgusTypeStr);
+}
 
 void
 ArgusPrintBssid (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -19306,6 +19329,12 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
       }
    }
    return (parser->RaLabel);
+}
+
+void
+ArgusPrintTypeLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "Type");
 }
 
 void

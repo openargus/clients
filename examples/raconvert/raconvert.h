@@ -298,6 +298,8 @@ void (*RaParseLabelAlgorithmTable[MAX_PARSE_ALG_TYPES])(struct ArgusParserStruct
    ArgusParseDstCountryCodeLabel,
 };
 
+void ArgusParseType (struct ArgusParserStruct *, char *);
+
 void ArgusParseBssid (struct ArgusParserStruct *, char *);
 void ArgusParseSsid (struct ArgusParserStruct *, char *);
 void ArgusParseCause (struct ArgusParserStruct *, char *);
@@ -1048,6 +1050,8 @@ RaParseAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "svnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPARSESRCVNID, ArgusParseSrcVirtualNID, "int", 0, ""},
 #define ARGUSPARSEDSTVNID		241
    { "dvnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPARSEDSTVNID, ArgusParseDstVirtualNID, "int", 0, ""},
+#define ARGUSPARSETYPE			242
+   { "type", "", 6 , 1, ARGUS_PTYPE_STRING, ARGUSPARSETYPE, ArgusParseType, "varchar(4)", 0, "Type"},
 };
 
 extern struct ArgusTokenStruct llcsap_db[];

@@ -44,7 +44,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-int json_parse_value(const char **cursor, ArgusJsonValue *parent);
+void skip_whitespace(const char**);
+int has_char(const char**, char);
+
+int json_parse_array(const char**, ArgusJsonValue *);
+int json_parse_object(const char**, ArgusJsonValue *);
+int json_parse_value(const char **, ArgusJsonValue *);
 char *json_print_value(ArgusJsonValue *parent, char *, int);
 int json_merge_value(ArgusJsonValue *, ArgusJsonValue *);
 

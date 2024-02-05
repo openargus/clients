@@ -525,8 +525,9 @@ int ArgusProcessJsonItem(struct ArgusParserStruct *, char *, ArgusJsonValue *);
 int
 ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue *item) 
 {
-   char valbuf[32], *val = valbuf, *buf = NULL;
-   int retn = 0, i;
+   char valbuf[32], *val = valbuf;
+   char *value = NULL, *buf = NULL;
+   int retn = 1, i;
 
    switch (item->type) {
       case ARGUS_JSON_BOOL:
@@ -559,37 +560,27 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
       }
    }
 
-   for (i = 0; i < RaConversionMapIndex; i++) {
-      if (strcmp(key, RaConversionMapTable[i].field) == 0) {
-         char *value = NULL;
-
-         if ((value = ArgusCalloc (1, ARGUSMAXSTR)) != NULL) {
-            if (val != NULL) {
-               if (RaConversionMapTable[i].func == ArgusParseLabel) {
-                  snprintf (value, ARGUSMAXSTR, "%s=%s", key, val);
-                  val = value;
-               }
-
-               if (RaConversionMapTable[i].func != NULL) {
-                  RaConversionMapTable[i].func(ArgusParser, val);
-                  retn = 1;
-	    }
-
-               switch (parser->argus.hdr.type) {
-                  case ARGUS_MAR:
-                  case ARGUS_EVENT:
-                     return(retn);
-                     break;
-               }
+   for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+      int len = strlen(RaParseAlgorithmTable[i].field);
+      if (!(strncmp(RaParseAlgorithmTable[i].field, key, len))) {
+         if (RaParseAlgorithmTable[i].parse == ArgusParseLabel) {
+            if ((value = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+               snprintf (value, ARGUSMAXSTR, "%s=%s", key, val);
+               val = value;
             }
-            ArgusFree(value);
-
-         } else
-            ArgusLog (LOG_ERR, "ArgusProcessJsonItem: ArgusCalloc error %s", strerror(errno));
-      }
+         }
+         RaParseAlgorithmTable[i].parse(parser, val);
+         if (i == ARGUSPARSEDIR)
+            RaConvertParseDirLabel = 1;
+         if (i == ARGUSPARSESTATE)
+            RaConvertParseStateLabel = 1;
+      } 
    }
+
    if (buf != NULL)
       ArgusFree (buf);
+   if (value != NULL)
+      ArgusFree(value);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusProcessJsonItem(%p, '%s', %s) returning %d", parser, key, val, retn);
@@ -599,7 +590,7 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
 
 int
 RaConvertJsonValue (struct ArgusParserStruct *parser, ArgusJsonValue *parent) {
-   int retn = 0, i;
+   int retn = 1, i;
 
    if (parent->type == ARGUS_JSON_OBJECT) {
       vector *vec = (vector *) &parent->value.array;
@@ -650,7 +641,7 @@ int
 RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int slen)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
-   int retn = 1, numfields = 1, i, parsed = 0;
+   int retn = 1, numfields = 1, i;
    char *argv[ARGUS_MAX_PRINT_FIELDS], **ap = argv;
    char delim[16], *ptr, *tptr, *tok;
 
@@ -679,11 +670,10 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
 
          if ((res1 = ArgusJsonParse(ptr, &l1root)) != NULL) {
             retn = RaConvertJsonValue(parser, res1);
-            parsed++;
+            numfields = ARGUS_MAX_PRINT_FIELDS;
          }
-      }
 
-      if (parsed == 0)  {
+      } else {
          while ((tok = strchr(tptr, RaConvertFieldDelimiter[0])) != NULL) {
             *tok++ = '\0';
             if (strlen(tptr))
@@ -700,15 +690,9 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
             *ap = tptr;
             numfields++;
          }
-/*
-         for (ap = argv; (*ap = strtok(tptr, delim)) != NULL;) {
-            tptr = NULL;
-            if (++ap >= &argv[ARGUS_MAX_PRINT_FIELDS])
-               break;
-         }
-*/
+      }
 
-         for (i = 0; i < numfields; i++) {
+      for (i = 0; i < numfields; i++) {
             if (RaParseAlgorithms[i] != NULL) {
                if ((argv[i] != NULL) && strlen(argv[i]) && strcmp(argv[i], "-")) {
                   char *value = NULL;
@@ -732,7 +716,6 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
                      ArgusLog (LOG_ERR, "RaConvertParseRecordString: ArgusCalloc error %s", strerror(errno));
                }
             }
-         }
       }
 
       if (argus->dsrs[ARGUS_TRANSPORT_INDEX] == NULL) {
@@ -1244,6 +1227,26 @@ ArgusParseLastDate (struct ArgusParserStruct *parser, char *buf)
 {
 }
 
+void
+ArgusParseType (struct ArgusParserStruct *parser, char *buf)
+{
+   struct ArgusRecordStruct *argus = &parser->argus;
+   int found = 0;
+
+   if (strcmp("man", buf) == 0)  { argus->hdr.type |= ARGUS_MAR; found++; }
+   if (strcmp("flow", buf) == 0) { argus->hdr.type |= ARGUS_FAR; found++; }
+   if (strcmp("aflow", buf) == 0) { argus->hdr.type |= ARGUS_AFLOW; found++; }
+   if (strcmp("nflow", buf) == 0) { argus->hdr.type |= ARGUS_NETFLOW; found++; }
+   if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
+   if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
+   if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("unknown", buf) == 0) { found++; }
+
+   if (!found)
+      ArgusLog (LOG_ERR, "ArgusParseType(0x%xs, %s) type not found\n", parser, buf);
+}
+
 /*
    ArgusParseSourceID is provided in common/argus_util.c
 
@@ -1594,11 +1597,20 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
       switch (ArgusThisProto) {
          case IPPROTO_IGMP:
          case IPPROTO_ICMP:
+         case IPPROTO_ICMPV6:
          case IPPROTO_ESP:
          case IPPROTO_UDP:
          case IPPROTO_TCP: {
             parser->canon.flow.hdr.subtype  = ARGUS_FLOW_CLASSIC5TUPLE;
-            parser->canon.flow.flow_un.ip.ip_p = ArgusThisProto;
+            if (parser->canon.flow.hdr.argus_dsrvl8.qual & ARGUS_TYPE_IPV4)
+               parser->canon.flow.flow_un.ip.ip_p = ArgusThisProto;
+            else 
+            if (parser->canon.flow.hdr.argus_dsrvl8.qual & ARGUS_TYPE_IPV6)
+               parser->canon.flow.flow_un.ipv6.ip_p = ArgusThisProto;
+            else {
+               parser->canon.flow.hdr.argus_dsrvl8.qual |= ARGUS_TYPE_IPV4;
+               parser->canon.flow.flow_un.ip.ip_p = ArgusThisProto;
+            }
             break;
          }
 
@@ -1673,7 +1685,7 @@ RaParseEtherAddr (struct ArgusParserStruct *parser, char *buf)
    unsigned int c1, c2, c3, c4, c5, c6;
    int retn = 0;
 
-   if ((sscanf (buf, "%x:%x:%x:%x:%x:%x", &c1, &c2, &c3, &c4, &c5, &c6)) == 6)
+   if ((sscanf (buf, "%02x:%02x:%02x:%02x:%02x:%02x", &c1, &c2, &c3, &c4, &c5, &c6)) == 6)
       retn = 1;
 
    return (retn);
@@ -1714,13 +1726,16 @@ ArgusParseSrcAddr (struct ArgusParserStruct *parser, char *buf)
                   break;
                }
 
-               default:
+               default: {
                   parser->canon.flow.hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV4 | ARGUS_MASKLEN;
                   parser->canon.flow.hdr.argus_dsrvl8.len   = 5;
 
                   parser->canon.flow.flow_un.ip.ip_src = *taddr->addr;
                   parser->canon.flow.flow_un.ip.smask  = taddr->masklen;
+                  if (ArgusThisProto)
+                     parser->canon.flow.flow_un.ip.ip_p  = ArgusThisProto;
                   break;
+               }
             }
             break;
          }
@@ -1735,6 +1750,9 @@ ArgusParseSrcAddr (struct ArgusParserStruct *parser, char *buf)
 
             for (i = 0; i < 4; i++)
                *sp++ = *rsp++;
+
+            if (ArgusThisProto)
+               parser->canon.flow.flow_un.ipv6.ip_p = ArgusThisProto;
 
             break;
          }
@@ -2114,10 +2132,13 @@ ArgusParsePackets (struct ArgusParserStruct *parser, char *buf)
       parser->canon.metric.hdr.argus_dsrvl8.len  = 2;
    }
 
-   parser->canon.metric.src.pkts = strtoll(buf, &endptr, 10);
+   if (strlen(buf)) {
+      parser->canon.metric.src.pkts = strtoll(buf, &endptr, 10);
+      if (endptr == buf)
+         ArgusLog (LOG_ERR, "ArgusParsePackets(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+   } else
+      parser->canon.metric.src.pkts = 0;
 
-   if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParsePacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 void
