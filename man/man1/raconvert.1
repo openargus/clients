@@ -92,6 +92,11 @@ a larger set of sensors to contribute to the \fBargus\fP data analytics systems.
 \fBraconvert\fP -f raconvert.zeek.conf -r zeek.conn.log -w argusfile
 .fi
 
+.nf
+\fBra\fP -M json -r argusfile > argus.json
+\fBraconvert\fP -r argus.json -w argusfile
+.fi
+
 .SH COPYRIGHT
 Copyright (c) 2000-2022 QoSient. All rights reserved.
 .SH SEE ALSO
