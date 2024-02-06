@@ -1240,7 +1240,9 @@ ArgusParseType (struct ArgusParserStruct *parser, char *buf)
    if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
    if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
    if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("arch", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
    if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("evnt", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
    if (strcmp("unknown", buf) == 0) { found++; }
 
    if (!found)
