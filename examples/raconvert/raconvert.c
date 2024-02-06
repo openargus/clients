@@ -1240,7 +1240,9 @@ ArgusParseType (struct ArgusParserStruct *parser, char *buf)
    if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
    if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
    if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("arch", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
    if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("evnt", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
    if (strcmp("unknown", buf) == 0) { found++; }
 
    if (!found)
@@ -1593,8 +1595,9 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
       }
 
       parser->canon.flow.hdr.type = ARGUS_FLOW_DSR;
+   }
 
-      switch (ArgusThisProto) {
+   switch (ArgusThisProto) {
          case IPPROTO_IGMP:
          case IPPROTO_ICMP:
          case IPPROTO_ICMPV6:
@@ -1632,13 +1635,6 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
             parser->canon.flow.hdr.argus_dsrvl8.qual = ARGUS_TYPE_ETHER;
             parser->canon.flow.flow_un.mac.mac_union.ether.ehdr.ether_type = ArgusThisProto;
             break;
-      }
-
-   } else {
-      if (parser->canon.flow.hdr.argus_dsrvl8.qual & ARGUS_TYPE_IPV4)
-         parser->canon.flow.flow_un.ip.ip_p = ArgusThisProto;
-      if (parser->canon.flow.hdr.argus_dsrvl8.qual & ARGUS_TYPE_IPV6)
-         parser->canon.flow.flow_un.ipv6.ip_p = ArgusThisProto;
    }
 
    switch (ArgusThisProto) {
@@ -2080,19 +2076,41 @@ ArgusParseDstTos (struct ArgusParserStruct *parser, char *buf)
 void
 ArgusParseSrcTtl (struct ArgusParserStruct *parser, char *buf)
 {
-/*
-   int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTTL].length;
-   sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "sTtl");
-*/
+   struct ArgusRecordStruct *argus = &parser->argus;
+   char *endptr; 
+   
+   int value = strtol(buf, &endptr, 10);
+   if (endptr == buf)
+      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(0x%xs, %s) fractonal format error\n", parser, buf);
+
+   if (argus->dsrs[ARGUS_IPATTR_INDEX] == NULL) {
+      argus->dsrs[ARGUS_IPATTR_INDEX] = &parser->canon.attr.hdr;
+      argus->dsrindex |= 0x1 << ARGUS_IPATTR_INDEX;
+      parser->canon.attr.hdr.argus_dsrvl8.len = (sizeof(struct ArgusIPAttrStruct) + 3)/4;
+   }
+
+   parser->canon.attr.hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_SRC;
+   parser->canon.attr.src.ttl = value;
 }
 
 void
 ArgusParseDstTtl (struct ArgusParserStruct *parser, char *buf)
 {
-/*
-   int len = RaPrintAlgorithmTable[ARGUSPRINTSRCTTL].length;
-   sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "dTtl");
-*/
+   struct ArgusRecordStruct *argus = &parser->argus;
+   char *endptr;
+  
+   int value = strtol(buf, &endptr, 10);
+   if (endptr == buf)
+      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(0x%xs, %s) fractonal format error\n", parser, buf);
+
+   if (argus->dsrs[ARGUS_IPATTR_INDEX] == NULL) {
+      argus->dsrs[ARGUS_IPATTR_INDEX] = &parser->canon.attr.hdr;
+      argus->dsrindex |= 0x1 << ARGUS_IPATTR_INDEX;
+      parser->canon.attr.hdr.argus_dsrvl8.len = (sizeof(struct ArgusIPAttrStruct) + 3)/4;
+   }
+
+   parser->canon.attr.hdr.argus_dsrvl8.qual |= ARGUS_IPATTR_DST;
+   parser->canon.attr.dst.ttl = value;
 }
 
 void
