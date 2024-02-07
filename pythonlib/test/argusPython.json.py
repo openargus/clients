@@ -13,5 +13,6 @@ if __name__ == '__main__':
 
    with open("argus.out.json", "r") as read_file:
        data = json.load(read_file)
+   json_str = json.dumps(data, indent=2)
    
-   print(data)
+   print(json_str)
