@@ -137,7 +137,7 @@
 #endif
 
 #define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
-#define ARGUS_TEMP_BUF_SIZE             0x400
+#define ARGUS_TEMP_BUF_SIZE             0x10000
 char *ArgusPrintTempBuf = NULL;
 char *ArgusTempBuffer = NULL;
 
@@ -6056,22 +6056,19 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    dlen = len - blen;
 
    if (!(parser->ArgusPrintJson))
-      while (isspace((int)(buf[blen - 1])))
-      {
+      while (isspace((int)(buf[blen - 1]))) {
          buf[blen - 1] = '\0';
          blen--;
       }
 
    if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0'))
-      if (buf[blen - 1] == parser->RaFieldDelimiter)
-      {
+      if (buf[blen - 1] == parser->RaFieldDelimiter) {
          buf[blen - 1] = '\0';
          blen--;
       }
 
    /*
-   if (parser->RaFieldQuoted)
-   {
+   if (parser->RaFieldQuoted) {
       char *ptr = tptr, sepbuf[8], *sep = sepbuf;
       char *ap, *tstr = buf;
       int i = 0;
@@ -6079,17 +6076,13 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       bzero(sep, 8);
       sep[0] = parser->RaFieldDelimiter;
 
-      while ((ap = strtok(tstr, sep)) != NULL)
-      {
+      while ((ap = strtok(tstr, sep)) != NULL) {
          if (i++)
             *ptr++ = parser->RaFieldDelimiter;
-         if (*ap != '\0')
-         {
+         if (*ap != '\0') {
             snprintf(ptr, MAXSTRLEN, "%c%s%c", parser->RaFieldQuoted, ap, parser->RaFieldQuoted);
             ptr += strlen(ptr);
-         }
-         else
-         {
+         } else {
             snprintf(ptr, MAXSTRLEN, "%c%c", parser->RaFieldQuoted, parser->RaFieldQuoted);
             ptr += strlen(ptr);
          }
@@ -6100,8 +6093,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
    dlen = len - blen;
 
-   if (parser->ArgusPrintJson)
-   {
+   if (parser->ArgusPrintJson) {
       ArgusPrintRecordCloser(parser, &buf[blen], argus, dlen);
    }
 
