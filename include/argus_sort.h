@@ -31,8 +31,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		83
-#define MAX_SORT_ALG_TYPES		83
+#define ARGUS_MAX_SORT_ALG		86
+#define MAX_SORT_ALG_TYPES		86
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -254,6 +254,10 @@ int ArgusSortDstMasklen (struct ArgusRecordStruct *, struct ArgusRecordStruct *)
 int ArgusSortIntFlow (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortIntFlowStdDev (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
+int ArgusSortNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortSrcNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortDstNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
 /*
 int ArgusSortSrcDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDstDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -347,6 +351,9 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortCompare,
    ArgusSortIntFlow,
    ArgusSortIntFlowStdDev,
+   ArgusSortNStroke,
+   ArgusSortSrcNStroke,
+   ArgusSortDstNStroke,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -441,6 +448,10 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "compare",
    "intflow",
    "intflowsdev",
+
+   "nstroke",
+   "snstroke",
+   "dnstroke",
 };
 
 #else
@@ -513,6 +524,10 @@ extern int ArgusSortSrcGap (struct ArgusRecordStruct *, struct ArgusRecordStruct
 extern int ArgusSortDstGap (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortSrcDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortDstDup (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+
+extern int ArgusSortNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortSrcNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortDstNStroke (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 extern int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES];

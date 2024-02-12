@@ -16955,6 +16955,120 @@ ArgusSortScore (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 
 
 int
+ArgusSortNStroke (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   int stroke1 = 0, stroke2 = 0;
+   int retn = 0;
+
+   if ((n1->hdr.type & 0xF0) != (n2->hdr.type & 0xF0))
+      return retn;
+
+   switch (n1->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+         break;
+         
+      case ARGUS_FAR: {
+         struct ArgusBehaviorStruct *actor1 = (void *)n1->dsrs[ARGUS_BEHAVIOR_INDEX];
+         struct ArgusBehaviorStruct *actor2 = (void *)n2->dsrs[ARGUS_BEHAVIOR_INDEX];
+         
+         if (actor1 != NULL) 
+            stroke1 = actor1->keyStroke.src.n_strokes + actor1->keyStroke.dst.n_strokes;
+
+         if (actor2 != NULL) 
+            stroke2 = actor2->keyStroke.src.n_strokes + actor2->keyStroke.dst.n_strokes;
+
+         if (actor1 && actor2) {
+            retn = (stroke2 - stroke1);
+         } else
+         if (n1) {
+            retn = -1;
+         } else
+            retn = 1;
+      }
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int
+ArgusSortSrcNStroke (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   int stroke1 = 0, stroke2 = 0;
+   int retn = 0;
+   
+   if ((n1->hdr.type & 0xF0) != (n2->hdr.type & 0xF0))
+      return retn;
+
+   switch (n1->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+         break;
+         
+      case ARGUS_FAR: {
+         struct ArgusBehaviorStruct *actor1 = (void *)n1->dsrs[ARGUS_BEHAVIOR_INDEX];
+         struct ArgusBehaviorStruct *actor2 = (void *)n2->dsrs[ARGUS_BEHAVIOR_INDEX];
+         
+         if (actor1 != NULL) 
+            stroke1 = actor1->keyStroke.src.n_strokes;
+         
+         if (actor2 != NULL) 
+            stroke2 = actor2->keyStroke.src.n_strokes;
+         break;
+      }
+   }
+   
+   if (n1 && n2) {
+      retn = (stroke2 > stroke1) ? 1 : 0;
+   }
+   
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+
+int
+ArgusSortDstNStroke (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   int stroke1 = 0, stroke2 = 0;
+   int retn = 0;
+  
+   if ((n1->hdr.type & 0xF0) != (n2->hdr.type & 0xF0))
+      return retn;
+
+   switch (n1->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+         break;
+
+      case ARGUS_FAR: {
+         struct ArgusBehaviorStruct *actor1 = (void *)n1->dsrs[ARGUS_BEHAVIOR_INDEX];
+         struct ArgusBehaviorStruct *actor2 = (void *)n2->dsrs[ARGUS_BEHAVIOR_INDEX];
+ 
+         if (actor1 != NULL)
+            stroke1 = actor1->keyStroke.dst.n_strokes;
+
+         if (actor2 != NULL)
+            stroke2 = actor2->keyStroke.dst.n_strokes;
+         break;
+      }
+   }
+  
+   if (n1 && n2) {
+      retn = (stroke2 > stroke1) ? 1 : 0;
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+
+
+int
 ArgusSortStartTime (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 {
    double t1 = 0.0, t2 = 0.0;
