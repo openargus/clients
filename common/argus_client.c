@@ -8899,6 +8899,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                         if (m1 && m2) {
                            if (m1->hdr.subtype == m2->hdr.subtype) {
                               switch (m1->hdr.subtype) {
+                                 default:
                                  case ARGUS_TYPE_ETHER: {
                                     struct ether_header *e1 = &m1->mac.mac_union.ether.ehdr;
                                     struct ether_header *e2 = &m2->mac.mac_union.ether.ehdr;

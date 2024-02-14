@@ -504,6 +504,7 @@ struct ArgusParserStruct {
    char RaAgMode;
    char RaMonMode;
    char RaUniMode;
+   char RaUnicastCluster;
    char RaPruneMode;
    char RaPrintMode;
    char RaCursesMode;
