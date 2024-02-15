@@ -504,13 +504,13 @@ struct ArgusParserStruct {
    char RaAgMode;
    char RaMonMode;
    char RaUniMode;
-   char RaUnicastCluster;
    char RaPruneMode;
    char RaPrintMode;
    char RaCursesMode;
    char RaWildCardDate;
    char RaDebugStatus;
 
+   char ArgusNormalize;
    char ArgusPrintEthernetVendors;
 
    int RaPolicyStatus;

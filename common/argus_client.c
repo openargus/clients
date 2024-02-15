@@ -7012,6 +7012,70 @@ RaGetUserDataString (struct ArgusRecordStruct *argus)
    return (retn);
 }
 
+void
+RaMatrixNormalizeEtherAddrs (struct ArgusRecordStruct *ns)
+{
+   struct ArgusMacStruct *m1 = NULL;
+
+   if ((m1 = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX]) != NULL) {
+      int i;
+
+      switch (m1->hdr.subtype) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            struct ether_header *e1 = &m1->mac.mac_union.ether.ehdr;
+#if defined(ARGUS_SOLARIS)
+            if ((e1->ether_shost.ether_addr_octet[0] == 0x33) &&
+                (e1->ether_shost.ether_addr_octet[1] == 0x33)) {
+               for (i = 2; i < 6; i++)
+                  e1->ether_shost.ether_addr_octet[i] = 0x00;
+            } else 
+            if ((e1->ether_shost.ether_addr_octet[0] == 0x01) &&
+                (e1->ether_shost.ether_addr_octet[1] == 0x00) &&
+                (e1->ether_shost.ether_addr_octet[2] == 0x5e)) {
+               for (i = 3; i < 6; i++)
+                  e1->ether_shost.ether_addr_octet[i] = 0x00;
+            }
+
+            if ((e1->ether_dhost.ether_addr_octet[0] == 0x33) &&
+                (e1->ether_dhost.ether_addr_octet[1] == 0x33)) {
+
+               for (i = 2; i < 6; i++) 
+                  e1->ether_dhost.ether_addr_octet[i] = 0x00;
+            } else
+            if ((e1->ether_dhost.ether_addr_octet[0] == 0x01) &&
+                (e1->ether_dhost.ether_addr_octet[1] == 0x00) &&
+                (e1->ether_dhost.ether_addr_octet[2] == 0x5e)) {
+               for (i = 3; i < 6; i++)
+                  e1->ether_dhost.ether_addr_octet[i] = 0x00;
+            } 
+#else
+            if ((e1->ether_shost[0] == 0x33) && (e1->ether_shost[1] == 0x33)) {
+               for (i = 2; i < 6; i++)
+                  e1->ether_shost[i] = 0x00;
+            } else {
+               if ((e1->ether_shost[0] == 0x01) && (e1->ether_shost[1] == 0x00) && (e1->ether_shost[2] == 0x5e)) {
+                  for (i = 3; i < 6; i++)
+                     e1->ether_shost[i] = 0x00;
+               }
+            }
+
+            if ((e1->ether_dhost[0] == 0x33) && (e1->ether_dhost[1] == 0x33)) {
+               for (i = 2; i < 6; i++)
+                  e1->ether_dhost[i] = 0x00;
+            } else {
+               if ((e1->ether_dhost[0] == 0x01) && (e1->ether_dhost[1] == 0x00) && (e1->ether_dhost[2] == 0x5e)) {
+                  for (i = 3; i < 6; i++)
+                     e1->ether_dhost[i] = 0x00;
+               }
+            }
+#endif
+            break;
+         }
+      }
+   }
+}
+
 struct RaPolicyStruct *
 RaFlowModelOverRides(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns)
 {
@@ -16784,6 +16848,7 @@ ArgusSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *queue
          for (i = 0; i < cnt; i++)
             ArgusAddToQueue(queue, queue->array[i], ARGUS_NOLOCK);
 
+         queue->arraylen = cnt;
       } else
          ArgusLog (LOG_ERR, "ArgusSortQueue: ArgusMalloc %s\n", strerror(errno));
 

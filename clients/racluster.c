@@ -109,9 +109,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (!(strncasecmp (mode->mode, "poll", 4)))
                parser->RaPollMode++;
             else
-            if (!(strncasecmp (mode->mode, "unicast", 7))) {
-               parser->RaUnicastCluster++;
-               ArgusInitAddrtoname(parser);
+            if (!(strncasecmp (mode->mode, "normal", 6))) {
+               parser->ArgusNormalize++;
             } else
             if (!(strncasecmp (mode->mode, "uni", 3)))
                parser->RaUniMode++;
@@ -536,37 +535,6 @@ usage ()
 
 
 void RaProcessThisRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-void RaMapMulticastAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-
-void 
-RaMapMulticastAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
-{
-   struct ArgusMacStruct *m = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX];
-   char *oui = NULL;
-
-   if (m !=  NULL) {
-      if ((oui = etheraddr_oui(ArgusParser, (unsigned char *)&m->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
-         if (strncmp("IPv6mcast", oui, 8) == 0) {
-            m->mac.mac_union.ether.ehdr.ether_shost[2] = 0;
-         }
-         if ((strncmp("IPv4mcast", oui, 8) == 0) || (strncmp("IPv6mcast", oui, 8) == 0)) {
-            m->mac.mac_union.ether.ehdr.ether_shost[3] = 0;
-            m->mac.mac_union.ether.ehdr.ether_shost[4] = 0;
-            m->mac.mac_union.ether.ehdr.ether_shost[5] = 0;
-         }
-      }
-      if ((oui = etheraddr_oui(ArgusParser, (unsigned char *)&m->mac.mac_union.ether.ehdr.ether_dhost)) != NULL) {
-         if (strncmp("IPv6mcast", oui, 8) == 0) {
-            m->mac.mac_union.ether.ehdr.ether_dhost[2] = 0;
-         }
-         if ((strncmp("IPv4mcast", oui, 8) == 0) || (strncmp("IPv6mcast", oui, 8) == 0)) {
-            m->mac.mac_union.ether.ehdr.ether_dhost[3] = 0;
-            m->mac.mac_union.ether.ehdr.ether_dhost[4] = 0;
-            m->mac.mac_union.ether.ehdr.ether_dhost[5] = 0;
-         }
-      }
-   }
-}
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
@@ -607,8 +575,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
             }
          }
 
-         if (parser->RaUnicastCluster) {
-            RaMapMulticastAddress (parser, ns);
+         if (parser->ArgusNormalize) {
+            RaMatrixNormalizeEtherAddrs(ns);
          }
 
          if (parser->RaMonMode && (flow != NULL)) {

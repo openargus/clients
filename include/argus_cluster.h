@@ -1206,6 +1206,8 @@ struct ArgusAggregatorStruct *ArgusCopyAggregator (struct ArgusAggregatorStruct 
 void ArgusDeleteAggregator (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
 void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
+
+void RaMatrixNormalizeEtherAddrs (struct ArgusRecordStruct *ns);
  
 unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
 void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
@@ -1229,6 +1231,8 @@ extern struct ArgusAggregatorStruct *ArgusCopyAggregator (struct ArgusAggregator
 extern void ArgusDeleteAggregator (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 extern struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
 extern void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
+
+extern void RaMatrixNormalizeEtherAddrs (struct ArgusRecordStruct *ns);
  
 extern unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
 extern void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
