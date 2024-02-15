@@ -541,7 +541,6 @@ void RaMapMulticastAddress (struct ArgusParserStruct *, struct ArgusRecordStruct
 void 
 RaMapMulticastAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
-   struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
    struct ArgusMacStruct *m = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX];
    char *oui = NULL;
 
