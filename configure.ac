@@ -569,6 +569,7 @@ AS_IF([test "$with_examples" != no],
    ])
    
    AC_CONFIG_FILES([
+      ./examples/ramatrix/Makefile
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile

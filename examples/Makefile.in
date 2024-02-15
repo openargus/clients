@@ -45,8 +45,8 @@ docdir = @datadir@/doc/argus-clients-3.0
 SHELL = /bin/sh
 
 DIRS = ./raconvert ./radecode ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto ./ralabel \
-	./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip ./ratop ./ratimerange \
-	./ratemplate @ARGUS_MYSQL@
+	./ramatrix ./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip \
+	./ratop ./ratimerange ./ratemplate @ARGUS_MYSQL@
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -74,6 +74,7 @@ ragrep: ../common
 rahisto: ../common
 rahosts: ../common
 ralabel: ../common
+ramatrix: ../common
 ramysql: ../common
 rapath: ../common
 rapolicy: ../common
