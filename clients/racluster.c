@@ -547,20 +547,20 @@ RaMapMulticastAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 
    if (m !=  NULL) {
       if ((oui = etheraddr_oui(ArgusParser, (unsigned char *)&m->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
-         if (strncmp("IPv6Mult", oui, 8) == 0) {
+         if (strncmp("IPv6mcast", oui, 8) == 0) {
             m->mac.mac_union.ether.ehdr.ether_shost[2] = 0;
          }
-         if ((strncmp("IPv4Mult", oui, 8) == 0) || (strncmp("IPv6Mult", oui, 8) == 0)) {
+         if ((strncmp("IPv4mcast", oui, 8) == 0) || (strncmp("IPv6mcast", oui, 8) == 0)) {
             m->mac.mac_union.ether.ehdr.ether_shost[3] = 0;
             m->mac.mac_union.ether.ehdr.ether_shost[4] = 0;
             m->mac.mac_union.ether.ehdr.ether_shost[5] = 0;
          }
       }
       if ((oui = etheraddr_oui(ArgusParser, (unsigned char *)&m->mac.mac_union.ether.ehdr.ether_dhost)) != NULL) {
-         if (strncmp("IPv6Mult", oui, 8) == 0) {
+         if (strncmp("IPv6mcast", oui, 8) == 0) {
             m->mac.mac_union.ether.ehdr.ether_dhost[2] = 0;
          }
-         if ((strncmp("IPv4Mult", oui, 8) == 0) || (strncmp("IPv6Mult", oui, 8) == 0)) {
+         if ((strncmp("IPv4mcast", oui, 8) == 0) || (strncmp("IPv6mcast", oui, 8) == 0)) {
             m->mac.mac_union.ether.ehdr.ether_dhost[3] = 0;
             m->mac.mac_union.ether.ehdr.ether_dhost[4] = 0;
             m->mac.mac_union.ether.ehdr.ether_dhost[5] = 0;

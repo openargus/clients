@@ -2829,8 +2829,8 @@ int ArgusWellKnownTag = 0;
 
 #define ARGUS_MAX_ETHER_ENTRIES		8
 char *ArgusAdditionalWiresharkManufEntries[ARGUS_MAX_ETHER_ENTRIES] = {
-   "01:00:5E        IPv4Multi       U.S. Department of Defense (IANA)",
-   "33:33/16        IPv6Multi       (RFC 2464), insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)",
+   "01:00:5E        IPv4mcast       U.S. Department of Defense (IANA)",
+   "33:33/16        IPv6mcast       (RFC 2464), insert the low 32 Bits of the multicast IPv6 Address into the Ethernet Address (RFC 7042 2.3.1.)",
    "FF:FF:FF        Broadcast       IEEE Registration Authority",
    "01:00:0C        Cisco           (Cisco Discovery Protocol), VTP (VLAN Trunking Protocol)",
    "01:80:C2        Ieee802         Spanning Tree Protocol (for bridges) IEEE 802.1D",
