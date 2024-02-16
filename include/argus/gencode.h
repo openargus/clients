@@ -432,6 +432,7 @@ struct ablock *Argusgen_ascode(char *, struct qual, unsigned int);
 struct ablock *Argusgen_ecode(unsigned char *, struct qual);
 struct ablock *Argusgen_mcode(char *, char *, int, struct qual);
 struct ablock *Argusgen_ncode(char *, int, struct qual, unsigned int);
+struct ablock *Argusgen_pcode(unsigned char *, unsigned char *, int, struct qual);
 struct ablock *Argusgen_fcode(char *, float, struct qual, unsigned int);
 struct ablock *Argusgen_proto_abbrev(int);
 struct ablock *Argusgen_relation(int, struct arth *, struct arth *, int);

@@ -219,7 +219,9 @@ nid:	  ID			{ $$.b = Argusgen_scode($1, $$.q = $<blk>0.q); }
                                   $$.b = Argusgen_mcode($1, NULL, $3, $$.q); }
 	| HIDV6			{ $$.q = $<blk>0.q; $$.q.type = Q_IPV6;
                                   $$.b = Argusgen_ncode($1, 0, $$.q, Q_EQUAL); }
-	| EID			{ $$.q = $<blk>0.q; $$.q.type = Q_IPV6;
+	| EID '/' NUM		{ $$.q = $<blk>0.q; $$.q.type = Q_ETHER;
+                                  $$.b = Argusgen_pcode($1, NULL, $3, $$.q); }
+	| EID			{ $$.q = $<blk>0.q; $$.q.type = Q_ETHER;
 				  $$.b = Argusgen_ecode($1, $$.q); }
 	| UUID			{ $$.q = $<blk>0.q; $$.q.type = Q_STRING;
                                   $$.b = Argusgen_ucode($1, $$.q); }

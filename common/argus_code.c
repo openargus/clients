@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -5557,6 +5557,44 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
    return b;
 }
+
+
+struct ablock *
+Argusgen_pcode( u_char *e1, u_char *e2, int masklen, struct qual q)
+{
+   struct ablock *b0 = NULL, *b1 = NULL;
+   struct ArgusFlow flow;
+   int offset, len = masklen / 8;
+
+   switch (q.proto) {
+      case Q_LINK:
+      case Q_ETHER:
+         if (q.addr == Q_HOST || q.addr == Q_DEFAULT)
+            b0 = Argusgen_ehostop(e1, (int)q.dir, len);
+         break;
+
+      case Q_ARP:
+         if (q.addr == Q_HOST) {
+            b1 =  Argusgen_linktype(ETHERTYPE_ARP);
+            offset = ((char *)&flow.arp_flow.haddr.h_un.ethernet - (char *)&flow);
+            len = sizeof(flow.arp_flow.haddr.h_un.ethernet);
+            b0 = Argusgen_bcmp (ARGUS_FLOW_INDEX, offset, len, e1, Q_DEFAULT);
+            Argusgen_and(b1, b0);
+         }
+         break;
+
+      default:
+         ArgusLog(LOG_ERR, "ethernet address used in non-ether expression");
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_pcode (%p, %p, %d, %p) returns %p\n", e1, e2, masklen, q, b0);
+#endif
+
+   return b0;
+}
+
+
 
 struct ablock *
 Argusgen_fcode(char *s, float v, struct qual q, u_int op)
