@@ -1867,9 +1867,9 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
          AC_CHECK_LIB(GeoIP, GeoIP_open, geoip="-GeoIP")
          if test $geoip = FAIL ; then
             AC_MSG_CHECKING(for standard GeoIP installation)
-            for dir in /usr/local ; do
-               if test -r $dir/lib/libGeoIP.a ; then
-                   geoip=$dir/lib
+            for dir in /usr/lib64 /usr/local/lib ; do
+               if test -r $dir/libGeoIP.a ; then
+                   geoip=$dir
                    AC_MSG_RESULT($geoip)
                    $1="-L$geoip -lGeoIP"
                    AC_MSG_CHECKING(for specified GeoIP.h)

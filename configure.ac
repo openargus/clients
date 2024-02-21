@@ -46,7 +46,7 @@ V_PERL=$PERL
 
 # Checks for programs.
 AC_PROG_LN_S
-AC_PROG_LEX(yywrap)
+AC_PROG_LEX(noyywrap)
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_YACC
