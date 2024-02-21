@@ -1877,16 +1877,13 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
                       d=$dir/include
                       AC_MSG_RESULT(found)
                       $2="-I$d $$2"
-                   else
-                      AC_MSG_RESULT(no)
                    fi
                    dnl continue and select the last one that exists
-               else
-                  AC_MSG_RESULT(no)
                fi
             done
 
             if test $geoip = FAIL; then
+               AC_MSG_RESULT(no)
                AC_MSG_CHECKING(for local GeoIP library and includes)
                places=`ls $srcdir/.. | sed -e 's,/$,,' -e "s,^,$srcdir/../," | \
                   grep -E '/GeoIP-[[0-9]]*.[[0-9]]*(.[[0-9]]*)?([[ab]][[0-9]]*)?$'`
@@ -1936,7 +1933,7 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
             fi
          done
          if test $geoip = FAIL; then
-            AC_MSG_RESULT(not found)
+            AC_MSG_RESULT(no)
          fi
       fi
          
