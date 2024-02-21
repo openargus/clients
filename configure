@@ -687,8 +687,6 @@ PYTHON_VERSION
 PYTHON
 LIBCARES_LIBS
 LIBCARES_CFLAGS
-LIBMAXMINDDB_LIBS
-LIBMAXMINDDB_CFLAGS
 UUID_LIBS
 ARGUS_CURLEXE
 LIBCURL
@@ -696,6 +694,8 @@ LIBCURL_CPPFLAGS
 _libcurl_config
 AWK
 systemdsystemunitdir
+LIBMAXMINDDB_LIBS
+LIBMAXMINDDB_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
@@ -807,11 +807,11 @@ with_libpcre
 with_pcre_config
 enable_largefile
 with_threads
+with_libmaxminddb
 with_GeoIP
 with_systemdsystemunitdir
 with_libcurl
 with_curlexe
-with_libmaxminddb
 with_c_ares
 with_python_sys_prefix
 with_python_prefix
@@ -1481,13 +1481,13 @@ Optional Packages:
   --with-libpcre=DIR      Compile with libpcre in <DIR>
   --with-pcre-config=PATH Location of PCRE pcre-config (auto)
   --without-threads       don't use native threads package
+  --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
   --with-GeoIP=DIR        Compile with GeoIP in <DIR>
   --with-systemdsystemunitdir=DIR
                           Directory for systemd service files
   --with-libcurl=PREFIX   look for the curl library in PREFIX/lib and headers
                           in PREFIX/include
   --with-curlexe=PATH     location of the curl binary to be run from ramanage
-  --with-libmaxminddb     Build with libmaxminddb for GeoIP2 labeling
   --with-c-ares           Build with c-ares for name resolution
   --with-python-sys-prefix
                           use Python's sys.prefix and sys.exec_prefix values
@@ -10802,6 +10802,248 @@ fi
 
 
 
+
+
+
+
+
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PKG_CONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+printf "%s\n" "$PKG_CONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_ac_pt_PKG_CONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+printf "%s\n" "$ac_pt_PKG_CONFIG" >&6; }
+else
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.9.0
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+printf %s "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+	else
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+		PKG_CONFIG=""
+	fi
+fi
+
+
+# Check whether --with-libmaxminddb was given.
+if test ${with_libmaxminddb+y}
+then :
+  withval=$with_libmaxminddb; with_libmaxminddb="$withval"
+else $as_nop
+  with_libmaxminddb="no"
+fi
+
+
+   if test x$with_geoip = "xyes"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot compile with both libmaxminddb and GeoIP" >&5
+printf "%s\n" "cannot compile with both libmaxminddb and GeoIP" >&6; }
+   else
+      if test "x$with_libmaxminddb" = "xyes"; then
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libmaxminddb >= 1.2.0" >&5
+printf %s "checking for libmaxminddb >= 1.2.0... " >&6; }
+
+if test -n "$LIBMAXMINDDB_CFLAGS"; then
+    pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBMAXMINDDB_CFLAGS=`$PKG_CONFIG --cflags "libmaxminddb >= 1.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LIBMAXMINDDB_LIBS"; then
+    pkg_cv_LIBMAXMINDDB_LIBS="$LIBMAXMINDDB_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LIBMAXMINDDB_LIBS=`$PKG_CONFIG --libs "libmaxminddb >= 1.2.0" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
+        else
+	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LIBMAXMINDDB_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (libmaxminddb >= 1.2.0) were not met:
+
+$LIBMAXMINDDB_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
+and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
+and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	LIBMAXMINDDB_CFLAGS=$pkg_cv_LIBMAXMINDDB_CFLAGS
+	LIBMAXMINDDB_LIBS=$pkg_cv_LIBMAXMINDDB_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+printf "%s\n" "#define ARGUS_GEOIP2 /**/" >>confdefs.h
+
+fi
+      fi
+   fi
+
+
+
 # Check whether --with-GeoIP was given.
 if test ${with_GeoIP+y}
 then :
@@ -11749,118 +11991,6 @@ fi
          ;;
       esac
 
-
-
-
-# Check whether --with-libmaxminddb was given.
-if test ${with_libmaxminddb+y}
-then :
-  withval=$with_libmaxminddb; with_libmaxminddb="$withval"
-else $as_nop
-  with_libmaxminddb="no"
-fi
-
-
-   if test x$with_geoip = "xyes"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot compile with both libmaxminddb and GeoIP" >&5
-printf "%s\n" "cannot compile with both libmaxminddb and GeoIP" >&6; }
-   else
-      if test "x$with_libmaxminddb" = "xyes"; then
-
-pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libmaxminddb >= 1.2.0" >&5
-printf %s "checking for libmaxminddb >= 1.2.0... " >&6; }
-
-if test -n "$LIBMAXMINDDB_CFLAGS"; then
-    pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBMAXMINDDB_CFLAGS=`$PKG_CONFIG --cflags "libmaxminddb >= 1.2.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$LIBMAXMINDDB_LIBS"; then
-    pkg_cv_LIBMAXMINDDB_LIBS="$LIBMAXMINDDB_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.2.0\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.2.0") 2>&5
-  ac_status=$?
-  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_LIBMAXMINDDB_LIBS=`$PKG_CONFIG --libs "libmaxminddb >= 1.2.0" 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
-        else
-	        LIBMAXMINDDB_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libmaxminddb >= 1.2.0" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$LIBMAXMINDDB_PKG_ERRORS" >&5
-
-	as_fn_error $? "Package requirements (libmaxminddb >= 1.2.0) were not met:
-
-$LIBMAXMINDDB_PKG_ERRORS
-
-Consider adjusting the PKG_CONFIG_PATH environment variable if you
-installed software in a non-standard prefix.
-
-Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
-and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details." "$LINENO" 5
-elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
-is in your PATH or set the PKG_CONFIG environment variable to the full
-path to pkg-config.
-
-Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
-and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
-See the pkg-config man page for more details.
-
-To get pkg-config, see <http://pkg-config.freedesktop.org/>.
-See \`config.log' for more details" "$LINENO" 5; }
-else
-	LIBMAXMINDDB_CFLAGS=$pkg_cv_LIBMAXMINDDB_CFLAGS
-	LIBMAXMINDDB_LIBS=$pkg_cv_LIBMAXMINDDB_LIBS
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-printf "%s\n" "#define ARGUS_GEOIP2 /**/" >>confdefs.h
-
-fi
-      fi
-   fi
 
 
 

@@ -425,6 +425,7 @@ if test "$have_cygwin" = yes ; then
    AC_DEFINE([CYGWIN], [], [Using cygwin])
 fi
 
+AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_GEOIP(V_GEOIPDEP, V_INCLS)
 
 AC_CACHE_CHECK([tm_gmtoff in struct tm], tcl_cv_member_tm_gmtoff, [
@@ -485,7 +486,6 @@ AC_QOSIENT_CURLEXE
 AC_QOSIENT_LIBUUID
 AC_QOSIENT_MACHINE_ID
 
-AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_LIBCARES
 
 AM_PATH_PYTHON([3],, [:])
