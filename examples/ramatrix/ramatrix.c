@@ -216,7 +216,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       parser->ArgusLastRecordTime = 0;
       parser->RaSortedInput = 1;
 
-
       if (parser->dflag) {
          int pid;
 
@@ -260,10 +259,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 void ArgusProcessMatrix(struct ArgusParserStruct *);
 
 /* 
- *               objects = [{name:"value", oui:"value",rank:"value", color:"value"},
- *                          {name:"value", oui:"value",rank:"value", color:"value"},
+ *               objects = [{name:"value", addr:"value", oui:"value",rank:"value", color:"value"},
+ *                          {name:"value", addr:"value", oui:"value",rank:"value", color:"value"},
  *                          . . .
- *                          {name:"value", oui:"value",rank:"value", color:"value"}];
+ *                          {name:"value", addr:"value", oui:"value",rank:"value", color:"value"}];
  */
 
 #define ARGUS_MAX_OUI_COLORS	16
@@ -300,8 +299,9 @@ struct ArgusCategoryData categorySchemes[ARGUS_MAX_CATEGORIES] = {
 
 #define ARGUS_SELF_WEIGHT	2.5f
 #define ARGUS_ROUTER_WEIGHT	1.5f
-#define ARGUS_BROADCAST_WEIGHT	0.12f
+#define ARGUS_BROADCAST_WEIGHT	0.2f
 #define ARGUS_DEFAULT_WEIGHT	1.0f
+#define ARGUS_MIN_WEIGHT	0.1f
 
 void
 ArgusProcessMatrix(struct ArgusParserStruct *parser)
@@ -327,7 +327,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
             struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
             if (mac != NULL) {
-               char addr[64], oui[64], pcr[64];
+               char addr[64], ouiaddr[64], oui[64], pcr[64];
                char *color = NULL, *category;
                struct enamemem *tp = NULL;
                argus->rank = rank++;
@@ -336,7 +336,10 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                bzero(oui, sizeof(oui));
                bzero(pcr, sizeof(pcr));
 
+	       parser->ArgusPrintEthernetVendors = 0;
                ArgusPrintSrcMacAddress(parser, addr, argus, 20);
+	       parser->ArgusPrintEthernetVendors = 1;
+               ArgusPrintSrcMacAddress(parser, ouiaddr, argus, 20);
                ArgusPrintSrcOui(parser, oui, argus, 20);
                ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
 
@@ -350,7 +353,11 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                   }
                }
 
-               if (strstr(oui, "cast") != NULL) {
+               if (strstr(oui, "mcas") != NULL) {
+                  category = categorySchemes[2].id;
+                  x = 2;
+               } else 
+               if (strstr(oui, "dcas") != NULL) {
                   category = categorySchemes[2].id;
                   x = 2;
                } else {
@@ -362,12 +369,12 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                if (color == NULL) color = "#AAAAAA";
                if (argus->rank > 0) printf (",");
 
-               printf ("{name:\"%s\", oui:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+               printf ("{name:\"%s\", addr:\"%s\", oui:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+                         ArgusTrimString(ouiaddr), 
                          ArgusTrimString(addr), 
                          ArgusTrimString(oui),
                          ArgusTrimString(pcr),
-                         category,
-                         color);
+                         category, color);
 
                if ((tp = lookup_emem (entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
                   tp->rank = argus->rank;
@@ -411,6 +418,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          for (i = 1; i < ArgusParser->eNflag; i++)
             if (agg->queue->array[i] != NULL)
                ArgusMergeRecords (agg, argus, (struct ArgusRecordStruct *)agg->queue->array[i]);
+
          ArgusParser->ns = argus;
 
          for (i = 0; i < parser->eNflag; i++) {
@@ -438,6 +446,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
 
                      if ((stp->category == 2) || (dtp->category == 2)) {
                         weight = 3.0 / n;
+                        weight = (weight < ARGUS_MIN_WEIGHT) ? ARGUS_MIN_WEIGHT : weight;
                         cvalue = 2;
                      } else {
                         if ((x == ArgusSelfIndex) || (y == ArgusSelfIndex))
@@ -448,12 +457,19 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
 
                         cvalue = dtp->category;
                      }
-                     if ((metric != NULL) && (metric->src.pkts > 0)) {
-                        matrix[x][y] = weight;
+                     if (metric != NULL) {
+                        if (metric->src.pkts > 0) {
+                           matrix[x][y] = weight;
+			} else {
+                           matrix[x][y] = ARGUS_MIN_WEIGHT;
+			}
                         category[x][y] = cvalue;
-                     }
-                     if ((metric != NULL) && (metric->dst.pkts > 0)) {
-                        matrix[y][x] = weight;
+
+                        if (metric->dst.pkts > 0) {
+                           matrix[y][x] = weight;
+                        } else {
+                           matrix[y][x] = ARGUS_MIN_WEIGHT;
+                        }
                         category[y][x] = cvalue;
                      }
                   }
@@ -533,6 +549,11 @@ RaParseComplete (int sig)
          if (!(ArgusSorter))
             if ((ArgusSorter = ArgusNewSorter(ArgusParser)) == NULL)
                ArgusLog (LOG_ERR, "RaParseComplete: ArgusNewSorter error %s", strerror(errno));
+
+         if (ArgusSorter->ArgusSortAlgorithms[0] == NULL) {
+            ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTSRCPKTSCOUNT];
+            ArgusSorter->ArgusSortAlgorithms[1] = ArgusSortAlgorithmTable[ARGUSSORTSRCMAC];
+	 }
 
          if ((mode = ArgusParser->ArgusMaskList) != NULL) {
             while (mode) {
