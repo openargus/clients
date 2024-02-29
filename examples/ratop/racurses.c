@@ -93,12 +93,12 @@ main(int argc, char **argv)
 
       pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
  
-      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, ArgusParser)) != 0)
-         ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
-
       if (ArgusCursesEnabled)
          if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, ArgusParser)) != 0)
             ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
+
+      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, ArgusParser)) != 0)
+         ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       pthread_join(RaDataThread, NULL);
 
@@ -3216,13 +3216,11 @@ ArgusCursesProcessInit()
    struct ArgusWindowStruct *ws  = NULL;
 
 #if defined(ARGUS_THREADS)
-/*
    sigset_t blocked_signals;
 
    sigemptyset (&blocked_signals);
    sigaddset (&blocked_signals, SIGWINCH);
    pthread_sigmask(SIG_UNBLOCK, &blocked_signals, NULL);
-*/
 
    (void) signal (SIGWINCH,(void (*)(int)) RaResizeHandler);
    (void) signal (SIGALRM,(void (*)(int)) RaResizeAlarmHandler);
@@ -5528,7 +5526,7 @@ RaUpdateHeaderWindow(WINDOW *win)
       tm = localtime_r(&tsec, &tmbuf);
       strftime ((char *) stimebuf, 32, "%Y/%m/%d.%T", tm);
       sprintf ((char *)&stimebuf[strlen(stimebuf)], " ");
-      strftime(&stimebuf[strlen(stimebuf)], 32, "%Z ", tm);
+      strftime(&stimebuf[strlen(stimebuf)], 32, "%Z", tm);
 
    } else
       sprintf (stimebuf, " ");
@@ -5917,7 +5915,13 @@ ArgusResetSearch (void)
 void
 RaResizeAlarmHandler(int sig)
 {
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&RaCursesLock);
+#endif
    ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&RaCursesLock);
+#endif
 }
 
 void

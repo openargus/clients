@@ -324,14 +324,14 @@ ArgusThreadsInit(pthread_attr_t *attr)
 #endif
 
 #if defined(_POSIX_THREAD_ATTR_STACKSIZE)
-#define ARGUS_MIN_STACKSIZE     0x1000000
+#define ARGUS_MIN_STACKSIZE     0x100000
 
    if (pthread_attr_getstacksize(attr, &stacksize))
       ArgusLog (LOG_ERR, "pthreads get stacksize error");
 
    if (stacksize < ARGUS_MIN_STACKSIZE) {
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
+      ArgusDebug (2, "setting stacksize from %d to %d", stacksize, ARGUS_MIN_STACKSIZE);
 #endif
       if (pthread_attr_setstacksize(attr, ARGUS_MIN_STACKSIZE))
          ArgusLog (LOG_ERR, "pthreads set stacksize error");
@@ -339,6 +339,10 @@ ArgusThreadsInit(pthread_attr_t *attr)
 #endif
 
    pthread_attr_setdetachstate(attr, PTHREAD_CREATE_JOINABLE);
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "ArgusThreadsInit(%p) done ...", attr);
 #endif
 }
 
