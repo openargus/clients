@@ -9931,6 +9931,88 @@ ArgusPrintDstMacAddress (struct ArgusParserStruct *parser, char *buf, struct Arg
 }
 
 void
+ArgusPrintSrcMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+   char *macstr = NULL;
+
+   if (mac != NULL) {
+      switch (mac->hdr.subtype & 0x3F) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            int vval = parser->ArgusPrintEthernetVendors;
+            parser->ArgusPrintEthernetVendors = 1;
+            macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost);
+            parser->ArgusPrintEthernetVendors = vval;
+            break;
+         }
+      }
+   }
+
+   if (macstr == NULL)
+      macstr = "";
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcMacAddr = \"%s\"", macstr);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(macstr);
+      } else {
+         if (strlen(macstr) > len) {
+            macstr[len - 1] = '*';
+            macstr[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, macstr);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcMacAddress (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintDstMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+   char *macstr = NULL;
+
+   if (mac != NULL) {
+      switch (mac->hdr.subtype & 0x3F) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            int vval = parser->ArgusPrintEthernetVendors;
+            parser->ArgusPrintEthernetVendors = 1;
+            macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost);
+            parser->ArgusPrintEthernetVendors = vval;
+            break;
+         }
+      }
+   }
+
+   if (macstr == NULL)
+      macstr = "";
+   
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " DstMacAddr = \"%s\"", macstr);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(macstr);
+      } else {
+         if (strlen(macstr) > len) {
+            macstr[len - 1] = '*';
+            macstr[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, macstr);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstMacOuiAddress (%p, %p)", buf, argus);
+#endif
+}
+
+void
 ArgusPrintSrcOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
@@ -19456,6 +19538,23 @@ void
 ArgusPrintDstMacAddressLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "DstMac");
+}
+
+
+void
+ArgusPrintSrcMacOuiAddressLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->RaMonMode) {
+      sprintf (buf, "%*.*s ", len, len, "Moui");
+   } else {
+      sprintf (buf, "%*.*s ", len, len, "SrcMoui");
+   }
+}
+
+void
+ArgusPrintDstMacOuiAddressLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "DstMoui");
 }
 
 void

@@ -361,12 +361,13 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
          break;
       case '"': {
          ++*cursor;
-         const char* start = *cursor;
-         char* end = strchr(*cursor, '"');
-         while ((end[-1] == '\\') && (end[-2] != '\\')) {
-            end = strchr(++end, '"');
+         const char *start = *cursor;
+         char *end = strchr(*cursor, '"');
+         if (end != NULL) {
+            while ((end[-1] == '\\') && (end[-2] != '\\')) {
+               end = strchr(++end, '"');
+            }
          }
-
          if (end) {
             size_t len = end - start;
             char *new_string = malloc((len + 1) * sizeof(char));
