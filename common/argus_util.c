@@ -123,6 +123,15 @@
 
 #include <rapolicy.h>
 
+#define ARGUS_ETHER_UNICAST	0x0100
+#define ARGUS_ETHER_MULTICAST	0x0001
+#define ARGUS_ETHER_UAA		0x0002
+#define ARGUS_ETHER_LAA		0x0004
+#define ARGUS_ETHER_SLAP_ELI	0x0010
+#define ARGUS_ETHER_SLAP_SAI	0x0030
+#define ARGUS_ETHER_SLAP_AAI	0x0050
+#define ARGUS_ETHER_SLAP_RES	0x0090
+
 #if defined(ARGUS_FLOWTOOLS)
 #include "ftlib.h"
 #endif
@@ -10107,7 +10116,7 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((format == NULL) || (strlen(format) == 0)) {
-      format = "0%0x";
+      format = "%s";
    }
 
    switch (argus->hdr.type & 0xF0) {
@@ -10131,9 +10140,26 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       }
    }
 
-   if (macclass != 0) 
-      snprintf (classbuf, sizeof(classbuf), format, macclass);
-   else
+   if (macclass != 0)  {
+      char macclassstr[4];
+   
+      if (strstr(format,"%s") != NULL) {
+         for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
+         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[3] = 'U';
+         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[3] = 'M';
+         if (macclass & ARGUS_ETHER_UAA)       macclassstr[2] = 'U';
+         if (macclass & ARGUS_ETHER_LAA)       macclassstr[2] = 'L';
+         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[1] = 'E';
+         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[1] = 'S';
+         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[1] = 'A';
+         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[1] = 'R';
+         snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
+
+      } else {
+         snprintf (classbuf, sizeof(classbuf), format, macclass);
+      }
+
+   } else
       snprintf (classbuf, sizeof(classbuf), "%s", " ");
 
    if (parser->ArgusPrintXml) {
@@ -10167,7 +10193,7 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((format == NULL) || (strlen(format) == 0)) {
-      format = "0%0x";
+      format = "%s";
    }
 
    switch (argus->hdr.type & 0xF0) {
@@ -10191,9 +10217,26 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       }
    }
 
-   if (macclass != 0) 
-      snprintf (classbuf, sizeof(classbuf), format, macclass);
-   else
+   if (macclass != 0)  {
+      char macclassstr[4];
+               
+      if (strstr(format,"%s") != NULL) {
+         for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
+         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[0] = 'U';
+         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[0] = 'M';
+         if (macclass & ARGUS_ETHER_UAA)       macclassstr[1] = 'U';
+         if (macclass & ARGUS_ETHER_LAA)       macclassstr[1] = 'L';
+         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
+         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
+         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
+         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
+         snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
+   
+      } else {
+         snprintf (classbuf, sizeof(classbuf), format, macclass);
+      }
+   
+   } else
       snprintf (classbuf, sizeof(classbuf), "%s", " ");
 
    if (parser->ArgusPrintXml) {
@@ -23337,15 +23380,6 @@ etheraddr_oui(struct ArgusParserStruct *parser, u_char *ep)
 
    return (NULL);
 }
-
-#define ARGUS_ETHER_UNICAST	0x0100
-#define ARGUS_ETHER_MULTICAST	0x0001
-#define ARGUS_ETHER_UAA		0x0002
-#define ARGUS_ETHER_LAA		0x0004
-#define ARGUS_ETHER_SLAP_ELI	0x0010
-#define ARGUS_ETHER_SLAP_SAI	0x0030
-#define ARGUS_ETHER_SLAP_AAI	0x0050
-#define ARGUS_ETHER_SLAP_RES	0x0090
 
 int
 etheraddr_class(struct ArgusParserStruct *parser, u_char *ep)
