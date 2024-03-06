@@ -17008,6 +17008,80 @@ ArgusSortCompare (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 }
 
 int
+ArgusSortMacClass (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   return (ArgusSortSrcMacClass(n1, n2));
+}
+
+int
+ArgusSortSrcMacClass (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusMacStruct *m1 = NULL, *m2 = NULL;
+   int s1 = 0, s2 = 0, retn = 0;
+
+// The concept is that you want to sort based on the class of the mac address.
+// This is primarily for ramatrix, which wants the list sorted by,
+// Broadcast, Multicast, Addresses in reverse order based on sort algorithm ...
+//
+// So we'll make anything with 'cas_' in the oui a cast class ...
+// they get first up ...
+
+   if ((m1 = (struct ArgusMacStruct *) n1->dsrs[ARGUS_MAC_INDEX]) != NULL) {
+      switch (m1->hdr.subtype) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            s1 = etheraddr_class(ArgusParser, (u_char *)&m1->mac.mac_union.ether.ehdr.ether_shost);
+            break;
+         }
+      }
+   }
+   if ((m2 = (struct ArgusMacStruct *) n2->dsrs[ARGUS_MAC_INDEX]) != NULL) {
+      switch (m2->hdr.subtype) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            s2 = etheraddr_class(ArgusParser, (u_char *)&m2->mac.mac_union.ether.ehdr.ether_shost);
+            break;
+         }
+      }
+   }
+
+   retn = (s2 > s1) ? 1 : (s2 == s1) ? 0 : -1;
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int
+ArgusSortDstMacClass (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
+{
+   struct ArgusMacStruct *m1 = NULL, *m2 = NULL;
+   int s1 = 0, s2 = 0, retn = 0;
+
+// The concept is that you want to sort based on the class of the mac address.
+// This is primarily for ramatrix, which wants the list sorted by,
+// Broadcast, Multicast, Addresses in reverse order based on sort algorithm ...
+//
+// So we'll make anything with 'cas_' in the oui a cast class ...
+// they get first up ...
+
+   m1 = (struct ArgusMacStruct *) n1->dsrs[ARGUS_MAC_INDEX];
+   m2 = (struct ArgusMacStruct *) n2->dsrs[ARGUS_MAC_INDEX];
+
+   if ((m1 != NULL) && (m2 != NULL)) {
+      switch (m1->hdr.subtype) {
+         default:
+         case ARGUS_TYPE_ETHER: {
+            s1 += etheraddr_class(ArgusParser, (u_char *)&m1->mac.mac_union.ether.ehdr.ether_dhost);
+            s2 += etheraddr_class(ArgusParser, (u_char *)&m2->mac.mac_union.ether.ehdr.ether_dhost);
+            break;
+         }
+      }
+
+      retn = (s2 > s1) ? 1 : (s2 == s1) ? 0 : -1;
+   }
+
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int
 ArgusSortScore (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
 {
    int retn = 0;

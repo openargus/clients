@@ -302,9 +302,11 @@ RaParseComplete (int sig)
                   if ((mode = ArgusParser->ArgusMaskList) != NULL) {
                      while (mode) {
                         for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
-                           if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
-                              ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
-                              break;
+                           if (ArgusSortKeyWords[x] != NULL) {
+                              if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
+                                 ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
+                                 break;
+                              }
                            }
                         }
                         mode = mode->nxt;

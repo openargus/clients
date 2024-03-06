@@ -551,8 +551,9 @@ RaParseComplete (int sig)
                ArgusLog (LOG_ERR, "RaParseComplete: ArgusNewSorter error %s", strerror(errno));
 
          if (ArgusSorter->ArgusSortAlgorithms[0] == NULL) {
-            ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTSRCPKTSCOUNT];
+            ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTSRCMACCLASS];
             ArgusSorter->ArgusSortAlgorithms[1] = ArgusSortAlgorithmTable[ARGUSSORTSRCMAC];
+            ArgusSorter->ArgusSortAlgorithms[2] = ArgusSortAlgorithmTable[ARGUSSORTSRCPKTSCOUNT];
 	 }
 
          if ((mode = ArgusParser->ArgusMaskList) != NULL) {

@@ -50,8 +50,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	245
-#define MAX_PRINT_ALG_TYPES     	245
+#define ARGUS_MAX_PRINT_ALG     	247
+#define MAX_PRINT_ALG_TYPES     	247
 
 #define ARGUS_PTYPE_INT			0
 #define ARGUS_PTYPE_UINT		1
@@ -501,6 +501,8 @@ void ArgusPrintDstMacAddress (struct ArgusParserStruct *, char *, struct ArgusRe
 void ArgusPrintSrcMacOuiAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstMacOuiAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintMacOuiAddress (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintSrcMacClass (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstMacClass (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintEtherType (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintProto (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintAddr (struct ArgusParserStruct *, char *, int, void *, int, unsigned char, int, int);
@@ -765,6 +767,8 @@ void ArgusPrintMacAddressLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcMacOuiAddressLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstMacOuiAddressLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintMacOuiAddressLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintSrcMacClassLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstMacClassLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintEtherTypeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintProtoLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintAddrLabel (struct ArgusParserStruct *, char *, int);

@@ -10097,6 +10097,125 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 }
 
 void
+ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char *format = NULL;
+   char classbuf[32];
+   int macclass = -1;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "0%0x";
+   }
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_EVENT:
+      case ARGUS_MAR: {
+         break;
+      }
+
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: {
+         struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+         if (mac != NULL) {
+            switch (mac->hdr.subtype & 0x3F) {
+               default:
+               case ARGUS_TYPE_ETHER:
+                  macclass = etheraddr_class (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost);
+                  break;
+            }
+         }
+      }
+   }
+
+   if (macclass != 0) 
+      snprintf (classbuf, sizeof(classbuf), format, macclass);
+   else
+      snprintf (classbuf, sizeof(classbuf), "%s", " ");
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcMacClass = \"%s\"", classbuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(classbuf);
+      } else {
+         if (strlen(classbuf) > len) {
+            classbuf[len - 1] = '*';
+            classbuf[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, classbuf);
+   }
+    
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcMacClass (%p, %p)", buf, argus);
+#endif
+}
+
+
+void
+ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char *format = NULL;
+   char classbuf[32];
+   int macclass = -1;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "0%0x";
+   }
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_EVENT:
+      case ARGUS_MAR: {
+         break;
+      }
+
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: {
+         struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+         if (mac != NULL) {
+            switch (mac->hdr.subtype & 0x3F) {
+               default:
+               case ARGUS_TYPE_ETHER:
+                  macclass = etheraddr_class (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost);
+                  break;
+            }
+         }
+      }
+   }
+
+   if (macclass != 0) 
+      snprintf (classbuf, sizeof(classbuf), format, macclass);
+   else
+      snprintf (classbuf, sizeof(classbuf), "%s", " ");
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " DstMacClass = \"%s\"", classbuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(classbuf);
+      } else {
+         if (strlen(classbuf) > len) {
+            classbuf[len - 1] = '*';
+            classbuf[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, classbuf);
+   }
+    
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstMacClass (%p, %p)", buf, argus);
+#endif
+}
+
+void
 ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusMacStruct *mac;
@@ -19574,6 +19693,22 @@ ArgusPrintDstOuiLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintSrcMacClassLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->RaMonMode) {
+      sprintf (buf, "%*.*s ", len, len, "MacClass");
+   } else {
+      sprintf (buf, "%*.*s ", len, len, "SrcMacClass");
+   }
+}
+
+void
+ArgusPrintDstMacClassLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "DstMacClass");
+}
+
+void
 ArgusPrintEtherTypeLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Etype");
@@ -23201,6 +23336,32 @@ etheraddr_oui(struct ArgusParserStruct *parser, u_char *ep)
    }
 
    return (NULL);
+}
+
+#define ARGUS_ETHER_UNICAST	0x0100
+#define ARGUS_ETHER_MULTICAST	0x0001
+#define ARGUS_ETHER_UAA		0x0002
+#define ARGUS_ETHER_LAA		0x0004
+#define ARGUS_ETHER_SLAP_ELI	0x0010
+#define ARGUS_ETHER_SLAP_SAI	0x0030
+#define ARGUS_ETHER_SLAP_AAI	0x0050
+#define ARGUS_ETHER_SLAP_RES	0x0090
+
+int
+etheraddr_class(struct ArgusParserStruct *parser, u_char *ep)
+{
+   int retn = 0;
+
+   if (ep[0] & 0x01) { retn |= ARGUS_ETHER_MULTICAST; } else { retn |= ARGUS_ETHER_UNICAST; };
+   if (ep[0] & 0x02) { retn |= ARGUS_ETHER_LAA; } else { retn |= ARGUS_ETHER_UAA; };
+   if (ep[0] & 0x0A) { retn |= ARGUS_ETHER_SLAP_ELI; } else
+   if (ep[0] & 0x0E) { retn |= ARGUS_ETHER_SLAP_SAI; }
+// if (ep[0] & 0x02) { retn |= ARGUS_ETHER_SLAP_AAI; }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "etheraddr_class(%p, %p) returns %d", parser, ep, retn);
+#endif
+   return retn;
 }
 
 char *
