@@ -4312,7 +4312,8 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
          case ARGUS_NETFLOW:
          case ARGUS_AFLOW:
          case ARGUS_FAR: {
-            int src = 0, dst = 0, proceed = 1;
+            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX];
+            int smacclass, dmacclass;
 
       if (strchr(dbuf, '?')) {
          switch (ns->hdr.type & 0xF0) {
@@ -4322,100 +4323,121 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
                int src = 0, dst = 0;
 
-            if (flow != NULL) {
-               switch (flow->hdr.subtype & 0x3F) {
-                  case ARGUS_FLOW_CLASSIC5TUPLE:
-                  case ARGUS_FLOW_LAYER_3_MATRIX: {
-                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                        case ARGUS_TYPE_IPV4: {
-                           switch (flow->ip_flow.ip_p) {
-                              case IPPROTO_TCP: {
-                                 bzero(dbuf, 16);
-                                 ArgusPrintDirection(parser, dbuf, ns, 8);
-                                 if (!(strchr(dbuf, '?'))) {
-                                    proceed = 0;
+      if (reverse == 0) {
+         switch (ns->hdr.type & 0xF0) {
+            case ARGUS_NETFLOW:
+            case ARGUS_AFLOW:
+            case ARGUS_FAR: {
+               int src = 0, dst = 0, proceed = 1;
+
+               struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
+               struct ArgusLabelerStruct *labeler = NULL;
+               char dbuf[16];
+
+               if (flow != NULL) {
+                  switch (flow->hdr.subtype & 0x3F) {
+                     case ARGUS_FLOW_CLASSIC5TUPLE:
+                     case ARGUS_FLOW_LAYER_3_MATRIX: {
+                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                           case ARGUS_TYPE_IPV4: {
+                              switch (flow->ip_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    bzero(dbuf, 16);
+                                    ArgusPrintDirection(parser, dbuf, ns, 8);
+                                    if (!(strchr(dbuf, '?'))) {
+                                       proceed = 0;
+                                    }
+                                    break;
                                  }
-                                 break;
                               }
                            }
                         }
                      }
                   }
-               }
-               if (proceed) {
-                  if (parser->ArgusDirectionFunction & ARGUS_PORT_DIR_MASK) {
-                        int ssrv = 0, dsrv = 0;
-                        u_short sport = 0;
-                        u_short dport = 0;
+                  if (proceed) {
+                     if (parser->ArgusDirectionFunction & ARGUS_PORT_DIR_MASK) {
+                           int ssrv = 0, dsrv = 0;
+                           u_short sport = 0;
+                           u_short dport = 0;
 
-                        switch (flow->hdr.subtype & 0x3F) {
-                           case ARGUS_FLOW_CLASSIC5TUPLE:
-                           case ARGUS_FLOW_LAYER_3_MATRIX: {
-                              switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                                 case ARGUS_TYPE_IPV4: {
-                                    switch (flow->ip_flow.ip_p) {
-                                       case IPPROTO_TCP:
-                                       case IPPROTO_UDP:
-                                          sport = flow->ip_flow.sport;
-                                          dport = flow->ip_flow.dport;
-                                          break;
+                           switch (flow->hdr.subtype & 0x3F) {
+                              case ARGUS_FLOW_CLASSIC5TUPLE:
+                              case ARGUS_FLOW_LAYER_3_MATRIX: {
+                                 switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                    case ARGUS_TYPE_IPV4: {
+                                       switch (flow->ip_flow.ip_p) {
+                                          case IPPROTO_TCP:
+                                          case IPPROTO_UDP:
+                                             sport = flow->ip_flow.sport;
+                                             dport = flow->ip_flow.dport;
+                                             break;
+                                       }
+                                       break;
                                     }
-                                    break;
-                                 }
 
-                                 case ARGUS_TYPE_IPV6: {
-                                    switch (flow->ipv6_flow.ip_p) {
-                                       case IPPROTO_TCP:
-                                       case IPPROTO_UDP:
-                                          sport = flow->ipv6_flow.sport;
-                                          dport = flow->ipv6_flow.dport;
-                                          break;
+                                    case ARGUS_TYPE_IPV6: {
+                                       switch (flow->ipv6_flow.ip_p) {
+                                          case IPPROTO_TCP:
+                                          case IPPROTO_UDP:
+                                             sport = flow->ipv6_flow.sport;
+                                             dport = flow->ipv6_flow.dport;
+                                             break;
+                                       }
+                                       break;
                                     }
-                                    break;
                                  }
                               }
                            }
-                        }
 /*
-      6633, http, https, domain, 22, ssh, imaps, pops
+         6633, http, https, domain, 22, ssh, imaps, pops
 */
-                        if (parser->ArgusDirectionFunction & ARGUS_PORT_SERVICES) {
-                           extern struct hnamemem  tporttable[HASHNAMESIZE];
-                           struct hnamemem *tp;
+                           if (parser->ArgusDirectionFunction & ARGUS_PORT_SERVICES) {
+                              extern struct hnamemem  tporttable[HASHNAMESIZE];
+                              struct hnamemem *tp;
 
-                           if (parser->ArgusSrvInit == 0)
-                              ArgusInitServarray(parser);
+                              if (parser->ArgusSrvInit == 0)
+                                 ArgusInitServarray(parser);
 
-                           for (tp = &tporttable[sport % (HASHNAMESIZE-1)]; tp->nxt; tp = tp->nxt) {
-                              if (tp->addr == sport) {
-                                 ssrv = sport;
-                                 break;
-                              }
-                           }
-                           for (tp = &tporttable[dport % (HASHNAMESIZE-1)]; tp->nxt; tp = tp->nxt) {
-                              if (tp->addr == dport) {
-                                 dsrv = dport;
-                                 break;
-                              }
-                           }
-
-                           if (ssrv || dsrv) {
-                              tested++;
-                              if (ssrv && dsrv) {
-                                 if (ssrv < dsrv) {
-                                    reverse++;
-                                 }
-                              } else {
-                                 if (ssrv) {
-                                    reverse++;
+                              for (tp = &tporttable[sport % (HASHNAMESIZE-1)]; tp->nxt; tp = tp->nxt) {
+                                 if (tp->addr == sport) {
+                                    ssrv = sport;
+                                    break;
                                  }
                               }
-                           }
-                        }
+                              for (tp = &tporttable[dport % (HASHNAMESIZE-1)]; tp->nxt; tp = tp->nxt) {
+                                 if (tp->addr == dport) {
+                                    dsrv = dport;
+                                    break;
+                                 }
+                              }
 
-                        if (!tested && (parser->ArgusDirectionFunction & ARGUS_PORT_WELLKNOWN)) {
-                           if ((sport != 0) && (dport != 0)) {
-                              if ((sport < 1024) || (dport < 1024)) {
+                              if (ssrv || dsrv) {
+                                 tested++;
+                                 if (ssrv && dsrv) {
+                                    if (ssrv < dsrv) {
+                                       reverse++;
+                                    }
+                                 } else {
+                                    if (ssrv) {
+                                       reverse++;
+                                    }
+                                 }
+                              }
+                           }
+
+                           if (!tested && (parser->ArgusDirectionFunction & ARGUS_PORT_WELLKNOWN)) {
+                              if ((sport != 0) && (dport != 0)) {
+                                 if ((sport < 1024) || (dport < 1024)) {
+                                    tested++;
+                                    if (sport < dport) {
+                                       reverse++;
+                                    }
+                                 }
+                              }
+                           }
+
+                           if (!tested && (parser->ArgusDirectionFunction & ARGUS_PORT_REGISTERED)) {
+                              if (((sport > 1023) && (sport < 49152)) || ((dport > 1023) && (dport < 49152))) {
                                  tested++;
                                  if (sport < dport) {
                                     reverse++;
@@ -4424,41 +4446,32 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                            }
                         }
 
-                        if (!tested && (parser->ArgusDirectionFunction & ARGUS_PORT_REGISTERED)) {
-                           if (((sport > 1023) && (sport < 49152)) || ((dport > 1023) && (dport < 49152))) {
-                              tested++;
-                              if (sport < dport) {
-                                 reverse++;
-                              }
-                           }
-                        }
-                     }
+                        if (!tested && (parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK)) {
+                           int dirs = parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK;
 
-                     if (!tested && (parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK)) {
-                        int dirs = parser->ArgusDirectionFunction & ARGUS_ADDR_DIR_MASK;
-
-                        switch (flow->hdr.subtype & 0x3F) {
-                           case ARGUS_FLOW_CLASSIC5TUPLE:
-                           case ARGUS_FLOW_LAYER_3_MATRIX: {
-                              switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                                 case ARGUS_TYPE_IPV4: {
-                                    if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                                       dst = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                                       src = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                                       break;
+                           switch (flow->hdr.subtype & 0x3F) {
+                              case ARGUS_FLOW_CLASSIC5TUPLE:
+                              case ARGUS_FLOW_LAYER_3_MATRIX: {
+                                 switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                                    case ARGUS_TYPE_IPV4: {
+                                       if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                                          dst = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                          src = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                                          break;
+                                       }
                                     }
                                  }
                               }
                            }
+       
+                           switch (dirs) {
+                              case ARGUS_SUGGEST_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
+                              case ARGUS_SUGGEST_LOCAL_DST: if ((dst > 0) && (src == 0)) reverse++; break;
+                              case ARGUS_FORCE_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
+                              case ARGUS_FORCE_LOCAL_DST: if ((src > 0) && (dst == 0)) reverse++; break;
+                           }
                         }
-    
-                        switch (dirs) {
-                           case ARGUS_SUGGEST_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
-                           case ARGUS_SUGGEST_LOCAL_DST: if ((dst > 0) && (src == 0)) reverse++; break;
-                           case ARGUS_FORCE_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
-                           case ARGUS_FORCE_LOCAL_DST: if ((src > 0) && (dst == 0)) reverse++; break;
-                        }
-                     }
+                  }
                }
             }
          }
@@ -10122,6 +10135,7 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_EVENT:
       case ARGUS_MAR: {
+         return;
          break;
       }
 
@@ -10145,14 +10159,14 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
    
       if (strstr(format,"%s") != NULL) {
          for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
-         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[3] = 'U';
-         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[3] = 'M';
-         if (macclass & ARGUS_ETHER_UAA)       macclassstr[2] = 'U';
-         if (macclass & ARGUS_ETHER_LAA)       macclassstr[2] = 'L';
-         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[1] = 'E';
-         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[1] = 'S';
-         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[1] = 'A';
-         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[1] = 'R';
+         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[0] = 'U';
+         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[0] = 'M';
+         if (macclass & ARGUS_ETHER_UAA)       macclassstr[1] = 'U';
+         if (macclass & ARGUS_ETHER_LAA)       macclassstr[1] = 'L';
+         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
+         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
+         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
+         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
          snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
 
       } else {
@@ -10199,6 +10213,7 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_EVENT:
       case ARGUS_MAR: {
+         return;
          break;
       }
 
