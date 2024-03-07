@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -109,9 +109,6 @@ typedef uint64_t u_int64_t;
 
 #include <netinet/icmp6.h>
 
-#if !defined(ICMP6_DST_UNREACH_BEYONDSCOPE)
-#define ICMP6_DST_UNREACH_BEYONDSCOPE      2
-#endif
 #if !defined(ICMP6_DST_UNREACH_SRC_FAIL)
 #define ICMP6_DST_UNREACH_SRC_FAIL         5
 #endif

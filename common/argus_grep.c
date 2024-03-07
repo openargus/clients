@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -151,11 +151,9 @@ ArgusGrepUserData (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
          } else
             len = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
 
-         for (i = 0; i < parser->ArgusRegExItems; i++) {
-            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len]))) {
-               found++;
-               break;
-            }
+         for (i = 0; !found && i < parser->ArgusRegExItems; i++) {
+            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len])))
+               found = 1;
          }
       }
    }

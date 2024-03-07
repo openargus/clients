@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -160,8 +160,6 @@ extern void ArgusCopyDebugString (char *, int);
 extern void ArgusZeroDebugString (void);
 
 struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-int RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *, unsigned int *, int, int);
-void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 int ArgusCloseDown = 0;
 

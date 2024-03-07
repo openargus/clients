@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -415,7 +415,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_EVENT:
-      case ARGUS_AFLOW:
       case ARGUS_NETFLOW:
          break;
 

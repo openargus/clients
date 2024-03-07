@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -211,40 +211,6 @@ struct ArgusMarStruct {
    unsigned int status, argusid;
    unsigned int localnet, netmask;
    unsigned int nextMrSequenceNum; 
-   struct ArgusTime startime, now;
-
-   unsigned char  major_version, minor_version; 
-   unsigned char interfaceType, interfaceStatus;
-
-   unsigned short reportInterval, argusMrInterval;
-   unsigned long long pktsRcvd, bytesRcvd;
-   long long drift;
-
-   unsigned int records, flows, dropped;
-   unsigned int queue, output, clients;
-   unsigned int bufs, bytes;
-   unsigned short suserlen, duserlen;
-
-   union {
-      unsigned int value;
-      unsigned int ipv4;
-      unsigned char ethersrc[6];
-      unsigned char str[4];
-      unsigned char uuid[16];
-      unsigned int ipv6[4];
-
-      struct {
-         unsigned int pad[3];
-         unsigned int thisid;
-      };
-   };
-
-   unsigned int record_len;
-};
-
-struct ArgusV3MarStruct {
-   unsigned int status, argusid;
-   unsigned int localnet, netmask, nextMrSequenceNum; 
    struct ArgusTime startime, now;
 
    unsigned char  major_version, minor_version; 
@@ -750,17 +716,6 @@ struct ArgusSystemFlow {
 #define    isis_flow flow_un.isis
 #define    wlan_flow flow_un.wlan
 
-struct ArgusV3AddrStruct {
-   union {
-      unsigned int value;
-      unsigned int ipv4;
-      unsigned char str[4];
-//    unsigned char ethersrc[6];
-//    unsigned int ipv6[4];
-//    unsigned char uuid[16];
-   } a_un;
-// unsigned char inf[4];
-};
 
 struct ArgusFlowHashStruct {
    struct ArgusDSRHeader hdr;
@@ -1027,7 +982,7 @@ struct ArgusGeoLocationStruct {
 struct ArgusNetspatialStruct {
    struct ArgusDSRHeader hdr;
    unsigned short status;
-   signed char sloc, dloc;
+   signed char sloc, dloc; 
 };
 
 struct ArgusLabelStruct {

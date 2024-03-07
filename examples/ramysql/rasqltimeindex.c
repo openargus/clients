@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2020 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -44,7 +44,7 @@
 #include <netdb.h>
 #include <sys/socket.h>
  
-#include <argus_mysql.h>
+#include "argus_mysql.h"
 
 #include <rasqltimeindex.h>
 
@@ -898,6 +898,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if (ArgusParser->Sflag)
          usage();
+
+      if ((parser->ArgusAggregator = ArgusNewAggregator(parser, "sid", ARGUS_RECORD_AGGREGATOR)) == NULL)
+         ArgusLog(LOG_ERR, "ArgusClientInit: ArgusNewAggregator error %s", strerror(errno));
 
       if ((ArgusTimeQueue = ArgusNewQueue()) == NULL)
          ArgusLog(LOG_ERR, "ArgusClientInit: ArgusNewQueue error %s", strerror(errno));

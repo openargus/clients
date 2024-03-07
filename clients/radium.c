@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -638,102 +638,17 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
                if (strrchr(optarg, (int) '`') != optarg) {
                   char *val = ArgusExpandBackticks(optarg);
 
-                     switch (i) {
-                        case RADIUM_MONITOR_ID: {
-                           if (optarg && quoted) {   // Argus ID is a string.  Limit to date is 4 characters.
-                              int slen = strlen(optarg);
-                              if (slen > 4) optarg[4] = '\0';
-                              setParserArgusID (parser, optarg, 4, ARGUS_IDIS_STRING);
- 
-                           } else {
-                              if (optarg && (*optarg == '`')) {
-                                 if (optarg[strlen(optarg) - 1] == '`') {
-                                    optarg++;
-                                    optarg[strlen(optarg) - 1] = '\0';
-                                    if (!(strcmp (optarg, "hostname"))) {
-                                       if ((fd = popen("hostname", "r")) != NULL) {
-                                          ptr = NULL;
-                                          clearerr(fd);
-                                          while ((ptr == NULL) && !(feof(fd)))
-                                             ptr = fgets(result, MAXSTRLEN, fd);
-
-                                          if (ptr == NULL)
-                                             ArgusLog (LOG_ERR, "ArgusParseResourceFile(%s) `hostname` failed %s.\n", file, strerror(errno));
-
-                                          optarg = ptr;
-                                          optarg[strlen(optarg) - 1] = '\0';
-                                          pclose(fd);
-
-                                          if ((ptr = strstr(optarg, ".local")) != NULL) {
-                                             if (strlen(ptr) == strlen(".local"))
-                                                *ptr = '\0';
-                                          }
-                                       } else
-                                          ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) System error: popen() %s\n", file, strerror(errno));
-                                    } else
-                                       ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) System error: popen() %s\n", file, strerror(errno));
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) unsupported command `%s` at line %d.\n", file, optarg, linenum);
-                              } else
-                                 ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
-                           }
-                           if (optarg && isalnum((int)*optarg)) {
-#if defined(HAVE_GETADDRINFO)
-                              struct addrinfo *host;
-                              int retn;
-
-                              if ((retn = getaddrinfo(optarg, NULL, NULL, &host)) == 0) {
-                                 struct addrinfo *hptr = host;
-                                 switch (host->ai_family) {
-                                    case AF_INET:  {
-                                       struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
-                                       unsigned int addr;
-                                       bcopy ((char *)&sa->sin_addr, (char *)&addr, 4);
-                                       setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
-                                       break;
-                                    }
-                                    default:
-                                       ArgusLog (LOG_ERR, "Probe ID %s not in address family\n", optarg);
-                                       break;
-                                 }
-                                 freeaddrinfo(hptr);
-
-                              } else {
-                                 switch (retn) {
-                                    case EAI_AGAIN:
-                                       ArgusLog(LOG_ERR, "dns server not available");
-                                       break;
-                                    case EAI_NONAME:
-                                       ArgusLog(LOG_ERR, "srcid %s unknown", optarg);
-                                       break;
-#if defined(EAI_ADDRFAMILY)
-                                    case EAI_ADDRFAMILY:
-                                       ArgusLog(LOG_ERR, "srcid %s has no IP address", optarg);
-                                       break;
+#ifdef ARGUSDEBUG
+                  ArgusDebug(1, "expanded %s to %s\n", optarg, val);
 #endif
-                                    case EAI_SYSTEM:
-                                       ArgusLog(LOG_ERR, "srcid %s name server error %s", optarg, strerror(errno));
-                                       break;
-                                 }
-                              }
-#else
-                              struct hostent *host;
-
-                              if ((host = gethostbyname(optarg)) != NULL) {
-                                 if ((host->h_addrtype == 2) && (host->h_length == 4)) {
-                                    unsigned int addr;
-                                    bcopy ((char *) *host->h_addr_list, (char *)&addr, host->h_length);
-                                    setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) host '%s' error %s\n", file, optarg, strerror(errno));
-                              } else
-                                 if (optarg && isdigit((int)*optarg)) {
-                                    setParserArgusID (parser, optarg, 4, ARGUS_IDIS_INT);
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
-                              }
-
-            ArgusParseSourceID(parser, optarg);
+                  ArgusParseSourceID(parser, val);
+                  free(val);
+               } else {
+                  ArgusLog (LOG_ERR, "%s: syntax error line %d\n", __func__, linenum);
+               }
+            } else {
+               ArgusParseSourceID(parser, optarg);
+            }
          }
          break;
       }

@@ -1,7 +1,7 @@
 /*
- * Argus Client Software.  Tools to read, analyze and manage Argus data.
- * Copyright (C) 2000-2022 QoSient, LLC.
- * All Rights Reserved
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
+ * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
  * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT

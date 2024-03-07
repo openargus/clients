@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -4208,17 +4208,18 @@ SFDecodeIPV6(SFSample *sptr)
 
       // get the tos (priority)
       sptr->dcd_ipTos = *ptr++ & 15;
-      // 24-bit label
-      // label = *ptr++;
-      // label <<= 8;
-      // label += *ptr++;
-      // label <<= 8;
-      // label += *ptr++;
+      // get past the 24-bit label
+/*
+      label = *ptr++;
+      label <<= 8;
+      label += *ptr++;
+      label <<= 8;
+      label += *ptr++;
       // payload
       // payloadLen = (ptr[0] << 8) + ptr[1];
-
+      ptr += 2;
+*/
       ptr += 5;
-
       // next header
       nextHeader = *ptr++;
 

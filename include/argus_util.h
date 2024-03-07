@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -31,9 +31,6 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
-#include <sys/stat.h>
-
 #include <argus_os.h>
 #include <argus_compat.h>
 
@@ -53,11 +50,6 @@ extern "C" {
 #define ARGUS_MAX_PRINT_ALG     	247
 #define MAX_PRINT_ALG_TYPES     	247
 
-#define ARGUS_PTYPE_INT			0
-#define ARGUS_PTYPE_UINT		1
-#define ARGUS_PTYPE_DOUBLE		2
-#define ARGUS_PTYPE_STRING		4
-#define ARGUS_PTYPE_JSON		5
 
 #include <argus/CflowdFlowPdu.h>
 
@@ -97,18 +89,6 @@ struct ArgusQueueStruct {
 #endif
    struct ArgusQueueHeader *start, *end;
    struct ArgusQueueHeader **array;
-};
-
-struct ArgusFileInput {
-   struct ArgusQueueHeader qhdr;
-   char *filename;
-   char *tempfile;
-   FILE *file;
-   long long ostart;
-   long long ostop;
-   int type;
-   int fd;
-   struct stat statbuf;
 };
 
 struct anamemem {
@@ -459,7 +439,6 @@ int ArgusSOptionRecord = 1;
 long thiszone;
 
 char *ArgusTrimString (char *str);
-char *ArgusEscapeString (char *, char *, int);
 char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
 char *ArgusGetUuidString (struct ArgusParserStruct *, u_char *, int);
 
@@ -477,7 +456,7 @@ int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
                               struct ArgusParserStruct *, char *);
 void ArgusParseSourceID (struct ArgusParserStruct *, char *);
 
-
+void ArgusPrintType (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintBssid (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSsid (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintCause (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -1421,6 +1400,98 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "dtf", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTDSTTRANSEFFICIENCY, ArgusPrintDstTransEfficiency, ArgusPrintDstTransEfficiencyLabel, "double", 0},
 #define ARGUSPRINTINODECOUNTRYCODE	200
    { "ico", "", 3 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTINODECOUNTRYCODE, ArgusPrintInodeCountryCode, ArgusPrintInodeCountryCodeLabel, "varchar(2)", 0},
+#define ARGUSPRINTSRCLATITUDE		201
+   { "slat", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTSRCLATITUDE, ArgusPrintSrcLatitude, ArgusPrintSrcLatitudeLabel, "double", 0},
+#define ARGUSPRINTSRCLONGITUDE		202
+   { "slon", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTSRCLONGITUDE, ArgusPrintSrcLongitude, ArgusPrintSrcLongitudeLabel, "double", 0},
+#define ARGUSPRINTDSTLATITUDE		203
+   { "dlat", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTDSTLATITUDE, ArgusPrintDstLatitude, ArgusPrintDstLatitudeLabel, "double", 0},
+#define ARGUSPRINTDSTLONGITUDE		204
+   { "dlon", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTDSTLONGITUDE, ArgusPrintDstLongitude, ArgusPrintDstLongitudeLabel, "double", 0},
+#define ARGUSPRINTINODELATITUDE		205
+   { "ilat", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINODELATITUDE, ArgusPrintInodeLatitude, ArgusPrintInodeLatitudeLabel, "double", 0},
+#define ARGUSPRINTINODELONGITUDE	206
+   { "ilon", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINODELONGITUDE, ArgusPrintInodeLongitude, ArgusPrintInodeLongitudeLabel, "double", 0},
+#define ARGUSPRINTSRCLOCAL		207
+   { "sloc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCLOCAL, ArgusPrintSrcLocal, ArgusPrintSrcLocalLabel, "tinyint unsigned", 0},
+#define ARGUSPRINTDSTLOCAL		208
+   { "dloc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTLOCAL, ArgusPrintDstLocal, ArgusPrintDstLocalLabel, "tinyint unsigned", 0},
+#define ARGUSPRINTLOCAL			209
+   { "loc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTLOCAL, ArgusPrintLocal, ArgusPrintLocalLabel, "tinyint unsigned", 0},
+#define ARGUSPRINTSID			210
+   { "sid", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSID, ArgusPrintSID, ArgusPrintSIDLabel, "varchar(64)", 0},
+#define ARGUSPRINTNODE			211
+   { "node", "", 8 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTNODE, ArgusPrintNode, ArgusPrintNodeLabel, "varchar(64)", 0},
+#define ARGUSPRINTINF			212
+   { "inf", "", 4 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTINF, ArgusPrintInf, ArgusPrintInfLabel, "varchar(4)", 0},
+#define ARGUSPRINTSTATUS		213
+   { "status", "", 4 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSTATUS, ArgusPrintStatus, ArgusPrintStatusLabel, "varchar(8)", 0},
+#define ARGUSPRINTSRCGROUP		214
+   { "sgrp", "", 4 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCGROUP, ArgusPrintSrcGroup, ArgusPrintSrcGroupLabel, "varchar(64)", 0},
+#define ARGUSPRINTDSTGROUP		215
+   { "dgrp", "", 4 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTGROUP, ArgusPrintDstGroup, ArgusPrintDstGroupLabel, "varchar(64)", 0},
+#define ARGUSPRINTHASHREF		216
+   { "hash", "", 4 , 1, ARGUS_PTYPE_UINT, ARGUSPRINTHASHREF, ArgusPrintHashRef, ArgusPrintHashRefLabel, "int unsigned", 0},
+#define ARGUSPRINTHASHINDEX		217
+   { "ind", "", 4 , 1, ARGUS_PTYPE_UINT, ARGUSPRINTHASHINDEX, ArgusPrintHashIndex, ArgusPrintHashIndexLabel, "int unsigned", 0},
+#define ARGUSPRINTSCORE			218
+   { "score", "%d", 5 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSCORE, ArgusPrintScore, ArgusPrintScoreLabel, "tinyint", 0},
+#define ARGUSPRINTSRCNAME		219
+   { "sname", "%s", 16 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCNAME, ArgusPrintSrcName, ArgusPrintSrcNameLabel, "varchar(64)", 0},
+#define ARGUSPRINTDSTNAME		220
+   { "dname", "%s", 16 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTNAME, ArgusPrintDstName, ArgusPrintDstNameLabel, "varchar(64)", 0},
+#define ARGUSPRINTETHERTYPE		221
+   { "etype", "%u", 8 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTETHERTYPE, ArgusPrintEtherType, ArgusPrintEtherTypeLabel, "varchar(32)", 0},
+#define ARGUSPRINTMEANIDLE		222
+   { "idlemean", "%u", 8 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTMEANIDLE, ArgusPrintIdleMean, ArgusPrintIdleMeanLabel, "double unsigned", 0},
+#define ARGUSPRINTMINIDLE		223
+   { "idlemin", "%u", 8 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTMINIDLE, ArgusPrintIdleMin, ArgusPrintIdleMinLabel, "double unsigned", 0},
+#define ARGUSPRINTMAXIDLE		224
+   { "idlemax", "%u", 8 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTMAXIDLE, ArgusPrintIdleMax, ArgusPrintIdleMaxLabel, "double unsigned", 0},
+#define ARGUSPRINTSTDDEVIDLE  		225
+   { "idlestddev", "%u", 8 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTSTDDEVIDLE, ArgusPrintIdleStdDeviation, ArgusPrintIdleStdDeviationLabel, "double unsigned", 0},
+#define ARGUSPRINTSRCMAXSEG  		226
+   { "smss", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCMAXSEG, ArgusPrintSrcMaxSeg, ArgusPrintSrcMaxSegLabel, "tinyint unsigned", 0},
+#define ARGUSPRINTDSTMAXSEG  		227
+   { "dmss", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTMAXSEG, ArgusPrintDstMaxSeg, ArgusPrintDstMaxSegLabel, "tinyint unsigned", 0},
+#define ARGUSPRINTINTFLOW		228
+   { "intflow", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINTFLOW, ArgusPrintIntFlow, ArgusPrintIntFlowLabel, "double", 0},
+#define ARGUSPRINTACTINTFLOW            229
+   { "actintflow", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTACTINTFLOW, NULL, NULL, "double", 0},
+#define ARGUSPRINTIDLEINTFLOW           230
+   { "idleintflow", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTIDLEINTFLOW, NULL, NULL, "double", 0},
+#define ARGUSPRINTINTFLOWMAX		231
+   { "intflowmax", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINTFLOWMAX, ArgusPrintIntFlowMax, ArgusPrintIntFlowMaxLabel, "double", 0},
+#define ARGUSPRINTINTFLOWMIN		232
+   { "intflowmin", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINTFLOWMIN, ArgusPrintIntFlowMin, ArgusPrintIntFlowMinLabel, "double", 0},
+#define ARGUSPRINTINTFLOWSDEV		233
+   { "intflowsdev", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINTFLOWSDEV, ArgusPrintIntFlowStdDev, ArgusPrintIntFlowStdDevLabel, "double", 0},
+#define ARGUSPRINTACTINTFLOWMAX         234
+   { "actintflowmax", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTACTINTFLOWMAX, NULL, NULL, "double", 0},
+#define ARGUSPRINTACTINTFLOWMIN         235
+   { "actintflowmin", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTACTINTFLOWMIN, NULL, NULL, "double", 0},
+#define ARGUSPRINTACTINTFLOWSDEV        236
+   { "actintflowsdev", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTACTINTFLOWSDEV, NULL, NULL, "double", 0},
+#define ARGUSPRINTIDLEINTFLOWMAX        237
+   { "idleintflowmax", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTIDLEINTFLOWMAX, NULL, NULL, "double", 0},
+#define ARGUSPRINTIDLEINTFLOWMIN        238
+   { "idleintflowmin", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTIDLEINTFLOWMIN, NULL, NULL, "double", 0},
+#define ARGUSPRINTIDLEINTFLOWSDEV       239
+   { "idleintflowsdev", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTIDLEINTFLOWSDEV, NULL, NULL, "double", 0},
+#define ARGUSPRINTSRCVNID		240
+   { "svnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVNID, ArgusPrintSrcVirtualNID, ArgusPrintSrcVirtualNIDLabel, "int", 0},
+#define ARGUSPRINTDSTVNID		241
+   { "dvnid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVNID, ArgusPrintDstVirtualNID, ArgusPrintDstVirtualNIDLabel, "int", 0},
+#define ARGUSPRINTTYPE			242
+   { "type", "", 4 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTTYPE, ArgusPrintType, ArgusPrintTypeLabel, "varchar(4)", 0},
+#define ARGUSPRINTSRCMACOUI    		243
+   { "smacoui", "", 7 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCMACOUI, ArgusPrintSrcMacOuiAddress, ArgusPrintSrcMacOuiAddressLabel, "varchar(24)", 0},
+#define ARGUSPRINTDSTOUINAME		244
+   { "dmacoui", "", 7 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCMACOUI, ArgusPrintDstMacOuiAddress, ArgusPrintDstMacOuiAddressLabel, "varchar(24)", 0},
+#define ARGUSPRINTSRCMACCLASS		245
+   { "smacclass", "%s", 9 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCMACCLASS, ArgusPrintSrcMacClass, ArgusPrintSrcMacClassLabel, "int", 0},
+#define ARGUSPRINTDSTMACCLASS		246
+   { "dmacclass", "%s", 9 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTMACCLASS, ArgusPrintDstMacClass, ArgusPrintDstMacClassLabel, "int", 0},
 };
 
 
@@ -1557,12 +1628,6 @@ char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabel
 char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 
-int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
-int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
-char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-
 struct ArgusQueueStruct *ArgusNewQueue (void);
 void ArgusDeleteQueue (struct ArgusQueueStruct *);
 int ArgusGetQueueCount(struct ArgusQueueStruct *);
@@ -1643,12 +1708,6 @@ extern struct gnamemem *check_group(struct gnamemem *, const u_char *);
 extern struct gnamemem *lookup_group(struct gnamemem *, const u_char *);
 extern struct snamemem *check_service(struct snamemem *, const u_char *);
 extern struct snamemem *lookup_service(struct snamemem *, const u_char *);
-
-extern char *lookup_srcid(const u_char *, struct anamemem *);
-extern char *lookup_alias(const u_char *, struct anamemem *);
-
-void ArgusFileFree(struct ArgusFileInput *afi);
-void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 
 extern char *lookup_srcid(const u_char *, struct anamemem *);
 extern char *lookup_alias(const u_char *, struct anamemem *);
@@ -1946,12 +2005,6 @@ extern struct snamemem *check_service(struct snamemem *, const u_char *);
 extern char *lookup_srcid(const u_char *, struct anamemem *);
 extern char *lookup_alias(const u_char *, struct anamemem *);
 
-
-
-
-extern char *lookup_srcid(const u_char *, struct anamemem *);
-extern char *lookup_alias(const u_char *, struct anamemem *);
-
 extern unsigned int ArgusIndexRecord (struct ArgusRecordStruct *);
 
 extern void *
@@ -1986,12 +2039,6 @@ extern void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecor
 extern struct RaAddressStruct *RaProcessAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int); 
 extern int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int); 
 extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int); 
-extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-extern char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
-
-extern int RaProcessAddressLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
-extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int, int);
 extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 extern char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
@@ -2032,23 +2079,7 @@ extern float RaDeltaFloatTime (struct timeval *, struct timeval *);
 extern char *ArgusGetString (struct ArgusParserStruct *, u_char *, int);
 extern char *ArgusGetUuidString (struct ArgusParserStruct *, u_char *, int);
 
-extern void setArgusHashTableSize (struct ArgusParserStruct *, int);
-extern void setArgusID(struct ArgusAddrStruct *, void *, int, unsigned int);
-extern void setTransportArgusID(struct ArgusTransportStruct *, void *, int, unsigned int);
-extern void setParserArgusID(struct ArgusParserStruct *, void *, int, unsigned int);
-
-extern void setArgusManInf (struct ArgusParserStruct *, char *);
-extern char *getArgusManInf (struct ArgusParserStruct *);
-
-extern int getParserArgusID(struct ArgusParserStruct *, struct ArgusAddrStruct *);
-extern unsigned int getArgusIDType(struct ArgusParserStruct *);
-extern int ArgusCommonParseSourceID (struct ArgusAddrStruct *,
-                              struct ArgusParserStruct *, char *);
-extern void ArgusParseSourceID (struct ArgusParserStruct *, char *);
-
-
-
-extern void ArgusPrintTime(struct ArgusParserStruct *, char *, struct timeval *);
+extern int ArgusPrintTime(struct ArgusParserStruct *, char *, size_t, struct timeval *);
 extern char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 extern void ArgusPrintRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *ptr, int);

@@ -1,7 +1,4 @@
 #!@PERLBIN@
-# Argus Software
-# Copyright (c) 2000-2022 QoSient, LLC
-# All rights reserved.
 #
 #  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
 #  Copyright (c) 2000-2024 QoSient, LLC

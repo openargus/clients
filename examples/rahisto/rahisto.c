@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -657,7 +657,7 @@ PrintHistograms(struct PerFlowHistoData *data)
    struct ArgusParserStruct *parser = ArgusParser;
    struct ArgusRecordStruct *ns = NULL;
    struct ArgusAgrStruct *tagr = NULL;
-   int i, freq, class = 1, start = 999999999, end = 0;
+   int freq, class, start, end;
    double bs = 0.0, be = 0.0, bf = 0.0;
    float rel, relcum;
    int i, printed;
@@ -840,18 +840,48 @@ PrintHistograms(struct PerFlowHistoData *data)
                   }
                }
 
-               if (!ArgusParser->ArgusPrintJson && !_writing_records_to_stdout) {
-                  if (ArgusParser->RaLabel == NULL) {
-                     char rangeval[32], rangebuf[128], c;
-                     int size = 0, rblen = 0;
+               if (stdStr)     free(stdStr);
+               if (meanStr)    free(meanStr);
+               if (medianStr)  free(medianStr);
+               if (percentStr) free(percentStr);
+               if (maxValStr)  free(maxValStr);
+               if (minValStr)  free(minValStr);
+               if (modeStr)    free(modeStr);
+            }
+         }
 
-                     size = parser->pflag > 16 ? 16 : parser->pflag;
-                     snprintf (rangeval, 32, "%*.*e", size, size, be);
+         if (!parser->qflag) {
+            if (!_writing_records_to_stdout) {
+               if (!ArgusParser->ArgusPrintJson &&
+                   ArgusParser->RaLabel == NULL) {
+                  char rangebuf[128], c;
+                  int size = parser->pflag;
+                  int rblen = 0;
 
-                     if (ArgusPrintInterval) 
-                        snprintf (rangebuf, 128, "%s-%s ", rangeval, rangeval);
+                  if (ArgusPrintInterval)
+                     sprintf (rangebuf, "%*.*e-%*.*e ", size, size, be, size, size, be);
+                  else
+                     sprintf (rangebuf, "%*.*e ", size, size, be);
+
+                  rblen = ((strlen(rangebuf) - strlen("Interval"))/4) * 2;
+
+                  ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, ns);
+
+                  if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
+                     printf ("Class%cInterval%cFreq%cRel.Freq%cCum.Freq", c, c, c, c);
+                     if (ArgusParser->RaLabel && strlen(ArgusParser->RaLabel)) {
+                        printf ("%c%s\n", c, ArgusParser->RaLabel);
+                     } else
+                        printf ("\n");
+                  } else {
+                     if (ArgusPrintInterval)
+                        printf (" Class     %*.*s%s%*.*s       Freq    Rel.Freq     Cum.Freq    %s\n",
+                             rblen, rblen, " ", "Interval", rblen, rblen, " ", ArgusParser->RaLabel);
                      else
-                        snprintf (rangebuf, 128, "%s ", rangeval);
+                        printf (" Class    %*.*s%s%*.*s       Freq    Rel.Freq     Cum.Freq    %s\n",
+                             rblen, rblen, " ", "Interval", rblen, rblen, " ", ArgusParser->RaLabel);
+                  }
+               }
 
                if (ArgusParser->ArgusPrintJson)
                   printf (" \"values\": [\n");
@@ -961,7 +991,8 @@ PrintHistograms(struct PerFlowHistoData *data)
                            rel  = 1.0/(tagr->act.n * 1.0);
                         }
 
-                              relcum += rel;
+                        ArgusPrintRecord (parser, buf, argus, MAXSTRLEN);
+                        slen = strlen(buf);
 
                         if ((sptr = strchr(buf, '{')) != NULL) {
                            char *tptr = strchr(sptr, '}');
@@ -1179,18 +1210,7 @@ RaProcessFarRecord (struct ArgusParserStruct *parser,
                     struct ArgusRecordStruct *argus,
                     struct PerFlowHistoData *data)
 {
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-      case ARGUS_EVENT: {
-         break;
-      }
-
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR: {
-         int i;
-
-         for (i = 0; i < RaHistoConfigCount; i++) {
+   int i;
 
    for (i = 0; i < RaHistoConfigCount; i++) {
          struct ArgusAggregatorStruct *agg;

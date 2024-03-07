@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -106,10 +106,6 @@ extern "C" {
 #define ARGUS_ASN_ASPLAIN	0
 #define ARGUS_ASN_ASDOTPLUS	1
 #define ARGUS_ASN_ASDOT    	2
-
-#define ARGUS_LABEL_LEGACY	0
-#define ARGUS_LABEL_JSON	1
-
 
 /* the ArgusRecordStruct (ns) is a single point data structure
    for clients to use to process and report on ARGUS flow data.  
@@ -299,10 +295,16 @@ struct ArgusCIDRAddr {
 #define ARGUS_REPLACE_COMPRESSED_BZ	0x04
 #define ARGUS_REPLACE_FILENAME_MODIFIED	0x08
 
-#define ARGUS_PRINT_NULL                0x01
-#define ARGUS_PRINT_EMPTY_STRING        0x02
-#define ARGUS_OMIT_EMPTY_STRING         0x04
+struct ArgusProgramStruct {
+   int status;
 
+   char *ArgusProgramName, *RaTimeFormat, *RaTimeZone;
+   char *ArgusProgramArgs, *ArgusProgramOptions;
+   char *ArgusSQLStatement, *MySQLDBEngine;
+   char *ArgusSearchString;
+
+   struct timeval ArgusRealTime, ArgusGlobalTime;
+};
 
 enum ArgusLockFilesEnum {
    ARGUS_FILE_NOLCK = 0,
@@ -329,6 +331,7 @@ struct ArgusParserStruct {
    char *ArgusProgramName, *RaTimeFormat, *RaTimeZone;
    char *ArgusProgramArgs, *ArgusProgramOptions;
    char *ArgusSQLStatement, *MySQLDBEngine;
+   char *ArgusAliasFile, *RadiumSrcidConvertFile;
    char *ArgusSourceIDString, *RaMarInfName;
    char *RaTempFilePath, *ArgusBaseLineFile;
    char *ArgusSearchString;
@@ -406,29 +409,38 @@ struct ArgusParserStruct {
    int ArgusHashTableSize;
    int ArgusRegExItems;
    int ArgusListens;
-   int ArgusAdjustTime;
-   int ArgusConnectTime;
-   int ArgusReverse;
-   int ArgusGenerateManRecords;
-   int ArgusPrintMan, ArgusPrintEvent;
-   int ArgusPrintXml, ArgusAsnFormat;
-   int ArgusPrintJson, ArgusPrintD3;
-   int ArgusPrintJsonEmptyString;
-   int ArgusLabelFormat;
-   int RaXMLStarted; 
-   int ArgusSrvInit;
-   int ArgusGrepSource;
-   int ArgusGrepDestination;
-   int ArgusAutoId;
 
-   int ArgusStripFields;
-   int ArgusDSRFields[ARGUSMAXDSRTYPE];
+   char ArgusRemotes;
+   char ArgusReplaceMode;
+   char ArgusHostsActive;
+   int ArgusLfd[ARGUS_MAXLISTEN];        /* listen file descriptors */
+   char ArgusLfdVersion[ARGUS_MAXLISTEN]; /* argus protocol version for this fd */
+   char ArgusAdjustTime;
+   char ArgusConnectTime;
+   char ArgusReverse;
+   char ArgusGenerateManRecords;
+   char ArgusPrintMan, ArgusPrintEvent;
+   char ArgusPrintXml, ArgusAsnFormat;
+   char ArgusPrintJson, ArgusPrintNewick;
+   char ArgusPrintJsonEmptyString;
+   char ArgusPrintD3;
+   char ArgusSrvInit;
+   char RaOutputStarted; 
+   char ArgusGrepSource;
+   char ArgusGrepDestination;
+   char ArgusAutoId;
+   char ArgusPrintPortZero;
+   char ArgusPrintHashZero;
+   char ArgusEtherFrameCnt;
+
+   char ArgusStripFields;
+   char ArgusDSRFields[ARGUSMAXDSRTYPE];
 
    char *RadiumArchive;
    char *ArgusMatchLabel;
    char *ArgusMatchGroup;
 
-   unsigned int ArgusID, ArgusIDType;
+   unsigned int ArgusIDType;
    struct ArgusTransportStruct trans;
 
    struct timeval ArgusReportTime;
@@ -448,13 +460,15 @@ struct ArgusParserStruct {
    long long ArgusTotalPkts, ArgusTotalSrcPkts, ArgusTotalDstPkts;
    long long ArgusTotalBytes, ArgusTotalSrcBytes, ArgusTotalDstBytes;
 
-   signed char RaOutputStarted;
-   signed char aflag, Aflag, bflag, cidrflag;
-   signed char cflag, Cflag, dflag, Dflag, eflag, Eflag;
-   signed char fflag, Fflag, gflag, Gflag, Hflag;
-   signed char idflag, jflag, Jflag, lflag, Lflag, mflag, hflag;
-   signed char notNetflag, Oflag, pflag, Pflag, qflag, Qflag;
-   signed char Netflag, nflag, Normflag, Pctflag, pidflag;
+   char debugflag, RaInitialized;
+   char RaFieldDelimiter, RaFieldQuoted; 
+
+   char aflag, Aflag, bflag, cidrflag;
+   char cflag, Cflag, dflag, Dflag, eflag, Eflag;
+   char fflag, Fflag, gflag, Gflag, Hflag;
+   signed char idflag, jflag, Jflag, lflag, iLflag, Lflag, mflag, hflag;
+   char notNetflag, Oflag, Pflag, qflag, Qflag;
+   char Netflag, nflag, nlflag, Normflag, Pctflag, pidflag;
 
    char tflag, uflag, Wflag, vflag, Vflag, iflag;
    char Iflag, rflag, Rflag, Sflag, sflag, Tflag, xflag;
@@ -560,7 +574,8 @@ struct ArgusParserStruct {
    struct ArgusFileInput *ArgusBaselineList;	/* first element in file list */
    struct ArgusFileInput *ArgusBaselineListTail;	/* last element in file list */
 
-   struct ArgusInput *ArgusRemoteHostList;
+   struct ArgusInput *ArgusRemoteServerList;
+   struct ArgusInput *ArgusCurrentFile;
 
    struct ArgusOutput *ArgusRemoteClientList;
 

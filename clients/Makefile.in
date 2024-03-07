@@ -1,6 +1,6 @@
 # 
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -55,9 +55,9 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../include -I../common @V_INCLS@
-DEFS = @DEFS@
-COMPATLIB = @V_PCRE@ @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@
+INCLS = -I. -I../include -I../common @V_INCLS@ @LIBCARES_CFLAGS@
+DEFS = @DEFS@ -DSYSCONFDIR=\"@sysconfdir@\" -DSHAREDSTATEDIR=\"@sharedstatedir@\"
+COMPATLIB = @V_PCRE@ @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@ @DNSLIB@ @LIBMAXMINDDB_LIBS@
 
 # Standard CFLAGS
 CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)

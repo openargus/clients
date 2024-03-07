@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -142,12 +142,13 @@ extern "C" {
 #define ARGUS_MAR                               0x80   /* Normal Argus Management Record */
 #define ARGUS_FAR                               0x10   /* Normal Argus Data Record */
 
-#define ARGUS_INDEX   				0x20   /* New Argus Index Record */
-#define ARGUS_NETFLOW  				0x30   /* Argus Cisco Netflow Originated Record */
-#define ARGUS_EVENT				0x40   /* New Argus Event/Message Record */
-#define ARGUS_AFLOW				0x50   /* New Argus Any Flow/Metric Record ... for things not argus flows */
-#define ARGUS_DATASUP				0x60   /* New Supplemental Argus Data Record */
-#define ARGUS_ARCHIVAL				0x70   /* New Archival Argus Data Record */
+#define ARGUS_INDEX                             0x20   /* New Argus Index Record */
+#define ARGUS_NETFLOW                           0x30   /* Argus Cisco Netflow Originated Record */
+#define ARGUS_EVENT                             0x40   /* New Argus Event/Message Record */
+#define ARGUS_AFLOW                             0x50   /* New Argus Any Flow/Metric Record */
+                                                       /* for converted / imported non-argus flow records */
+#define ARGUS_DATASUP                           0x60   /* New Supplemental Argus Data Record */
+#define ARGUS_ARCHIVAL                          0x70   /* New Archival Argus Data Record */
 
 
 /*
@@ -455,7 +456,8 @@ extern "C" {
  
 #define ARGUS_TYPE_INT				0x20
 #define ARGUS_TYPE_STRING			0x21
-#define ARGUS_TYPE_UUID                         0x22
+#define ARGUS_TYPE_UUID				0x22
+
 
 /* Flow Descriptor Option Qualifiers */
 #define ARGUS_ANON				0x20
@@ -1618,13 +1620,9 @@ extern "C" {
 #define ARGUS_SRC_OUTOFORDER    	0x00010000
 #define ARGUS_DST_OUTOFORDER    	0x00020000
 
-#define ARGUS_DUPLICATES                0x000C0000
-#define ARGUS_SRC_DUPLICATES            0x00040000
-#define ARGUS_DST_DUPLICATES            0x00080000
-
-#define ARGUS_GAP                       0x00C00000
-#define ARGUS_SRC_GAP                   0x00400000
-#define ARGUS_DST_GAP                   0x00800000
+#define ARGUS_DUPLICATES		0x000C0000
+#define ARGUS_SRC_DUPLICATES    	0x00040000
+#define ARGUS_DST_DUPLICATES    	0x00080000
 
 #define ARGUS_GAP			0x00C00000
 #define ARGUS_SRC_GAP		    	0x00400000
@@ -1791,22 +1789,17 @@ extern "C" {
 #define ARGUS_DST_ADDR			0x02
 #define ARGUS_INODE_ADDR		0x04
 
-/* Argus GEO DSR */
-#define ARGUS_GEO_DSR                   0x68
-#define ARGUS_GEO_INDEX                 22
 
-/* Argus GEO DSR Qualifier */
-#define ARGUS_SRC_GEO                   0x01
-#define ARGUS_DST_GEO                   0x02
-#define ARGUS_INODE_GEO                 0x04
+/* Argus Flow Hash DSR */
+#define ARGUS_FLOW_HASH_DSR             0x07
+#define ARGUS_FLOW_HASH_INDEX           24
 
-/* Argus Netspatial LOCAL DSR */
-#define ARGUS_LOCAL_DSR                 0x6A
-#define ARGUS_LOCAL_INDEX               23
+/* VxLan Transport DSR Type */
+#define ARGUS_VXLAN_DSR                  0x43
+#define ARGUS_VXLAN_INDEX                22
 
-/* Argus Netspatial DSR Qualifier */
-#define ARGUS_SRC_LOCAL                 0x01
-#define ARGUS_DST_LOCAL                 0x02
+#define ARGUS_SRC_VXLAN                  0x01
+#define ARGUS_DST_VXLAN                  0x02
 
 #define ARGUS_ADDR_MASK         	0x07
 

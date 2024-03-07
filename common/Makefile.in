@@ -1,6 +1,6 @@
-#
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -84,18 +84,21 @@ LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/ar
 OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ) $(TIMEROBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
 
+COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c \
+            $(GENSRC) $(VSRC) argus_lockfile.c argus_clientconfig.c argus_parse_time.c 
 
-COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c argus_clientconfig.c $(GENSRC) $(VSRC)
-COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o argus_clientconfig.o scanner.o grammar.o version.o
+COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o \
+            scanner.o grammar.o version.o argus_lockfile.o argus_clientconfig.o \
+            argus_parse_time.o
 
 PARSESRC  = argus_main.c
 PARSEOBJ  = argus_main.o
 
-CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_json.c argus_label_geoip.c
-CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_json.o argus_label_geoip.o
+CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c \
+            argus_output.c argus_json.c ring.c argus_split_mode.c
 
-OUTPUTSRC = argus_output.c
-OUTPUTOBJ = argus_output.o
+CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o \
+            argus_output.o argus_json.o ring.o argus_split_mode.o
 
 EVENTSRC  = argus_event.c
 EVENTOBJ  = argus_event.o

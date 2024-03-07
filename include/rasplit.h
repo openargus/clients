@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -19,9 +19,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/rasplit.h#22 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/rasplit.h#8 $
+ * $DateTime: 2016/11/14 01:30:37 $
+ * $Change: 3244 $
  */
 
 #ifndef RaSplit_h

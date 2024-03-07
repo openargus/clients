@@ -1,6 +1,6 @@
 # 
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -54,7 +54,7 @@ CC = @CC@
 CCOPT = @V_CCOPT@
 INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @DNSLIB@ @ZLIB@ @LIBMAXMINDDB_LIBS@
 
 CURSESLIB = @CURSESLIB@ @V_READLINE@
 

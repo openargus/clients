@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -217,8 +217,6 @@ struct RaMySQLProbeTable {
 
 
 void ArgusThreadsInit(pthread_attr_t *);
-
-struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
 
 extern int ArgusCloseDown;
 int RaTopReplace = 0;;
@@ -677,6 +675,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          (void) signal (SIGPIPE, SIG_IGN);
          (void) signal (SIGALRM, SIG_IGN);
 
+         if (parser->ver3flag)
+            argus_version = ARGUS_VERSION_3;
+
          parser->ArgusReverse = 1;
 
          parser->timeout.tv_sec  = 60;
@@ -691,7 +692,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          parser->NonBlockingDNS = 1;
          parser->RaCumulativeMerge = 1;
 
-         if ((parser->timeout.tv_sec == -1) || (parser->timeout.tv_sec == 0)) {
+         if (parser->timeout.tv_sec == -1) {
             parser->timeout.tv_sec  = 60;
             parser->timeout.tv_usec = 0;
          }
@@ -707,76 +708,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                }
             }
          }
-
-         if (parser->ArgusFlowModelFile)
-            parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
-         else {
-
-            if (parser->ArgusMaskList != NULL)
-               parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
-            else
-               parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
-         }
-
-         if (parser->ArgusAggregator != NULL) {
-            if (correct >= 0) {
-               if (correct == 0) {
-                  if (parser->ArgusAggregator->correct != NULL)
-                     free(parser->ArgusAggregator->correct);
-                  parser->ArgusAggregator->correct = NULL;
-               } else {
-                  if (parser->ArgusAggregator->correct != NULL)
-                     free(parser->ArgusAggregator->correct);
-                  parser->ArgusAggregator->correct = strdup("yes");
-                  parser->ArgusPerformCorrection = 1;
-               }
-            }
-
-            if (preserve == 0) {
-               if (parser->ArgusAggregator->pres != NULL)
-                  free(parser->ArgusAggregator->pres);
-               parser->ArgusAggregator->pres = NULL;
-            } else {
-               if (parser->ArgusAggregator->pres != NULL)
-                  free(parser->ArgusAggregator->pres);
-               parser->ArgusAggregator->pres = strdup("yes");
-            }
-
-         } else {
-
-            parser->RaCumulativeMerge = 0;
-            bzero(parser->RaSortOptionStrings, sizeof(parser->RaSortOptionStrings));
-            parser->RaSortOptionIndex = 0;
-//          parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = "stime";
-         }
-
-         if (parser->ArgusRemoteHosts)
-            if ((input = (void *)parser->ArgusRemoteHosts->start) != NULL)
-               parser->RaTasksToDo = RA_ACTIVE;
-
-         if ((ArgusEventAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
-
-         if (parser->Hstr != NULL)
-            ArgusHistoMetricParse(parser, parser->ArgusAggregator);
-
-         if ((ArgusModelerQueue = ArgusNewQueue()) == NULL)
-            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
-
-         if ((ArgusProbeQueue = ArgusNewQueue()) == NULL)
-            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
-
-         if ((ArgusFileQueue = ArgusNewQueue()) == NULL)
-            ArgusLog(LOG_ERR, "ArgusClientInit: RaNewQueue error %s", strerror(errno));
-
-         if ((RaCursesProcess = RaCursesNewProcess(parser)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
-
-         if ((RaEventProcess = RaCursesNewProcess(parser)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
-
-         if ((RaHistoryProcess = RaCursesNewProcess(parser)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
 
          if (parser->vflag)
             ArgusReverseSortDir++;
@@ -1015,7 +946,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   if (!(strncasecmp (mode->mode, "preserve", 8))) {
                      preserve = 1;
                   } else
-                  if (!(strncasecmp (mode->mode, "nopreserve", 8))) {
+                  if (!(strncasecmp (mode->mode, "nocolor", 7))) {
+                     parser->ArgusColorSupport = 0;
+                  } else
+                  if (!(strncasecmp (mode->mode, "nopreserve", 10))) {
                      preserve = 0;
                   } else
                   if (!(strncasecmp (mode->mode, "nocurses", 4))) {
@@ -1864,13 +1798,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               ArgusDeleteRecordStruct(ArgusParser, dns);
                            }
                         }
-                        case ARGUS_TYPE_IPV6: {
-                           switch (flow->ipv6_flow.ip_p) {
-                              case IPPROTO_ESP:
-                                 tryreverse = 0;
-                                 break;
-                           }
-                        }
+                     }
+                  }
 
                   if (pns) {
                      if (pns->qhdr.queue) {
@@ -2120,43 +2049,16 @@ RaProcessThisLsOfEventRecord (struct ArgusParserStruct *parser, struct ArgusReco
       agg = agg->nxt;
    }
 
-   if (cns) {
-   if (!found)
-      if ((hstruct = ArgusGenerateHashStruct(agg, cns, flow)) == NULL)
-         ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
-
-   switch (ns->hdr.type & 0xF0) {
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR: {
-         tns = ArgusCopyRecordStruct(cns);
-         if (pns) {
-            if (parser->RaCumulativeMerge)
-               ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, tns);
-            else {
-               int i;
-               for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-                  if (tns->dsrs[i] != NULL) {
-                     if (pns->dsrs[i] != NULL)
-                        ArgusFree(pns->dsrs[i]);
-                     pns->dsrs[i] = tns->dsrs[i];
-                     tns->dsrs[i] = NULL;
-                  }
-               }
-
-               ArgusDeleteRecordStruct(ArgusParser, tns);
-               pns->status |= ARGUS_RECORD_MODIFIED;
-
-               ArgusRemoveFromQueue(RaEventProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-               ArgusAddToQueue (RaEventProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-
-            } else {
-               pns = tns;
-               pns->status |= ARGUS_RECORD_MODIFIED;
-               pns->htblhdr = ArgusAddHashEntry (RaEventProcess->htable, pns, hstruct);
-               ArgusAddToQueue (RaEventProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
-            }
-            RaWindowModified = RA_MODIFIED;
+   if (pns != NULL) {
+      switch (pns->hdr.type & 0xF0) {
+         case ARGUS_NETFLOW:
+         case ARGUS_AFLOW:
+         case ARGUS_FAR: {
+            ArgusMergeRecords (ArgusParser->ArgusAggregator, pns, cns);
+            pns->status |= ARGUS_RECORD_MODIFIED;
+            ArgusRemoveFromQueue(RaEventProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
+            ArgusAddToQueue (RaEventProcess->queue, &pns->qhdr, ARGUS_NOLOCK);
+            break;
          }
       }
       ArgusDeleteRecordStruct(ArgusParser, cns);
@@ -3052,6 +2954,8 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
 #endif
             }
          }
+         ns->status |= ARGUS_RECORD_MODIFIED;
+         pns->status |= ARGUS_RECORD_MODIFIED;
       }
 
       ArgusDeleteRecordStruct(ArgusParser, cns);

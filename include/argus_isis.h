@@ -1,6 +1,6 @@
 /*
- * Argus Software Common include files -  output structures
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Software Common include files -  output structures
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,

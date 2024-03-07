@@ -1,21 +1,20 @@
 /*
- * Argus Software Library files - Json processing
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  */
 
@@ -30,7 +29,7 @@
  */
 
 /*
- * $Id: //depot/clients/common/argus_json.c#20 $
+ * $Id: //depot/gargoyle/clients/common/argus_json.c#20 $
  * $DateTime: 2016/10/24 12:10:50 $
  * $Change: 3226 $
  */
@@ -320,24 +319,6 @@ json_zero_value(ArgusJsonValue *val) {
    val->type = ARGUS_JSON_NULL;
 }
 
-
-void
-json_zero_value(ArgusJsonValue *val) {
-   if (!val) return;
-
-   switch (val->type) {
-      case ARGUS_JSON_STRING:
-         break;
-
-      case ARGUS_JSON_ARRAY:
-      case ARGUS_JSON_OBJECT:
-         vector_foreach(&(val->value.array), val, (void(*)(void*))json_zero_value);
-         vector_zero(&(val->value.array));
-         break;
-   }
-   val->type = ARGUS_JSON_NULL;
-}
-
 int
 json_is_literal(const char** cursor, const char* literal) {
    size_t cnt = strlen(literal);
@@ -538,22 +519,6 @@ json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
       vector_push_back(&p1->value.array, &v2);
       p1->status |= ARGUS_JSON_MODIFIED;
 
-      switch (p2->type) {
-         case ARGUS_JSON_BOOL:
-         case ARGUS_JSON_INTEGER:
-         case ARGUS_JSON_DOUBLE:
-            break;
-
-         case ARGUS_JSON_STRING:
-            v2.value.string = strdup(p2->value.string);
-            break;
-      }
-
-      vector_init(&p1->value.object, sizeof(ArgusJsonValue));
-      vector_push_back(&p1->value.array, &v1);
-      vector_push_back(&p1->value.array, &v2);
-      p1->status |= ARGUS_JSON_MODIFIED;
-
    } else {
       vector_push_back(&p1->value.array, p2);
       p1->status |= ARGUS_JSON_MODIFIED;
@@ -660,8 +625,19 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                   if (strcmp(p2data[x].value.string, key) == 0) {
                      ArgusJsonValue *p2value = &p2data[x + 1];
                      json_merge_value(p1value, p2value);
-                     json_zero_value(&p2data[x]);
-                     json_zero_value(&p2data[x + 1]);
+                     ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
+                     ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
+
+                     if (p1value->status & ARGUS_JSON_MODIFIED) {
+                        json_zero_value(&p2data[x]);
+                        json_zero_value(&p2data[x + 1]);
+                        p1value->status &= ~ARGUS_JSON_MODIFIED;
+                     }
+                     if (p2value->status & ARGUS_JSON_MODIFIED) {
+                        json_zero_value(&p1data[x]);
+                        json_zero_value(&p1data[x + 1]);
+                        p2value->status &= ~ARGUS_JSON_MODIFIED;
+                     }
                   }
                }
             }
@@ -671,8 +647,7 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                   vector_push_back(&p1->value.array, &p2data[x]);
                   ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
                   vector_push_back(&p1->value.array, &p2data[x + 1]);
-                  json_zero_value(&p2data[x]);
-                  json_zero_value(&p2data[x + 1]);
+                  ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
                   p1->status |= ARGUS_JSON_MODIFIED;
                }
             }

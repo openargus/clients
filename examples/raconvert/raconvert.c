@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -31,20 +31,31 @@
  */
 
 /*
- * $Id: //depot/argus/clients/examples/raconvert/raconvert.c#13 $
- * $DateTime: 2014/05/12 10:49:40 $
- * $Change: 2818 $
+ * $Id: //depot/gargoyle/clients/examples/raconvert/raconvert.c#11 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
 #include <argus_compat.h>
 
+#if defined(ARGUS_SOLARIS) || (__FreeBSD__) || (__NetBSD__) || (__OpenBSD__)
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
+
 #include <unistd.h>
 #include <string.h>
-#include <sys/types.h>
+
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <net/if.h>
 
 #include <netinet/tcp.h>
+
+
+#include <unistd.h>
 
 #include <netinet/tcp.h>
 
@@ -100,8 +111,7 @@
 #define RACONVERT_FIELD_QUOTED		7
 #define RACONVERT_CONVERSION_MAP	8	
 
-#define ARGUS_ZEEK			1
-#define ARGUS_MAX_CONVERSION		256
+#define ARGUS_MAX_CONVERSION		1024
 
 int ArgusInputType = 0;
 
@@ -171,6 +181,8 @@ char *ArgusDebugModes[RASCII_MAXDEBUG] = {
    " ",
    "tasks",
 };
+
+static int argus_version = ARGUS_VERSION;
 
 char *ArgusExpandBackticks(const char * const);
 int RaParseEtherAddr (struct ArgusParserStruct *, char *);
@@ -290,8 +302,12 @@ main (int argc, char **argv) {
 
          file = ArgusParser->ArgusInputFileList;
          while (file && ArgusParser->eNflag) {
+
+            ArgusInputFromFile(input, file);
+            ArgusParser->ArgusCurrentInput = input;
+
             if (strcmp (file->filename, "-")) {
-               RaConvertReadFile(ArgusParser, file);
+               RaConvertReadFile(ArgusParser, input);
             } else {
                if (ArgusParser->ArgusPassNum == 1)
                   RaConvertReadFile(ArgusParser, input);
@@ -335,8 +351,6 @@ usage () {
    exit(1);
 }
 
-
-static int argus_version = ARGUS_VERSION;
 
 void
 ArgusClientInit(struct ArgusParserStruct *parser)
@@ -513,8 +527,8 @@ int RaConvertJsonValue (struct ArgusParserStruct *, ArgusJsonValue *);
 
 unsigned int ArgusRecordSequence = 1;
 int ArgusParseDirStatus = 0;
-int ArgusParseState = 0;
-int ArgusThisProto = -1;
+int ArgusConvertParseState = 0;
+extern int ArgusThisProto;
 
 
 #define ARGUS_PARSING_KEY	0
@@ -611,7 +625,7 @@ RaConvertJsonValue (struct ArgusParserStruct *parser, ArgusJsonValue *parent) {
             case ARGUS_JSON_DOUBLE:
             case ARGUS_JSON_STRING: {
                if (state == ARGUS_PARSING_VALUE) {
-                  retn += ArgusProcessJsonItem(parser, key, item);
+                  retn = ArgusProcessJsonItem(parser, key, item);
                   state = ARGUS_PARSING_KEY;
 	       }
                break;
@@ -794,7 +808,6 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
    return (retn);
 }
 
-int RaPrintCounter = 1;
 
 int RaPrintCounter = 1;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
@@ -872,10 +885,14 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
    if (fd != NULL) {
       char *strbuf = NULL, *str;
-      size_t len = 0, slen;
-      int line = 0;
+      size_t len = ARGUSMAXSTR, slen;
+      int line = 0, done = 0;
 
-      while ((slen = getline(&strbuf, &len, fd)) != -1) {
+      if ((strbuf = ArgusCalloc (1, ARGUSMAXSTR)) == NULL)
+         ArgusLog (LOG_ERR, "%s: ArgusCalloc error\n", __func__, strerror(errno));
+
+      while (!done && ((slen = getline(&strbuf, &len, fd)) != -1)) {
+         int i;
          str = strbuf;
          line++;
 
@@ -891,11 +908,6 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
             if (*str == '{')
                ArgusProcessTitleString = 1;
          }
-
-         if ((*str != '#') && (slen > 1)) {
-            if (ArgusProcessTitleString) {
-               if (RaConvertParseRecordString(parser, str, slen)) {
-                  struct ArgusRecordStruct *argus = &parser->argus;
 
          if ((*str != '#') && (slen > 1)) {
             if (ArgusProcessTitleString) {
@@ -919,17 +931,17 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                               if (retn != 0) {
                                  if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                                     struct ArgusRecord *argusrec = NULL;
-                                    char *sbuf;
-                                    if ((sbuf = (char *)ArgusCalloc(1, ARGUSMAXSTR)) != NULL) {
-                                       if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                                    int rv;
+
+                                       if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                                           ArgusHtoN(argusrec);
 #endif
-                                          ArgusWriteNewLogfile (parser, input, wfile, argusrec);
+                                          rv = ArgusWriteNewLogfile (parser, input, wfile, argusrec);
+                                          if (rv < 0)
+                                             ArgusLog (LOG_ERR, "%s: unable to open file\n", __func__);
                                        }
-                                       ArgusFree(sbuf);
-                                    } else
-                                       ArgusLog (LOG_ERR, "RaCovertReadFile: ArgusCalloc error %s", strerror(errno));
+                                    }
                                  }
                               }
                            }
@@ -940,6 +952,8 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
                      if (!parser->qflag) {
                         char *buf = NULL;
+                        int retn = 0;
+
                         if ((buf = ArgusCalloc (1, ARGUSMAXSTR)) != NULL) {
                            argus->rank = RaPrintCounter++;
 
@@ -1016,9 +1030,10 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                }
             } else {
                RaConvertParseTitleString(str);
+               ArgusProcessTitleString = 1;
+            }
          }
       }
-      free(strbuf);
 
       ArgusFree(strbuf);
 
@@ -1040,15 +1055,13 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
 char *RaDateFormat = "%m/%d.%H:%M:%S";
 
-#define RACONVERTTIME	8
+#define RACONVERTTIME	6
 
 char *RaConvertTimeFormats[RACONVERTTIME] = {
    NULL,
    "%Y/%m/%d %T",
    "%Y/%m/%d.%T",
    "%Y/%m/%d.%H:%M:%S",
-   "%Y-%m-%d.%H:%M:%S",
-   "%Y-%m-%dT%H:%M:%S",
    "%H:%M:%S",
    "%T",
 };
@@ -1082,42 +1095,27 @@ ArgusParseAutoId (struct ArgusParserStruct *parser, char *buf)
    argus->autoid = value;
 }
 
-
 void
 ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    char *ptr, date[128], *frac;
    struct timeval tvpbuf, *tvp = &tvpbuf;
-   int i, len, unixtime = 0;
+   int i, len, unixtime = 1;
    char *endptr;
    int done = 0;
 
    bzero (date, sizeof(date));
    bzero (tvp, sizeof(*tvp));
+
    bcopy (buf, date, strlen(buf));
 
-   gettimeofday(tvp, 0);
-
-   if (RaDateFormat != NULL)
-      if (strcmp(RaDateFormat, "%f") == 0)
-         unixtime = 1;
-
-   if (unixtime == 0) {
-      if (RaConvertTmPtr == NULL) {
-         char *ptr = NULL;
-         if ((ptr = strchr(date, 'Z')) != NULL) {
-            *ptr = '\0';
-            if ((RaConvertTmPtr = gmtime(&tvp->tv_sec)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
-         } else {
-            if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) gmtime error\n", parser, buf, strerror(errno));
-         }
-
-         bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
-         RaConvertTmPtr = &timebuf;
-      }
+   if (RaConvertTmPtr == NULL) {
+      gettimeofday(tvp, 0);
+      if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
+      bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
+      RaConvertTmPtr = &timebuf;
    }
 
    if ((frac = strrchr(date, '.')) != NULL) {
@@ -1150,7 +1148,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
       tvp->tv_usec = useconds;
    }
 
-   if ((unixtime == 0) && (RaDateFormat != NULL)) {
+   if (RaDateFormat != NULL) {
       if ((ptr = strptime(date, RaDateFormat, RaConvertTmPtr)) != NULL) {
          if (*ptr == '\0') {
             done++;
@@ -1161,7 +1159,6 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
    } else {
       ptr = date;
       len = strlen(ptr);
-      unixtime = 1;
 
       for (i = 0; i < len; i++) {
          if (!(isdigit((int)ptr[i]))) {
@@ -1176,15 +1173,18 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
             ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) fractonal format error\n", parser, buf);
       } else {
          if (RaConvertTimeFormats[0] == NULL) {
-            if (RaDateFormat != NULL)
-               RaConvertTimeFormats[0] = strdup(RaDateFormat);
+            char *sptr;
+            RaConvertTimeFormats[0] = strdup(RaDateFormat);
+            if ((sptr = strstr(RaConvertTimeFormats[0], ".%f")) != NULL) {
+               
+            }
          }
 
          for (i = 0; (i < RACONVERTTIME) && (!done); i++) {
             char *format = NULL;
             if ((format = RaConvertTimeFormats[i]) != NULL) {
                if ((ptr = strptime(date, format, RaConvertTmPtr)) != NULL) {
-                  if ((*ptr == '\0') || (*ptr == 'Z')) {
+                  if (*ptr == '\0') {
                      done++;
                      RaDateFormat = format;
                   }
@@ -1226,31 +1226,6 @@ void
 ArgusParseLastDate (struct ArgusParserStruct *parser, char *buf)
 {
 }
-
-void
-ArgusParseType (struct ArgusParserStruct *parser, char *buf)
-{
-   struct ArgusRecordStruct *argus = &parser->argus;
-   int found = 0;
-
-   if (strcmp("man", buf) == 0)  { argus->hdr.type |= ARGUS_MAR; found++; }
-   if (strcmp("flow", buf) == 0) { argus->hdr.type |= ARGUS_FAR; found++; }
-   if (strcmp("aflow", buf) == 0) { argus->hdr.type |= ARGUS_AFLOW; found++; }
-   if (strcmp("nflow", buf) == 0) { argus->hdr.type |= ARGUS_NETFLOW; found++; }
-   if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
-   if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
-   if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
-   if (strcmp("arch", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
-   if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
-   if (strcmp("evnt", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
-   if (strcmp("unknown", buf) == 0) { found++; }
-
-   if (!found)
-      ArgusLog (LOG_ERR, "ArgusParseType(0x%xs, %s) type not found\n", parser, buf);
-}
-
-/*
-   ArgusParseSourceID is provided in common/argus_util.c
 
 void
 ArgusParseType (struct ArgusParserStruct *parser, char *buf)
@@ -1593,10 +1568,7 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
             argus->hdr.type = ARGUS_EVENT;
             return;
          } else
-            switch (ArgusInputType) {
-               case ARGUS_NETFLOW: argus->hdr.type = ARGUS_FAR | ARGUS_NETFLOW; break;
-               case ARGUS_ZEEK:    argus->hdr.type = ARGUS_FAR | ARGUS_AFLOW; break;
-            }
+            argus->hdr.type = ARGUS_FAR | ArgusInputType;
 
          if ((proto = getprotobyname(buf)) != NULL) {
             ArgusThisProto = proto->p_proto;
@@ -1614,10 +1586,7 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
    if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
       argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
       argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
-      switch (ArgusInputType) {
-         case ARGUS_NETFLOW: argus->hdr.type = ARGUS_FAR | ARGUS_NETFLOW; break;
-         case ARGUS_ZEEK:    argus->hdr.type = ARGUS_FAR | ARGUS_AFLOW; break;
-      }
+      argus->hdr.type = ARGUS_FAR | ArgusInputType;
 
       parser->canon.flow.hdr.type = ARGUS_FLOW_DSR;
    }
@@ -1840,8 +1809,8 @@ ArgusParseDstAddr (struct ArgusParserStruct *parser, char *buf)
                }
 
                default:
-                  parser->canon.flow.flow_un.ip.ip_dst = *taddr->addr;
-                  parser->canon.flow.flow_un.ip.dmask  =  taddr->masklen;
+                  parser->canon.flow.flow_un.ip.ip_dst    = *taddr->addr;
+                  parser->canon.flow.flow_un.ip.dmask     =  taddr->masklen;
                   break;
             }
             break;
@@ -2630,7 +2599,8 @@ ArgusParseState (struct ArgusParserStruct *parser, char *buf)
    struct ArgusRecordStruct *argus = &parser->argus;
    int match = 0;
 
-   if (ArgusInputType == ARGUS_ZEEK) {
+   ArgusConvertParseState = 0;
+   if (ArgusInputType == ARGUS_AFLOW) {
       RaConvertParseDirLabel = 1;
       RaConvertParseStateLabel = 1;
       unsigned int tcpstatus = 0; 
@@ -4713,12 +4683,12 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                         if (optarg) {
                            switch (i) {
                               case RACONVERT_SOURCE: {
-	                         if (strcasecmp(optarg, "argus") == 0) {
-			         } else if (strcasecmp(optarg, "netflow") == 0) {
-			            ArgusInputType = ARGUS_NETFLOW;
-			         } else if (strcasecmp(optarg, "zeek") == 0) {
-			            ArgusInputType = ARGUS_ZEEK;
-			         }
+	                      if (strcasecmp(optarg, "argus") == 0) {
+			      } else if (strcasecmp(optarg, "netflow") == 0) {
+			         ArgusInputType = ARGUS_NETFLOW;
+			      } else if (strcasecmp(optarg, "zeek") == 0) {
+			         ArgusInputType = ARGUS_AFLOW;
+			      }
                                  break;
                               }
 
@@ -4816,7 +4786,7 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
 
                                  gettimeofday(tvp, 0);
                                  bzero(tbuf, sizeof(tbuf));
-                                 ArgusPrintTime(parser, tbuf, tvp);
+                                 ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
 
                                  if ((len = strlen(tbuf)) > 0)
                                     if (len > 128)

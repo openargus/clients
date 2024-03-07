@@ -1,6 +1,6 @@
 # 
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  This program is free software, released under the GNU General
@@ -233,7 +233,6 @@ AC_QOSIENT_THREADS(V_THREADS)
 #   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
 #   WRAPLIBS="$V_WRAPDEP"
 #fi
-
 
 saved_CPPFLAGS=$CPPFLAGS
 saved_LIBS=$LIBS
@@ -529,8 +528,8 @@ AC_SUBST(ZLIB)
 AC_SUBST(DNSLIB)
 AC_SUBST(CURSESLIB)
 AC_SUBST(CURSES_INCLS)
-AC_SUBST(XDR_INCLS)
 AC_SUBST(LIB_XDR)
+AC_SUBST(XDR_INCLS)
 AC_SUBST(INSTALL_LIB)
 AC_SUBST(INSTALL_BIN)
 AC_SUBST(PCRE_CFLAGS)

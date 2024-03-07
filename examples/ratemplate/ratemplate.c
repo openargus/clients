@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -303,9 +303,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          break;
       case ARGUS_NETFLOW:
          fprintf (stdout, "ratemplate processing netflow record\n");
-         break;
-      case ARGUS_AFLOW:
-         fprintf (stdout, "ratemplate processing aflow record\n");
          break;
       case ARGUS_FAR:
          fprintf (stdout, "ratemplate processing flow record\n");

@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -16,12 +16,6 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- */
-
-/* 
- * $Id: //depot/argus/clients/common/argus_output.c#7 $
- * $DateTime: 2012/12/13 11:07:52 $
- * $Change: 2514 $
  */
 
 /*
@@ -3959,148 +3953,10 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 void *
 ArgusOutputProcess(void *arg)
 {
-   struct ArgusOutputStruct *output = (struct ArgusOutputStruct *) arg;
-   struct timeval ArgusUpDate = {0, 50000}, ArgusNextUpdate = {0,0};
-   int val, count;
-   void *retn = NULL;
-
-#if defined(ARGUS_THREADS)
-   sigset_t blocked_signals;
-#endif /* ARGUS_THREADS */
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusControlChannelProcess(0x%x) starting\n", output);
-#endif
-
-#if defined(ARGUS_THREADS)
-   sigfillset(&blocked_signals);
-   pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
-   while (!(output->status & ARGUS_STOP)) {
-#else
-   {
-#endif
-      struct ArgusListStruct *list = NULL;
-      struct ArgusRecordStruct *rec = NULL;
-
-      if (output && ((list = output->ArgusOutputList) != NULL)) {
-         gettimeofday (&output->ArgusGlobalTime, 0L);
-
-    /* check to see if there are any new clients */
-         
-         if ((output->ArgusControlPort != 0) &&
-            ((output->ArgusGlobalTime.tv_sec >  ArgusNextUpdate.tv_sec) ||
-            ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
-             (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
-         
-            if (output->ArgusListens) {
-               struct timeval wait = {0, 0}; 
-               fd_set readmask;
-               int i, width = 0;
- 
-               FD_ZERO(&readmask);
-
-               for (i = 0; i < output->ArgusListens; i++) {
-                  if (output->ArgusLfd[i] != -1) {
-                     FD_SET(output->ArgusLfd[i], &readmask);
-                     width = (output->ArgusLfd[i] > width) ? output->ArgusLfd[i] : width;
-                  }  
-               }
-
-               if (output->ArgusClients) {
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_lock(&output->ArgusClients->lock);
-#endif
-                  if ((count = output->ArgusClients->count) > 0) {
-                     struct ArgusClientData *client = (void *)output->ArgusClients->start;
-                     int i;
-
-                     for (i = 0; i < count && client; i++) {
-                        if (client->sock && !(client->sock->filename)) {
-                           if (client->fd != -1) {
-                              FD_SET(client->fd, &readmask);
-                              width = (client->fd > width) ? client->fd : width;
-                           }
-                        } 
-                        client = (void *) client->qhdr.nxt;
-                     }
-                  }
-
-                  if (width) {
-                     if ((val = select (width + 1, &readmask, NULL, NULL, &wait)) >= 0) {
-                        if (val > 0) {
-                           struct ArgusClientData *client = (void *)output->ArgusClients->start;
-#ifdef ARGUSDEBUG
-                           ArgusDebug (1, "ArgusControlChannelProcess() select returned with tasks\n");
-#endif
-                           for (i = 0; i < output->ArgusListens; i++)
-                              if (FD_ISSET(output->ArgusLfd[i], &readmask))
-                                 ArgusCheckClientStatus(output, output->ArgusLfd[i]);
-
-                           if (client != NULL)  {
-                              do {
-                                 if (client->fd != -1) {
-                                    if (FD_ISSET(client->fd, &readmask)) {
-                                       if (ArgusCheckControlMessage(output, client) < 0) {
-                                          ArgusDeleteSocket(output, client);
-                                       }
-                                    }
-                                 }
-                                 client = (void *) client->qhdr.nxt;
-                              } while (client != (void *)output->ArgusClients->start);
-                           }
-                        }
-                     }
-                  }
-#if defined(ARGUS_THREADS)
-                  pthread_mutex_unlock(&output->ArgusClients->lock);
-#endif
-               }
-
-               ArgusNextUpdate.tv_sec  = (output->ArgusGlobalTime.tv_sec  +  ArgusUpDate.tv_sec);
-               ArgusNextUpdate.tv_usec = (output->ArgusGlobalTime.tv_usec +  ArgusUpDate.tv_usec);
-
-               if (ArgusNextUpdate.tv_usec > 1000000) {
-                  ArgusNextUpdate.tv_sec++;
-                  ArgusNextUpdate.tv_usec -= 1000000;
-               }
-            }
-         }
-
-         if (ArgusOutputStatusTime(output)) {
-            if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS)) != NULL)
-               ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
-         }
-
-         while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
-            int done = 0;
-            ArgusLoadList(output->ArgusOutputList, output->ArgusInputList);
-
-            while (!done && ((rec = (struct ArgusRecordStruct *) ArgusPopFrontList(output->ArgusInputList, ARGUS_LOCK)) != NULL)) {
-               u_int seqnum = 0;
-               output->ArgusTotalRecords++;
-               switch (rec->hdr.type & 0xF0) {
-                  case ARGUS_MAR:
-                  case ARGUS_EVENT:
-                     break;
-
-                  case ARGUS_NETFLOW:
-                  case ARGUS_AFLOW:
-                  case ARGUS_FAR: {
-                     struct ArgusTransportStruct *trans = (void *)rec->dsrs[ARGUS_TRANSPORT_INDEX];
-                     if (trans != NULL) {
-                        seqnum = trans->seqnum;
-                     }
-                     break;
-                  }
-               }
-               output->ArgusOutputSequence = seqnum;
-#ifdef ARGUSDEBUG
-               if (seqnum == 0)
-                  ArgusDebug (1, "ArgusControlChannelProcess() received mar 0x%x totals %lld count %d remaining %d\n",
-                            rec, output->ArgusTotalRecords, output->ArgusInputList->count, output->ArgusOutputList->count);
-#endif
-               count = 0;
+   void *rv;
+   struct ArgusOutputStruct *output = (struct ArgusOutputStruct *)arg;
+   unsigned short *portnum = &output->ArgusPortNum;
+   ArgusCheckMessageFunc checkmessage = ArgusCheckClientMessage;
 
    rv = __ArgusOutputProcess(arg, portnum, checkmessage, __func__);
 #if defined(ARGUS_THREADS)
@@ -4856,6 +4712,8 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output, char version)
    retn->argus_mar.reportInterval = 0;
 
    if (getParserArgusID(ArgusParser, asptr)) {
+   switch (version) {
+      case ARGUS_VERSION_3: {
          struct cnamemem *cp;
          extern struct cnamemem converttable[HASHNAMESIZE];
 
@@ -4868,10 +4726,48 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output, char version)
          } else {
             retn->argus_mar.thisid = asptr->a_un.value;
          }
-   }
-   retn->argus_mar.record_len = htonl(-1);
+         break;
+      }
 
-   output->ArgusLastMarUpdateTime = now;
+      case ARGUS_VERSION_5: {
+         switch (getArgusIDType(ArgusParser) & ~ARGUS_TYPE_INTERFACE) {
+            case ARGUS_TYPE_STRING: {
+               retn->argus_mar.status |= ARGUS_IDIS_STRING;
+               bcopy (&asptr->a_un.str, &retn->argus_mar.str, 4);
+               break;
+            }
+            case ARGUS_TYPE_INT: {
+               retn->argus_mar.status |= ARGUS_IDIS_INT;
+               retn->argus_mar.value = htonl(asptr->a_un.value);
+               break;
+            }
+            case ARGUS_TYPE_IPV4: {
+               retn->argus_mar.status |= ARGUS_IDIS_IPV4;
+               retn->argus_mar.ipv4 = htonl(asptr->a_un.ipv4);
+               break;
+            }
+            case ARGUS_TYPE_IPV6: {
+               retn->argus_mar.status |= ARGUS_IDIS_IPV6;
+               bcopy (&asptr->a_un.ipv6, &retn->argus_mar.ipv6, sizeof(retn->argus_mar.ipv6));
+               break;
+            }
+            case ARGUS_TYPE_UUID: {
+               retn->argus_mar.status |= ARGUS_IDIS_UUID;
+               bcopy (&asptr->a_un.uuid, &retn->argus_mar.uuid, sizeof(retn->argus_mar.uuid));
+               break;
+            }
+         }
+
+         if (getArgusManInf(ArgusParser) != NULL)
+            retn->argus_mar.status |=  ARGUS_ID_INC_INF;
+         }
+         break;
+      }
+
+      retn->argus_mar.status = htonl(retn->argus_mar.status);
+   }
+
+   retn->argus_mar.record_len = htonl(-1);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (4, "ArgusGenerateInitialMar() returning\n");
@@ -4922,13 +4818,13 @@ ArgusGenerateStatusMarRecord(struct ArgusOutputStruct *output,
                   break;
                }
                case ARGUS_TYPE_IPV6: {
-//                rec->argus_mar.status |= ARGUS_IDIS_IPV6;
-//                bcopy (&asptr->a_un.ipv6, &rec->argus_mar.ipv6, sizeof(rec->argus_mar.ipv6));
+                  rec->argus_mar.status |= ARGUS_IDIS_IPV6;
+                  bcopy (&asptr->a_un.ipv6, &rec->argus_mar.ipv6, sizeof(rec->argus_mar.ipv6));
                   break;
                }
                case ARGUS_TYPE_UUID: {
-//                rec->argus_mar.status |= ARGUS_IDIS_UUID;
-//                bcopy (&asptr->a_un.uuid, &rec->argus_mar.uuid, sizeof(rec->argus_mar.uuid));
+                  rec->argus_mar.status |= ARGUS_IDIS_UUID;
+                  bcopy (&asptr->a_un.uuid, &rec->argus_mar.uuid, sizeof(rec->argus_mar.uuid));
                   break;
                }
             }
@@ -5000,6 +4896,19 @@ int
 getArgusPortNum(struct ArgusParserStruct *parser)
 {
    return(parser->ArgusPortNum);
+}
+
+
+void
+setArgusZeroConf (struct ArgusParserStruct *parser, unsigned int type)
+{
+   parser->ArgusZeroConf = type;
+}
+
+unsigned int
+getArgusZeroConf (struct ArgusParserStruct *parser)
+{
+   return (parser->ArgusZeroConf);
 }
 
 void
@@ -5099,22 +5008,23 @@ ArgusTcpWrapper (struct ArgusOutputStruct *output, int fd, struct sockaddr *from
        /* Report remote client */
 
 #if HAVE_GETADDRINFO
-   struct sockaddr_storage remoteaddr, localaddr;
-   char localip[60], remoteip[60];
-   char hbuf[NI_MAXHOST];
-   unsigned int salen, niflags;
+      struct sockaddr_storage remoteaddr, localaddr;
+      char localip[60], remoteip[60];
+      char hbuf[NI_MAXHOST];
+      unsigned int niflags;
+      socklen_t salen;
 
-   salen = sizeof(remoteaddr);
-   bzero(hbuf, sizeof(hbuf));
+      salen = sizeof(remoteaddr);
+      bzero(hbuf, NI_MAXHOST);
 
-   if ((getpeername(fd, (struct sockaddr *)&remoteaddr, &salen) == 0) &&
-                      (remoteaddr.ss_family == AF_INET || remoteaddr.ss_family == AF_INET6)) {
-      if (getnameinfo((struct sockaddr *)&remoteaddr, salen, hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD) == 0) {
-         strncpy(clienthost, hbuf, sizeof(hbuf) - 1);
-      } else {
-         clienthost[0] = '\0';
-      }
-      niflags = NI_NUMERICHOST;
+      if ((getpeername(fd, (struct sockaddr *)&remoteaddr, &salen) == 0) &&
+                         (remoteaddr.ss_family == AF_INET || remoteaddr.ss_family == AF_INET6)) {
+         if (getnameinfo((struct sockaddr *)&remoteaddr, salen, hbuf, sizeof(hbuf), NULL, 0, NI_NAMEREQD) == 0) {
+            strncpy(clienthost, hbuf, NI_MAXHOST);
+         } else {
+            clienthost[0] = '\0';
+         }
+         niflags = NI_NUMERICHOST;
 #ifdef NI_WITHSCOPEID
          if (((struct sockaddr *)&remoteaddr)->sa_family == AF_INET6)
             niflags |= NI_WITHSCOPEID;

@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -74,7 +74,7 @@ void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, i
 void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #if defined(ARGUS_MYSQL)
-#include <argus_mysql.h>
+# include "argus_mysql.h"
 
 int ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, char *, int);
 struct ArgusRecordStruct *RaLookupDBCache (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusHashStruct *);
@@ -104,8 +104,6 @@ int ArgusCreateSQLSaveTable(char *, char *);
 char *ArgusCreateSQLSaveTableName (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, char *, int);
 
 void ArgusThreadsInit(pthread_attr_t *);
-
-struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
 
 extern int ArgusCloseDown;
 

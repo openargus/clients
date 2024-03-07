@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -158,12 +158,10 @@ extern char version[];
 #define EXTRACT_DOUBLE(p)       (*(double *)p)
 #define EXTRACT_LONGLONG(p)     (*(unsigned long long *)p)
 
-
 struct enamemem *ArgusEtherMaskArray[49];
-struct enamemem enametable[HASHNAMESIZE];
+struct enamemem *enametable = NULL;
 struct enamemem nsaptable[HASHNAMESIZE];
 struct enamemem bytestringtable[HASHNAMESIZE];
- 
 struct protoidmem protoidtable[HASHNAMESIZE];
 struct cnamemem ipv6cidrtable[HASHNAMESIZE];
 
@@ -203,7 +201,19 @@ char *ArgusAbbreviateMetric(struct ArgusParserStruct *, char *, int, double);
 
 void RaClearConfiguration (struct ArgusParserStruct *);
 
-#define ARGUS_RCITEMS                           75
+static int ArgusParseTimeArg (char **, char **, int, struct tm *, int *);
+static void ArgusParseArgs(struct ArgusParserStruct *, int, char **);
+int RaParseResourceStr (struct ArgusParserStruct *parser, char *str, int linenum,
+                         char *directives[], size_t items, ResourceCallback cb);
+
+int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
+                         int enable_soptions, char *directives[], size_t items,
+                         ResourceCallback cb);
+static int RaParseResourceLine(struct ArgusParserStruct *, int, char *, int, int);
+void setArgusEventDataRecord (struct ArgusParserStruct *, char *);
+void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
+#define ARGUS_RCITEMS                           82
 
 #define RA_ARGUS_SERVER                         0
 #define RA_SOURCE_PORT				1
@@ -279,7 +289,14 @@ void RaClearConfiguration (struct ArgusParserStruct *);
 #define RA_GENERATE_BIN_MAR_RECORDS		71
 #define RA_ASN_PRINT_FORMAT			72
 #define RA_FILTER_TIMEOUT  			73
-#define RA_LABEL_FORMAT				74
+#define RATOP_CONTROL_PORT  			74
+#define RADIUM_ZEROCONF_REGISTER		75
+#define RA_SRCID_ALIAS				76
+#define RA_RECORD_CORRECTION			77
+#define RA_STATUS_EVENT				78
+#define RA_HASHTABLE_SIZE			79
+#define RA_TMP_PATH				80
+#define RA_LOCAL_CORRECT			81
 
 
 char *ArgusResourceFileStr [] = {
@@ -357,7 +374,14 @@ char *ArgusResourceFileStr [] = {
    "RA_GENERATE_BIN_MAR_RECORDS=",
    "RA_ASN_PRINT_FORMAT=",
    "RA_FILTER_TIMEOUT=",
-   "RA_LABEL_FORMAT=",
+   "RATOP_CONTROL_PORT=",
+   "RADIUM_ZEROCONF_REGISTER=",
+   "RA_SRCID_ALIAS=",
+   "RA_RECORD_CORRECTION=",
+   "RA_STATUS_EVENT=",
+   "RA_HASHTABLE_SIZE=",
+   "RA_TMP_PATH=",
+   "RA_LOCAL_CORRECT=",
 };
 
 #include <ctype.h>
@@ -433,7 +457,70 @@ static int RaDescend(char *, size_t, size_t);
 time_t timegm (struct tm *);
 #endif
 
-void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+#ifdef __sun
+# pragma weak RaParseOptHStr
+#endif
+int RaParseOptHStr(const char *const str)
+#ifdef __GNUC__
+ __attribute__((weak));
+#endif
+
+int RaParseOptHStr(const char *const str)
+{
+   return 0;
+}
+
+int ArgusMkdirPath(const char * const path)
+{
+   struct stat statbuf;
+   char *cpy = strdup(path);
+   char *tptr;
+   char *pptr;
+   int rv = 0;
+
+   if (cpy == NULL)
+      ArgusLog(LOG_ERR, "%s unable to allocate path name\n", __func__);
+
+   if ((tptr = strrchr(cpy, (int) '/')) != NULL) {   /* if there is a path */
+      *tptr = '\0';
+      pptr = tptr;
+
+      while ((pptr != NULL) && ((stat(cpy, &statbuf)) < 0)) {
+         switch (errno) {
+            case ENOENT:
+               if ((pptr = strrchr(cpy, (int) '/')) != NULL) {
+                  if (pptr != cpy) {
+                     *pptr = '\0';
+                  } else {
+                     pptr = NULL;
+                  }
+               }
+               break;
+
+            default:
+               ArgusLog (LOG_ERR, "stat: %s %s\n", cpy, strerror(errno));
+               rv = -1;
+               goto out;
+         }
+      }
+
+      while (&cpy[strlen(cpy)] <= tptr) {
+         if ((mkdir(cpy, 0777)) < 0) {
+            if (errno != EEXIST) {
+               ArgusLog (LOG_ERR, "mkdir: %s %s\n", cpy, strerror(errno));
+               rv = -1;
+               goto out;
+            }
+         }
+         cpy[strlen(cpy)] = '/';
+      }
+      *tptr = '/';
+   }
+
+out:
+   free(cpy);
+   return rv;
+}
 
 int
 RaProcessRecursiveFiles (char *path, int sort)
@@ -595,6 +682,7 @@ ArgusFileFree(struct ArgusFileInput *afi)
 
    ArgusFree(afi);
 }
+
 
 #if defined(ARGUS_THREADS)
 void * ArgusTimeoutProcess (void *);
@@ -1261,28 +1349,43 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      free (parser->ArgusSQLStatement);
                   parser->ArgusSQLStatement = strdup(&optarg[4]);
                } else
+               if ((tzptr = strstr(optarg, "eframe=")) != NULL) {
+                  parser->ArgusEtherFrameCnt = (int)strtol(&tzptr[7], (char **)NULL, 10);
+                  ArgusAddMode = 0;
+               } else
+               if (!(strcmp (optarg, "d3"))) {
+                  parser->ArgusPrintD3++;
+                  ArgusAddMode = 0;
+               } else
                if (!(strcmp (optarg, "json"))) {
                   parser->ArgusPrintJson++;
                   parser->Lflag = 0;                        // No print header lines
                   parser->RaFieldDelimiter = ',';           // Force delimiter to comma
                   parser->RaFieldWidth = RA_VARIABLE_WIDTH; // just making sure
                   parser->RaFieldQuoted = RA_DOUBLE_QUOTED;
-                  parser->eflag = ARGUS_ENCODE_ASCII;
-                  parser->cflag++;
+                  parser->eflag = ARGUS_ENCODE_ASCII;       // just making sure
+                  parser->cflag++;                          // just making sure
                   parser->ArgusPrintJsonEmptyString = ARGUS_PRINT_EMPTY_STRING;
-                  parser->Lflag = 0;
                   ArgusAddMode = 0;
                } else 
                if (!(strcmp(optarg, "null"))) {
                   parser->ArgusPrintJsonEmptyString = ARGUS_PRINT_NULL;
                   ArgusAddMode = 0;
-               } else 
+               } else
                if (!(strcmp(optarg, "empty"))) {
                   parser->ArgusPrintJsonEmptyString = ARGUS_PRINT_EMPTY_STRING;
                   ArgusAddMode = 0;
                } else
                if (!(strcmp(optarg, "omit"))) {
                   parser->ArgusPrintJsonEmptyString = ARGUS_OMIT_EMPTY_STRING;
+                  ArgusAddMode = 0;
+               } else
+               if (!(strcmp (optarg, "newick"))) {
+                  parser->ArgusPrintNewick++;
+                  parser->RaFieldDelimiter = ',';
+                  parser->RaFieldWidth = RA_VARIABLE_WIDTH;
+                  parser->RaFieldQuoted = RA_DOUBLE_QUOTED;
+                  parser->cflag++;
                   ArgusAddMode = 0;
                } else
                if (!(strcmp (optarg, "xml"))) {
@@ -1744,9 +1847,9 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
       free(cmdbuf);
    }
 
-// if (parser->RaPrintOptionIndex > 0)
-//    ArgusProcessSOptions(parser);
- 
+   if (parser->RaPrintOptionIndex > 0)
+      ArgusProcessSOptions(parser);
+
    if (parser->ArgusRemoteFilter != NULL)
       if (ArgusFilterCompile (&parser->ArgusFilterCode, parser->ArgusRemoteFilter, parser->Oflag) < 0) {
          if (strlen(parser->ArgusRemoteFilter) > 20)
@@ -1782,24 +1885,6 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
    if (parser->ArgusGrepSource || parser->ArgusGrepDestination)
       ArgusInitializeGrep(parser);
-
-   if (parser->uflag) {
-      RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].type    = ARGUS_PTYPE_DOUBLE;
-      RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].type     = ARGUS_PTYPE_DOUBLE;
-      RaPrintAlgorithmTable[ARGUSPRINTSRCSTARTDATE].type = ARGUS_PTYPE_DOUBLE;
-      RaPrintAlgorithmTable[ARGUSPRINTSRCLASTDATE].type  = ARGUS_PTYPE_DOUBLE;
-      RaPrintAlgorithmTable[ARGUSPRINTDSTSTARTDATE].type = ARGUS_PTYPE_DOUBLE;
-      RaPrintAlgorithmTable[ARGUSPRINTDSTLASTDATE].type  = ARGUS_PTYPE_DOUBLE;
-   }
-   if (parser->nflag > 1) {
-      RaPrintAlgorithmTable[ARGUSPRINTSRCPORT].type  = ARGUS_PTYPE_INT;
-      RaPrintAlgorithmTable[ARGUSPRINTDSTPORT].type  = ARGUS_PTYPE_INT;
-   }
-   if (parser->nflag > 2) {
-      RaPrintAlgorithmTable[ARGUSPRINTPROTO].type    = ARGUS_PTYPE_INT;
-   }
-
-   ArgusProcessSOptions(parser);
 
    if (parser->RaParseDone)
       exit (0);
@@ -2247,30 +2332,20 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
             break;
          }
 
-                           case RA_LABEL_FORMAT: {
-                              if (strcasecmp(optarg, "json") == 0) {
-                                 parser->ArgusLabelFormat = ARGUS_LABEL_JSON;
-                              } else 
-                              if (strcasecmp(optarg, "legacy") == 0) {
-                                 parser->ArgusLabelFormat = ARGUS_LABEL_LEGACY;
-                              } else 
-                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: label format specification error: %s invalid", optarg);
-                              break;
-                           }
-
-                           case RA_FILTER_TIMEOUT: {
-                              float value = 0.0;
-                              char *endptr = NULL;
+         case RA_FILTER_TIMEOUT: {
+            float value = 0.0;
+            char *endptr = NULL;
 
             value = strtof(optarg, &endptr);
 
             if (optarg != endptr) {
                parser->RaFilterTimeout  = value;
 
-                              } else
-                                 ArgusLog (LOG_ERR, "ArgusParseResourceFile: filter timeout format error (use float)");
-                              break;
-                           }
+            } else
+               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+
+            break;
+         }
 
          case RA_FIELD_SPECIFIER: {
             char *tok = NULL;
@@ -2513,15 +2588,14 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
             break;
          }
 
-                           case RA_SERVICES_SIGNATURES: {
-                              if (parser->ArgusLabeler == NULL) {
-                                 if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
-                                    ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+         case RA_SERVICES_SIGNATURES: {
+            if (parser->ArgusLabeler == NULL)
+               if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
-                                 RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
-			      }
-                              break;
-                           }
+            RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
+            break;
+         }
 
          case RA_COLOR_SUPPORT: {
             if (!(strncasecmp(optarg, "yes", 3)))
@@ -3955,158 +4029,6 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
 }
 
 int
-RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
-{
-   struct RaAddressStruct *raddr;
-   int retn = 0, label = 1, src = 0, dst = 0;
-
-   if (mode & ARGUS_LABEL_RECORD) {
-      label = 1;
-      mode &= ~ARGUS_LABEL_RECORD;
-   }
-   if (mode & ARGUS_MASK_SADDR_INDEX) {
-      src = 1;
-      mode &= ~ARGUS_MASK_SADDR_INDEX;
-   }
-   if (mode & ARGUS_MASK_DADDR_INDEX) {
-      dst = 1;
-      mode &= ~ARGUS_MASK_DADDR_INDEX;
-   }
-
-   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
-      switch (type) {
-         case ARGUS_TYPE_IPV4: {
-            if (*addr < 8) {
-               retn = 4;
-
-            } else {
-               struct RaAddressStruct node;
-               bzero ((char *)&node, sizeof(node));
-
-            /* always try exact match first? */
-            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL)
-               if (mode != ARGUS_EXACT_MATCH)
-                  raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode);
-
-            if (raddr != NULL) {
-               if (label && (src || dst)) {
-                  char *buf;
-                  if ((buf = (char *) ArgusCalloc (1, 2048)) == NULL)
-                     ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
-
-                  if (raddr->label != NULL) {
-                     char *clabel = ArgusUpgradeLabel(raddr->label, buf, 2048);
-
-                     if (clabel != NULL) {
-                        free(raddr->label);
-                        raddr->label = strdup(clabel);
-                     }
-
-                     if (src) {
-                        snprintf (buf, 2048, "\"saddr\":%s", raddr->label);
-                     }
-                     if (dst) {
-                        snprintf (buf, 2048, "\"daddr\":%s", raddr->label);
-                     }
-                     ArgusAddToRecordLabel (parser, argus, buf);
-                     argus->status |= ARGUS_RECORD_MODIFIED;
-                  }
-                  ArgusFree(buf);
-               }
-               retn = 1;
-            }
-            break;
-         }
-
-         case ARGUS_TYPE_IPV6:
-            break;
-      }
-
-#ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLabel (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
-#endif
-   }
-
-   return (retn);
-}
-
-
-// The mode bitmap passed to RaProcessAddressLocality indicates the type of match to be done,
-// but also it passes an indication if the routine should add to the label, information
-// regarding the match.
-
-int
-RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int mask, int type, int mode)
-{
-   struct RaAddressStruct *raddr;
-   int retn = 0, label = 0, src = 0, dst = 0;
-
-   if (mode & ARGUS_LABEL_RECORD) {
-      label = 1;
-      mode &= ~ARGUS_LABEL_RECORD;
-   }
-   if (mode & ARGUS_MASK_SADDR_INDEX) {
-      src = 1;
-      mode &= ~ARGUS_MASK_SADDR_INDEX;
-   }
-   if (mode & ARGUS_MASK_DADDR_INDEX) {
-      dst = 1;
-      mode &= ~ARGUS_MASK_DADDR_INDEX;
-   }
-
-   if ((labeler != NULL) && (labeler->ArgusAddrTree != NULL)) {
-      switch (type) {
-         case ARGUS_TYPE_IPV4: {
-            struct RaAddressStruct node;
-            bzero ((char *)&node, sizeof(node));
-
-            node.addr.type = AF_INET;
-            node.addr.len = 4;
-            node.addr.addr[0] = *addr;
-            node.addr.mask[0] = 0xFFFFFFFF << (32 - mask);
-            node.addr.masklen = mask;
-
-            /* always try exact match first? */
-            if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
-               retn = ARGUS_MY_ADDRESS;
-            else if (mode != ARGUS_EXACT_MATCH)
-               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
-                  if (raddr->locality > 1)
-                     retn = ARGUS_MY_NETWORK;
-                  if (*addr < 255)
-                     retn = ARGUS_MY_NETWORK;
-               }
-
-            if (raddr != NULL) {
-               if (label && (src || dst)) {
-                  char buf[128];
-                  if (raddr->label != NULL) {
-                     if (src) {
-                        snprintf (buf, 128, "{ sloc:%s }", raddr->label);
-                     }
-                     if (dst) {
-                        snprintf (buf, 128, "{ dloc:%s }", raddr->label);
-                     }
-                     ArgusAddToRecordLabel (parser, argus, buf);
-                     argus->status |= ARGUS_RECORD_MODIFIED;
-                  }
-               }
-            }
-            break;
-         }
-         case ARGUS_TYPE_IPV6:
-            break;
-      }
-
-#ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLocality (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
-#endif
-   }
-
-   return (retn);
-}
-
-int
 RaFetchAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, unsigned int *addr, int mask, int type, int mode)
 {
    struct RaAddressStruct *raddr;
@@ -4295,9 +4217,12 @@ RaFetchAddressLocalityGroup (struct ArgusParserStruct *parser, struct ArgusLabel
 void
 ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
-   if (parser->ArgusDirectionFunction) {
-      struct ArgusLabelerStruct *labeler = NULL;
-      int tested = 0, reverse = 0;
+   int tested = 0, reverse = 0;
+
+   if (parser->RaMonMode)
+      return;
+
+   if (parser->ArgusDirectionFunction && parser->ArgusPerformCorrection) {
       double stime, dtime;
 
       if (parser->ArgusDirectionFunction & ARGUS_LOCAL_TIME) {
@@ -4315,13 +4240,19 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
             struct ArgusMacStruct *mac = (struct ArgusMacStruct *) ns->dsrs[ARGUS_MAC_INDEX];
             int smacclass, dmacclass;
 
-      if (strchr(dbuf, '?')) {
-         switch (ns->hdr.type & 0xF0) {
-            case ARGUS_NETFLOW:
-            case ARGUS_AFLOW:
-            case ARGUS_FAR: {
-               struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
-               int src = 0, dst = 0;
+            if (mac != NULL) {
+               switch (mac->hdr.subtype & 0x3F) {
+                  default:
+                  case ARGUS_TYPE_ETHER: 
+                     smacclass = etheraddr_class (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost);
+                     dmacclass = etheraddr_class (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost);
+                     if ((smacclass & ARGUS_ETHER_MULTICAST) && !(dmacclass & ARGUS_ETHER_MULTICAST)) 
+                        reverse++;
+                     break;
+               }
+            }
+         }  
+      }
 
       if (reverse == 0) {
          switch (ns->hdr.type & 0xF0) {
@@ -5783,20 +5714,6 @@ ArgusPrintXmlSortAlgorithms(struct ArgusParserStruct *parser)
 int ArgusPrintRecordHeader (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 int ArgusPrintRecordCloser (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
-int ArgusParseInited = 0;
-extern char version[];
-
-#define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
-#define ARGUS_TEMP_BUF_SIZE             0x400
-char *ArgusPrintTempBuf = NULL;
-char *ArgusTempBuffer = NULL;
-
-#define ARGUS_PRINT_TEMP_BUF_SIZE       0x10000
-#define ARGUS_TEMP_BUF_SIZE             0x400
-char *ArgusPrintTempBuf = NULL;
-char *ArgusTempBuffer = NULL;
-
-
 void
 ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -5915,8 +5832,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                            }
 
                         if (parser->RaFieldQuoted) {
-                           int tlen, tind = 0, i;
-                           tlen = slen;
+                              int tlen, tind = 0, i;
+                              tlen = slen;
 
 			      if (tlen > 0) {
                               if (thistype == ARGUS_PTYPE_STRING) {
@@ -6127,20 +6044,9 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
 /*
    struct ArgusInput *input = argus->input;
-   char *timeFormat = parser->RaTimeFormat, *tmpbuf;
-   int slen = 0, dlen = len;
+   char *timeFormat = parser->RaTimeFormat;
    extern char version[];
-
-   if (ArgusPrintTempBuf == NULL)
-      if ((ArgusPrintTempBuf = (char *)ArgusMalloc(ARGUS_PRINT_TEMP_BUF_SIZE)) == NULL)
-         ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
-
-   if (ArgusTempBuffer == NULL)
-      if ((ArgusTempBuffer = (char *)ArgusMalloc(ARGUS_TEMP_BUF_SIZE)) == NULL)
-         ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
-
-   if ((tmpbuf = ArgusPrintTempBuf) != NULL)
-      *tmpbuf = '\0';
+   int slen = 0, dlen = len;
 
    if (!(ArgusParseInited)) {
       ArgusInitAddrtoname (parser);
@@ -6153,17 +6059,9 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          parser->RaOutputStarted++;
       }
 
-   if (parser->ArgusPrintJson) {
-      if (timeFormat == NULL)
-         parser->RaTimeFormat = strdup("%H:%M:%S.%f");
-      if (parser->RaOutputStarted == 0) {
-         parser->RaOutputStarted++;
-      }
-      ArgusPrintRecordHeader (parser, buf, argus, dlen);
-
-   } else
+   } else 
    if (parser->ArgusPrintXml) {
-      parser->RaTimeFormat="%Y-%m-%dT%H:%M:%S.%f";
+      parser->RaTimeFormat = strdup("%Y-%m-%dT%H:%M:%S.%f");
 
 //  If input is NULL this record was generated locally, not received.
       if (parser->RaOutputStarted == 0 && input != NULL) {
@@ -6234,168 +6132,128 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
       ArgusPrintRecordHeader (parser, &buf[slen], argus, dlen);
    }
 
-   switch (argus->hdr.type & 0xF0) {
-         case ARGUS_MAR: {
-            if (parser->ArgusPrintJson) {
-               ArgusPrintManagementRecord(parser, buf, argus, dlen);
-               break;
-            }
-         }
-
-         default: {
 #if defined(ARGUS_THREADS)
-            pthread_mutex_lock(&parser->lock); 
+      pthread_mutex_lock(&parser->lock); 
 #endif
-            for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
-               char tmpbuf[0x10000];
-               int tlen = 0;
 
-               if ((parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex]) != NULL) {
-                  if (parser->RaPrintAlgorithm->print != NULL) {
-                     int thistype = ARGUS_PTYPE_STRING;
-                     bzero(tmpbuf, 16);
+   for (parser->RaPrintIndex = 0; parser->RaPrintIndex < MAX_PRINT_ALG_TYPES; parser->RaPrintIndex++) {
+      char tmpbuf[MAXSTRLEN];
 
-                     parser->RaPrintAlgorithm->print(parser, tmpbuf, argus, parser->RaPrintAlgorithm->length);
+      if ((parser->RaPrintAlgorithm = parser->RaPrintAlgorithmList[parser->RaPrintIndex]) != NULL) {
+         if (parser->RaPrintAlgorithm->print != NULL) {
+            bzero(tmpbuf, sizeof(tmpbuf));
 
-                     if ((slen = strlen(tmpbuf)) > 0) {
-                        if (parser->RaPrintAlgorithm->type == ARGUS_PTYPE_STRING) {
-                           int ival = 0;
-                           float fval = 0.0;
+            parser->RaPrintAlgorithm->print(parser, tmpbuf, argus, parser->RaPrintAlgorithm->length);
 
-                           int iret = ((sscanf(tmpbuf, "%d %n", &ival, &tlen) == 1) && !tmpbuf[tlen]);
-                           int fret = ((sscanf(tmpbuf, "%f %n", &fval, &tlen) == 1) && !tmpbuf[tlen]);
+            if ((slen = strlen(tmpbuf)) > 0) {
+               dlen = sizeof(tmpbuf) - slen;
 
-                           if (iret) {
-                              thistype = ARGUS_PTYPE_INT;
-                           } else 
-			   if (fret) {
-                              thistype = ARGUS_PTYPE_DOUBLE;
-                           } else
-                              if (tmpbuf[0] == '{') {
-                                 thistype = ARGUS_PTYPE_JSON;
-                              }
-                        }
+               if (tmpbuf[slen - 1] == ' ') {
+                  tmpbuf[slen - 1] = '\0';  // remove trailing space
+                  slen--;
+                  dlen = sizeof(tmpbuf) - slen;
+               }
 
-                        dlen = sizeof(tmpbuf) - slen;
+               if (!(parser->ArgusPrintXml)) {
+                  if ((parser->RaPrintIndex > 0) && (parser->RaPrintIndex < ARGUS_MAX_PRINT_ALG)) {
+                     if ((parser->RaFieldDelimiter == '\0') || (parser->RaFieldDelimiter == ' ')) {
+                        int tok = 0, i;
 
-                        if (tmpbuf[slen - 1] == ' ') {
-                           tmpbuf[slen - 1] = '\0';  // remove trailing space
-                           slen--;
-                           dlen = sizeof(tmpbuf) - slen;
-                        }
+                        for (i = 0; i < strlen(tmpbuf); i++) {
+                           if (!isspace((int)tmpbuf[i])) {
+                              tok = 1; break; 
+                           } 
+                        } 
+                        if (parser->RaSeparateAddrPortWithPeriod) {
+                           switch (argus->hdr.type & 0xF0) {
+                              case ARGUS_FAR:
+                              case ARGUS_NETFLOW:
+                              case ARGUS_AFLOW:
+                                 if (tok) {
+                                    if ((parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1] != NULL) && 
+                                        (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)) {
+                                       if (((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintSrcPort) &&
+                                            (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintSrcAddr)) ||
+                                           ((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintDstPort) &&
+                                            (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintDstAddr))) {
 
-                        if (parser->ArgusPrintXml) {
-                           if (slen > 0)
-                              if (!(tmpbuf[slen - 1] == '\"'))
-                                 sprintf(&tmpbuf[slen], "\"");
-                        } else {
-                           if ((parser->RaPrintIndex > 0) && (parser->RaPrintIndex < ARGUS_MAX_PRINT_ALG)) {
-                              if ((parser->RaFieldDelimiter == '\0') || (parser->RaFieldDelimiter == ' ')) {
-                                 int tok = 0, i;
-
-                                 for (i = 0; i < strlen(tmpbuf); i++) {
-                                    if (!isspace(tmpbuf[i])) {
-                                       tok = 1; break; 
-                                    } 
-                                 } 
-                                 if (parser->RaSeparateAddrPortWithPeriod) {
-                                    switch (argus->hdr.type & 0xF0) {
-                                       case ARGUS_FAR:
-                                       case ARGUS_NETFLOW:
-                                       case ARGUS_AFLOW:
-                                          if (tok) {
-                                             if (((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintSrcPort) &&
-                                                  (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintSrcAddr)) ||
-                                                 ((parser->RaPrintAlgorithmList[parser->RaPrintIndex]->print     == ArgusPrintDstPort) &&
-                                                  (parser->RaPrintAlgorithmList[parser->RaPrintIndex - 1]->print == ArgusPrintDstAddr))) {
-
-                                                if (parser->RaFieldDelimiter == '\0')
-                                                   if (buf[strlen(buf) - 1] == ' ')
-                                                      buf[strlen(buf) - 1] = '.';
-                                             }
-                                          }
-                                          break;
-
-                                       default:
-                                          break;
-                                    }
-                                 }
-                              }
-                           }
-
-                           slen = strlen(tmpbuf); dlen = len - slen;
-                           snprintf(&tmpbuf[slen], dlen, " ");
-                        }
-
-                        if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
-                           if (parser->RaPrintAlgorithm->print != ArgusPrintFlags)
-                              while ((strlen(tmpbuf) > 0) && isspace((int)(tmpbuf[strlen(tmpbuf) - 1])))
-                                 tmpbuf[strlen(tmpbuf) - 1] = '\0';
-                
-                           slen = strlen(buf); dlen = len - slen;
-
-                           if (parser->RaFieldQuoted) {
-                              int tlen, tind = 0, i;
-
-                              if ((tlen = strlen(tmpbuf)) > 0) {
-                                 if (thistype == ARGUS_PTYPE_STRING) {
-                                    if (strchr(tmpbuf, parser->RaFieldQuoted)) {
-                                       for (i = 0; i < tlen; i++) {
-                                          if (tmpbuf[i] == parser->RaFieldQuoted)
-                                             ArgusTempBuffer[tind++] = '\\';
-                                          ArgusTempBuffer[tind++] = tmpbuf[i];
+                                          if (parser->RaFieldDelimiter == '\0')
+                                             if (buf[strlen(buf) - 1] == ' ')
+                                                buf[strlen(buf) - 1] = '.';
                                        }
-                                       bcopy(ArgusTempBuffer, tmpbuf, tind);
-                                       tmpbuf[tind] = '\0';
-                                       slen = tind;
-                                       dlen = ARGUS_PRINT_TEMP_BUF_SIZE - tind;
                                     }
                                  }
+                                 break;
 
-                                 if (parser->ArgusPrintJson) {
-                                    if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
-                                                                 (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
-                                       snprintf(&buf[strlen(buf)], dlen, "%c%s%c:%s%c", 
-                                          parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
-                                          tmpbuf, parser->RaFieldDelimiter);
-				    
-                                    } else {
-                                       if (thistype == ARGUS_PTYPE_STRING) {
-                                          slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c:%c%s%c%c", 
-                                             parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
-                                             parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted,
-                                             parser->RaFieldDelimiter);
-				       } else {
-                                          slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c:%s%c", 
-                                             parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
-                                             tmpbuf, parser->RaFieldDelimiter);
-				       }
-                                    }
-                                 } else {
-                                    slen = snprintf(&buf[strlen(buf)], dlen, "%c%s%c%c", 
-                                       parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
-                                 }
-                              }
-
-                           } else 
-                              snprintf(&buf[slen], dlen, "%s%c", tmpbuf, parser->RaFieldDelimiter);
-
-                        } else {
-                           slen = strlen(buf); dlen = len - slen;
-                           snprintf(&buf[slen], dlen, "%s", tmpbuf);
+                              default:
+                                 break;
+                           }
                         }
-
-                        parser->RaPrintAlgorithm->offset = slen;
                      }
                   }
+
+                  slen = strlen(tmpbuf); dlen = len - slen;
+                  snprintf(&tmpbuf[slen], dlen, " ");
+
+               } else {
+                  slen = strlen(tmpbuf); dlen = len - slen;
+                  if (slen > 0)
+                     if (!(tmpbuf[slen - 1] == '\"'))
+                        sprintf(&tmpbuf[slen], "\"");
                }
+
+               if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
+                  if (parser->RaPrintAlgorithm->print != ArgusPrintFlags)
+                     while ((strlen(tmpbuf) > 0) && isspace((int)(tmpbuf[strlen(tmpbuf) - 1])))
+                        tmpbuf[strlen(tmpbuf) - 1] = '\0';
+       
+                  slen = strlen(buf); dlen = len - slen;
+
+                  if (parser->RaFieldQuoted) {
+                     int tlen, tind = 0, i;
+                     tlen = strlen(tmpbuf);
+                     if (strchr(tmpbuf, parser->RaFieldQuoted)) {
+                        char tbuffer[1024];
+                        for (i = 0; i < tlen; i++) {
+                           if (tmpbuf[i] == parser->RaFieldQuoted)
+                              tbuffer[tind++] = '\\';
+                           tbuffer[tind++] = tmpbuf[i];
+                        }
+                        bcopy(tbuffer, tmpbuf, tind);
+                     }
+                        
+                     if (parser->ArgusPrintJson) {
+                        if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
+                                                     (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
+                           snprintf(&buf[slen], dlen, "%c%s%c:%s%c", 
+                              parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                              tmpbuf, parser->RaFieldDelimiter);
+                        } else {
+                           snprintf(&buf[slen], dlen, "%c%s%c:%c%s%c%c", 
+                              parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
+                              parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted,
+                              parser->RaFieldDelimiter);
+                        }
+                     } else
+                        snprintf(&buf[slen], dlen, "%c%s%c%c", parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
+
+                  } else
+                     snprintf(&buf[slen], dlen, "%s%c", tmpbuf, parser->RaFieldDelimiter);
+
+               } else {
+                  slen = strlen(buf); dlen = len - slen;
+                  snprintf(&buf[slen], dlen, "%s", tmpbuf);
+               }
+
+               parser->RaPrintAlgorithm->offset = slen;
             }
-#if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&parser->lock); 
-#endif
-         break;
          }
+      }
    }
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&parser->lock); 
+#endif
 
    slen = strlen(buf); dlen = len - slen;
 
@@ -6427,12 +6285,6 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 */
 }
 
-/*
-void
-ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   ArgusPrintManStatus(parser,&buf[strlen(buf)],argus,len);
-}
 
 void
 ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -6443,28 +6295,40 @@ ArgusPrintManagementRecord(struct ArgusParserStruct *parser, char *buf, struct A
 int
 ArgusPrintRecordHeader (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   char *ArgusTypeStr = NULL;
-   char ArgusTypeBuf[32];
+   int retn = 0;
+   if (buf != NULL) {
+      char ArgusTypeBuf[32], *ArgusTypeStr = ArgusTypeBuf;
 
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:      ArgusTypeStr = "management"; break;
-      case ARGUS_FAR:      ArgusTypeStr = "flow"; break;
-      case ARGUS_NETFLOW:  ArgusTypeStr = "netFlow"; break;
-      case ARGUS_INDEX:    ArgusTypeStr = "index"; break;
-      case ARGUS_DATASUP:  ArgusTypeStr = "supplement"; break;
-      case ARGUS_ARCHIVAL: ArgusTypeStr = "archive"; break;
-      case ARGUS_EVENT:    ArgusTypeStr = "event"; break;
-      case ARGUS_AFLOW:    ArgusTypeStr = "aflow"; break;
-      default:             ArgusTypeStr = "unknown"; break;
-   }   
+      if (parser->ArgusPrintJson) {
+         sprintf(&buf[strlen(buf)], "{");
 
-   if (parser->ArgusPrintJson) {
-      snprintf(buf, len, "{ \"type\":\"%s\",", ArgusTypeStr);
-   } else
-   if (parser->ArgusPrintXml) {
-      snprintf (ArgusTypeBuf, 32, "%s", ArgusTypeStr);
-      snprintf(&buf[strlen(buf)], len, " <Argus%sRecord ", ArgusTypeStr);
+         ArgusPrintType(parser, ArgusTypeStr, argus, 32);
+         snprintf(buf, len, "{ \"type\":\"%s\",", ArgusTypeStr);
+         retn = strlen(buf);
+
+      } else
+      if (parser->ArgusPrintXml) {
+         char ArgusTypeBuf[32], *ArgusTypeStr    = ArgusTypeBuf;
+
+         snprintf (ArgusTypeBuf, 32, " ");
+
+         switch (argus->hdr.type & 0xF0) {
+            case ARGUS_MAR:      snprintf (ArgusTypeBuf, 32, "Management"); break;
+            case ARGUS_FAR:      snprintf (ArgusTypeBuf, 32, "Flow"); break;
+            case ARGUS_AFLOW:    snprintf (ArgusTypeBuf, 32, "AFlow"); break;
+            case ARGUS_NETFLOW:  snprintf (ArgusTypeBuf, 32, "NetFlow"); break;
+            case ARGUS_INDEX:    snprintf (ArgusTypeBuf, 32, "Index"); break;
+            case ARGUS_DATASUP:  snprintf (ArgusTypeBuf, 32, "Supplement"); break;
+            case ARGUS_ARCHIVAL: snprintf (ArgusTypeBuf, 32, "Archive"); break;
+            case ARGUS_EVENT:    snprintf (ArgusTypeBuf, 32, "Event"); break;
+            default:             snprintf (ArgusTypeBuf, 32, "Unknown"); break;
+         }
+
+         retn = snprintf(&buf[strlen(buf)], len, " <Argus%sRecord ", ArgusTypeStr);
+      }
    }
+   return (retn);
+}
 
 int
 ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -6474,26 +6338,27 @@ ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct Argu
    if (buf != NULL) {
       retn = strlen(buf);
       if (parser->ArgusPrintJson) {
-         sprintf(&buf[strlen(buf)], "}");
-      } else {
-         if (parser->ArgusPrintXml) {
-            char ArgusTypeBuf[32], *ArgusTypeStr    = ArgusTypeBuf;
-
-            snprintf (ArgusTypeBuf, 32, " ");
-
-            switch (argus->hdr.type & 0xF0) {
-               case ARGUS_MAR:      snprintf (ArgusTypeBuf, 32, "Management"); break;
-               case ARGUS_FAR:      snprintf (ArgusTypeBuf, 32, "Flow"); break;
-               case ARGUS_NETFLOW:  snprintf (ArgusTypeBuf, 32, "NetFlow"); break;
-               case ARGUS_INDEX:    snprintf (ArgusTypeBuf, 32, "Index"); break;
-               case ARGUS_DATASUP:  snprintf (ArgusTypeBuf, 32, "Supplement"); break;
-               case ARGUS_ARCHIVAL: snprintf (ArgusTypeBuf, 32, "Archive"); break;
-               case ARGUS_EVENT:    snprintf (ArgusTypeBuf, 32, "Event"); break;
-               case ARGUS_AFLOW:    snprintf (ArgusTypeBuf, 32, "Aflow"); break;
-               default:             snprintf (ArgusTypeBuf, 32, "Unknown"); break;
-            }
-            snprintf(&buf[strlen(buf)], len, "></Argus%sRecord>", ArgusTypeStr);
+         sprintf(&buf[strlen(buf)], " }"); 
+         retn += 2;
+      } else
+      if (parser->ArgusPrintXml) {
+         char ArgusTypeBuf[32], *ArgusTypeStr    = ArgusTypeBuf;
+   
+         snprintf (ArgusTypeBuf, 32, " ");
+   
+         switch (argus->hdr.type & 0xF0) {
+            case ARGUS_MAR:      snprintf (ArgusTypeBuf, 32, "Management"); break;
+            case ARGUS_FAR:      snprintf (ArgusTypeBuf, 32, "Flow"); break;
+            case ARGUS_AFLOW:    snprintf (ArgusTypeBuf, 32, "AFlow"); break;
+            case ARGUS_NETFLOW:  snprintf (ArgusTypeBuf, 32, "NetFlow"); break;
+            case ARGUS_INDEX:    snprintf (ArgusTypeBuf, 32, "Index"); break;
+            case ARGUS_DATASUP:  snprintf (ArgusTypeBuf, 32, "Supplement"); break;
+            case ARGUS_ARCHIVAL: snprintf (ArgusTypeBuf, 32, "Archive"); break;
+            case ARGUS_EVENT:    snprintf (ArgusTypeBuf, 32, "Event"); break;
+            default:             snprintf (ArgusTypeBuf, 32, "Unknown"); break;
          }
+         snprintf(&buf[strlen(buf)], len, "></Argus%sRecord>", ArgusTypeStr);
+         retn = strlen(buf);
       }
    }
    return (retn);
@@ -6532,7 +6397,7 @@ ArgusPrintBssid (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: 
       case ARGUS_EVENT: 
-      case ARGUS_AFLOW:
+      case ARGUS_AFLOW: 
       case ARGUS_NETFLOW: {
          if (parser->ArgusPrintXml) {
          } else {
@@ -6611,7 +6476,7 @@ ArgusPrintSsid (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: 
       case ARGUS_EVENT: 
-      case ARGUS_AFLOW:
+      case ARGUS_AFLOW: 
       case ARGUS_NETFLOW: {
          if (parser->ArgusPrintXml) {
          } else {
@@ -6731,7 +6596,6 @@ ArgusPrintStartDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          long long stime = ArgusFetchStartuSecTime(argus);
 
@@ -6787,7 +6651,6 @@ ArgusPrintLastDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          long long stime = ArgusFetchLastuSecTime(argus);
 
@@ -6843,7 +6706,6 @@ ArgusPrintSrcStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -6898,7 +6760,6 @@ ArgusPrintSrcLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -6953,7 +6814,6 @@ ArgusPrintDstStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -7009,7 +6869,6 @@ ArgusPrintDstLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -7063,7 +6922,6 @@ ArgusPrintRelativeDate (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (struct ArgusTimeObject *)argus->dsrs[ARGUS_TIME_INDEX];
 
@@ -7196,7 +7054,6 @@ RaGetFloatDuration (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -7374,7 +7231,6 @@ RaGetFloatSrcDuration (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX];
          if (dtime != NULL) {
@@ -7427,7 +7283,6 @@ RaGetFloatDstDuration (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTimeObject *dtime;
          if ((dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX]) != NULL) {
@@ -7469,7 +7324,6 @@ RaGetFloatMean (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusAgrStruct *agr;
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
@@ -7492,7 +7346,6 @@ RaGetFloatIdleTime (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          double qtime = 0.0, rtime = 0.0;
          double value = 0.0;
@@ -7536,7 +7389,6 @@ RaGetFloatMin (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusAgrStruct *agr;
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
@@ -7560,7 +7412,6 @@ RaGetFloatMax (struct ArgusRecordStruct *argus)
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusAgrStruct *agr;
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
@@ -7714,10 +7565,7 @@ RaParseCIDRAddr (struct ArgusParserStruct *parser, char *addr)
 
       case AF_INET6: {
          unsigned short *val = (unsigned short *)&retn->addr;
-         int ind = 0, asize = sizeof(retn->addr);
-         int ssize = sizeof(unsigned short);
-         int len = asize/ssize;
-
+         int ind = 0, len = sizeof(retn->addr)/(sizeof(unsigned short));
          int fsecnum = 8, lsecnum = 0, rsecnum = 0, i, masklen;
          char *sstr = NULL, *ipv4addr = NULL;
 
@@ -7924,7 +7772,6 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
             count = agr->count;
@@ -7978,7 +7825,6 @@ ArgusPrintCor (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((cor = (struct ArgusCorrelateStruct *) argus->dsrs[ARGUS_COR_INDEX]) != NULL) {
             struct ArgusCorMetrics *cmets = &cor->metrics;
@@ -8058,7 +7904,6 @@ ArgusPrintMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (agr->count > 0) {
@@ -8160,7 +8005,6 @@ ArgusPrintSum (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (agr->count > 0) {
@@ -8252,7 +8096,6 @@ ArgusPrintRunTime (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (agr->count > 0) {
@@ -8299,7 +8142,6 @@ ArgusPrintMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: 
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (parser->Hflag) {
@@ -8389,7 +8231,6 @@ ArgusPrintMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: 
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (parser->Hflag) {
@@ -8480,7 +8321,6 @@ ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
 
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
@@ -8575,7 +8415,6 @@ ArgusPrintIdleTime (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          float tidle = RaGetFloatIdleTime(argus);
          if (tidle < 0) tidle = 0;
@@ -8616,7 +8455,6 @@ ArgusPrintStartRange (struct ArgusParserStruct *parser, char *buf, struct ArgusR
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR:
          break;
    }
@@ -8652,7 +8490,6 @@ ArgusPrintEndRange (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       case ARGUS_EVENT:
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR:
          break;
    }
@@ -8777,7 +8614,7 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
          break;
 
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
+      case ARGUS_AFLOW: 
       case ARGUS_FAR: {
          struct ArgusFlow *flow;
          struct ArgusMacStruct *mac;
@@ -9135,6 +8972,10 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
    return;
 }
 
+
+char argus_strbuf[MAXSTRLEN];
+u_short ArgusThisProto;
+
 void
 ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -9167,7 +9008,7 @@ ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
                default:
                case ARGUS_IDIS_IPV4:   value =   strdup(ArgusGetName(parser, (u_char *)&rec->argus_mar.ipv4)); break;
-               case ARGUS_IDIS_IPV6:   value = ArgusGetV6Name(parser, (u_char *)&rec->argus_mar.ipv6); break;
+               case ARGUS_IDIS_IPV6:   value = strdup(ArgusGetV6Name(parser, (u_char *)&rec->argus_mar.ipv6)); break;
             }
 
             if (rec->argus_mar.status & ARGUS_ID_INC_INF) {
@@ -9186,7 +9027,6 @@ ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       case ARGUS_EVENT:
       case ARGUS_AFLOW:
       case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) argus->dsrs[ARGUS_TRANSPORT_INDEX];
          if (trans != NULL) {
@@ -9201,7 +9041,7 @@ ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
                default:
                case ARGUS_TYPE_IPV4:   value =   strdup(ArgusGetName(parser, (u_char *)&trans->srcid.a_un.ipv4)); break;
-               case ARGUS_TYPE_IPV6:   value = ArgusGetV6Name(parser, (u_char *)&trans->srcid.a_un.ipv6); break;
+               case ARGUS_TYPE_IPV6:   value = strdup(ArgusGetV6Name(parser, (u_char *)&trans->srcid.a_un.ipv6)); break;
 //             case ARGUS_TYPE_ETHER:  value = ArgusGetEtherName(parser, (u_char *)&trans->srcid.a_un.ether); break;
             }
             if (trans->hdr.argus_dsrvl8.qual & ARGUS_TYPE_INTERFACE) {
@@ -11338,19 +11178,16 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
                snprintf (abuf, sizeof(abuf), "%s", ArgusGetV6Name (parser, (unsigned char *)addr));
                addrstr = abuf;
             }
-
-               switch (parser->cidrflag) {
-                  case RA_ENABLE_CIDR_ADDRESS_FORMAT:
-                     if ((masklen == 128) || (masklen == 0))
-                        break;
+            switch (parser->cidrflag) {
+               case RA_ENABLE_CIDR_ADDRESS_FORMAT:
+                  if ((masklen == 128) || (masklen == 0))
+                     break;
 
 //  deliberately fall through
-                  case RA_STRICT_CIDR_ADDRESS_FORMAT:
-                     sprintf(addrbuf, "%s/%d", addrstr, masklen);
-                     addrstr = addrbuf;
-               }
+              case RA_STRICT_CIDR_ADDRESS_FORMAT:
+                 sprintf(addrbuf, "%s/%d", addrstr, masklen);
+                 addrstr = addrbuf;
             }
-
             break;
          }
 
@@ -13549,7 +13386,6 @@ ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *parser, char *buf, st
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_EVENT:
       case ARGUS_MAR:
-      case ARGUS_AFLOW:
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
          sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13925,19 +13761,9 @@ ArgusPrintDstLongitude (struct ArgusParserStruct *parser, char *buf, struct Argu
 void
 ArgusPrintInodeLongitude (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   char pbuf[32];
-   bzero(pbuf, 4);
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_EVENT:
-      case ARGUS_MAR:
-      case ARGUS_AFLOW:
-      case ARGUS_NETFLOW:
-         sprintf (buf, "%*.*s ", len, len, pbuf);
-         break;
-
-      case ARGUS_FAR: {
-         struct ArgusMetricStruct *metric;
+   struct ArgusGeoLocationStruct *geo = (struct ArgusGeoLocationStruct *) argus->dsrs[ARGUS_GEO_INDEX];
+   char tmpbuf[128], *ptr = tmpbuf;
+   float lon = 0.0;
 
    if (argus->hdr.type & ARGUS_MAR) {
 
@@ -13970,19 +13796,6 @@ ArgusPrintInodeLongitude (struct ArgusParserStruct *parser, char *buf, struct Ar
 #endif
 }
 
-void
-ArgusPrintSrcTransEfficiency (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   char pbuf[32];
-   bzero(pbuf, 4);
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_EVENT:
-      case ARGUS_MAR:
-      case ARGUS_AFLOW:
-      case ARGUS_NETFLOW:
-         sprintf (buf, "%*.*s ", len, len, pbuf);
-         break;
 
 
 void
@@ -14031,13 +13844,34 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
    char tmpbuf[128], *ptr = tmpbuf;
    int locValue = -1;
 
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_EVENT:
-      case ARGUS_MAR:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-         sprintf (buf, "%*.*s ", len, len, pbuf);
-         break;
+   if (argus->hdr.type & ARGUS_MAR) {
+      sprintf (ptr, " ");
+   } else {
+      sprintf (ptr, " ");
+      if (local != NULL) {
+         locValue = local->sloc;
+         sprintf (ptr, "%d", locValue);
+      } else {
+
+         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
+         if (flow != NULL) {
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE:
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                     case ARGUS_TYPE_IPV4: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+                           sprintf (ptr, "%d", locValue);
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " SrcLocal = \"%s\"", ptr);
@@ -14794,7 +14628,7 @@ ArgusPrintSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   struct ArgusHistoObject *ihist = &jitter->src.idle.dist_union.linear;
 
                   int i, tpkts[256], max = 0;
-                  int tlen = ahist->bins, tmax = 8;;
+                  int tlen = ahist->bins, tmax = 8;
 
                   bzero(&tpkts, sizeof(tpkts));
 
@@ -15127,7 +14961,7 @@ ArgusPrintDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   struct ArgusHistoObject *ihist = &jitter->dst.idle.dist_union.linear;
 
                   int i, tpkts[256], max = 0;
-                  int tlen = ahist->bins, tmax = 8;;
+                  int tlen = ahist->bins, tmax = 8;
 
                   bzero(&tpkts, sizeof(tpkts));
 
@@ -15670,7 +15504,434 @@ ArgusPrintDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
    }
 
    if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcIdleIntFlow = \"%s\"", value);
+      sprintf (buf, " DstIntPktMin = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+   
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstIntPktMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintActiveSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: 
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->src.act.maxval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcActIntPktMax = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintActiveSrcIntPktMax (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintActiveSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: 
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->src.act.minval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcActIntPktMin = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintActiveSrcIntPktMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: 
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->dst.act.maxval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " DstActIntPktMax = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintActiveDstIntPktMax (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->dst.act.minval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " DstActIntPktMin = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintActiveDstIntPktMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->src.idle.maxval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleSrcIntPktMax (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->src.idle.minval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleSrcIntPktMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->dst.idle.maxval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleDstIntPktMax (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIdleDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusJitterStruct *jitter;
+   char value[128];
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR:
+         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
+            sprintf (value, "%.*f", parser->pflag, jitter->dst.idle.minval/1000.0);
+         break;
+   }
+
+   if (parser->ArgusPrintXml) {
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }  
+      } 
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIdleDstIntPktMin (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIntFlow (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr = NULL; 
+   char value[128];
+
+   bzero(value, sizeof(value));
+ 
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: {
+         float meanval = 0.0;
+         unsigned int n;
+
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            if ((n = agr->idle.n) > 0) {
+               meanval = agr->idle.meanval;
+            }
+            sprintf (value, "%.*f", parser->pflag, meanval);   
+         }
+         break;
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " IntFlow = \"%s\"", value);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(value);
+      } else {
+         if (strlen(value) > len) {
+            value[len - 1] = '*';
+            value[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, value);
+   } 
+   
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintIntFlow (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintIntFlowDist (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusAgrStruct *agr;
+   char value[128];
+
+   bzero(value, sizeof(value));
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         break;
+
+      case ARGUS_EVENT:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            int i, tpkts[8], max = 0, tlen, tmax;
+
+            for (i = 0; i < 8; i++) {
+               tpkts[i] = agr->idle.fdist[i];
+               max = (max < tpkts[i]) ? tpkts[i] : max;
+            }
+
+            tlen  = ((len == 8) || (len == 16)) ? len : ((len < 16) ? 8 : 16);
+            tmax  = ((tlen == 8)) ? 15 : 255;
+
+            if (max > tmax)
+               for (i = 0; i < 8; i++) {
+                        if (tpkts[i]) {
+                           tpkts[i] = (tpkts[i] * tmax) / max;
+                           if (tpkts[i] == 0)
+                              tpkts[i] = 1;
+                        }
+               }
+
+            switch (tlen) {
+                     case  8:
+                        for (i = 0; i < 8; i++)
+                           sprintf (&value[strlen(value)], "%1.1x", tpkts[i]);
+                        break;
+
+                     case 16:
+                        for (i = 0; i < 8; i++)
+                           sprintf (&value[strlen(value)], "%2.2x", tpkts[i]);
+                        break;
+            }
+         }
+         break;
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcIntDist = \"%s\"", value);
    } else {
       if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
          len = strlen(value);
@@ -15684,7 +15945,7 @@ ArgusPrintDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
    } 
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleIntFlow (%p, %p)", buf, argus);
+   ArgusDebug (10, "ArgusPrintIntFlowDist (%p, %p)", buf, argus);
 #endif
 }
 
@@ -15708,9 +15969,25 @@ ArgusPrintIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusR
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
-      case ARGUS_FAR: 
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->src.act.maxval/1000.0);
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            float maxval = agr->idle.maxval;
+            sprintf (value, "%.*f", parser->pflag, maxval);
+         }
+
+         if (parser->ArgusPrintXml) {
+            sprintf (buf, " IntFlowMax = \"%s\"", value);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+               len = strlen(value);
+            } else {
+               if (strlen(value) > len) {
+                  value[len - 1] = '*';
+                  value[len]     = '\0';
+               }
+            }
+            sprintf (buf, "%*.*s ", len, len, value);
+         } 
          break;
       }
    }
@@ -15738,10 +16015,11 @@ ArgusPrintIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct Arg
 
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             float stddev = agr->idle.stdev;
-            sprintf (value, "%.*f", parser->pflag, stddev/1000.0);
+            sprintf (value, "%.*f", parser->pflag, stddev);
          }
 
          if (parser->ArgusPrintXml) {
@@ -15785,248 +16063,31 @@ ArgusPrintIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusR
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
-      case ARGUS_FAR: 
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->src.act.minval/1000.0);
+      case ARGUS_FAR: {
+         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL) {
+            float minval = agr->idle.minval;
+            sprintf (value, "%.*f", parser->pflag, minval/1000.0);
+         }
+
+         if (parser->ArgusPrintXml) {
+            sprintf (buf, " IntFlowMin = \"%s\"", value);
+         } else {
+            if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+               len = strlen(value);
+            } else {
+               if (strlen(value) > len) {
+                  value[len - 1] = '*';
+                  value[len]     = '\0';
+               }
+            }
+            sprintf (buf, "%*.*s ", len, len, value);
+         } 
          break;
       }
    }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintIntFlowMin (%p, %p)", buf, argus);
-#endif
-}
-
-
-void
-ArgusPrintActiveIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR: 
-         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, agr->act.stdev/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcActIntFlowStdDev = \"%s\"", value);
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveIntFlowStdDev (%p, %p)", buf, argus);
-#endif
-}
-
-void
-ArgusPrintActiveIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, agr->act.maxval/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcActIntFlowMax = \"%s\"", value);
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }
-      }
-      sprintf (buf, "%*.*s ", len, len, value);
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveIntFlowMax (%p, %p)", buf, argus);
-#endif
-}
-
-void
-ArgusPrintActiveIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((jitter = (struct ArgusJitterStruct *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, jitter->src.idle.maxval/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " SrcActIntFlowMin = \"%s\"", value);
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintActiveIntFlowMin (%p, %p)", buf, argus);
-#endif
-}
-
-
-void
-ArgusPrintIdleIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, agr->idle.stdev/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }
-      }
-      sprintf (buf, "%*.*s ", len, len, value);
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleIntFlowStdDev (%p, %p)", buf, argus);
-#endif
-}
-
-void
-ArgusPrintIdleIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, agr->idle.maxval/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleIntFlowMax (%p, %p)", buf, argus);
-#endif
-}
-
-void
-ArgusPrintIdleIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
-{
-   struct ArgusAgrStruct *agr;
-   char value[128];
-   bzero(value, sizeof(value));
-
-   switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
-         break;
-
-      case ARGUS_EVENT:
-      case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
-      case ARGUS_FAR:
-         if ((agr = (struct ArgusAgrStruct *)argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
-            sprintf (value, "%.*f", parser->pflag, agr->idle.minval/1000.0);
-         break;
-   }
-
-   if (parser->ArgusPrintXml) {
-   } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(value);
-      } else {
-         if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
-         }  
-      } 
-      sprintf (buf, "%*.*s ", len, len, value);
-   } 
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusPrintIdleIntFlowMin (%p, %p)", buf, argus);
 #endif
 }
 
@@ -19204,10 +19265,11 @@ void
 ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    if (parser->ArgusPrintMan) {
+      if (parser->ArgusPrintXml) {
+         sprintf (buf, " ManStatus = \"%s\"", " ");
+      } else
       if (parser->ArgusPrintJson) {
          struct ArgusRecord *rec = (struct ArgusRecord *)argus->dsrs[ARGUS_MAR_INDEX];
-         struct timeval tvpbuf, *tvp = &tvpbuf;
-
          if (rec != NULL) {
             struct ArgusMarStruct mar = rec->ar_un.mar;
             char tbuf[256], *cptr;
@@ -19230,11 +19292,12 @@ ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             l += sprintf(buf + l, " \"cause\":\"%s\",", cptr);
             dlen--;
 
+            struct timeval tvpbuf, *tvp = &tvpbuf;
             // starttime
             bzero(tbuf, 256);
             tvp->tv_sec = mar.startime.tv_sec;
             tvp->tv_usec = mar.startime.tv_usec;
-            ArgusPrintTime(parser, tbuf, tvp);
+            ArgusPrintTime(parser, tbuf, 256, tvp);
             if (parser->uflag) {
                l += sprintf(buf + l, " \"starttime\":%s,", tbuf);
 	    } else {
@@ -19245,7 +19308,7 @@ ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             bzero(tbuf, 256);
             tvp->tv_sec = mar.now.tv_sec;
             tvp->tv_usec = mar.now.tv_usec;
-            ArgusPrintTime(parser, tbuf, tvp);
+            ArgusPrintTime(parser, tbuf, 256, tvp);
             if (parser->uflag) {
                l += sprintf(buf + l, " \"now\":%s,", tbuf);
 	    } else {
@@ -19279,18 +19342,13 @@ ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             l += sprintf(buf + l, " \"suserlen\":%hu,", mar.suserlen);
             l += sprintf(buf + l, " \"duserlen\":%hu,", mar.duserlen);
          }
-
       } else {
          // "Normal" printing mode... shouldn't usually be reached due to other gates in printing routines
          ArgusPrintRecord(parser, buf, argus, len);
-         sprintf(buf, "%*.*s ", len, len, " ");
       }
-
-   } else { 
-      if (parser->ArgusPrintXml) {
-         sprintf (buf, " ManStatus = \"%s\"", " ");
-      } else
-         sprintf (buf, "%*.*s ", len, len, " ");
+   } else {
+      // Printing MAR is disabled... shouldn't usually be reached due to other gates in printing routines
+      // sprintf(buf, "");
    }
 
 #ifdef ARGUSDEBUG
@@ -22479,6 +22537,7 @@ extern int ether_hostton(char *, struct ether_addr *);
 #endif
 #endif
 
+
 /*
  * A faster replacement for inet_ntoa().
  */
@@ -22941,75 +23000,13 @@ check_nmem(struct nnamemem *table, const u_char *np)
    return NULL;
 }
 
-   if ((cp = inet_ntop(AF_INET6, (const void *) &addr, ntop_buf, sizeof(ntop_buf))) != NULL)
-      p->name = strdup(cp);
-
-   return (p->name);
-}
-
-static char hex[] = "0123456789abcdef";
-
-unsigned int
-getnamehash(const u_char *np)
-{
-   unsigned int retn = 0;
-   if (np != NULL) {
-      retn = 5381;
-      int c;
-
-      while ((c = tolower(*np++)) != '\0')
-         retn = ((retn << 5) + retn) ^ c;  // (retn * 33) ^ c
-   }
-   return retn;
-}
-
-struct cnamemem *
-check_cmem(struct cnamemem *table, const u_char *np)
-{
-   if (np != NULL) {
-      struct cnamemem *tp;
-      u_int hash;
-
-      hash = getnamehash(np);
-
-      tp = &table[hash % (HASHNAMESIZE-1)];
-      while (tp->n_nxt) {
-         if (!strcmp((char *)np, tp->name))
-            return tp;
-         else
-            tp = tp->n_nxt;
-      }
-   }
-   return NULL;
-}
-
-struct nnamemem *
-check_nmem(struct nnamemem *table, const u_char *np)
-{
-   if (np != NULL) {
-      struct nnamemem *tp;
-      u_int hash;
-
-      hash = getnamehash(np);
-
-      tp = &table[hash % (HASHNAMESIZE-1)];
-      while (tp->n_nxt) {
-         if (!strcmp((char *)np, tp->n_name))
-            return tp;
-         else
-            tp = tp->n_nxt;
-      }
-   }
-   return NULL;
-}
-
 struct nnamemem *
 lookup_nmem(struct nnamemem *table, const u_char *np)
 {
    struct nnamemem *tp = NULL;
    if (np != NULL) {
       u_int hash;
-
+ 
       hash  = getnamehash(np);
       hash %= (HASHNAMESIZE - 1);
 
@@ -23030,19 +23027,83 @@ lookup_nmem(struct nnamemem *table, const u_char *np)
    return(tp);
 }
 
+
+int ArgusCnameArrayInited = 0;
+ 
+struct cnamemem *
+check_cmem(struct cnamemem *table, const u_char *cp)
+{
+   if (ArgusCnameArrayInited == 0) {
+      ArgusCnameArrayInited++;
+      bzero(ipv6cidrtable, sizeof(ipv6cidrtable));
+   }
+ 
+   if (cp != NULL) {
+      struct cnamemem *tp;
+      u_int hash;
+      
+      hash = getnamehash(cp);
+      
+      tp = &table[hash % (HASHNAMESIZE-1)];
+      while (tp->n_nxt) {
+         if (!strcmp((char *)cp, tp->name))
+            return tp;
+         else
+            tp = tp->n_nxt;
+      }
+   }
+   return NULL;
+}
+
+
+/* Find the hash node that corresponds the cidr address 'cp'. */
+
+struct cnamemem *
+lookup_cmem(struct cnamemem *table, const u_char *np)
+{
+   struct cnamemem *cp = NULL;
+
+   if (ArgusCnameArrayInited == 0) {
+      ArgusCnameArrayInited++;
+      bzero(ipv6cidrtable, sizeof(ipv6cidrtable));
+   }
+
+   if (np != NULL) {
+      u_int hash;
+ 
+      hash  = getnamehash(np);
+      hash %= (HASHNAMESIZE - 1);
+
+      cp = &table[hash];
+      while (cp->n_nxt) {
+         if (!strcmp((char *)np, cp->name))
+            return cp;
+         else
+            cp = cp->n_nxt;
+      }
+
+      cp->hashval = hash;
+      cp->name = strdup((char *) np);
+      cp->n_nxt = (struct cnamemem *)calloc(1, sizeof(*cp));
+   }
+
+   return(cp);
+}
+
+
+
 /* Find the hash node that corresponds the ether address 'ep'. */
 
 struct enamemem *
 check_emem(struct enamemem *table, const u_char *ep)
 {
-   u_int16_t i, j, k;
+   u_int i, j, k;
    struct enamemem *tp;
-   u_int ind;
-
+ 
    k = (ep[0] << 8) | ep[1];
    j = (ep[2] << 8) | ep[3];
    i = (ep[4] << 8) | ep[5];
-
+ 
    tp = &table[(i ^ j) % (HASHNAMESIZE-1)];
    while (tp->e_nxt)
       if (tp->e_addr[0] == i && tp->e_addr[1] == j && tp->e_addr[2] == k)
@@ -23079,7 +23140,6 @@ lookup_emem(struct enamemem *table, const u_char *ep)
    tp->e_nxt = (struct enamemem *)calloc(1, sizeof(*tp));
    return tp;
 }
-
 
 /*
  * Find the hash node that corresponds to the bytestring 'bs'
@@ -23248,12 +23308,13 @@ etheraddr_string(struct ArgusParserStruct *parser, u_char *ep)
    }
 
 #if defined(ETHER_SERVICE) && !defined(linux) && !defined(CYGWIN)
-   if (!parser->nflag) {
-      char buf[128];
-      if (ether_ntohost(buf, (struct ether_addr *)ep) == 0) {
-         tp->e_name = strdup(buf);
+      if (!parser->nflag) {
+         char buf[128];
+         if (ether_ntohost(buf, (struct ether_addr *)ep) == 0) {
+            if (tp->e_name != NULL) free(tp->e_name);
+            tp->e_name = strdup(buf);
+         }
       }
-   }
 #endif
    if (tp != NULL) {
       if (tp->e_numeric == NULL) {
@@ -23300,7 +23361,6 @@ etheraddr_string(struct ArgusParserStruct *parser, u_char *ep)
    }
    return (retn);
 }
-
 
 char *
 linkaddr_string(struct ArgusParserStruct *parser, const unsigned char *ep, unsigned int len)
@@ -24757,7 +24817,7 @@ ArgusPrintCountryCode (struct ArgusParserStruct *parser, struct ArgusRecordStruc
       }
 
    } else
-      snprintf (buf, 3, "  ");
+      sprintf (buf, "  ");
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintCountryCode (%p, %p, %p, %d, %d, %p) returning\n", parser, argus, addr, type, len, buf);
@@ -25357,13 +25417,81 @@ ArgusPrintLabel(struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
       } else
          obuf = "";
 
-      if (parser->ArgusPrintXml) {
-         if (strchr(labelbuf, '\"')) {
-            char ebuf[MAXSTRLEN];
-            labelbuf = ArgusEscapeString(labelbuf, ebuf, MAXSTRLEN);
-            sprintf (buf, " Label = \"%s\"", labelbuf);
-	 } else
-            sprintf (buf, " Label = \"%s\"", labelbuf);
+      if (parser->ArgusPrintJson) {
+         // JSON (strings) mode
+            labelbuf = strdup(obuf); // Work with a copy of the string
+            if (labelbuf == NULL) {
+               ArgusLog(LOG_ERR, "PrintLabel, Label Expansion: Unable to strdup(), malloc fail?");
+               //Will exit after logging error
+            }
+
+            // JSON Label expansion mode
+            if (labelbuf[0] != 0) {
+               // If label is already in JSON format, then copy ...
+                  if (labelbuf[0] == '{') {
+                     sprintf(buf, "%s", labelbuf);
+               // else
+                  } else {
+
+
+               // Iterate over each name=value pair, separated by colons ':'
+                  char *one_label_pair = NULL;
+                  char *eq = NULL;
+                  int l = 0;
+                  l += sprintf(buf + l, "{"); // label object start
+                  one_label_pair = strtok(labelbuf, ":");
+
+                  do {
+                     // Find the equals sign and change to JSON format '":"'
+                     eq = strchr(one_label_pair, '=');
+                     if (eq != NULL) {
+                        eq[0] = 0;          // Insert \0 to break the string in two parts
+                        char *val = eq + 1; // Point to the value part
+
+                        // Check the value portion for being a number or list of numbers
+                        int slen = strlen(val);
+                        int i = 0, digits = 0, commas = 0, periods = 0;
+                        for (i = 0; i < slen; i++) {
+                           if (isdigit(val[i]) != 0) {
+                              digits++;
+                           } else if (val[i] == '.') {
+                              periods++;
+                           } else if (val[i] == ',') {
+                              commas++;
+                           }
+                        }
+                        if (digits > 0 && (digits + periods + commas) >= slen && periods <= 1) {
+                           // The value portion looks like int, float, or comma separated list of numbers...
+                           char *comma = strstr(val, ",");
+                           if (comma != NULL) {
+                              // only output the first number in the list of numbers
+                              comma[0] = 0; // end the string before the comma.
+                           }
+                           l += sprintf(buf + l, "\"%s\":%s, ", one_label_pair, val);
+                        } else {
+                           // If its not a number it is a string and gets quotes
+                           l += sprintf(buf + l, "\"%s\":\"%s\", ", one_label_pair, val);
+                        }
+                     } else {
+                        // bad label field, had no equals sign
+#ifdef ARGUSDEBUG
+                        ArgusDebug(3, "ArgusPrintLabel (%p, %p) Bad label, no equals sign '%s'", buf, argus, label->l_un.label);
+#endif
+                     }
+                  } while ((one_label_pair = strtok(NULL, ":")) != NULL);
+
+                  if (l > 2) {
+                     if ((buf[l - 2] == ',') && (buf[l - 1] == ' '))
+                        l -= 2; // Backtrack two chars to replace the dangling comma
+                  }
+                  l += sprintf(buf + l, " }");
+               }
+            } else {
+               // Empty object
+               sprintf(buf, "{}");
+            }
+
+            free(labelbuf);
       } else {
          if (parser->RaFieldWidth != RA_FIXED_WIDTH)
             len = strlen(obuf);
@@ -28355,15 +28483,22 @@ void
 ArgusLog (int priority, char *fmt, ...)
 {
    va_list ap;
-   char *buf = NULL, *ptr = NULL;
    struct timeval now;
-   char *label = NULL;
-   int i, slen;
+   char *buf = NULL, *label = NULL;
+   int i;
+   int c;
+   size_t len = 0;
+   size_t remain = 1024;
 
-   if ((buf = (char *)ArgusCalloc(1, MAXSTRLEN)) == NULL)
-      ArgusLog(LOG_ERR, "ArgusLog ArgusCalloc: error %s", strerror(errno));
+   if (ArgusParser->qflag) 
+      return;
 
-   ptr = buf;
+   if (priority == LOG_NOTICE)
+      return;
+
+   if ((priority == LOG_WARNING) && (ArgusParser->ArgusPrintWarnings  == 0))
+      return;
+
    gettimeofday (&now, 0L);
 
    if ((buf = (char *)ArgusCalloc (1, 1024)) != NULL) {
@@ -28416,25 +28551,17 @@ ArgusLog (int priority, char *fmt, ...)
       va_start(ap);
 #endif
 
-   c = vsnprintf(&buf[len], remain, fmt, ap);
-   if (c > 0) {
-      len += c;
-      remain -= c;
-   }
-   va_end (ap);
+      c = vsnprintf(&buf[len], remain, fmt, ap);
+      if (c > 0) {
+         len += c;
+         remain -= c;
+      }
+      va_end (ap);
 
-   slen = strlen(buf);
-   while (buf[slen] == '\n') {
-      buf[slen - 1] = '\0';
-      slen--;
-   }
-
-   ptr = &buf[slen];
-
-   for (i = 0; i < ARGUSPRIORITYSTR; i++) 
-      if (ArgusPriorityStr[i].priority == priority) {
-         label = ArgusPriorityStr[i].label;
-         break;
+      while (buf[len - 1] == '\n') {
+         buf[len - 1] = '\0';
+         len--;
+         remain++;
       }
 
       for (i = 0; i < ARGUSPRIORITYSTR; i++) 
@@ -28504,9 +28631,6 @@ ArgusLog (int priority, char *fmt, ...)
       if (buf != NULL)
          ArgusFree(buf);
    }
-
-   if (buf != NULL)
-      ArgusFree(buf);
 }
 
 
@@ -28653,7 +28777,6 @@ ArgusParseTimeArg(char **argp, char *args[], int ind, struct tm *tm,
    }
 
    strncpy (buf, arg, 64);
-// end += strlen (buf);
    if ((tmp = strchr(arg, '+')) && (*(tmp + 1) != '\0')) {
       retn = 0;
    } else 
@@ -32026,6 +32149,9 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
       if ((wfile = (struct ArgusWfileStruct *) ArgusCalloc (1, sizeof (*wfile))) != NULL) {
          ArgusPushFrontList(parser->ArgusWfileList, (struct ArgusListRecord *)wfile, ARGUS_LOCK);
 
+         if ((wfile->agg = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
+
          wfile->filename  = ptr;
 
          if (filter) {
@@ -32046,7 +32172,6 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
       ArgusLog (LOG_ERR, "setArgusWfile, file is null");
 }
 
-
 void
 setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
 {
@@ -32057,8 +32182,8 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
          case ARGUS_TYPE_STRING: bcopy((char *)ptr, &srcid->a_un.str, 4); break;
          case ARGUS_TYPE_INT:    srcid->a_un.value = atoi((char *)ptr); offset = sizeof(unsigned int); break;
          case ARGUS_TYPE_IPV4:   srcid->a_un.ipv4 = ntohl(*(unsigned int *)ptr); offset = sizeof(unsigned int); break;
-//       case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &srcid->a_un.ipv6, 16); offset = sizeof(srcid->a_un.ipv6); break;
-//       case ARGUS_TYPE_UUID:  bcopy((char *)ptr, &srcid->a_un.uuid, 16); offset = sizeof(srcid->a_un.uuid); break;
+         case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &srcid->a_un.ipv6, 16); offset = sizeof(srcid->a_un.ipv6); break;
+         case ARGUS_TYPE_UUID:  bcopy((char *)ptr, &srcid->a_un.uuid, 16); offset = sizeof(srcid->a_un.uuid); break;
       }
 
       if (type & ARGUS_TYPE_INTERFACE) {
@@ -32077,28 +32202,25 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
 void
 setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsigned int type)
 {
-   int tsize = sizeof(*trans);
-
-   bzero (trans, tsize);
+   bzero (trans, sizeof(*trans));
 
    if (len > 0) {
-//    int offset = 0;
-
       trans->hdr.type              = ARGUS_TRANSPORT_DSR;
       trans->hdr.subtype           = ARGUS_SRCID | ARGUS_SEQ;
       trans->hdr.argus_dsrvl8.qual = type;
+      int offset                   = 0;
 
       switch (type & ~ARGUS_TYPE_INTERFACE) {
          case ARGUS_TYPE_STRING: break;
-//       case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
-//       case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
-//       case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
-//       case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
+         case ARGUS_TYPE_INT:    offset = sizeof(unsigned int); break;
+         case ARGUS_TYPE_IPV4:   offset = sizeof(unsigned int); break;
+         case ARGUS_TYPE_IPV6:   offset = sizeof(trans->srcid.a_un.ipv6); break;
+         case ARGUS_TYPE_UUID:   offset = sizeof(trans->srcid.a_un.uuid); break;
       }
 
       setArgusID(&trans->srcid, ptr, len, type);
 
-      trans->hdr.argus_dsrvl8.len  = (tsize + 3)/4;
+      trans->hdr.argus_dsrvl8.len  = (offset + 3)/4 + 1;
 
       if (type & ARGUS_TYPE_INTERFACE) {
          trans->hdr.subtype |= ARGUS_TYPE_INTERFACE;
@@ -32152,6 +32274,7 @@ getArgusIDType(struct ArgusParserStruct *parser)
 }
 
 
+
 /*
    SourceID Syntax:
       [type:/]sid[/inf]
@@ -32196,13 +32319,13 @@ ArgusCommonParseSourceID(struct ArgusAddrStruct *srcid,
          optarg = ptr;
 
          if (!(strcmp(prefix, "uuid"))) {
-//          type = ARGUS_TYPE_UUID;
+            type = ARGUS_TYPE_UUID;
          } else
          if (!(strcmp(prefix, "ipv4"))) {
             type = ARGUS_TYPE_IPV4;
          } else
          if (!(strcmp(prefix, "ipv6"))) {
-//          type = ARGUS_TYPE_IPV6;
+            type = ARGUS_TYPE_IPV6;
          } else
          if (!(strcmp(prefix, "int"))) {
             type = ARGUS_TYPE_INT;
@@ -32248,344 +32371,6 @@ ArgusCommonParseSourceID(struct ArgusAddrStruct *srcid,
                unsigned int saddr = ntohl(srcid->a_un.ipv4);
                slen = sizeof(srcid->a_un.ipv4);
                bcopy(&saddr, buf, slen);
-               type = ARGUS_TYPE_IPV4;
-               break;
-            }
-            case ARGUS_TYPE_IPV6: {
-//             slen = sizeof(srcid->a_un.ipv6);
-//             bcopy(&srcid->a_un.ipv6, buf, slen);
-//             type = ARGUS_TYPE_IPV6;
-               break;
-            }
-
-            case ARGUS_TYPE_UUID  : {
-//             slen = sizeof(srcid->a_un.uuid);
-//             bcopy(&srcid->a_un.uuid, buf, slen);
-//             type = ARGUS_TYPE_UUID;
-               break;
-            }
-         }
-
-      } else
-      if (*optarg == '"') {
-         optarg++;
-         if (optarg[strlen(optarg) - 1] == '\n')
-            optarg[strlen(optarg) - 1] = '\0';
-         if (optarg[strlen(optarg) - 1] == '\"')
-            optarg[strlen(optarg) - 1] = '\0';
-
-         strncpy((char *) buf, optarg, sizeof(buf) - 1);
-         slen = strlen((char *) buf);
-         type = ARGUS_TYPE_STRING;
-      } else
-// 
-//    uuid
-//
-      if (strchr(optarg, '-')) {
-         if (strlen(optarg) == 36) {
-            const char *cptr = (const char *) optarg;
-            int i;
-
-            for (i = 0; i < 16; i++) {
-               sscanf((const char *) cptr, "%2hhx", &buf[i]);
-               cptr += 2;
-               if (*cptr == '-') cptr++;
-            }
-            slen = 16;
-            type = ARGUS_TYPE_UUID;
-         }
-      } else
-      if (strchr(optarg, '.')) {
-         int done = 0;
-
-#if defined(HAVE_INET_ATON)
-         struct in_addr pin;
- 
-         if (inet_aton(optarg, &pin)) {
-            bcopy(&pin.s_addr, (char *)buf, 4);
-            slen = 4;
-            done++;
-         }
-#else 
-#if defined(HAVE_GETADDRINFO)
-         struct addrinfo *host, hints;
-
-         bzero(&hints, sizeof(hints));
-         hints.ai_family   = AF_INET;
-         hints.ai_flags    = AI_NUMERICHOST;
-
-         if ((retn = getaddrinfo(optarg, NULL, NULL, &host)) == 0) {
-            struct addrinfo *hptr = host;
-            do {
-               switch (host->ai_family) {
-                  case AF_INET:  {
-                     struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
-                     bcopy ((char *)&sa->sin_addr, (char *)buf, 4);
-                     slen = 4;
-                     type = ARGUS_TYPE_IPV4;
-                     done++;
-                     break;
-                  }
-               }
-               host = host->ai_next;
-            } while (host != NULL);
-            freeaddrinfo(hptr);
-
-         }
-
-#else  // HAVE_GETADDRINFO
-         struct hostent *host;
-         if ((host = gethostbyname(optarg)) != NULL) {
-            if ((host->h_addrtype == 2) && (host->h_length == 4)) {
-               bcopy ((char *) *host->h_addr_list, (char *)buf, host->h_length);
-               slen = 4;
-            }
-         }
-#endif
-#endif
-         type = ARGUS_TYPE_IPV4;
-
-      } else
-      if (strchr(optarg, ':')) {
-         type = ARGUS_TYPE_IPV6;
-         slen = strlen(optarg);
-      } else
-      if (isalnum((int)*optarg)) {
-         long value;
-         char *tptr;
-         if ((value = strtol(optarg, (char **)&tptr, 10)) != 0) {
-            slen = strlen(optarg);
-            if (tptr == &optarg[slen]) {
-               int num = value;
-               bcopy(&num, buf, sizeof(num));
-               slen = sizeof(num);
-               type = ARGUS_TYPE_INT;
-            }
-         }
-      }
-
-      if (iptr != NULL) {
-         int len;
-         if (src && strcmp(iptr, "inf") == 0) {
-            char *inf = getArgusManInf(src);
-            if (inf != NULL) {
-               if ((len = strlen(inf)) > 4) {
-                  bcopy(inf, &buf[slen], 3);
-                  if (isdigit((int)inf[len - 1]))
-                     buf[slen+3] = inf[len - 1];
-                  else
-                     buf[slen+3] = inf[3];
-               } else
-                  bcopy(inf, &buf[slen], len);
-               slen += len;
-                type |= ARGUS_TYPE_INTERFACE;
-            }
-         } else {
-            len = strlen(iptr);
-            bcopy(iptr, &buf[slen], len);
-            slen += len;
-            type |= ARGUS_TYPE_INTERFACE;
-         }
-      }
-
-      if (type) {
-         if (src)
-            setParserArgusID (src, buf, slen, type);
-         else
-            setArgusID (srcid, buf, slen, type);
-      } else
-         retn = 1;
-
-      free (sptr);
-      if (retn > 0)
-         ArgusLog (LOG_ERR, "Srcid format error: %s\n", sptr);
-   }
-
-   return type;
-}
-
-void
-ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
-{
-   (void)ArgusCommonParseSourceID(&src->trans.srcid, src, optarg);
-}
-
-void
-setArgusManInf (struct ArgusParserStruct *src, char *optarg)
-{
-   if (src->RaMarInfName != NULL) {
-      free (src->RaMarInfName);
-      src->RaMarInfName = NULL;
-   }
-
-   if (optarg && strlen(optarg))
-      src->RaMarInfName = strdup(optarg);
-}
-
-char *
-getArgusManInf (struct ArgusParserStruct *src) 
-{
-   return (src->RaMarInfName);
-}
-
-void
-setArgusID(struct ArgusParserStruct *parser, void *ptr, int len, unsigned int type)
-{
-   struct ArgusTransportStruct *trans = &parser->trans;
-
-   bzero (trans, sizeof(*trans));
-
-   if (len > 0) {
-      int offset                   = 0;
-      trans->hdr.type              = ARGUS_TRANSPORT_DSR;
-      trans->hdr.subtype           = ARGUS_SRCID | ARGUS_SEQ;
-      trans->hdr.argus_dsrvl8.qual = type;
-
-      switch (type & ~ARGUS_TYPE_INTERFACE) {
-         case ARGUS_TYPE_STRING: bcopy((char *)ptr, &trans->srcid.a_un.str, 4); break;
-         case ARGUS_TYPE_INT:    trans->srcid.a_un.value = atoi((char *)ptr); offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV4:   trans->srcid.a_un.ipv4 = ntohl(*(unsigned int *)ptr); offset = sizeof(unsigned int); break;
-         case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &trans->srcid.a_un.ipv6, 16); offset = sizeof(trans->srcid.a_un.ipv6); break;
-         case ARGUS_TYPE_UUID:  bcopy((char *)ptr, &trans->srcid.a_un.uuid, 16); offset = sizeof(trans->srcid.a_un.uuid); break;
-      }
-
-      trans->hdr.argus_dsrvl8.len  = (offset + 3)/4 + 1;
-
-      if (type & ARGUS_TYPE_INTERFACE) {
-         char *iptr = NULL, *buf = NULL;
-         trans->hdr.subtype |= ARGUS_TYPE_INTERFACE;
-         iptr = (char *)ptr + offset;
-         buf = (char *)&trans->srcid + offset;
-         bcopy(iptr, (char *)buf, 4);
-         trans->hdr.argus_dsrvl8.len  += 1;
-      }
-   }
-
-   parser->ArgusIDType = type;
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (1, "setArgusID(%p, %p, %p, 0x%x) done", parser, ptr, type);
-#endif
-}
-
-int
-getArgusID(struct ArgusParserStruct *parser, struct ArgusAddrStruct *addr)
-{
-   int retn = 0;
-
-   if ((parser != NULL) && (addr != NULL)) {
-      bcopy((char *)&parser->trans.srcid, (char *)addr, sizeof(*addr));
-      retn = 1;
-   }
-#ifdef ARGUSDEBUG
-   ArgusDebug (7, "getParserArgusID(%p, %p) done\n", parser, addr);
-#endif
-   return (retn);
-}
-
-unsigned int
-getArgusIDType(struct ArgusParserStruct *parser)
-{
-#ifdef ARGUSDEBUG
-   ArgusDebug (7, "getArgusIDType(%p) done\n", parser);
-#endif
-
-   return (parser->ArgusIDType);
-}
-
-
-
-/*
-   SourceID Syntax:
-      [type:/]sid[/inf]
-         where type can be:
-            int, str, ipv4, ipv6, uuid
-
-         where sid can be:
-            int, "string", ipv4, ipv6, uuid
-
-         where inf is:
-            char[4]
-*/
-
-void
-ArgusParseSourceID (struct ArgusParserStruct *src, char *optarg)
-{
-   struct ArgusTransportStruct *trans = &src->trans;
-   int retn = 0, type = 0, slen = 0, subsid = 0;
-   char *ptr = NULL, *sptr = NULL, *iptr = NULL;
-   unsigned char buf[32];
-   char *prefix = NULL;
-
-
-   if (optarg  == NULL)
-      return;
-
-   type = trans->hdr.argus_dsrvl8.qual;
-
-   bzero(buf, sizeof(buf));
-   if ((sptr = strdup(optarg)) != NULL) {
-      optarg = sptr;
-
-// process the optional type part.
-      if ((ptr = strstr(optarg, ":/")) != NULL) {
-         prefix = optarg;
-         *ptr++ = '\0'; *ptr++ = '\0';
-         optarg = ptr;
-
-         if (!(strcmp(prefix, "uuid"))) {
-            type = ARGUS_TYPE_UUID;
-         } else
-         if (!(strcmp(prefix, "ipv4"))) {
-            type = ARGUS_TYPE_IPV4;
-         } else
-         if (!(strcmp(prefix, "ipv6"))) {
-            type = ARGUS_TYPE_IPV6;
-         } else
-         if (!(strcmp(prefix, "int"))) {
-            type = ARGUS_TYPE_INT;
-         } else
-         if (!(strcmp(prefix, "str"))) {
-            type = ARGUS_TYPE_STRING;
-         }
-      }
-
-// test for dev srcid substitution
-      if (optarg[0] == '/') {
-         if (optarg[1] == '/') {
-            subsid = 1;
-            optarg++;
-         }
-      }
-
-// process the optional inf part. 
-      if ((iptr = strchr(optarg, '/')) != NULL) {
-         if (strlen(iptr + 1) > 4)
-            ArgusLog(LOG_ERR, "ArgusParseSourceID error: %s: interface len gt 4 char", optarg);
-         *iptr++ = '\0';
-      }
-
-// process the sid part.
-//    string
-//
-      if (subsid) {
-         switch (type & ~ARGUS_TYPE_INTERFACE) {
-            case ARGUS_TYPE_STRING: {
-               slen = strlen((const char *)&src->trans.srcid.a_un.str);
-               bcopy(&src->trans.srcid.a_un.str, buf, slen);
-               type = ARGUS_TYPE_STRING;
-               break;
-            }
-            case ARGUS_TYPE_INT: {
-               slen = sizeof(src->trans.srcid.a_un.value);
-               bcopy(&src->trans.srcid.a_un.value, buf, slen); 
-               type = ARGUS_TYPE_INT;
-               break;
-            }
-            case ARGUS_TYPE_IPV4: {
-               unsigned int saddr = ntohl(src->trans.srcid.a_un.ipv4);
-               slen = sizeof(src->trans.srcid.a_un.ipv4);
-               bcopy(&saddr, buf, slen); 
                type = ARGUS_TYPE_IPV4;
                break;
             }
@@ -33820,24 +33605,6 @@ ArgusTrimString (char *str)
    }
    return (retn);
 }
-
-char *
-ArgusEscapeString (char *str, char *buf, int len)
-{
-   char *sptr = str, *bptr = buf;
-   char *bend = buf + len;
-
-   while ((sptr != NULL) && (strlen(sptr) > 0) && (bptr < bend)) {
-      while ((*sptr != '\"') && *sptr != '\0' && (bptr < bend)) *bptr++ = *sptr++;
-      if (*sptr == '\"') {
-         *bptr++ = '\\';
-         *bptr++ = *sptr++;
-      }
-   }
-   *bptr++ = '\0';
-   return (buf);
-}
-
 
 
 #if !defined(HAVE_TIMEGM)

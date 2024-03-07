@@ -1,49 +1,49 @@
-#! /usr/bin/perl 
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#!@PERLBIN@
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
-#
-#  Modified from rahosts command
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
 # 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
 #  
 #   ra() based host use report
 #  
+#  $Id: //depot/gargoyle/clients/examples/rahosts/raips.pl#6 $
+#  $DateTime: 2015/07/08 12:33:29 $
+#  $Change: 3040 $
+# 
+
 #
 # Complain about undeclared variables
+
 use strict;
 
 # Used modules
-use POSIX;
 use Socket;
 
 # Global variables
-my $tmpfile = tmpnam();
-my $tmpconf = $tmpfile . ".conf";
-
 my $Program = `which ra`;
-my $Options = "-L -1 -nn -s saddr:32 daddr:32 proto -c , ";
-my $VERSION = "3.0.1";                
+my $Options = "-L -1 -n -s saddr:32 daddr:32 proto -c , ";
+my $VERSION = "5.0.1";                
 my @arglist = ();
 
 chomp $Program;
 
-my @args = ($Program, $Options, ' "'.join('" "',@ARGV).'"');
-our ($mode, %addrs, $saddr, $daddr, $addr, $proto);
-
+my @args = ($Program, $Options, @ARGV);
+our ($mode, %items, %addrs, $saddr, $daddr, $addr, $proto);
+my ($x, $y, $z, $w);
 
 # Start the program
 
@@ -52,19 +52,41 @@ while (my $data = <SESAME>) {
    chomp $data;
    ($saddr, $daddr, $proto) = split (/,/, $data);
 
-   if (!(($proto == 0) || ($proto > 255))) {
-#      if ((!($saddr eq "0.0.0.0")) && (!($daddr eq "0.0.0.0"))) {
-#         ($x, $y, $z, $w) = split(/\./, $daddr);
-         $addrs{$saddr} = 1;
-         $addrs{$daddr} = 1;
-#         $items{$saddr}{$x}{$y}{$z}{$w}++; 
-#      //}
+   if (!($proto eq "man")) {
+      if (!($saddr eq "0.0.0.0")) {
+         ($x, $y, $z, $w) = split(/\./, $saddr);
+         $addrs{$saddr}++; 
+         $items{$saddr}{$x}{$y}{$z}{$w}++;
+      }
+
+      if (!($daddr eq "0.0.0.0")) {
+         ($x, $y, $z, $w) = split(/\./, $daddr);
+         $addrs{$daddr}++; 
+         $items{$daddr}{$x}{$y}{$z}{$w}++;
+      }
    }
 }
 
 close(SESAME);
 
-for $addr ( sort keys (%addrs) ) 
+for $addr ( sort internet keys(%items) ) 
 {
-	print $addr,"\n";   
-}   
+   my $startseries = 0;
+   my $lastseries = 0;
+   my $count = $addrs{$addr};
+
+   print "$addr\n";
+}
+
+
+sub numerically { $a <=> $b };
+
+sub internet {
+   my @a_fields = split /\./, $a;
+   my @b_fields = split /\./, $b;
+
+   $a_fields[0] <=> $b_fields[0] ||
+   $a_fields[1] <=> $b_fields[1] ||
+   $a_fields[2] <=> $b_fields[2] ||
+   $a_fields[3] <=> $b_fields[3]
+}

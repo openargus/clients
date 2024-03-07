@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -53,7 +53,8 @@
 #include <rasplit.h>
 #include "rasql_common.h"
  
-#include <argus_mysql.h>
+#include "argus_mysql.h"
+#include <mysqld_error.h>
 
 char *RaDatabase = NULL;
 char **RaTables = NULL;
@@ -1051,20 +1052,23 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 
    if (ArgusFileQueue->count) {
       int i, cnt = ArgusFileQueue->count;
-      char *buf = NULL, *sbuf = NULL;
+      char *buf, *sbuf;
       MYSQL_RES *mysqlRes;
       struct stat statbuf;
       int retn, x;
 
-      if ((buf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-         ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
-      if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-         ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+      if ((buf = ArgusMalloc(1024)) == NULL)
+         ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+
+      if ((sbuf = ArgusMalloc(1024)) == NULL)
+         ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
 
       for (i = 0; i < cnt; i++) {
          if ((fstruct = (struct RaMySQLFileStruct *) ArgusPopQueue(ArgusFileQueue, ARGUS_LOCK)) !=  NULL) {
+            char *str = NULL;
 
-            sprintf (buf, "SELECT filename from Filename WHERE id = %d", fstruct->fileindex);
+            str = "SELECT filename from %s.Filename WHERE id = %d",
+            sprintf (buf, str, RaDatabase, fstruct->fileindex);
 
             if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
                ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
@@ -1072,19 +1076,20 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
             else {
                if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
                   if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-                     char *file = NULL, *filenamebuf = NULL, *directorypath = NULL;
-          
-                     if ((file = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
-                     if ((filenamebuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
-                     if ((directorypath = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-                        ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
-
                      while ((row = mysql_fetch_row(mysqlRes))) {
+                        char *file, *filenamebuf, *directorypath;
                         char *ptr = NULL;
                         unsigned long *lengths;
 
+                        if ((file = ArgusMalloc(MAXSTRLEN)) == NULL)
+                           ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+
+                        if ((filenamebuf = ArgusMalloc(MAXSTRLEN)) == NULL)
+                           ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+
+                        if ((directorypath = ArgusMalloc(MAXSTRLEN)) == NULL)
+                           ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+          
                         lengths = mysql_fetch_lengths(mysqlRes);
                         if (RaFormat) {
                            char fbuf[1024];
@@ -1139,19 +1144,33 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                            sprintf (filenamebuf, "%s/%s", ArgusArchiveBuf, file);
                         }
 
-                        if ((stat (filenamebuf, &statbuf)) != 0) {
-                           char *command, *compressbuf;
+                        if ((stat (filenamebuf, &statbuf)) != 0) {   // does file exist
+                           char *compressbuf = NULL;
+                           char *filepath =  NULL;
 
-                           if ((command = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-                              ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusCalloc error %s", strerror(errno));
+                           if ((filepath = ArgusMalloc(MAXSTRLEN)) == NULL)
+                              ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
 
-                           if ((compressbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-                              ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusCalloc error %s", strerror(errno));
+                           if (ArgusParser->RaTempFilePath != NULL)
+                              sprintf(filepath, "%s/%s", ArgusParser->RaTempFilePath, filenamebuf);
 
-                           sprintf (compressbuf, "%s.gz", filenamebuf);
-                           if ((stat (compressbuf, &statbuf)) == 0) {
-                              if ((fstruct->ostart >= 0) || (fstruct->ostop > 0)) {
-                                 sprintf (command, "gunzip %s", compressbuf);
+                           if ((stat (filepath, &statbuf)) != 0) {  // is file in temporary cache 
+
+                              if ((compressbuf = ArgusMalloc(MAXSTRLEN)) == NULL)
+                                 ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+
+                              sprintf (compressbuf, "%s.gz", filenamebuf);
+
+                              if ((stat (compressbuf, &statbuf)) == 0) {
+                                 if ((fstruct->ostart >= 0) || (fstruct->ostop > 0)) {
+                                    char *command =  NULL;
+
+                                    if ((command = ArgusMalloc(MAXSTRLEN)) == NULL)
+                                       ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
+
+                                    ArgusMkdirPath(filepath);
+
+                                    sprintf (command, "gunzip -c \"%s\" > \"%s\"", compressbuf, filepath);
 #ifdef ARGUSDEBUG
                                     ArgusDebug (2, "RaSQLProcessQueue: local decomression command %s\n", command);
 #endif
@@ -1170,31 +1189,27 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                                     int RaPort = ArgusParser->ArgusPortNum ?  ArgusParser->ArgusPortNum : ARGUS_DEFAULTPORT;
                                     char *command =  NULL;
 
-                           } else {
-                              if (RaHost) {
-                                 int RaPort = ArgusParser->ArgusPortNum ?  ArgusParser->ArgusPortNum : ARGUS_DEFAULTPORT;
+                                    if ((command = ArgusMalloc(MAXSTRLEN)) == NULL)
+                                       ArgusLog(LOG_ERR, "RaSQLProcessQueue: alloc error", strerror(errno));
 
-                                 if (RaRoleString != NULL)
-                                    sprintf (command, "/usr/local/bin/ra -nnS %s:%d%s/%s/%s -w %s", RaHost, RaPort, RaArchive, RaRoleString, file, filenamebuf);
-                                 else
-                                    sprintf (command, "/usr/local/bin/ra -nnS %s:%d%s/%s -w %s", RaHost, RaPort, RaArchive, file, filenamebuf);
+                                    if (RaRoleString != NULL)
+                                       sprintf (command, "\"%s/ra\" -S %s:%d%s/%s/%s -w %s", RaProgramPath, RaHost, RaPort, RaArchive, RaRoleString, file, filenamebuf);
+                                    else
+                                       sprintf (command, "\"%s/ra\" -S %s:%d%s/%s -w %s", RaProgramPath, RaHost, RaPort, RaArchive, file, filenamebuf);
 #ifdef ARGUSDEBUG
                                     ArgusDebug (2, "RaSQLProcessQueue: remote file caching command  %s\n", command);
 #endif
-                                 if (system(command) < 0)
-                                    ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
+                                    if (system(command) < 0)
+                                       ArgusLog(LOG_ERR, "RaSQLProcessQueue: system error", strerror(errno));
 
-                                 if (command != NULL)
                                     ArgusFree(command);
+                                 }
                               }
 
                            } else {
                               sprintf (filenamebuf, "%s", filepath);
                            }
-                           if (command != NULL)
-                              ArgusFree(command);
-                           if (compressbuf != NULL)
-                              ArgusFree(compressbuf);
+                           ArgusFree(filepath);
                         }
 
                         fstruct->filename = strdup (filenamebuf);
@@ -1202,9 +1217,6 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                         ArgusFree(filenamebuf);
                         ArgusFree(directorypath);
                      }
-                     if (file != NULL) ArgusFree(file);
-                     if (filenamebuf) ArgusFree(filenamebuf);
-                     if (directorypath != NULL) ArgusFree(directorypath);
                   }
 
                   mysql_free_result(mysqlRes);
@@ -1867,7 +1879,7 @@ ArgusCreateSQLSaveTable(char *table)
 {
    int retn = 0, cindex = 0, ind = 0, i, x, exists = 0;
    struct ArgusMaskStruct *ArgusMaskDefs = ArgusIpV4MaskDefs; 
-   char stable[256], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN - 32];
+   char stable[256], sbuf[MAXSTRLEN], kbuf[MAXSTRLEN];
 
    sprintf (stable, "%s", table);
 
@@ -1954,10 +1966,8 @@ ArgusCreateSQLSaveTable(char *table)
          }
       }
 
-      if (strlen(kbuf)) {
-         int sblen = strlen(sbuf);
-         snprintf (&sbuf[sblen], MAXSTRLEN - sblen, ", %s", kbuf);
-      }
+      if (strlen(kbuf))
+         sprintf (&sbuf[strlen(sbuf)], ", %s", kbuf);
 
       if (ArgusSOptionRecord)
          sprintf (&sbuf[strlen(sbuf)], ", record blob");

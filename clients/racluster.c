@@ -1,6 +1,6 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
@@ -132,8 +132,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             mode = mode->nxt;
          }
       }
-
-      parser->ArgusReverse = 1;
 
       if (parser->ArgusFlowModelFile) {
          if ((parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL)) == NULL)
@@ -726,6 +724,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   agg->rap = agg->drap;
 
                ArgusGenerateNewFlow(agg, ns);
+               agg->ArgusMaskDefs = NULL;
 
                if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
                   if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
@@ -878,8 +877,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusReverseRecord (ns);
                                           break;
                                        }
-                                       break;
                                     }
+                                    break;
+                                 }
 
                                  case ARGUS_TYPE_IPV6: {
                                     switch (flow->ipv6_flow.ip_p) {
@@ -925,6 +925,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                              ArgusReverseRecord (ns);
                                           break;
                                        }
+                                    }
+                                    break;
+                                 }
 
                                  default: {
                                     double  nstime = ArgusFetchStartTime(ns);
