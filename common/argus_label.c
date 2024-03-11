@@ -2965,7 +2965,7 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
 {
    char *str, *ptr;
    char labelbuf[256], *label = NULL;
-   int retn = 1;
+   int retn = 1, fhl = 0;
 // int linenum = 0;
    char *banner = NULL;
    FILE *fd =  NULL;
@@ -2994,21 +2994,28 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
                      if ((sptr = strtok(&ptr[9], " \t\n")) != NULL)
                         RaReadAddressConfig (parser, labeler, sptr);
                   } else {
-                     if (banner == NULL) {
-                        if (strlen(ptr) > 2) {
-                           char *cptr = ptr + 1;
-                           int slen;
-                           while (isspace((int)*cptr)) cptr++;
-                           if ((slen = strlen(cptr)) > 0) {
-                              if (cptr[slen - 1] == '\n') cptr[slen - 1] = '\0';
-                              banner = strdup(cptr);
-                              if (strstr(banner, "firehol_")) {
-                                 snprintf(labelbuf, 256, "{\"firehol\":\"%s\" }", &banner[8]);
-                              } else {
-                                 snprintf(labelbuf, 256, "%s", banner);
+                     if (strlen(ptr) > 2) {
+                        char *cptr = ptr + 1;
+                        int slen;
+                        while (isspace((int)*cptr)) cptr++;
+                        if ((slen = strlen(cptr)) > 0) {
+                           if (cptr[slen - 1] == '\n') cptr[slen - 1] = '\0';
+                           if (strstr(cptr, "firehol_")) {
+                              snprintf(labelbuf, 256, "{\"firehol\":\"%s\" }", &cptr[8]);
+                              if (strstr(cptr, "firehol_level1")) {
+                                 fhl = 1;
+                              } else 
+                              if (strstr(cptr, "firehol_level2")) {
+                                 fhl = 2;
+                              } else 
+                              if (strstr(cptr, "firehol_level3")) {
+                                 fhl = 3;
+                              } else 
+                              if (strstr(cptr, "firehol_level4")) {
+                                 fhl = 4;
                               }
-                              label = labelbuf;
                            }
+                           label = labelbuf;
                         }
                      }
                   }
@@ -3019,7 +3026,13 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
                   if (strchr(ptr, '|')) {
                      RaInsertRIRTree (parser, labeler, ptr);
                   } else {
-                     RaInsertAddressTree (parser, labeler, ptr, label);
+                     if ((!strcmp(ptr, "10.0.0.0/8\n") && (fhl == 1)) ||
+                         (!strcmp(ptr, "127.0.0.0/8\n") && (fhl == 1)) ||
+                         (!strcmp(ptr, "192.168.0.0/16\n") && (fhl == 1)) ||
+                         (!strcmp(ptr, "169.254.0.0/16\n") && (fhl == 1)) ||
+                         (!strcmp(ptr, "224.0.0.0/3\n") && (fhl == 1))) {
+		     } else
+                        RaInsertAddressTree (parser, labeler, ptr, label);
                   }
                   break;
             }
