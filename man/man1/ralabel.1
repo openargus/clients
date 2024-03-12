@@ -15,7 +15,7 @@ and 3) flow filter, providing free form labels based on argus filter specicficat
 
 .SH SYNOPSIS
 .B ralabel
-\fB\-f\fP \fIaddress.file\fP [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+\fB\-f\fP \fIaddress.file\fP [-M \fBaddr\fP] [-m \fBmask\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
 .SH DESCRIPTION
 .IX  "ralabel command"  ""  "\fBralabel\fP \(em argus data"
 .LP
@@ -30,9 +30,17 @@ Ralabel, reads a number of standard IANA IP address file formats that
 specific IPv4 addresses, CIDR addresses and IPV4 prefix address specification.
 Examples of these file types are provided in ./support/Config.
 
-\fBralabel(1)\fP specific options are:
+.LP
+.SH OPTIONS
 .TP 4 4
 .BI \-f "\| label.strategy.specification.file\^"
+Provide a label specification file.
+.TP 4 4
+.BI \-M "\| addr\^"
+If the label specification is a simple address list, specify this option.
+.TP 4 4
+.BI \-m "\| saddr, daddr\^"
+For IANA address labeling, specify which address should be labeled (default saddr and daddr).
 
 .SH INVOCATION
 This invocation reads \fBargus(8)\fP data from \fBargusfile\fP and labels
