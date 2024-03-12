@@ -102,6 +102,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                if (parser->ArgusFlowModelFile) {
                   if (!(RaReadAddressConfig (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile) > 0))
                      ArgusLog (LOG_ERR, "ArgusNewLabeler: RaReadAddressConfig error");
+                  parser->ArgusFlowModelFile = NULL;
+		  parser->ArgusLabeler->RaLabelIanaAddress = 1;
                }
             } else
             if (!(strncasecmp (mode->mode, "debug.local", 10))) {
@@ -278,7 +280,6 @@ usage ()
 
 /*
 char *RaLabelProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int);
-
 
 char *
 RaLabelProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, unsigned int *addr, int type)
