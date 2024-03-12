@@ -23468,7 +23468,7 @@ etheraddr_class(struct ArgusParserStruct *parser, u_char *ep)
 // if (ep[0] & 0x02) { retn |= ARGUS_ETHER_SLAP_AAI; }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "etheraddr_class(%p, %p) returns %d", parser, ep, retn);
+   ArgusDebug (6, "etheraddr_class(%p, %p) returns %d", parser, ep, retn);
 #endif
    return retn;
 }
