@@ -402,10 +402,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                                  if (((label = (void *)argus->dsrs[ARGUS_LABEL_INDEX]) != NULL)) {
                                     char *slabel = label->l_un.label;
                                     if (strlen(slabel)) {
-                                       if (strstr(slabel, "firehol") && strstr(slabel, "level1")) argus->score = 9;
-                                       if (strstr(slabel, "firehol") && strstr(slabel, "level4")) argus->score = 10;
-                                       if (strstr(slabel, "firehol") && strstr(slabel, "level3")) argus->score = 11;
-                                       if (strstr(slabel, "firehol") && strstr(slabel, "level2")) argus->score = 12;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level4")) argus->score = 9;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level3")) argus->score = 10;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level2")) argus->score = 11;
+                                       if (strstr(slabel, "firehol") && strstr(slabel, "level1")) argus->score = 12;
                                        if (strstr(slabel, "esoc")) argus->score = 12;
                                     }
                                  } else {
@@ -523,7 +523,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                    */
                   if ((RaAnnualProcess == NULL) && (RaMonthlyProcess == NULL) && (argus->dsrs[ARGUS_SCORE_INDEX] == NULL)) {
                   } else {
-                     argus->score = 0;
+//                   argus->score = 0;
                   }
 
                   for (pass = 0; pass < 2; pass++) {
