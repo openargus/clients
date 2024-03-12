@@ -151,6 +151,7 @@ int RaPrintLabelTreeDebug = 0;
 #define RALABEL_PRINT_LOCALONLY			23
 #define RALABEL_BIND_NON_BLOCKING		24
 #define RALABEL_DNS_NAME_CACHE_TIMEOUT		25
+#define RALABEL_FIREHOL_FILES			27
 
 char *RaLabelResourceFileStr [] = {
    "RALABEL_IANA_ADDRESS=",
@@ -179,6 +180,7 @@ char *RaLabelResourceFileStr [] = {
    "RALABEL_PRINT_LOCALONLY=",
    "RALABEL_BIND_NON_BLOCKING=",
    "RALABEL_DNS_NAME_CACHE_TIMEOUT=",
+   "RALABEL_FIREHOL_FILES=",
 };
 
 
@@ -296,6 +298,84 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         if (!(RaReadAddressConfig (parser, labeler, optarg) > 0))
                            ArgusLog (LOG_ERR, "RaLabelParseResourceFile: RaReadAddressConfig error");
                         break;
+
+                     case RALABEL_FIREHOL_FILES: {
+/*
+
+            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
+            glob_t globbuf;
+
+            bzero (strbuf, MAXSTRLEN);
+            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+
+            if (strlen(strbuf) > 0) {
+               struct ArgusRecordStruct *ns = NULL;
+
+               ArgusDeleteFileList(ArgusParser);
+               while ((ptr = strtok(str, " ")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE;
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", ptr, 6))) {
+                     if (parser->readDbstr != NULL)
+                        free(parser->readDbstr);
+                     parser->readDbstr = strdup(ptr);
+                     type = ARGUS_DBASE_SOURCE;
+                     ptr += 6;
+                  } else
+#endif
+                  if (!(strncmp ("cisco:", ptr, 6))) {
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("jflow:", ptr, 6))) {
+                     type = ARGUS_JFLOW_DATA_SOURCE;
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("sflow:", ptr, 6))) {
+                     type = ARGUS_SFLOW_DATA_SOURCE;
+                     ptr += 6;
+                  }
+
+                  glob (ptr, 0, NULL, &globbuf);
+                  if (globbuf.gl_pathc > 0) {
+                     int i;
+                     for (i = 0; i < globbuf.gl_pathc; i++)
+                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], type, -1, -1);
+                  } else {
+                     char sbuf[2048];
+                     sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
+                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                  }
+                  str = NULL;
+               }
+               ArgusParser->RaTasksToDo = RA_ACTIVE;
+               ArgusParser->Sflag = 0;
+               while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(RaCursesProcess->queue, ARGUS_LOCK)) != NULL)  {
+                  if (ArgusSearchHitRecord == ns) {
+                     ArgusResetSearch();
+                  }
+                  ArgusDeleteRecordStruct (ArgusParser, ns);
+               }
+               ArgusEmptyHashTable(RaCursesProcess->htable);
+               if (ArgusParser->ns) {
+                  ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
+                  ArgusParser->ns = NULL;
+               }
+               
+               ArgusParser->RaClientUpdate.tv_sec = 0;
+               ArgusParser->status &= ~ARGUS_FILE_LIST_PROCESSED;
+               ArgusParser->ArgusLastTime.tv_sec  = 0;
+               ArgusParser->ArgusLastTime.tv_usec = 0;
+            }
+            break;
+ */
+
+
+                        if (!(RaReadAddressConfig (parser, labeler, optarg) > 0))
+                           ArgusLog (LOG_ERR, "RaLabelParseResourceFile: RaReadAddressConfig error");
+                        break;
+                     }
 
                      case RALABEL_IEEE_ADDRESS:
                         if (!(strncasecmp(optarg, "yes", 3)))
@@ -3026,7 +3106,8 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
                   if (strchr(ptr, '|')) {
                      RaInsertRIRTree (parser, labeler, ptr);
                   } else {
-                     if ((!strcmp(ptr, "10.0.0.0/8\n") && (fhl == 1)) ||
+                     if ((!strcmp(ptr, "0.0.0.0/8\n") && (fhl == 1)) ||
+                         (!strcmp(ptr, "10.0.0.0/8\n") && (fhl == 1)) ||
                          (!strcmp(ptr, "127.0.0.0/8\n") && (fhl == 1)) ||
                          (!strcmp(ptr, "192.168.0.0/16\n") && (fhl == 1)) ||
                          (!strcmp(ptr, "169.254.0.0/16\n") && (fhl == 1)) ||
