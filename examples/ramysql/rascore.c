@@ -729,6 +729,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         struct timeval nstvbuf, tstvbuf, *nstvp = &nstvbuf, *tstvp = &tstvbuf;
                         float tdur = RaGetFloatDuration (tns);
 
+                        process->ns = tns;
+
                         RaGetStartTime(argus,  nstvp);
                         RaGetStartTime(tns, tstvp);
 
@@ -741,7 +743,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 // First test if we've seen this before, so if the times are the same, then we're in baseline.
 
                         if (nstvp->tv_sec > tstvp->tv_sec) {
-                           int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_MONTH) ? 4 : ((tdur > SECONDS_IN_WEEK) ? 4 : 0)) : ((tdur > SECONDS_IN_WEEK) ? 4 : 0);
+                           int score = (pass == FIRST_PASS) ? ((tdur > SECONDS_IN_QUARTER) ? 4 : ((tdur > SECONDS_IN_MONTH) ? 4 : (tdur > SECONDS_IN_WEEK) ? 3 : 1)) : 0;
                            argus->score = argus->score > score ? argus->score : score;
                         } else {
                            if ((nstvp->tv_sec == tstvp->tv_sec) && (nstvp->tv_usec == tstvp->tv_usec)) {
@@ -752,7 +754,18 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         }
                      }
                   }
+
+                  if ((RaAnnualProcess->ns != NULL) && (RaMonthlyProcess->ns != NULL)) {
+                     float ydur = RaGetFloatDuration (RaAnnualProcess->ns);
+                     float mdur = RaGetFloatDuration (RaMonthlyProcess->ns);
+                     if (ydur == mdur) {
+                        argus->score = argus->score > 1 ? argus->score : 1;
+		     }
+		  }
+                  
                   RaSendArgusRecord(argus);
+                  RaAnnualProcess->ns = NULL; 
+		  RaMonthlyProcess->ns = NULL;
                }
             }
 
