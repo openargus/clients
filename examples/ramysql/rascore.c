@@ -64,7 +64,7 @@ char **RaTables = NULL;
 extern int ArgusTimeRangeStrategy;
 int ArgusScoreHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
 
-struct RaOutputProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *);
+struct RaOutputProcessStruct *RaScoreNewProcess(struct ArgusParserStruct *);
 
 struct RaOutputProcessStruct *RaAnnualProcess = NULL;
 struct RaOutputProcessStruct *RaMonthlyProcess = NULL;
@@ -745,7 +745,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                            argus->score = argus->score > score ? argus->score : score;
                         } else {
                            if ((nstvp->tv_sec == tstvp->tv_sec) && (nstvp->tv_usec == tstvp->tv_usec)) {
-                               argus->score = 1;
+                              if (argus->score == 0) {
+                                 argus->score = 1;
+                              }
                            }
                         }
                      }
@@ -1242,16 +1244,17 @@ RaSQLQueryTable (char *table, struct RaOutputProcessStruct *process)
       int i, slen = 0;
 
       for (i = 0; (ArgusTableColumnName[i] != NULL) && (i < ARGUSSQLMAXCOLUMNS); i++) {
-         if (!(strcmp("ltime", ArgusTableColumnName[i]))) {
-            timeField = "ltime";
-            break;
-         }
-         if (!(strcmp("stime", ArgusTableColumnName[i])))
-            timeField = "stime";
+//       if (!(strcmp("ltime", ArgusTableColumnName[i]))) {
+//          timeField = "ltime";
+//          break;
+//       }
+//       if (!(strcmp("stime", ArgusTableColumnName[i])))
+//          timeField = "stime";
       }
 
       if (timeField == NULL) 
-         timeField = "second";
+//       timeField = "second";
+         timeField = "stime";
 
       if ((slen = strlen(ArgusSQLStatement)) > 0) {
          snprintf (&ArgusSQLStatement[strlen(ArgusSQLStatement)], MAXSTRLEN - slen, " and ");
@@ -2066,14 +2069,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
             if (RaTables) {
                if (RaTables[0] != NULL) {
-                  if ((RaAnnualProcess = RaCursesNewProcess(parser)) == NULL)
-                     ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+                  if ((RaAnnualProcess = RaScoreNewProcess(parser)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
                   RaSQLQueryTable (RaTables[0], RaAnnualProcess);
                }
 
                if (RaTables[1] != NULL) {
-                  if ((RaMonthlyProcess = RaCursesNewProcess(parser)) == NULL)
-                     ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+                  if ((RaMonthlyProcess = RaScoreNewProcess(parser)) == NULL)
+                     ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
                   RaSQLQueryTable (RaTables[1], RaMonthlyProcess);
                }
 
@@ -2655,25 +2658,25 @@ ArgusCreateSQLSaveTable(char *table)
 
 
 struct RaOutputProcessStruct *
-RaCursesNewProcess(struct ArgusParserStruct *parser)
+RaScoreNewProcess(struct ArgusParserStruct *parser)
 {
    struct RaOutputProcessStruct *retn = NULL;
 
    if ((retn = (struct RaOutputProcessStruct *) ArgusCalloc (1, sizeof(*retn))) != NULL) {
       if ((retn->queue = ArgusNewQueue()) == NULL)
-         ArgusLog (LOG_ERR, "RaCursesNewProcess: ArgusNewQueue error %s\n", strerror(errno));
+         ArgusLog (LOG_ERR, "RaScoreNewProcess: ArgusNewQueue error %s\n", strerror(errno));
 
       if ((retn->delqueue = ArgusNewQueue()) == NULL)
-         ArgusLog (LOG_ERR, "RaCursesNewProcess: ArgusNewQueue error %s\n", strerror(errno));
+         ArgusLog (LOG_ERR, "RaScoreNewProcess: ArgusNewQueue error %s\n", strerror(errno));
 
       if ((retn->htable = ArgusNewHashTable(0x100000)) == NULL)
-         ArgusLog (LOG_ERR, "RaCursesNewProcess: ArgusCalloc error %s\n", strerror(errno));
+         ArgusLog (LOG_ERR, "RaScoreNewProcess: ArgusCalloc error %s\n", strerror(errno));
 
    } else
-      ArgusLog (LOG_ERR, "RaCursesNewProcess: ArgusCalloc error %s\n", strerror(errno));
+      ArgusLog (LOG_ERR, "RaScoreNewProcess: ArgusCalloc error %s\n", strerror(errno));
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (3, "RaCursesNewProcess(0x%x) returns 0x%x\n", parser, retn);
+   ArgusDebug (3, "RaScoreNewProcess(0x%x) returns 0x%x\n", parser, retn);
 #endif
    return (retn);
 }
