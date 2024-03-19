@@ -1185,6 +1185,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                                  }
 
                               } else {
+/*
                                  if (RaHost) {
                                     int RaPort = ArgusParser->ArgusPortNum ?  ArgusParser->ArgusPortNum : ARGUS_DEFAULTPORT;
                                     char *command =  NULL;
@@ -1204,6 +1205,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 
                                     ArgusFree(command);
                                  }
+*/
                               }
 
                            } else {
