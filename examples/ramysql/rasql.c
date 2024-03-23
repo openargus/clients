@@ -825,7 +825,7 @@ void
 RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
 {
    MYSQL_RES *mysqlRes;
-   char *timeField = NULL;
+   char *timeField = "stime";
    char *buf, *sbuf;
    int i, slen = 0;
    int retn, x, count = 0;
@@ -838,7 +838,7 @@ RaSQLQueryDatabaseTable (char *table, unsigned int start, unsigned int stop)
 
    for (i = 0; (ArgusTableColumnName[i] != NULL) && (i < ARGUSSQLMAXCOLUMNS); i++) {
       if (!(strcmp("ltime", ArgusTableColumnName[i]))) {
-         timeField = "ltime";
+//       timeField = "ltime";
       }
       if (!(strcmp("stime", ArgusTableColumnName[i]))) {
          timeField = "stime";
