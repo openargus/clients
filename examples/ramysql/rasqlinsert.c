@@ -260,6 +260,7 @@ struct RaMySQLProbeTable {
  
 
 static void *ArgusOutputProcess (void *);
+int ArgusOutputClosed = 0;
 
 #endif
 
@@ -353,6 +354,9 @@ main(int argc, char **argv)
          parser->readDbstr = NULL; //if writing we'll need to read the same db
       }
 
+      if ((pthread_create(&RaOutputThread, NULL, ArgusOutputProcess, ArgusParser)) != 0)
+         ArgusLog (LOG_ERR, "ArgusOutputProcess() pthread_create error %s\n", strerror(errno));
+
 #if defined(ARGUS_MYSQL)
       RaMySQLInit(RaSQLRewrite ? 2 : 1);
       ArgusParseInit(parser, NULL);
@@ -398,9 +402,6 @@ main(int argc, char **argv)
       }
 #endif
 
-      if ((pthread_create(&RaOutputThread, NULL, ArgusOutputProcess, ArgusParser)) != 0)
-         ArgusLog (LOG_ERR, "ArgusOutputProcess() pthread_create error %s\n", strerror(errno));
- 
       if (RaSQLRewrite) {
          if (parser->tflag) {
             RaTables = ArgusCreateSQLTimeTableNames(parser, &ArgusTableStartSecs,
@@ -570,6 +571,10 @@ ArgusOutputProcess (void *arg)
 
    ArgusOutputProcessClose(parser);
 
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "ArgusOutputProcess() done!");
+#endif
+
 #if defined(ARGUS_THREADS)
    pthread_exit (NULL);
 #else
@@ -732,6 +737,8 @@ ArgusOutputProcessClose(struct ArgusParserStruct *parser)
    if (ArgusParser->RaCursesMode)
       pthread_join(RaCursesInputThread, NULL);
 #endif
+
+   ArgusOutputClosed++;
 }
 
 int 
@@ -1352,7 +1359,10 @@ ArgusMySQLInsertProcess (void *arg)
       }
    }
 
-   pthread_join(RaOutputThread, NULL);
+   while (!(ArgusOutputClosed)) {
+      const struct timespec ts = {0, 200000000};
+      nanosleep(&ts, NULL);
+   }
 
    if ((ArgusSQLInsertQueryList != NULL) && (ArgusSQLInsertQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLInsertQueryList);
@@ -1457,7 +1467,10 @@ ArgusMySQLSelectProcess (void *arg)
       }
    }
 
-   pthread_join(RaOutputThread, NULL);
+   while (!(ArgusOutputClosed)) {
+      const struct timespec ts = {0, 200000000};
+      nanosleep(&ts, NULL);
+   }
 
    if ((ArgusSQLSelectQueryList != NULL) && (ArgusSQLSelectQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLSelectQueryList);
@@ -1541,7 +1554,10 @@ ArgusMySQLUpdateProcess (void *arg)
       }
    }
 
-   pthread_join(RaOutputThread, NULL);
+   while (!(ArgusOutputClosed)) {
+      const struct timespec ts = {0, 200000000};
+      nanosleep(&ts, NULL);
+   }
 
    if ((ArgusSQLUpdateQueryList != NULL) && (ArgusSQLUpdateQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLUpdateQueryList);
@@ -1624,7 +1640,10 @@ ArgusMySQLDeleteProcess (void *arg)
       }
    }
 
-   pthread_join(RaOutputThread, NULL);
+   while (!(ArgusOutputClosed)) {
+      const struct timespec ts = {0, 200000000};
+      nanosleep(&ts, NULL);
+   }
 
    if ((ArgusSQLDeleteQueryList != NULL) && (ArgusSQLDeleteQueryList->count > 0))
       ArgusProcessSQLQueryList(parser, ArgusSQLDeleteQueryList);
