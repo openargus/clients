@@ -1,0 +1,74 @@
+/*
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software, released under the GNU General
+ * Public License; you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software
+ * Foundation; either version 3, or any later version.
+ *
+ * Other licenses are available through QoSient, LLC.
+ * Inquire at info@qosient.com.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ *  radns -  decode argus record DNS captured user data
+ *           and generate trees to hold the data       
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+Mon May 29 14:51:01 EDT 2017
+
+Added radnsdb.pl as a helper application for using radns data from mysql.
+Radnsdb is passed a date, and it reads dns transactions from the appropriate
+dnsFlows/dns_%Y_%m_%d table, and writes json strings into a dnsNames database.
+
+This dnsNames database, can be used by the dnsq.pl to find json data for specific
+IP addresses for any given date.
+
+
+Used this to populate the dnsNames database from an existing dnsFlows database.
+
+for i in `mysql -u root dnsFlows --skip-column-names -Be "show tables"`; do echo $i; radnsdb -t `echo $i | awk 'BEGIN{FS="_"}{print $2"/"$3"/"$4}'` -w mysql://root@localhost/dnsNames/$i; done
+
+
+This directory contains source code for radns.1, an example program that
+uses the user data found in DNS argus records to track if the addresses
+in the flows were learned from DNS.
+
+The basic idea is that argus has parsed all the traditional network
+headers, TCP, UDP, ICMP, etc ... and the DNS payload data that argus 
+captures is a binary copy of the complete data in the packet found 
+after these headers.  Using parsing engines, such as tcpdump or wireshark's,
+the DNS requests and responses are check for protocol conformity, and
+then categorized by DNS content.
+
+The addresses which were advertised as authoratative answers, are
+tracked and all flow records received has their addresses checked to see
+if they were learned through DNS.
+
+Because flows can live much longer than the DNS references to the addresses
+being used, you only really want to check the START records to see if there
+is a DNS cache at the time of the start of transaction.
+
+In gargoyle's end system approach for Linux/Mac OS X, we also have argus
+events to tell us if there are long lived flows to expect, which we can
+use to notify the DNS tracking engine that some of the flows addresses
+need not be searched.
+
+Because gargoyles argus may not capture the complete packet payload, the
+routines do ensure that they deal with truncation well.  
+
+Radns.1 is an example, and as such, you should be able to add your own
+decoders, pretty quickly.  
+
+
+See the manpage for radns.1 for details.

@@ -1,0 +1,125 @@
+/*
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
+ * All rights reserved.
+ *
+ * This program is free software, released under the GNU General
+ * Public License; you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software
+ * Foundation; either version 3, or any later version.
+ *
+ * Other licenses are available through QoSient, LLC.
+ * Inquire at info@qosient.com.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ */
+
+/* 
+ * $Id: //depot/gargoyle/clients/examples/radns/NOTES#4 $
+ * $DateTime: 2016/04/01 14:24:35 $
+ * $Change: 3130 $
+ */
+
+Thu Mar 31 19:38:41 EDT 2016
+With a DNS transaction database sitting on a laptop, like this one, its trivial to build the list of client / DNS server relationships.
+This command provides a daily tally, which eliminates aggregations that span breaks in service.  So we see the comings and goings.
+We see that this laptop was allocated different IP addrs, and talked to different DNS servers in the new networks.
+
+Basic DNS accounting will show that some of the resolutions change based on the DNS server and the home network.
+
+rasql -r mysql://root@localhost/dns/%Y_%m_%d -M time 1d -t -14d -w - | rabins -M time 1d  -m srcid inf saddr daddr proto dport -w - | rasort -m stime -s -srcid
+            StartTime        Dur      Flgs  Proto            SrcAddr  Sport   Dir            DstAddr  Dport  SrcPkts  DstPkts     SrcBytes     DstBytes State 
+03/18.00:22:48.410243 4142.3872*  e           udp       192.168.0.78          <->       192.168.0.66.53          513      511        42985       185365   CON
+03/18.10:37:46.108046 45575.742*  e           udp          10.0.1.38          <->           10.0.1.1.53         8021     7988       667927      1118328   CON
+03/19.13:59:20.410744 35973.445*  e           udp          10.0.1.38          <->           10.0.1.1.53        11987    11987       977149      1762755   CON
+03/20.00:00:08.543964 74673.625*  e           udp          10.0.1.38          <->           10.0.1.1.53         9466     9453       781105      1319510   CON
+03/21.10:06:59.904056 2386.1457*  e           udp          10.0.1.38          <->           10.0.1.1.53          243      243        20026        31968   CON
+03/21.13:48:51.475178 33509.484*  e           udp       192.168.0.78          <->       192.168.0.66.53         1480     1451       129102       741819   CON
+03/22.00:07:24.919227 23822.275*  e           udp       192.168.0.78          <->       192.168.0.66.53          113      112         9606        50924   CON
+03/22.09:00:34.336894 609.724792  e           udp     172.19.131.157          <->       172.19.134.2.53          267      258        22666        87137   CON
+03/22.11:36:22.997619 459.291687  e           udp     10.252.171.239          <->      156.154.70.26.53          236      235        19409        47256   CON
+03/22.13:36:10.611201 16124.998*  e           udp     10.252.171.252          <->      156.154.70.26.53         1380     1363       112310       267655   CON
+03/22.16:02:27.487346  12.652418  e           udp     10.252.171.252          <->      156.154.71.26.53            2        1          152           76   CON
+03/22.22:30:02.762646 5054.0805*  e           udp       172.20.11.86          <->            4.2.2.1.53          523      434        42832       130961   CON
+03/23.01:30:00.883190 25563.740*  e           udp       172.20.11.86          <->            4.2.2.1.53          183      182        15291        68331   CON
+03/23.09:45:14.415475 20455.009*  e           udp     10.252.171.219          <->      156.154.70.26.53          594      590        49344       111163   CON
+03/23.13:06:16.666636  19.556334  e           udp     10.252.171.242          <->      156.154.70.26.53           26       26         2247         4877   CON
+03/23.17:49:58.911291 1660.3017*  e           udp     172.19.131.162          <->       172.19.134.2.53          380      329        33310       116424   CON
+03/23.20:00:43.143522 6646.7993*  e           udp       192.168.0.78          <->       192.168.0.66.53          297      286        24418       144963   CON
+03/24.00:51:31.090033   5.563560  e           udp       192.168.0.78          <->       192.168.0.66.53           20       20         1658         9712   CON
+03/25.00:00:00.186298 2053.7980*  e           udp       192.168.0.78          <->       192.168.0.66.53           24       22         2034         8668   CON
+03/26.00:32:40.763871 82656.609*  e           udp       172.20.2.203          <->         172.20.0.1.53           61       61         4964        20042   CON
+03/27.00:31:06.884698 38396.218*  e           udp       172.20.2.203          <->         172.20.0.1.53           88       87         7168        29158   CON
+03/28.13:37:19.597820 37317.742*  e           udp       192.168.0.78          <->       192.168.0.66.53         1168     1150        95373       586804   CON
+03/29.10:15:24.817796 45955.750*  e           udp          10.0.1.38          <->           10.0.1.1.53         3744     3741       318045       441804   CON
+03/30.10:03:05.810427 48760.503*  e           udp          10.0.1.38          <->           10.0.1.1.53         2614     2611       214297       342036   CON
+03/31.10:17:41.342607 33568.820*  e           udp          10.0.1.38          <->           10.0.1.1.53         1994     1990       165344       273436   CON
+
+Wed Mar 30 10:54:53 EDT 2016
+With a database of all the dns requests and responses, we can build the list of IP addresses
+learned from DNS, and the names associated with those addresses.
+
+We will want to build data structures that allow us to recognize aberrant requests and responses.
+radns.1 has the logic to find simple Kaminski style aberrations, answers for different names than
+requested (req / res mismatches).
+
+The types of aberrant behavior is:
+   1. new dns server
+   2. dns failure (potential indication of direct attack)
+   3. dns performance problems (possible indication of indirect attack)
+   4. the use of DNAME/CNAME and wildcarding to 'steer' names to alternate addresses
+   5. DNS delivering a different IP address  (incorrect ???)
+        How to determine what a different IP address is and that it maybe incorrect is
+        challenging, but very approachable.  For mobile assets, it is very interesting,
+        as local / private addresses can be provided for standard services.  This is,
+        of course, where the most potential problems can occur.  For example, most hosts
+        in the google.com TLD are resolved to authoritative Time Warner addresses 
+        when a device is attached to a TWC network.  This type of locally deployed
+        global services sets up for big time problems, which we can track with this deliverable.
+
+   6. the use of IP addresses without DNS involvement
+        this type of behavior is important as forensics data.  when there are aberrant uses
+        of IP addresses, understanding if an application was 'driven' to the IP address
+        by DNS is critical to understanding the nature of the aberrant use.
+        How applications 'learn' IP addresses that it uses is an "achilles heel" for abuse,
+        and the use of DNS/bind as a trusted source of information is a path for exploit.
+
+
+The ultimate test is to see that this IP address is incorrect for this name.
+
+
+Fri Mar 18 15:48:29 EDT 2016
+To provide for a good historical base for radns to operate, one strategy is to run this on the end system:
+   rasqlinsert -m none -S localhost -d -w mysql://root@localhost/dns/%Y_%m_%d -M time 1d - udp and port domain 
+
+And to generate, say  the last 24 hours time window for dns processing
+   rasql -r mysql://root@localhost/ratop/dns_%Y_%m_%d -M time 1d -t -1d
+
+This strategy provides us with the basic foundational data needed to maintain a DNS verification system.
+At some point, having a complete DNS archive is a bit of a burden, so we'll want to remove the complete transaction log and have a summarization log.
+
+
+Wed Mar 16 12:20:00 EDT 2016
+Seems that in order to minimize the output of radns alerts that addresses are not in the cache, we need to seed the cache from an historical dns transaction list, and to provide the argus-lsof events.
+
+The argus-lsof events are needed to be aware of persistent flows.  For TCP, DNS reference to a remote 
+node occurs at connection setup time.  So for some protocols, we only check when the flow is caused 
+by a START message.  If the connection is persistent (> 300 secs), then the DNS cache will timeout, 
+but the flow can have traffic on it.  As long as the remote address is in the cache, then we will 
+at least have some indication that there was a lookup at some time in the past.   If the cache 
+is pruned, and remote addresses of persistent connections are deleted, there is a real chance that 
+long lived flows will be miss reporte when they go active.  In this case, argus generates the status record
+as a START record, without the SYN or SYNACK.  It will do the same thing for UDP, ICMP, whatever.  So
+using the events list of open connections, can provide the hints needed to keep from deleting the
+remote address from the address list.
+
+An historical dns list is needed to seed the cache, as radns.1 can come up without seeing a DNS
+lookup that is cached in the system.  How far back to go ???  Maybe a day ...
+

@@ -552,6 +552,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/raconvert/Makefile
       ./examples/radbase/Makefile
       ./examples/radecode/Makefile
+      ./examples/radns/Makefile
       ./examples/radump/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
