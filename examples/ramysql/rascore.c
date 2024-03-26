@@ -755,7 +755,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      }
                   }
 
-                  if ((RaAnnualProcess->ns != NULL) && (RaMonthlyProcess->ns != NULL)) {
+                  if (((RaAnnualProcess != NULL) && (RaAnnualProcess->ns != NULL)) && 
+                      ((RaMonthlyProcess != NULL) && (RaMonthlyProcess->ns != NULL))) {
                      float ydur = RaGetFloatDuration (RaAnnualProcess->ns);
                      float mdur = RaGetFloatDuration (RaMonthlyProcess->ns);
                      if (ydur == mdur) {
@@ -1939,7 +1940,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (strcmp(RaDatabase, "inventory") == 0) {
                struct timeval now;
                struct tm tmval;
-               gettimeofday (&now, 0L);
+	       if (parser->startime_t.tv_sec != 0)
+                  now =  parser->startime_t;
+	       else
+                  gettimeofday (&now, 0L);
                localtime_r(&now.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
@@ -1949,7 +1953,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (strcmp(RaDatabase, "ipMatrix") == 0) {
                struct timeval now;
                struct tm tmval;
-               gettimeofday (&now, 0L);
+	       if (parser->startime_t.tv_sec != 0)
+                  now =  parser->startime_t;
+	       else
+                  gettimeofday (&now, 0L);
                localtime_r(&now.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
@@ -1959,7 +1966,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (strcmp(RaDatabase, "dnsMatrix") == 0) {
                struct timeval now;
                struct tm tmval;
-               gettimeofday (&now, 0L);
+	       if (parser->startime_t.tv_sec != 0)
+                  now =  parser->startime_t;
+	       else
+                  gettimeofday (&now, 0L);
                localtime_r(&now.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
