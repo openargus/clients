@@ -1912,7 +1912,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 // stored in parser->startime_t && parser->lasttime_t, and we support
 // wildcard options, so ..., the idea is that we need at some point to
 // calculate the set of tables that we'll search for records.  We
-// should do that here.
+// should do that here.  If startime_t is maxed out, then it has not
+// been initialized, so set both start and last time to now ...
+//
+      if (parser->startime_t.tv_sec == 0x7FFFFFFF) {
+         gettimeofday (&parser->startime_t, 0L);
+         parser->lasttime_t = parser->startime_t;
+      }
+
 //
 // So the actual table, datatbase, etc..., were set in the RaMySQLInit()
 // call so we can test some values here.
@@ -1927,7 +1934,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char RaMonthlyBaseLineTable[256];
          int n = 0;
 
-
          if (RaTable != NULL) {
             sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
             str = strdup(ArgusSQLTableNameBuf);
@@ -1938,39 +1944,24 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
 
             if (strcmp(RaDatabase, "inventory") == 0) {
-               struct timeval now;
                struct tm tmval;
-	       if (parser->startime_t.tv_sec != 0)
-                  now =  parser->startime_t;
-	       else
-                  gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
+               localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
                *ArgusSQLTableNameBuf = '\0';
 
             } else
             if (strcmp(RaDatabase, "ipMatrix") == 0) {
-               struct timeval now;
                struct tm tmval;
-	       if (parser->startime_t.tv_sec != 0)
-                  now =  parser->startime_t;
-	       else
-                  gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
+               localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
                *ArgusSQLTableNameBuf = '\0';
 
             } else
             if (strcmp(RaDatabase, "dnsMatrix") == 0) {
-               struct timeval now;
                struct tm tmval;
-	       if (parser->startime_t.tv_sec != 0)
-                  now =  parser->startime_t;
-	       else
-                  gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
+               localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
                *ArgusSQLTableNameBuf = '\0';
