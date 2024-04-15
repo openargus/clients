@@ -28848,7 +28848,7 @@ ArgusCheckTimeFormat (struct tm *tm, char *str)
       bzero (buf, sizeof(buf));
       strncpy (buf, str, 128);
 
-      if ((ptr = strpbrk (buf, "smhdMy")) != NULL) {
+      if ((ptr = strpbrk (buf, "smhdMyY")) != NULL) {
          if (tm->tm_year == 0) {
             time_t tsec = ArgusParser->ArgusGlobalTime.tv_sec;
             localtime_r(&tsec, tm);
@@ -32617,6 +32617,7 @@ setArgusEventDataRecord (struct ArgusParserStruct *src, char *ptr)
                      case 'w': interval *= 60 * 60 * 24 * 7; break;
                      case 'M': interval *= 60 * 60 * 24 * 30; break;
                      case 'y': interval *= 60 * 60 * 24 * 365; break;
+                     case 'Y': interval *= 60 * 60 * 24 * 365; break;
                   }
                }
                elem++;

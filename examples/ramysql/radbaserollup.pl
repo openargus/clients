@@ -64,6 +64,7 @@ my $filter      = $query->param('fi');
 my $mode        = $query->param('mo');
 
 my $debug       = 0;
+my $dryrun      = 0;
 my $quiet       = 0;
 my $force       = 0;
 my $done        = 0;
@@ -82,6 +83,7 @@ ARG: while (my $arg = shift(@ARGV)) {
     if (!$done) {
       for ($arg) {
          s/^-debug$//    && do { $debug++; next ARG; };
+         s/^-dryrun$//   && do { $dryrun++; next ARG; };
          s/^-db$//       && do { $database = shift(@ARGV); next ARG; };
          s/^-dbase$//    && do { $database = shift(@ARGV); next ARG; };
          s/^-force$//    && do { $force++; next ARG; };
@@ -156,59 +158,37 @@ my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
 # Now generate yearly and monthly tables
 
 foreach my $i (0 .. $#databases) {
-   my ($db, $table, $keys, $fields) = @{$databases[$i]};
+   my ($dbase, $table, $keys, $fields) = @{$databases[$i]};
 
-   print "DEBUG: radbaserollup: processing db:$db dbase:'$database'\n" if $debug;
+   print "DEBUG: radbaserollup: processing db:$dbase dbase:'$database'\n" if $debug;
 
-   if (($database eq "") || ($database eq $db)) {
+   if (($database eq "") || ($database eq $dbase)) {
       my %hash = ();
 
       print "DEBUG: radbaserollup: processing dbase:'$database'\n" if $debug;
 
-      my @tables = RaDbaseRollupGetTables($db, $stime, $etime);
-
-      foreach my $tbl (keys %annualTables) {
-         drop_table( $dbh, $tbl );
-      }
+      RaDbaseRollupGetTables($dbase, $stime, $etime);
 
       foreach my $tbl (keys %monthlyTables) {
-         drop_table( $dbh, $tbl );
+         my ($class, $year, $month) = split('_', $tbl);
+
+         print "DEBUG: process db:$dbase year:$year month:$month tbl:$tbl keys:$keys fields:$fields\n" if $debug;
+	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m_%d -M time 1d -t ".$year."/".$month."/01+1M -M nocorrect -w - | $racluster -m smac saddr sid inf -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
+
+         print "DEBUG: $cmd \n" if $debug;
+         if ($dryrun == 0) {
+              `$cmd`;
+         }
       }
+      foreach my $tbl (keys %annualTables) {
+         my ($class, $year) = split('_', $tbl);
+         print "DEBUG: process db:$dbase year:$year tbl:$tbl keys:$keys fields:$fields\n" if $debug;
+	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m -M time 1M -t ".$year."+1y -M nocorrect -w - | $racluster -m smac saddr sid inf -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
 
-      foreach my $i (0 .. $#tables) {
-        my ($dbase, $table, $monthly, $annual, $date) = @{$tables[$i]};
-        my ($db, $tbl, $keys, $fields);
-        my $found = 0;
-
-        foreach my $i (0 .. $#databases) {
-           ($db, $tbl, $keys, $fields) = @{$databases[$i]};
-           if ($db eq $dbase) {
-              $found = 1;
-              last;
-           }
-        }
-
-        if ($found > 0) {
-           print "DEBUG: process db:$dbase table:$table annual:$annual monthly:$monthly date:$date\n" if $debug;
-
-           my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$table." -M nocorrect -w ".$tmpfile . $filter;
-           print "DEBUG: $cmd \n" if $debug;
-           `$cmd`;
-
-           if (-e $tmpfile) {
-              my $minsert = "$rasqlinsert -XM cache time 1M -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$monthly." -s ".$fields;
-              my $yinsert = "$rasqlinsert -XM cache time 1y -r ".$tmpfile." -M nocorrect -m $keys -w mysql://root\@localhost/".$db."/".$annual." -s ".$fields;
-
-              print "DEBUG: $minsert \n" if $debug;
-              `$minsert`;
-
-              print "DEBUG: $yinsert \n" if $debug;
-              `$yinsert`;
-
-              print "DEBUG: rm -f $tmpfile\n" if $debug;
-              `rm -f $tmpfile`;
-           }
-        }
+         print "DEBUG: $cmd \n" if $debug;
+         if ($dryrun == 0) {
+              `$cmd`;
+         }
       }
    }
 }
@@ -257,90 +237,6 @@ sub row_count {
         print "DEBUG: table $table has @${aryref[0]} rows\n";
     }
     return @$aryref[0];
-}
-
-# return 0 on success, undefined otherwise
-sub drop_table {
-    my ($dbh, $table) = @_;
-    my $query = "DROP TABLE $table";
-    my $sth = $dbh->prepare($query);
-
-    if ( !defined $sth ) {
-        my $sub_name = ( caller(0) )[3];
-        carp "$sub_name: unable to prepare SQL statement";
-        return;
-    }
-
-    my $res = $sth->execute;
-    if ( !defined $res ) {
-       $sth->finish;
-       return;
-    }
-
-    $sth->finish;
-    return 0;
-}
-
-# return 0 on success, undefined otherwise
-sub rename_table {
-    my ($dbh, $oldname, $newname) = @_;
-    my $query = "RENAME TABLE $oldname TO $newname";
-    my $sth = $dbh->prepare($query);
-
-    if ( !defined $sth ) {
-        my $sub_name = ( caller(0) )[3];
-        carp "$sub_name: unable to prepare SQL statement";
-        return;
-    }
-
-    my $res = $sth->execute;
-    if ( !defined $res ) {
-        $sth->finish;
-        return;
-    }
-
-    $sth->finish;
-    return 0;
-}
-
-# $dbaref is an array reference containing
-#   (database, base table name, primary key columns, all columns)
-# $dtime is a string representation of the table name's date component
-#   e.g., 2018_02_12 if operating on the table for Feb 12, 2018.
-sub score_one_table {
-    my ($dbaref, $dtime) = @_;
-
-    my ($db, $table_bn, $keys, $fields) = @$dbaref;
-    my $dburi = "mysql://root\@localhost/$db";
-    my $table = "${table_bn}_${dtime}";
-    my $scorecmd = "rasql -r ${dburi}/${table} -w - | "
-                 . "rascore -f /usr/share/argus-clients/emerging-threats-current.conf"
-                 . "        -r - -r $dburi -m saddr -w - | "
-                 . "rasqlinsert -M time 1d -m $keys -s $fields -w ${dburi}/${table}_rascore";
-    print "DEBUG: ${scorecmd}\n" if $debug;
-    if ( system($scorecmd) != 0 ) {
-        warn "Unable to add score to table ${table}\n";
-        return;
-    }
-
-    my $dbh = opendb($db);
-    if ( ! $dbh ) {
-        warn "Unable to open database $db\n";
-        return;
-    }
-
-    if ( row_count( $dbh, "${table}_rascore" ) > 0 ) {
-        drop_table( $dbh, $table );
-        if ( !defined rename_table( $dbh, "${table}_rascore", $table ) ) {
-            closedb($dbh);
-            return;
-        }
-    } else {
-        warn "rascore generated no output\n";
-    }
-
-    closedb($dbh);
-    return 1;
 }
 
 sub RaTodaysDate {
@@ -394,26 +290,16 @@ sub RaDbaseRollupGetTables {
       while ($stime <= $etime) {
          my @tnames = split(',', $tableFormat);
          my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($stime);
-         my $date = sprintf("%4d-%02d-%02d", $year+1900, $mon + 1, $mday);
+         my $date = sprintf("%4d/%02d/%02d", $year+1900, $mon + 1, $mday);
 
          foreach my $tab (@tnames) {
-            my $tableName = sprintf("%s_%4d_%02d_%02d", $tab, $year+1900, $mon + 1, $mday);
             my $monthlyTable = sprintf("%s_%4d_%02d", $tab, $year+1900, $mon + 1);
             my $annualTable = sprintf("%s_%4d", $tab, $year+1900);
 
             $monthlyTables{$monthlyTable}++;
             $annualTables{$annualTable}++;
-
-            if ($hash{$tableName}) {
-               my @trow = ($dbase, $tableName, $monthlyTable, $annualTable, $date);
-               push @tables, \@trow;
-            }
          }
          $stime += 86400;
       }
    }
-
-   my $tlen = scalar @tables;
-   print "DEBUG: RaDbaseRollupGetTables: found $tlen tables\n" if $debug;
-   return @tables;
 }

@@ -1948,7 +1948,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
 
             } else
             if (strcmp(RaDatabase, "ipMatrix") == 0) {
@@ -1956,7 +1955,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
 
             } else
             if (strcmp(RaDatabase, "dnsMatrix") == 0) {
@@ -1964,7 +1962,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                localtime_r(&parser->startime_t.tv_sec, &tmval);
                strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
                str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
             } else
             if (strcmp(RaDatabase, "arpMatrix") == 0) {
                struct tm tmval;
@@ -1981,7 +1978,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   strftime (ArgusSQLTableNameBuf, 256, "arp_%Y_%m_%d", &tmval);
 
                str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
             }
          }
 
