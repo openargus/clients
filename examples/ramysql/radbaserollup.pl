@@ -44,6 +44,9 @@ use File::Temp qw/ :POSIX /;
 use File::Which qw/ which where /;
 use CGI qw(:standard);
 
+use constant ARGUS_ANNUAL => 1;
+use constant ARGUS_MONTH  => 2;
+
 my $query = new CGI;
 
 # Global variables
@@ -58,6 +61,7 @@ my ($val, $stime, $etime);
 
 my @names       = $query->param;
 my $time        = $query->param('tm');
+my $type        = $query->param('tp');
 my $object      = $query->param('ob');
 my $database    = $query->param('db');
 my $filter      = $query->param('fi');
@@ -95,6 +99,7 @@ ARG: while (my $arg = shift(@ARGV)) {
          s/^-quiet$//    && do { $quiet = 1; next ARG; };
          s/^-t$//        && do { $time = shift(@ARGV); next ARG; };
          s/^-time$//     && do { $time = shift(@ARGV); next ARG; };
+         s/^-type$//     && do { $type = shift(@ARGV); next ARG; };
       }
     } else {
       for ($arg) {
@@ -103,6 +108,14 @@ ARG: while (my $arg = shift(@ARGV)) {
       }
     }
     $arglist[@arglist + 0] = $arg;
+  }
+
+  if (not defined $type) {
+     $type = ARGUS_ANNUAL | ARGUS_MONTH;
+  } elsif ($type eq "year") {
+     $type = ARGUS_ANNUAL;
+  } elsif ($type eq "month") {
+     $type = ARGUS_MONTH;
   }
 
   if (not defined $database) {
@@ -169,26 +182,30 @@ foreach my $i (0 .. $#databases) {
 
       RaDbaseRollupGetTables($dbase, $stime, $etime);
 
+      if ($type & ARGUS_MONTH) {
       foreach my $tbl (keys %monthlyTables) {
          my ($class, $year, $month) = split('_', $tbl);
 
          print "DEBUG: process db:$dbase year:$year month:$month tbl:$tbl keys:$keys fields:$fields\n" if $debug;
-	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m_%d -M time 1d -t ".$year."/".$month."/01+1M -M nocorrect -w - | $racluster -m smac saddr sid inf -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
+	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m_%d -M time 1d -t ".$year."/".$month."/01+1M -M nocorrect -w - | $racluster -m $keys -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
 
          print "DEBUG: $cmd \n" if $debug;
          if ($dryrun == 0) {
               `$cmd`;
          }
       }
+      }
+      if ($type & ARGUS_ANNUAL) {
       foreach my $tbl (keys %annualTables) {
          my ($class, $year) = split('_', $tbl);
          print "DEBUG: process db:$dbase year:$year tbl:$tbl keys:$keys fields:$fields\n" if $debug;
-	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m -M time 1M -t ".$year."+1y -M nocorrect -w - | $racluster -m smac saddr sid inf -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
+	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m -M time 1M -t ".$year."+1y -M nocorrect -w - | $racluster -m $keys -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
 
          print "DEBUG: $cmd \n" if $debug;
          if ($dryrun == 0) {
               `$cmd`;
          }
+      }
       }
    }
 }
