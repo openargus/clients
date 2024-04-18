@@ -40,19 +40,31 @@ use URI::URL;
 use JSON;
 use DBI;
 use Switch;
-use File::Which qw/ which where /;;
+use File::Temp qw/ tempfile tempdir /;
+use File::Which qw/ which where /;
+use qosient::XS::util;
 use Time::Local;
 use Data::Dumper;
 
 # Global variables
 my $VERSION = "5.0.3";
 
+my @wdays       = qw (sun mon tue wed thu fri sat);
+my $f;
+my $fname;
+
+($f,  $fname)   = tempfile();
+
 my $debug   = 0;
+my $dryrun  = 0;
 my $drop    = 0;
 my $quiet   = 0;
-my $uri     = 0;
-my $time    = "-1d";
 my $fstime  = "";
+my @tinds   = ();
+my $dbase;
+my $uri;
+my $time;
+my $tod;
 
 my $mode    = 0;
 my $node    = "";
@@ -62,11 +74,33 @@ my $scheme;
 my $netloc;
 my $path;
 
+my ($val, $stime, $ctime, $lhtime, $ptime, $etime);
 my @arglist = ();
+
+my $rasql       = which 'rasql';
+my $ra          = which 'ra';
+my $radns       = which 'radns';
+ 
+my $Program;
+my $options;
+ 
+my @databases = ("dnsAddrs", "dnsNames");
+my (%items, %addrs, $addr);
+ 
+my $startseries = 0;
+my $lastseries = 0;
+my ($user, $pass, $host, $port);
+my $dbh;
+
+# Start the program
+# Parse the arguements if any
 
 ARG: while (my $arg = shift(@ARGV)) {
    for ($arg) {
       s/^-debug//         && do { $debug++; next ARG; };
+      s/^-dryrun//        && do { $dryrun++; next ARG; };
+      s/^-dbase//         && do { $dbase = shift (@ARGV); next ARG; };
+      s/^-db//            && do { $dbase = shift (@ARGV); next ARG; };
       s/^-drop//          && do { $drop++; next ARG; };
       s/^-t//             && do { $time = shift (@ARGV); next ARG; };
       s/^-time//          && do { $time = shift (@ARGV); next ARG; };
@@ -88,293 +122,434 @@ ARG: while (my $arg = shift(@ARGV)) {
    $arglist[@arglist + 0] = $arg;
 }
 
-print "DEBUG: RaDNSDb: starting for time $time\n" if $debug;
 
-# Start the program
+   if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+      $time = RaTodaysDate();
+   }
 
-my @results     = ();
-my $results_ref = \@results;
+   print "DEBUG: RaDNSDb: starting for time $time\n" if $debug;
 
-my $rasql       = which 'rasql';
-my $ra          = which 'ra';
-my $radns       = which 'radns';
+   RaDnsDBProcessParameters ();
+   RaDnsDBConnectDB ();
+   RaDnsDBProcessData ();
+   RaDnsDBCleanUp ($fname);
 
-my $Program;
-my $options;
+   if (defined $dbh) {
+     $dbh->disconnect();
+  }
+  exit;
 
-my (%items, %addrs, $addr);
 
-my $startseries = 0;
-my $lastseries = 0;
-my ($user, $pass, $host, $port, $space, $db, $table);
-my $dbh;
+sub RaDnsDBProcessParameters {
+  if (not defined ($time)) {
+     $time = "-1d";
+  }
+  if (defined $time) {
+    if (index($time,":") != -1) {
+       ($time, $tod) = split(/:/, $time);
+       if (defined ($tod)) {
+            $tod = lc $tod;
+            my @days = split(/,/, $tod);
+            foreach my $day (@days) {
+               my ($tind) = grep { $wdays[$_] eq $day } (0 .. @wdays-1);
+               if ($tind >= 0) { push @tinds, $tind; }
+            }
 
-if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
-   $time = RaTodaysDate();
+            if (scalar @tinds) {
+               my $tstr = join ",", @tinds;
+               print "DEBUG: RaDnsDBProcessParameters: time:'$time' tod:$tstr\n" if $debug;
+            }
+       }
+    }
+
+    ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
+    print "DEBUG: RaDnsDBProcessParameters: time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
+  }
 }
 
-if ($uri) {
-   my $url = URI::URL->new($uri);
+sub RaDnsDBConnectDB {
+  my $dsn = "DBI:mysql:";
+  my $username = '';
+  my $password = '';
+  my %attr = ( PrintError=>0, RaiseError=>0 );
 
-   print "DEBUG: RaDNSDb: url is $url\n" if $debug;
+  if (not defined $uri) {
+     $uri = "mysql://root\@localhost/";
+  }
 
-   $scheme = $url->scheme;
-   $netloc = $url->netloc;
-   $path   = $url->path;
+  my $url = URI::URL->new($uri);
+  print "DEBUG: RaDNSDb: url is $url\n" if $debug;
 
-   if ($netloc ne "") {
-      ($user, $host) = split /@/, $netloc;
-      if ($user =~ m/:/) {
-         ($user , $pass) = split/:/, $user;
-      }
-      if ($host =~ m/:/) {
-         ($host , $port) = split/:/, $host;
-      }
-   }
+  $scheme = $url->scheme;
+  $netloc = $url->netloc;
+  $path   = $url->path;
 
-   if ($path ne "") {
-      ($space, $db, $table)  = split /\//, $path;
-   }
-
-   print "DEBUG: RaDNSDb: access database host $host user $user using database $db table $table\n" if $debug;
-
-   $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
-
-   $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
-   $dbh->do("use $db");
-
-
-   # Drop table 'foo'. This may fail, if 'foo' doesn't exist
-   # Thus we put an eval around it.
-
-   switch ($db) {
-      case /^dnsNames/ {
-         $options = "-u -f /usr/argus/radns.conf -qM json search:0.0.0.0/0,::/0";
-      }
-      case /^dnsAddrs/ {
-         $options = "-u -f /usr/argus/radns.conf -qM json search:'.'";
-      }
-   }
-
-   if (grep -d, glob "/home/dns/*/*/$time") {
-      $Program = "$radns $options -t $time -R /home/dns/*/*/$time";
-   } else {
-      $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
-   }
-
-   print "DEBUG: RaDNSDb: calling Program $Program\n" if $debug;
-   open(SESAME, "$Program |");
-   while (my $data = <SESAME>) {
-      chomp($data);
-
-      print "DEBUG: RaDnsDb:  radns returned: $data\n" if $debug;
-
-      if (length($data)) {
-         if ($data !~ /\^/) {
-            eval {
-               my $decoded = JSON->new->utf8->decode($data);
-               push(@$results_ref, $decoded);
-            } or do {
-            }
+  if ($netloc ne "") {
+         ($user, $host) = split /@/, $netloc;
+         if ($user =~ m/:/) {
+            ($user , $pass) = split/:/, $user;
          }
-      }
-   }
-   close(SESAME);
-
-   switch ($db) {
-      case /^dnsNames/ {
-         if (scalar(@{$results_ref}) > 0) {
-            # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-            if ($drop > 0) {
-               $dbh->do("DROP TABLE $table");
-            }
-
-            print "DEBUG: RaDnsDB: CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
-            $dbh->do("CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
-
-            foreach my $n (@$results_ref) {
-               my $addr = $n->{'addr'};
-               my $data = JSON->new->utf8->space_after->encode($n);
- 
-               my $sql = "INSERT INTO $table (addr,names) VALUES('$addr', '$data') ON DUPLICATE KEY UPDATE names='$data'";
-               print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug;
-               $dbh->do($sql);
-            }
-         } else {
-            print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
+         if ($host =~ m/:/) {
+            ($host , $port) = split/:/, $host;
          }
-      }
-      case /^dnsAddrs/ {
-         if (scalar(@{$results_ref}) > 0) {
-            # Create a new table 'foo'. This must not fail, thus we don't catch errors.
-            if ($drop > 0) {
-               $dbh->do("DROP TABLE $table");
+  }
+
+  print "DEBUG: RaDNSDb: access database host $host user $user\n" if $debug;
+
+  $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+}
+
+sub RaDnsDBProcessData {
+   if (defined $dbh) {
+      # Drop table 'foo'. This may fail, if 'foo' doesn't exist
+      # Thus we put an eval around it.
+      #
+
+      my $num = scalar @databases;
+      print "DEBUG: radnsdb processing $num databases\n" if $debug;
+
+      foreach my $i (0 .. $num) {
+         my $db = $databases[$i];
+
+	 print "DEBUG: radnsdb processing db:$db dbase:'$dbase'\n" if $debug;
+
+         if ((defined $db) && (($dbase eq "") || ($dbase eq $db))) {
+            $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
+            $dbh->do("use $db");
+
+            switch ($db) {
+               case /^dnsNames/ {
+                  $options = "-u -f /usr/argus/radns.conf -qM json search:0.0.0.0/0,::/0";
+               }
+               case /^dnsAddrs/ {
+                  $options = "-u -f /usr/argus/radns.conf -qM json search:'.'";
+               }
             }
 
-            my $SQL  = "CREATE TABLE IF NOT EXISTS $table (";
-               $SQL .= "`name` varchar(128) NOT NULL,";
-               $SQL .= "`tld` varchar(64),";
-               $SQL .= "`nld` varchar(64),";
-               $SQL .= "`ref` INT,";
-               $SQL .= "`stime` double(18,6) unsigned,";
-               $SQL .= "`ltime` double(18,6) unsigned,";
-               $SQL .= "`addrs` TEXT,";
-               $SQL .= "`client` TEXT,";
-               $SQL .= "`server` TEXT,";
-               $SQL .= "`cname` TEXT,";
-               $SQL .= "`ptr` TEXT,";
-               $SQL .= "`ns` TEXT,";
-               $SQL .= "PRIMARY KEY (`name`))";
+            my @tables = RaDnsDBGetTables($db, $stime, $etime);
 
-            print "DEBUG: RaDnsDB: $SQL\n" if $debug;
-            $dbh->do($SQL);
+            foreach my $i (0 .. $#tables) {
+              my ($time, $table, $tab) = @{$tables[$i]};
+              my ($tbl, $keys, $fields);
+              my @results     = ();
+              my $results_ref = \@results;
+              my $found = 0;
 
-            my $str = sprintf "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=\"$db\" AND TABLE_NAME=\"$table\"";
-            print "DEBUG: RaEsocFetchData: sql:$str\n" if $debug;
+              if (grep -d, glob "/home/dns/*/*/$time") {
+                 $Program = "$radns $options -t $time -R /home/dns/*/*/$time";
+              } else {
+                 $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
+              }
 
-            my $sth = $dbh->prepare($str) or die "can't prepare: ", $DBI::errstr, "\n";
-            $sth->execute() or die "can't execute: ", $DBI::errstr, "\n";
+              print "DEBUG: RaDNSDb: processing dbase:$db table:$table calling Program $Program\n" if $debug;
+              open(SESAME, "$Program |");
+              while (my $data = <SESAME>) {
+                 chomp($data);
+                 if (length($data)) {
+                    if ($data !~ /\^/) {
+                       eval {
+                          my $decoded = JSON->new->utf8->decode($data);
+                          push(@$results_ref, $decoded);
+                          print "DEBUG: RaDnsDb: push decoded: $data\n" if $debug > 1;
+                       } or do {
+                       }
+                    }
+                 }
+              }
+              close(SESAME);
 
-            my $stimetbl = 0;
-            my $ltimetbl = 0;
+              my $num = scalar @results;
+              if ($num > 0) {
+                 switch ($db) {
+                    case /^dnsNames/ {
+                       # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+                       print "DEBUG: RaDnsDB: processing dbase:$db $num results\n" if $debug;
+                       if ($drop > 0) {
+                          if ($dryrun == 0) {
+                             print "DEBUG: RaDnsDB: DROP TABLE IF EXISTS $table\n" if $debug;
+                             $dbh->do("DROP TABLE IF EXISTS $table");
+                          }
+                       }
 
-            while(my @row = $sth->fetchrow_array()) {
-               my $column = $row[0];
-               switch ($column) {
-                  case "stime"     {  $stimetbl = 1; }
-                  case "ltime"     {  $ltimetbl = 1; }
+                       print "DEBUG: RaDnsDB: CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))\n" if $debug;
+                       $dbh->do("CREATE TABLE IF NOT EXISTS $table (addr VARCHAR(64) NOT NULL, names TEXT, PRIMARY KEY ( addr ))");
+
+                       foreach my $n (@$results_ref) {
+                          my $addr = $n->{'addr'};
+                          my $data = JSON->new->utf8->space_after->encode($n);
+            
+                          my $sql = "INSERT INTO $table (addr,names) VALUES('$addr', '$data') ON DUPLICATE KEY UPDATE names='$data'";
+                          print "DEBUG: RaDNSDbFetchData: $sql\n" if $debug > 1;
+                          if ($dryrun == 0) {
+                             $dbh->do($sql);
+                          }
+                       }
+                    }
+                    case /^dnsAddrs/ {
+                       # Create a new table 'foo'. This must not fail, thus we don't catch errors.
+                       print "DEBUG: RaDnsDB: processing dbase:$db $num results\n" if $debug;
+                       if ($drop > 0) {
+                          if ($dryrun == 0) {
+                             print "DEBUG: RaDnsDB: DROP TABLE IF EXISTS $table\n" if $debug;
+                             $dbh->do("DROP TABLE IF EXISTS $table");
+                          }
+                       }
+
+                       my $SQL  = "CREATE TABLE IF NOT EXISTS $table (";
+                          $SQL .= "`name` varchar(128) NOT NULL,";
+                          $SQL .= "`tld` varchar(64),";
+                          $SQL .= "`nld` varchar(64),";
+                          $SQL .= "`ref` INT,";
+                          $SQL .= "`stime` double(18,6) unsigned,";
+                          $SQL .= "`ltime` double(18,6) unsigned,";
+                          $SQL .= "`addrs` TEXT,";
+                          $SQL .= "`client` TEXT,";
+                          $SQL .= "`server` TEXT,";
+                          $SQL .= "`cname` TEXT,";
+                          $SQL .= "`ptr` TEXT,";
+                          $SQL .= "`ns` TEXT,";
+                          $SQL .= "PRIMARY KEY (`name`))";
+
+                       print "DEBUG: RaDnsDB: $SQL\n" if $debug;
+                       if ($dryrun == 0) {
+                          $dbh->do($SQL);
+                       }
+
+                       my $str = sprintf "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=\"$db\" AND TABLE_NAME=\"$table\"";
+                       print "DEBUG: RaEsocFetchData: sql:$str\n" if $debug;
+
+                       my $sth = $dbh->prepare($str) or die "can't prepare: ", $DBI::errstr, "\n";
+                       $sth->execute() or die "can't execute: ", $DBI::errstr, "\n";
+
+                       my $stimetbl = 0;
+                       my $ltimetbl = 0;
+
+                       while(my @row = $sth->fetchrow_array()) {
+                          my $column = $row[0];
+                          switch ($column) {
+                             case "stime"     {  $stimetbl = 1; }
+                             case "ltime"     {  $ltimetbl = 1; }
+                         }
+                       }
+                       $sth->finish();
+                       if ($stimetbl == 0) {
+                          $str  = sprintf "ALTER TABLE $table ADD COLUMN `stime` double(18,6) AFTER `nld`";
+                          $dbh->do($str);
+                          print "DEBUG: sql '$str'\n" if $debug;
+                       }
+                       if ($ltimetbl == 0) {
+                          $str  = sprintf "ALTER TABLE $table ADD COLUMN `ltime` double(18,6) AFTER `stime`";
+                          $dbh->do($str);
+                          print "DEBUG: sql '$str'\n" if $debug;
+                       }
+                       foreach my $n (@$results_ref) {
+                          my ($name,$tld,$nld,$stime,$ltime,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
+                          my ($tind,$nind);
+
+                          if (defined $n->{'name'}) {
+                             $name = $n->{'name'};
+                             my $slen = length($name);
+
+                             $tind = rindex( $name, '.', $slen - 2 );
+                             if ($tind > 0) {
+                                $tld = substr( $name, $tind + 1);
+                                if (defined $tld) {
+                                   $n->{'tld'} = $tld;
+                                   $tld   = '"' . $n->{'tld'} . '"';
+                                }
+
+                                $nind = rindex( $name, '.', $tind - 1);
+                                if ($nind > 0) {
+                                   $nld = substr( $name, $nind + 1 );
+
+                                   if (defined $nld) {
+                                      $n->{'nld'} = $nld;
+                                      $nld   = '"' . $n->{'nld'} . '"';
+                                   }
+                                }
+                             }
+
+                             if ((not defined $tld) || (length($tld) == 0)) { $tld = '"' . $name . '"'; $n->{'tld'} = $name; }
+                             if ((not defined $nld) || (length($nld) == 0)) { $nld = '"' . $name . '"'; $n->{'nld'} = $name; }
+
+                             print "DEBUG: RaDnsDB: name:$name length:$slen tind:$tind tld:$tld nind:$nind nld:$nld\n" if $debug > 1;
+                             $name  = '"' . $n->{'name'} . '"'
+                          }
+
+                          if (defined $n->{'stime'})  { $stime   = $n->{'stime'}};
+                          if (defined $n->{'ltime'})  { $ltime   = $n->{'ltime'}};
+                          if (defined $n->{'ref'})  { $ref   = $n->{'ref'}};
+
+                          if (defined $n->{'addr'}) { 
+                             my $array = $n->{'addr'}; 
+                             $addrs = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+                          if (defined $n->{'client'}) {
+                             my $array = $n->{'client'};
+                             $client = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+                          if (defined $n->{'server'}) { 
+                             my $array = $n->{'server'};
+                             $server = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+                          if (defined $n->{'cname'}) { 
+                             my $array = $n->{'cname'};
+                             $cname = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+                          if (defined $n->{'ptr'}) { 
+                             my $array = $n->{'ptr'};
+                             $ptr = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+                          if (defined $n->{'ns'}) { 
+                             my $array = $n->{'ns'};
+                             $ns = "'" . JSON->new->utf8->encode($array) . "'";
+                          };
+
+                          if (defined $addrs) { 
+                             my @fields = ();
+                             my @values = ();
+                             my $str = "";
+
+                             if (defined $name)   { push(@fields,"name");   push(@values, $name); }
+                             if (defined $tld)    { push(@fields,"tld");    push(@values, $tld); }
+                             if (defined $nld)    { push(@fields,"nld");    push(@values, $nld); }
+                             if (defined $stime)  { push(@fields,"stime");  push(@values, $stime); }
+                             if (defined $ltime)  { push(@fields,"ltime");  push(@values, $ltime); }
+                             if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
+                             if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
+                             if (defined $client) { push(@fields,"client"); push(@values, $client); }
+                             if (defined $server) { push(@fields,"server"); push(@values, $server); }
+                             if (defined $cname)  { push(@fields,"cname");  push(@values, $cname); }
+                             if (defined $ptr)    { push(@fields,"ptr");    push(@values, $ptr); }
+                             if (defined $ns)     { push(@fields,"ns");     push(@values, $ns); }
+
+                             my $cols = join(",", @fields);
+                             my $vals = join(",", @values);
+
+                             my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals) ";
+                             my $dup = " ON DUPLICATE KEY UPDATE ";
+                             my $fcnt = scalar @fields;
+
+                             for (my $i = 0; $i < $fcnt; $i++) {
+                                if ($i > 0) {
+                                   $dup .= ",";
+                                }
+                                $dup .= "`$fields[$i]`=$values[$i]";
+                             }
+
+                             $SQL .= $dup.";";
+                             print "DEBUG: results: sql: '$SQL'\n" if $debug > 1;
+
+                             if ($dryrun == 0) {
+                                $dbh->do($SQL);
+                             }
+                          }
+                       }
+                    }
+                 }
+              } else {
+                 print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
               }
             }
-            $sth->finish();
-            if ($stimetbl == 0) {
-               $str  = sprintf "ALTER TABLE $table ADD COLUMN `stime` double(18,6) AFTER `nld`";
-               $dbh->do($str);
-               print "DEBUG: sql '$str'\n" if $debug;
-            }
-            if ($ltimetbl == 0) {
-               $str  = sprintf "ALTER TABLE $table ADD COLUMN `ltime` double(18,6) AFTER `stime`";
-               $dbh->do($str);
-               print "DEBUG: sql '$str'\n" if $debug;
-            }
-            foreach my $n (@$results_ref) {
-               my ($name,$tld,$nld,$stime,$ltime,$ref,$addrs,$client,$server,$cname,$ptr,$ns);
-               my ($tind,$nind);
-
-               if (defined $n->{'name'}) {
-                  $name = $n->{'name'};
-                  my $slen = length($name);
-
-                  $tind = rindex( $name, '.', $slen - 2 );
-                  if ($tind > 0) {
-                     $tld = substr( $name, $tind + 1);
-                     if (defined $tld) {
-                        $n->{'tld'} = $tld;
-                        $tld   = '"' . $n->{'tld'} . '"';
-                     }
-
-                     $nind = rindex( $name, '.', $tind - 1);
-                     if ($nind > 0) {
-                        $nld = substr( $name, $nind + 1 );
-
-                        if (defined $nld) {
-                           $n->{'nld'} = $nld;
-                           $nld   = '"' . $n->{'nld'} . '"';
-                        }
-                     }
-                  }
-
-                  if ((not defined $tld) || (length($tld) == 0)) { $tld = '"' . $name . '"'; $n->{'tld'} = $name; }
-                  if ((not defined $nld) || (length($nld) == 0)) { $nld = '"' . $name . '"'; $n->{'nld'} = $name; }
-
-                  print "DEBUG: RaDnsDB: name:$name length:$slen tind:$tind tld:$tld nind:$nind nld:$nld\n" if $debug;
-                  $name  = '"' . $n->{'name'} . '"'
-               }
-
-               if (defined $n->{'stime'})  { $stime   = $n->{'stime'}};
-               if (defined $n->{'ltime'})  { $ltime   = $n->{'ltime'}};
-               if (defined $n->{'ref'})  { $ref   = $n->{'ref'}};
-
-               if (defined $n->{'addr'}) { 
-                  my $array = $n->{'addr'}; 
-                  $addrs = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-               if (defined $n->{'client'}) {
-                  my $array = $n->{'client'};
-                  $client = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-               if (defined $n->{'server'}) { 
-                  my $array = $n->{'server'};
-                  $server = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-               if (defined $n->{'cname'}) { 
-                  my $array = $n->{'cname'};
-                  $cname = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-               if (defined $n->{'ptr'}) { 
-                  my $array = $n->{'ptr'};
-                  $ptr = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-               if (defined $n->{'ns'}) { 
-                  my $array = $n->{'ns'};
-                  $ns = "'" . JSON->new->utf8->encode($array) . "'";
-               };
-
-               if (defined $addrs) { 
-                  my @fields = ();
-                  my @values = ();
-                  my $str = "";
-
-                  if (defined $name)   { push(@fields,"name");   push(@values, $name); }
-                  if (defined $tld)    { push(@fields,"tld");    push(@values, $tld); }
-                  if (defined $nld)    { push(@fields,"nld");    push(@values, $nld); }
-                  if (defined $stime)  { push(@fields,"stime");  push(@values, $stime); }
-                  if (defined $ltime)  { push(@fields,"ltime");  push(@values, $ltime); }
-                  if (defined $ref)    { push(@fields,"ref");    push(@values, $ref); }
-                  if (defined $addrs)  { push(@fields,"addrs");  push(@values, $addrs); }
-                  if (defined $client) { push(@fields,"client"); push(@values, $client); }
-                  if (defined $server) { push(@fields,"server"); push(@values, $server); }
-                  if (defined $cname)  { push(@fields,"cname");  push(@values, $cname); }
-                  if (defined $ptr)    { push(@fields,"ptr");    push(@values, $ptr); }
-                  if (defined $ns)     { push(@fields,"ns");     push(@values, $ns); }
-
-                  my $cols = join(",", @fields);
-                  my $vals = join(",", @values);
-
-                  my $SQL  = "INSERT INTO $table ($cols) VALUES ($vals) ";
-                  my $dup = " ON DUPLICATE KEY UPDATE ";
-                  my $fcnt = scalar @fields;
-
-                  for (my $i = 0; $i < $fcnt; $i++) {
-                     if ($i > 0) {
-                        $dup .= ",";
-                     }
-                     $dup .= "`$fields[$i]`=$values[$i]";
-                  }
-
-                  $SQL .= $dup.";";
-                  print "DEBUG: results: sql: '$SQL'\n" if $debug;
-
-                  $dbh->do($SQL);
-               }
-            }
-         } else {
-            print "DEBUG: RaInventoryGenerateResults: no results\n" if $debug;
          }
-      }
-   }
-
-   $dbh->disconnect();
-
-} else {
-   if ((length @results) > 0) {
-      foreach my $n (@$results_ref) {
-         my $data = JSON->new->utf8->space_after->encode($n);
-         printf "$data\n";
       }
    }
 }
 
-exit 0;
+sub RaDnsDBCleanUp {
+   my $file = shift;
+   print "DEBUG: calling RaDnsDBCleanUp\n" if $debug;
+   unlink $file;
+}
+
+
+sub RaDnsDBGetTables {
+   my $dbase = shift;
+   my $cstime = shift;
+   my $cetime = shift;
+
+   my $dates = 1;
+   my $tableFormat;
+   my @tables = ();
+   my %hash = {};
+
+   $dbh->do("use $dbase;");
+
+   my $sth = $dbh->prepare("show tables;");
+   $sth->execute();
+   while(my @row = $sth->fetchrow_array()) {
+      $hash{@row[0]}++;
+   }
+   $sth->finish();
+
+   switch ($dbase) {
+      case "inventory"         { $tableFormat = "ipAddrs"; }
+      case "ether"             { $tableFormat = "ether"; }
+      case "dnsAddrs"          { $tableFormat = "dns"; }
+      case "dnsNames"          { $tableFormat = "dns"; }
+      case "ipMatrix"          { $tableFormat = "ip"; }
+      case "etherMatrix"       { $tableFormat = "ether"; }
+      case "ntpMatrix"         { $tableFormat = "ntp"; }
+      case "arpMatrix"         { $tableFormat = "arp"; }
+      case "dnsMatrix"         { $tableFormat = "dns"; }
+      case "ldapMatrix"        { $tableFormat = "ldap"; }
+      case "imapsMatrix"       { $tableFormat = "imaps"; }
+      case "hostsInventory"    { $tableFormat = "host"; }
+      case "portsInventory"    { 
+         if ($mode eq "sport") {
+            $tableFormat = "srcPorts"; 
+         } else {
+            $tableFormat = "dstPorts"; 
+         }
+      }
+      case "scanners"          { $tableFormat = $mode; }
+      else                     { $dates = 0; }
+   }
+
+   print "DEBUG: RaDnsDBGetTables: db $dbase table $tableFormat stime $cstime etime $cetime dates $dates\n" if $debug;
+
+   if ($dates) {
+#
+#     Issue with crossing a daylight savings time boundary.
+#     Times should be 00:00:00 times, if not, then adjust so that they are.
+# 
+      my @tnames = split(',', $tableFormat);
+
+      while ($cstime <= $cetime) {
+         my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($cstime);
+
+         if ($hour != 0) {
+            if ($hour == 23) {
+               $cstime += 3600;
+            } else {
+               $cstime -= 3600;
+            }
+            ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($cstime);
+         }
+
+         my $date = sprintf("%4d/%02d/%02d", $year+1900, $mon + 1, $mday);
+
+         my $val = scalar @tinds;
+         my ($mch) = grep { $tinds[$_] eq $wday } (0 .. @tinds-1);
+
+         if (($val == 0) || defined $mch) {
+            foreach my $tab (@tnames) {
+               my $tableName = sprintf("%s_%4d_%02d_%02d", $tab, $year+1900, $mon + 1, $mday);
+
+               print "DEBUG: RaDnsDBGetTables: tableName $tableName\n" if $debug;
+
+               my @trow = ($date, $tableName, $tab);
+               push @tables, \@trow;
+            }
+         }
+         $cstime += 86400;
+      }
+   }
+
+   my $tlen = scalar @tables;
+   print "DEBUG: RaDnsDBGetTables: found $tlen tables\n" if $debug;
+   return @tables;
+}
 
 sub numerically { $a <=> $b };
 
