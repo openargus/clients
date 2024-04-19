@@ -2060,6 +2060,12 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
 
          if (RaBaselines != NULL) {
+            int eNflag = parser->eNflag;
+            int sNflag = parser->sNflag;
+
+	    parser->eNflag = -1;
+	    sNflag = 0;
+
             tableIndex = 0;
             retn = -1;
             while ((table = RaBaselines[tableIndex]) != NULL) {
@@ -2137,6 +2143,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                ArgusDebug (1, "No SQL Baseline tables found\n");
 #endif
             }
+            parser->eNflag = eNflag;
+            parser->sNflag = sNflag;
          }
       }
 
