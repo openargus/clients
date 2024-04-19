@@ -2140,6 +2140,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
+   if (RaTables != NULL) {
       tableIndex = 0;
       while ((table = RaTables[tableIndex]) != NULL) {
          tableIndex++;
@@ -2153,6 +2154,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          else
             RaParseComplete (SIGINT);
       }
+   }
 }
 
 void
