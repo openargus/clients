@@ -768,8 +768,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 		  }
                   
                   RaSendArgusRecord(argus);
-                  RaAnnualProcess->ns = NULL; 
-		  RaMonthlyProcess->ns = NULL;
+
+                  if (RaAnnualProcess != NULL)  RaAnnualProcess->ns = NULL; 
+                  if (RaMonthlyProcess != NULL) RaMonthlyProcess->ns = NULL; 
                }
             }
 
@@ -1917,9 +1918,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char *optarg = baseline->filename;
 
          if (!(strncmp ("mysql:", optarg, 6))) {
-            if (parser->readDbstr != NULL)
-               free(parser->readDbstr);
-            parser->readDbstr = strdup(optarg);
+            if (parser->readDbstr == NULL) {
+                  free(parser->readDbstr);
+               parser->readDbstr = strdup(optarg);
+            }
          }
       }
 
@@ -1954,7 +1956,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
 
-      if (RaBaselines == NULL) {
+      if (baseline && (RaBaselines == NULL)) {
          char *sptr, *str = NULL, *base = NULL;
          char *year = NULL, *month = NULL;
 
@@ -1962,11 +1964,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char RaMonthlyBaseLineTable[256];
          int n = 0;
 
-         if (RaTable != NULL) {
-            sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
-            str = strdup(ArgusSQLTableNameBuf);
-
-         } else {
             if (RaDatabase == NULL) {
                RaDatabase = strdup("inventory");
             }
@@ -2006,138 +2003,156 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   strftime (ArgusSQLTableNameBuf, 256, "arp_%Y_%m_%d", &tmval);
 
                str = strdup(ArgusSQLTableNameBuf);
+            } else
+            if ((strcmp(RaDatabase, "ether") == 0) || (strcmp(RaDatabase, "etherMatrix") == 0)) {
+               struct tm tmval;
+               struct timeval durbuf, *dur = &durbuf;
+               RaDiffTime (&parser->lasttime_t, &parser->startime_t, dur);
+
+               localtime_r(&parser->startime_t.tv_sec, &tmval);
+               if (dur->tv_sec > (86400 * 182))  {
+                  strftime (ArgusSQLTableNameBuf, 256, "ether_%Y", &tmval);
+               } else
+               if (dur->tv_sec > (86400 * 14))  {
+                  strftime (ArgusSQLTableNameBuf, 256, "ether_%Y_%m", &tmval);
+               } else
+                  strftime (ArgusSQLTableNameBuf, 256, "ether_%Y_%m_%d", &tmval);
+
+               str = strdup(ArgusSQLTableNameBuf);
             }
-         }
 
-         if (str != NULL) {
-            char *tstr = strdup(str);
-            if ((RaBaselines = ArgusCalloc(sizeof(void *), 5)) == NULL)
-               ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+            if (str != NULL) {
+               char *tstr = strdup(str);
+               if ((RaBaselines = ArgusCalloc(sizeof(void *), 5)) == NULL)
+                  ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
-            while ((sptr = strsep(&str, "_")) != NULL) {
-               switch (n++) {
-                  case 0:  base = strdup(sptr); break;
-                  case 1:  year = strdup(sptr); break;
-                  case 2:  month = strdup(sptr); break;
-               }
-            }
-
-            snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year);
-            snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
-
-            if (strcmp(tstr, RaAnnualBaseLineTable))
-               RaBaselines[0] = strdup(RaAnnualBaseLineTable);
-
-            if (strcmp(tstr, RaMonthlyBaseLineTable))
-               RaBaselines[1] = strdup(RaMonthlyBaseLineTable);
-
-            if (str != NULL) free(str);
-            if (tstr != NULL) free(tstr);
-            if (base != NULL) free(base);
-            if (year != NULL) free(year);
-            if (month != NULL) free(month);
-#ifdef ARGUSDEBUG
-            ArgusDebug (2, "%s: opening baseline tables %s, %s", __func__, RaBaselines[0], RaBaselines[1]);
-#endif
-         }
-         if (baseline->filename)
-            free(baseline->filename);
-         ArgusFree(baseline);
-      }
-
-      bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
-
-      if (RaBaselines != NULL) {
-         tableIndex = 0;
-         retn = -1;
-         while ((table = RaBaselines[tableIndex]) != NULL) {
-            tableIndex++;
-         }
-         for (x = 0; x < tableIndex; x++) {
-            table = RaBaselines[x];
-            if (strcmp("Seconds", table)) {
-               sprintf (ArgusSQLStatement, "desc %s", table);
-               if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
-                  if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
-                     ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-#ifdef ARGUSDEBUG
-                  } else {
-                     ArgusDebug (4, "%s: skip missing table %s", __func__, table);
-#endif
+               while ((sptr = strsep(&str, "_")) != NULL) {
+                  switch (n++) {
+                     case 0:  base = strdup(sptr); break;
+                     case 1:  year = strdup(sptr); break;
+                     case 2:  month = strdup(sptr); break;
                   }
-               } else {
-                  break;
                }
+
+               snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year);
+               snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
+
+               if (strcmp(tstr, RaAnnualBaseLineTable))
+                  RaBaselines[0] = strdup(RaAnnualBaseLineTable);
+
+               if (strcmp(tstr, RaMonthlyBaseLineTable))
+                  RaBaselines[1] = strdup(RaMonthlyBaseLineTable);
+
+               if (str != NULL) free(str);
+               if (tstr != NULL) free(tstr);
+               if (base != NULL) free(base);
+               if (year != NULL) free(year);
+               if (month != NULL) free(month);
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "%s: opening baseline tables %s, %s", __func__, RaBaselines[0], RaBaselines[1]);
+#endif
             }
+            if (baseline->filename)
+               free(baseline->filename);
+            ArgusFree(baseline);
          }
 
-         if (retn == 0) {
-            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-                  int ind = 0;
-                  while ((row = mysql_fetch_row(mysqlRes)))
-                     ArgusTableColumnName[ind++] = strdup(row[0]);
+         bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
 
-                  mysql_free_result(mysqlRes);
+         if (RaBaselines != NULL) {
+            tableIndex = 0;
+            retn = -1;
+            while ((table = RaBaselines[tableIndex]) != NULL) {
+               tableIndex++;
+            }
+            for (x = 0; x < tableIndex; x++) {
+               table = RaBaselines[x];
+               if (strcmp("Seconds", table)) {
+                  sprintf (ArgusSQLStatement, "desc %s", table);
+                  if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
+                     if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
+                        ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+#ifdef ARGUSDEBUG
+                     } else {
+                        ArgusDebug (4, "%s: skip missing table %s", __func__, table);
+#endif
+                     }
+                  } else {
+                     break;
+                  }
                }
             }
 
-            if (retn > 0) {
-               int x, i = 0;
+            if (retn == 0) {
+               if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+                  if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     int ind = 0;
+                     while ((row = mysql_fetch_row(mysqlRes)))
+                        ArgusTableColumnName[ind++] = strdup(row[0]);
 
-               while (parser->RaPrintAlgorithmList[i] != NULL) {
-                 ArgusFree(parser->RaPrintAlgorithmList[i]);
-                 parser->RaPrintAlgorithmList[i] = NULL;
-                 i++;
+                     mysql_free_result(mysqlRes);
+                  }
                }
 
-               for (x = 0; (ArgusTableColumnName[x] != NULL) && (x < ARGUSSQLMAXCOLUMNS); x++) {
-                  for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-                     if (!strcmp(RaPrintAlgorithmTable[i].field, ArgusTableColumnName[x])) {
-                        if ((parser->RaPrintAlgorithmList[x] = ArgusCalloc(1, sizeof(*parser->RaPrintAlgorithm))) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+               if (retn > 0) {
+                  int x, i = 0;
 
-                        bcopy(&RaPrintAlgorithmTable[i], parser->RaPrintAlgorithmList[x], sizeof(*parser->RaPrintAlgorithm));
+                  while (parser->RaPrintAlgorithmList[i] != NULL) {
+                    ArgusFree(parser->RaPrintAlgorithmList[i]);
+                    parser->RaPrintAlgorithmList[i] = NULL;
+                    i++;
+                  }
+
+                  for (x = 0; (ArgusTableColumnName[x] != NULL) && (x < ARGUSSQLMAXCOLUMNS); x++) {
+                     for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+                        if (!strcmp(RaPrintAlgorithmTable[i].field, ArgusTableColumnName[x])) {
+                           if ((parser->RaPrintAlgorithmList[x] = ArgusCalloc(1, sizeof(*parser->RaPrintAlgorithm))) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+                           bcopy(&RaPrintAlgorithmTable[i], parser->RaPrintAlgorithmList[x], sizeof(*parser->RaPrintAlgorithm));
+                        }
                      }
                   }
+
+                  ArgusProcessSOptions(parser);
                }
 
-               ArgusProcessSOptions(parser);
+               if (RaBaselines) {
+                  if (RaBaselines[0] != NULL) {
+                     if ((RaAnnualProcess = RaScoreNewProcess(parser)) == NULL)
+                        ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
+                     RaSQLQueryTable (RaBaselines[0], RaAnnualProcess);
+                  }
+
+                  if (RaBaselines[1] != NULL) {
+                     if ((RaMonthlyProcess = RaScoreNewProcess(parser)) == NULL)
+                        ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
+                     RaSQLQueryTable (RaBaselines[1], RaMonthlyProcess);
+                  }
+                  found++;
+               }
             }
-
-            if (RaBaselines) {
-               if (RaBaselines[0] != NULL) {
-                  if ((RaAnnualProcess = RaScoreNewProcess(parser)) == NULL)
-                     ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
-                  RaSQLQueryTable (RaBaselines[0], RaAnnualProcess);
-               }
-
-               if (RaBaselines[1] != NULL) {
-                  if ((RaMonthlyProcess = RaScoreNewProcess(parser)) == NULL)
-                     ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
-                  RaSQLQueryTable (RaBaselines[1], RaMonthlyProcess);
-               }
-/*
-               if (RaTables[2] != NULL) {
-                  RaSQLQueryTable (RaTables[2], NULL);
-
-                  if (ArgusModelerQueue->count > 0)
-                     RaSQLProcessQueue (ArgusModelerQueue);
-                  else
-                     RaParseComplete (SIGINT);
-               }
-*/
-               found++;
+            if (!found) {
+#ifdef ARGUSDEBUG
+               ArgusDebug (1, "No SQL Baseline tables found\n");
+#endif
             }
          }
       }
 
-      if (!found) {
-#ifdef ARGUSDEBUG
-         ArgusDebug (1, "No SQL Baseline tables found\n");
-#endif
+      tableIndex = 0;
+      while ((table = RaTables[tableIndex]) != NULL) {
+         tableIndex++;
       }
-   }
+
+      for (x = 0; x < tableIndex; x++) {
+         RaSQLQueryTable (RaTables[x], NULL);
+ 
+         if (ArgusModelerQueue->count > 0)
+            RaSQLProcessQueue (ArgusModelerQueue);
+         else
+            RaParseComplete (SIGINT);
+      }
 }
 
 void
@@ -2260,7 +2275,7 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
 {
    char **retn = NULL, *fileStr = NULL;
    struct ArgusAdjustStruct *nadp = &RaBinProcess->nadp;
-   int retnIndex = 2;
+   int retnIndex = 0;
 
    if (table && (strchr(table, '%') || strchr(table, '$'))) {
       if ((retn = ArgusCalloc(sizeof(void *), ARGUS_MAX_TABLE_LIST_SIZE)) == NULL)
@@ -2389,44 +2404,8 @@ ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser, char *table)
             retnIndex = 0;
          }
 
-         retn[2] = strdup(fileStr);
+         retn[retnIndex] = strdup(fileStr);
       }
-   }
-
-   if (retn != NULL) {
-      char *sptr, *str;
-      char *base = NULL;
-      char *year = NULL;
-      char *month = NULL;
-      int n = 0;
-
-      char RaAnnualBaseLineTable[256];
-      char RaMonthlyBaseLineTable[256];
-
-      str = strdup(retn[2]);
-
-      while ((sptr = strsep(&str, "_")) != NULL) {
-         switch (n++) {
-            case 0:  base = strdup(sptr); break;
-            case 1:  year = strdup(sptr); break;
-            case 2:  month = strdup(sptr); break;
-         }
-      }
-
-      if (year != NULL)  { 
-         snprintf (RaAnnualBaseLineTable, 256, "%s_%s", base, year); 
-         retn[0] = strdup(RaAnnualBaseLineTable);
-      }
-
-      if (month != NULL) {
-         snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
-         retn[1] = strdup(RaMonthlyBaseLineTable);
-      }
-
-      if (str != NULL) free(str);
-      if (base != NULL) free(base);
-      if (year != NULL) free(year);
-      if (month != NULL) free(month);
    }
 
    return (retn);
