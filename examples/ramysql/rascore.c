@@ -54,11 +54,14 @@
 
 #include <rabins.h>
 #include <rasplit.h>
+
+#if defined(ARGUS_MYSQL)
  
 #include "argus_mysql.h"
 #include <mysqld_error.h>
 
 char *RaDatabase = NULL;
+char **RaBaselines = NULL;
 char **RaTables = NULL;
 
 extern int ArgusTimeRangeStrategy;
@@ -1905,8 +1908,22 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          nadp->count = 1;
       }
 
-      RaMySQLInit();
+//
+// We need to loadup the baseline files if configured
+//
+      struct ArgusFileInput *baseline = NULL;
 
+      if ((baseline = parser->ArgusBaselineList) != NULL) {
+         char *optarg = baseline->filename;
+
+         if (!(strncmp ("mysql:", optarg, 6))) {
+            if (parser->readDbstr != NULL)
+               free(parser->readDbstr);
+            parser->readDbstr = strdup(optarg);
+         }
+      }
+
+      RaMySQLInit();
 
 // so we've been given a time filter, so we have a start and end time
 // stored in parser->startime_t && parser->lasttime_t, and we support
@@ -1921,12 +1938,23 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
 //
-// So the actual table, datatbase, etc..., were set in the RaMySQLInit()
-// call so we can test some values here.
+// So the actual baseline tables, datatbase, etc..., were set in the
+// RaMySQLInit() based on the baseline definition.
+//
+// The idea is that we want a yearly, and monthly baseline in order
+// to understand of the classification of FF / FU / UF / UU for a
+// given input flow.  The (F)amiliar score is based on how often
+// have we seen this flow identifier, and we compare it against
+// a baseline for presence.
 // 
+// So, read in the annual and monthly baselines given a starting date,
+// and compare against those for first seen and frequency.
+// These will be stored in RaBaselines[0] and RaBaselines[1];
+//
+
       RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
 
-      if (RaTables == NULL) {
+      if (RaBaselines == NULL) {
          char *sptr, *str = NULL, *base = NULL;
          char *year = NULL, *month = NULL;
 
@@ -1983,7 +2011,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
          if (str != NULL) {
             char *tstr = strdup(str);
-            if ((RaTables = ArgusCalloc(sizeof(void *), 5)) == NULL)
+            if ((RaBaselines = ArgusCalloc(sizeof(void *), 5)) == NULL)
                ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
             while ((sptr = strsep(&str, "_")) != NULL) {
@@ -1998,13 +2026,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             snprintf (RaMonthlyBaseLineTable, 256, "%s_%s_%s", base, year, month);
 
             if (strcmp(tstr, RaAnnualBaseLineTable))
-               RaTables[0] = strdup(RaAnnualBaseLineTable);
+               RaBaselines[0] = strdup(RaAnnualBaseLineTable);
 
             if (strcmp(tstr, RaMonthlyBaseLineTable))
-               RaTables[1] = strdup(RaMonthlyBaseLineTable);
-
-            if (strlen(ArgusSQLTableNameBuf) > 0) 
-               RaTables[2] = strdup(ArgusSQLTableNameBuf);
+               RaBaselines[1] = strdup(RaMonthlyBaseLineTable);
 
             if (str != NULL) free(str);
             if (tstr != NULL) free(tstr);
@@ -2012,21 +2037,24 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (year != NULL) free(year);
             if (month != NULL) free(month);
 #ifdef ARGUSDEBUG
-            ArgusDebug (2, "%s: opening tables %s, %s, %s", __func__, RaTables[0], RaTables[1], RaTables[2]);
+            ArgusDebug (2, "%s: opening baseline tables %s, %s", __func__, RaBaselines[0], RaBaselines[1]);
 #endif
          }
+         if (baseline->filename)
+            free(baseline->filename);
+         ArgusFree(baseline);
       }
 
       bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
 
-      if (RaTables != NULL) {
+      if (RaBaselines != NULL) {
          tableIndex = 0;
          retn = -1;
-         while ((table = RaTables[tableIndex]) != NULL) {
+         while ((table = RaBaselines[tableIndex]) != NULL) {
             tableIndex++;
          }
          for (x = 0; x < tableIndex; x++) {
-            table = RaTables[x];
+            table = RaBaselines[x];
             if (strcmp("Seconds", table)) {
                sprintf (ArgusSQLStatement, "desc %s", table);
                if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
@@ -2077,19 +2105,19 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                ArgusProcessSOptions(parser);
             }
 
-            if (RaTables) {
-               if (RaTables[0] != NULL) {
+            if (RaBaselines) {
+               if (RaBaselines[0] != NULL) {
                   if ((RaAnnualProcess = RaScoreNewProcess(parser)) == NULL)
                      ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
-                  RaSQLQueryTable (RaTables[0], RaAnnualProcess);
+                  RaSQLQueryTable (RaBaselines[0], RaAnnualProcess);
                }
 
-               if (RaTables[1] != NULL) {
+               if (RaBaselines[1] != NULL) {
                   if ((RaMonthlyProcess = RaScoreNewProcess(parser)) == NULL)
                      ArgusLog (LOG_ERR, "ArgusClientInit: RaScoreNewProcess error");
-                  RaSQLQueryTable (RaTables[1], RaMonthlyProcess);
+                  RaSQLQueryTable (RaBaselines[1], RaMonthlyProcess);
                }
-
+/*
                if (RaTables[2] != NULL) {
                   RaSQLQueryTable (RaTables[2], NULL);
 
@@ -2098,6 +2126,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                   else
                      RaParseComplete (SIGINT);
                }
+*/
                found++;
             }
          }
@@ -2105,7 +2134,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       if (!found) {
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "No SQL tables found\n");
+         ArgusDebug (1, "No SQL Baseline tables found\n");
 #endif
       }
    }
@@ -2804,3 +2833,4 @@ ArgusScoreHandleRecord (struct ArgusParserStruct *parser,
 
    return (retn);
 }
+#endif

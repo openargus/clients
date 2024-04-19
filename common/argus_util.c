@@ -1309,22 +1309,11 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                      ArgusAddMode = 0;
                   }
                } else
-               if ((tzptr = strstr (optarg, "baseline:")) != NULL) {
+               if ((tzptr = strstr (optarg, "baseline=")) != NULL) {
                   int type = ARGUS_DATA_SOURCE | ARGUS_BASELINE_SOURCE;
                   optarg += 9;
-#if defined(ARGUS_MYSQL)
-                  if (!(strncmp ("mysql:", optarg, 6))) {
-                     if (parser->readDbstr != NULL)
-                        free(parser->readDbstr);
-                     parser->readDbstr = strdup(optarg);
-                     type &= ~ARGUS_DATA_SOURCE;
-                     type |= ARGUS_DBASE_SOURCE;
-                     optarg += 6;
-                  }
-#endif
                   if (!(ArgusAddBaselineList (parser, optarg, type, -1, -1)))
                      ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
-
                   stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
 
                } else
