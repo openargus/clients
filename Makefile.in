@@ -54,10 +54,12 @@ SHELL = /bin/sh
 DIRS = @DIRS@
 INSTDIRS = @DIRS@ ./include
 OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
+CLEANDIRS = @DIRS@ ./pkg ./pythonlib ./perllib
+
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \
 	include lib man support aclocal.m4 acsite.m4 config configure configure.ac \
-	.threads bin clients examples common debian pkg pythonlib README.rst VERSION 
+	.threads bin clients examples common debian pkg perllib pythonlib README.rst VERSION 
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -248,12 +250,13 @@ config.status: configure
 TAGS: $(SRCS)
 	etags $(SRCS)
 
+
 .PHONY: clean mostlyclean distclean realclean dist
 
 clean: force
 	rm -f config.log
 	rm -f pkg/osx/*.pkg
-	@for i in $(DIRS) ; do \
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) clean ); \
 		fi; \
@@ -261,14 +264,14 @@ clean: force
 
 mostlyclean: clean
 
-distclean: clean
+distclean: force
 	rm -f config.*
 	rm -f TAGS
 	rm -f lib/*.a
 	rm -f bin/ra*
 	rm -f Makefile
 	rm -f *~
-	@for i in $(DIRS) ; do \
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
@@ -286,7 +289,7 @@ clobber realclean: force
 	rm -rf log
 	rm -rf autom4te.cache
 
-	@for i in $(DIRS) ; do \
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
@@ -294,6 +297,7 @@ clobber realclean: force
 
 	rm -f *~
 	rm -f ./Makefile config.*
+
 
 dist: $(DISTFILES) distclean
 	echo argus-clients-`cat VERSION` > .fname

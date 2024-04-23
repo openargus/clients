@@ -515,7 +515,7 @@ sub RaDnsDBGetTables {
 # 
       my @tnames = split(',', $tableFormat);
 
-      while ($cstime <= $cetime) {
+      while ($cstime < $cetime) {
          my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($cstime);
 
          if ($hour != 0) {
