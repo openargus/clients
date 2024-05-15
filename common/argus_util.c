@@ -9985,17 +9985,21 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
 
    if (macclass != 0)  {
       char macclassstr[4];
+      char *uaa = "UAA";
    
       if (strstr(format,"%s") != NULL) {
          for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
-         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[0] = 'U';
-         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[0] = 'M';
-         if (macclass & ARGUS_ETHER_UAA)       macclassstr[1] = 'U';
-         if (macclass & ARGUS_ETHER_LAA)       macclassstr[1] = 'L';
-         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
-         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
-         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
-         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
+         if (macclass & ARGUS_ETHER_UAA) {
+            bcopy(uaa, macclassstr, 4);
+         } else {
+            if (macclass & ARGUS_ETHER_LAA)       macclassstr[0] = 'L';
+            if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[1] = 'U';
+            if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[1] = 'M';
+            if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
+            if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
+            if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
+            if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
+         }
          snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
 
       } else {
