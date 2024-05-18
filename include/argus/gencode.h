@@ -52,12 +52,15 @@
 
 #include <argus_os.h>
 
+#define Q_MAX		195
+
 /* Address qualifers. */
 
 #define Q_HOST		1
 #define Q_SRCID		2
 #define Q_NET		3
 #define Q_PORT		4
+#define Q_CLASS		194
 
 #define Q_GATEWAY	5
 #define Q_INTRANET	186
