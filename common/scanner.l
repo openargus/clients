@@ -183,6 +183,7 @@ inode    return INODE;
 net      return NET;
 mask     return AMASK;
 loc      return LOC;
+class    return CLASS;
 
 masklen  return MASKLEN;
 mlen     return MASKLEN;
