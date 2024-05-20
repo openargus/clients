@@ -120,17 +120,9 @@
 #include <argus_ethertype.h>
 #include <argus_dscodepoints.h>
 #include <argus_encapsulations.h>
+#include <argus_macclass.h>
 
 #include <rapolicy.h>
-
-#define ARGUS_ETHER_UNICAST	0x0100
-#define ARGUS_ETHER_MULTICAST	0x0001
-#define ARGUS_ETHER_UAA		0x0002
-#define ARGUS_ETHER_LAA		0x0004
-#define ARGUS_ETHER_SLAP_ELI	0x0010
-#define ARGUS_ETHER_SLAP_SAI	0x0030
-#define ARGUS_ETHER_SLAP_AAI	0x0050
-#define ARGUS_ETHER_SLAP_RES	0x0090
 
 #if defined(ARGUS_FLOWTOOLS)
 #include "ftlib.h"
@@ -9985,20 +9977,20 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
 
    if (macclass != 0)  {
       char macclassstr[4];
-      char *uaa = "UAA";
    
       if (strstr(format,"%s") != NULL) {
          for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
          if (macclass & ARGUS_ETHER_UAA) {
-            bcopy(uaa, macclassstr, 4);
+            bcopy("UAA", macclassstr, 4);
          } else {
             if (macclass & ARGUS_ETHER_LAA)       macclassstr[0] = 'L';
             if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[1] = 'U';
             if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[1] = 'M';
-            if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
-            if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
-            if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
-            if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
+
+            if (macclass & ARGUS_ETHER_SLAP_ELI)  bcopy("ELI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_SAI)  bcopy("SAI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_AAI)  bcopy("AAI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_RES)  bcopy("AAI", macclassstr, 4);
          }
          snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
 
@@ -10070,14 +10062,18 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
                
       if (strstr(format,"%s") != NULL) {
          for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
-         if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[0] = 'U';
-         if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[0] = 'M';
-         if (macclass & ARGUS_ETHER_UAA)       macclassstr[1] = 'U';
-         if (macclass & ARGUS_ETHER_LAA)       macclassstr[1] = 'L';
-         if (macclass & ARGUS_ETHER_SLAP_ELI)  macclassstr[2] = 'E';
-         if (macclass & ARGUS_ETHER_SLAP_SAI)  macclassstr[2] = 'S';
-         if (macclass & ARGUS_ETHER_SLAP_AAI)  macclassstr[2] = 'A';
-         if (macclass & ARGUS_ETHER_SLAP_RES)  macclassstr[2] = 'R';
+         if (macclass & ARGUS_ETHER_UAA) {
+            bcopy("UAA", macclassstr, 4);
+         } else {
+            if (macclass & ARGUS_ETHER_LAA)       macclassstr[0] = 'L';
+            if (macclass & ARGUS_ETHER_UNICAST)   macclassstr[1] = 'U';
+            if (macclass & ARGUS_ETHER_MULTICAST) macclassstr[1] = 'M';
+
+            if (macclass & ARGUS_ETHER_SLAP_ELI)  bcopy("ELI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_SAI)  bcopy("SAI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_AAI)  bcopy("AAI", macclassstr, 4); else
+            if (macclass & ARGUS_ETHER_SLAP_RES)  bcopy("AAI", macclassstr, 4);
+         }
          snprintf (classbuf, sizeof(macclassstr), format, macclassstr);
    
       } else {
@@ -23453,13 +23449,27 @@ int
 etheraddr_class(struct ArgusParserStruct *parser, u_char *ep)
 {
    int retn = 0;
+   char slap = ep[0] & 0x0F;
 
-   if (ep[0] & 0x01) { retn |= ARGUS_ETHER_MULTICAST; } else { retn |= ARGUS_ETHER_UNICAST; };
-   if (ep[0] & 0x02) { retn |= ARGUS_ETHER_LAA; } else { retn |= ARGUS_ETHER_UAA; };
-   if (ep[0] & 0x0A) { retn |= ARGUS_ETHER_SLAP_ELI; } else
-   if (ep[0] & 0x0E) { retn |= ARGUS_ETHER_SLAP_SAI; }
-// if (ep[0] & 0x02) { retn |= ARGUS_ETHER_SLAP_AAI; }
+   if (ep[0] & 0x02) { 
+      retn |= ARGUS_ETHER_LAA;
+      if (ep[0] & 0x01) { retn |= ARGUS_ETHER_MULTICAST; } else { retn |= ARGUS_ETHER_UNICAST; }
+      if (slap == 0x0A) { 
+         retn = ARGUS_ETHER_SLAP_ELI; 
+      } else
+      if (slap == 0x0E) { 
+         retn = ARGUS_ETHER_SLAP_SAI;
+      } else
+      if (slap == 0x02) {
+         retn = ARGUS_ETHER_SLAP_AAI;
+      } else
+      if (slap == 0x06) { 
+         retn = ARGUS_ETHER_SLAP_RES; 
+      }
 
+   } else {
+      retn = ARGUS_ETHER_UAA;
+   }
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "etheraddr_class(%p, %p) returns %d", parser, ep, retn);
 #endif
