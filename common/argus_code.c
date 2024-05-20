@@ -78,6 +78,7 @@
 #include <argus_filter.h>
 #include <argus_dscodepoints.h>
 #include <argus_encapsulations.h>
+#include <argus_macclass.h>
 #include <argus_ethertype.h>
 
 #include <signal.h>
@@ -211,6 +212,7 @@ static struct ablock *Argusgen_jitter(float, int, int, u_int);
 static struct ablock *Argusgen_dur(float, int, u_int);
 static struct ablock *Argusgen_mean(float, int, u_int);
 static struct ablock *Argusgen_encaps(int, int, u_int);
+static struct ablock *Argusgen_macclass(char *, int, u_int);
 static struct slist *xfer_to_x(struct arth *);
 static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
@@ -2208,6 +2210,19 @@ Argusgen_encapsatom(int off, u_int v, u_int op)
 }
 
 static struct ablock *
+Argusgen_macclassatom(int off, u_int mask, u_int v, u_int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_mcmp(ARGUS_MAC_INDEX, off, NFF_B, v, mask, Q_EQUAL, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_macclassatom (%d, 0x%x, 0x%x) returns 0x%x\n", off, mask, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_portatom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -3274,6 +3289,59 @@ Argusgen_encaps(int v, int dir, u_int op)
 #endif
  
    return b1;
+}
+
+
+static struct ablock *
+Argusgen_macclass(char *class, int dir, u_int op)
+{
+   struct ablock *b0 = NULL, *b1 = NULL;
+   struct ArgusMacStruct mac;
+   int offset, mask = 0, v = 0;
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_macclass (%s, %d)\n", class, dir);
+#endif
+
+   extern struct ArgusMacClassStruct argus_macclass [];
+   struct ArgusMacClassStruct *macclass = argus_macclass;
+   while (macclass->id != 0) {
+      if (strncasecmp(macclass->class, class, strlen(macclass->class)) == 0) {
+         mask = macclass->mask;
+         v = macclass->value;
+         break;
+      }
+      macclass++;
+   }
+
+   switch (dir) {
+      case Q_SRC: {
+         offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_shost - (char *)&mac);
+         return Argusgen_macclassatom(offset, mask, v, op);
+      }
+
+      case Q_DST: {
+         offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_dhost - (char *)&mac);
+         return Argusgen_macclassatom(offset, mask, v, op);
+      }
+
+      case Q_AND: {
+         b0 = Argusgen_macclass(class, Q_SRC, op);
+         b1 = Argusgen_macclass(class, Q_DST, op);
+         Argusgen_and(b0, b1);
+         return b1;
+      }
+
+      case Q_DEFAULT:
+      case Q_OR: {
+         b0 = Argusgen_macclass(class, Q_SRC, op);
+         b1 = Argusgen_macclass(class, Q_DST, op);
+         Argusgen_or(b0, b1);
+         return b1;
+      }
+   }
+   abort();
+   /* NOTREACHED */
 }
 
 
@@ -5221,13 +5289,26 @@ Argusgen_scode(char *name, struct qual q)
          break;
       }
 
+      case Q_CLASS: {
+         extern struct ArgusMacClassStruct argus_macclass [];
+	 struct ArgusMacClassStruct *macclass = argus_macclass;
+	 while (macclass->id != 0) {
+            if (strncasecmp(macclass->class, name, strlen(macclass->class)) == 0) {
+               b = Argusgen_macclass(name, dir, Q_EQUAL);
+               break;
+	    }
+	    macclass++;
+	 }
+	 break;
+      }
+
       case Q_UNDEF:
          syntax();
          /* NOTREACHED */
    }
 
    if (b == NULL)
-      ArgusLog(LOG_ERR, "Argusgen_scode error");
+      syntax();
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_scode (%s, 0x%x) returns %p\n", name, q, b);
