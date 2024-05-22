@@ -8636,7 +8636,7 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
                      case ARGUS_ENCAPS_ISL:    buf[1] = 'i'; break;
                      case ARGUS_ENCAPS_GRE:    buf[1] = 'G'; break;
                      case ARGUS_ENCAPS_AH:     buf[1] = 'a'; break;
-                     case ARGUS_ENCAPS_IP:     buf[1] = 'P'; break;
+                     case ARGUS_ENCAPS_IP:     buf[1] = '4'; break;
                      case ARGUS_ENCAPS_IPV6:   buf[1] = '6'; break;
                      case ARGUS_ENCAPS_HDLC:   buf[1] = 'H'; break;
                      case ARGUS_ENCAPS_CHDLC:  buf[1] = 'C'; break;
@@ -19395,7 +19395,7 @@ ArgusPrintSrcEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   case ARGUS_ENCAPS_ISL:    ebuf[ind++] = 'i'; break;
                   case ARGUS_ENCAPS_GRE:    ebuf[ind++] = 'G'; break;
                   case ARGUS_ENCAPS_AH:     ebuf[ind++] = 'a'; break;
-                  case ARGUS_ENCAPS_IP:     ebuf[ind++] = 'P'; break;
+                  case ARGUS_ENCAPS_IP:     ebuf[ind++] = '4'; break;
                   case ARGUS_ENCAPS_IPV6:   ebuf[ind++] = '6'; break;
                   case ARGUS_ENCAPS_HDLC:   ebuf[ind++] = 'H'; break;
                   case ARGUS_ENCAPS_CHDLC:  ebuf[ind++] = 'C'; break;
@@ -19454,7 +19454,7 @@ ArgusPrintDstEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   case ARGUS_ENCAPS_ISL:    ebuf[ind++] = 'i'; break;
                   case ARGUS_ENCAPS_GRE:    ebuf[ind++] = 'G'; break;
                   case ARGUS_ENCAPS_AH:     ebuf[ind++] = 'a'; break;
-                  case ARGUS_ENCAPS_IP:     ebuf[ind++] = 'P'; break;
+                  case ARGUS_ENCAPS_IP:     ebuf[ind++] = '4'; break;
                   case ARGUS_ENCAPS_IPV6:   ebuf[ind++] = '6'; break; 
                   case ARGUS_ENCAPS_HDLC:   ebuf[ind++] = 'H'; break;
                   case ARGUS_ENCAPS_CHDLC:  ebuf[ind++] = 'C'; break;
