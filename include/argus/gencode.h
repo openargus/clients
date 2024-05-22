@@ -214,6 +214,9 @@
 #define Q_MPLS   	110
 #define Q_VLAN   	111
 
+#define Q_VXLAN   	194
+#define Q_GRE   	195
+
 #define Q_RTR   	112
 #define Q_MBR   	113
 #define Q_LVG   	114

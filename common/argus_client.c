@@ -2723,6 +2723,15 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
+                     case ARGUS_GRE_DSR: {
+                        struct ArgusGreStruct *gre = (struct ArgusGreStruct *) dsr;
+
+                        bcopy((char *)gre, (char *)&canon->gre, cnt);
+                        retn->dsrs[ARGUS_GRE_INDEX] = (struct ArgusDSRHeader*) &canon->gre;
+                        retn->dsrindex |= (0x01 << ARGUS_GRE_INDEX);
+                        break;
+                     }
+
                      case ARGUS_MPLS_DSR: {
                         struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                         unsigned int *mlabel = (unsigned int *)(dsr + 1);
@@ -9368,8 +9377,11 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                                                 rmetric->dst.bytes += 1;
                                              bytes = rmetric->dst.appbytes;
                                              rmetric->dst.appbytes /= 2;
+
                                              if (bytes & 0x01)
                                                 rmetric->dst.appbytes += 1;
+                                             rmetric->src.bytes = 0;
+                                             rmetric->src.appbytes = 0;
 
                                              rtime->dst.end  = rtime->dst.start;
                                              time->dst.start = time->dst.end;

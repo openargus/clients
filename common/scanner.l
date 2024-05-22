@@ -161,6 +161,9 @@ igmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytex
 mpls	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return MPLS; } 
 isis	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ISIS; } 
 
+vxlan	 return VXLAN;
+gre	 return GRE;
+
 vlan	 return VLAN;
 vid	 return VID;
 vpri	 return VPRI;
