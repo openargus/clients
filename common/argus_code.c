@@ -1053,6 +1053,28 @@ Argusgen_vlan(unsigned int proto)
 
    return(b1);
 }
+
+static struct ablock *
+Argusgen_vxlan(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusVlanStruct vlan;
+   int offset = ((char *)&vlan.hdr.type - (char *)&vlan);
+   b1 = Argusgen_cmp(ARGUS_VXLAN_INDEX, offset, NFF_B, (u_int) ARGUS_VXLAN_DSR, Q_EQUAL, Q_DEFAULT);
+
+   return(b1);
+}
+
+static struct ablock *
+Argusgen_gre(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusVlanStruct vlan;
+   int offset = ((char *)&vlan.hdr.type - (char *)&vlan);
+   b1 = Argusgen_cmp(ARGUS_GRE_INDEX, offset, NFF_B, (u_int) ARGUS_GRE_DSR, Q_EQUAL, Q_DEFAULT);
+
+   return(b1);
+}
  
 
 static struct ablock *
@@ -1713,6 +1735,14 @@ Argusgen_proto_abbrev(int proto)
 
       case Q_VLAN:
          b1 = Argusgen_vlan(Q_DEFAULT);
+         break;
+
+      case Q_VXLAN:
+         b1 = Argusgen_vxlan(Q_DEFAULT);
+         break;
+
+      case Q_GRE:
+         b1 = Argusgen_gre(Q_DEFAULT);
          break;
 
       case Q_RARP:
