@@ -4890,7 +4890,7 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
 #include <uuid/uuid.h>
 #else
 #if defined(HAVE_LINUX_UUID_H)
-#include <uuid.h>
+#include <linux/uuid.h>
 #else
 #if defined(HAVE_UUID_H)
 #include <uuid.h>
