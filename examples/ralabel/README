@@ -17,20 +17,29 @@
  * THIS SOFTWARE.
  *
  *
- *  radark -  argus data based scan detector
+ *  ralabel -  argus labeler 
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
 
 
 NOTES
+  The concept is to provide a number of labeling strategies
+  with configuration capabilities for each of the labelers.
+  This allows the user to specify the order of the labeling,
+  which is provided to support hierarchical labeling.
 
-To repair / update existing database tables, read the table, ralabel with 'replace' and reinsert table.
+  The basic label strategies that are supported are:
 
-for i in {01..31}; \
-do echo 2019/07/$i; \
- rasql -r mysql://root@localhost/ipMatrix/ip_%Y_%m_%d -M time 1d -t 2019/07/$i -w /tmp/ipMatrix.2019.07.$i.out; \
- ralabel -f /usr/argus/*local*conf -r /tmp/ipMatrix.2019.07.$i.out -M replace; \
- rasqlinsert -M drop -r /tmp/ipMatrix.2019.07.$i.out -w  mysql://root@localhost/ipMatrix/ip_2019_07_$i -m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr; \
-done
+     RALABEL_IEEE_ADDRESS
+     RALABEL_IANA_ADDRESS
+     RALABEL_ARIN_COUNTRY_CODES
+     RALABEL_BIND_NAME
+     RALABEL_IANA_PORT
+     RALABEL_ARGUS_FLOW
+     RALABEL_LOCALITY
+     RALABEL_GEOIP_ASN
+
+A Sample conf file is in ./support/Config/ralabel.conf
+and describes specifics about each strategy ...
 
