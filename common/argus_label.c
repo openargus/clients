@@ -4750,24 +4750,24 @@ RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            argus->dsrindex |= (0x1 << ARGUS_LOCAL_INDEX);
 
                            nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
-                           nss->sloc = 4;
+                           nss->sloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
                            nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
-                           nss->dloc = 4;
+                           nss->dloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
 
                         } else {
                            if (labeler->RaLabelLocalityOverwrite) {
                               nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
-                              nss->sloc = 4;
+                              nss->sloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
                               nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
-                              nss->dloc = 4;
+                              nss->dloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
                            } else {
                               if (!(nss->hdr.argus_dsrvl8.qual & ARGUS_SRC_LOCAL)) {
                                  nss->hdr.argus_dsrvl8.qual |= ARGUS_SRC_LOCAL;
-                                 nss->sloc = 4;
+                                 nss->sloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
                               }
                               if (!(nss->hdr.argus_dsrvl8.qual & ARGUS_DST_LOCAL)) {
                                  nss->hdr.argus_dsrvl8.qual |= ARGUS_DST_LOCAL;
-                                 nss->dloc = 4;
+                                 nss->dloc = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
                               }
                            }
                         }

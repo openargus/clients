@@ -4042,8 +4042,36 @@ RaFetchAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStr
             break;
          }
 
-         case ARGUS_TYPE_IPV6:
-            break;
+         case ARGUS_TYPE_IPV6: {
+            int type = RaIPv6AddressType(parser, (struct in6_addr *) addr);
+
+	    switch (type) {
+               case ARGUS_IPV6_UNICAST_LINKLOCAL:
+               case ARGUS_IPV6_UNICAST_LOOPBACK:
+               case ARGUS_IPV6_MULTICAST_NODELOCAL:
+               case ARGUS_IPV6_MULTICAST_LINKLOCAL:
+	       case ARGUS_IPV6_UNICAST_UNSPECIFIED:
+                  retn = 4;
+	          break;
+
+               case ARGUS_IPV6_UNICAST_SITELOCAL:
+               case ARGUS_IPV6_MULTICAST_SITELOCAL:
+                  retn = 3;
+	          break;
+
+               case ARGUS_IPV6_MULTICAST_ORGLOCAL:
+                  retn = 2;
+	          break;
+
+               case ARGUS_IPV6_MULTICAST_GLOBAL:
+               case ARGUS_IPV6_UNICAST_V4COMPAT:
+               case ARGUS_IPV6_UNICAST_V4MAPPED:
+	       default:
+                  retn = 1;
+	          break;
+	    }
+	    break;
+	 }
       }
 
 #ifdef ARGUSDEBUG
@@ -13852,8 +13880,15 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                         if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                            locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                            sprintf (ptr, "%d", locValue);
-                           break;
                         }
+                        break;
+                     }
+                     case ARGUS_TYPE_IPV6: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
+                           sprintf (ptr, "%d", locValue);
+                        }
+                        break;
                      }
                   }
                }
@@ -13913,6 +13948,13 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                            sprintf (ptr, "%d", locValue);
                            break;
                         }
+                     }
+                     case ARGUS_TYPE_IPV6: {
+                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+                           locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
+                           sprintf (ptr, "%d", locValue);
+                        }
+                        break;
                      }
                   }
                }
