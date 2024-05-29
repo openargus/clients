@@ -26,14 +26,19 @@ use v5.6.0;
 use strict;
 use warnings;
 use Carp;
+use Data::Dumper;
 
 use POSIX;
 use Time::Local;
+use Switch;
+
 use DBI;
 use File::Temp qw/ :POSIX /;
 use File::Which qw/ which where /;
 
 my $debug       = 0;
+my $dryrun      = 0;
+my $database;
 
 # opendb("databasename")
 sub opendb {
@@ -127,6 +132,7 @@ sub rename_table {
 #   (database, base table name, primary key columns, all columns)
 # $dtime is a string representation of the table name's date component
 #   e.g., 2018_02_12 if operating on the table for Feb 12, 2018.
+#
 sub score_one_table {
     my ($dbaref, $dtime) = @_;
 
@@ -178,9 +184,12 @@ my ($dtime, $mtime, $ytime);
 ARG: while (my $arg = shift(@ARGV)) {
     if (!$done) {
       for ($arg) {
-         s/^-debug$//      && do { $debug++; next ARG; };
-         s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
-         s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
+         s/^-debug$//     && do { $debug++; next ARG; };
+         s/^-dryrun$//    && do { $dryrun++; next ARG; };
+         s/^-db$//        && do { $database = shift(@ARGV); next ARG; }; 
+         s/^-dbase$//     && do { $database = shift(@ARGV); next ARG; }; 
+         s/^-t$//         && do { $time  = shift(@ARGV); next ARG; };
+         s/^-time$//      && do { $time  = shift(@ARGV); next ARG; };
       }
     } else {
       for ($arg) {
@@ -219,37 +228,49 @@ my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf sma
 my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db4 = ( "etherMatrix", "ether", "sid inf dmac smac", "stime ltime sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
-my @db5 = ( "ntpMatrix", "ntp", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db6 = ( "ldapMatrix", "ldap", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db7 = ( "arpMatrix", "arg", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db8 = ( "ether", "ether", "sid inf smac etype", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
+my @db5 = ( "ether", "ether", "sid inf smac etype", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
 
-my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
+my @databases = \(@db1, @db2, @db3, @db4, @db5);
 
 # first add score DSR to the daily table
-score_one_table(\@db1, $dtime) or die;
-
+# score_one_table(\@db1, $dtime) or die;
 # Now update the monthly and yearly caches
 
-foreach my $i (0 .. $#databases) {
-   my ($db, $table, $keys, $fields) = @{$databases[$i]};
+if (@databases) {
+   foreach my $i (0 .. $#databases) {
+      my $process = 0;
+      my ($db, $table, $keys, $fields) = @{$databases[$i]};
 
-   my $cmd = "$rasql -r mysql://root\@localhost/".$db."/".$table."_".$dtime." -w ".$tmpfile;
-   print "DEBUG: $cmd \n" if $debug;
-   `$cmd`;
+      if (defined $database) {
+         if ($db eq $database) {
+            $process = 1;
+         }
+      } else {
+         $process = 1;
+      }
 
-   if (-e $tmpfile) {
-      my $minsert = "$rasqlinsert -M cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$mtime." -s ".$fields;
-      my $yinsert = "$rasqlinsert -M cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$ytime." -s ".$fields;
+      if ($process > 0) {
+         my $cmd = "$rasql -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -r mysql://root\@localhost/".$db."/".$table."_".$dtime." -w ".$tmpfile;
+         print "DEBUG: $cmd \n" if $debug;
+         `$cmd`;
 
-      print "DEBUG: $minsert \n" if $debug;
-      `$minsert`;
+         if (-e $tmpfile) {
+            my $minsert = "$rasqlinsert -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -M cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$mtime." -s ".$fields;
+            my $yinsert = "$rasqlinsert -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -M cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$ytime." -s ".$fields;
 
-      print "DEBUG: $yinsert \n" if $debug;
-      `$yinsert`;
+            print "DEBUG: $minsert \n" if $debug;
+            if ($dryrun == 0) {
+               `$minsert`;
+            }
 
-      print "DEBUG: rm -f $tmpfile\n" if $debug;
-      `rm -f $tmpfile`;
+            print "DEBUG: $yinsert \n" if $debug;
+            if ($dryrun == 0) {
+               `$yinsert`;
+            }
+            print "DEBUG: rm -f $tmpfile\n" if $debug;
+            `rm -f $tmpfile`;
+         }
+      }
    }
 }
 
