@@ -36,27 +36,18 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/usr/local/bin";
 my @arglist = ();
 
 my $radnsdb   = which 'radnsdb';
-my $mysql     = which 'mysql';
 my $debug     = 0;
+my $dryrun    = 0;
 my $done      = 0;
-
 my $time;
-my $dbtime;
-my $filter;
-my @dbaseList;
-my $dbase     = "";
-my $table;
-
 
 ARG: while (my $arg = shift(@ARGV)) {
     if (!$done) {
       for ($arg) {
          s/^-debug$//      && do { $debug++; next ARG; };
+         s/^-dryrun$//     && do { $dryrun++; next ARG; };
          s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
          s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
-         s/^-dbase$//      && do { $dbase = shift(@ARGV); next ARG; };
-         s/^-db$//         && do { $dbase = shift(@ARGV); next ARG; };
-         s/^-table$//      && do { $table = shift(@ARGV); next ARG; };
       }
     } else {
       for ($arg) {
@@ -67,50 +58,36 @@ ARG: while (my $arg = shift(@ARGV)) {
     $arglist[@arglist + 0] = $arg;
 }
 
-if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
-   $time = RaTodaysDate();
-}
-
-if ($time eq "") {
-   my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
-   my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
-   ($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
-
-     $time = sprintf "%4d/%02d/%02d", $year+1900, $mon+1, $mday;
-   $dbtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
-
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Yesterday")) {
+   $time = RaYesterdaysDate();
 } else {
-   ($dbtime = $time) =~ s/\//_/g;
-}
-
-my $sqlcmd = "mysql dnsFlows -u root -NBe 'CREATE INDEX idx_stime ON dns_$dbtime (stime);' 2>&1";
-print "DEBUG: calling $sqlcmd\n" if $debug;
-my $output = `$sqlcmd`;
-
-if ($dbase eq "") {
-   push @dbaseList, "dnsNames";
-   push @dbaseList, "dnsAddrs";
-} else {
-   push @dbaseList, $dbase;
-}
-
-foreach (@dbaseList) {
-   my $cmd;
-   if ($debug) {
-      $cmd = $radnsdb.' -t '.$time.' -w mysql://root@localhost/'.$_.'/dns_'.$dbtime.' -debug 2>&1';
-   } else {
-      $cmd = $radnsdb.' -t '.$time.' -w mysql://root@localhost/'.$_.'/dns_'.$dbtime.' 2>&1';
-   }
-
-   print "DEBUG: calling $cmd\n" if $debug;
-
-   my @output = `$cmd`;
-   foreach (@output) {
-      print;
+   if ($time eq "Today") {
+      $time = RaTodaysDate();
    }
 }
+
+my $cmd = "$radnsdb -time $time -drop";
+$cmd = $cmd." -debug" if $debug;
+print "DEBUG: RaDbManageData: cmd: $cmd\n" if $debug;
+if ($dryrun == 0) {
+   system($cmd);
+}
+exit;
 
 sub RaTodaysDate {
-  my($day, $month, $year)=(localtime)[3,4,5];
-  return sprintf( "%04d/%02d/%02d", $year+1900, $month+1, $day);
+  my ($sec, $min, $hour, $day, $mon, $year) = localtime();
+  my $date = sprintf( "%04d/%02d/%02d", $year+1900, $mon+1, $day);
+
+  print "DEBUG: RaTodaysDate: $date\n" if $debug;
+  return $date;
+}
+
+sub RaYesterdaysDate {
+  my ($sec, $min, $hour, $day, $mon, $year) = localtime();
+  my  $yesterday = timelocal(0,0,12,$day,$mon,$year) - 24*60*60;
+  ($sec, $min, $hour, $day, $mon, $year) = localtime($yesterday);
+
+  my $date = sprintf( "%04d/%02d/%02d", $year+1900, $mon+1, $day);
+  print "DEBUG: RaYesterdaysDate: $date\n" if $debug;
+  return $date;
 }
