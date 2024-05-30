@@ -765,7 +765,6 @@ struct ArgusEncapsStruct {
    unsigned int src, dst;
 };
 
-
 struct ArgusUniStats {
    long long pkts, bytes, appbytes;
 };
