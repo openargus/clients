@@ -17,9 +17,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- */
-
-/* 
  * $Id: //depot/gargoyle/clients/clients/radium.c#20 $
  * $DateTime: 2016/11/30 00:54:11 $
  * $Change: 3245 $
