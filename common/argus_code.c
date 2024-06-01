@@ -102,7 +102,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -1244,27 +1244,38 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 static struct ablock *
 Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsigned int proto)
 {
-   int offset, src_off = 0, dst_off = 0, len = 0;
+   int offset, src_off = 0, dst_off = 0, len = 0, findex = 0;
    struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
+   struct ArgusGreStruct gre;
    struct ArgusFlow flow;
  
    switch (proto) {
+      case Q_GRE:
+         src_off = ((char *)&gre.tflow.ip_flow.ip_src - (char *)&gre);
+         dst_off = ((char *)&gre.tflow.ip_flow.ip_dst - (char *)&gre);
+         len = sizeof(gre.tflow.ip_flow.ip_src);
+         findex = ARGUS_GRE_INDEX;
+         break;
+
       case ETHERTYPE_IP:
          src_off = ((char *)&flow.ip_flow.ip_src - (char *)&flow);
          dst_off = ((char *)&flow.ip_flow.ip_dst - (char *)&flow);
          len = sizeof(flow.ip_flow.ip_src);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_IPV6:
          src_off = ((char *)&flow.ipv6_flow.ip_src - (char *)&flow);
          dst_off = ((char *)&flow.ipv6_flow.ip_dst - (char *)&flow);
          len = sizeof(flow.ipv6_flow.ip_src);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_ARP:
          src_off = ((char *)&flow.arp_flow.arp_spa - (char *)&flow);
          dst_off = ((char *)&flow.arp_flow.arp_tpa - (char *)&flow);
          len = sizeof(flow.arp_flow.arp_spa);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_REVARP:
@@ -1336,8 +1347,8 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
 
    switch (len) {
       case 0: break;
-      case 1: b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
-      case 2: b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_H, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
+      case 1: b1 = Argusgen_mcmp(findex, offset, NFF_B, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
+      case 2: b1 = Argusgen_mcmp(findex, offset, NFF_H, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
 
       case 4:
       case 8: 
@@ -1346,9 +1357,9 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
          for (i = 0; i < len/4; i++) {
             if (mask[i] != 0) {
                if (b1 == NULL) {
-                  b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
+                  b1 = Argusgen_mcmp(findex, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
                } else {
-                  b0 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
+                  b0 = Argusgen_mcmp(findex, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
                   Argusgen_and(b0, b1);
                }
             }
@@ -1446,6 +1457,11 @@ Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
             } else
                Argusgen_or(b0, b1);
          }
+         break;
+      }
+
+      case Q_GRE: {
+         b1 = Argusgen_hostop(addr, mask, type, dir, Q_GRE);
          break;
       }
 
@@ -5329,6 +5345,28 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
             case Q_LINK:
                ArgusLog(LOG_ERR, "illegal link layer address");
                break;
+
+            case Q_GRE: {
+               *mask = 0xffffffff;
+               if ((s == NULL) && (q.addr == Q_NET)) {
+                  /* Promote short net number */
+                  while (v && (v & 0xff000000) == 0) {
+                     v <<= 8;
+                     *mask <<= 8;
+                  }
+               } else if (vlen >= 0) {
+                  /* Promote short ipaddr */
+                  v <<= 32 - vlen;
+                  *mask <<= 32 - vlen;
+               }
+#ifdef ARGUSDEBUG
+               else {
+                  ArgusDebug(9, "%s: unable to 'promote' short ipaddr\n", __func__);
+               }
+#endif
+               addr = (u_int *)&v;
+               break;
+            }
 
             case Q_IPV6: {
                struct ArgusCIDRAddr *cidraddr = RaParseCIDRAddr (ArgusParser, s);

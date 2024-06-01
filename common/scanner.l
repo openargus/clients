@@ -177,6 +177,7 @@ hello    return HELLO;
 svc      return SVC;
 spi      return SPI;
 
+addr     return HOST;
 host     return HOST;
 srcid    return SRCID;
 sid      return SID;
