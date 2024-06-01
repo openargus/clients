@@ -10921,6 +10921,316 @@ ArgusPrintDstNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 #endif
 }
 
+void
+ArgusPrintGreSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_EVENT: {
+         sprintf (buf, "%*.*s ", len, len, " ");
+         break;
+      }
+
+      case ARGUS_FAR: {
+         struct ArgusGreStruct *gre = NULL;
+         struct ArgusFlow *flow;
+         void *addr = NULL;
+         int objlen = 0, type = 0;
+         unsigned char masklen = 0;
+
+
+         if ((gre = (void *)argus->dsrs[ARGUS_GRE_INDEX]) != NULL) {
+            flow = &gre->tflow;
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE: 
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_IPV4:
+                        addr = &flow->ip_flow.ip_src;
+                        if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT)
+                           masklen = 32;
+                        else {
+                           if (flow->hdr.argus_dsrvl8.qual & ARGUS_MASKLEN)
+                              masklen = flow->ip_flow.smask;
+                        }
+                        objlen = 4;
+                        break;
+                     case ARGUS_TYPE_IPV6:
+                        addr = &flow->ipv6_flow.ip_src;
+                        if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT)
+                           masklen = 128;
+                        else
+                           if (flow->hdr.argus_dsrvl8.qual & ARGUS_MASKLEN)
+                              masklen = flow->ipv6_flow.smask;
+                        objlen = 16;
+                        break;
+
+                     case ARGUS_TYPE_RARP:
+                        type = ARGUS_TYPE_ETHER;
+                        addr = &flow->lrarp_flow.tareaddr;
+                        objlen = 6;
+                        break;
+                     case ARGUS_TYPE_ARP:
+                        type = ARGUS_TYPE_IPV4;
+                        addr = &flow->larp_flow.arp_spa;
+                        objlen = 4;
+                        break;
+                     case ARGUS_TYPE_ETHER:
+                        addr = &flow->mac_flow.mac_union.ether.ehdr.ether_shost;
+                        objlen = 6;
+                        break;
+                     case ARGUS_TYPE_WLAN:
+                        type = ARGUS_TYPE_ETHER;
+                        addr = &flow->wlan_flow.shost;
+                        objlen = 6;
+                        break;
+
+                     case ARGUS_TYPE_ISIS: {
+                        type = ARGUS_TYPE_ISIS;
+                        switch (flow->isis_flow.pdu_type) {
+                           case L1_LAN_IIH:
+                           case L2_LAN_IIH:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.hello.srcid;
+                              objlen = SYSTEM_ID_LEN;
+                              break;
+
+                           case L1_CSNP:
+                           case L2_CSNP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.csnp.srcid;
+                              objlen = NODE_ID_LEN;
+                              break;
+
+                           case L1_PSNP:
+                           case L2_PSNP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.psnp.srcid;
+                              objlen = NODE_ID_LEN;
+                              break;
+
+                           case L1_LSP:
+                           case L2_LSP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.lsp.lspid;
+                              objlen = LSP_ID_LEN;
+                              break;
+                        }
+                        break;
+                     }
+                  }
+                  break;
+               }
+
+               case ARGUS_FLOW_ARP: {
+                  switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_RARP:
+                        type = ARGUS_TYPE_ETHER;
+                        addr = &flow->rarp_flow.dhaddr;
+                        objlen = 6;
+                        break;
+
+                     case ARGUS_TYPE_ARP:
+                        type = ARGUS_TYPE_IPV4;
+                        addr = &flow->arp_flow.arp_spa;
+                        objlen = 4;
+                        break;
+                  }
+                  break;
+               }
+
+               default:
+                  break;
+            }
+         } 
+         ArgusPrintAddr (parser, buf, type, addr, objlen, masklen, len, ARGUS_SRC);
+         break;
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintGreSrcAddr (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintGreDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_EVENT: {
+         sprintf (buf, "%*.*s ", len, len, " ");
+         break;
+      }
+
+      case ARGUS_FAR: {
+         struct ArgusGreStruct *gre = NULL;
+         struct ArgusFlow *flow;
+         void *addr = NULL;
+         int objlen = 0, type = 0;
+         unsigned char masklen = 0;
+
+
+         if ((gre = (void *)argus->dsrs[ARGUS_GRE_INDEX]) != NULL) {
+            flow = &gre->tflow;
+            switch (flow->hdr.subtype & 0x3F) {
+               case ARGUS_FLOW_CLASSIC5TUPLE: 
+               case ARGUS_FLOW_LAYER_3_MATRIX: {
+                  switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                     case ARGUS_TYPE_IPV4:
+                        addr = &flow->ip_flow.ip_dst;
+                        if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT)
+                           masklen = 32;
+                        else {
+                           if (flow->hdr.argus_dsrvl8.qual & ARGUS_MASKLEN)
+                              masklen = flow->ip_flow.smask;
+                        }
+                        objlen = 4;
+                        break;
+                     case ARGUS_TYPE_IPV6:
+                        addr = &flow->ipv6_flow.ip_dst;
+                        if (flow->hdr.argus_dsrvl8.qual & ARGUS_FRAGMENT)
+                           masklen = 128;
+                        else
+                           if (flow->hdr.argus_dsrvl8.qual & ARGUS_MASKLEN)
+                              masklen = flow->ipv6_flow.smask;
+                        objlen = 16;
+                        break;
+
+                     case ARGUS_TYPE_RARP:
+                        type = ARGUS_TYPE_ETHER;
+                        addr = &flow->lrarp_flow.tareaddr;
+                        objlen = 6;
+                        break;
+                     case ARGUS_TYPE_ARP:
+                        type = ARGUS_TYPE_IPV4;
+                        addr = &flow->larp_flow.arp_spa;
+                        objlen = 4;
+                        break;
+                     case ARGUS_TYPE_ETHER:
+                        addr = &flow->mac_flow.mac_union.ether.ehdr.ether_dhost;
+                        objlen = 6;
+                        break;
+                     case ARGUS_TYPE_WLAN:
+                        type = ARGUS_TYPE_ETHER;
+                        addr = &flow->wlan_flow.dhost;
+                        objlen = 6;
+                        break;
+
+                     case ARGUS_TYPE_ISIS: {
+                        type = ARGUS_TYPE_ISIS;
+                        switch (flow->isis_flow.pdu_type) {
+                           case L1_LAN_IIH:
+                           case L2_LAN_IIH:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.hello.srcid;
+                              objlen = SYSTEM_ID_LEN;
+                              break;
+
+                           case L1_CSNP:
+                           case L2_CSNP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.csnp.srcid;
+                              objlen = NODE_ID_LEN;
+                              break;
+
+                           case L1_PSNP:
+                           case L2_PSNP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.psnp.srcid;
+                              objlen = NODE_ID_LEN;
+                              break;
+
+                           case L1_LSP:
+                           case L2_LSP:
+                              type = ARGUS_TYPE_ISIS;
+                              addr = &flow->isis_flow.isis_un.lsp.lspid;
+                              objlen = LSP_ID_LEN;
+                              break;
+                        }
+                        break;
+                     }
+                  }
+                  break;
+               }
+
+               case ARGUS_FLOW_ARP:
+               default:
+                  break;
+            }
+         } 
+         ArgusPrintAddr (parser, buf, type, addr, objlen, masklen, len, ARGUS_SRC);
+         break;
+      }
+   }
+
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintGreDstAddr (%p, %p)", buf, argus);
+#endif
+}
+
+
+void
+ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char protoStrBuf[16], *protoStr = NULL;
+   u_char proto; 
+ 
+   bzero (protoStrBuf, sizeof(protoStrBuf));
+   protoStr = protoStrBuf;
+    
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR:
+         sprintf (protoStrBuf, " ");
+         break;
+
+      case ARGUS_NETFLOW:
+      case ARGUS_AFLOW:
+      case ARGUS_EVENT:
+         sprintf (protoStrBuf, " ");
+         break;
+         
+      case ARGUS_FAR: {
+         struct ArgusGreStruct *gre = NULL;
+
+         if ((gre = (void *)argus->dsrs[ARGUS_GRE_INDEX]) != NULL) {
+            proto = gre->proto;
+
+            if (ip_proto_string[proto] == NULL)
+               ip_proto_string[proto] = "unas";
+            if (parser->nflag > 2)
+               sprintf (protoStr, "%u", proto); 
+            else
+               sprintf (protoStr, "%s", ip_proto_string[proto]); 
+            break;
+         }
+      }
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " Proto = \"%s\"", protoStr);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(protoStr);
+      } else {
+         if (strlen(protoStr) > len) {
+            protoStr[len - 1] = '*';
+            protoStr[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, protoStr);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintGreProto (%p, %p)", buf, argus);
+#endif
+}
+
 
 void
 ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -19869,6 +20179,12 @@ ArgusPrintProtoLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintGreProtoLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "GProto");
+}
+
+void
 ArgusPrintSrcNetLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    if (parser->RaMonMode) {
@@ -19888,6 +20204,20 @@ ArgusPrintSrcAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
          sprintf (buf, "%*.*s ", len, len, "SrcDomain");
       } else {
          sprintf (buf, "%*.*s ", len, len, "SrcAddr");
+      }
+   }
+}
+
+void
+ArgusPrintGreSrcAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->RaMonMode) {
+      sprintf (buf, "%*.*s ", len, len, "GAddr");
+   } else {
+      if (parser->domainonly && (!parser->nflag)) {
+         sprintf (buf, "%*.*s ", len, len, "GSrcDomain");
+      } else {
+         sprintf (buf, "%*.*s ", len, len, "GSrcAddr");
       }
    }
 }
@@ -19929,6 +20259,16 @@ ArgusPrintDstAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
       sprintf (buf, "%*.*s ", len, len, "DstDomain");
    } else {
       sprintf (buf, "%*.*s ", len, len, "DstAddr");
+   }
+}
+
+void
+ArgusPrintGreDstAddrLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   if (parser->domainonly && (!parser->nflag)) {
+      sprintf (buf, "%*.*s ", len, len, "GDstDomain");
+   } else {
+      sprintf (buf, "%*.*s ", len, len, "GDstAddr");
    }
 }
 
