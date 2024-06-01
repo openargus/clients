@@ -127,7 +127,7 @@ are:
            jitter   Jitter data ([s|d]jit, [s|d]intpkt)
            ipattr   IP attributes ([s|d]ipid, [s|d]tos, [s|d]dsb, [s|d]ttl)
            psize    packet size information
-           mac      MAC addresses (smac, dmac)
+           mac      MAC addresses (smac, dmac, smacclass, dmacclass)
            icmp     ICMP specific data (icmpmap, inode)
            encaps   Flow encapsulation type indications
            behavior Behavioral metrics and data
@@ -319,6 +319,12 @@ oui portion of the source MAC addr.
 .B doui
 oui portion of the destination MAC addr.
 .TP
+.B smacclass
+class of the source MAC addr. (UAA, LAA, ELI, SAI, AAI, RES, LM)
+.TP
+.B dmacclass
+class of the destination MAC addr. (UAA, LAA, ELI, SAI, AAI, RES, LM)
+.TP
 .B senc
 source encapsulations processed.
 .TP
@@ -381,6 +387,15 @@ source MPLS identifier.
 .TP
 .B dmpls
 destination MPLS identifier.
+.TP
+.B sgreaddr
+source GRE tunnel address.
+.TP
+.B dgreaddr
+destination GRE tunnel address.
+.TP
+.B greproto
+Next layer GRE tunnel protocol.
 .TP
 .B autoid
 Auto generated identifier (mysql).
@@ -678,6 +693,7 @@ Examles are:
    -s +2srcid    adds the source identifier after the 2nd field.
    -s spkts:18   prints src pkt count with a column width of 18.
    -s smpls      print the local mpls label in the flow.
+   -s sgreaddr   print the src address of the GRE tunnel in the flow.
 .fi
 .RE
 .TP 4 4
