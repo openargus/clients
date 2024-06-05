@@ -157,13 +157,13 @@ my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
 my @db1 = ( "inventory", "ipAddrs", "smac saddr sid inf", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state trans");
-my @db2 = ( "ipMatrix", "ip", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db3 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db4 = ( "etherMatrix", "ether", "dmac smac sid inf", "stime ltime sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
-my @db5 = ( "ntpMatrix", "ntp", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db6 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db7 = ( "arpMatrix", "arg", "daddr saddr sid inf", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db8 = ( "ether", "ether", "smac etype sid inf", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
+my @db2 = ( "ipMatrix", "ip", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db3 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db4 = ( "etherMatrix", "ether", "dmac smac sid inf", "stime dur sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
+my @db5 = ( "ntpMatrix", "ntp", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db6 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db7 = ( "arpMatrix", "arg", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db8 = ( "ether", "ether", "smac etype sid inf", "stime dur sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
 
 #my @databases = \(@db1, @db2);
 my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
