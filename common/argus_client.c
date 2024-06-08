@@ -7331,10 +7331,17 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  }
                               }
                            }
+                        } else {
+                           if (!(p1) && p2) {
+                              if ((p1 = ArgusCalloc(1, sizeof(*p1))) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                              bcopy ((char *)p2, (char *)p1, sizeof(*p2));
+                              ns1->dsrs[ARGUS_PSIZE_INDEX] = (struct ArgusDSRHeader *) p1;
+                              ns1->dsrindex |= (0x01 << ARGUS_PSIZE_INDEX);
+                           }
                         }
                         break;
                      }
-
 
 // Merging the aggregation object results in ns1 having
 // a valid aggregation object, with updates to the various
@@ -8456,7 +8463,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                } else {
                   if (!(a1 || a2)) {
                      if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                        ArgusLog (LOG_ERR, "ArgusIntersectRecords: ArgusCalloc error %s", strerror(errno));
 
                      a1->hdr.type            = ARGUS_AGR_DSR;
                      a1->hdr.subtype         = 0x01;
@@ -8467,7 +8474,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                   } else
                   if (a2) {
                      if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                        ArgusLog (LOG_ERR, "ArgusIntersectRecords: ArgusCalloc error %s", strerror(errno));
 
                      bcopy((char *)a2, (char *)a1, sizeof(*a1));
                      a1->count++;
