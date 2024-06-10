@@ -5091,25 +5091,23 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
             case ARGUS_PSIZE_INDEX: {
                struct ArgusPacketSizeStruct *psize = (void *)argus->dsrs[ARGUS_PSIZE_INDEX];
                struct ArgusPacketSizeStruct pbuf, *pbptr = &pbuf;
-               pbptr->hdr = psize->hdr;
+               memcpy(pbptr, psize, sizeof(*psize));
 
                switch (psize->hdr.argus_dsrvl8.qual & 0x0F) {
                   case ARGUS_SRCDST_SHORT:
                      break;
                   case ARGUS_SRC_SHORT:
-                     pbptr->hdr.argus_dsrvl8.qual &= ~ARGUS_SRC_SHORT;
-                     pbptr->hdr.argus_dsrvl8.qual |=  ARGUS_DST_SHORT;
+                     psize->hdr.argus_dsrvl8.qual &= ~ARGUS_SRC_SHORT;
+                     psize->hdr.argus_dsrvl8.qual |=  ARGUS_DST_SHORT;
                      break;
                   case ARGUS_DST_SHORT:
-                     pbptr->hdr.argus_dsrvl8.qual &= ~ARGUS_DST_SHORT;
-                     pbptr->hdr.argus_dsrvl8.qual |=  ARGUS_SRC_SHORT;
+                     psize->hdr.argus_dsrvl8.qual &= ~ARGUS_DST_SHORT;
+                     psize->hdr.argus_dsrvl8.qual |=  ARGUS_SRC_SHORT;
                      break;
                }
 
-               bcopy(&psize->src, &pbptr->dst, sizeof(psize->src));
-               bcopy(&psize->dst, &pbptr->src, sizeof(psize->dst));
-
-               bcopy(pbptr, psize, sizeof(*psize));
+               memcpy(&psize->src, &pbptr->dst, sizeof(psize->src));
+               memcpy(&psize->dst, &pbptr->src, sizeof(psize->dst));
                break;
             }
 
@@ -14520,7 +14518,7 @@ ArgusPrintSrcMaxPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
-            if (psize->src.psizemax > 0)
+            if (psize->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) 
                sprintf (value, "%d", psize->src.psizemax);
             else
                sprintf (value, " ");
@@ -14566,7 +14564,7 @@ ArgusPrintSrcMinPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
-            if (psize->src.psizemin > 0) 
+            if (psize->hdr.subtype & ARGUS_PSIZE_SRC_MAX_MIN) 
                sprintf (value, "%d", psize->src.psizemin);
             else
                sprintf (value, " ");
@@ -14736,7 +14734,7 @@ ArgusPrintDstMaxPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
-            if (psize->dst.psizemax > 0) 
+            if (psize->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) 
                sprintf (value, "%d", psize->dst.psizemax);
             else
                sprintf (value, " ");
@@ -14781,7 +14779,7 @@ ArgusPrintDstMinPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
-            if (psize->dst.psizemin > 0) 
+            if (psize->hdr.subtype & ARGUS_PSIZE_DST_MAX_MIN) 
                sprintf (value, "%d", psize->dst.psizemin);
             else
                sprintf (value, " ");

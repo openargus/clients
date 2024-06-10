@@ -2503,7 +2503,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                      case ARGUS_PSIZE_DSR: {
                         int i, offset = 0;
-                        switch (dsr->argus_dsrvl8.qual & 0x03) {
+                        switch (dsr->argus_dsrvl8.qual & 0x0F) {
                            case ARGUS_SRCDST_SHORT:
                               dsr->subtype |= ARGUS_PSIZE_SRC_MAX_MIN | ARGUS_PSIZE_DST_MAX_MIN;
                               canon->psize.src.psizemin = (((unsigned short *)(dsr + 1))[0]);
