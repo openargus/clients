@@ -489,18 +489,22 @@ AC_QOSIENT_LIBCARES
 
 AM_PATH_PYTHON([3],, [:])
 
-if test "$PYTHON_VERSION" = "3"; then
 AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
 if test "$HAVE_SWIG" = "1" ; then
   case "$target_os" in
   darwin*)
+if test "$PYTHON_VERSION" = "3"; then
         DIRS="$DIRS ./pythonlib"
+fi
+        DIRS="$DIRS ./perllib"
         ;;
   *)
+if test "$PYTHON_VERSION" = "3"; then
         DIRS="$DIRS ./pythonlib"
+fi
+        DIRS="$DIRS ./perllib"
         ;;
   esac
-fi
 fi
 
 AC_SUBST(PACKAGE_VERSION)
@@ -542,6 +546,7 @@ AC_CONFIG_FILES([
    ./lib/argus-clients.pc
    ./pkg/rhel/systemd/rasqlinsert-setup
    ./pkg/Makefile
+   ./perllib/Makefile
    ./pythonlib/Makefile
    ./lib/argus-clients.spec
 ])

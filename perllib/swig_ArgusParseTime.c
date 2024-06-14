@@ -47,8 +47,8 @@ struct ArgusParserStruct *ArgusNewParser(char *);
 static void ArgusInitializeParser(struct ArgusParserStruct *);
 
 
-int RaDaysInAMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-struct ArgusParserStruct *ArgusParser = NULL;
+extern int RaDaysInAMonth[12];
+extern struct ArgusParserStruct *ArgusParser;
 
 int
 swig_ArgusParseTime (char *time_string, int *start, int *end)
@@ -171,13 +171,14 @@ swig_ArgusParseTime (char *time_string, int *start, int *end)
    return retn;
 }
 
+/*
 void
 ArgusLog (int d, char *fmt, ...)
 {
    return;
 }
 
-char ArgusDebugBuf[MAXSTRLEN];
+extern char ArgusDebugBuf[MAXSTRLEN];
 
 void
 ArgusDebug (int d, char *fmt, ...)
@@ -347,7 +348,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen, struc
                   snprintf_append(buf, &len, &remain, "%s", sbuf);
                   break;
                }
-               /* Fall through to default if %z and not parser->ArgusPrintXml */
+               // Fall through to default if %z and not parser->ArgusPrintXml
             }
             default: {
                char sbuf[8];
@@ -366,6 +367,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen, struc
    }
    return (int)len;
 }
+*/
 
 
 struct ArgusParserStruct *

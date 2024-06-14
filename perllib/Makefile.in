@@ -92,7 +92,7 @@ argus_parse_time.o: ../common/argus_parse_time.c
 swig_ArgusParseTime.o: swig_ArgusParseTime.c
 	$(CC) $(CFLAGS) -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 swig_ArgusParseTime_wrap.o: swig_ArgusParseTime_wrap.c
-	$(CC) $(CFLAGS) -Wno-unused-variable -Wno-missing-prototypes \
+	$(CC) $(CFLAGS) -Wno-unused-variable -Wno-missing-prototypes -Wno-misleading-indentation \
 	  -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 
 # multiple targets (left side of the colon) seems to confuse parallel make.
@@ -104,6 +104,8 @@ swig.stamp: swig_ArgusParseTime.i
 	swig -perl5 $^
 	mv util.pm qosient/XS
 	touch swig.stamp
+
+.PHONY: clean distclean
 
 distclean: clean
 	rm -f Makefile
