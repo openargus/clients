@@ -147,10 +147,12 @@ uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasort
 	rm -f $(DESTDIR)$(BINDIR)/rastream
 
+.PHONY: clean mostlyclean distclean realclean clobber
+
 clean:
 	rm -f $(CLEANFILES)
 
-distclean:
+clobber realclean distclean:
 	rm -f $(CLEANFILES) Makefile 
 
 tags: $(TAGFILES)
