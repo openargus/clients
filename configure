@@ -788,6 +788,7 @@ with_systemdsystemunitdir
 with_libcurl
 with_curlexe
 with_c_ares
+enable_python
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1440,6 +1441,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-largefile     omit support for large files
+  --disable-python        Disable scripts that depends on python
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -11136,6 +11138,22 @@ fi
       fi
 
 
+#
+# Python stuff
+#
+# Check whether --enable-python was given.
+if test "${enable_python+set}" = set; then :
+  enableval=$enable_python; case "${enableval}" in
+          yes) HAVE_PYTHON=yes ;;
+          no)  HAVE_PYTHON=no ;;
+          *) as_fn_error $? "bad value ${enableval} for --enable-python" "$LINENO" 5 ;;
+   esac
+else
+  HAVE_PYTHON=yes
+fi
+
+
+if test "x$HAVE_PYTHON" = "xyes" ; then
 
 
 
@@ -11398,6 +11416,44 @@ $as_echo "$am_cv_python_pyexecdir" >&6; }
 
 
 
+py_mod_var=`echo numpy'_' | sed 'y%./+-%__p_%'`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for python module numpy" >&5
+$as_echo_n "checking for python module numpy... " >&6; }
+if eval \${py_cv_mod_$py_mod_var+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+prog="
+import sys
+try:
+        import numpy
+except ImportError:
+        sys.exit(1)
+except:
+        sys.exit(0)
+sys.exit(0)"
+if $PYTHON -c "$prog" 1>&5 2>&5
+  then
+    eval "py_cv_mod_$py_mod_var=yes"
+  else
+    eval "py_cv_mod_$py_mod_var=no"
+  fi
+
+fi
+
+py_val=`eval "echo \`echo '$py_cv_mod_'$py_mod_var\`"`
+if test "x$py_val" != xno; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+  HAVE_PYTHON_NUMPY=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  HAVE_PYTHON_NUMPY=no
+fi
+
+fi
+
 # Extract the first word of "swig", so it can be a program name with args.
 set dummy swig; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -11415,7 +11471,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_HAVE_SWIG="1"
+    ac_cv_prog_HAVE_SWIG=""yes""
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -11423,7 +11479,7 @@ done
   done
 IFS=$as_save_IFS
 
-  test -z "$ac_cv_prog_HAVE_SWIG" && ac_cv_prog_HAVE_SWIG="0"
+  test -z "$ac_cv_prog_HAVE_SWIG" && ac_cv_prog_HAVE_SWIG=""no""
 fi
 fi
 HAVE_SWIG=$ac_cv_prog_HAVE_SWIG
@@ -11436,16 +11492,16 @@ $as_echo "no" >&6; }
 fi
 
 
-if test "$HAVE_SWIG" = "1" ; then
+if test "x$HAVE_SWIG" = "xyes" ; then
   case "$target_os" in
   darwin*)
-if test "$PYTHON_VERSION" = "3"; then
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
         DIRS="$DIRS ./perllib"
         ;;
   *)
-if test "$PYTHON_VERSION" = "3"; then
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
         DIRS="$DIRS ./perllib"

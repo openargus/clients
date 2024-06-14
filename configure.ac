@@ -27,6 +27,9 @@
 #
 # Process this file with autoconf to produce a configure script.
 
+m4_include([m4/python.m4])
+
+
 AC_PREREQ([2.68])
 AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
@@ -487,19 +490,33 @@ AC_QOSIENT_MACHINE_ID
 
 AC_QOSIENT_LIBCARES
 
-AM_PATH_PYTHON([3],, [:])
+#
+# Python stuff
+#
+AC_ARG_ENABLE(python,
+   AS_HELP_STRING([--disable-python], [Disable scripts that depends on python]),
+   [case "${enableval}" in
+          yes) HAVE_PYTHON=yes ;;
+          no)  HAVE_PYTHON=no ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-python]) ;;
+   esac],[HAVE_PYTHON=yes])
 
-AC_CHECK_PROG([HAVE_SWIG], [swig], [1], [0])
-if test "$HAVE_SWIG" = "1" ; then
+if test "x$HAVE_PYTHON" = "xyes" ; then
+   AM_PATH_PYTHON([3],, [:])
+   AM_CHECK_PYMOD(numpy,,[HAVE_PYTHON_NUMPY=yes],[HAVE_PYTHON_NUMPY=no])
+fi
+
+AC_CHECK_PROG([HAVE_SWIG], [swig], ["yes"], ["no"])
+if test "x$HAVE_SWIG" = "xyes" ; then
   case "$target_os" in
   darwin*)
-if test "$PYTHON_VERSION" = "3"; then
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
         DIRS="$DIRS ./perllib"
         ;;
   *)
-if test "$PYTHON_VERSION" = "3"; then
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
         DIRS="$DIRS ./perllib"
