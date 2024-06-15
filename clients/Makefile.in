@@ -84,11 +84,11 @@ YACC = @V_YACC@
 LIB = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a
 
 SRC = ra.c radium.c racount.c rasort.c rastream.c rabins.c racluster.c \
-      ranonymize.c
+      ramanage.c ranonymize.c
 
 PROGS = @INSTALL_BIN@/ra @INSTALL_BIN@/radium @INSTALL_BIN@/racount @INSTALL_BIN@/rasort \
 	@INSTALL_BIN@/rastream @INSTALL_BIN@/rabins @INSTALL_BIN@/racluster \
-	@INSTALL_BIN@/ranonymize
+	@INSTALL_BIN@/ramanage @INSTALL_BIN@/ranonymize
 
 all: $(PROGS)
 
@@ -106,6 +106,9 @@ all: $(PROGS)
 
 @INSTALL_BIN@/racount: racount.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ racount.o $(LIB) $(COMPATLIB)
+
+@INSTALL_BIN@/ramanage: ramanage.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ ramanage.o $(LIB) $(COMPATLIB)
 
 @INSTALL_BIN@/ranonymize: ranonymize.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ ranonymize.o $(LIB) $(COMPATLIB)
@@ -133,6 +136,7 @@ install: force all
 	$(INSTALL) @INSTALL_BIN@/racluster $(DESTDIR)$(BINDIR)/racluster
 	$(INSTALL) @INSTALL_BIN@/racount $(DESTDIR)$(BINDIR)/racount
 	$(INSTALL) @INSTALL_BIN@/radium $(DESTDIR)$(SBINDIR)/radium
+	$(INSTALL) @INSTALL_BIN@/ramanage $(DESTDIR)$(BINDIR)/ramanage
 	$(INSTALL) @INSTALL_BIN@/ranonymize $(DESTDIR)$(BINDIR)/ranonymize
 	$(INSTALL) @INSTALL_BIN@/rasort $(DESTDIR)$(BINDIR)/rasort
 	$(INSTALL) @INSTALL_BIN@/rastream $(DESTDIR)$(BINDIR)/rastream
@@ -143,6 +147,7 @@ uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/racluster
 	rm -f $(DESTDIR)$(BINDIR)/racount
 	rm -f $(DESTDIR)$(SBINDIR)/radium
+	rm -f $(DESTDIR)$(BINDIR)/ramanage
 	rm -f $(DESTDIR)$(BINDIR)/ranonymize
 	rm -f $(DESTDIR)$(BINDIR)/rasort
 	rm -f $(DESTDIR)$(BINDIR)/rastream
