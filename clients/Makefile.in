@@ -107,8 +107,11 @@ all: $(PROGS)
 @INSTALL_BIN@/racount: racount.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ racount.o $(LIB) $(COMPATLIB)
 
-@INSTALL_BIN@/ramanage: ramanage.o $(LIB)
-	$(CC) $(CFLAGS) -o $@ ramanage.o $(LIB) $(COMPATLIB)
+@INSTALL_BIN@/ramanage: ramanage.o ramanage_sha1.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ ramanage.o ramanage_sha1.o $(LIB) $(COMPATLIB) @LIBCURL@ @LIBCARES_LIBS@
+
+ramanage_sha1.o: ../common/sha1.c
+	$(CC) $(CFLAGS) -c $^ -o $@
 
 @INSTALL_BIN@/ranonymize: ranonymize.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ ranonymize.o $(LIB) $(COMPATLIB)

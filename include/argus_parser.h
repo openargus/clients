@@ -539,7 +539,7 @@ struct ArgusParserStruct {
    char *RaFlowModelFile, *exceptfile;
    char *writeDbstr, *readDbstr;
    char *dbuserstr, *dbpassstr, *dbportstr, *dbhoststr;
-   char *ais, *ustr, *pstr; 
+   char *ais, *aistrategy, *ustr, *pstr; 
    char *timearg, *wfile;
 
    char *ArgusFlowModelFile;

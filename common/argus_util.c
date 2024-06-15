@@ -74,6 +74,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <wordexp.h>
+#include <glob.h>
 
 #include <argus_compat.h>
 
@@ -187,6 +188,7 @@ typedef struct {
  
 void sprint128 (char *, char *, uint128 *);
 
+int RaProcessArchiveSplitOptions(struct ArgusParserStruct *, char *, int);
 int ArgusGenerateCanonRecord (struct ArgusRecordStruct *);
 
 void ArgusPrintEspSpi (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int, u_int, int);
@@ -513,6 +515,133 @@ int ArgusMkdirPath(const char * const path)
 out:
    free(cpy);
    return rv;
+}
+
+
+char ArgusArchiveNameBuf[MAXSTRLEN];
+
+int
+RaProcessArchiveFiles (char *path, int sort)
+{
+   int retn = 1;
+   struct stat statbuf;
+   size_t pathlen;
+   char *name;
+
+   if (stat(path, &statbuf) < 0)
+      return(0);
+
+   if (ArgusParser->ais == NULL)
+      ArgusParser->ais = getenv("ARGUS_ARCHIVE");
+
+   if (ArgusParser->aistrategy == NULL)
+      ArgusParser->aistrategy = getenv("ARGUS_ARCHIVE_STRATEGY");
+
+   pathlen = strlen(path);
+
+   if (pathlen > MAXSTRLEN) {
+      ArgusLog(LOG_WARNING, "%s: path name > %u\n", __func__, MAXSTRLEN);
+      return 0;
+   }
+
+   if ((pathlen > 1) && ((path[0] == '.') && (path[1] != '/')))
+      return (0);
+
+/*
+ * If ArgusParser->ais is set, then we can be intelligent as to how we
+ * process the archive, as we know how the archive is organized.
+ * If not, we'll need to process the archive as if it has an unknown
+ * structure / strategy and just recurse down into the the file structure.
+ *
+ * With a format and strategy, we can find the days that are available for
+ * processing, using a time range, (like -2d, or date-date), and not
+ * have to use RaDescend(), which is really expensive and slow.
+ *
+ * This is 'catchup' processing.  We'll start with 'yesterday' and go back
+ * to find files that need to added.
+ */
+
+#define ARGUS_REPO_SPAN		182
+#define ARGUS_DAY_SECS		86000
+#define ARGUS_MAX_FILENUM	1000
+
+   if ((ArgusParser->ais != NULL) && (ArgusParser->aistrategy != NULL)) {
+      struct timeval start = ArgusParser->startime_t;
+      struct timeval end   = ArgusParser->lasttime_t;
+
+      char *ptr = NULL;
+      struct tm tmval;
+      glob_t globbuf;
+
+      if (start.tv_sec && end.tv_sec) {
+      } else {
+         gettimeofday (&end, 0L);
+         end.tv_sec -= ARGUS_DAY_SECS;
+         start.tv_sec = end.tv_sec - (ARGUS_REPO_SPAN * ARGUS_DAY_SECS);
+      }
+
+      while ((end.tv_sec > start.tv_sec) && (ArgusParser->ArgusInputFileCount < ARGUS_MAX_FILENUM)) {
+         localtime_r(&end.tv_sec, &tmval);
+
+         if (strchr(ArgusParser->ais, '%') != NULL)
+            if (strftime(ArgusArchiveNameBuf, MAXSTRLEN, ArgusParser->ais, &tmval) <= 0)
+               ArgusLog (LOG_ERR, "RaProcessArchiveFiles () strftime %s\n", strerror(errno));
+
+         if ((ptr = strstr(ArgusArchiveNameBuf, "/argus.")) != NULL) {
+            *(ptr + 1)  = '*';
+            *(ptr + 2)  = 0;
+         }
+
+         if (strchr(ArgusParser->ais, '$') != NULL)
+            RaProcessArchiveSplitOptions(ArgusParser, ArgusArchiveNameBuf, MAXSTRLEN);
+
+         if (strlen(ArgusArchiveNameBuf) > 0) {
+            glob (ArgusArchiveNameBuf, 0, NULL, &globbuf);
+            if (globbuf.gl_pathc > 0) {
+               int i;
+               for (i = 0; i < globbuf.gl_pathc; i++) {
+                  char *path = globbuf.gl_pathv[i];
+                  if (stat(path, &statbuf) >= 0) {
+                     if (ArgusAddFileList (ArgusParser, path, ARGUS_DATA_SOURCE, -1, -1) != 0)
+                        ((struct ArgusFileInput *)ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
+                  }
+               }
+            }
+         }
+         end.tv_sec -= 86000;
+      }
+
+   } else {
+      name = ArgusMalloc(MAXSTRLEN);
+      if (name == NULL)
+         ArgusLog(LOG_ERR, "%s: Unable to allocate filename buffer\n", __func__);
+
+      strcpy(name, path);
+      if (stat(path, &statbuf) < 0)
+         return(0);
+
+      if ((statbuf.st_mode & S_IFMT) == S_IFDIR) {
+         retn = RaDescend (name, MAXSTRLEN, pathlen);
+      } else {
+         if ((statbuf.st_mode & S_IFMT) == S_IFREG) {
+#ifdef ARGUSDEBUG
+            ArgusDebug (2, "RaProcessArchiveFiles: adding %s\n", path);
+#endif
+            if (!(ArgusAddFileList (ArgusParser, path, ARGUS_DATA_SOURCE, -1, -1)))
+               ArgusLog (LOG_ERR, "error: -R file arg %s\n", path);
+
+            /* Copy the stat() results since we already have them. */
+            ((struct ArgusFileInput *)ArgusParser->ArgusInputFileListTail)->statbuf = statbuf;
+         }
+      }
+      ArgusFree(name);
+   }
+
+   if (sort)
+      ArgusSortFileList (&ArgusParser->ArgusInputFileList,
+                         &ArgusParser->ArgusInputFileListTail,
+                         ArgusParser->ArgusInputFileCount);
+   return (retn);
 }
 
 int
@@ -33988,6 +34117,54 @@ ArgusTrimString (char *str)
       while ((*ptr != '\0') && (isspace((int)*ptr)) && (ptr != retn))
          *ptr-- = '\0';
    }
+   return (retn);
+}
+
+/*
+ * In this program, we want to take the archive strategy and replace the '$'
+ * variables with '*', so we can use glob to get the filenames for a specific
+ * period.
+ *
+ */
+
+int
+RaProcessArchiveSplitOptions(struct ArgusParserStruct *parser, char *str, int len)
+{
+   char resultbuf[MAXSTRLEN], tmpbuf[16];
+   char *ptr = NULL, *tptr = str;
+   int retn = 0, x;
+
+   len = len > MAXSTRLEN ? MAXSTRLEN : len;
+   bzero (resultbuf, len);
+   bzero (tmpbuf, 16);
+   tmpbuf[0] = '*';
+
+   while ((ptr = strchr (tptr, '$')) != NULL) {
+      *ptr++ = '\0';
+      sprintf (&resultbuf[strlen(resultbuf)], "%s", tptr);
+
+      for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
+         if (!strncmp (RaPrintAlgorithmTable[x].field, ptr, strlen(RaPrintAlgorithmTable[x].field))) {
+            sprintf (&resultbuf[strlen(resultbuf)], "%s", tmpbuf);
+            ptr += strlen(RaPrintAlgorithmTable[x].field);
+            while (*ptr && (*ptr != '$'))
+               bcopy (ptr++, &resultbuf[strlen(resultbuf)], 1);
+            break;
+         }
+      }
+      tptr = ptr;
+      retn++;
+   }
+
+   if (retn) {
+      bzero (str, len);
+      bcopy (resultbuf, str, strlen(resultbuf));
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (1, "RaProcessArchiveSplitOptions(%s, %d, 0x%x): returns %d", str, len, retn);
+#endif
+
    return (retn);
 }
 
