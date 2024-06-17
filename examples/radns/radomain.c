@@ -176,56 +176,60 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
 
       slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
       slen = (user->count < slen) ? user->count : slen;
-
-      if (qlen <= slen) {
-         
-
       snapend = bp + slen;
 
-      if (slen >= sizeof(HEADER)) {
-         np = (const HEADER *)bp;
+      while (qlen <= slen) {
+         if (slen >= sizeof(HEADER)) {
+            np = (const HEADER *)bp;
 
-         query->seqnum = EXTRACT_16BITS(&np->id);
-         query->opcode = DNS_OPCODE(np);
+            query->seqnum = EXTRACT_16BITS(&np->id);
+            query->opcode = DNS_OPCODE(np);
 
-         /* get the byte-order right */
-         query->qdcount = EXTRACT_16BITS(&np->qdcount);
-         query->ancount = EXTRACT_16BITS(&np->ancount);
-         query->nscount = EXTRACT_16BITS(&np->nscount);
-         query->arcount = EXTRACT_16BITS(&np->arcount);
+            /* get the byte-order right */
+            query->qdcount = EXTRACT_16BITS(&np->qdcount);
+            query->ancount = EXTRACT_16BITS(&np->ancount);
+            query->nscount = EXTRACT_16BITS(&np->nscount);
+            query->arcount = EXTRACT_16BITS(&np->arcount);
 
-         query->flags[0] = np->flags1;
-         query->flags[1] = np->flags2;
+            query->flags[0] = np->flags1;
+            query->flags[1] = np->flags2;
 
-         bzero(ArgusBuf, 0x4000);
-         
-         if ((cp = ns_nprint((const u_char *)(np + 1), bp, ArgusBuf)) != NULL) {
-            query->name = strdup(ArgusBuf);
+            bzero(ArgusBuf, 0x4000);
+            
+            if ((cp = ns_nprint((const u_char *)(np + 1), bp, ArgusBuf)) != NULL) {
+               query->name = strdup(ArgusBuf);
 
-            query->qtype = EXTRACT_16BITS(cp);
-            cp += 2;
-            query->qclass = EXTRACT_16BITS(cp);
-            cp += 2;
+               query->qtype = EXTRACT_16BITS(cp);
+               cp += 2;
+               query->qclass = EXTRACT_16BITS(cp);
+               cp += 2;
 
-            if (!(DNS_QR(np))) {      // a request
-               query->qr = 0;
-            } else {                  // a response
-               int cnt;
-               query->qr = 1;
-               query->rcode   = DNS_RCODE(np);
-               if (cp && ((cnt = query->ancount) > 0)) {
-                  do {
-                     cp = ns_rparse(query, bp, cp, ARGUS_UPDATE, 0);
-                  } while (cp && (--cnt > 0));
-               }
-               if (cp && ((cnt = query->nscount) > 0)) {
-                  do {
-                     cp = ns_rparse(query, bp, cp, ARGUS_UPDATE, 0);
-                  } while (cp && (--cnt > 0));
+               if (!(DNS_QR(np))) {      // a request
+                  query->qr = 0;
+               } else {                  // a response
+                  int cnt;
+                  query->qr = 1;
+                  query->rcode   = DNS_RCODE(np);
+                  if (cp && ((cnt = query->ancount) > 0)) {
+                     do {
+                        cp = ns_rparse(query, bp, cp, ARGUS_UPDATE, 0);
+                     } while (cp && (--cnt > 0));
+                  }
+                  if (cp && ((cnt = query->nscount) > 0)) {
+                     do {
+                        cp = ns_rparse(query, bp, cp, ARGUS_UPDATE, 0);
+                     } while (cp && (--cnt > 0));
+                  }
                }
             }
          }
-      }
+
+         bp += qlen;
+
+         if (offset > 0) {
+            qlen = EXTRACT_16BITS(bp);
+            bp += offset;
+         }
       }
    }
 
