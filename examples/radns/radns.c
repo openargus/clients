@@ -2774,8 +2774,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            node.addr.len = 4;
  
                            if ((raddr = RaFindAddress (parser, ArgusDnsServers->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
+#if defined(ARGUSDEBUG)
                               ArgusDebug(1, "%s: RaProcessRecord: new DNS server %s\n", tptr, intoa(node.addr.addr[0]));
-
+#endif
                               if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                  bcopy(&node, raddr, sizeof(node));
                                  if (node.addr.str != NULL)
@@ -2789,7 +2790,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            node.addr.str = NULL;
 
                            if ((raddr = RaFindAddress (parser, ArgusDnsClients->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
+#if defined(ARGUSDEBUG)
                               ArgusDebug(1, "%s: RaProcessRecord: new DNS client %s\n", tptr, intoa(node.addr.addr[0]));
+#endif
 
                               if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                  bcopy(&node, raddr, sizeof(node));
@@ -2812,8 +2815,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  if (node.addr.str == NULL)
                                     node.addr.str = (char *)cp;
                                  if ((raddr = RaFindAddress (parser, ArgusDnsServers->ArgusAddrTree[cidr->type], &node, ARGUS_EXACT_MATCH)) == NULL) {
+#if defined(ARGUSDEBUG)
                                     ArgusDebug(1, "%s: RaProcessRecord: new DNS server %s\n", tptr, cp);
-
+#endif
                                     if ((raddr = (struct RaAddressStruct *) ArgusMalloc (sizeof(*raddr))) != NULL) {
                                        bcopy(&node, raddr, sizeof(node));
                                        if (node.addr.str != NULL)
@@ -2833,8 +2837,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  if (node.addr.str == NULL)
                                     node.addr.str = (char *)cp;
                                  if ((raddr = RaFindAddress (parser, ArgusDnsClients->ArgusAddrTree[cidr->type], &node, ARGUS_EXACT_MATCH)) == NULL) {
+#if defined(ARGUSDEBUG)
                                     ArgusDebug(1, "%s: RaProcessRecord: new DNS client %s\n", tptr, cp);
-
+#endif
                                     if ((raddr = (struct RaAddressStruct *) ArgusMalloc (sizeof(*raddr))) != NULL) {
                                        bcopy(&node, raddr, sizeof(node));
                                        if (node.addr.str != NULL)
@@ -3051,7 +3056,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   }
 
                   case ARGUS_TYPE_IPV6: {
-                     if (IN6_IS_ADDR_MULTICAST(daddr)) {
+                     if (IN6_IS_ADDR_MULTICAST((struct in6_addr *)daddr)) {
                      } else {
                         struct ArgusCIDRAddr *cidr;
                         char ntop_buf[INET6_ADDRSTRLEN];
