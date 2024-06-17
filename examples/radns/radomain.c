@@ -147,14 +147,14 @@ static const u_char *ns_nskip(register const u_char *);
 static int labellen(const u_char *);
 static const u_char *blabel_print(const u_char *);
 
-struct ArgusDomainQueryStruct *ArgusParseDNSBuffer (struct ArgusParserStruct *, struct ArgusDataStruct *);
+struct ArgusDomainQueryStruct *ArgusParseDNSBuffer (struct ArgusParserStruct *, struct ArgusDataStruct *, int);
 void relts_print(char *, u_int32_t);
 
 #define ARGUS_UPDATE   0
 #define ARGUS_CHECK     1
 
 struct ArgusDomainQueryStruct *
-ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *user)
+ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *user, int offset)
 {
    struct ArgusDomainQueryStruct *query = NULL;
 
@@ -162,14 +162,24 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
       register const HEADER *np;
       register const u_char *cp;
       u_char *bp = NULL;
-      int slen;
+      int slen, qlen = 0;
 
       if ((query = ArgusCalloc(1, sizeof(struct ArgusDomainQueryStruct))) == NULL)
          ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
 
       bp = (u_char *) &user->array;
+
+      if (offset > 0) {
+         qlen = EXTRACT_16BITS(bp);
+         bp += offset;
+      }
+
       slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
       slen = (user->count < slen) ? user->count : slen;
+
+      if (qlen <= slen) {
+         
+
       snapend = bp + slen;
 
       if (slen >= sizeof(HEADER)) {
@@ -216,6 +226,7 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
             }
          }
       }
+      }
    }
 
    return (query);
@@ -223,10 +234,15 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
 
 
 struct ArgusDomainStruct *
-ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, struct ArgusDomainStruct *dns)
+ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, struct ArgusDomainStruct *dns, int proto)
 {
    struct ArgusDomainStruct *retn = NULL;
+   int offset = 0;
+
    bzero(dns, sizeof(*dns));
+
+   if (proto == IPPROTO_TCP)
+      offset = 2;
 
    if (argus != NULL) {
       struct ArgusDataStruct *suser = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
@@ -234,7 +250,7 @@ ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       struct ArgusDomainQueryStruct *query = NULL;
 
       if (suser != NULL) {
-         if ((query = ArgusParseDNSBuffer (parser, suser)) != NULL) {
+         if ((query = ArgusParseDNSBuffer (parser, suser, offset)) != NULL) {
             if (query->qr == 0) {
                dns->request = query;
             } else {
@@ -245,7 +261,7 @@ ArgusParseDNSRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       }
 
       if (duser != NULL) {
-         if ((query = ArgusParseDNSBuffer (parser, duser)) != NULL) {
+         if ((query = ArgusParseDNSBuffer (parser, duser, offset)) != NULL) {
             if (query->qr == 1) {
                if (dns->response == NULL) {
                   dns->response = query;

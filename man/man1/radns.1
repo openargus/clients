@@ -1,0 +1,105 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RADNS 1 "07 October 2023" "radns 5.0.3"
+.SH NAME
+\fBradns\fP \- process DNS data from \fBargus(8)\fP data streams / files.
+.SH SYNOPSIS
+.B radns
+[\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "radns command"  ""  "\fLradns\fP \(em DNS transaction argus data"
+.LP
+.B Radns
+reads
+.BR argus
+data from an \fIargus-data\fP source, and extracts and tracks DNS transaction
+data from the argus data records.  \fBradns\fP is a flow record labeler, and
+can be configured to label flow records with the dns names of the \fBsaddr\fP
+and \fBdaddr\fP addresses seen in the outer IP DSR of flow records.  As a 
+result, \fBradns\fP can be a stage in an argus data flow stream, enhancing
+real-time flow records with DNS metadata.
+
+.SH OPTIONS
+Radns, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression, and the ability
+to specify the output style, format and contents for printing
+data.  See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBradns(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4 4
+.BI \-M "\| modes\^"
+Supported modes are:
+.PP
+.RS
+.TP 15
+.B json
+Print the DNS transaction data in json format.
+.RE
+
+.SH CONFIGURATION
+\fBradns(1)\fP can be configured using a \fBradns.conf(5)\fP configuration file. See \fBradns.conf(5)\fP
+for a complete description of \fBradns configuration options\fP.
+
+
+.SH INVOCATION
+A sample invocation of \fBradns(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and prints the DNS transaction content as it is read from the \fBargus(8)\fP data.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+% radns -R /usr/local/argus/archive/*/en0/2024/02/05/*.05.10.0* -N 1200
+02/05.05:12:50.506561: AAAA? KitAppTV.local. : 
+02/05.05:14:30.116963: AAAA? qosient.mail.pairserver.com. :  SOA pairserver.com. ns1.pair.com. root.pair.com. 2024020506 3600 300 604800 7200
+02/05.10:01:06.404054: PTR? lb._dns-sd._udp.0.129.37.10.in-addr.arpa. :  SOA 10.in-addr.arpa. prisoner.iana.org. hostmaster.root-servers.org. 1 604800 60 604800 604800
+apophis:argus-clients-5.0 carter$ bin/radns -M json -R /usr/local/argus/archive/*/en0/2024/02/05/*.05.10.0* -N 1250
+02/05.05:12:50.506561: AAAA? KitAppTV.local. : 
+02/05.05:14:30.116963: AAAA? qosient.mail.pairserver.com. :  SOA pairserver.com. ns1.pair.com. root.pair.com. 2024020506 3600 300 604800 7200
+02/05.10:01:06.404054: PTR? lb._dns-sd._udp.0.129.37.10.in-addr.arpa. :  SOA 10.in-addr.arpa. prisoner.iana.org. hostmaster.root-servers.org. 1 604800 60 604800 604800
+02/05.10:01:45.717174: Type65? init.push.apple.com. :  CNAME init.push.apple.com. init.push-apple.com.akadns.net. SOA akadns.net. internal.akadns.net. hostmaster.akamai.com. 1629813934 90000 90000 90000 180
+02/05.10:01:45.717302: AAAA? init.push.apple.com. :  AAAA init.push-apple.com.akadns.net. 2620:149:208:430a::4[28],2620:149:208:430e::4[28],2620:149:208:430c::4[28],2620:149:208:430b::4[28],2620:149:208:430d::4[28] CNAME init.push.apple.com. init.push-apple.com.akadns.net.
+02/05.10:01:45.717432: A? init.push.apple.com. :  A init.push-apple.com.akadns.net. 17.188.179.2[16],17.188.178.2[16],17.188.178.226[16],17.188.178.34[16],17.188.143.158[16],17.188.143.157[16],17.188.179.34[16],17.188.143.187[16] CNAME init.push.apple.com. init.push-apple.com.akadns.net.
+02/05.10:01:45.736437: Type65? init.push-apple.com.akadns.net. :  SOA akadns.net. internal.akadns.net. hostmaster.akamai.com. 1629813934 90000 90000 90000 180
+
+.fi
+
+A sample invocation of \fBradns(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and uses the -q option to suppress DNS transaction reporting.
+\fBradns(1)\fP caches its DNS server, clients and transaction data in memory, and
+when finished reading data, resolve queries about the data.
+
+In this example, it reads a days of data and looks up references to a specific DNS
+query, printing its output as json data.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+% radns -M json -R /usr/local/argus/archive/*/en0/2024/02/05 -qM search:qosient.com.
+{ "name":"qosient.com.", "ref":"3", "stime":"1707147521","ltime":"1707183149", "addr":[ "216.92.14.146" ], "server":[ "2603:7000:c00:b053:ea9f:80ff:fe85:5cc5" ], "client":[ "2603:7000:c00:b053:987f:ad32:81c:e70f", "2603:7000:c00:b053:f9f2:6d70:ff9c:48d7" ] }
+.vs
+.ps
+.ft P
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient. All rights reserved.
+.SH SEE ALSO
+.BR radns.conf(5),
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+.SH FILES
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS

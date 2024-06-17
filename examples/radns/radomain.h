@@ -234,7 +234,7 @@ struct ArgusDomainStruct {
    struct ArgusDomainQueryStruct *response;
 };
 
-struct ArgusDomainStruct *ArgusParseDNSRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDomainStruct *);
+struct ArgusDomainStruct *ArgusParseDNSRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDomainStruct *, int);
 
 /*
  * Define constants based on rfc883
