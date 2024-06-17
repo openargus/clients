@@ -157,6 +157,7 @@ struct ArgusDomainQueryStruct *
 ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *user, int offset)
 {
    struct ArgusDomainQueryStruct *query = NULL;
+   struct ArgusDomainQueryStruct *retn = NULL;
 
    if (user != NULL) {
       register const HEADER *np;
@@ -164,22 +165,29 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
       u_char *bp = NULL;
       int slen, qlen = 0;
 
-      if ((query = ArgusCalloc(1, sizeof(struct ArgusDomainQueryStruct))) == NULL)
-         ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
-
       bp = (u_char *) &user->array;
-
-      if (offset > 0) {
-         qlen = EXTRACT_16BITS(bp);
-         bp += offset;
-      }
 
       slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
       slen = (user->count < slen) ? user->count : slen;
       snapend = bp + slen;
 
-      while (qlen <= slen) {
+      if (offset > 0) {
+         qlen = EXTRACT_16BITS(bp);
+         bp += offset;
+         slen -= offset;
+      } else {
+         qlen = slen;
+      }
+
+      while (slen && (qlen <= slen)) {
          if (slen >= sizeof(HEADER)) {
+            if ((query = ArgusCalloc(1, sizeof(struct ArgusDomainQueryStruct))) == NULL)
+               ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+
+            if (retn != NULL) {
+               query->nxt = retn;
+               retn = query;
+	    }
             np = (const HEADER *)bp;
 
             query->seqnum = EXTRACT_16BITS(&np->id);
@@ -225,15 +233,20 @@ ArgusParseDNSBuffer (struct ArgusParserStruct *parser, struct ArgusDataStruct *u
          }
 
          bp += qlen;
+         slen -= qlen;
 
          if (offset > 0) {
             qlen = EXTRACT_16BITS(bp);
             bp += offset;
+            if (slen > 0) slen -= offset;
          }
+         if (retn == NULL) {
+            retn = query;
+	 }
       }
    }
 
-   return (query);
+   return (retn);
 }
 
 

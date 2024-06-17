@@ -202,6 +202,7 @@ struct ArgusDomainResourceRecord {
 };
 
 struct ArgusDomainQueryStruct {
+   struct ArgusDomainQueryStruct *nxt;
    unsigned char qr, opcode, rcode, status;
    unsigned char flags[2];
    unsigned short seqnum;
