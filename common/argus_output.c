@@ -1864,7 +1864,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         struct ArgusJitterStruct *jitter = (struct ArgusJitterStruct *) dsr;
                         struct ArgusJitterStruct *tjit   = (struct ArgusJitterStruct *) dsrptr;
 
-                        int size = (sizeof(struct ArgusOutputStatObject) + 3) / 4;
+                        int size = (sizeof(struct ArgusStatObject) + 3) / 4;
                         XDR xdrbuf, *xdrs = &xdrbuf;
 
                         unsigned char value = 0, tmp = 0, *ptr;
@@ -1876,7 +1876,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         tjit->hdr.argus_dsrvl8.len = 1;
                         
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_ACTIVE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatObject), XDR_ENCODE);
                            xdr_int(xdrs,   &jitter->src.act.n);
                            xdr_float(xdrs, &jitter->src.act.minval);
                            xdr_float(xdrs, &jitter->src.act.meanval);
@@ -1888,14 +1888,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
 //                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->src.act.dist_union.fdist[i];
+//                                  cnt += jitter->src.act.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->src.act.dist_union.fdist[i])
-                                       max = jitter->src.act.dist_union.fdist[i];
+                                    if (max < jitter->src.act.fdist[i])
+                                       max = jitter->src.act.fdist[i];
 
                                  for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->src.act.dist_union.fdist[i])) {
+                                    if ((tmp = jitter->src.act.fdist[i])) {
                                        if (i & 0x01) {
                                           if (max > 15)
                                             tmp = ((tmp * 15)/max);
@@ -1932,7 +1932,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                         }
 
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_IDLE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->src.idle.n);
                            xdr_float(xdrs, &jitter->src.idle.minval);
                            xdr_float(xdrs, &jitter->src.idle.meanval);
@@ -1944,14 +1944,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
 //                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->src.idle.dist_union.fdist[i];
+//                                  cnt += jitter->src.idle.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->src.idle.dist_union.fdist[i])
-                                       max = jitter->src.idle.dist_union.fdist[i];
+                                    if (max < jitter->src.idle.fdist[i])
+                                       max = jitter->src.idle.fdist[i];
 
                                  for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->src.idle.dist_union.fdist[i])) {
+                                    if ((tmp = jitter->src.idle.fdist[i])) {
                                        if (i & 0x01) {
                                           if (max > 15)
                                             tmp = ((tmp * 15)/max);
@@ -1989,7 +1989,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            }
                         }
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_ACTIVE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->dst.act.n);
                            xdr_float(xdrs, &jitter->dst.act.minval);
                            xdr_float(xdrs, &jitter->dst.act.meanval);
@@ -2000,14 +2000,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
 //                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->dst.act.dist_union.fdist[i];
+//                                  cnt += jitter->dst.act.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->dst.act.dist_union.fdist[i])
-                                       max = jitter->dst.act.dist_union.fdist[i];
+                                    if (max < jitter->dst.act.fdist[i])
+                                       max = jitter->dst.act.fdist[i];
 
                                  for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->dst.act.dist_union.fdist[i])) {
+                                    if ((tmp = jitter->dst.act.fdist[i])) {
                                        if (i & 0x01) {
                                           if (max > 15)
                                             tmp = ((tmp * 15)/max);
@@ -2045,7 +2045,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            }
                         }
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_IDLE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->dst.idle.n);
                            xdr_float(xdrs, &jitter->dst.idle.minval);
                            xdr_float(xdrs, &jitter->dst.idle.meanval);
@@ -2056,14 +2056,14 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                                  value = 0;
                                  ptr = (unsigned char *)&fdist;
 //                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->dst.idle.dist_union.fdist[i];
+//                                  cnt += jitter->dst.idle.fdist[i];
 
                                  for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->dst.idle.dist_union.fdist[i])
-                                       max = jitter->dst.idle.dist_union.fdist[i];
+                                    if (max < jitter->dst.idle.fdist[i])
+                                       max = jitter->dst.idle.fdist[i];
 
                                  for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->dst.idle.dist_union.fdist[i])) {
+                                    if ((tmp = jitter->dst.idle.fdist[i])) {
                                        if (i & 0x01) {
                                           if (max > 15)
                                             tmp = ((tmp * 15)/max);
@@ -2932,249 +2932,61 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                      }
 
                      case ARGUS_JITTER_INDEX: {
-#if defined(HAVE_XDR)
                         struct ArgusJitterStruct *jitter = (struct ArgusJitterStruct *) dsr;
                         struct ArgusJitterStruct *tjit   = (struct ArgusJitterStruct *) dsrptr;
+                        int size = sizeof(struct ArgusStatsObject) / 4;
 
-                        int size = (sizeof(struct ArgusOutputStatObject) + 3) / 4;
                         XDR xdrbuf, *xdrs = &xdrbuf;
 
-                        unsigned char value = 0, tmp = 0, *ptr;
-                        unsigned int fdist = 0;
-                        int max, i;
-//                      int cnt;
-
                         *dsrptr++ = *(unsigned int *)dsr;
-                        tjit->hdr.argus_dsrvl8.len = 1;
-                        
+                        len = 1;
+
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_ACTIVE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
-                           xdr_int(xdrs,   &jitter->src.act.n);
+                           bzero((char *)dsrptr, sizeof(struct ArgusStatsObject));
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatsObject), XDR_ENCODE);
+                           xdr_int(xdrs, &jitter->src.act.n);
                            xdr_float(xdrs, &jitter->src.act.minval);
                            xdr_float(xdrs, &jitter->src.act.meanval);
                            xdr_float(xdrs, &jitter->src.act.stdev);
                            xdr_float(xdrs, &jitter->src.act.maxval);
-
-                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                              case ARGUS_HISTO_EXP: {
-                                 value = 0;
-                                 ptr = (unsigned char *)&fdist;
-//                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->src.act.dist_union.fdist[i];
-
-                                 for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->src.act.dist_union.fdist[i])
-                                       max = jitter->src.act.dist_union.fdist[i];
-
-                                 for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->src.act.dist_union.fdist[i])) {
-                                       if (i & 0x01) {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value |= tmp;
-                                          *ptr++ = value;
-                                       } else {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value = (tmp << 4);
-                                       }
-                                    } else {
-                                       if (i & 0x01) {
-                                          value &= 0xF0;
-                                          *ptr++ = value;
-                                       } else {
-                                          value = 0;
-                                       }
-                                    }
-                                 }
-                                 xdr_u_int(xdrs, &fdist);
-                                 dsrptr += size;
-                                 tjit->hdr.argus_dsrvl8.len += size;
-                                 break;
-                              }
-
-                              default: 
-                              case ARGUS_HISTO_LINEAR: 
-                                 dsrptr += 5;
-                                 tjit->hdr.argus_dsrvl8.len += 5;
-                                 break;
-                           }
-                        }
-
+                           dsrptr += size;
+                           len += size;
+			}
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_SRC_IDLE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           bzero((char *)dsrptr, sizeof(struct ArgusStatsObject));
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatsObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->src.idle.n);
                            xdr_float(xdrs, &jitter->src.idle.minval);
                            xdr_float(xdrs, &jitter->src.idle.meanval);
                            xdr_float(xdrs, &jitter->src.idle.stdev);
                            xdr_float(xdrs, &jitter->src.idle.maxval);
-
-                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                              case ARGUS_HISTO_EXP: {
-                                 value = 0;
-                                 ptr = (unsigned char *)&fdist;
-//                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->src.idle.dist_union.fdist[i];
-
-                                 for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->src.idle.dist_union.fdist[i])
-                                       max = jitter->src.idle.dist_union.fdist[i];
-
-                                 for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->src.idle.dist_union.fdist[i])) {
-                                       if (i & 0x01) {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value |= tmp;
-                                          *ptr++ = value;
-                                       } else {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value = (tmp << 4);
-                                       }
-                                    } else {
-                                       if (i & 0x01) {
-                                          value &= 0xF0;
-                                          *ptr++ = value;
-                                       } else {
-                                          value = 0;
-                                       }
-                                    }
-                                 }
-
-                                 xdr_u_int(xdrs, &fdist);
-                                 dsrptr += size;
-                                 tjit->hdr.argus_dsrvl8.len += size;
-                                 break;
-                              }
-
-                              default: 
-                              case ARGUS_HISTO_LINEAR: {
-                                 dsrptr += 5;
-                                 tjit->hdr.argus_dsrvl8.len += 5;
-                                 break;
-                              }
-                           }
-                        }
+                           dsrptr += size;
+                           len += size;
+			}
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_ACTIVE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           bzero((char *)dsrptr, sizeof(struct ArgusStatsObject));
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatsObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->dst.act.n);
                            xdr_float(xdrs, &jitter->dst.act.minval);
                            xdr_float(xdrs, &jitter->dst.act.meanval);
                            xdr_float(xdrs, &jitter->dst.act.stdev);
                            xdr_float(xdrs, &jitter->dst.act.maxval);
-                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                              case ARGUS_HISTO_EXP: {
-                                 value = 0;
-                                 ptr = (unsigned char *)&fdist;
-//                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->dst.act.dist_union.fdist[i];
-
-                                 for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->dst.act.dist_union.fdist[i])
-                                       max = jitter->dst.act.dist_union.fdist[i];
-
-                                 for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->dst.act.dist_union.fdist[i])) {
-                                       if (i & 0x01) {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value |= tmp;
-                                          *ptr++ = value;
-                                       } else {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value = (tmp << 4);
-                                       }
-                                    } else {
-                                       if (i & 0x01) {
-                                          value &= 0xF0;
-                                          *ptr++ = value;
-                                       } else {
-                                          value = 0;
-                                       }
-                                    }
-                                 }
-
-                                 xdr_u_int(xdrs, &fdist);
-                                 dsrptr += size;
-                                 tjit->hdr.argus_dsrvl8.len += size;
-                                 break;
-                              }
-
-                              default:
-                              case ARGUS_HISTO_LINEAR: {
-                                 dsrptr += 5;
-                                 tjit->hdr.argus_dsrvl8.len += 5;
-                                 break;
-                              }
-                           }
+                           dsrptr += size;
+                           len += size;
                         }
                         if (jitter->hdr.argus_dsrvl8.qual & ARGUS_DST_IDLE_JITTER) {
-                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusOutputStatObject), XDR_ENCODE);
+                           bzero((char *)dsrptr, sizeof(struct ArgusStatsObject));
+                           xdrmem_create(xdrs, (char *)dsrptr, sizeof(struct ArgusStatsObject), XDR_ENCODE);
                            xdr_int(xdrs, &jitter->dst.idle.n);
                            xdr_float(xdrs, &jitter->dst.idle.minval);
                            xdr_float(xdrs, &jitter->dst.idle.meanval);
                            xdr_float(xdrs, &jitter->dst.idle.stdev);
                            xdr_float(xdrs, &jitter->dst.idle.maxval);
-                           switch (jitter->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
-                              case ARGUS_HISTO_EXP: {
-                                 value = 0;
-                                 ptr = (unsigned char *)&fdist;
-//                               for (cnt = 0, i = 0; i < 8; i++)
-//                                  cnt += jitter->dst.idle.dist_union.fdist[i];
-
-                                 for (i = 0, max = 0; i < 8; i++)
-                                    if (max < jitter->dst.idle.dist_union.fdist[i])
-                                       max = jitter->dst.idle.dist_union.fdist[i];
-
-                                 for (i = 0; i < 8; i++) {
-                                    if ((tmp = jitter->dst.idle.dist_union.fdist[i])) {
-                                       if (i & 0x01) {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value |= tmp;
-                                          *ptr++ = value;
-                                       } else {
-                                          if (max > 15)
-                                            tmp = ((tmp * 15)/max);
-                                          if (!tmp) tmp++;
-                                          value = (tmp << 4);
-                                       }
-                                    } else {
-                                       if (i & 0x01) {
-                                          value &= 0xF0;
-                                          *ptr++ = value;
-                                       } else {
-                                          value = 0;
-                                       }
-                                    }
-                                 }
-
-                                 xdr_u_int(xdrs, &fdist);
-                                 dsrptr += size;
-                                 tjit->hdr.argus_dsrvl8.len += size;
-                                 break;
-                              }
-
-                              default:
-                              case ARGUS_HISTO_LINEAR: {
-                                 dsrptr += 5;
-                                 tjit->hdr.argus_dsrvl8.len += 5;
-                                 break;
-                              }
-                           }
+                           dsrptr += size;
+                           len += size;
                         }
 
-                        len = tjit->hdr.argus_dsrvl8.len;
-#endif
+                        tjit->hdr.argus_dsrvl8.len = len;
                         break;
                      }
 

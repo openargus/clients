@@ -15062,7 +15062,7 @@ ArgusPrintSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   int i, tpkts[8], max = 0, tlen, tmax;
 
                   for (i = 0; i < 8; i++) {
-                     tpkts[i] = jitter->src.act.dist_union.fdist[i] + jitter->src.idle.dist_union.fdist[i];
+                     tpkts[i] = jitter->src.act.fdist[i] + jitter->src.idle.fdist[i];
                      max = (max < tpkts[i]) ? tpkts[i] : max;
                   }
 
@@ -15092,9 +15092,10 @@ ArgusPrintSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   break;
                }
 
+/*
                case ARGUS_HISTO_LINEAR: {
-                  struct ArgusHistoObject *ahist = &jitter->src.act.dist_union.linear;
-                  struct ArgusHistoObject *ihist = &jitter->src.idle.dist_union.linear;
+                  struct ArgusHistoObject *ahist = &jitter->src.act.linear;
+                  struct ArgusHistoObject *ihist = &jitter->src.idle.linear;
 
                   int i, tpkts[256], max = 0;
                   int tlen = ahist->bins, tmax = 8;
@@ -15138,6 +15139,7 @@ ArgusPrintSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   }
                   break;
                }
+*/
 
                default:
                   sprintf (value, " ");
@@ -15189,7 +15191,7 @@ ArgusPrintActiveSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, stru
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = jitter->src.act.dist_union.fdist[i];
+                  tpkts[i] = jitter->src.act.fdist[i];
                   max = (max < tpkts[i]) ? tpkts[i] : max;
                }
 
@@ -15264,7 +15266,7 @@ ArgusPrintIdleSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = jitter->src.idle.dist_union.fdist[i];
+                  tpkts[i] = jitter->src.idle.fdist[i];
                   max = (max < tpkts[i]) ? tpkts[i] : max;
                }
 
@@ -15395,7 +15397,7 @@ ArgusPrintDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   int i, tpkts[8], max = 0, tlen, tmax;
 
                   for (i = 0; i < 8; i++) {
-                     tpkts[i] = jitter->dst.act.dist_union.fdist[i] + jitter->dst.idle.dist_union.fdist[i];
+                     tpkts[i] = jitter->dst.act.fdist[i] + jitter->dst.idle.fdist[i];
                      max = (max < tpkts[i]) ? tpkts[i] : max;
                   }
 
@@ -15425,9 +15427,10 @@ ArgusPrintDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   break;
                }
 
+/*
                case ARGUS_HISTO_LINEAR: {
-                  struct ArgusHistoObject *ahist = &jitter->dst.act.dist_union.linear;
-                  struct ArgusHistoObject *ihist = &jitter->dst.idle.dist_union.linear;
+                  struct ArgusHistoObject *ahist = &jitter->dst.act.linear;
+                  struct ArgusHistoObject *ihist = &jitter->dst.idle.linear;
 
                   int i, tpkts[256], max = 0;
                   int tlen = ahist->bins, tmax = 8;
@@ -15471,7 +15474,7 @@ ArgusPrintDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
                   }
                   break;
                }
-
+*/
                default:
                   sprintf (value, " ");
                   break;
@@ -15522,7 +15525,7 @@ ArgusPrintActiveDstIntPktDist (struct ArgusParserStruct *parser, char *buf, stru
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = jitter->dst.act.dist_union.fdist[i];
+                  tpkts[i] = jitter->dst.act.fdist[i];
                   max = (max < tpkts[i]) ? tpkts[i] : max;
                }
 
@@ -15597,7 +15600,7 @@ ArgusPrintIdleDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = jitter->dst.idle.dist_union.fdist[i];
+                  tpkts[i] = jitter->dst.idle.fdist[i];
                   max = (max < tpkts[i]) ? tpkts[i] : max;
                }
 
@@ -16584,8 +16587,8 @@ ArgusPrintSrcJitter (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
 
          if (argus && ((jitter = (void *)argus->dsrs[ARGUS_JITTER_INDEX]) != NULL)) {
             double stdev = 0.0, sumsqrd1 = 0.0, sumsqrd2 = 0.0, sumsqrd;
+            float meanval = 0.0;
             unsigned int n;
-            float meanval;
 
             if ((n = (jitter->src.act.n + jitter->src.idle.n)) > 0) {
                if (jitter->src.act.n && jitter->src.idle.n) {
@@ -16614,6 +16617,7 @@ ArgusPrintSrcJitter (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   stdev = stdev / 1000;
                }
 
+               if (stdev != stdev) stdev = 0.00;
                sprintf (value, "%.*f", parser->pflag, stdev);
             }
          }
