@@ -17,7 +17,7 @@ except:
 sys.exit(0)"], [prog="
 import $1
 $1.$2"])
-if $PYTHON -c "$prog" 1>&AC_FD_CC 2>&AC_FD_CC
+if $PYTHON -c "$prog" 1>&AS_MESSAGE_LOG_FD 2>&AS_MESSAGE_LOG_FD
   then
     eval "py_cv_mod_$py_mod_var=yes"
   else

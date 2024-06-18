@@ -30,7 +30,7 @@
 m4_include([m4/python.m4])
 
 
-AC_PREREQ([2.68])
+AC_PREREQ([2.72])
 AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_MACRO_DIR([./m4])
@@ -125,7 +125,7 @@ esac
 
 V_PYTHON_INCLS="-I"$am_cv_python_inc
 CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
-AC_CHECK_HEADERS(Python.h)
+AC_CHECK_HEADERS(Python.h, EXTERN.h)
 CPPFLAGS="${saved_CPPFLAGS}"
 
 # Checks for typedefs, structures, and compiler characteristics.

@@ -93,7 +93,7 @@ swig_ArgusParseTime.o: swig_ArgusParseTime.c
 	$(CC) $(CFLAGS) -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 swig_ArgusParseTime_wrap.o: swig_ArgusParseTime_wrap.c
 	$(CC) $(CFLAGS) -Wno-unused-variable -Wno-missing-prototypes -Wno-misleading-indentation \
-	  -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
+	  -Wno-compound-token-split-by-macro -I../include $(PERL_CFLAGS) -c $(filter %.c, $^)
 
 # multiple targets (left side of the colon) seems to confuse parallel make.
 # create intermediate file swig.stamp instead.
