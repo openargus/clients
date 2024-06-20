@@ -91,7 +91,9 @@
 
 #if defined(HAVE_XDR)
 #include <rpc/types.h>
+#if defined(HAVE_RPC_XDR_H)
 #include <rpc/xdr.h>
+#endif
 #endif
 
 #include <sys/socket.h>
