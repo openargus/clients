@@ -81,12 +81,10 @@
 #include <netinet/igmp.h>
 #include <netinet/tcp.h>
 
-#if defined(ARGUS_GEOIP) || defined(ARGUS_GEOIP2)
-#include <maxminddb.h>
 #include "argus_label_geoip.h"
-#include "maxminddb-compat-util.h"
 
-int geoip2_path_compare(const void *, const void *);
+#if defined(ARGUS_GEOIP) || defined(ARGUS_GEOIP2)
+#include "argus_label_geoip.h"
 #endif
 
 
