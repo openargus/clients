@@ -1,21 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  */
 
@@ -66,9 +66,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_auth.c#29 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_auth.c#9 $
+ * $DateTime: 2016/09/20 14:32:09 $
+ * $Change: 3196 $
  */
 
 
@@ -128,28 +128,7 @@ extern int ArgusMinSsf;
 int RaGetRealm(void *context, int, const char **, const char **);
 int RaSimple(void *context, int, const char **, unsigned *);
 int RaGetSecret(sasl_conn_t *, void *context, int, sasl_secret_t **);
-int ArgusSaslGetPath(void *context __attribute__((unused)), char **);
 int ArgusSaslLog (void *context __attribute__((unused)), int, const char *);
-
-#define PLUGINDIR "/usr/lib/sasl2"
-char *searchpath = NULL;
-
-int
-ArgusSaslGetPath(void *context __attribute__((unused)), char ** path)
-{
-  if (! path)
-    return SASL_BADPARAM;
-  if (searchpath)
-    *path = searchpath;
-   else
-    *path = PLUGINDIR;
-
-#ifdef ARGUSDEBUG
-  ArgusDebug(2, "SASL path %s", *path);
-#endif
-
-  return SASL_OK;
-}
 
 int
 ArgusSaslLog (void *context __attribute__((unused)), int priority, const char *message)
@@ -188,7 +167,6 @@ sasl_callback_t RaCallBacks[] = {
   { SASL_CB_USER,     (funcptr)&RaSimple,    NULL },
   { SASL_CB_AUTHNAME, (funcptr)&RaSimple,    NULL },
   { SASL_CB_PASS,     (funcptr)&RaGetSecret, NULL },
-  { SASL_CB_GETPATH,  (funcptr)&ArgusSaslGetPath, NULL },
   { SASL_CB_LIST_END, NULL, NULL }
 };
 
@@ -279,6 +257,8 @@ int
 ArgusAuthenticate (struct ArgusInput *input)
 {
    int retn = 0;
+
+#ifdef ARGUS_SASL
    char *user = NULL, *pass = NULL;
 
 #if defined(ARGUS_THREADS)
@@ -299,7 +279,6 @@ ArgusAuthenticate (struct ArgusInput *input)
 #endif
    
    if (ArgusInitializeAuthentication(input)) {
-#ifdef ARGUS_SASL
       int fd = input->fd;
 
       if ((input->in = fd) < 0)
@@ -312,7 +291,6 @@ ArgusAuthenticate (struct ArgusInput *input)
          retn = 1;
       else
          retn = 0;
-#endif /* ARGUS_SASL */
    }
 #if defined(ARGUS_THREADS)
    pthread_mutex_lock(&ArgusParser->lock);
@@ -325,6 +303,7 @@ ArgusAuthenticate (struct ArgusInput *input)
    pthread_mutex_unlock(&ArgusParser->lock);
 #endif
 
+#endif /* ARGUS_SASL */
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusAuthenticate (0x%x) returning %d\n", input, retn);
@@ -596,7 +575,7 @@ int
 RaSendSaslString (int fd, const char *s, int l, int mode)
 {
    char *buf = NULL, *ptr = NULL;
-   unsigned int al, len;
+   unsigned int al, len = 0;
    int result, tsize;
 
    switch (mode) {

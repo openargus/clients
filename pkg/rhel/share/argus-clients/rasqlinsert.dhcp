@@ -1,0 +1,1 @@
+-M time 1d -m none -s stime ltime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr -w mysql://root@localhost/dhcpFlows/dhcp_%Y_%m_%d - udp and ( port 67 or port 68 )

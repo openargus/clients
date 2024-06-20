@@ -1,0 +1,1 @@
+-M time 1d -m none -s stime ltime saddr daddr proto sport dport pkts bytes pcr -w mysql://root@localhost/etherFlows/ether%Y_%m_%d - not man and not event and not arp and not ip

@@ -1,0 +1,418 @@
+# 
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
+#  All rights reserved.
+# 
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+# 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+# 
+#
+# Example .rarc
+#
+# Ra* clients will open this file if its in the users HOME directory,
+# or in the $ARGUSHOME directory, and parse it to set common configuration
+# options.  All of these values will be overriden by those options
+# set on the command line, or in the file specified using the -f option.
+#
+# Values can be quoted to make string denotation easier, however, the
+# parser does not require that string values be quoted.  To support this,
+# the parse will remove '\"' characters from input strings, so do not
+# use this character in strings themselves.
+#
+# Values specified as "" will be treated as a NULL string, and the parser
+# will ignore the variable setting.
+
+#
+# All ra* clients can attach to a remote server, and collect argus data
+# in real time.  This variable can be a name or a dot notation IP address.
+#
+#RA_ARGUS_SERVER=localhost:561
+
+#
+# You can specify the source port that will be used on all remote TCP
+# connections, using this variable.
+#
+#RA_SOURCE_PORT=13564
+
+
+# Any ra* program can generate a pid file, which can be
+# used to control the number of instances that the system
+# can support.  However, creating a system pid file may
+# require priviledges that are inappropriate for all cases.
+#
+# When configured to generate a pid file, if a file called
+# ra*.pid (where ra* is the name of the program in question)
+# exists in the RA_PID_PATH directory, and a program
+# exists with a pid that matches the one contained in the
+# file, then the program will not start.  If the pid does
+# not exist, then the ra* program replaces the value in the
+# file, with its own pid.   If a pid file does not exist,
+# then the ra* program will create it in the RA_PID_PATH
+# directory, if it can.  The end result is that the system
+# will support only one instanace of the program, based
+# on name, running at a time.
+#
+# The default value is to not generate a pid.  The default
+# path for the pid file, is /var/run.
+#
+# No Commandline equivalent
+#
+#
+RA_SET_PID="no"
+RA_PID_PATH="/var/run"
+
+
+# Argus supports the use of SASL to provide strong
+# authentication and confidentiality protection.
+#
+# When argus is compiled with SASL support, ra* clients may be
+# required to authenticate to the argus server before the argus
+# will accept the connection.  This variable will allow one to
+# set the user and authorization id's, if needed.  Although
+# not recommended you can provide a password through the
+# RA_AUTH_PASS variable.  The format for this variable is:
+#
+# RA_USER_AUTH="user_id/authorization_id"
+#
+#RA_USER_AUTH="user/user"
+#RA_AUTH_PASS="password"
+
+# The clients can specify a part of the negotiation of the
+# security policy that argus uses. This is controlled through
+# the use of a minimum and maximum allowable protection
+# strength values.  Set these variable to control this policy.
+#
+ 
+#RA_MIN_SSF=0
+#RA_MAX_SSF=128
+
+
+# All ra* clients can support writing its output as Argus Records into
+# a file.  Stdout can be specified using "-".  The format is:
+#    "output.file filter"
+#
+#RA_OUTPUT_FILE="/tmp/ra.out tcp"
+
+
+# All ra* clients can support filtering its input based on a time
+# range. The format is:
+#      timeSpecification[-timeSpecification]
+#
+# where the format of a timeSpecification can be one of these:
+#      [mm/dd[/yy].]hh[:mm[:ss]]
+#      mm/dd[/yy]
+#
+#RA_TIMERANGE=""
+
+
+# All ra* clients can support running for a number of seconds,
+# while attached to a remote source of argus data.  This is a type
+# of polling.  The default is zero (0), which means run indefinately.
+#
+RA_RUN_TIME=0
+
+
+# Specify if ra* clients should print management records by default.  
+# This does not affect management record processing, nor down stream
+# management record propagation.
+#
+RA_PRINT_MAN_RECORDS=yes
+RA_PRINT_EVENT_RECORDS=yes
+
+
+# Most ra* clients are designed to print argus records out in ASCII,
+# with each client supporting its own output formats.  For ra() like
+# clients, this variable will generate column headers as labels.
+# The number is the number of lines between repeated header output.
+# Setting this value to zero (0) will cause the labels to be printed
+# once.  If you don't want labels,  then comment this line out or
+# delete it.
+#
+RA_PRINT_LABELS=0
+
+
+# All ra* clients are designed to provide flexibility in what data
+# is printed when configured to generate ASCII output.
+# For ra() like clients, this variable overide the default field
+# printing specification.  This is the equivalent to the "-s option".
+# The below example is the default field definition.
+#
+RA_FIELD_SPECIFIER="stime flgs proto saddr sport dir daddr dport spkts dpkts sbytes dbytes state"
+
+
+# Most ra* clients are designed to print argus records out in ASCII,
+# with each client supporting its own output formats.  For ra() like
+# clients, this variable can overide the default field delimiter,
+# which are variable spans of space (' '), to be any character.
+# The most common are expected to be '\t' for tabs, and ',' for
+# comma separated fields.
+#
+RA_FIELD_DELIMITER=''
+
+
+# The field width generates columnar output for the ra* programs,
+# but in some cases, you don't really want a lot of white space
+# in your output.
+# 
+# To handle these cases, use the RA_FIELD_WIDTH variable to specify
+# whether you want 'variable' or 'fixed'.  'fixed' is the default.
+# 
+# When using 'variable', the field width is the length of the string
+# needed to print the entire field's value.  This is generally the
+# ideal behavior when you want to use the output in other programs,
+# such as the use of CSV ('comma seperated values') formated input
+# for importing into Excel.
+# 
+# When the field delimiter is changed, all ra* programs will change
+# to 'variable' field widths.  To override this, remove the comment
+# below, so that you explicitly set the width to be 'fixed'.
+# 
+#RA_FIELD_WIDTH='fixed'
+
+
+# For ra() like clients, this variable will control the
+# translation of numbers to names, such as resolving hostnames, 
+# and print port or protocol names.  There can be a huge performance
+# impact with name lookup, so the default is to not resolve hostnames.
+#
+# Valid options are 'none' to print no names, 'proto'
+# translate the protocol names, 'port' to translate 
+# port names, and 'all' to translate all fields.  An
+# invalid value will default to 'port', silently.
+#
+RA_PRINT_NAMES=port
+
+
+# Ra() clients when printing numeric IP addresses, print them
+# as CIDR addresses.  CIDR notation is constructed from the IP address and
+# the prefix size, the latter being the number of leading 1 bits of the
+# routing prefix. The IP address is expressed according to the standards
+# of IPv4 or IPv6. It is followed by a separator character, the forward
+# slash (/) character, and the prefix size expressed as a decimal number.
+#
+# Argus IPv4 data contains the CIDR mask length, when its less than 32,
+# and ra* programs will by default provides the "/masklen" suffix when
+# the mask is less than 32.
+#
+# This maybe confusing for some data processors, which would rather see
+# the "/masklen" never, or all the time.  Use this option to specify
+# changes in the default printing stratgy.
+#
+# Accepatable values for this variable are:
+#     "no"     -  do not provide the CIDR mask length (legacy mode) [default]
+#     "yes"    -  print CIDR mask length when less than 32
+#     "strict" -  always print CIDR mask length
+#
+RA_CIDR_ADDRESS_FORMAT="yes"
+
+
+# For ra() like clients, this variable will include the response
+# data that is provided by Argus.  This is protocol and state
+# specific.
+#
+RA_PRINT_RESPONSE_DATA=no
+ 
+
+# For ra() like clients, this variable will force the timestamp
+# to be in Unix time format, which is an integer representing the
+# number of elapsed seconds since the epoch.
+#
+RA_PRINT_UNIX_TIME=no
+
+
+# For ra() like clients, the format that is used to print
+# timestamps, is based on the strftime() library call, with
+# an extension to print fractions of a sec "%f".  The
+# default is "%T.%f".  You can overide this default time
+# format by setting this variable.  This string must conform
+# to the format specified in strftime().  Malformed strings can
+# generate interesting output, so be aware with this one, and
+# don't forget the '.' when doing fractions of a second.
+#
+RA_TIME_FORMAT="%Y/%m/%d.%T.%f"
+
+
+# The timezone used for timestamps is specified by the
+# tzset() library routines, and is normally specified by
+# factors such as the TZ environment variable found on
+# most machines.  You can override the TZ environment variable
+# by specifying a time zone using this variable.  The format
+# of this string must conform to the format specified by
+# tzset(3).
+#
+#RA_TZ="EST5EDT4,M3.2.0/02,M11.1.0/02"
+
+
+# For ra() like clients, this variable is used to override the
+# time format of the timestamp.  This variable specifies the
+# number of decimal places that will be printed as the fractional
+# part of the time.  Argus collects usec precision, and so a
+# maximum value of 6 is supported.  To not print the fractional
+# part, specify the value zero (0).
+#
+RA_USEC_PRECISION=6
+
+
+# Argus can capture user data.  When printing out the user data
+# contents, using tools such as raxml(), the type of encoding
+# can be specified here. Supported values are "Ascii", "Encode64",
+# or "Encode32".
+#
+#RA_USERDATA_ENCODE=Encode32
+#RA_USERDATA_ENCODE=Encode64
+#RA_USERDATA_ENCODE=Ascii
+
+# If compiled to support this option, ra* clients are capable
+# of generating a lot of use [full | less | whatever] debug
+# information.  The default value is zero (0).
+#
+#RA_DEBUG_LEVEL=0
+
+# Ra style clients use a non-blocking method to connect to
+# remote data sources, so the user can control how long to
+# wait if a remote source doesn't respond.  This variable sets
+# the number of seconds to wait.  This number should be set to
+# a reasonable value (5 < value < 60).  The default value is
+# 10 seconds.
+#
+#RA_CONNECT_TIME=10
+
+
+# You can provide a filter expression here, if you like.
+# It should be limited to 2K in length.  The default is to
+# not filter.
+#
+#RA_FILTER=""
+
+
+# Many ra* programs sort records as a part of their function.
+# Programs like rasort.1, providing explicit command-line options
+# to specify the sort algorithms and their order, using the
+# '-m field [field ...]' option.
+#
+# Use this configuration directive to specify the default sorting
+# algorithm table for your ra* programs.  The default sort algorithm
+# is record start time "stime".
+#
+#RA_SORT_ALGORITHMS="stime "
+
+
+
+# Some ra* clients have a timeout based function.  Ratop, as an
+# example, times out flows and removes them from  screen at a fixed
+# interval.  This variable can be set using the RA_TIMEOUT_INTERVAL
+# variable, which is a float in seconds. 60.0 seconds is the default.
+#
+#RA_TIMEOUT_INTERVAL=60.0
+
+
+# Some ra* clients have an interval based function.  Ratop, as an
+# example, can refresh the screen at a fixed interval.  This variable
+# can be set using the RA_UPDATE_INTERVAL variable, which is a
+# float in seconds.  0.5 seconds is the default.
+#
+#RA_UPDATE_INTERVAL=0.5
+
+
+# All ra* clients have the ability to print country codes for the
+# IP addresses that are in a flow record.  Country codes are 
+# generated from the ARIN delegated address space files.  Specify
+# the location of your DELEGATED_IP file here.
+#
+# No Commandline equivalent
+#
+RA_DELEGATED_IP="/usr/local/argus/delegated-ipv4-latest"
+
+
+# All ra* clients can reliably connect to remote data sources.
+# This causes the ra* program to try to reconnect to lost remote
+# sources every 5 seconds, indefinately. This causes ra* program
+# to not terminate but retry connection attempts when they fail.
+#
+# This feature is implemented using threads, and so threads
+# support must be compiled in.
+#
+# No Commandline equivalent
+#
+#RA_RELIABLE_CONNECT=no
+
+
+# Many ra* clients can connect and use a MySQL database, either
+# reading for writing.  This may require references to remotes
+# database hosts, databases, tables, and mysql account names
+# and passwords.
+#
+# Default values for these variables can be set here.
+# support must be compiled in.
+#
+# Commandline equivalents:
+#   -r mysql://[username[:password]@]hostname[:port]/database/tablename
+#   -w mysql://[username[:password]@]hostname[:port]/database/tablename
+#   -u username:password
+#
+
+#RA_DATABASE="argus"
+#RA_DB_TABLE="table"
+#RA_DB_USER="root"
+#RA_DB_PASS="whatever"
+
+
+# For ra* programs that use curses, these variables defined color schemes
+# and color assignments.
+#
+#RA_COLOR_SUPPORT="yes"
+#
+# Argus uses a sixteen color palette, with 8 monotone and 8 accent colors,
+# plus 16 colors of gray. You can provide color definitions for all internal
+# values using a 256 Xterm color wheel, to assign foreground and background
+# colors.
+
+# The monotone values are here specified as MONO_1-8.
+
+#RA_MONO_1=
+#RA_MONO_2=
+#RA_MONO_3=
+#RA_MONO_4=
+#RA_MONO_4=
+#RA_MONO_5=
+#RA_MONO_6=
+#RA_MONO_7=
+#RA_MONO_8=
+
+#RA_YELLOW=
+#RA_ORANGE=
+#RA_RED=
+#RA_MAGENTA=
+#RA_VIOLET=
+#RA_BLUE=
+#RA_CYAN=
+#RA_GREEN=
+
+
+# Many ra* clients process flow records, where locality is an important
+# property.  Used for a number of issues, such as  access control,
+# visualization, and analytics.
+# 
+# RA_LOCAL is assigned an iana-address-file formatted file.
+
+RA_LOCAL=/usr/local/argus/local.addrs
+RA_LOCAL_DIRECTION="local:left"
+
+
+
+# Many ra* clients can identify services through analysis of the contents of
+# the user data buffers.
+#
+# RA_LOCAL is assigned an iana-address-file formatted file.
+
+RA_SERVICES_SIGNATURES=/usr/local/argus/std.sig

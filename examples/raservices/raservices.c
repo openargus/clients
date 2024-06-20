@@ -1,25 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- */
-
-/*
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
  * raservices - discover and validate network services.
  *              add ArgusLabelStruct to the argus record
  *              if writing the record out.
@@ -28,9 +24,9 @@
  * QoSient, LLC
  *
  * 
- * $Id: //depot/argus/clients/examples/raservices/raservices.c#12 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/raservices/raservices.c#11 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -53,6 +49,7 @@
 int ArgusReplace   = 0;
 int ArgusExtend    = 0;
 int ArgusDiff      = 0;
+static int argus_version = ARGUS_VERSION;
 
 
 void
@@ -63,6 +60,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    if (!(parser->RaInitialized)) {
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
@@ -97,6 +97,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (!(ArgusParser->ArgusPrintJson))
+            fprintf (stdout, "\n");
+
          if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
             struct ArgusWfileStruct *wfile = NULL, *start = NULL;
  
@@ -156,6 +159,8 @@ usage ()
 }
 
 
+
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 
 void
@@ -335,21 +340,26 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          for (i = 0; i < count; i++) {
             if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                struct ArgusRecord *argusrec = NULL;
-               static char sbuf[0x10000];
 
-               if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+               if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                  int rv = 0;
+
 #ifdef _LITTLE_ENDIAN
                   ArgusHtoN(argusrec);
 #endif
                   if (parser->exceptfile != NULL) {
                      if (strlen (name) && strcmp(wfile->filename, parser->exceptfile))
-                        ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                      else
                         if (!strlen (name) && !strcmp(wfile->filename, parser->exceptfile))
-                           ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                           rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
 
                   } else
-                     ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                     rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+
+                  if (rv < 0)
+                     ArgusLog(LOG_ERR, "%s unable to open file\n",
+                              __func__);
                }
             }
             lobj = lobj->nxt;
@@ -358,7 +368,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
    } else {
       if (!parser->qflag) {
-         if (parser->Lflag) {
+         if (parser->Lflag && (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (parser->RaLabel == NULL)
                parser->RaLabel = ArgusGenerateLabel(parser, argus);
  
@@ -369,10 +379,17 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                parser->Lflag = 0;
          }
 
-         *(int *)&buf = 0;
+         buf[0] = 0;
          ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-         if (fprintf (stdout, "%s\n", buf) < 0)
-            RaParseComplete(SIGQUIT);
+
+         if (parser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
+         fflush(stdout);
       }
    }
 

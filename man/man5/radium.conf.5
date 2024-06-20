@@ -1,21 +1,10 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
-.\" 
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
 .\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
 .\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"
-.TH RADIUM.CONF 1 "07 November 2000" "radium.conf 3.0.8"
+.TH RADIUM.CONF 1 "19 August 2016" "radium.conf 5.0.3"
 .SH NAME
 \fBradium.conf\fP \- \fBradium\fP resource file.
 .SH SYNOPSIS
@@ -330,8 +319,29 @@ probes, and merged.
 
 \fBRADIUM_CORRELATE=\fP"no"
 
+.SH RADIUM_AUTH_LOCALHOST
+
+Defaults to "yes".
+When SASL authentication is enabled and this value is "no", client
+connections to radium originating on localhost will not require
+authentication.
+Client connections originating from any other host will still be
+authenticated.
+
+ Commandline equivalent   none
+
+.SH RADIUM_V3_ACCESS_PORT
+
+Allow the generation of Argus V3 (open source) flow records for clients
+connecting to the specified TCP port.
+Except for the resulting data format, this option behaves like
+RADIUM_ACCESS_PORT.
+Defaults to unset (0).
+
+Commandline equivalent   none
+
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient  All rights reserved.
+Copyright (c) 2000-2024 QoSient  All rights reserved.
 
 .RE
 .SH SEE ALSO

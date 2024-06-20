@@ -1,34 +1,30 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- */
-
-/*
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
  * rauserdata - formulate the service signature file.
  *
  * written by Carter Bullard
  * QoSient, LLC
  *
  * 
- * $Id: //depot/argus/clients/examples/raservices/rauserdata.c#12 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/raservices/rauserdata.c#9 $
+ * $DateTime: 2016/09/20 14:24:49 $
+ * $Change: 3195 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,7 +54,6 @@ int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct Argu
 void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 void RaProcessSrvRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-struct RaBinProcessStruct *RaNewBinProcess (struct ArgusParserStruct *, int);
 void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 
@@ -175,7 +170,7 @@ RaParseComplete (int sig)
             if (ArgusParser->Lflag > 2) printf ("Total Clients  %d  ", RaTotals[ARGUS_CLIENT]);
             printf ("\n");
 
-            ArgusSortQueue (ArgusSorter, ArgusParser->ArgusAggregator->queue);
+            ArgusSortQueue (ArgusSorter, ArgusParser->ArgusAggregator->queue, ARGUS_LOCK);
             RaPrintOutQueue (NULL, ArgusParser->ArgusAggregator->queue, 0);
          }
 
@@ -368,7 +363,7 @@ ArgusPruneSignatures (struct ArgusParserStruct *parser, struct ArgusRecordStruct
             if (tns->bins->array[i] == bin) {
                tns->bins->array[i] = NULL;
                tns->bins->count--;
-               RaDeleteBin(parser, bin);
+               RaDeleteBin(parser, tns->bins, i);
                break;
             }
          }
@@ -410,6 +405,7 @@ RaProcessSrvRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, ns);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -743,36 +739,6 @@ ArgusMergeUserData(struct RaBinStruct *bin, struct ArgusRecordStruct *ns1, struc
 }
 
 
-struct RaBinProcessStruct * 
-RaNewBinProcess (struct ArgusParserStruct *parser, int size)
-{ 
-   struct RaBinProcessStruct *retn = NULL;
-   struct ArgusAdjustStruct *tnadp;
-  
-   parser->ArgusReverse = 0;
- 
-   if ((retn = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*retn))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
-
-#if defined(ARGUS_THREADS)
-   pthread_mutex_init(&retn->lock, NULL);
-#endif
-  
-   tnadp = &retn->nadp;
-   tnadp->mode    = -1;
-   tnadp->modify  =  1;
-   tnadp->slen    =  2;
-   tnadp->count   = 1;
-   tnadp->value   = 1;
-
-   if ((retn->array = (struct RaBinStruct **)ArgusCalloc(size, sizeof(struct RaBinStruct *))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewBinProcess: ArgusCalloc error %s", strerror(errno));
-
-   retn->arraylen = size;
-   return (retn);
-}
-
-
 int RaSortUserDataBins (const void *, const void *);
 
 int
@@ -830,7 +796,7 @@ RaPrintOutQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int le
                   struct ArgusQueueStruct *q = bin->agg->queue;
 
                   if (q->count > 0) {
-                     ArgusSortQueue (ArgusSorter, bin->agg->queue);
+                     ArgusSortQueue (ArgusSorter, bin->agg->queue, ARGUS_LOCK);
                      RaPrintOutQueue (bin, bin->agg->queue, level);
                      print = 1;
                   }

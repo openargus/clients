@@ -1,0 +1,8 @@
+[Unit]
+Description=Process Hosts Daily COI data
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/rahostsdaily
+TimeoutStartSec=1hr
+

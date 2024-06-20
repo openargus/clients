@@ -1,0 +1,1 @@
+-M rmon -M dsrs=-suser,-duser -m sid inf smac saddr  -w mysql://root@localhost/inventory/ipAddrs_%Y_%m_%d -s stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state score -M cache time 1d - ip

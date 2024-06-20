@@ -1,21 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  */
 
@@ -28,9 +28,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_import.c#31 $
- * $DateTime: 2016/08/22 00:42:29 $
- * $Change: 3177 $
+ * $Id: //depot/gargoyle/clients/common/argus_import.c#20 $
+ * $DateTime: 2016/10/24 12:10:50 $
+ * $Change: 3226 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,6 +57,11 @@
 
 #include <netinet/tcp.h>
 
+#define Version1        1
+#define Version5        5
+#define Version6        6
+#define Version7        7
+#define Version8        8
 
 struct ArgusRecord *ArgusNetFlowCallRecord (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);
 struct ArgusRecord *ArgusNetFlowDetailInt  (struct ArgusParserStruct *, struct ArgusInput *, u_char **, int *);
@@ -1126,7 +1131,11 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                         case k_CiscoV9InputSnmp: {
                            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
                            uint16_t input = ntohs(value.val16[0]);
+#if defined(ARGUS_SOLARIS)
+                           bcopy((char *)&input, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost.ether_addr_octet[4], 2);
+#else
                            bcopy((char *)&input, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost[4], 2);
+#endif
                            ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
                            ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
                            mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;
@@ -1154,7 +1163,11 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                         case k_CiscoV9OutputSnmp: {
                            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
                            uint16_t output = ntohs(value.val16[0]);
+#if defined(ARGUS_SOLARIS)
+                           bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost.ether_addr_octet[4], 2);
+#else
                            bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost[4], 2);
+#endif
                            ns->dsrindex |= 1 << ARGUS_MAC_INDEX;
                            ns->dsrs[ARGUS_MAC_INDEX] = &canon->mac.hdr;
                            mac->hdr.argus_dsrvl8.qual = ARGUS_PORT_INDEX;
@@ -1683,7 +1696,7 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
 #ifdef _LITTLE_ENDIAN
                      ArgusHtoN(argus);
 #endif
-                     ArgusHandleRecord (parser, input, argus, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (parser, input, argus, 0, &ArgusParser->ArgusFilterCode);
 #ifdef ARGUSDEBUG
                      ArgusDebug (3, "ArgusParseCiscoRecordV9Data (%p, %p, %p, %p, %d) new flow\n", parser, input, templates, sptr, *cnt);
 #endif
@@ -3008,7 +3021,7 @@ ArgusReadCiscoStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput 
                   case CISCO_VERSION_9: {
                      struct ArgusRecord *argus = input->ArgusCiscoNetFlowParse (ArgusParser, input, &input->ArgusReadPtr, NULL);
                      if  (argus != NULL)
-                        if (ArgusHandleRecord (ArgusParser, input, argus, &ArgusParser->ArgusFilterCode) < 0)
+                        if (ArgusHandleRecord (ArgusParser, input, argus, 0, &ArgusParser->ArgusFilterCode) < 0)
                            return(1);
                      break;
                   }
@@ -3247,7 +3260,7 @@ ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *parser, struct ArgusInpu
             }
 
             case ARGUS_READINGBLOCK: {
-               if (ArgusHandleRecord (parser, input, input->ArgusCiscoNetFlowParse (parser, input, &ptr, &count), &ArgusParser->ArgusFilterCode) < 0)
+               if (ArgusHandleRecord (parser, input, input->ArgusCiscoNetFlowParse (parser, input, &ptr, &count), 0, &ArgusParser->ArgusFilterCode) < 0)
                   return(1);
 
                break;
@@ -4196,17 +4209,18 @@ SFDecodeIPV6(SFSample *sptr)
 
       // get the tos (priority)
       sptr->dcd_ipTos = *ptr++ & 15;
-      // 24-bit label
-      // label = *ptr++;
-      // label <<= 8;
-      // label += *ptr++;
-      // label <<= 8;
-      // label += *ptr++;
+      // get past the 24-bit label
+/*
+      label = *ptr++;
+      label <<= 8;
+      label += *ptr++;
+      label <<= 8;
+      label += *ptr++;
       // payload
       // payloadLen = (ptr[0] << 8) + ptr[1];
-
+      ptr += 2;
+*/
       ptr += 5;
-
       // next header
       nextHeader = *ptr++;
 

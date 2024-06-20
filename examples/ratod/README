@@ -1,0 +1,80 @@
+/*
+ * Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
+ * All rights reserved.
+ *
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */
+
+/*
+ *  ratod - tools used to develop time of day behavioral flow data
+ *          The essence of the effort is to generate the canonical day,
+ *          through statistical process of 1,000s of days, and comparing
+ *          data presentations.
+ *          
+ *          The first concept is to remove the time from the flows, so
+ *          for daily processing, we'll set the starting time to be
+ *          0 by subtracting the starting second for the specific day,
+ *          and all other time is offset by this value.
+ *          
+ *          Then, we'll bin the data to generate 5m inventories.
+ *          While this maybe a lot of data, we'll do some experiments to
+ *          see what works ...
+ *          
+ *          
+ *  
+ *  Author: Carter Bullard carter@qosient.com
+ */
+
+NOTES
+
+OK, so currently the implementation provides rabins() behavior
+with time normalization to Jan 1, 1970.  This provides the
+greatest flexibility to generate aggregated or unaggregated
+data.  Right now we're doing Time of Whatever normalization.
+Using the time bins command line configuration data to
+specify arbitrary time period normalization.
+
+The easiest support for ToD processing is to stream data
+through a tool that only does time normalization, but
+putting the rabins() aggregation does provide most of
+what we need in a tool like this.
+
+Simple normalization of the time is not enough to provide usable
+data, as direction information is critical to making useful TOD
+flow run data.
+
+The concept to date is to provide time normalized 300sec resolved
+L2/L3 service oriented flow run data.  This will be read in using
+the " -M rtime " options, so that it represents a TOD cache of
+expected network behavior.  The flow records can span the entire
+day, if, for example, there are no idle times, or it can be broken
+down into 300 sec bins.  
+
+NOTE - Racurses() will need to manage its timeout values based on
+       " ltime " for this to work.
+
+
+Service oriented flow run data
+Normalizing a set of flows into a daily canonical flow run dataset,
+involes removing the ephemeral data, such as source port values.
+This demands that service direction be a part of the process, so
+as to minimize ephemeral collision (where ephemeral data is inadvertently
+introduced into the comparison sets).
+
+The goal is identify new flows that are outside the services box,
+as well as identify when expected flows do not show up.
+The primary motivator in the ratod() analytics.
+

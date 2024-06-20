@@ -1,0 +1,84 @@
+#  Gargoyle Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2018-2024 QoSient, LLC
+#  All rights reserved.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 3, or (at your option)
+#  any later version.
+# 
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+pythonextlib = @PYTHON_EXT_LIB@
+PYTHON = python3
+PYTHON_CFLAGS = $(shell $(PYTHON)-config --cflags)
+
+# Pathname of directory to install the system binaries
+SBINDIR = @sbindir@
+# # Pathname of directory to install the system binaries
+BINDIR = @bindir@
+# Pathname of directory to install the include files
+INCLDEST = @includedir@
+# Pathname of directory to install the library
+LIBDEST =  @libdir@
+# Pathname of directory to install the man page
+MANDEST = @mandir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+CC = @CC@
+CCOPT = @V_CCOPT@
+INCLS = -I. -I../include -I../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
+DEFS = @DEFS@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+
+MYSQLLIB = @MYSQL_LDFLAGS@ 
+
+# Standard CFLAGS
+CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
+INSTALL = /usr/bin/install -c
+        
+.PHONY: TOP all depend
+        
+all: TOP
+SRC = argusPython.c
+        
+TOP: _argusPython.cpython-38-darwin.so
+
+_argusPython.cpython-38-darwin.so:  swig.stamp
+
+# multiple targets (left side of the colon) seems to confuse parallel make.
+# create intermediate file swig.stamp instead.
+argusPython_wrap.c: swig.stamp
+qosient/XS/util.pm: swig.stamp
+swig.stamp: argusPython.i argusPython.c setup.py
+	swig -python argusPython.i
+	python3 setup.py build_ext --include-dirs=../include --library-dirs=../lib
+	touch swig.stamp
+
+install: _argusPython.cpython-38-darwin.so
+	python3 -m pip install .
+
+uninstall: all
+	python3 -m pip uninstall argusPython
+
+distclean: clean
+	rm -f Makefile
+clean:
+	rm -rf __pycache__ argusPython.egg-info build
+	rm -f *.o *.so argusPython.py argusPython_wrap.c swig.stamp
+
+depend: $(SRC)
+	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_CFLAGS) $(SRC)
+

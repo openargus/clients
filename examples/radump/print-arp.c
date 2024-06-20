@@ -19,11 +19,12 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -274,24 +275,81 @@ arp_src_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
    return (ArgusBuf);
 }
 
+int ArgusParseDstArpBuffer(struct ArgusParserStruct *, struct ArgusRecordStruct *);
+
 char *
 arp_dst_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
    struct ArgusMetricStruct *metric = (void *) argus->dsrs[ARGUS_METRIC_INDEX];
-   struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
    struct ArgusArpFlow *arp = (struct ArgusArpFlow *) &flow->arp_flow;
 
-   if (net && ((metric != NULL) && metric->dst.pkts)) {
-      switch (net->hdr.subtype & 0x1F) {
-         case ARGUS_NETWORK_SUBTYPE_ARP:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s is-at %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa), 
-                        etheraddr_string(parser, (unsigned char *)&net->net_union.arp.respaddr));
-            break;
+   if ((metric != NULL) && metric->dst.pkts) {
+      struct ArgusNetworkStruct *net = NULL;
+
+      if ((net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX]) == NULL) {
+         if (ArgusParseDstArpBuffer(parser, argus) > 0)
+            net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
+      }
+
+      if (net != NULL) {
+         switch (net->hdr.subtype & 0x1F) {
+            case ARGUS_NETWORK_SUBTYPE_ARP:
+               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s is-at %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa), 
+                           etheraddr_string(parser, (unsigned char *)&net->net_union.arp.respaddr));
+               break;
+         }
       }
    }
 
    return (ArgusBuf);
+}
+
+int 
+ArgusParseDstArpBuffer(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
+{
+   int retn = 0;
+   struct ArgusDataStruct *user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
+
+   if (user != NULL) {
+      u_char *bp = (u_char *) &user->array;
+      u_char *snapend;
+      extern struct ArgusCanonRecord ArgusGenerateCanonBuffer;
+      struct ArgusNetworkStruct *net = NULL;
+      struct ArgusCanonRecord  *canon;
+
+      struct ArgusARPObject *arpobj = NULL;
+      struct ether_arp *arp = NULL;
+
+      if (argus->input != NULL) {
+         canon = &argus->input->ArgusGenerateRecordCanonBuf;
+      } else {
+         canon = &ArgusGenerateCanonBuffer;
+      }
+
+      int slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
+      slen = (user->count < slen) ? user->count : slen;
+      slen = (slen > 8046) ? 8046 : slen;
+      snapend = bp + slen;
+
+      arp = (struct ether_arp *) bp;
+
+      argus->dsrs[ARGUS_NETWORK_INDEX] = &canon->net.hdr;
+      net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
+      bzero(net, sizeof(*net));
+
+            if ((bp + sizeof(*arp)) <= snapend) {
+            net->hdr.type              = ARGUS_NETWORK_DSR;
+            net->hdr.subtype           = ARGUS_NETWORK_SUBTYPE_ARP;
+            net->hdr.argus_dsrvl8.qual = 0;
+            net->hdr.argus_dsrvl8.len  = ((sizeof(struct ArgusARPObject) + 3)/4) + 1;
+
+            arpobj = &net->net_union.arp;
+            bcopy ((unsigned char *)arp, arpobj->respaddr, 6);
+            retn = 1;
+            }
+   }
+   return(retn);
 }
 
 /*

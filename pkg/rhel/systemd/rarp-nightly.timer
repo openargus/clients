@@ -1,0 +1,11 @@
+[Unit]
+Description=Process ARP transactions
+
+[Timer]
+# daily at 0045 hrs
+OnCalendar=*-*-* 00:45:00
+Persistent=true
+
+[Install]
+Also=rarp-nightly.service
+WantedBy=multi-user.target

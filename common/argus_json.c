@@ -1,21 +1,21 @@
 /*
- * Argus Software Library files - Json processing
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
- 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
  *
  */
 
@@ -30,23 +30,34 @@
  */
 
 /*
- * $Id: //depot/clients/common/argus_json.c#20 $
+ * $Id: //depot/gargoyle/clients/common/argus_json.c#20 $
  * $DateTime: 2016/10/24 12:10:50 $
  * $Change: 3226 $
  */
 
+
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <ctype.h>
 #include <stddef.h>
 
+#include "argus_debug.h"
 #include "argus_json.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static int json_parse_value(const char **cursor, ArgusJsonValue *parent);
-static char *json_print_value(ArgusJsonValue *parent, char *, int);
-static int json_merge_value(ArgusJsonValue *, ArgusJsonValue *);
+void skip_whitespace(const char**);
+int has_char(const char**, char);
+
+int json_parse_array(const char**, ArgusJsonValue *);
+int json_parse_object(const char**, ArgusJsonValue *);
+int json_parse_value(const char **, ArgusJsonValue *);
+char *json_print_value(ArgusJsonValue *parent, char *, int);
+int json_merge_value(ArgusJsonValue *, ArgusJsonValue *);
 
 // Allocate the data structure for the vector
 void
@@ -194,13 +205,13 @@ vector_foreach(const vector* v, ArgusJsonValue *parent, vector_foreach_t fp) {
    }
 }
 
-static void
+void
 skip_whitespace(const char** cursor) {
    if (**cursor == '\0') return;
    while (iscntrl(**cursor) || isspace(**cursor)) ++(*cursor);
 }
 
-static int
+int
 has_char(const char** cursor, char character) {
    skip_whitespace(cursor);
    int retn = **cursor == character;
@@ -208,7 +219,7 @@ has_char(const char** cursor, char character) {
    return retn;
 }
 
-static int
+int
 json_parse_object(const char** cursor, ArgusJsonValue *parent) {
    ArgusJsonValue result = { .type = ARGUS_JSON_OBJECT };
    vector_init(&result.value.object, sizeof(ArgusJsonValue));
@@ -219,14 +230,18 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
       ArgusJsonValue value = { .type = ARGUS_JSON_NULL };
       retn = json_parse_value(cursor, &key);
       retn = retn && has_char(cursor, ':');
-      retn = retn && json_parse_value(cursor, &value);
+      retn = 0;
+      retn = json_parse_value(cursor, &value);
+
+#ifdef ARGUSDEBUG
+      ArgusDebug (3, "json_parse_object: pushing (%s)", key.value.string);
+#endif
 
       if (retn) {
          vector_push_back(&result.value.object, &key);
          vector_push_back(&result.value.object, &value);
       } else {
          json_free_value(&key);
-         break;
       }
       skip_whitespace(cursor);
       if (has_char(cursor, '}')) break;
@@ -244,7 +259,7 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
    return 1;
 }
 
-static int
+int
 json_parse_array(const char** cursor, ArgusJsonValue *parent) {
    int retn = 1;
    if (**cursor == ']') {
@@ -271,6 +286,7 @@ json_free_value(ArgusJsonValue *val) {
    if (!val) return;
 
    switch (val->type) {
+      case ARGUS_JSON_KEY:
       case ARGUS_JSON_STRING:
          if (val->value.string != NULL) {
             free(val->value.string);
@@ -314,7 +330,7 @@ json_is_literal(const char** cursor, const char* literal) {
    return 0;
 }
 
-static int
+int
 json_parse_value(const char** cursor, ArgusJsonValue *parent) {
    // Eat whitespace
    int retn = 0;
@@ -327,17 +343,26 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
          break;
       case '"': {
          ++*cursor;
-         const char* start = *cursor;
-         char* end = strchr(*cursor, '"');
+         const char *start = *cursor;
+         char *end = strchr(*cursor, '"');
+         if (end != NULL) {
+            while ((end[-1] == '\\') && (end[-2] != '\\')) {
+               end = strchr(++end, '"');
+            }
+         }
          if (end) {
             size_t len = end - start;
             char *new_string = malloc((len + 1) * sizeof(char));
             memcpy(new_string, start, len);
             new_string[len] = '\0';
 
-            if (parent->type == ARGUS_JSON_STRING)
-               if (parent->value.string != NULL)
+            if ((parent->type == ARGUS_JSON_KEY) ||
+                (parent->type == ARGUS_JSON_STRING)) {
+               if (parent->value.string != NULL) {
                   free (parent->value.string);
+                  parent->value.string = NULL;
+               }
+            }
 
             if (parent->type != ARGUS_JSON_KEY) {
                parent->type = ARGUS_JSON_STRING;
@@ -354,6 +379,7 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
          skip_whitespace(cursor);
          retn = json_parse_object(cursor, parent);
          break;
+
       case '[':
          parent->type = ARGUS_JSON_ARRAY;
          vector_init(&parent->value.array, sizeof(ArgusJsonValue));
@@ -404,9 +430,11 @@ json_parse_value(const char** cursor, ArgusJsonValue *parent) {
                memcpy(new_string, start, len);
                new_string[len] = '\0';
 
-               if (parent->type == ARGUS_JSON_STRING)
+               if ((parent->type == ARGUS_JSON_KEY) ||
+                   (parent->type == ARGUS_JSON_STRING)) {
                   if (parent->value.string != NULL)
                      free (parent->value.string);
+               }
 
                if (parent->type != ARGUS_JSON_KEY) {
                   parent->type = ARGUS_JSON_STRING;
@@ -462,9 +490,9 @@ json_print_value(ArgusJsonValue *parent, char *buf, int len) {
    return retn;
 }
 
-static int json_add_value(ArgusJsonValue *, ArgusJsonValue *);
+int json_add_value(ArgusJsonValue *, ArgusJsonValue *);
 
-static int
+int
 json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    int retn = 0;
    if ((p1->type != ARGUS_JSON_OBJECT) && (p1->type != ARGUS_JSON_ARRAY)) {
@@ -499,7 +527,7 @@ json_add_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    return retn;
 }
 
-static int
+int
 json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
    int retn = 0;
 
@@ -598,8 +626,19 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                   if (strcmp(p2data[x].value.string, key) == 0) {
                      ArgusJsonValue *p2value = &p2data[x + 1];
                      json_merge_value(p1value, p2value);
-                     json_zero_value(&p2data[x]);
-                     json_zero_value(&p2data[x + 1]);
+                     ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
+                     ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
+
+                     if (p1value->status & ARGUS_JSON_MODIFIED) {
+                        json_zero_value(&p2data[x]);
+                        json_zero_value(&p2data[x + 1]);
+                        p1value->status &= ~ARGUS_JSON_MODIFIED;
+                     }
+                     if (p2value->status & ARGUS_JSON_MODIFIED) {
+                        json_zero_value(&p1data[x]);
+                        json_zero_value(&p1data[x + 1]);
+                        p2value->status &= ~ARGUS_JSON_MODIFIED;
+                     }
                   }
                }
             }
@@ -607,9 +646,9 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
             for (x = 0; x < p2size; x += 2) {
                if (((ArgusJsonValue *)&p2data[x])->type) {
                   vector_push_back(&p1->value.array, &p2data[x]);
+                  ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
                   vector_push_back(&p1->value.array, &p2data[x + 1]);
-                  json_zero_value(&p2data[x]);
-                  json_zero_value(&p2data[x + 1]);
+                  ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
                   p1->status |= ARGUS_JSON_MODIFIED;
                }
             }
@@ -669,10 +708,10 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
 ArgusJsonValue *
 ArgusJsonParse(const char* input, ArgusJsonValue *result) {
    ArgusJsonValue *retn = NULL;
-   
-   if (json_parse_value(&input, result)) {
+
+   if (json_parse_value(&input, result))
       retn = result;
-   }
+
    return (retn);
 }
 

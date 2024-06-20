@@ -1,21 +1,10 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
-.\" 
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
 .\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
 .\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"
-.TH RASQLINSERT 1 "12 August 2009" "rasqlinsert 3.0.8"
+.TH RASQLINSERT 1 "8 April 2023" "rasqlinsert 5.0.3"
 .SH NAME
 \fBrasqlinsert\fP \- write \fBargus(8)\fP data into mysql database tables.
 .SH SYNOPSIS
@@ -68,7 +57,8 @@ new records to an existing table, there is a high likelyhood for error, as
 flow key.  Use the "-M cache" option to cause \fBrasqlinsert\fP to reference the
 table contents prior to aggregation and insertion.
 
-The binary data \fBrasqlinsert\fP inserts by default, is read using \fBrasql\fP.
+The binary data that \fBrasqlinsert\fP inserts by default is retrieved
+with \fBrasql(1)\fP.
 
 .LP
 .SH RASQLINSERT SPECIFIC OPTIONS
@@ -84,6 +74,23 @@ amounts of data and flow keys.
 .B \-M drop
 This causes \fBrasqlinsert\fP to drop any pre-existing database table that
 has the same name as the target table name, on startup.
+.TP 4 4
+.B \-M rewrite
+Update SQL tables with a freshly processed record field.
+This allows existing tables to be modified in place and is provided as
+a way to reduce the stored flow data.
+For example, when combined with the "-M dsrs=" mode it can be used to
+remove certain DSRs from the in-table flow record.
+
+Some commandline parameters are ignored in rewrite mode and some others
+conflict.
+The cache and drop modes cannot be used with rewrite.
+No input files (-r) may be specified since the source of data is always
+the table to be rewritten.
+Lastly, the field specifier (-s) and flow model (-m) options will be
+ignored since these parameters are derived from the table being rewritten.
+
+See the INVOCATION section below for an example of the rewrite mode.
 
 .SH INVOCATION
 This invocation writes aggregated \fBargus(8)\fP data from the \fIfile\fP into
@@ -141,8 +148,17 @@ tables.
    \fBrasqlinsert\fP -m none -S argus -w mysql://user@localhost/db/table_%Y_%m_%d -M time 1d
 .fi
 
+Update tables by removing the source and destination user buffer DSRs
+from the binary flow record column for the month of February, 2018.
+
+.nf
+   \fBrasqlinsert\fP -M rewrite time 1d dsrs=-suser,-duser \\
+               -t 2018/02 \\
+               -w mysql://user@localhost/db/table_%Y_%m_%d
+.fi
+
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.
 
 .SH SEE ALSO
 .BR rasql(1),

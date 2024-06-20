@@ -1,28 +1,30 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ *  racurses.h - include file curses based argus data processing.
+ *
+ *  Author: Carter Bullard carter@qosient.com
  */
 
-/* 
- * $Id: //depot/argus/clients/examples/ratop/racurses.h#16 $
- * $DateTime: 2012/05/01 14:08:47 $
- * $Change: 2378 $
+/*
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.h#11 $
+ * $DateTime: 2016/11/09 23:17:55 $
+ * $Change: 3242 $
  */
 
 
@@ -108,6 +110,10 @@ struct RaCursesProcessStruct {
    struct nff_program filter;
 };
 
+#define RA_IDLE                 0
+#define RA_ACTIVE               1
+#define RA_SORTING              2
+
 #define ARGUS_FORWARD           1
 #define ARGUS_BACKWARD          2
  
@@ -134,17 +140,16 @@ int RaCursesClose(struct ArgusParserStruct *parser, pthread_attr_t *);
 
 #if defined(ARGUS_CURSES)
 int RaHighlightDisplay (struct ArgusParserStruct *, struct ArgusQueueStruct *, char *);
+
+int RaCursesSetWindowData(struct ArgusParserStruct *parser, WINDOW *win, struct ArgusQueueStruct *queue);
 int RaCursesSetWindowFocus(struct ArgusParserStruct *, WINDOW *);
+
 WINDOW *RaCursesGetWindowFocus(struct ArgusParserStruct *);
 #endif
 
 extern void ArgusSetDebugString (char *, int, int);
 extern void ArgusCopyDebugString (char *, int);
 extern void ArgusZeroDebugString (void);
-
-struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-int RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *, unsigned int *, int, int);
-void ArgusProcessDirection (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 int ArgusCloseDown = 0;
 
@@ -173,7 +178,7 @@ struct ArgusWindowStruct {
 #endif
    char *desc;
    int (*data)(struct ArgusWindowStruct *);
-   void *values[2048];
+// void *values[2048];
 };
 
 struct ArgusWindowStruct *RaCurrentWindow = NULL;
@@ -192,10 +197,6 @@ struct ArgusWindowStruct *RaDebugWindowStruct  = NULL;
 struct ArgusWindowStruct *RaStatusWindowStruct = NULL;
 struct ArgusWindowStruct *RaDataWindowStruct   = NULL;
 
-#define ARGUS_LIGHT     230
-#define ARGUS_DARK      234
-
-int ArgusBackGround = ARGUS_DARK;
 #if defined(ARGUS_THREADS)
 pthread_mutex_t RaCursesLock;
 #endif
@@ -221,6 +222,7 @@ struct ArgusAttributeStruct *RaColorArray = NULL;
 #define ARGUS_MAGENTA   5
 #define ARGUS_CYAN      6
 #define ARGUS_WHITE     7
+
 #define ARGUS_ORANGE    8
 #define ARGUS_VIOLET    9
 
@@ -230,8 +232,14 @@ struct ArgusAttributeStruct *RaColorArray = NULL;
 #define ARGUS_BASE00	13
 #define ARGUS_BASE0	14
 #define ARGUS_BASE1	15
+
 #define ARGUS_BASE2	16
 #define ARGUS_BASE3	17
+
+#define ARGUS_LIGHT     230
+#define ARGUS_DARK      234
+ 
+int ArgusBackGround = ARGUS_DARK;
 
 #if defined(ARGUS_CURSES)
 int ArgusGetDisplayLineColor(struct ArgusParserStruct *, WINDOW *, struct ArgusRecordStruct *, struct ArgusAttributeStruct *);
@@ -243,7 +251,7 @@ int (*RaColorAlgorithms[ARGUS_MAX_COLOR_ALG]) (struct ArgusParserStruct *, struc
 
 char RaOutputBuffer[MAXBUFFERLEN];
 struct RaCursesProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+int RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 void ArgusUpdateScreen(void);
 void ArgusTouchScreen(void);
 
@@ -403,8 +411,8 @@ void clearArgusWfile(struct ArgusParserStruct *);
 #define RAGETTINGwSTR      "Write display to file: "
 #define RAGETTINGpSTR      "Set Precision: "
 
-char RaCommandInputStr[MAXSTRLEN];
-char RaCommandError[MAXSTRLEN];
+char RaCommandInputStr[1024];
+char RaCommandError[1024];
 
 strproc *RaCommandValueArray = NULL;
 char **RaCommandArray        = NULL;
@@ -478,7 +486,7 @@ int RaScreenStartY    = 0;
 
 extern char RaOutputBuffer[MAXBUFFERLEN];
 extern struct RaCursesProcessStruct *RaCursesNewProcess(struct ArgusParserStruct *parser);
-extern void RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
+extern int RaClientSortQueue (struct ArgusSorterStruct *, struct ArgusQueueStruct *, int);
 extern void ArgusSetDebugString (char *, int, int);
 extern void ArgusUpdateScreen(void);
 extern void ArgusResetSearch (void);

@@ -1,28 +1,28 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- */
+ */ 
 
 /* 
- * $Id: //depot/argus/clients/include/argus_client.h#72 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_client.h#18 $
+ * $DateTime: 2016/09/13 16:02:42 $
+ * $Change: 3182 $
  */
 
 
@@ -45,8 +45,11 @@ extern "C" {
 #include <sys/time.h>
 
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <string.h>
 #include <sys/stat.h>
+
+#include <netdb.h>
 
 #include <argus_compat.h>
 
@@ -103,10 +106,10 @@ extern "C" {
 #define RA_CON			1
 #define RA_DONE			2
 
-#define RA_HASHTABLESIZE	0x10000
-#define RA_SVCPASSED		0x010000
-#define RA_SVCFAILED		0x020000
-#define RA_SVCINCOMPLETE        0x040000
+#define RA_HASHTABLESIZE	0x1000
+#define RA_SVCPASSED		0x0100000
+#define RA_SVCFAILED		0x0200000
+#define RA_SVCINCOMPLETE        0x0400000
 #define RA_SVCTEST		(RA_SVCFAILED|RA_SVCPASSED|RA_SVCINCOMPLETE)
 #define RA_SVCDISCOVERY		0x080000
 #define RA_SVCMULTICAST		0x100000
@@ -130,8 +133,8 @@ extern "C" {
 #define ARGUS_READINGDATAGRAM	8
 
 
-#define TSEQ_HASHSIZE		9029
-#define HASHNAMESIZE		8192
+#define TSEQ_HASHSIZE		0x10000
+#define HASHNAMESIZE		1024
 
 #define RASIGLENGTH		32
    
@@ -146,9 +149,29 @@ extern "C" {
 #define RA_SVC_WILDCARD		4
 
 
+struct ArgusWirelessStruct {
+   int agrCtlRSSI, agrExtRSSI, agrCtlNoise, agrExtNoise;
+   char *state, *opMode;
+   int lastTxRate, maxRate, lastAssocStatus;
+   char *auth, *linkAuth;
+   char *bssid, *ssid;
+   int mcs, channel;
+};
+ 
 
 typedef struct ArgusRecord * (*ArgusNetFlowHandler)(struct ArgusParserStruct *, struct ArgusInput *, uint8_t **, int *);
 
+struct ArgusFileInput {
+   struct ArgusQueueHeader qhdr;
+   char *filename;
+   char *tempfile;
+   FILE *file;
+   long long ostart;
+   long long ostop;
+   int type;
+   int fd;
+   struct stat statbuf;
+};
 
 struct ArgusInput {
    struct ArgusQueueHeader qhdr;
@@ -177,8 +200,11 @@ struct ArgusInput {
    char *user, *pass;
 
    FILE *file, *pipe;
+
    unsigned int ArgusLocalNet, ArgusNetMask;
-   unsigned int ArgusID, ArgusIDType;
+   unsigned int ArgusIDType;
+   struct ArgusAddrStruct srcid;
+
    struct timeval ArgusStartTime, ArgusLastTime;
    long long ArgusTimeDrift;
    int ArgusMarInterval;
@@ -537,7 +563,6 @@ enum Aggregation
   NetflowRouterPrefix
 };
 #endif
-
 
 typedef struct {
     uint16_t format;             /* Header format, it is 2 in this round */
@@ -1134,6 +1159,7 @@ void *ArgusConnectRemotes (void *);
 void *ArgusConnectRemote (void *);
  
 void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
+void ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 int ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *);
 
 extern void ArgusLog (int, char *, ...);
@@ -1154,7 +1180,7 @@ int ArgusProcessFileIndependantly = 0;
 struct ArgusAggregatorStruct *ArgusParseAggregator (struct ArgusParserStruct *, char *, char **);
 
 struct ArgusRecordStruct *ArgusGenerateRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *);
-struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *);
+struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 int ArgusGenerateCiscoRecord (struct ArgusRecordStruct *, unsigned char, char *);
 
 void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *); 
@@ -1173,26 +1199,39 @@ struct ArgusHashTableHdr *ArgusAddHashEntry (struct ArgusHashTable *, void *, st
 struct ArgusHashTableHdr *ArgusFindHashEntry (struct ArgusHashTable *, struct ArgusHashStruct *);
 void ArgusRemoveHashEntry (struct ArgusHashTableHdr **);
 void ArgusEmptyHashTable (struct ArgusHashTable *);
+void ArgusEmptyHashTable2 (struct ArgusHashTable *, ArgusEmptyHashCallback);
+void ArgusHashForEach(struct ArgusHashTable *, ArgusHashForEachCallback, void *);
+
 
 struct ArgusListStruct *ArgusNewList (void);
 void ArgusDeleteList (struct ArgusListStruct *, int);
 int ArgusListEmpty (struct ArgusListStruct *);
 int ArgusGetListCount(struct ArgusListStruct *);
+
+int ArgusAddObjectToList(struct ArgusListStruct *, void *, int);
+int ArgusRemoveObjectFromList(struct ArgusListStruct *, void *, int);
+
 int ArgusPushFrontList(struct ArgusListStruct *, struct ArgusListRecord *, int);
 int ArgusPushBackList(struct ArgusListStruct *, struct ArgusListRecord *, int);
+
 struct ArgusListRecord *ArgusFrontList(struct ArgusListStruct *);
 struct ArgusListRecord *ArgusBackList(struct ArgusListStruct *);
 struct ArgusListRecord *ArgusPopBackList(struct ArgusListStruct *, int);
 struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
+struct ArgusListRecord *ArgusPopList(struct ArgusListStruct *, int);
 
 int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
+int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusInput *);
+void ArgusSetTimeout (struct ArgusParserStruct *, struct ArgusInput *);
 
 int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *, int);
 void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 void RaProcessSrvRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+
 struct RaBinProcessStruct *RaNewBinProcess (struct ArgusParserStruct *, int);
+int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
+
 void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 int RaReadSrvSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
@@ -1200,17 +1239,16 @@ struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, struct Argu
 
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
-int ArgusHistoMetricParse (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
-int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
-
 struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
-void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);
+void RaDeleteBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, int);
+
 
 void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);
 void ArgusAlignInit(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 struct ArgusRecordStruct *ArgusAlignRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
+int ArgusAlignTime(struct ArgusParserStruct *, struct ArgusAdjustStruct *, time_t *);
 
-int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int);
+int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int, struct ArgusRecordStruct **);
 void ArgusCalculatePeriod (struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 
 void ArgusAdjustTransactions (struct ArgusRecordStruct *, double, double);
@@ -1223,6 +1261,7 @@ int ArgusReadSflowDatagramSocket (struct ArgusParserStruct *, struct ArgusInput 
 int ArgusReadCiscoStreamSocket (struct ArgusParserStruct *, struct ArgusInput *);
 int ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *, struct ArgusInput *);
 
+void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #else /* ArgusClient */
 
@@ -1255,6 +1294,7 @@ extern void RaParseComplete (int);
 extern int RaParseType (char *);
 extern struct ArgusISOAddr *RaParseISOAddr (struct ArgusParserStruct *, char *);
 extern struct ArgusCIDRAddr *RaParseCIDRAddr (struct ArgusParserStruct *, char *);
+extern int RaIsEtherAddr (struct ArgusParserStruct *, char *);
 
 extern void ArgusClientTimeout (void);
 extern void parse_arg (int, char**);
@@ -1300,6 +1340,7 @@ extern void *ArgusConnectRemotes (void *);
 extern void *ArgusConnectRemote (void *);
  
 extern void ArgusCloseInput(struct ArgusParserStruct *parser, struct ArgusInput *);
+extern void ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *);
 extern int ArgusReadStreamSocket (struct ArgusParserStruct *parser, struct ArgusInput *);
 
 extern void ArgusLog (int, char *, ...);
@@ -1312,7 +1353,7 @@ extern int ArgusProcessFileIndependantly;
 
 extern struct ArgusAggregatorStruct *ArgusParseAggregator (struct ArgusParserStruct *, char *, char **);
 extern struct ArgusRecordStruct *ArgusGenerateRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *);
-extern struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *);
+extern struct ArgusRecord *ArgusGenerateRecord (struct ArgusRecordStruct *, unsigned char, char *, int);
 extern int ArgusGenerateCiscoRecord (struct ArgusRecordStruct *, unsigned char, char *);
 
 extern void ArgusDeleteRecordStruct (struct ArgusParserStruct *, struct ArgusRecordStruct *); 
@@ -1330,22 +1371,33 @@ extern struct ArgusHashTableHdr *ArgusAddHashEntry (struct ArgusHashTable *, str
 extern struct ArgusHashTableHdr *ArgusFindHashEntry (struct ArgusHashTable *, struct ArgusHashStruct *);
 extern void ArgusRemoveHashEntry (struct ArgusHashTableHdr **);
 extern void ArgusEmptyHashTable (struct ArgusHashTable *);
+extern void ArgusEmptyHashTable2 (struct ArgusHashTable *, ArgusEmptyHashCallback);
+extern void ArgusHashForEach(struct ArgusHashTable *, ArgusHashForEachCallback, void *);
 
 extern struct ArgusListStruct *ArgusNewList (void);
 extern void ArgusDeleteList (struct ArgusListStruct *, int);
 extern int ArgusListEmpty (struct ArgusListStruct *);
 extern int ArgusGetListCount(struct ArgusListStruct *);
+
+extern int ArgusAddObjectToList(struct ArgusListStruct *, void *, int);
+extern int ArgusRemoveObjectFromList(struct ArgusListStruct *, void *, int);
+
 extern int ArgusPushFrontList(struct ArgusListStruct *, struct ArgusListRecord *, int);
 extern int ArgusPushBackList(struct ArgusListStruct *, struct ArgusListRecord *, int);
+
 extern struct ArgusListRecord *ArgusFrontList(struct ArgusListStruct *);
 extern struct ArgusListRecord *ArgusBackList(struct ArgusListStruct *);
 extern struct ArgusListRecord *ArgusPopBackList(struct ArgusListStruct *, int);
 extern struct ArgusListRecord *ArgusPopFrontList(struct ArgusListStruct *, int);
+extern struct ArgusListRecord *ArgusPopList(struct ArgusListStruct *, int);
 
 extern int RaTestUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *, int);
 extern void ArgusMergeUserData(struct RaBinStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern void RaProcessSrvRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+
 extern struct RaBinProcessStruct *RaNewBinProcess (struct ArgusParserStruct *, int);
+extern int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
+
 extern void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 extern int RaReadSrvSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
@@ -1354,19 +1406,18 @@ extern struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, stru
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
 extern int ArgusProcessServiceAvailability (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *);
-extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
-
-extern int ArgusHistoMetricParse (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
-extern int ArgusHistoTallyMetric (struct ArgusParserStruct *, struct ArgusRecordStruct *, double);
+extern int ArgusCheckTime (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
+extern int ArgusCheckTimeout (struct ArgusParserStruct *, struct ArgusInput *);
+extern void ArgusSetTimeout (struct ArgusParserStruct *, struct ArgusInput *);
 
 extern struct RaBinStruct *RaNewBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, long long, int);
-extern void RaDeleteBin (struct ArgusParserStruct *, struct RaBinStruct *);
+extern void RaDeleteBin (struct ArgusParserStruct *, struct RaBinProcessStruct *, int);
 
 extern void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);
 extern void ArgusAlignInit(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 extern struct ArgusRecordStruct *ArgusAlignRecord(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
-extern int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int);
+extern int ArgusAlignTime(struct ArgusParserStruct *, struct ArgusAdjustStruct *, time_t *);
+extern int ArgusInsertRecord (struct ArgusParserStruct *, struct RaBinProcessStruct *, struct ArgusRecordStruct *, int, struct ArgusRecordStruct **);
 extern void ArgusCalculatePeriod (struct ArgusRecordStruct *, struct ArgusAdjustStruct *);
 
 extern void ArgusAdjustSrcLoss (struct ArgusRecordStruct *, struct ArgusRecordStruct *, double);
@@ -1378,6 +1429,7 @@ extern int ArgusReadCiscoDatagramSocket (struct ArgusParserStruct *, struct Argu
 extern int ArgusReadSflowStreamSocket (struct ArgusParserStruct *, struct ArgusInput *);
 extern int ArgusReadSflowDatagramSocket (struct ArgusParserStruct *, struct ArgusInput *);
 
+extern void ArgusShiftArray (struct ArgusParserStruct *, struct RaBinProcessStruct *, int, int);
 
 #endif
 #ifdef __cplusplus

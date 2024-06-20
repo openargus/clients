@@ -1,0 +1,89 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RASQLCHECKCONF 1 "12 August 2023" "rasqlcheckconf 5.0.2"
+.SH NAME
+\fBrasqlcheckconf\fP \- write \fBargus(8)\fP data into mysql database tables.
+.SH SYNOPSIS
+.B rasqlcheckconf
+[\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+
+.SH DESCRIPTION
+.IX  "rasqlcheckconf command"  ""  "\fBrasqlcheckconf\fP \(em argus data"
+.LP
+\fBrasqlcheckconf\fP writes
+.BR argus
+data into a mysql database. 
+
+The principal function of \fBrasqlcheckconf\fP is to compare an argus.conf file
+with the entries in a MySQL database table. Using the same syntax and strategies for
+all other ra* programs, \fBrasqlcheckconf\fP creates databases and database tables,
+as needed based on the print specification on the either the command-line or the
+.rarc file.
+
+\fBrasqlcheckconf\fP by default, will compare \fB/etc/argus.conf\fP with the entries
+in the \fBargusConf\fP table in the argus database.  If the database is different,
+\fBrasqlcheckconf\fP will return a non-zero RETURN VALUE.  If the "-M replace" option
+is provided, \fBrasqlcheckconf\fP will replace the database table, with the items
+in the \fBargus.conf\fP file.
+
+Using the standard ra* client command line options, you can specify particular argus.conf
+files, and modify the database and table names use for comparison.
+
+.LP
+.SH RASQLCHECKCONF SPECIFIC OPTIONS
+\fBrasqlcheckconf\fP, like all ra based clients, supports a number of \fBra options\fP.
+
+There are no \fBrasqlcheckconf(1)\fP specific options.
+
+
+.SH INVOCATION
+This invocation compares the default \fB/etc/argus.conf\fP configuration with the
+default database and table, or ones that are specified in the users .rarc file.
+
+   \fBrasqlcheckconf\fP
+   
+
+This invocation compares the default \fB/etc/argus.conf\fP configuration with a
+specific database table.
+.nf
+ 
+   \fBrasqlcheckconf\fP -r mysql://root@localhost/argus/argusConf 
+
+.fi
+
+This invocation compares an alternate \fBargus.conf\fP configuration with a
+specific database table, and replaces the database entries if there are differences.
+.nf
+
+   \fBrasqlcheckconf\fP -f argus.conf -r mysql://root@localhost/argus/argusConf -M replace
+ 
+.fi
+
+.SH RETURN VALUES
+\fBrasqlcheckconf\fP exits with one of the following values:
+.nf
+
+   0  All entries matched.
+
+   1  The contents of the database table did not match the configuration file
+
+   2  The database table was empty or did not exist 
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient. All rights reserved.
+
+.SH SEE ALSO
+.BR rasql(1),
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi

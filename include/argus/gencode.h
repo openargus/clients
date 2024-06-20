@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -42,9 +42,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus/gencode.h#21 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus/gencode.h#13 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 /*
@@ -53,13 +53,20 @@
 
 #include <argus_os.h>
 
+#define Q_MAX		195
+
 /* Address qualifers. */
 
 #define Q_HOST		1
 #define Q_SRCID		2
 #define Q_NET		3
 #define Q_PORT		4
+#define Q_CLASS		194
+
 #define Q_GATEWAY	5
+#define Q_INTRANET	186
+#define Q_INTERNET	187
+
 #define Q_PROTO		6
 #define Q_IPID		7
 #define Q_TTL		8
@@ -100,6 +107,14 @@
 #define Q_FLOAT		140
 #define Q_GAP		141
 #define Q_DUP		142
+#define Q_MASKLEN	182
+#define Q_UUID		183
+#define Q_MAXSEG	190
+
+#define Q_SID		184
+#define Q_INF		185
+#define Q_LOC		188
+#define Q_NODE		189
 
 /* Protocol qualifiers. */
 
@@ -107,6 +122,10 @@
 #define Q_FAR		132
 #define Q_EVENT		133
 #define Q_INDEX		134
+
+/* Record status indicators */
+#define Q_BASELINE	190
+#define Q_MATCH		191
 
 /* Keystroke Behavior Keywords */
 
@@ -136,7 +155,6 @@
 #define Q_QP		59
 
 #define	Q_DECNET	60
-#define	Q_LAT		62
 #define	Q_MOPRC		63
 #define	Q_MOPDL		64
 
@@ -196,6 +214,9 @@
 #define Q_MPLS   	110
 #define Q_VLAN   	111
 
+#define Q_VXLAN   	194
+#define Q_GRE   	195
+
 #define Q_RTR   	112
 #define Q_MBR   	113
 #define Q_LVG   	114
@@ -231,6 +252,11 @@
 #define Q_OR		130
 #define Q_AND		131
 
+#define Q_LOCAL		178
+#define Q_REMOTE	179
+#define Q_LOR		180
+#define Q_LAND		181
+
 /* TCP Option qualifiers. */
 
 #define Q_TCPOPT		143
@@ -252,6 +278,29 @@
 #define Q_INTERACTIVE		158
 #define Q_INTERIDLE  		159
 
+#define Q_INTERFLOW		192
+#define Q_INTERFLOWSTDDEV	193
+
+#define Q_UNREACHNET		160
+#define Q_UNREACHHOST		161
+#define Q_UNREACHPROTO		162
+#define Q_UNREACHPORT		163
+#define Q_UNREACHFRAG		164
+#define Q_UNREACHSRCFAIL	165
+#define Q_UNREACHNETUNKNOWN	166
+#define Q_UNREACHHOSTUNKNOWN	167
+#define Q_UNREACHHOSTISOLATED	168
+#define Q_UNREACHHOSTPROHIBITED	169
+#define Q_UNREACHNETPROHIBITED	170
+#define Q_UNREACHNETTOS		171
+#define Q_UNREACHHOSTTOS	172
+#define Q_UNREACHFILTER		173
+#define Q_UNREACHHOSTPRECEDENCE	174
+#define Q_UNREACHPRECUTOFF	175
+
+#define Q_LAT			176
+#define Q_LON			177
+
 #define Q_DEFAULT	0
 #define Q_UNDEF		255
 
@@ -261,6 +310,7 @@
 #define Q_GREATER	3
 #define Q_GEQ		4
 #define Q_LEQ		5
+#define Q_NOTEQUAL	6
 
 /* DNS Opcode qualifiers. */
 #define Q_AUTH		1
@@ -383,11 +433,13 @@ struct ablock *Argusgen_stat(struct ablock *, struct ablock *, unsigned int);
 
 struct ablock *Argusgen_ocode(int, struct qual);
 struct ablock *Argusgen_scode(char *, struct qual);
+struct ablock *Argusgen_ucode(char *, struct qual);
 struct ablock *Argusgen_tcode(int, struct qual);
 struct ablock *Argusgen_ascode(char *, struct qual, unsigned int);
 struct ablock *Argusgen_ecode(unsigned char *, struct qual);
 struct ablock *Argusgen_mcode(char *, char *, int, struct qual);
 struct ablock *Argusgen_ncode(char *, int, struct qual, unsigned int);
+struct ablock *Argusgen_pcode(unsigned char *, unsigned char *, int, struct qual);
 struct ablock *Argusgen_fcode(char *, float, struct qual, unsigned int);
 struct ablock *Argusgen_proto_abbrev(int);
 struct ablock *Argusgen_relation(int, struct arth *, struct arth *, int);
@@ -396,6 +448,8 @@ struct ablock *Argusgen_greater(int);
 struct ablock *Argusgen_byteop(int, int, int);
 struct ablock *Argusgen_broadcast(int);
 struct ablock *Argusgen_multicast(int);
+struct ablock *Argusgen_intranet(void);
+struct ablock *Argusgen_internet(void);
 struct ablock *Argusgen_inbound(int);
 struct ablock *Argusgen_dns(int, int, int);
 struct ablock *Argusgen_appbytes(int, int, u_int);

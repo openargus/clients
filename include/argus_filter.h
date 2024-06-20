@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -61,9 +61,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_filter.h#19 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_filter.h#7 $
+ * $DateTime: 2014/10/07 14:26:13 $
+ * $Change: 2933 $
  */
 
 
@@ -162,12 +162,14 @@ extern struct enamemem *lookup_emem(struct enamemem *, const unsigned char *);
 char *ArgusEtherProtoString(struct ArgusParserStruct *, unsigned short port);
 char *linkaddr_string(struct ArgusParserStruct *parser, unsigned char *, unsigned int);
 char *etheraddr_string(struct ArgusParserStruct *parser, unsigned char *);
+int etheraddr_class(struct ArgusParserStruct *parser, unsigned char *);
 char *etheraddr_oui(struct ArgusParserStruct *parser, unsigned char *);
 char *protoid_string(const unsigned char *);
 char *llcsap_string(unsigned char);
 char *isonsap_string(const unsigned char *, int);
 char *tcpport_string(unsigned short);
 char *udpport_string(unsigned short);
+char *icmpport_string(struct ArgusRecordStruct *, int);
 
 extern void init_servarray(void);
 extern void init_eprotoarray(void);
@@ -240,12 +242,14 @@ extern char *ArgusGetV6Name(struct ArgusParserStruct *, unsigned char *);
 extern char *ArgusEtherProtoString(struct ArgusParserStruct *, unsigned short);
 extern char *linkaddr_string(struct ArgusParserStruct *parser, const unsigned char *, unsigned int);
 extern char *etheraddr_string(struct ArgusParserStruct *parser, unsigned char *);
+extern int etheraddr_class(struct ArgusParserStruct *parser, unsigned char *);
 extern char *etheraddr_oui(struct ArgusParserStruct *parser, unsigned char *);
 extern char *protoid_string(const unsigned char *);
 extern char *llcsap_string(unsigned char);
 extern char *isonsap_string(const unsigned char *, int);
 extern char *tcpport_string(unsigned short);
 extern char *udpport_string(unsigned short);
+extern char *icmpport_string(struct ArgusRecordStruct *, int);
 
 extern void init_addrtoname(int, unsigned int, unsigned int);
 extern unsigned int **argus_nametoaddr(char *);

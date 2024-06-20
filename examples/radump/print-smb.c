@@ -6,10 +6,12 @@
  * or later
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -920,6 +922,51 @@ print_smb(const u_char *buf, const u_char *maxbuf)
 trunc:
     sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
     return;
+}
+
+/*
+ * Print an SMB-over-TCP packet received across tcp on port 445
+ */
+char *
+smb_tcp_print(const u_char *data, int length)
+{
+    int caplen;
+    u_int smb_len;
+    const u_char *maxbuf;
+
+    if (length < 4)
+	goto trunc;
+    if (snapend < data)
+	goto trunc;
+    caplen = snapend - data;
+    if (caplen < 4)
+	goto trunc;
+    maxbuf = data + caplen;
+    smb_len = EXTRACT_24BITS(data + 1);
+    length -= 4;
+    caplen -= 4;
+
+    startbuf = data;
+    data += 4;
+
+    if (smb_len >= 4 && caplen >= 4 && (memcmp(data,"\377SMB",4) || (memcmp(data,"\376SMB",4) == 0))) {
+	if ((int)smb_len > caplen) {
+	    if ((int)smb_len > length)
+                sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Packet is continued in later TCP segments\n");
+	    else
+                sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Short packet. Try increasing the snap length by %d\n",
+		    smb_len - caplen);
+	} else
+	    sprintf(&ArgusBuf[strlen(ArgusBuf)], " ");
+
+	print_smb(data, maxbuf > data + smb_len ? data + smb_len : maxbuf);
+    } else
+       sprintf(&ArgusBuf[strlen(ArgusBuf)],"SMB-over-TCP packet:(raw data or continuation?)\n");
+
+    return ArgusBuf;
+trunc:
+    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    return ArgusBuf;
 }
 
 

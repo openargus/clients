@@ -1,23 +1,26 @@
 /*
- * Argus Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
+ * This program is free software, released under the GNU General
+ * Public License; you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software
+ * Foundation; either version 3, or any later version.
+ *
+ * Other licenses are available through QoSient, LLC.
+ * Inquire at info@qosient.com.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the * GNU General Public License for more details.
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
+
 
 QUICK MAKE
 
@@ -52,8 +55,22 @@ curses development package installed, such as "ncurses-devel".
 Ratop would like to use the readline library, if available.  While not
 required, readline is recommended.
 
+For Debian, you will need to install readline-dev.
+
+  # apt install readline-dev
+
+For other Linux, you may need to install it as 
+
+  # apt install readline-devel
+
 For some OS's, such as Mac OS X, which does not ship with readline, due to
-licensing issues, installing these packages is optional.
+licensing issues, installing these packages is optional.  Using Brew to
+install needed packages for compiling argus and argus-clients is recommended.
+That's what we do.
+
+Argus 5.0 supports the use of uuid's as source id's.  To use uuid's effective,
+argus clients uses libuuid-devel to parse and generate uuid strings.
+This will need to be installed to turn on all features.
 
 Some argi are configured to use strong authentication and encryption 
 when transporting it data over the wire.  Argus clients can be compiled
@@ -113,6 +130,27 @@ of flex and bison are available via anonymous ftp:
 
         ftp://prep.ai.mit.edu/pub/gnu/bison-*.tar.gz
         ftp://prep.ai.mit.edu/pub/non-gnu/flex/flex-*.tar.gz
+
+
+In order to support some specific DSR processing, argus clients needs
+the XDR library, which is now provided in the libtirpc-devel package
+on Linux. Without the XDR functions, argus-clients will not be able
+to process the ARGUS_JITTER_DSR metrics, but argus-clients will build
+without the library.
+
+Getting this library is different for most platforms. For 
+Centos Stream 9, as an example, libtirpc is available in the Base OS
+repository using 'dnf', but the needed libtirpc-devel package is in
+the CRB repository.  You will need to configure 'dnf' to add CRB to the
+repo lists.
+
+  # dnf config-manager --set-enabled crb
+
+For other Linux that use 'dnf', you won't need the above command, but
+you will need to install libtirpc.
+
+  # dnf install libtirpc-devel
+
 
 Now, if you are still having problems, ..., well its hard to say
 from here what it might be.  So, you may want to send us some email.

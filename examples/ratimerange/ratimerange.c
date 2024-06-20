@@ -1,34 +1,32 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- * 
- * $Id: //depot/argus/clients/examples/ratimerange/ratimerange.c#7 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
- */
-
-/*
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
  * ratimerange.c  - print out the time range for the data seen.
  *
  * Carter Bullard
  * QoSient, LLC
  *
+ */
+
+/*
+ * $Id: //depot/gargoyle/clients/examples/ratimerange/ratimerange.c#5 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -86,12 +84,12 @@ RaParseComplete (int sig)
       if (!ArgusParser->RaParseCompleting++) {
          char sbuf[128], ebuf[128];
 
-         bzero (sbuf, sizeof(sbuf));
-         bzero (ebuf, sizeof(ebuf));
+         sbuf[0] = '\0';
+         ebuf[0] = '\0';
 
          if (ArgusParser->ArgusTotalRecords > 0) {
-            ArgusPrintTime(ArgusParser, sbuf, &RaStartTime);
-            ArgusPrintTime(ArgusParser, ebuf, &RaEndTime);
+            ArgusPrintTime(ArgusParser, sbuf, sizeof(sbuf), &RaStartTime);
+            ArgusPrintTime(ArgusParser, ebuf, sizeof(ebuf), &RaEndTime);
 
             printf ("%s - %s\n", sbuf, ebuf);
             fflush (stdout);
@@ -190,7 +188,28 @@ void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    switch (argus->hdr.type & 0xF0) {
-      case ARGUS_MAR:
+      case ARGUS_MAR: {
+         struct ArgusRecord *rec = (struct ArgusRecord *)argus->dsrs[0];
+         if ((rec->hdr.cause & 0xF0) == ARGUS_START) {
+            if (rec->ar_un.mar.now.tv_sec)
+               if ((RaStartTime.tv_sec  > rec->ar_un.mar.now.tv_sec) ||
+                  ((RaStartTime.tv_sec == rec->ar_un.mar.now.tv_sec) &&
+                  (RaStartTime.tv_usec > rec->ar_un.mar.now.tv_usec))) {
+                  RaStartTime.tv_sec  = rec->ar_un.mar.now.tv_sec;
+                  RaStartTime.tv_usec = rec->ar_un.mar.now.tv_usec;
+               }
+
+         } else 
+            if (rec->ar_un.mar.now.tv_sec)
+               if ((RaEndTime.tv_sec  < rec->ar_un.mar.now.tv_sec) ||
+                  ((RaEndTime.tv_sec == rec->ar_un.mar.now.tv_sec) &&
+                  (RaEndTime.tv_usec < rec->ar_un.mar.now.tv_usec))) {
+                  RaEndTime.tv_sec  = rec->ar_un.mar.now.tv_sec;
+                  RaEndTime.tv_usec = rec->ar_un.mar.now.tv_usec;
+               }
+         break;
+      }
+
       case ARGUS_EVENT: {
          break;
       }

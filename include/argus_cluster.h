@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_cluster.h#38 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_cluster.h#17 $
+ * $DateTime: 2016/10/10 23:14:45 $
+ * $Change: 3219 $
  */
 
 #ifndef ArgusCluster_h
@@ -95,7 +95,7 @@ struct ArgusAggregatorStruct {
    struct RaFlowModelStruct *fmodel;
    struct ArgusModeStruct *ArgusModeList, *ArgusMaskList;
    struct ArgusMaskStruct *ArgusMaskDefs;
-   struct ArgusQueueStruct *queue;
+   struct ArgusQueueStruct *queue, *timeout;
    struct ArgusHashTable *htable;
    struct ArgusHashStruct hstruct;
    struct ArgusSystemFlow fstruct;
@@ -118,57 +118,63 @@ struct ArgusAggregatorStruct {
 
 #define NLI			-1
 
-#define ARGUS_MAX_MASK_LIST	37
+#define ARGUS_MAX_MASK_LIST	41
 
 #define ARGUS_MASK_SRCID	0
+#define ARGUS_MASK_SID      	1
+#define ARGUS_MASK_SRCID_INF	2
  
-#define ARGUS_MASK_SMPLS	1
-#define ARGUS_MASK_DMPLS	2
-#define ARGUS_MASK_SVLAN	3
-#define ARGUS_MASK_DVLAN	4
+#define ARGUS_MASK_SMPLS	3
+#define ARGUS_MASK_DMPLS	4
+#define ARGUS_MASK_SVLAN	5
+#define ARGUS_MASK_DVLAN	6
  
-#define ARGUS_MASK_PROTO	5
-#define ARGUS_MASK_SADDR	6
-#define ARGUS_MASK_SPORT	7
-#define ARGUS_MASK_DADDR	8
-#define ARGUS_MASK_DPORT	9
+#define ARGUS_MASK_PROTO	7
+#define ARGUS_MASK_SADDR	8
+#define ARGUS_MASK_SPORT	9
+#define ARGUS_MASK_DADDR	10
+#define ARGUS_MASK_DPORT	11
  
-#define ARGUS_MASK_SNET		10
-#define ARGUS_MASK_DNET		11
+#define ARGUS_MASK_SNET		12
+#define ARGUS_MASK_DNET		13
  
-#define ARGUS_MASK_STOS		12
-#define ARGUS_MASK_DTOS		13
-#define ARGUS_MASK_STTL		14
-#define ARGUS_MASK_DTTL		15
-#define ARGUS_MASK_SIPID	16
-#define ARGUS_MASK_DIPID	17
+#define ARGUS_MASK_STOS		14
+#define ARGUS_MASK_DTOS		15
+#define ARGUS_MASK_STTL		16
+#define ARGUS_MASK_DTTL		17
+#define ARGUS_MASK_SIPID	18
+#define ARGUS_MASK_DIPID	19
  
-#define ARGUS_MASK_STCPB	18
-#define ARGUS_MASK_DTCPB	19
+#define ARGUS_MASK_STCPB	20
+#define ARGUS_MASK_DTCPB	21
 
-#define ARGUS_MASK_SMAC		20
-#define ARGUS_MASK_DMAC		21
+#define ARGUS_MASK_SMAC		22
+#define ARGUS_MASK_DMAC		23
 
-#define ARGUS_MASK_SVID		22
-#define ARGUS_MASK_DVID		23
-#define ARGUS_MASK_SVPRI	24
-#define ARGUS_MASK_DVPRI	25
-#define ARGUS_MASK_SVC		26
+#define ARGUS_MASK_SVID		24
+#define ARGUS_MASK_DVID		25
+#define ARGUS_MASK_SVPRI	26
+#define ARGUS_MASK_DVPRI	27
+#define ARGUS_MASK_SVC		28
  
-#define ARGUS_MASK_INODE	27
+#define ARGUS_MASK_INODE	29
 
-#define ARGUS_MASK_SDSB		28
-#define ARGUS_MASK_DDSB		29
-#define ARGUS_MASK_SCO 		30
-#define ARGUS_MASK_DCO 		31
-#define ARGUS_MASK_SAS 		32
-#define ARGUS_MASK_DAS 		33
-#define ARGUS_MASK_IAS 		34
-#define ARGUS_MASK_SOUI		35
-#define ARGUS_MASK_DOUI		36
+#define ARGUS_MASK_SDSB		30
+#define ARGUS_MASK_DDSB		31
+#define ARGUS_MASK_SCO 		32
+#define ARGUS_MASK_DCO 		33
+#define ARGUS_MASK_SAS 		34
+#define ARGUS_MASK_DAS 		35
+#define ARGUS_MASK_IAS 		36
+#define ARGUS_MASK_SOUI		37
+#define ARGUS_MASK_DOUI		38
+#define ARGUS_MASK_ETYPE	39
+
+#define ARGUS_MASK_STIME	40
 
 
 #define ARGUS_MASK_SRCID_INDEX	(0x1 << ARGUS_MASK_SRCID)
+#define ARGUS_MASK_INF_INDEX	(0x1 << ARGUS_MASK_SRCID_INF)
  
 #define ARGUS_MASK_SMPLS_INDEX	(0x1 << ARGUS_MASK_SMPLS)
 #define ARGUS_MASK_DMPLS_INDEX	(0x1 << ARGUS_MASK_DMPLS)
@@ -209,6 +215,9 @@ struct ArgusAggregatorStruct {
 #define ARGUS_MASK_SOUI_INDEX	(0x1 << ARGUS_MASK_SOUI)
 #define ARGUS_MASK_DOUI_INDEX	(0x1 << ARGUS_MASK_DOUI)
 
+#define ARGUS_MASK_ETYPE_INDEX	(0x1 << ARGUS_MASK_ETYPE)
+
+#define ARGUS_MASK_STIME_INDEX	(0x1 << ARGUS_MASK_STIME)
 
 struct ArgusMaskStruct {
    char *name, slen;
@@ -216,8 +225,51 @@ struct ArgusMaskStruct {
 };
 
 #if defined(ARGUS_MAIN)
+struct ArgusMaskStruct ArgusSrcIdMaskDefs[ARGUS_MAX_MASK_LIST] = {
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL},
+   {NULL}
+};
 struct ArgusMaskStruct ArgusIpV4MaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       4,  2, 1},
@@ -252,12 +304,16 @@ struct ArgusMaskStruct ArgusIpV4MaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"soui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"doui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusIpV4RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -292,12 +348,16 @@ struct ArgusMaskStruct ArgusIpV4RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        8,  2, 1},
    {"das",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"soui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"doui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusIpV6MaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       4,  2, 1},
@@ -332,12 +392,16 @@ struct ArgusMaskStruct ArgusIpV6MaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"soui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"doui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
  
 struct ArgusMaskStruct ArgusIpV6RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -372,13 +436,17 @@ struct ArgusMaskStruct ArgusIpV6RevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"soui",  4, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"doui",  4, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIBLocalMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       4,  2, 1},
@@ -413,13 +481,17 @@ struct ArgusMaskStruct ArgusIBLocalMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {NULL},
+   {NULL},
+   {NULL},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIBGlobalMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       4,  2, 1},
@@ -454,13 +526,17 @@ struct ArgusMaskStruct ArgusIBGlobalMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
-   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
-   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {NULL},
+   {NULL},
+   {NULL},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIBGlobalRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       4,  2, 1},
@@ -493,13 +569,17 @@ struct ArgusMaskStruct ArgusIBGlobalRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sco",   3, ARGUS_COCODE_INDEX,     4,  2, 1},
    {"dco",   3, ARGUS_COCODE_INDEX,     6,  2, 1},
    {"sas",   3, ARGUS_ASN_INDEX,        4,  4, 1},
-   {"das",   3, ARGUS_ASN_INDEX,        8,  4, 1},
-   {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
+   {NULL},
+   {NULL},
+   {NULL},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusArpMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -536,12 +616,16 @@ struct ArgusMaskStruct ArgusArpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 
 struct ArgusMaskStruct ArgusArpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -578,11 +662,15 @@ struct ArgusMaskStruct ArgusArpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusRarpMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -619,11 +707,15 @@ struct ArgusMaskStruct ArgusRarpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusRarpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -660,11 +752,15 @@ struct ArgusMaskStruct ArgusRarpRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusEtherMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -701,10 +797,14 @@ struct ArgusMaskStruct ArgusEtherMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusEtherRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -741,11 +841,15 @@ struct ArgusMaskStruct ArgusEtherRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusWlanMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -780,10 +884,16 @@ struct ArgusMaskStruct ArgusWlanMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"sas",   3, ARGUS_ASN_INDEX,        8,  4, 1},
    {"das",   3, ARGUS_ASN_INDEX,        4,  4, 1},
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
+   {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusWlanRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -820,10 +930,14 @@ struct ArgusMaskStruct ArgusWlanRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusIsisMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -860,11 +974,15 @@ struct ArgusMaskStruct ArgusIsisMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIsisRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -901,11 +1019,15 @@ struct ArgusMaskStruct ArgusIsisRevMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIsisHelloMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -942,10 +1064,14 @@ struct ArgusMaskStruct ArgusIsisHelloMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusMaskStruct ArgusIsisLspMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -982,11 +1108,15 @@ struct ArgusMaskStruct ArgusIsisLspMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIsisCsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -1023,11 +1153,15 @@ struct ArgusMaskStruct ArgusIsisCsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 
 struct ArgusMaskStruct ArgusIsisPsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
-   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4,  4, 1},
+   {"srcid", 5, ARGUS_TRANSPORT_INDEX,  4, 20, 1},
+   {"sid",   5, ARGUS_TRANSPORT_INDEX,  4, 16, 1},
+   {"inf",   3, ARGUS_TRANSPORT_INDEX,  20, 4, 1},
    {"smpls", 5, ARGUS_MPLS_INDEX,       8,  4, 1},
    {"dmpls", 5, ARGUS_MPLS_INDEX,       4,  4, 1},
    {"svlan", 5, ARGUS_VLAN_INDEX,       6,  2, 1},
@@ -1064,6 +1198,8 @@ struct ArgusMaskStruct ArgusIsisPsnpMaskDefs[ARGUS_MAX_MASK_LIST] = {
    {"ias",   3, ARGUS_ASN_INDEX,       12,  4, 1},
    {"soui",  3, ARGUS_MAC_INDEX,       10,  3, 1},
    {"doui",  3, ARGUS_MAC_INDEX,        4,  3, 1},
+   {"etype", 5, ARGUS_MAC_INDEX,       16,  2, 1},
+   {"stime", 5, ARGUS_TIME_INDEX,       4,  8, 1},
 };
 
 struct ArgusAggregatorStruct *ArgusNewAggregator (struct ArgusParserStruct *, char *, int type);
@@ -1071,9 +1207,13 @@ struct ArgusAggregatorStruct *ArgusCopyAggregator (struct ArgusAggregatorStruct 
 void ArgusDeleteAggregator (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
 void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
+
+void RaMatrixNormalizeEtherAddrs (struct ArgusRecordStruct *ns);
  
 unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
-void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
+                        struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 #else
@@ -1092,9 +1232,13 @@ extern struct ArgusAggregatorStruct *ArgusCopyAggregator (struct ArgusAggregator
 extern void ArgusDeleteAggregator (struct ArgusParserStruct *, struct ArgusAggregatorStruct *);
 extern struct RaPolicyStruct *RaFlowModelOverRides(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
 extern void ArgusGenerateNewFlow(struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
+
+extern void RaMatrixNormalizeEtherAddrs (struct ArgusRecordStruct *ns);
  
 extern unsigned int ArgusMergeAddress(unsigned int *, unsigned int *, int, int, unsigned char *);
-extern void ArgusMergeRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern void ArgusMergeRecords (const struct ArgusAggregatorStruct * const,
+                               struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern void ArgusReplaceRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern void ArgusIntersectRecords (struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 
 #endif

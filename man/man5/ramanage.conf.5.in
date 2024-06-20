@@ -1,0 +1,242 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RAMANAGE.CONF 5 "13 November 2018" "ramanage.conf 5.0.3"
+.SH NAME
+\fBramanage.conf\fP \- \fBramanage\fP configuration options
+.SH SYNOPSIS
+.B ramanage.conf
+.SH DESCRIPTION
+The following options control the behavior of the compress, upload and
+delete commands.
+These are set in @sysconfdir@/ramanage.conf or in a file referenced
+by the -f option.
+On Windows systems, these can be set in the 64-bit registry.
+See the WINDOWS REGISTRY section below for details.
+
+.SH RAMANAGE_LOCK_FILE
+ramanage is designed to be run from rastream(1).
+rastream will spawn one process for each file it closes, as the files
+are closed which will lead to multiple ramanage processes.
+To prevent all processes from consuming CPU and/or network resources
+simultaneously, a lock file can be specified which will ensure that
+only one ramanage process is working at any given time.
+The filename must be specified using posix conventions, meaning
+forward slashes between directories even on Windows systems.
+Currently, Cygwin is used for building Windows binaries and therefor
+the filenames must also adhere to the layout of Cygwin's "filesystem".
+On Unix systems, /var/lib and /var/lock are common places for this
+sort of file.
+
+.SH RAMANAGE_COMPRESS_EFFORT
+Set the gzip compression effort.
+Allowed range is 1-9 inclusive.
+Currently not implemented.
+
+.SH RAMANAGE_COMPRESS_METHOD
+Set the compression algorithm.
+Only gzip is supported.
+Currently not implemented.
+
+.SH RAMANAGE_COMPRESS_MAX_KB
+Limit the amount of data from the archive that can be compressed in one
+run of ramange.
+If compression is enabled, ramanage will always compress the file after
+the -r option, regardless of size.
+After, if archive processing is enabled, ramange will start with the
+oldest uncompressed file in the archive and will compress files until
+it reaches this limit.
+If no limit is specified or is set to zero, ramanage will continue until
+the entire archive is compressed.
+Must be a positive integer value.
+
+.SH RAMANAGE_UPLOAD_USE_DNS
+Look for a service record in DNS pointing to the QoSient collection
+system.
+The service record (SRV) name has the format
+_argus_upload._tcp.\fIdomainname\fP.
+ramanage uses the resulting hostname and port values to find the
+collector.
+Priority and weight are ignored.
+Valid values are "yes" and "no".
+
+.SH RAMANAGE_UPLOAD_USE_DNS_DOMAIN
+Look in DNS for a service record in this domain.
+Use in conjunction with RAMANAGE_UPLOAD_USE_DNS.
+Valid values are valid domain names.
+Omit the trailing dot/period.
+
+.SH RAMANAGE_UPLOAD_SERVER
+If not using a DNS service record to locate the collector,
+provide the numeric IPv4 or IPv6 address here.
+
+.SH RAMANAGE_UPLOAD_DIR
+Upload (PUT) files into this directory on the collector.
+QoSient collectors default to /uploads.
+ramanage assumes no default directory.
+
+.SH RAMANAGE_UPLOAD_USER
+When using BasicAuth, authenticate with this username.
+
+.SH RAMANAGE_UPLOAD_PASS
+When using BasicAuth, authenticate with this password.
+Note that if an external curl binary is used, the password
+will appear on the commandline.
+
+.SH RAMANAGE_UPLOAD_AUTH
+Set the authenticate type for HTTPS uploads.
+Leave blank for BasicAuth or set to "spnego"
+for Kerberos V5.
+
+.SH RAMANAGE_UPLOAD_MAX_KB
+Limit the amount of data from the archive that can be uploaded in one
+run of ramange.
+If upload is enabled, ramanage will always upload the file after the -r
+option, regardless of size.
+After, if archive processing is enabled, ramange will start with the
+oldest file in the archive and will upload files until it reaches
+this limit.
+If no limit is specified or is set to zero, ramanage will continue until
+the entire archive is uploaded.
+Must be a positive integer value.
+
+.SH RAMANAGE_UPLOAD_DELAY_USEC
+Delay uploads by some random time limited by this value.
+It is assumed that many systems will be uploading data to
+the same QoSient collector at the same time (since most systems
+have some sort of time synchronization, like NTP).
+Stagger the uploads some by waiting for an unpredictable
+time.
+Disable by setting to zero.
+
+.SH RAMANAGE_PATH_ARCHIVE
+Specify the location of the local Argus file archive (mandatory).
+The filename must be specified using posix conventions, meaning
+forward slashes between directories even on Windows systems.
+Currently, Cygwin is used for building Windows binaries and therefor
+the filenames must also adhere to the layout of Cygwin's "filesystem".
+
+.SH RAMANAGE_PATH_STAGING
+Specify the location of the local Argus file staging directory
+(mandatory).
+This is where files will be moved after upload.
+File remain in this directory until they are deleted,
+according to the ramange configuration.
+The filename must be specified using posix conventions, meaning
+forward slashes between directories even on Windows systems.
+Currently, Cygwin is used for building Windows binaries and therefor
+the filenames must also adhere to the layout of Cygwin's "filesystem".
+
+.SH RAMANAGE_RPOLICY_DELETE_AFTER
+Delete files in the staging and archive directories after the duration
+specified here in days.
+Must be a positive integer.
+
+.SH RAMANAGE_RPOLICY_COMPRESS_AFTER
+Compress files in the staging and archive directories after the
+duration specified here in days.
+Must be a positive integer.
+Set to zero to compress immediately.
+
+.SH RAMANAGE_RPOLICY_MAX_KB
+Delete the oldest files in the archive if more than this amount of
+storage is used.
+Currently not implemented.
+
+.SH RAMANAGE_RPOLICY_MIN_DAYS
+Keep at least this many days worth of argus data in the archive, even
+if this exceeds the storage requirements set in RAMANAGE_RPOLICY_MAX_KB.
+Currently not implemented.
+
+.SH RAMANAGE_RPOLICY_IGNORE_ARCHIVE
+Set to "yes" if only the file specified by -r should be processed.
+Defaults to "no".
+
+.SH RAMANAGE_PROCESS_ARCHIVE_PERIOD
+ramanage is designed to be run from rastream(1).
+rastream will spawn one process for each file it closes, as the files
+are closed which will lead to multiple ramanage processes.
+To prevent the archive compression and upload phases from running in
+close succession as a result, specify how often it is permissible
+to compress/upload/delete files in the archive.
+Value must be a non-negative integer and has units of seconds.
+
+.SH RAMANAGE_CMD_COMPRESS
+Set to "yes" to enable file compression.
+Defaults to "no".
+
+.SH RAMANAGE_CMD_DELETE
+Set to "yes" to enable file deletion.
+Defaults to "no".
+
+.SH RAMANAGE_CMD_UPLOAD
+Set to "yes" to enable file uploads.
+Defaults to "no".
+
+.SH "WINDOWS REGISTRY"
+If present, configuration items in the Windows registry will be preferred
+over those in configuration files.
+These are stored in HKLM:\\SOFTWARE\\QoSient\\ArgusClients\\ramanage.
+Configuration items have the same names as those in configuration files
+and have a type of either SZ for string values, or QWORD for numeric
+values.
+
+To view current settings from PowerShell,
+.ft CW
+.ps 8
+.nf
+.in +0.5i
+C:\\> Get-ItemProperty HKLM:\\SOFTWARE\\QoSient\\ArgusClients\\ramanage
+.in
+.fi
+.ps
+.ft
+
+Create the registry key if not present:
+.ft CW
+.ps 8
+.nf
+.in +0.5i
+C:\\> New-Item -Path HKLM:\\SOFTWARE -Name QoSient
+C:\\> New-Item -Path HKLM:\\SOFTWARE\\QoSient -Name ArgusClients
+C:\\> New-Item -Path HKLM:\\SOFTWARE\\QoSient\\ArgusClients -Name ramanage
+.in
+.fi
+.ps
+.ft
+
+Configuration values can be added to the ramanage key from PowerShell
+with the Set-ItemProperty cmdlet.
+Numeric values require the -Type parameter.
+To enter string values, omit the type parameter.
+.ft CW
+.ps 8
+.nf
+.in +0.5i
+C:\\> Set-ItemPropery -Path HKLM:\\SOFTWARE\\QoSient\\ArgusClients\\ramanage `
+.in +0.5i
+-Type QWord `
+-Name RAMANAGE_RPOLICY_DELETE_AFTER `
+-Value 180
+.in -0.5i
+C:\\> Set-ItemPropery -Path HKLM:\\SOFTWARE\\QoSient\\ArgusClients\\ramanage `
+.in +0.5i
+-Name RAMANAGE_CMD_UPLOAD `
+-Value yes
+.in -0.5i
+.in -0.5i
+.fi
+.ps
+.ft
+
+The regedit program (not regedit32) can be used to create the ramanage
+key and its properties if a graphical interface is preferred.
+
+.SH SEE ALSO
+.BR ramanage (1),\  rastream (1)
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient. All rights reserved.

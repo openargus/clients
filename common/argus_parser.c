@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -30,9 +30,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_parser.c#53 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_parser.c#18 $
+ * $DateTime: 2016/11/30 12:35:01 $
+ * $Change: 3247 $
  */
 
 
@@ -70,18 +70,33 @@ struct ArgusParserStruct *ArgusParser = NULL;
 
 extern void ArgusLog (int, char *, ...);
 
+static void ArgusInitializeParser(struct ArgusParserStruct *);
+
 struct ArgusParserStruct *
 ArgusNewParser(char *progname)
 {
    struct ArgusParserStruct *retn = NULL;
+   char progbuf[1024], *ptr;
+
+   if (progname != NULL) {
+      strncpy (progbuf, progname, 1024);
+      if ((ptr = strrchr (progbuf, '/')) != NULL) {
+         *ptr++ = '\0';
+         progname = ptr;
+      }
+   } else 
+      ArgusLog (LOG_ERR, "ArgusNewParser(%s) no program name");
 
    if ((retn  = (struct ArgusParserStruct *) ArgusCalloc(1, sizeof(*retn))) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewParser(%s) ArgusCalloc error %s", progname, strerror(errno));
 
    retn->ArgusProgramName = strdup(progname);
    retn->ArgusCIDRPtr = &retn->ArgusCIDRBuffer;
-   retn->RaTimeFormat = strdup("%T.%f");
+// retn->RaTimeFormat = strdup("%T.%f");
    retn->ArgusFractionalDate = 1;
+
+   retn->ArgusHashTableSize = RA_HASHTABLESIZE;
+   retn->RaFilterTimeout = 1.5;
 
    retn->RaClientTimeout.tv_sec = 1;
    retn->RaCloseInputFd = 1;
@@ -92,9 +107,10 @@ ArgusNewParser(char *progname)
    retn->Lflag = -1;
    retn->pflag  = 6;
    retn->ArgusReverse = 1;
-   retn->ArgusPerformCorrection = 1;
-   retn->ArgusTimeMultiplier = 1.0;
+   retn->ArgusPrintWarnings = 1;
+   retn->ArgusPerformCorrection = 0;
    retn->RaSeparateAddrPortWithPeriod = 1;
+   retn->RaPruneMode = 1;
 
    retn->timeout.tv_sec  = -1;
    retn->timeout.tv_usec =  0;
@@ -102,11 +118,10 @@ ArgusNewParser(char *progname)
    retn->ArgusPassNum = 1;
 
    ArgusInitializeParser(retn);
-   ArgusParser = retn;
    return (retn);
 }
 
-void
+static void
 ArgusInitializeParser(struct ArgusParserStruct *parser)
 {
    int i;
@@ -129,41 +144,28 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
    parser->ArgusTotalSrcBytes   = 0;
    parser->ArgusTotalDstBytes   = 0;
 
-   parser->RaLabelCounter       = 0;
-   parser->RaFilterTimeout      = 1.5;
-
-   if (parser->ArgusListens) {
-      for (i = 0; i < parser->ArgusListens; i++)
-         close(parser->ArgusLfd[i]);
-   }
+   parser->RaLabelCounter      = 0;
 
    parser->RaFieldWidth = RA_FIXED_WIDTH;
+
+   parser->ArgusGenerateManRecords = 0;
+
+   for (i = 0; i < ARGUS_MAXLISTEN; i++) {
+      parser->ArgusLfd[i] = -1;
+      parser->ArgusOutputs[i] = NULL;
+   }
+
    parser->ArgusListens = 0;
 
-   parser->ArgusGenerateManRecords = 1;
-
-   for (i = 0; i < ARGUS_MAXLISTEN; i++)
-      parser->ArgusLfd[i] = -1;
-
-   if (parser->ArgusInputList == NULL)
-      parser->ArgusInputList = ArgusNewList();
-
-   if (parser->ArgusOutputList == NULL)
-      parser->ArgusOutputList = ArgusNewList();
-
-   if (parser->ArgusRemoteHosts == NULL)
-      parser->ArgusRemoteHosts = ArgusNewQueue();
-
-   if (parser->ArgusActiveHosts == NULL)
-      parser->ArgusActiveHosts = ArgusNewQueue();
-
-   if (parser->MySQLDBEngine != NULL) {
-      free(parser->MySQLDBEngine);
-      parser->MySQLDBEngine = NULL;
-   }
+   parser->ArgusInputList = ArgusNewList();
+   parser->ArgusOutputList = ArgusNewList();
+   parser->ArgusRemoteHosts = ArgusNewQueue();
+   parser->ArgusActiveHosts = ArgusNewQueue();
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&parser->lock, NULL);
+   pthread_mutex_init(&parser->sync, NULL);
+   pthread_cond_init(&parser->cond, NULL);
 #endif
 
    gettimeofday(&parser->ArgusStartRealTime, 0L);
@@ -178,8 +180,8 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
 #define ARGUSPERFMETRICS		1
 */
 #if defined(ARGUSPERFMETRICS)
-   extern int ArgusAllocMax, ArgusAllocBytes;
-   extern int ArgusAllocTotal, ArgusFreeTotal;
+   extern unsigned int ArgusAllocMax, ArgusAllocBytes;
+   extern unsigned int ArgusAllocTotal, ArgusFreeTotal;
 
    struct timeval timediff;
    int x = 0 , len;
@@ -207,19 +209,13 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
         addr = (struct ArgusInput *)addr->qhdr.nxt;
       }
    }
-/*
-   for (i = 0; i < parser->tcount; i++) {
-      if (parser->remote[i].input->hostname != NULL) {
-         ArgusIntStr[x++] = strdup(parser->remote[i].input->hostname);
-      }
-   }
-*/
 #endif
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_lock(&parser->lock);
 #endif
 
+   ArgusFreeHostarray();
    ArgusFreeEtherarray();
    ArgusFreeServarray(parser);
    ArgusFreeProtoidarray();
@@ -274,18 +270,6 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
       ArgusDeleteAggregator(parser, parser->ArgusAggregator);
    }
 
-/*
-   if ((tcount = parser->tcount) > 0) {
-      struct ArgusInput *input = NULL;
-      for (i = 0; i < tcount; i++) {
-         if ((input = parser->remote[i].input) != NULL) {
-            ArgusCloseInput(parser, input);
-            parser->remote[i].input = NULL;
-         }
-      }
-   }
-*/
-
    if (parser->RaSortOptionIndex > 0) {
       int i;
       for (i = 0; i < parser->RaSortOptionIndex; i++) 
@@ -316,7 +300,7 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
    if (parser->MySQLDBEngine != NULL)
       free(ArgusParser->MySQLDBEngine);
 
-   parser->debugflag = -1;
+   parser->debugflag = 0;
 
    if (parser->ArgusProgramArgs != NULL)
       ArgusFree(parser->ArgusProgramArgs);
@@ -348,6 +332,13 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
       free(parser->ArgusMatchLabel);
       parser->ArgusMatchLabel = NULL;
       regfree(&parser->lpreg);
+   }
+
+   if (parser->ArgusMatchGroup != NULL) {
+      free(parser->ArgusMatchGroup);
+      parser->ArgusMatchGroup = NULL;
+      regfree(&parser->sgpreg);
+      regfree(&parser->dgpreg);
    }
 
 /*
@@ -418,8 +409,6 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
       free (parser->dbportstr);
    if (parser->dbhoststr != NULL)
       free (parser->dbhoststr);
-   if (parser->dbportstr != NULL)
-      free (parser->dbportstr);
    if (parser->ais != NULL)
       free (parser->ais);
 

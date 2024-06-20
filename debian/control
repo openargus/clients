@@ -2,8 +2,8 @@ Source: argus-clients
 Section: utils
 Priority: optional
 Maintainer: Carter Bullard <info@qosient.com>
-Build-Depends: debhelper (>= 9.0.0), autotools-dev, zlib1g-dev, libreadline-dev, libgeoip-dev, libncurses5-dev, libmysqlclient-dev, flow-tools-dev, flex, bison, libpcre3-dev
-Standards-Version: 3.9.6
+Build-Depends: debhelper (>= 8.0.0), autotools-dev
+Standards-Version: 3.9.3
 Homepage: http://qosient.com/argus
 
 Package: argus-clients

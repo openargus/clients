@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_main.h#37 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_main.h#9 $
+ * $DateTime: 2016/10/24 12:28:54 $
+ * $Change: 3227 $
  */
 
 #ifndef ArgusMain_h
@@ -36,6 +36,9 @@ extern "C" {
 #include <stdlib.h>
 #include <stdio.h>
 #include <syslog.h>
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -62,7 +65,8 @@ extern "C" {
 #define MAJOR_VERSION_3    3
 #define MAJOR_VERSION_4    4
 #define MAJOR_VERSION_5    5
-#define VERSION_MAJOR      MAJOR_VERSION_3
+#define MAJOR_VERSION_6    6
+#define VERSION_MAJOR      MAJOR_VERSION_5
 #define VERSION_MINOR      MINOR_VERSION_0
 
 #ifndef MAXPATHNAMELEN
@@ -97,14 +101,24 @@ struct ArgusRfileStruct {
    char *name;
 };
 
+struct ArgusLfileStruct {
+   struct ArgusListObjectStruct *nxt;
+   char *filename;
+   FILE *fd;
 
-#define ARGUS_DATA		0x00
-#define CISCO_V5_DATA		0x01
-#define CISCO_V9_DATA		0x02
+   struct stat statbuf;
+};
+
+#define ARGUS_DATA		0x01
+#define ARGUS_CISCO_V5_DATA	0x02
+#define ARGUS_CISCO_V9_DATA	0x04
+#define ARGUS_IPFIX_DATA	0x08
 
 struct ArgusWfileStruct {
    struct ArgusListObjectStruct *nxt, *prv;
    struct ArgusHashTableHdr *htblhdr;
+   struct ArgusAggregatorStruct *agg;
+
    char *filename, *filetarget, *command;
    char *filterstr;
 
@@ -115,6 +129,9 @@ struct ArgusWfileStruct {
    int firstWrite, startSecs, endSecs;
    struct timeval laststat;
    struct timeval stime, etime;
+#ifdef HAVE_FCNTL_H
+   struct flock lock;
+#endif
 };
 
 
@@ -135,6 +152,8 @@ struct ArgusWfileStruct {
 
 
 extern int ArgusAuthenticate (struct ArgusInput *);
+int RaOnePassComplete(void);
+
 
 #ifdef ArgusMain
 
@@ -155,8 +174,8 @@ extern struct ArgusParserStruct *ArgusParser;
 extern void RaClearConfiguration (struct ArgusParserStruct *);
  
 void ArgusMainInit (struct ArgusParserStruct *, int, char **);
-void ArgusParseArgs (struct ArgusParserStruct *, int, char **);
 void setArgusArchive(struct ArgusParserStruct *, char *);
+void setArgusLfile(struct ArgusParserStruct *, char *);
 void setArgusWfile(struct ArgusParserStruct *, char *, char *);
 void ArgusInitStructs (struct ArgusParserStruct *);
 void setArguspidflag (struct ArgusParserStruct *, int);
@@ -181,15 +200,17 @@ void ArgusProcessStripOptions (struct ArgusParserStruct *, char *);
 
 void read_udp_services (char *);
 
-int RaProcessRecursiveFiles (char *);
+int RaProcessArchiveFiles (char *, int);
+int RaProcessRecursiveFiles (char *, int);
 
 int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int ArgusHandleDatum (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
-int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
+int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, unsigned long, struct nff_program *);
 int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecordStruct *, struct nff_program *);
 void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 
 extern int ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *, int);
+void ArgusReadStreams (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 void ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 void ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *);
 
@@ -198,22 +219,29 @@ int ArgusProcessRecord (struct ArgusRecordStruct *);
 void ArgusGenerateCanonicalRecord (struct ArgusRecord *, struct ArgusCanonRecord *);
 
 int ArgusGetServerSocket (struct ArgusInput *, int);
+
+int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+struct ArgusFileInput *ArgusPopBaselineList (struct ArgusParserStruct *);
+void ArgusDeleteBaselineList (struct ArgusParserStruct *);
+
 int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
+int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 void ArgusDeleteFileList (struct ArgusParserStruct *);
-int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
-void ArgusDeleteHostList (struct ArgusParserStruct *);
+int ArgusAddServerList (struct ArgusParserStruct *, char *, int, int);
+void ArgusDeleteServerList (struct ArgusParserStruct *);
 int ArgusAddModeList (struct ArgusParserStruct *, char *);
 void ArgusDeleteModeList (struct ArgusParserStruct *);
-int ArgusAddMaskList (struct ArgusParserStruct *, char *);
+int ArgusAddMaskList (struct ArgusParserStruct *, const char * const);
 void ArgusDeleteMaskList (struct ArgusParserStruct *);
 
-extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
+extern int ArgusParseAliasFile (char *);
 
 int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *, struct ArgusWfileStruct *, struct ArgusRecord *);
 
 int parseUserDataArg (char **, char **, int);
 int ArgusCheckTimeFormat (struct tm *tm, char *str);
-int ArgusParseTime (struct ArgusParserStruct *parser, struct tm *, struct tm *, char *, char, int *);
+int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 
 char *ArgusCopyArgv(char **);
 
@@ -245,7 +273,7 @@ extern char *exceptfile, *wfile;
 
 extern struct ArgusInput *ArgusInput;
 extern struct ArgusInput *ArgusInputFileList;
-extern struct ArgusInput *ArgusRemoteHostList;
+extern struct ArgusInput *ArgusRemoteServerList;
 extern struct ArgusModeStruct *ArgusModeList;
 extern struct ArgusModeStruct *ArgusMaskList;
 
@@ -285,15 +313,20 @@ extern void setArgusRank(struct ArgusParserStruct *, int);
 extern int getArgusRank(struct ArgusParserStruct *);
 
 extern void setArgusArchive(struct ArgusParserStruct *, char *);
+extern void setArgusLfile(struct ArgusParserStruct *, char *);
 extern void setArgusWfile(struct ArgusParserStruct *, char *, char *);
-extern int RaProcessRecursiveFiles (char *);
+
+extern int RaProcessArchiveFiles (char *, int);
+extern int RaProcessRecursiveFiles (char *, int);
+
 extern int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int ArgusHandleDatum (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
-extern int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
+extern int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, unsigned long, struct nff_program *);
 extern int ArgusHandleRecordStruct (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecordStruct *, struct nff_program *);
 extern void ArgusReformatRecord (struct ArgusRecord *, struct ArgusRecord *);
 extern int ArgusReadRemoteConnection (int, struct nff_program *);
 extern int ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *, int);
+extern void ArgusReadStreams (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 extern void ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *);
 extern void ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *);
 
@@ -303,25 +336,40 @@ extern void ArgusGenerateCanonicalRecord (struct ArgusRecord *, struct ArgusCano
 extern void ArgusReadRemote (int, struct nff_program *);
 extern int read_file (int fd, struct nff_program *);
 
-extern int ArgusParseResourceFile (struct ArgusParserStruct *, char *);
+extern int ArgusParseAliasFile (char *);
 
 extern int ArgusGetServerSocket (struct ArgusInput *, int);
+
 extern int ArgusAddFileList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern int ArgusPushFileList (struct ArgusParserStruct *, char *, int, long long, long long);
 extern void ArgusDeleteFileList (struct ArgusParserStruct *);
-extern int ArgusAddHostList (struct ArgusParserStruct *, char *, int, int);
-extern void ArgusDeleteHostList (struct ArgusParserStruct *);
+
+extern int ArgusAddBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern int ArgusPushBaselineList (struct ArgusParserStruct *, char *, int, long long, long long);
+extern struct ArgusFileInput *ArgusPopBaselineList (struct ArgusParserStruct *);
+extern void ArgusDeleteBaselineList (struct ArgusParserStruct *);
+
+extern int ArgusAddServerList (struct ArgusParserStruct *, char *, int, int);
+extern void ArgusDeleteServerList (struct ArgusParserStruct *);
 extern int ArgusAddModeList (struct ArgusParserStruct *, char *);
 extern void ArgusDeleteModeList (struct ArgusParserStruct *);
-extern int ArgusAddMaskList (struct ArgusParserStruct *, char *);
+extern int ArgusAddMaskList (struct ArgusParserStruct *, const char * const);
 extern void ArgusDeleteMaskList (struct ArgusParserStruct *);
 
 extern int ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *, struct ArgusWfileStruct *, struct ArgusRecord *);
 
 extern int parseUserDataArg (char **, char **, int);
 extern int ArgusCheckTimeFormat (struct tm *tm, char *str);
-extern int ArgusParseTime (struct ArgusParserStruct *parser, struct tm *, struct tm *, char *, char, int *);
+extern int ArgusParseTime (char *, struct tm *, struct tm *, char *, char, int *, int);
 
 #endif
+
+struct ArgusModeStruct *
+RaParseSplitMode(struct ArgusParserStruct *,
+                 struct RaBinProcessStruct **,
+                 struct ArgusModeStruct *,
+                 int *);
+
 #ifdef __cplusplus
 }
 #endif

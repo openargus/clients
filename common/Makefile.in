@@ -1,28 +1,22 @@
-#
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
+#  the Free Software Foundation; either version 3, or (at your option)
 #  any later version.
-#
+# 
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#
+# 
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # 
-#  Various configurable paths (remember to edit Makefile.in, not Makefile)
-#
-# $Id: //depot/argus/clients/common/Makefile.in#24 $
-# $DateTime: 2016/06/01 15:17:28 $
-# $Change: 3148 $
-#
 #
 
 # Top level hierarchy
@@ -52,7 +46,7 @@ INCLS = -I. -I../include @V_INCLS@ @MYSQL_INCLS@ @XDR_INCLS@
 DEFS = @DEFS@ -DARGUS_SYSLOG
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) -fPIC $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL = @INSTALL@
 RANLIB = @V_RANLIB@
@@ -86,29 +80,36 @@ TAGHDR = bpf/net/bpf.h
 
 TAGFILES = $(SRC) $(HDR) $(TAGHDR)
 
-LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_output.a
+LIBS = @INSTALL_LIB@/argus_parse.a @INSTALL_LIB@/argus_common.a @INSTALL_LIB@/argus_client.a @INSTALL_LIB@/argus_event.a @INSTALL_LIB@/argus_timer.a
 
-OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ)
+OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ) $(TIMEROBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
 
+COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c \
+            $(GENSRC) $(VSRC) argus_lockfile.c argus_clientconfig.c argus_parse_time.c \
+	    argus_windows_registry.c
 
-COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c argus_clientconfig.c $(GENSRC) $(VSRC)
-COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o argus_clientconfig.o scanner.o grammar.o version.o
+COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o \
+            scanner.o grammar.o version.o argus_lockfile.o argus_clientconfig.o \
+            argus_parse_time.o \
+	    argus_windows_registry.o
 
 PARSESRC  = argus_main.c
 PARSEOBJ  = argus_main.o
 
-CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_json.c argus_label_geoip.c
-CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_json.o argus_label_geoip.o
+CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_label_geoip.c \
+            argus_output.c argus_json.c ring.c argus_split_mode.c
 
-OUTPUTSRC = argus_output.c
-OUTPUTOBJ = argus_output.o
+CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_label_geoip.o \
+            argus_output.o argus_json.o ring.o argus_split_mode.o
 
 EVENTSRC  = argus_event.c
 EVENTOBJ  = argus_event.o
 
+TIMERSRC  = argus_timer.c
+TIMEROBJ  = argus_timer.o
 
-SRC = $(COMMONSRC) $(PARSESRC) $(CLIENTSRC) $(OUTPUTSRC) $(EVENTSRC)
+SRC = $(COMMONSRC) $(PARSESRC) $(CLIENTSRC) $(OUTPUTSRC) $(EVENTSRC) $(TIMERSRC)
 
 all: $(LIBS)
 
@@ -124,12 +125,12 @@ all: $(LIBS)
 	rm -f $@; ar qc $@ $(CLIENTOBJ)
 	-$(RANLIB) $@
 
-@INSTALL_LIB@/argus_output.a: $(OUTPUTOBJ)
-	rm -f $@; ar qc $@ $(OUTPUTOBJ)
-	-$(RANLIB) $@
-
 @INSTALL_LIB@/argus_event.a: $(EVENTOBJ)
 	rm -f $@; ar qc $@ $(EVENTOBJ)
+	-$(RANLIB) $@
+
+@INSTALL_LIB@/argus_timer.a: $(TIMEROBJ)
+	rm -f $@; ar qc $@ $(TIMEROBJ)
 	-$(RANLIB) $@
 
 scanner.c: scanner.l

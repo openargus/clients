@@ -1,28 +1,26 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/radump/radump.c#11 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/radump/radump.c#8 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -36,8 +34,6 @@
 
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -280,7 +276,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          }
       }
 
-      fprintf (stdout, "\n");
+
+      if (!(parser->ArgusPrintJson))
+         fprintf (stdout, "\n");
       fflush(stdout);
    }
 }
@@ -293,8 +291,8 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    unsigned short sport = 0, dport = 0;
    int type, proto, process = 0;
    struct ArgusDataStruct *user = NULL;
-   u_char buf[MAXSTRLEN], *bp = NULL;
-   int slen = 0, done = 0;
+   u_char *bp = NULL;
+   int slen = 0;
 
    if ((user = (struct ArgusDataStruct *)argus->dsrs[ind]) == NULL)
       return (ArgusBuf);
@@ -335,7 +333,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            igmp_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -345,7 +342,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            pim_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -368,7 +364,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                         if ((metric != NULL) && (((ind == ARGUS_SRCUSERDATA_INDEX) && metric->src.pkts) ||
                                                  ((ind == ARGUS_DSTUSERDATA_INDEX) && metric->dst.pkts))) {
                            pim_print(bp, slen);
-                           done++;
                            break;
                         }
                      }
@@ -382,7 +377,6 @@ RaDumpUserBuffer (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                   if (ind == ARGUS_DSTUSERDATA_INDEX) {
                      arp_dst_print(parser, argus);
                   }
-                  done++;
                   break;
                }
 /*
@@ -394,11 +388,18 @@ struct ArgusMacFlow {
 */
 
                case ARGUS_TYPE_ETHER: {
-                  if (flow != NULL)
+                  if (flow != NULL) {
+                     u_short eproto = flow->mac_flow.mac_union.ether.ehdr.ether_type;
+
                      if ((flow->mac_flow.mac_union.ether.ssap == LLCSAP_BPDU) &&
-                         (flow->mac_flow.mac_union.ether.dsap == LLCSAP_BPDU))
+                         (flow->mac_flow.mac_union.ether.dsap == LLCSAP_BPDU)) {
                         stp_print (bp, slen);
-                  done++;
+                     } else {
+                        switch (eproto) {
+                           case ETHERTYPE_WOL: wol_print(bp, slen); break;
+                        }
+                     }
+                  }
                   break;
                }
             }
@@ -415,7 +416,6 @@ struct ArgusMacFlow {
                   if (ind == ARGUS_DSTUSERDATA_INDEX) {
                      arp_dst_print(parser, argus);
                   }
-                  done++;
                   break;
             }
          }
@@ -423,8 +423,6 @@ struct ArgusMacFlow {
    }
 
    if (process && bp) {
-      *(int *)&buf = 0;
-
 #define ISPORT(p) (dport == (p) || sport == (p))
 
       switch (proto) {
@@ -443,6 +441,8 @@ struct ArgusMacFlow {
                 ns_print(bp + 2, slen - 2, 0);
             else if (ISPORT(MSDP_PORT))
                msdp_print(bp, slen);
+            else if (ISPORT(SMB_PORT))
+               smb_tcp_print(bp, slen);
             else if (ISPORT(LDP_PORT))
                ldp_print(bp, slen);
             else {
@@ -583,27 +583,30 @@ fn_print(register const u_char *s, register const u_char *ep, char *buf)
  * If ep is NULL, assume no truncation check is needed.
  * Return true if truncated.
  */                     
-int                     
+
+char *
 fn_printn(register const u_char *s, register u_int n,
           register const u_char *ep, char *buf)
 {
-        register u_char c;
+   register u_char c;
+   int len = strlen(buf);
+   char *ebuf = &buf[len];
 
-        while (n > 0 && (ep == NULL || s < ep)) {
-                n--;
-                c = *s++;
-                if (!isascii(c)) {
-                        c = toascii(c);
-                        sprintf(&buf[strlen(buf)], "%c", 'M');
-                        sprintf(&buf[strlen(buf)], "%c", '-');
-                }
-                if (!isprint(c)) {
-                        c ^= 0x40;      /* DEL to ?, others to alpha */
-                        sprintf(&buf[strlen(buf)], "%c", '^');
-                }
-                sprintf(&buf[strlen(buf)], "%c", c);
-        }
-        return (n == 0) ? 0 : 1;
+   while ((n > 0) && (ep == NULL || s < ep)) {
+      n--;
+      c = *s++;
+      if (!isascii(c)) {
+         c = toascii(c);
+         *ebuf++ = 'M';
+         *ebuf++ = '-';
+      }
+      if (!isprint(c)) {
+         c ^= 0x40;      /* DEL to ?, others to alpha */
+         *ebuf++ = '^';
+      }
+      *ebuf++ = c;
+   }
+   return (n == 0) ? ebuf : NULL;
 }
 
 /*

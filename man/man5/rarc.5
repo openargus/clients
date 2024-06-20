@@ -1,21 +1,10 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
-.\" 
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
 .\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
 .\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"
-.TH RARC 5 "07 November 2000" "rarc 3.0.8"
+.TH RARC 5 "14 September 2016" "rarc 5.0.3"
 .SH NAME
 \fBrarc\fP \- \fBra\fP client resource file.
 .SH SYNOPSIS
@@ -41,17 +30,6 @@ Optionally you can specify a port number using a ':' and then providing
 the port number desired.
 
 \fBRA_ARGUS_SERVER=\fPlocalhost:561
-
-.SH RA_SOURCE_PORT
-
-You can change the default source port value that will be used on remote
-TCP and UDP connections, using this variable.  When you specify the
-remote server using the -S option, when you don't specify a port number,
-this is the port number it will use.
-
-The default port number is 561.
-
-\fBRA_SOURCE_PORT=\fP561
 
 
 .SH PID FILE SUPPORT
@@ -292,30 +270,6 @@ Commandline equivalent: -M printer=<printer>
 \fBRA_USERDATA_ENCODE=\fPAscii
 
 
-.SH RA_LABEL_FORMAT
-
-Argus supports extending flow records using argus labels.  Labels are
-metadata strings that can be modified for flow data enhancements.
-Argus 3.0 and earlier supports a format that follows standard metadata
-composed of a list of key=value pairs separated by ':'.  Multiple values
-withing a key value are separated by ','. Keys and values are not
-normally enclosed by quotes.
-
-Argus clients support an optional format, converting the label to standard
-JSON format.  This solves a number of problems, such as inclusion of values
-that contain ':'s, such as IPv6 addresses.
-
-Starting with Argus 4.0, the default label format will be JSON, and
-legacy formats will be converted on the fly.
-
-No Commandline equivalent
-
-.nf
-\fBRA_LABEL_FORMAT=\fPLegacy
-\fBRA_LABEL_FORMAT=\fPJson
-.fi
-
-
 .SH RA_FILTER
 
 You can provide a filter expression here, if you like.
@@ -323,25 +277,6 @@ It should be limited to 2K in length.  The default is to
 not filter.  See ra(1) for the format of the filter expression.
 
 \fBRA_FILTER=\fP""
-
-
-.SH RA_FILTER_TIMEOUT
-
-The filter is compiled in a separate process, and all ra* programs
-need to wait a reasonable time for the filter compiler to finish,
-or time out and return an error, in the case of a fatal error in
-compiling.  Many systems are very busy, and could benefit from a
-prolonged wait period, however, this timeout value could generate
-a significant startup wait state for programs that have poor filter
-specifications, if the timer is too long.
-
-The current default is 1.5 seconds, but you can set this to any
-amount of time.
-
-No Commandline equivalent
-
-\fBRA_FILTER_TIMEOUT=\fP1.5
-
 
 .SH SASL SUPPPORT
 When argus is compiled with SASL support, ra* clients may be
@@ -409,6 +344,18 @@ is record start time "stime".
 .fi
 
 
+.SH RA_HASHTABLE_SIZE
+
+ra* clients that match flow attributes, such as aggregators, use
+hash tables to hold data for processing.  This variable can change
+the size of hash tables to help control memory, or increase
+processing speed.  The default is 262144 (0x40000).
+
+.nf
+\fBRA_HASHTABLE_SIZE=\fP262144
+.fi
+
+
 .SH RA_TIMEOUT_INTERVAL
 
 Some ra* clients have a timeout based function.  Ratop, as an
@@ -430,6 +377,22 @@ float in seconds.  0.5 seconds is the default.
 
 .nf
 \fBRA_UPDATE_INTERVAL=\fP0.5
+.fi
+
+
+.SH RA_SRC_ALIAS
+
+All ra* clients have the ability to alias the srcid to the "node" field.
+The method for finding the alias is specified using this variable,
+RA_SRCID_ALIAS.  The format for the URL provides for file and database
+access.  File access is implemented.
+.nf
+    file:/usr/local/argus/argus.srcid.alias.txt
+    mysql://[username[:password]@]hostname[:port]/database/tablename
+.fi
+
+.nf
+\fBRA_SRCID_ALIAS=\fP"file:/usr/local/argus/argus.srcid.alias.txt"
 .fi
 
 
@@ -503,13 +466,13 @@ Commandline equivalents:
 
 Those ra* clients that can create database tables may need to
 specify a table type or rather, a database engine other than the
-defaul, MyISAM.
+default, InnoDB.
 
 Commandline equivalents:
   -M mysql_engine=tableType
      Current tableTypes are
-        MyISAM
         InnoDB
+        MyISAM
         Merge
         Memory
         Archive
@@ -518,7 +481,7 @@ Commandline equivalents:
         CSV
 
 .nf
-\fBMYSQL_DB_ENGINE=\fP"MyISAM"
+\fBMYSQL_DB_ENGINE=\fP"InnoDB"
 .fi
 
 
@@ -599,7 +562,7 @@ The syntax is:
 
 .RE
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.
 .RE
 .SH SEE ALSO
 .BR ra (1)

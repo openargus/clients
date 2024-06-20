@@ -1,0 +1,29 @@
+#!/bin/bash
+
+typeset -r PACKAGE=@PACKAGE_TARNAME@
+typeset -r prefix=@prefix@
+typeset -r datadir=@datarootdir@
+typeset -r pkgdatadir=${datadir}/${PACKAGE}
+
+if (( $# < 2 )) ; then
+	exit 1
+fi
+
+cmd=$1
+template=$2
+
+mkdir -p /run/argus
+argfile=${pkgdatadir}/rasqlinsert.${template}
+if [[ ${cmd} = start ]] ; then
+	if [[ -r ${argfile} ]] ; then
+		cp ${argfile} /run/argus
+	fi
+elif [[ ${cmd} = stop ]] ; then
+	if [[ -r ${argfile} ]] ; then
+		# if we copied this file, remove it.
+		rm -f /run/argus/rasqlinsert.${template}
+	fi
+fi
+
+exit 0
+

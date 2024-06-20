@@ -1,0 +1,1 @@
+-M time 1d -m none -s stime ltime saddr daddr proto sport dport pkts bytes pcr -w mysql://root@localhost/dnsFlows/dns_%Y_%m_%d - port 53

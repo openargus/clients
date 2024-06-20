@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -41,8 +41,9 @@
  *                    first monitor(1) datum.
  *
  *   (void) ArgusClientTimeout ();
- *                    this routine is called every second, when
- *                    argus_parse is connected to a remote data source.
+ *                    this routine is called every ArgusParser->RaClientTimeout
+ *                    period, after reading files and connecting to a remote
+ *                    data source.
  *
  *   (void) RaParseComplete (0);
  *                    this routine will be called after all the
@@ -55,9 +56,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_main.c#84 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_main.c#13 $
+ * $DateTime: 2016/10/13 07:13:10 $
+ * $Change: 3222 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -102,6 +103,19 @@
 #else
 #include <sched.h>
 #endif
+
+#ifdef __sun
+# pragma weak RaOnePassComplete
+#endif
+int RaOnePassComplete(void)
+#ifdef __GNUC__
+ __attribute__((weak));
+#endif
+
+int RaOnePassComplete(void)
+{
+    return 1;
+}
 
 
 int
@@ -193,21 +207,22 @@ main (int argc, char **argv)
    ArgusMainInit (ArgusParser, argc, argv);
    ArgusClientInit (ArgusParser);
 
+   if (ArgusParser->ArgusLocalLabeler != NULL) {
+      struct ArgusLabelerStruct *labeler = ArgusParser->ArgusLocalLabeler;
+      if (labeler->RaLabelLocalityInterfaceIsMe == 1) {
+         ArgusGetInterfaceAddresses(ArgusParser);
+      }
+   }
+
    if (ArgusParser->pidflag)
       ArgusCreatePIDFile (ArgusParser, ArgusParser->ArgusProgramName);
  
-   if (!(ArgusParser->Sflag))
-      if (ArgusParser->ArgusInputFileList == NULL)
+   if (!(ArgusParser->Sflag)) {
+      if (ArgusParser->ArgusInputFileList == NULL) {
          if (!(ArgusAddFileList (ArgusParser, "-", ARGUS_DATA_SOURCE, -1, -1)))
             ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
-
-#if defined(ARGUS_THREADS)
-extern void * ArgusTimeoutProcess (void *);
-
-   if (ArgusParser->ArgusTimeoutThread)
-      if ((pthread_create(&ArgusParser->timer, &attr, ArgusTimeoutProcess, ArgusParser)) != 0)
-         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
-#endif
+      }
+   }
 
 /*
    OK now we're ready.  Read in all the files, for as many passes as
@@ -218,48 +233,63 @@ extern void * ArgusTimeoutProcess (void *);
    ArgusParser->ArgusCurrentInput = NULL;
 
    if (ArgusParser->ArgusInputFileList != NULL) {
-      struct ArgusInput *file; 
+      struct ArgusInput *input;
+      struct ArgusFileInput *file;
 
       while (ArgusParser->ArgusPassNum) {
-         file = ArgusParser->ArgusInputFileList;
+         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+            ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
-         ArgusParser->ArgusCurrentInput = file;
+         file = ArgusParser->ArgusInputFileList;
 
          while (file && ArgusParser->eNflag) {
             if (strcmp (file->filename, "-")) {
                if (strlen(file->filename)) {
-                  if (file->fd < 0) {
-                     if ((file->file = fopen(file->filename, "r")) == NULL) 
-                        ArgusLog (LOG_ALERT, "open '%s': %s", file->filename, strerror(errno));
+                  if (file->file == NULL) {
+                     if ((file->file = fopen(file->filename, "r")) == NULL) {
+#ifdef ARGUSDEBUG
+                        ArgusDebug (1, "open '%s': %s", file->filename, strerror(errno));
+#endif
+                     }
 
                   } else {
                      fseek(file->file, 0, SEEK_SET);
                   }
 
-                  if ((file->file != NULL) && ((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+                  ArgusInputFromFile(input, file);
+
+                  /* input->file now "owns" this pointer.  Setting it
+                   * to NULL prevents ArgusFileFree() from closing the
+                   * file a second time.
+                   */
+                  file->file = NULL;
+
+                  ArgusParser->ArgusCurrentInput = input;
+
+                  if ((input->file != NULL) && ((ArgusReadConnection (ArgusParser, input, ARGUS_FILE)) >= 0)) {
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusTotalMarRecords++;
                      ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                      if (ArgusParser->RaPollMode) {
-                         ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, &ArgusParser->ArgusFilterCode);
-                         ArgusCloseInput(ArgusParser, file);  
+                         ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
                      } else {
                         if (file->ostart != -1) {
-                           file->offset = file->ostart;
-                           if (fseek(file->file, file->offset, SEEK_SET) >= 0)
-                              ArgusReadFileStream(ArgusParser, file);
+                           input->offset = file->ostart;
+                           if (fseek(input->file, input->offset, SEEK_SET) >= 0)
+                              ArgusReadFileStream(ArgusParser, input);
                         } else {
-                           ArgusHandleRecord (ArgusParser, file, &file->ArgusInitCon, &ArgusParser->ArgusFilterCode);
-                           ArgusReadFileStream(ArgusParser, file);
+                           ArgusHandleRecord (ArgusParser, input, &input->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
+                           ArgusReadFileStream(ArgusParser, input);
                         }
                      }
 
                   } else
                      file->fd = -1;
-
-                  if (file->file != NULL) {
-                     ArgusCloseInput(ArgusParser, file);  
-                  }
                }
 
             } else {
@@ -268,36 +298,54 @@ extern void * ArgusTimeoutProcess (void *);
                file->ostart = -1;
                file->ostop = -1;
 
-               if (((ArgusReadConnection (ArgusParser, file, ARGUS_FILE)) >= 0)) {
+               ArgusInputFromFile(input, file);
+               ArgusParser->ArgusCurrentInput = input;
+
+               if (((ArgusReadConnection (ArgusParser, input, ARGUS_FILE)) >= 0)) {
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_lock(&ArgusParser->lock);
+#endif
                   ArgusParser->ArgusTotalMarRecords++;
                   ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                  pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                   if ((flags = fcntl(fileno(stdin), F_GETFL, 0L)) < 0)
                      ArgusLog (LOG_ERR, "ArgusReadFile: fcntl error %s", strerror(errno));
 
                   if (fcntl(fileno(stdin), F_SETFL, flags | O_NONBLOCK) < 0)
                      ArgusLog (LOG_ERR, "ArgusReadFile: fcntl error %s", strerror(errno));
 
-                  ArgusReadFileStream(ArgusParser, file);
+                  ArgusReadFileStream(ArgusParser, input);
                }
             }
 
 #ifdef ARGUSDEBUG
             ArgusDebug (1, "main: ArgusReadFileStream (%s) done", file->filename);
 #endif
-            RaArgusInputComplete(file);
+            RaArgusInputComplete(input);
+            ArgusParser->ArgusCurrentInput = NULL;
+            ArgusCloseInput(ArgusParser, input);
 
-            if (file->filename != NULL)
-               free(file->filename);
+            file = (struct ArgusFileInput *)file->qhdr.nxt;
 
-            file = (struct ArgusInput *)file->qhdr.nxt;
-
-            ArgusFree(ArgusParser->ArgusInputFileList);
-            ArgusParser->ArgusInputFileList = file;
+            /* Only free items from the file list during the last pass over
+             * the data. */
+            if (ArgusParser->ArgusPassNum <= 1) {
+               ArgusFileFree(ArgusParser->ArgusInputFileList);
+               ArgusParser->ArgusInputFileList = file;
+            }
          }
 
          ArgusParser->ArgusPassNum--;
+         RaOnePassComplete(); /* let this particular client know we're done
+                               * with this pass
+                               */
       }
+
+      ArgusSetLocalNet(input->ArgusLocalNet, input->ArgusNetMask);
+      ArgusDeleteInput(ArgusParser, input);
+      input = NULL;
    }
 
    ArgusParser->ArgusCurrentInput = NULL;
@@ -321,7 +369,19 @@ extern void * ArgusTimeoutProcess (void *);
 */
 
    if (ArgusParser->Sflag) {
+
+      if (ArgusParser->tflag)
+         ArgusParser->tflag = 0;
+
       ArgusParser->ArgusPassNum = 1;
+
+#if defined(ARGUS_THREADS)
+extern void * ArgusTimeoutProcess (void *);
+ 
+   if (ArgusParser->ArgusTimeoutThread)
+      if ((pthread_create(&ArgusParser->timer, &attr, ArgusTimeoutProcess, ArgusParser)) != 0)
+         ArgusLog (LOG_ERR, "ArgusNewOutput() pthread_create error %s\n", strerror(errno));
+#endif
 
       if (ArgusParser->ArgusRemoteHosts && (ArgusParser->ArgusRemoteHosts->count > 0)) {
          struct ArgusQueueStruct *tqueue = ArgusNewQueue();
@@ -343,28 +403,32 @@ extern void * ArgusTimeoutProcess (void *);
             while ((addr = (void *)ArgusPopQueue(ArgusParser->ArgusRemoteHosts, ARGUS_LOCK)) != NULL) {
                if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) {
                   if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_lock(&ArgusParser->lock);
+#endif
                      ArgusParser->ArgusTotalMarRecords++;
                      ArgusParser->ArgusTotalRecords++;
-
+#if defined(ARGUS_THREADS)
+                     pthread_mutex_unlock(&ArgusParser->lock);
+#endif
                      if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 
                      if (fcntl(addr->fd, F_SETFL, flags | O_NONBLOCK) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 
-                     ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, &ArgusParser->ArgusFilterCode);
+                     ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
 
                      if (ArgusParser->RaPollMode) {
-                        ArgusCloseInput (ArgusParser, addr);
-                        ArgusFree(addr);
+                        ArgusDeleteInput (ArgusParser, addr);
                      } else {
                         ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
                         ArgusParser->ArgusHostsActive++;
                      }
                   } else
-                     ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_LOCK);
+                     ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_NOLOCK);
                } else
-                  ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_LOCK);
+                  ArgusAddToQueue(tqueue, &addr->qhdr, ARGUS_NOLOCK);
 
 #if !defined(ARGUS_THREADS)
             }
@@ -373,7 +437,7 @@ extern void * ArgusTimeoutProcess (void *);
 #endif
          }
 
-         while ((addr = (void *)ArgusPopQueue(tqueue, ARGUS_LOCK)) != NULL)
+         while ((addr = (void *)ArgusPopQueue(tqueue, ARGUS_NOLOCK)) != NULL)
             ArgusAddToQueue(ArgusParser->ArgusRemoteHosts, &addr->qhdr, ARGUS_LOCK);
 
          ArgusDeleteQueue(tqueue);
@@ -408,6 +472,8 @@ extern void * ArgusTimeoutProcess (void *);
          if (addr->tid != (pthread_t) 0) {
             pthread_join(addr->tid, &retn);
          }
+         if (addr->hostname != NULL)
+            free (addr->hostname);
          ArgusFree(addr);
       }
 
@@ -415,6 +481,8 @@ extern void * ArgusTimeoutProcess (void *);
          if (addr->tid != (pthread_t) 0) {
             pthread_join(addr->tid, &retn);
          }
+         if (addr->hostname != NULL)
+            free (addr->hostname);
          ArgusFree(addr);
       }
    }

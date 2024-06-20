@@ -1,0 +1,24 @@
+#!/bin/sh
+
+source /etc/os-release
+
+if [[ ! ( ${QOSIENT_SYSTEM_TYPE} = collector || \
+          ${QOSIENT_SYSTEM_TYPE} = devel ) ]] ; then
+	exit 0
+fi
+
+FILES=
+while  test $# != 0
+do
+    case "$1" in
+    -r) shift; FILENAME="$1"; break;;
+    esac
+    shift
+done
+
+if [[ -z "$FILENAME" ]] ; then
+	exit 1
+fi
+
+export FILENAME
+/usr/bin/run-parts /etc/rastream.d

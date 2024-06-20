@@ -5,7 +5,7 @@
 
 echo "Finding system information for a Argus bug report"
 
-VERSION="3.0.4"
+VERSION="5.0.2"
 BUGMAIL="argus-info@lists.andrew.cmu.edu"
 
 LIBC_INFO=""
@@ -191,7 +191,7 @@ SYNOPSIS_C='<synopsis of the problem (one line)>'
 SEVERITY_C='<[ non-critical | serious | critical ] (one line)>'
 PRIORITY_C='<[ low | medium | high ] (one line)>'
 CLASS_C='<[ install-bug | sw-bug | doc-bug | change-request | support ] (one line)>'
-PRODUCT_C='<[ ra | rabins | racluster | raconvert | racount | radark | radump | raevent | rafiteraddr | ragraph | rahisto | rahosts | ralabel | ranonyize | rapath | raplot | rapolicy | rasports | raservices | rasort | rasplit | rasql | rasqlinsert | rasqltimeindex | rastream | rastrip | ratimerange | ratop | ratree | rauserdata ] (one line)>'
+PRODUCT_C='<[ ra | rabins | racluster | raconvert | racount | radark | radump | raevent | rafiteraddr | ragraph | rahisto | rahosts | ralabel | ranonyize | rapath | raplot | rapolicy | rasports | raservices | rasort | rasplit | rasql | rasqlcheckconf | rasqlinsert | rasqltimeindex | rastream | rastrip | ratimerange | ratop | ratree | rauserdata ] (one line)>'
 RELEASE_C='<release number or tag (one line)>'
 ENVIRONMENT_C='<machine, os, target, libraries (multiple lines)>'
 DESCRIPTION_C='<precise description of the problem (multiple lines)>'

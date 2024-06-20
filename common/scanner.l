@@ -1,25 +1,26 @@
 %{
-/* Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+/*
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: //depot/argus/clients/common/scanner.l#66 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/scanner.l#19 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 /*
@@ -44,6 +45,7 @@
  */
 
 #define YY_NO_INPUT
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -83,6 +85,8 @@ int argus_get_lineno (void);
 FILE *argus_get_in (void);
 FILE *argus_get_out (void);
 
+int xdtoi(int);
+
 static YY_BUFFER_STATE in_buffer;
 #else
 static char *in_buffer;
@@ -100,6 +104,7 @@ extern char *argus_yytext;
 
 N        ([0-9]+|(0X|0x)[0-9A-Fa-f]+)
 B        ([0-9A-Fa-f][0-9A-Fa-f]?)
+U	 [0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}
 ISD      [0-9A-Fa-f]{4}
 V6       ((([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}:[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){5}:([0-9A-Fa-f]{1,4}:)?[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){4}:([0-9A-Fa-f]{1,4}:){0,2}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){3}:([0-9A-Fa-f]{1,4}:){0,3}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){2}:([0-9A-Fa-f]{1,4}:){0,4}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){6}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(([0-9A-Fa-f]{1,4}:){0,5}:((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|(::([0-9A-Fa-f]{1,4}:){0,5}((\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b)\.){3}(\b((25[0-5])|(1\d{2})|(2[0-4]\d)|(\d{1,2}))\b))|([0-9A-Fa-f]{1,4}::([0-9A-Fa-f]{1,4}:){0,5}[0-9A-Fa-f]{1,4})|(::([0-9A-Fa-f]{1,4}:){0,6}[0-9A-Fa-f]{1,4})|(([0-9A-Fa-f]{1,4}:){1,7}:))
                          
@@ -117,8 +122,17 @@ far      return FAR;
 event    return EVENT;
 index    return INDEX;
 
+baseline return BASELINE;
+match    return MATCH;
+
 dst      return DST;
 src      return SRC;
+
+rmt      return REMOTE;
+lcl      return LOCAL;
+
+local    return INTRANET;
+remote   return INTERNET;
 
 seq      return SEQ;
 
@@ -127,29 +141,36 @@ recurs   return RECURS;
 req      return REQ;
 rsp      return RSP;
 
-link|ppp|slip  return LINK;
-fddi     return LINK;
-ether    return LINK;
-arp      return ARP;
-rarp     return RARP;
-ip       return IP;
-ipv4     return IPV4;
-ipv6     return IPV6;
-tcp      return TCP;
-udp      return UDP;
-udt      return UDT;
-rtp      return RTP;
-rtcp     return RTCP;
-icmp     return ICMP;
-igmp     return IGMP;
-mpls     return MPLS;
-vlan     return VLAN;
-vid      return VID;
-vpri     return VPRI;
-mid      return MPLSID;
+link    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+slip    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+ppp     { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+fddi    { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+ether   { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LINK; }
+arp     { if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ARP; }
+rarp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RARP; }
+ip	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IP; }
+ipv4	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPV4; }
+ipv6	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPV6; }
+tcp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return TCP; }
+udp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return UDP; }
+udt	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return UDT; }
+rtp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RTP; }
+rtcp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return RTCP; }
+icmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ICMP; }
+igmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IGMP; }
+mpls	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return MPLS; } 
+isis	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ISIS; } 
+
+vxlan	 return VXLAN;
+gre	 return GRE;
+
+vlan	 return VLAN;
+vid	 return VID;
+vpri	 return VPRI;
+mid	 return MPLSID;
+
 ipid     return IPID;
 anon     return ANON;
-isis     return ISIS;
 psnp     return PSNP;
 csnp     return CSNP;
 lsp      return LSP;
@@ -157,11 +178,21 @@ hello    return HELLO;
 svc      return SVC;
 spi      return SPI;
 
+addr     return HOST;
 host     return HOST;
 srcid    return SRCID;
+sid      return SID;
+node     return NODE;
+inf      return INF;
 inode    return INODE;
 net      return NET;
 mask     return AMASK;
+loc      return LOC;
+class    return CLASS;
+
+masklen  return MASKLEN;
+mlen     return MASKLEN;
+
 port     return PORT;
 proto    return PROTO;
 encaps   return ENCAPS;
@@ -212,30 +243,34 @@ tcpccecho return TCPCCECHO;
 secn     return SECN;
 decn     return DECN;
 
-rate       return RATE;
-load       return LOAD;
-inter      return INTER;
-intpkt     return INTER;
-intpktact  return INTERACTIVE;
-intpktidle return INTERIDLE;
-jit        return JITTER;
-jitter     return JITTER;
-jitact     return JITTERACTIVE;
-jitidle    return JITTERIDLE;
-dur        return DUR;
-avgdur     return AVGDUR;
-deldur     return DELTADUR;
-delstime   return DELTALAST;
-delltime   return DELTALAST;
-loss       return LOSS;
-ploss      return PLOSS;
-gap        return GAP;
-dup        return DUP;
+rate        return RATE;
+load        return LOAD;
+intflow     return INTERFLOW;
+intflowsdev return INTERFLOWSTDDEV;
+inter       return INTER;
+intpkt      return INTER;
+intpktact   return INTERACTIVE;
+intpktidle  return INTERIDLE;
+jit         return JITTER;
+jitter      return JITTER;
+jitact      return JITTERACTIVE;
+jitidle     return JITTERIDLE;
+dur         return DUR;
+avgdur      return AVGDUR;
+deldur      return DELTADUR;
+delstime    return DELTALAST;
+delltime    return DELTALAST;
+loss        return LOSS;
+ploss       return PLOSS;
+gap         return GAP;
+maxseg      return MAXSEG;
 
-gateway  return GATEWAY;
+gateway     return GATEWAY;
 
 eq       return EQUAL;
 equal    return EQUAL;
+neq      return NOTEQUAL;
+notequal return NOTEQUAL;
 lt       return LESS;
 lte      return LEQ;
 less     return LESS;
@@ -279,6 +314,7 @@ avail        return CONNECTED;
 cor          return CORRELATED;
 corolated    return CORRELATED;
 
+dup          return DUP;
 ecn          return ECN;
 drop         return RETRANS;
 retrans      return RETRANS;
@@ -292,9 +328,30 @@ fragonly     return FRAG_ONLY;
 
 icmpmap      return ICMPMAP;
 echo         return ICMPECHO;
-unreach      return UNREACH;
 redirect     return REDIRECT;
 timexed      return TIMEXED;
+
+unreach      return UNREACH;
+unr          return UNREACH;
+unrnet       return UNREACHNET;
+unrhost      return UNREACHHOST;
+unrproto     return UNREACHPROTO;
+unrport      return UNREACHPORT;
+unrfrag      return UNREACHFRAG;
+unrsrcfail   return UNREACHSRCFAIL;
+unrnetunk    return UNREACHNETUNKNOWN;
+unrhostunk   return UNREACHHOSTUNKNOWN;
+unriso       return UNREACHHOSTISOLATED;
+unrnetpro    return UNREACHNETPROHIBITED;
+unrhostpro   return UNREACHHOSTPROHIBITED;
+unrnettos    return UNREACHNETTOS;
+unrhosttos   return UNREACHHOSTTOS;
+unrfilter    return UNREACHFILTER;
+unrhostpre   return UNREACHHOSTPRECEDENCE;
+unrnetpre    return UNREACHPRECUTOFF;
+
+lat          return LAT;
+lon          return LON;
 
 [ \n\t]         ;
 [+\-*/:\[\]!<>()&|=]   return yytext[0];
@@ -313,8 +370,8 @@ timexed      return TIMEXED;
 \+?({N}\.{N}) { yylval.f  = stof((char *)yytext); if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return FLOAT; }
 
 ({N}\.{N}\.{N}\.{N})   { yylval.s = Argussdup((char *)yytext); return HIDV4; }
-(\.{N}\.{N}\.{N}\.{N})   { yylval.s = Argussdup((char *)yytext); return STRING; }
 {B}:{B}:{B}:{B}:{B}:{B} { yylval.e = argus_ether_aton((char *)yytext); return EID; }
+{U}	{ yylval.s = Argussdup((char *)yytext); return UUID; }
 {V6}	{ yylval.s = Argussdup((char *)yytext); return HIDV6; }
 
 \"[^\*\n]*\"  { yylval.s = Argussdup((char *)yytext); return STRING; }
@@ -347,10 +404,9 @@ yywrap()
 
 /* Hex digit to integer. */
 int
-xdtoi(c)
-int c;
+xdtoi(int c)
 {
-   if (isdigit(c))
+   if (isdigit((int)c))
       return c - '0';
    else if (islower(c))
       return c - 'a' + 10;
@@ -370,7 +426,7 @@ stoi(char *s)
    int sign = 0;
 
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
 
    /* Check for sign */
    if (*s == '-') {
@@ -413,7 +469,7 @@ stof(char* s)
    int sign = 0;
      
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
      
    /* Check for sign */
    if (*s == '-') { 
@@ -425,24 +481,24 @@ stof(char* s)
    }
      
    /* Read integer part */
-   while (isdigit(*s))
+   while (isdigit((int)*s))
       retn = retn * 10 + (*(s++) - '0');
      
    /* Read fractional part */ 
    if (*s == '.') {
       float q;
       s++;
-      while (isdigit(*s)) s++; 
+      while (isdigit((int)*s)) s++; 
       s--;
       do {
          q = *s - '0';
          frac = (frac + q) / 10;
-      } while (isdigit(*(--s)));
-      while (isdigit(*(++s))) s++;
+      } while (isdigit((int)*(--s)));
+      while (isdigit((int)*(++s))) s++;
    }
      
    /* Skip whitespace */
-   while (isspace(*s)) s++;
+   while (isspace((int)*s)) s++;
      
    /* Combine integer and fractional part, and apply sign */
    retn += frac;

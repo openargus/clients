@@ -1,6 +1,6 @@
 #
 #  Argus Client Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 #
@@ -37,10 +37,5 @@
 #  Local Address Classifications
 #   
 
-192.168.0.0/16			QoSient
-192.168.0.0/24			Wired
-192.168.0.67			SMTP
-192.168.1.0/24			Switzerland
-192.168.2.0/24			Wireless
-207.237.36.98			QoSient.com
+10.1.0.0/16			Housa
 

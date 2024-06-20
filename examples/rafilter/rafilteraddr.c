@@ -1,22 +1,20 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  */
 
 /*
@@ -26,9 +24,9 @@
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/argus/clients/examples/rafilter/rafilteraddr.c#12 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/rafilter/rafilteraddr.c#13 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -59,6 +57,7 @@
 #include <argus_main.h>
 #include <argus_cluster.h>
 
+static int argus_version = ARGUS_VERSION;
 
 /*
    IANA style address label configuration file syntax is:
@@ -91,6 +90,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
 
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
+
       if ((parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR)) == NULL)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
@@ -101,6 +103,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
                if (!(strncasecmp (mode->mode, "debug.node", 10)))
                   ArgusLabelerStatus |= ARGUS_TREE_DEBUG_NODE;
+            }
+            if (!(strncasecmp (mode->mode, "level=", 6))) {
+               extern int RaPrintLabelTreeLevel;
+               int value = 0;
+               char *endptr = NULL;
+               value = strtod(&mode->mode[6], &endptr);
+               if (&mode->mode[6] != endptr) {
+                  RaPrintLabelTreeLevel = value;
+               }
             }
 
             mode = mode->nxt;
@@ -135,6 +146,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
          if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
             struct ArgusWfileStruct *wfile = NULL, *start = NULL;
     
@@ -186,51 +200,12 @@ usage ()
    fprintf (stdout, "usage: %s [-v] -f address.file [raoptions] \n", ArgusParser->ArgusProgramName);
    fprintf (stdout, "options: -f          specify file containing address(es).\n");
    fprintf (stdout, "         -v          invert the logic and print flows that don't match.\n");
+   fprintf (stdout, "         -M level=x  set the level when printing out the address tree.\n");
    fflush (stdout);
    exit(1);
 }
 
-/*
-extern struct RaAddressStruct *RaFindAddress (struct ArgusParserStruct *, struct RaAddressStruct *, struct RaAddressStruct *, int);
-int RaProcessAddress (struct ArgusParserStruct *, struct ArgusRecordStruct *, unsigned int *, int);
-
-int
-RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, unsigned int *addr, int type)
-{
-   struct ArgusLabelerStruct *labeler = NULL;
-   struct RaAddressStruct *raddr;
-   int retn = 0;
-
-   if ((labeler = parser->ArgusLabeler) == NULL)
-      ArgusLog (LOG_ERR, "RaProcessAddress: No labeler\n");
-
-   switch (type) {
-      case ARGUS_TYPE_IPV4: {
-         struct RaAddressStruct node;
-         bzero ((char *)&node, sizeof(node));
-
-         node.addr.type = AF_INET;
-         node.addr.len = 4;
-         node.addr.addr[0] = *addr;
-         node.addr.masklen = 32;
-
-         if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_NODE_MATCH)) != NULL) {
-            retn++;
-         }
-         break;
-      }
-
-      case ARGUS_TYPE_IPV6:
-         break;
-   }
-
-#ifdef ARGUSDEBUG
-   ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d) returning %d\n", parser, argus, addr, type, retn);
-#endif
-
-   return (retn);
-}
-*/
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
@@ -239,6 +214,11 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
 
    int retn = 0;
+   int mode = ARGUS_SUPER_MATCH;
+
+   if (parser->ArgusLabelRecord > 0) {
+      mode |= ARGUS_LABEL_RECORD;
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
@@ -254,20 +234,52 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                case ARGUS_FLOW_CLASSIC5TUPLE:
                case ARGUS_FLOW_LAYER_3_MATRIX: {
                   switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4:
+                     case ARGUS_TYPE_IPV4: {
                         if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_src, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, &flow->ip_flow.ip_dst, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
                         break;
-                     case ARGUS_TYPE_IPV6:
+                     }
+                     case ARGUS_TYPE_IPV6: {
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_src, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_SADDR_INDEX);
                         if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX))
-                           retn = RaProcessAddress(parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6);
+                           retn = RaProcessAddressLocality(parser, labeler, argus, (unsigned int *) &flow->ipv6_flow.ip_dst, 128, ARGUS_TYPE_IPV6, mode | ARGUS_MASK_DADDR_INDEX);
                         break;
+                     }
+                     case ARGUS_FLOW_ARP: {
+                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                           case ARGUS_TYPE_ARP: {
+                              if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
+                                 unsigned int *saddr = (unsigned int *)&flow->arp_flow.arp_spa;
+                                 retn = RaProcessAddressLocality(parser, labeler, argus, saddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
+                              }
+                              if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                                 unsigned int *daddr = (unsigned int *)&flow->arp_flow.arp_tpa;
+                                 retn = RaProcessAddressLocality(parser, labeler, argus, daddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
+                              }
+                              break;
+                           }
+                           case ARGUS_TYPE_RARP: {
+                              break;
+                           }
+                        }
+                        break;
+                     }
                   }
                   break; 
+               }
+               case ARGUS_FLOW_ARP: {
+                  if ((!retn && parser->ArgusAggregator->mask & ARGUS_MASK_SADDR_INDEX)) {
+                     unsigned int *saddr = (unsigned int *)&flow->arp_flow.arp_spa;
+                     retn = RaProcessAddressLocality(parser, labeler, argus, saddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_SADDR_INDEX);
+                  }
+                  if (!retn && (parser->ArgusAggregator->mask & ARGUS_MASK_DADDR_INDEX)) {
+                     unsigned int *daddr = (unsigned int *)&flow->arp_flow.arp_tpa;
+                     retn = RaProcessAddressLocality(parser, labeler, argus, daddr, 32, ARGUS_TYPE_IPV4, mode | ARGUS_MASK_DADDR_INDEX);
+                  }
+                  break;
                }
             }
          }
@@ -284,23 +296,27 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                for (i = 0; i < count; i++) {
                   if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                        int rv = 0;
 
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
                         if (parser->exceptfile != NULL) {
+
                            if (retn && strcmp(wfile->filename, parser->exceptfile))
-                              ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                            else
                               if (!retn && !strcmp(wfile->filename, parser->exceptfile))
-                                 ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                                 rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
 
                         } else {
                            if (retn)
-                              ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
                         }
+
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                      }
                   }
 
@@ -312,7 +328,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             if (retn) {
                char buf[MAXSTRLEN];
                if (!parser->qflag) {
-                  if (parser->Lflag) {
+                  if (parser->Lflag && !(ArgusParser->ArgusPrintJson)) {
                      if (parser->RaLabel == NULL)
                         parser->RaLabel = ArgusGenerateLabel(parser, argus);
           
@@ -323,14 +339,15 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         parser->Lflag = 0;
                   }
 
-                  *(int *)&buf = 0;
+                  buf[0] = 0;
                   ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-                  if (fprintf (stdout, "%s ", buf) < 0)
+                  if (fprintf (stdout, "%s", buf) < 0)
                      RaParseComplete(SIGQUIT);
                }
                if (parser->ArgusWfileList == NULL)
-                  if (fprintf (stdout, "\n") < 0)
-                     RaParseComplete(SIGQUIT);
+                  if (!(parser->ArgusPrintJson)) 
+                     if (fprintf (stdout, "\n") < 0)
+                        RaParseComplete(SIGQUIT);
             }
          }
 

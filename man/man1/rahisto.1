@@ -1,21 +1,10 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
-.\" 
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
 .\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
 .\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"
-.TH RAHISTO 1 "07 November 2000" "rahisto 3.0.8"
+.TH RAHISTO 1 "19 September 2023" "rahisto 5.0.3"
 .SH NAME
 \fBrahisto\fP \- print histogram of metrics from \fBargus(8)\fP data.
 .SH SYNOPSIS
@@ -46,11 +35,33 @@ Don't print bins that have zero frequencies.
 .B \-M outlayer
 Print accumulated stats for outlayer values, i.e. the values that
 are outside the histogram range.
-.TP 15
-.BI \-H "\| metric bin[L]:range | size\^"
+.TP 4 4
+.B \-M perflow
+Generate multiple histograms.
+One histogram for each -H option will be generated each flow
+discovered.
+The flow model is specified with the -m option.
+See the racluster(1) man page for aggregatable objects.
+Note that no aggregation takes place as a result of the -m option;
+this is used only to classify flow records.
+.TP 4 4
+.BI \-m "\| aggregation object\^"
+Supported aggregation objects are listed in the
+\fBracluster(1)\fP
+man page.
+.TP 4 4
+.BI \-H "\| [abs] metric bin[L]:range | size\^"
+Specify histogram options, metric, number of bins, whether to use
+logorithmic scales, and either a range specification to indicate
+start and stop times, or just the size of each bin.  The optional 'abs' 
+indicates that rahisto should use absolute values for the metric.
+More than one -H option can be supplied.
+One histogram per metric will be calculated for the same input data.
 
 .TP 5
-Supported metrics are:
+Rahisto supports 112 argus metrics, which include most of the metrics
+that can be printed.  See ra.1 for metric fields that are supported by
+the ra* programs.  The common metrics include:
 .PP
 .RS
 .TP 15
@@ -166,10 +177,11 @@ the round-trip time of arp volleys in \fBargus(8)\fP data.
 .fi
 
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.
 
 .SH SEE ALSO
 .BR ra(1),
+.BR racluster(1),
 .BR rarc(5),
 .BR argus(8),
 

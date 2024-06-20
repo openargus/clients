@@ -1,0 +1,11 @@
+[Unit]
+Description=Rollup Argus Database Tables By Month and Year
+
+[Timer]
+# daily at 0015 hrs
+OnCalendar=*-*-* 02:15:00
+Persistent=true
+
+[Install]
+Also=dbaseRollup-nightly.service
+WantedBy=multi-user.target

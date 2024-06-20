@@ -1,21 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  
  *
  */
 
@@ -61,9 +61,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_filter.c#34 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_filter.c#8 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -138,6 +138,13 @@ static int floatisequal(double, double);
 static int floatisgreaterthan(double, double);
 static int floatislessthan(double, double);
 static int floatisgreaterthanequal(double, double);
+
+static void find_ud(struct ablock *);
+
+static inline int skip_line(FILE *);
+static inline int skip_space(FILE *);
+
+char *ArgusLookupDev(char *);
 
 #include <ctype.h>
 
@@ -244,7 +251,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
    nff_int64 mem [NFF_MEMWORDS];
    int k, retn;
    u_char *p = (u_char *)argus;
-   float F;
+   float F = -1;
 
    --pc;
    while (1) {
@@ -275,7 +282,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(double)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -310,7 +317,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   F = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(float)) > sizeof(struct ArgusRecordStruct))
                      F = -1;
@@ -345,7 +352,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(long long)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -381,7 +388,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
 
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(int)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -416,7 +423,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if ((k + sizeof(short)) > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -451,7 +458,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
                   A = -1;
             } else {
                if (argus != NULL) {
-                  u_char *ptr = (u_char *)&argus->hdr;
+                  u_char *ptr = (u_char *)argus;
                   k = pc->data.k;
                   if (k > sizeof(struct ArgusRecordStruct))
                      A = -1;
@@ -586,6 +593,7 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
             pc += ((F == pc->data.f) && (A != -1)) ? pc->jt : pc->jf;
             continue;
 */
+
          case NFF_JMP|NFF_JGT|NFF_F: {
             pc += ((floatisgreaterthan(F, pc->data.f)) && (A != -1)) ? pc->jt : pc->jf;
             continue;
@@ -752,12 +760,8 @@ ArgusFilterOrig (struct nff_insn *pc, struct ArgusRecordStruct *argus, int wirel
 #define inline
 #endif
 
-static inline int skip_space(FILE *);
-static inline int skip_line(FILE *);
-
 static inline int
-skip_space(f)
-FILE *f;
+skip_space(FILE *f)
 {
    int c;
 
@@ -769,8 +773,7 @@ FILE *f;
 }
 
 static inline int
-skip_line(f)
-   FILE *f;
+skip_line(FILE *f)
 {
    int c;
 
@@ -909,9 +912,9 @@ argus_next_etherent(FILE *fp)
  * if none can be found.  The interface must be configured up; the
  * lowest unit number is preferred; loopback is ignored.
  */
+
 char *
-ArgusLookupDev(ebuf)
-char *ebuf;
+ArgusLookupDev(char *ebuf)
 {
    int fd, minunit, n;
    char *cp;
@@ -1091,6 +1094,7 @@ argus_strerror(int errnum)
 #define X_ATOM (NFF_MEMWORDS+1)
 
 #define NOP -1
+#define TST  1
 
 /*#define BDEBUG*/
 #if defined(BDEBUG)
@@ -1504,9 +1508,9 @@ compute_local_ud(struct ablock *b)
 /*
  * Assume graph is already leveled.
  */
+
 static void
-find_ud(root)
-   struct ablock *root;
+find_ud(struct ablock *root)
 {
    int i, maxlevel;
    struct ablock *p;
@@ -3228,6 +3232,8 @@ nff_image(struct nff_insn *p, int n)
      v = p->data.k;
      f = p->data.f;
      s = p->data.s;
+
+   fmt = "";
 
    switch (p->code) {
 

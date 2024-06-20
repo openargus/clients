@@ -21,10 +21,12 @@
  * Format and print bootp packets.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -69,7 +71,9 @@ bootp_print(register const u_char *cp, u_int length)
    static const u_char vm_cmu[4] = VM_CMU;
    static const u_char vm_rfc1048[4] = VM_RFC1048;
 
-   bp = (const struct bootp *)cp;
+   unsigned int iaddr;
+
+   bp = (struct bootp *)cp;
    TCHECK(bp->bp_op);
 
         sprintf(&ArgusBuf[strlen(ArgusBuf)],"BOOTP/DHCP, %s",
@@ -80,10 +84,10 @@ bootp_print(register const u_char *cp, u_int length)
       sprintf(&ArgusBuf[strlen(ArgusBuf)]," from %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
    }
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", length: %u", length);
+   sprintf(&ArgusBuf[strlen(ArgusBuf)],", length: %u", length);
 
-        if (!ArgusParser->vflag)
-            return ArgusBuf;
+   if (!ArgusParser->vflag)
+      return ArgusBuf;
 
    TCHECK(bp->bp_secs);
 
@@ -110,23 +114,31 @@ bootp_print(register const u_char *cp, u_int length)
 
    /* Client's ip address */
    TCHECK(bp->bp_ciaddr);
-   if (bp->bp_ciaddr.s_addr)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client IP: %s", ipaddr_string(&bp->bp_ciaddr));
+   if (bp->bp_ciaddr.s_addr) {
+      iaddr = ntohl(bp->bp_ciaddr.s_addr);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client IP: %s", ipaddr_string(&iaddr));
+   }
 
    /* 'your' ip address (bootp client) */
    TCHECK(bp->bp_yiaddr);
-   if (bp->bp_yiaddr.s_addr)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Your IP: %s", ipaddr_string(&bp->bp_yiaddr));
+   if (bp->bp_yiaddr.s_addr) {
+      iaddr = ntohl(bp->bp_yiaddr.s_addr);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Your IP: %s", ipaddr_string(&iaddr));
+   }
 
    /* Server's ip address */
    TCHECK(bp->bp_siaddr);
-   if (bp->bp_siaddr.s_addr)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Server IP: %s", ipaddr_string(&bp->bp_siaddr));
+   if (bp->bp_siaddr.s_addr) {
+      iaddr = ntohl(bp->bp_siaddr.s_addr);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Server IP: %s", ipaddr_string(&iaddr));
+   }
 
    /* Gateway's ip address */
    TCHECK(bp->bp_giaddr);
-   if (bp->bp_giaddr.s_addr)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Gateway IP: %s", ipaddr_string(&bp->bp_giaddr));
+   if (bp->bp_giaddr.s_addr) {
+      iaddr = ntohl(bp->bp_giaddr.s_addr);
+      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Gateway IP: %s", ipaddr_string(&iaddr));
+   }
 
    /* Client's Ethernet address */
    if (bp->bp_htype == 1 && bp->bp_hlen == 6) {
@@ -356,6 +368,7 @@ rfc1048_print(register const u_char *bp)
    sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-rfc1048:");
 
    /* Step over magic cookie */
+   sprintf(&ArgusBuf[strlen(ArgusBuf)], " MAGIC:0x%08x", EXTRACT_32BITS(bp));
    bp += sizeof(int32_t);
 
    /* Loop while we there is a tag left in the buffer */
@@ -449,7 +462,7 @@ rfc1048_print(register const u_char *bp)
       case 'a':
          /* ascii strings */
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(bp, size, snapend, ArgusBuf)) {
+         if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
             goto trunc;
          }
@@ -467,7 +480,7 @@ rfc1048_print(register const u_char *bp)
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
             ul = EXTRACT_32BITS(bp);
             if (c == 'i') {
-               ul = htonl(ul);
+//             ul = htonl(ul);
                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&ul));
             } else if (c == 'L')
                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d", ul);
@@ -575,7 +588,7 @@ rfc1048_print(register const u_char *bp)
                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u/%u/", *bp, *(bp+1));
             bp += 2;
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-            if (fn_printn(bp, size - 3, snapend, ArgusBuf)) {
+            if (fn_printn(bp, size - 3, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
                goto trunc;
             }
@@ -589,7 +602,7 @@ rfc1048_print(register const u_char *bp)
             size--;
             if (type == 0) {
                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-               if (fn_printn(bp, size, snapend, ArgusBuf)) {
+               if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
                   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
                   goto trunc;
                }

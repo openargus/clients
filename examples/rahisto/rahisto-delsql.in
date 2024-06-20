@@ -1,0 +1,303 @@
+#!@V_PERL@
+
+#
+# NOT COMPLETELY TESTED
+#
+
+# rahisto-delsql removes histograms from the SQL database.
+# Empty tables are dropped and references to those tables in the
+# "histograms" index table are removed.
+#
+# Note that this version does not update the histograms index table
+# unless any of the sid_inf tables have been emptied.
+
+use strict;
+use warnings;
+use Carp;
+use JSON;
+use DBI;
+use IPC::System::Simple qw(capture);
+use POSIX qw(strftime);
+use Try::Tiny;
+use Getopt::Std;
+use Time::Local qw(timegm);
+use qosient::XS::util;
+use qosient::rahisto;
+
+my $debug;
+
+sub optimize_table {
+    my ($dbh, $tablename) = @_;
+
+    # still some data left.  defrag and reclaim disk space.
+    # For InnoDB, this requires @@innodb_defragment=1.
+    my $query = "OPTIMIZE TABLE $tablename";
+    if ($debug) {
+        print STDERR "$query\n";
+    }
+    if ( !defined $dbh->do($query) ) {
+        warn "Failed to optimize table $tablename";
+        return;
+    }
+    return 1;
+}
+
+sub delete_histo_values {
+    my ( $dbh, $prefixstr_aref, $tablename, $times ) = @_;
+    my $query = qq{DELETE from $tablename};
+    my $where = q{ WHERE};
+    my $usewhere;
+    my @params = ();
+    my $addresses;
+
+    if ( $prefixstr_aref && scalar(@$prefixstr_aref) > 0 ) {
+        $addresses = strs2prefix_array($prefixstr_aref);
+        if ( defined $addresses ) {
+            my $addresses_str =
+              join( ',', map( 'INET6_ATON(?)', @$addresses ) );
+            push @params, map( $_->ip(), @$addresses );
+            $usewhere = 1;
+            $where .= qq{ address IN ($addresses_str)};
+        }
+    }
+
+    if ( defined $times ) {
+        my $cnt    = scalar( @{$times} );
+        my $clause = q{};
+
+        if ( $cnt > 0 ) {
+            if ($usewhere) {
+                $clause .= q{ AND};
+            }
+            $clause .= qq{ stime >= ?};
+            push @params, $times->[0];
+            if ( $cnt > 2 ) {
+                $clause .= qq{ AND stime < ?};
+                push @params, $times->[2];
+            }
+            $usewhere = 1;
+            $where .= $clause;
+        }
+    }
+
+    if ( !defined $usewhere ) {
+        carp "must provide some constraints";
+        return;
+    }
+
+    $query .= $where;
+
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        carp "unable to prepare SQL create select statement";
+        return;
+    }
+
+    if ($debug) {
+        print STDERR "$query\n";
+        print STDERR " " . join(', ', @params) . "\n";
+    }
+    my $res = $sth->execute(@params);
+
+    if ( !defined $res ) {
+        return;
+    }
+    $sth->finish;
+
+    if ($res > 0) {
+        optimize_table($dbh, $tablename);
+    }
+
+    return 1;
+}
+
+sub clean_empty_tables {
+    my ( $dbh, $index_href ) = @_;
+    my $query;
+    my @empties = ();
+
+    for my $tbl ( keys $index_href ) {
+        $query = qq{SELECT COUNT(*) AS count FROM $tbl};
+        if ($debug) {
+            print STDERR "$query\n";
+        }
+
+        my $sth = $dbh->prepare($query);
+
+        if ( !defined $sth ) {
+            carp "unable to prepare SQL create select statement";
+            return;
+        }
+
+        if ($debug) {
+            print STDERR "$query\n";
+        }
+        my $res = $sth->execute;
+
+        if ( !defined $res ) {
+            return;
+        }
+        my @arr = $sth->fetchrow_array;
+        $sth->finish;
+
+        if ( ( !@arr ) || scalar(@arr) == 0 ) {
+            warn qq{query "$query" returned no results};
+            next;
+        }
+        if ( $arr[0] == 0 ) {
+            # table is empty -- blow it away
+            push @empties, $tbl;
+            $query = "DROP TABLE $tbl";
+            if ($debug) {
+                print STDERR "$query\n";
+            }
+            if ( !defined $dbh->do($query) ) {
+                warn "Failed to drop table $tbl";
+            }
+        }
+    }
+
+    if ( scalar(@empties) == 0 ) {
+        return 1;
+    }
+
+    # Now remove any mention of the deleted tables from the histogram index
+
+    $query = q{DELETE FROM histograms WHERE tablename IN};
+    $query .= '(' . join( ',', map( '?', @empties ) ) . ')';
+
+    if ($debug) {
+        print STDERR "$query\n";
+        print STDERR " " . join(', ', @empties) . "\n";
+    }
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        carp "unable to prepare SQL DELETE statement";
+        return;
+    }
+
+    my $res = $sth->execute(@empties);
+    $sth->finish;
+
+    if ( !defined $res ) {
+        return;
+    }
+    return 1;
+}
+
+sub one_query {
+    my ( $dbh, $index_href, $query_prefixes, $query_times ) = @_;
+    my %results_hash = ();
+
+    for my $tbl ( keys $index_href ) {
+        my $results =
+          delete_histo_values( $dbh, $query_prefixes, $tbl, $query_times );
+        if ($results) {
+            $results_hash{$tbl} = $results;
+        }
+    }
+    return 1;
+}
+
+# create an array of time bounds from the -t option
+sub handle_opt_t {
+    my ($str) = @_;
+    my @bounds = split( /-/x, $str );
+    my $times;
+    my @timary = qosient::XS::util::ArgusParseTime($str);
+
+    if ($timary[0] == 0) {
+        carp "Invalid time string";
+        return;
+    }
+
+    if ( scalar(@bounds) == 1 ) {
+        # not a time range and also no leading "-"
+        # Build an array representing the time from the UNIX epoch until
+        # $opt_t.  NOTE: this is different than the query utility's
+        # interpretation of a single time parameter.  Should rahisto-query
+        # do the same???
+        $times = [ 0, '-', $timary[1] ];
+    }
+    elsif ( scalar(@bounds) > 1 ) {
+        if ( length( $bounds[0] ) == 0 ) {
+            # time parameters is a relative date.
+            # Build an array representing the time from the UNIX epoch until
+            # $opt_t.  NOTE: this is different than the query utility's
+            # interpretation of a single time parameter.  Should rahisto-query
+            # do the same???
+            $times = [ 0, '-', $timary[1] ];
+        }
+        else {
+            $times = [ $timary[1], '-', $timary[2] ];
+        }
+    }
+
+    if ($debug) {
+        print STDERR "parsed time range " . join( ' ', @$times ) . "\n";
+    }
+    return $times;
+}
+
+my $query_prefixes;
+my $query_times;
+my $query_infs;
+my $query_sids;
+
+# -D    debug
+# -a    comma or space separated list of addresses
+# -t    time range
+# -i    comma or space separated list of argus "inf"s
+# -s    comma or space separated list of argus "sid"s
+getopts("Da:t:i:s:C:");
+our ( $opt_D, $opt_a, $opt_t, $opt_i, $opt_s, $opt_C );
+if ($opt_D) {
+    $debug = 1;
+}
+if ($opt_a) {
+    @{$query_prefixes} = split( /[ ,]/x, $opt_a );
+}
+if ($opt_t) {
+    $query_times = handle_opt_t($opt_t);
+}
+if ($opt_i) {
+    @{$query_infs} = split( /[ ,]/x, $opt_i );
+
+    # TODO: validation
+}
+if ($opt_s) {
+    @{$query_sids} = split( /[ ,]/x, lc $opt_s );
+
+    # TODO: validation
+}
+
+
+# EXIT IF NO TIME SPECIFIED
+if (!$opt_t || !defined $query_times) {
+    croak "Must specify a (valid) time or time range.";
+}
+
+my $dbh = rahisto_opendb;
+if ( !defined $dbh ) {
+    croak "Unable to connect to database";
+}
+
+my $index_href =
+  rahisto_index_search_prefixes( $dbh, $query_prefixes, $query_sids,
+    $query_infs );
+if ( !defined $index_href ) {
+    print STDERR "No results found\n";
+    exit(1);
+}
+else {
+    #   use Data::Dumper;
+    #   print Dumper($index_href);
+}
+
+### DELETE SOME STUFF HERE
+one_query( $dbh, $index_href, $query_prefixes, $query_times );
+clean_empty_tables( $dbh, $index_href );
+
+rahisto_closedb($dbh);

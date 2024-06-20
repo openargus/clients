@@ -56,12 +56,12 @@
  #   @(#)snmp.awk.x   1.1 (LANL) 1/15/90
  */
 
-
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
 
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -787,7 +787,7 @@ asn1_print(struct be *elem)
       p = elem->data.str;
       if (printable) {
          sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(p, asnlen, snapend, ArgusBuf)) {
+         if (fn_printn(p, asnlen, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
             sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
             goto trunc;
          }
@@ -1201,7 +1201,7 @@ static void
 varbind_print(u_char pduid, const u_char *np, u_int length)
 {
    struct be elem;
-   int count = 0, ind;
+   int count = 0;
 #ifdef LIBSMI
    SmiNode *smiNode = NULL;
 #endif
@@ -1221,7 +1221,7 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
    length = elem.asnlen;
    np = (u_char *)elem.data.raw;
 
-   for (ind = 1; length > 0; ind++) {
+   for (; length > 0; ) {
       const u_char *vbend;
       u_int vblength;
 

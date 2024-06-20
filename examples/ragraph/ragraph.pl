@@ -1,22 +1,22 @@
 #!@PERLBIN@
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+# 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#  
 #  ragraph.pl - graph argus data.
 #     This program uses rabins() and rrdtool to generate png formated  
 #     graphs of argus data.  It is an ambitious program, trying to
@@ -36,6 +36,7 @@ use strict;
 use RRDs;
 use POSIX qw/ strftime /;
 use File::Temp qw/ :POSIX /;
+use File::Which qw/ which where /;
 
 # Global variables
 my $tmpfile = tmpnam();
@@ -43,7 +44,7 @@ my $RRD     = $tmpfile.".rrd";
 my $RRDARG  = $tmpfile.".rrdargs";
 my $PNG     = "ragraph.png";
 
-my $RABINS = "/usr/local/bin/rabins";
+my $RABINS  = which 'rabins';
 my $VERSION = "3.0.8";
 my @arglist = ();
 

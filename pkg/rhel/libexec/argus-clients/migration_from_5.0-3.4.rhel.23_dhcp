@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+# Tables in the SQL database that hold DHCP data now all have names
+# starting with "dhcp_".  This is done so that later, when the database
+# is re-organized by system UUID, there is no opportunity for table name
+# collisions.
+
+use DBI;
+use Carp;
+use strict;
+use warnings;
+
+my $db_flows  = 'dhcpFlows';
+my $db_matrix = 'dhcpMatrix';
+my $dsn       = "DBI:mysql:$db_flows";
+my $dbuser    = 'root';
+my $password  = q{};
+my %attr      = ( PrintError => 0, RaiseError => 0 );
+my $table;
+
+my %per_db_tables = (
+    $db_flows  => [ 'summary_%', 'detail_%', 'ethers_%' ],
+    $db_matrix => ['matrix_%'],
+);
+
+my $dbh = DBI->connect( $dsn, $dbuser, $password, \%attr );
+if ( !defined $dbh ) {
+    croak 'Cannot connect to database';
+}
+
+my $errcount = 0;
+for my $db ( keys %per_db_tables ) {
+    $dbh->do("USE $db") || next;
+    for my $pattern ( @{ $per_db_tables{$db} } ) {
+        my $query = "SHOW TABLES like '$pattern'";
+        my $sth = $dbh->prepare($query);
+        my $res = $sth->execute;
+        if ( ! defined $res ) {
+            print "Unable to query list of tables like $pattern.\n";
+            next;
+        }
+        $sth->bind_columns(\$table);
+
+        while ($sth->fetch) {
+            my $ren = $dbh->prepare("RENAME TABLE $table TO dhcp_$table");
+            $res = $ren->execute;
+            if ( ! defined $res ) {
+                $errcount = $errcount + 1;
+            }
+            $ren->finish;
+        }
+        $sth->finish;
+    }
+}
+
+if ( $errcount > 0 ) {
+    print "Unable to rename $errcount table(s).\n";
+    exit(1);
+}

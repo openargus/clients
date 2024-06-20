@@ -1,26 +1,25 @@
-/*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ /*
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * 
- * $Id: //depot/argus/clients/clients/ranonymize.c#37 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/ranonymize.c#10 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -49,6 +48,17 @@
 unsigned int RaMapHash = 0;
 unsigned int RaHashSize  = 1024;
 
+char *RaNonEthernetAnonmyization = "sequential";
+int RaMacAnonymize = 1;
+char *RaNonIPAnonmyization = NULL;
+int RaIPAnonymize = 1;
+char *RaNonNetAnonmyization = NULL;
+int RaNetAnonymize = 1;
+char *RaNonHostAnonmyization = NULL;
+int RaHostAnonymize = 1;
+char *RaNonASAnonmyization = NULL;
+int RaASAnonymize = 1;
+
 unsigned short RaMapIpIdValue = 0;
 unsigned int RaMapOffsetValue  = 0;
 unsigned int RaMapTransOffsetValue  = 0;
@@ -58,6 +68,7 @@ unsigned int RaMapTimeSecOffsetValue  = 0;
 unsigned int RaMapTimeuSecOffsetValue = 0;
 unsigned int RaPortMappingOffsetValue = 0;
 unsigned char RaTosMappingOffsetValue = 0;
+
 
 int RaMapMacCounter = 0;
 int RaMapMacMultiCastCounter = 0;
@@ -172,6 +183,8 @@ extern char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE];
 
 int ArgusFirstMOptionField = 1;
 
+static int argus_version = ARGUS_VERSION;
+
 void ArgusProcessOptions(struct ArgusModeStruct *);
 
 struct RaMapHashTableHeader *RaMapAllocateEtherAddr (struct ether_header *, int, int);
@@ -184,7 +197,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 {
    struct ArgusModeStruct *mode = NULL, *pmode = NULL;;
    struct timeval tvpbuf, *tvp = &tvpbuf;
-   int retn, cnt, ind = 0, x, y, count = 0, shiftcount = 0, start;
+   int retn, ind = 0, x, y;
+   int shiftcount = 0, start;
    unsigned short i, value, startport = 0;
    char *ptr = NULL;
 
@@ -199,6 +213,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
 
       parser->RaInitialized++;
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
@@ -406,12 +423,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       }
 
       RaPortMapping[RA_MAX_PORT] = RA_MAX_PORT;
-      RaPortMapping[RA_MAX_PORT] = RA_MAX_PORT;
 
       if (RaPreserveWellKnownPorts) {
          if (RaPreserveRegisteredPorts) {
             if (RaPreservePrivatePorts) {
-                  startport = RA_MAX_PORT - 1;
+               startport = RA_MAX_PORT - 1;
             } else
                startport = 49152;
          } else
@@ -420,29 +436,30 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          startport = 1;
 
       if (!(strncmp(RaPortMappingOffset, "random", 6))) {
+/*
+      create an array of randomized sequential numbers in a specific range.
+*/
          for (i = startport, start = startport; i < RA_MAX_PORT; i++) {
-               if (shiftcount > 5) {
-                  cnt = 0;
-                  shiftcount = 0;
-                  y = start;
-                  bzero ((char *) RaPortTemp, sizeof(RaPortTemp));
-                  for (x = i; x < RA_MAX_PORT; x++) {
+            if (shiftcount > 5) {
+               shiftcount = 0;
+               y = start;
+               bzero ((char *) RaPortTemp, sizeof(RaPortTemp));
+               for (x = i; x < RA_MAX_PORT; x++) {
                      while ((RaPortRandom[y] == 0) && (y < RA_MAX_PORT)) y++;
                      if (RaPortRandom[y]) {
                         RaPortTemp[x] = RaPortRandom[y];
                         RaPortRandom[y] = 0;
-                        cnt++;
                      } else
                         break;
-                  }
-                  bcopy ((char *)RaPortTemp, (char *) RaPortRandom, sizeof(RaPortRandom));
-                  start = i;
                }
+               bcopy ((char *)RaPortTemp, (char *) RaPortRandom, sizeof(RaPortRandom));
+               start = i;
+            }
 
-               retn = i + (random() % (RA_MAX_PORT - i));
-               ind = retn;
-               while (RaPortRandom[ind] == 0) {
-                  if (retn & 0x01) {
+            retn = i + (random() % (RA_MAX_PORT - i));
+            ind = retn;
+            while (RaPortRandom[ind] == 0) {
+               if (retn & 0x01) {
                      if (ind >= start) {
                         ind--;
                      } else {
@@ -457,14 +474,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                         shiftcount++;
                      }
                   }
-               }
+            }
 
-               if ((value = RaPortRandom[ind])) {
-                  RaPortMapping[i] = value;
-                  RaPortRandom[ind] = 0;
-                  count++;
-               }
+            if ((value = RaPortRandom[ind])) {
+               RaPortMapping[i] = value;
+               RaPortRandom[ind] = 0;
+            }
          }
+
       } else {
          if (!(strncmp(RaPortMappingOffset, "offset:random", 13))) {
             RaPortMappingOffsetValue = (random() % RA_MAX_PORT);
@@ -488,6 +505,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
          }
       }
+
    }
 }
 
@@ -534,6 +552,10 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
+
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -610,13 +632,17 @@ usage ()
 #define RAMAP_AS_NUMBER                 0x20
 
 int RaFirstRecord = 1;
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    struct ArgusInput *input = argus->input;
-   static char buf[MAXSTRLEN];
    int label, x;
+   char *buf;
+
+   if ((buf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaMapNewNetwork: ArgusCalloc(%s) error %s", optarg, strerror(errno));
 
    if (ArgusParser->ArgusReplaceMode && input) {
       if (parser->ArgusWfileList == NULL) {
@@ -626,7 +652,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
          srandom (ArgusParser->ArgusRealTime.tv_usec);
          label = random() % 100000;
 
-         bzero(buf, sizeof(buf));
          snprintf (buf, MAXSTRLEN, "%s.tmp%d", input->filename, label);
 
          setArgusWfile(ArgusParser, buf, NULL);
@@ -744,12 +769,16 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      if (pass != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
-                           static char sbuf[0x10000];
-                           if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                              int rv;
+
 #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
 #endif
-                              ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, argus->input,
+                                                         wfile, argusrec);
+                              if (rv < 0)
+                                 ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                            }
                         }
                      }
@@ -761,7 +790,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          } else {
             if (!parser->qflag) {
-               if (parser->Lflag) {
+
+               if (!(ArgusParser->ArgusPrintJson) && (ArgusParser->Lflag)) {
                   if (parser->RaLabel == NULL)
                      parser->RaLabel = ArgusGenerateLabel(parser, argus);
        
@@ -772,15 +802,22 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      parser->Lflag = 0;
                }
 
-               *(int *)&buf = 0;
+               buf[0] = 0;
                ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-               if (fprintf (stdout, "%s\n", buf) < 0)
-                  RaParseComplete(SIGQUIT);
+
+               if (parser->ArgusPrintJson) {
+                  if (fprintf (stdout, "%s", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               } else {
+                  if (fprintf (stdout, "%s\n", buf) < 0)
+                     RaParseComplete (SIGQUIT);
+               }
             }
          }
          break;
       }
    }
+   ArgusFree(buf);
 }
 
 int RaSendArgusRecord(struct ArgusRecordStruct *argus) {return 0;}
@@ -1057,11 +1094,14 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
 {
    struct RaMapHashTableHeader *retn = NULL;
    struct RaClassNets *thisNet = NULL;
-   char buf[MAXSTRLEN];
    struct in_addr addrbuf, *addr = &addrbuf;
    struct hostent *hp;
+   char *buf = NULL;
    unsigned int **p;
    int hostclass;
+
+   if ((buf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+      ArgusLog (LOG_ERR, "RaMapNewNetwork: ArgusCalloc(%s) error %s", optarg, strerror(errno));
 
    if (IN_CLASSA(host)) hostclass = RAMAP_CLASSA; else
    if (IN_CLASSB(host)) hostclass = RAMAP_CLASSB; else
@@ -1069,7 +1109,6 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
    if (IN_CLASSD(host)) hostclass = RAMAP_CLASSM; else
    hostclass = RAMAP_CLASSC;
 
-   bzero (buf, MAXSTRLEN);
    do {
       if (RaMapNetAddrHierarchy > RANON_SUBNET) {
          switch (hostclass) {
@@ -1097,6 +1136,7 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
          ArgusLog (LOG_ERR, "RaMapNewNetwork: gethostbyname(%s) error %s", optarg, strerror(errno));
    
       addr->s_addr = **(unsigned int **)hp->h_addr_list;
+
       if ((retn = RaMapFindHashObject (&RaMapNetTable, &addr->s_addr, RAMAP_IP_ADDR, 4))) {
          if (retn->net->index >= RA_MAX_CLASS_VALUE) {
             if (RaMapNetAddrHierarchy > RANON_SUBNET) {
@@ -1158,6 +1198,8 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
       ArgusDebug (2, "RaMapNewNetwork (%s, %s) returns 0x%x\n", sbuf1, sbuf2, retn);
    }
 #endif
+
+   ArgusFree(buf);
    return (retn);
 }
 
@@ -1168,9 +1210,11 @@ RaMapAllocateNet (unsigned int addr, unsigned int mask)
    struct RaMapHashTableHeader *retn = NULL;
    struct RaMapHashTableHeader *net = NULL;
    unsigned int newaddr = 0;
-   char buf[MAXSTRLEN];
+   char *buf;
 
-   bzero (buf, MAXSTRLEN);
+   if ((buf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaMapNewNetwork: ArgusCalloc(%s) error %s", optarg, strerror(errno));
+
    if (!(retn = RaMapFindHashObject (&RaMapNetTable, &addr, RAMAP_IP_ADDR, 4))) {
       switch (mask) {
          case IN_CLASSA_NET:
@@ -1210,7 +1254,6 @@ RaMapAllocateNet (unsigned int addr, unsigned int mask)
             retn->net->index = 1;
          }
 
-
          if (!(retn->sub)) {
             if ((retn->sub = (void *) ArgusCalloc (1, 4)) != NULL) {
                bcopy ((char *)&newaddr, (char *) retn->sub, 4);
@@ -1241,6 +1284,7 @@ RaMapAllocateNet (unsigned int addr, unsigned int mask)
    }
 #endif
 
+   ArgusFree(buf);
    return (retn);
 }
 
@@ -1258,8 +1302,14 @@ RaMapAllocateIPAddr (unsigned int *addr, int type, int len)
          else
          if (((*addr & 0xff) == 0x00) && RaPreserveBroadcastAddress)
             newaddr = *((unsigned int *)net->sub);
-         else
-            newaddr = *((unsigned int *)net->sub) + ((struct RaClassNets *)net->net)->index++;
+         else {
+            if (RaHostAnonymize) {
+               newaddr = *((unsigned int *)net->sub) + ((struct RaClassNets *)net->net)->index++;
+            } else {
+               unsigned int host = *addr & ~net->mask;
+               newaddr = *((unsigned int *)net->sub) + host;
+            }
+         }
 
          if ((retn = RaMapAddHashEntry (&RaMapHashTable, (void *)addr, type, len))) {
             retn->net = net->net;
@@ -1313,47 +1363,49 @@ RaMapInventory (void *oid, int type, int len)
 
    switch (type) {
       case RAMAP_ETHER_MAC_ADDR: {
-         if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
+         if (RaMacAnonymize) {
+            if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
 
-            if (!(retn = RaMapAllocateEtherAddr (oid, type, len))) 
-               ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateEtherAddr error %s\n", strerror(errno));
+               if (!(retn = RaMapAllocateEtherAddr (oid, type, len))) 
+                  ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateEtherAddr error %s\n", strerror(errno));
 
-            if (!(RaMapEtherAddrList))
-               RaMapEtherAddrList = ArgusNewList();
+               if (!(RaMapEtherAddrList))
+                  RaMapEtherAddrList = ArgusNewList();
 
-            if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
-               ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
+               if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
+                  ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
 
-            lobj->list_obj = retn;
-            ArgusPushBackList(RaMapEtherAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+               lobj->list_obj = retn;
+               ArgusPushBackList(RaMapEtherAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+            }
+
+            if (RaMapConvert)
+               if (retn->sub)
+                  bcopy ((char *)retn->sub, (char *) oid, len);
          }
-
-         if (RaMapConvert)
-            if (retn->sub)
-               bcopy ((char *)retn->sub, (char *) oid, len);
-      
          break;     
       }
 
       case RAMAP_IP_ADDR: {
-         if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
-            if (!(retn = RaMapAllocateIPAddr (oid, type, len)))
-               ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateIPAddr error %s\n", strerror(errno));
+         if (RaIPAnonymize) {
+            if (!(retn = RaMapFindHashObject (&RaMapHashTable, oid, type, len))) {
+               if (!(retn = RaMapAllocateIPAddr (oid, type, len)))
+                  ArgusLog (LOG_ERR, "RaMapInventory: RaMapAllocateIPAddr error %s\n", strerror(errno));
             
-            if (!(RaMapIPAddrList))
-               RaMapIPAddrList = ArgusNewList();
+               if (!(RaMapIPAddrList))
+                  RaMapIPAddrList = ArgusNewList();
 
-            if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
-               ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
+               if ((lobj = ArgusCalloc(1, sizeof(*lobj))) == NULL)
+                  ArgusLog (LOG_ERR, "RaMapInventory: ArgusCalloc error %s\n", strerror(errno));
 
-            lobj->list_obj = retn;
-            ArgusPushBackList(RaMapIPAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+               lobj->list_obj = retn;
+               ArgusPushBackList(RaMapIPAddrList, (struct ArgusListRecord *)lobj, ARGUS_LOCK);
+            }
+
+            if (RaMapConvert)
+               if (retn->sub)
+                  bcopy ((char *)retn->sub, (char *) oid, len);
          }
-
-         if (RaMapConvert)
-            if (retn->sub)
-               bcopy ((char *)retn->sub, (char *) oid, len);
-
          break;     
       }
 
@@ -1548,32 +1600,33 @@ RaMapRemoveHashEntry (struct RaMapHashTableStruct *table, struct RaMapHashTableH
 #define RANON_PRESERVE_ETHERNET_VENDOR		6
 #define RANON_PRESERVE_ETHERNET_BROADCAST	7
 #define RANON_PRESERVE_ETHERNET_MULTICAST	8
-#define RANON_NET_ANONYMIZATION			9
-#define RANON_HOST_ANONYMIZATION		10
-#define RANON_NETWORK_ADDRESS_LENGTH		11
-#define RANON_PRESERVE_NET_ADDRESS_HIERARCHY	12
-#define RANON_PRESERVE_BROADCAST_ADDRESS	13
-#define RANON_PRESERVE_MULTICAST_ADDRESS	14
-#define RANON_PRESERVE_IP_ID			15
-#define RANON_SPECIFY_NET_TRANSLATION		16
-#define RANON_SPECIFY_HOST_TRANSLATION		17
-#define RANON_PRESERVE_WELLKNOWN_PORT_NUMS	18
-#define RANON_PRESERVE_REGISTERED_PORT_NUMS	19
-#define RANON_PRESERVE_PRIVATE_PORT_NUMS	20
-#define RANON_PRESERVE_PORT_NUMS		21
-#define RANON_PRESERVE_PORT_NUM			22
-#define RANON_CLASSA_NET_ADDRESS_LIST		23
-#define RANON_CLASSB_NET_ADDRESS_LIST		24
-#define RANON_CLASSC_NET_ADDRESS_LIST		25
-#define RANON_CLASSM_NET_ADDRESS_LIST		26
-#define RANON_MAP_DUMPFILE			27
-#define RANON_PORT_METHOD			28
-#define RANON_PRESERVE_ICMPMAPPED_TTL		29
-#define RANON_PRESERVE_IP_TTL			30
-#define RANON_PRESERVE_IP_TOS			31
-#define RANON_PRESERVE_IP_OPTIONS		32
-#define RANON_AS_ANONYMIZATION			33
-#define RANON_SPECIFY_ASN_TRANSLATION		34
+#define RANON_IP_ADDRESS_ANONYMIZATION		9
+#define RANON_NET_ANONYMIZATION			10
+#define RANON_HOST_ANONYMIZATION		11
+#define RANON_NETWORK_ADDRESS_LENGTH		12
+#define RANON_PRESERVE_NET_ADDRESS_HIERARCHY	13
+#define RANON_PRESERVE_BROADCAST_ADDRESS	14
+#define RANON_PRESERVE_MULTICAST_ADDRESS	15
+#define RANON_PRESERVE_IP_ID			16
+#define RANON_SPECIFY_NET_TRANSLATION		17
+#define RANON_SPECIFY_HOST_TRANSLATION		18
+#define RANON_PRESERVE_WELLKNOWN_PORT_NUMS	19
+#define RANON_PRESERVE_REGISTERED_PORT_NUMS	20
+#define RANON_PRESERVE_PRIVATE_PORT_NUMS	21
+#define RANON_PRESERVE_PORT_NUMS		22
+#define RANON_PRESERVE_PORT_NUM			23
+#define RANON_CLASSA_NET_ADDRESS_LIST		24
+#define RANON_CLASSB_NET_ADDRESS_LIST		25
+#define RANON_CLASSC_NET_ADDRESS_LIST		26
+#define RANON_CLASSM_NET_ADDRESS_LIST		27
+#define RANON_MAP_DUMPFILE			28
+#define RANON_PORT_METHOD			29
+#define RANON_PRESERVE_ICMPMAPPED_TTL		30
+#define RANON_PRESERVE_IP_TTL			31
+#define RANON_PRESERVE_IP_TOS			32
+#define RANON_PRESERVE_IP_OPTIONS		33
+#define RANON_AS_ANONYMIZATION			34
+#define RANON_SPECIFY_ASN_TRANSLATION		35
 
 
 char *RaNonResourceFileStr [] = {
@@ -1586,6 +1639,7 @@ char *RaNonResourceFileStr [] = {
    "RANON_PRESERVE_ETHERNET_VENDOR=",
    "RANON_PRESERVE_ETHERNET_BROADCAST=",
    "RANON_PRESERVE_ETHERNET_MULTICAST=",
+   "RANON_IP_ADDRESS_ANONYMIZATION=",
    "RANON_NET_ANONYMIZATION=",
    "RANON_HOST_ANONYMIZATION=",
    "RANON_NETWORK_ADDRESS_LENGTH=",
@@ -1622,8 +1676,13 @@ int
 RaNonParseResourceFile (char *file)
 {
    int retn = 0, i, len, found = 0, lines = 0;
-   char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
+   char *strbuf, *str = NULL, *optarg = NULL;
    FILE *fd;
+
+   if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaMapNewNetwork: ArgusCalloc(%s) error %s", optarg, strerror(errno));
+
+   str = strbuf;
 
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
@@ -1676,15 +1735,34 @@ RaNonParseResourceFile (char *file)
                               break;
 
                            case RANON_ETHERNET_ANONYMIZATION:
+                              RaNonEthernetAnonmyization = strdup(optarg);
+
+                              if (!(strncmp(RaNonEthernetAnonmyization, "no", 2)))
+                                 RaMacAnonymize = 0;
+                              break;
+
+                           case RANON_IP_ADDRESS_ANONYMIZATION:
+                              RaNonIPAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonIPAnonmyization, "no", 2)))
+                                 RaIPAnonymize = 0;
                               break;
 
                            case RANON_NET_ANONYMIZATION:
+                              RaNonNetAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonNetAnonmyization, "no", 2)))
+                                 RaNetAnonymize = 0;
                               break;
 
                            case RANON_HOST_ANONYMIZATION:
+                              RaNonHostAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonHostAnonmyization, "no", 2)))
+                                 RaHostAnonymize = 0;
                               break;
 
                            case RANON_AS_ANONYMIZATION:
+                              RaNonASAnonmyization = strdup(optarg);
+                              if (!(strncmp(RaNonASAnonmyization, "no", 2)))
+                                 RaASAnonymize = 0;
                               break;
 
                            case RANON_SPECIFY_ASN_TRANSLATION: {
@@ -1782,6 +1860,11 @@ RaNonParseResourceFile (char *file)
                               } else
                                  ArgusLog (LOG_ERR, "RaNonParseResourceFile: gethostbyname(%s) error %s",
                                                 optarg, strerror(errno));
+
+                              /* gcc doesn't know that ArgusLog will not return.
+                               * Initialize to avoid warnings.
+                               */
+                              naddr->s_addr = 0;
 
                               if ((hp = gethostbyname(ptr)) != NULL) {
                                  for (p = (unsigned int **)hp->h_addr_list; *p; ++p)
@@ -1903,6 +1986,8 @@ RaNonParseResourceFile (char *file)
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusParseResourceFile (%s) returning %d\n", file, retn);
 #endif
+
+   ArgusFree(strbuf);
 
    return (retn);
 }
@@ -2145,8 +2230,10 @@ ArgusAnonymizeMac(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
 
-   RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_shost, RAMAP_ETHER_MAC_ADDR, 6);
-   RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_dhost, RAMAP_ETHER_MAC_ADDR, 6);
+   if (RaMacAnonymize) {
+      RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_shost, RAMAP_ETHER_MAC_ADDR, 6);
+      RaMapInventory (&mac->mac.mac_union.ether.ehdr.ether_dhost, RAMAP_ETHER_MAC_ADDR, 6);
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "ArgusAnonymizeMac (0x%x, 0x%x)\n", parser, argus);

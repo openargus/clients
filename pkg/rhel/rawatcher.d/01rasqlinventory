@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [[ -z "$FILENAME" ]] ; then
+   exit 0
+fi
+
+/usr/bin/rasqlinsert -X -r "$FILENAME" -M rmon -M dsrs=-suser -duser -m sid inf smac etype -w mysql://root@localhost/ether/ether_%Y_%m_%d -s stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state -M cache time 1d
+
+/usr/bin/rasqlinsert -X -r "$FILENAME" -m sid inf smac dmac etype -s stime dur sid inf smac dmac etype spkts dpkts sbytes dbytes pcr score -w mysql://root@localhost/etherMatrix/ether_%Y_%m_%d -M cache time 1d
+
+/usr/bin/rasqlinsert -X -r "$FILENAME" -M rmon -M dsrs=-suser -duser -m sid inf smac saddr -w mysql://root@localhost/inventory/ipAddrs_%Y_%m_%d -s stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state score -M cache time 1d - ip
+
+/usr/bin/rasqlinsert -X -r "$FILENAME" -m sid inf saddr daddr -s stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr score -w mysql://root@localhost/ipMatrix/ip_%Y_%m_%d -M cache time 1d - ip
+

@@ -1,26 +1,24 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  * 
- * $Id: //depot/argus/clients/examples/ragrep/ragrep.c#7 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/ragrep/ragrep.c#7 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 /*
@@ -53,6 +51,8 @@
 #include <signal.h>
 #include <ctype.h>
 
+static int argus_version = ARGUS_VERSION;
+
 extern int ArgusTotalMarRecords;
 extern int ArgusTotalFarRecords;
 
@@ -66,19 +66,17 @@ int ArgusParseGrepExpressionFile(struct ArgusParserStruct *, char *);
 char *ArgusGrepBuffer = NULL;
 int ArgusRecordMatches = 0;
 int ArgusTotalMatches = 0;
-int ArgusTotalFiles = 0;
 
 int
 ArgusParseGrepExpressionFile(struct ArgusParserStruct *parser, char *file) {
    char buffer [ARGUS_GREP_STRLEN];
-   int eop = 0, retn = 0, linenum = 0;
+   int eop = 0, retn = 0;
    char *sptr = NULL, *eptr = NULL;
    FILE *fd;
 
    if (file) {
       if ((fd = fopen (file, "r")) != NULL) {
          while (fgets (buffer, ARGUS_GREP_STRLEN, fd)) {
-            linenum++;
             if ((*buffer != '#') && (*buffer != '\n') && (*buffer != '!') && strlen(buffer)) {
                int slen = strlen(buffer);
 
@@ -141,8 +139,6 @@ ArgusParseGrepExpressionFile(struct ArgusParserStruct *parser, char *file) {
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
-   struct ArgusInput *list;
-
    parser->RaWriteOut = 0;
    parser->ArgusPrintMan = 0;
 
@@ -150,20 +146,15 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       (void) signal (SIGHUP,  (void (*)(int)) RaParseComplete);
 
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
+
       if (parser->ArgusFlowModelFile) {
          parser->ArgusGrepSource++;
          parser->ArgusGrepDestination++;
  
          if (ArgusParseGrepExpressionFile (parser, parser->ArgusFlowModelFile) != 0)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusParseGrepExpression error");
-      }
-
-
-      if ((list = parser->ArgusInputFileList) != NULL) {
-         while (list->qhdr.nxt) {
-            list = (struct ArgusInput *)list->qhdr.nxt;
-            ArgusTotalFiles++;
-         }
       }
 
 
@@ -176,6 +167,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
 void RaArgusInputComplete (struct ArgusInput *input) { 
    if (input->major_version > 0) {
+
       if (ArgusParser->Lflag) {
          if (ArgusRecordMatches == 0) {
             printf ("%s\n", input->filename);
@@ -202,6 +194,9 @@ RaParseComplete (int sig)
 {
    if (sig >= 0) {
       if (!ArgusParser->RaParseCompleting++) {
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
 #ifdef ARGUSDEBUG
          ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
@@ -351,6 +346,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 }
 
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 void
 RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -386,12 +383,17 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      if (retn != 0) {
                         if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                            struct ArgusRecord *argusrec = NULL;
-                           static char sbuf[0x10000];
-                           if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                           int rv;
+
+                           if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
       #ifdef _LITTLE_ENDIAN
                               ArgusHtoN(argusrec);
       #endif
-                              ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                              rv = ArgusWriteNewLogfile (parser, argus->input,
+                                                         wfile, argusrec);
+                              if (rv < 0)
+                                 ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                          __func__);
                            }
                         }
                      }
@@ -403,17 +405,16 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
       
          } else {
             if (!(parser->qflag || parser->Lflag || parser->lflag || parser->cflag)) {
-               if (!(parser->ArgusPrintXml)) {
+               if (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson)) {
                   if (parser->RaLabel == NULL)
                      parser->RaLabel = ArgusGenerateLabel(parser, argus);
                }
       
                bzero (buf, sizeof(buf));
                ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-      
 
                if (argus->input->filename != NULL)
-                  if (((ArgusTotalFiles > 1) || parser->Hflag) && !(parser->hflag))
+                  if (((parser->ArgusInputFileCount > 1) || parser->Hflag) && !(parser->hflag))
                      fprintf (stdout, "%s:", argus->input->filename);
 
                if (parser->bflag)
@@ -462,7 +463,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                   }
                }
       
-               fprintf (stdout, "\n");
+               if (!(ArgusParser->ArgusPrintJson))
+                  fprintf (stdout, "\n");
                fflush (stdout);
             }
          }
@@ -492,12 +494,17 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                if (retn != 0) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                     int rv;
+
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (parser, argus->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                    __func__);
                      }
                   }
                }
@@ -510,7 +517,7 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
    } else {
 
       if ((parser->ArgusPrintMan) && (!parser->qflag)) {
-         if (parser->Lflag && !(parser->ArgusPrintXml)) {
+         if (parser->Lflag && (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (parser->RaLabel == NULL)
                parser->RaLabel = ArgusGenerateLabel(parser, argus);
  
@@ -524,8 +531,14 @@ RaProcessManRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          bzero (buf, sizeof(buf));
          if (argus->dsrs[0] != NULL) {
             ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete(SIGQUIT);
+
+            if (parser->ArgusPrintJson) {
+               if (fprintf (stdout, "%s", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            } else {
+               if (fprintf (stdout, "%s\n", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            }
          }
          fflush (stdout);
       }
@@ -565,12 +578,17 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
                if (retn != 0) {
                   if ((parser->exceptfile == NULL) || strcmp(wfile->filename, parser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     static char sbuf[0x10000];
-                     if ((argusrec = ArgusGenerateRecord (argus, 0L, sbuf)) != NULL) {
+                     int rv;
+
+                     if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        ArgusWriteNewLogfile (parser, argus->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (parser, argus->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                    __func__);
                      }
                   }
                }
@@ -583,7 +601,7 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
    } else {
 
       if ((parser->ArgusPrintEvent) && (!parser->qflag)) {
-         if (parser->Lflag && !(parser->ArgusPrintXml)) {
+         if (parser->Lflag && (!(parser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
             if (parser->RaLabel == NULL)
                parser->RaLabel = ArgusGenerateLabel(parser, argus);
  
@@ -597,8 +615,13 @@ RaProcessEventRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct
          bzero (buf, sizeof(buf));
          ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
 
-         if (fprintf (stdout, "%s\n", buf) < 0)
-            RaParseComplete(SIGQUIT);
+         if (parser->ArgusPrintJson) {
+            if (fprintf (stdout, "%s", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         } else {
+            if (fprintf (stdout, "%s\n", buf) < 0)
+               RaParseComplete (SIGQUIT);
+         }
          fflush (stdout);
       }
    }

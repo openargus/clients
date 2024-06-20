@@ -1,13 +1,14 @@
 #
-#  Argus Client Software. Tools to read, analyze and manage Argus data.
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
-#  $Id: //depot/argus/clients/AUTHORS#7 $
-#  $DateTime: 2016/06/01 15:17:28 $
-#  $Change: 3148 $
+#  $Id: //depot/gargoyle/clients/AUTHORS#4 $
+#  $DateTime: 2014/05/14 00:30:13 $
+#  $Change: 2825 $
 
 Argus and its client software are written by Carter Bullard <carter@qosient.com>
+and Eric Kinzie <eric@qosient.com>.
 
 Many contributions of fixes, bug reports and design have been submitted to the
 argus developers mailing list over the years, please see the ./CREDITS file for

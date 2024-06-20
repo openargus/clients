@@ -1,32 +1,31 @@
 /*
- * Argus Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
- 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- */
+ */ 
 
 /*
- * Argus configuration helper routines.
+ * Argus-5.0 Client Library
  *
  * written by Carter Bullard
  * QoSient, LLC
  *
  */
-
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
@@ -46,8 +45,12 @@
 #if defined(HAVE_UUID_UUID_H)
 #include <uuid/uuid.h>
 #else
+#if defined(HAVE_LINUX_UUID_H)
+#include <linux/uuid.h>
+#else
 #if defined(HAVE_UUID_H)
 #include <uuid.h>
+#endif
 #endif
 #endif
 
@@ -85,6 +88,43 @@ __wmic_get_uuid(char *uuidstr, size_t len)
 
 close_out:
    fclose(fp);
+   return res;
+}
+#endif
+
+
+#ifdef HAVE_MACHINE_ID
+static int
+__linux_get_machine_id_uuid(char *uuidstr, size_t len)
+{
+   char str[64], *sptr = str;
+   int slen, res = -1;
+   FILE *fp;
+
+   if (len < 37)
+      /* need 37 bytes, including terminating null, to hold uuid string */
+      return -1;
+
+   if ((fp = fopen("/var/lib/dbus/machine-id", "r")) != NULL) {
+      if (fgets(str, sizeof(str), fp) == NULL)
+         goto linux_close_out;
+
+      if (strncmp(sptr, "UUID", 4) == 0) 
+         sptr += 4;
+
+      if (sptr[strlen(sptr) - 1] == '\n') 
+         sptr[strlen(sptr) - 1] = '\0';
+
+      if ((slen = strlen(sptr)) >= 32) {
+         strncpy(uuidstr, sptr, 32);
+         uuidstr[33] = '\0';
+         res = 0;
+      }
+
+linux_close_out:
+      fclose(fp);
+   }
+
    return res;
 }
 #endif
@@ -140,8 +180,8 @@ ArgusExpandBackticks(const char * const in)
       } else
          ArgusLog (LOG_ERR, "%s: System error: popen() %s\n", __func__, strerror(errno));
    } else
-#ifdef HAVE_GETHOSTUUID
    if (!(strcmp (optarg, "hostuuid"))) {
+#ifdef HAVE_GETHOSTUUID
       uuid_t id;
       struct timespec ts = {0,0};
       if (gethostuuid(id, &ts) == 0) {
@@ -150,20 +190,26 @@ ArgusExpandBackticks(const char * const in)
          res = strdup(sbuf);
       } else
          ArgusLog (LOG_ERR, "%s: System error: gethostuuid() %s\n", __func__, strerror(errno));
-   } else
 #else
-# ifdef CYGWIN
+# ifdef HAVE_MACHINE_ID
+      char uuidstr[64];
 
-   if (!(strcmp (optarg, "hostuuid"))) {
+      if (__linux_get_machine_id_uuid(uuidstr, 37) == 0)
+         res = strdup(uuidstr);
+      else
+         ArgusLog(LOG_ERR, "%s: unable to read system UUID\n", __func__);
+# else
+#  ifdef CYGWIN
       char uuidstr[64];
 
       if (__wmic_get_uuid(uuidstr, 37) == 0)
          res = strdup(uuidstr);
       else
          ArgusLog(LOG_ERR, "%s: unable to read system UUID\n", __func__);
-   } else
+#  endif
 # endif
 #endif
+   } else
       ArgusLog (LOG_ERR, "%s: unsupported command `%s`.\n", __func__, in);
 
    free(optargstart);

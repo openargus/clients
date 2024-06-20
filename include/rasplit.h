@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/rasplit.h#22 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/rasplit.h#8 $
+ * $DateTime: 2016/11/14 01:30:37 $
+ * $Change: 3244 $
  */
 
 #ifndef RaSplit_h
@@ -78,27 +78,8 @@ extern "C" {
 #define ARGUSSPLITMINUTE	6
 #define ARGUSSPLITSECOND	7
 
-#if defined(ArgusClient)
+extern const char *RaSplitModes[ARGUSSPLITMODENUM];
 
-char *RaSplitModes[ARGUSSPLITMODENUM] = { 
-  "time",
-  "count",  
-  "size",    
-  "flow",    
-  "pattern",    
-  "nomodify",    
-  "hard",    
-  "soft",    
-  "zero",    
-  "rate",    
-};
-
-#else
-
-extern char *RaSplitModes[ARGUSSPLITMODENUM];
-
-#endif
- 
 char *RaSplitFilename (struct ArgusAdjustStruct *);
  
 extern void ArgusAlignConfig(struct ArgusParserStruct *, struct ArgusAdjustStruct *);

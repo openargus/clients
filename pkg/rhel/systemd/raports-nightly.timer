@@ -1,0 +1,11 @@
+[Unit]
+Description=Process Argus Ports Daily Inventory
+
+[Timer]
+# daily at 0115 hrs
+OnCalendar=*-*-* 01:15:00
+Persistent=true
+
+[Install]
+Also=raports-nightly.service
+WantedBy=multi-user.target

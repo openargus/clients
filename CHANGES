@@ -1,45 +1,165 @@
 /*
- * Argus Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
+ * This program is free software, released under the GNU General
+ * Public License; you can redistribute it and/or modify it under the terms
+ * of the GNU General Public License as published by the Free Software
+ * Foundation; either version 3, or any later version.
+ *
+ * Other licenses are available through QoSient, LLC.
+ * Inquire at info@qosient.com.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the
+ * implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the * GNU General Public License for more details.
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
 
 
-CHANGES -  This file attempts to capture the changes between argus-clients-3.0.8.4
-           and argus-clients-3.0.8.5.  There are some significant changes, so if I
-           missed anything, please be kind.
+Argus-5.0 Data Support
+
+Argus-5.0 is a public version of commercial argus, that provides enhanced
+functionality and performance.  Argus-5.0 is designed to be completely
+backward compatible with the previous versions of open source argus and
+its program names, configuration, etc should be similar when possible.
+
+Product specific changes are provided with each product.  When no
+specific changes are mentioned, gargoyle should be perceived as
+completely compatible, but enhanced.
 
 
-Argus MetaData Support
+Argus Data Support
 
-Argus MetaData Support
+Argus-5.0 represents a major change in argus data.  The format
+was completely updated to support 128-bit uuid argus source id's,
+As a result there is no forward compatibility between argus-3.0 programs and
+argus-5.0 data.  Argus-5.0 programs are backward compatible, however, so
+you can read and process your data with argus-5.0 programs.
 
-In 3.0.8.5 we added JSON format support for the label. In the clients, we have
-a configuration variable for the rarc file that can cause any client to convert
-the label to JSON.  By default, this is turned off.
+We have made provisions for argus-5.0 programs to generate argus-3.x formatted
+data, but that is configurable, and not the default behavior.  So there is
+explicit conversion that will be going on under the covers.  There is no 
+compelling justification to convert your argus-3.x data, allowing you to leave
+the original data unmodified.
 
-All argus clients support the '-M label="regex"' option, which search the contents
-of the label string in flow records, and processes those records that match.
-Knowing that the format is JSON may impact the format of your regex.
+Argus-5.0.0 and its clients provides for extended modes of transport of argus
+data, earlier version of argus-clients cannot read these transport formats.
 
-When you aggregate flow records, the labels get merged, and the resulting structures
-will be stored either as legacy or JSON.
+Argus-clients-5.0 provides extended capabilities for reading flow-tools
+originated data, and bro/zeek data and converting them to argus-5.0 data
+formats.
 
-When you read either formats, the clients will retain the original format for 3.0 Argus.
+Argus-clients-5.0.0 is backward compatible with all prior releases of
+argus data, fixing a large number of bugs, with regard to data represenation
+and processing.  
 
-In Argus 4.0, we intend to shift all metadata to JSON, so this is a transition strategy.
+
+Architecture
+
+The client programs evolved quite a bit between argus-2.0, argus-3.0 and argus-5.0.
+With the addition of large scale argus data collection and distribution, using
+radium(), and rastream().  Argus-clients-5.0 extends this architecture, providing
+the ability to collect, distribute, archive, analyze, and process network flow
+data, for argus data, flow-tools data, netflow v5-8 partial sflow data processing,
+and zeek data conversion.
+
+radium(), and rastream() are the principal programs that have been added to the
+ra* family of programs.  radium can connect to multiple sources of argus data,
+whether they are streams or files of data, and can write out data to multiple targets,
+supporting independant access control, authentication, and filtering per target.
+What this means is that you can build a argus data distribution tree, to collect,
+process and redistribute argus data.
+
+Rastream() is known as a stream block processors (SBP).  You want to collect data
+from a set of argus data stream sources, and the data just keeps coming in.
+When/how can you stop to process the data, say for real-time indexing, search
+and/or processing?  In the database world this is called 'stream block processing'.
+rastream() reads in argus data, and output the data into a set of files
+that make up a native OS filesystem based archive.  rastream() extends
+this capability by implementing a wa hold buffer to allow for input sorting,
+and then based on command line options, rastream() can call scripts against the
+files after a time period or an event.  We use rastream() to periodically commit
+data to an information system for indexing, searching, processing, compressing,
+and then archive. Say every 5 minutes, on the second, rastream() will close
+completed input files and then spawn any number of processes against those files. 
+
+With these  programs, we have collected data from as many as 5K argus data
+sources, and managed the data in a set of argus data respositories.
+
+Argus-clients-3.0.6 provides new capabilities in this area, allowing
+radium to "serve up" files that are generated by rastream().
+See the manpages for radium.1 and ra.1.
+
+
+The clients distribution has been restructred in argus-5.0.0.  It is organized
+into argus client Core Programs, and Examples.
+
+Client Core Programs
+   ra         - principal program that read, process, filter, and print argus data.
+   racount    - no basic changes.
+   racluster  - complete rewrite of argus aggregation strategies,
+                and replaces ragator.
+
+   radium     - argus record collection and distribution program.
+
+   ranonymize - updated for new data types.
+   rasort     - ported.
+
+   ratop      - massive rewrite.  Completely new program.
+
+Client Example Programs
+   These programs provide examples in key areas of argus data processing
+and management.
+
+   argus data environment
+      ratop - realtime argus data processing environment (curses based)
+         provides vi() like functionality for streaming and file based flow data,
+         supporting printing, searching, editing, sorting, writing argus data.
+
+   argus data processing
+      raconvert - ascii to binary data record conversion
+      raevent - non flow data printing
+      rafilteraddr - high performance filtering
+      ralabel - semantic enhancement / metadata tagging
+      rastream - stream block processing
+      rastrip - data compression
+
+   analytics
+      rahisto - frequency distribution analysis for argus data metrics
+
+   graphing
+      ragraph - time series graphing (rrd-tool based)
+      raplot - general plotting (gnuplot based)
+
+   storage management
+      ramysql - mysql based utilities
+        rasql          - read native argus data from mysql database tables.
+        rasqlinsert    - insert and read argus data from/to mysql data tables.
+        rasqltimeindex - generate argus data file time indexes for searching.
+
+   forensics
+      radump      - decode captured user data
+      ragrep      - regular expression matching from captured user data
+      raservices  - user data analysis to determine used protocol
+
+   reporting
+      radark      - scanner detection and reporting
+      rascan      - scanner detection and reporting
+      rahosts     - IP address inventory reporting
+      raips       - IP address inventory reporting
+      rapath      - print topology information derived from argus data
+      rapolicy    - continuous access control policy verification
+      raports     - application port usage
+      rarpwatch   - arpwatch driven using argus data
+      ratimerange - argus data file time span
+
+   development
+      ratemplate  - ra client development template when using the argus clients library.
+
+

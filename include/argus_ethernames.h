@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_ethernames.h#8 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_ethernames.h#4 $
+ * $DateTime: 2014/05/14 00:30:13 $
+ * $Change: 2825 $
  */
 
 
@@ -65,6 +65,7 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "1632", "dlog", "DLOG" }, 
    { "1633", "dlog", "DLOG" }, 
    { "2048", "ip", "Internet IP (IPv4)" }, 
+   { "2048", "ipv4", "Internet IP (IPv4)" }, 
    { "2049", "x75", "X.75 Internet" }, 
    { "2050", "nbs", "NBS Internet" }, 
    { "2051", "ecma", "ECMA Internet" }, 
@@ -74,6 +75,7 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "2055", "xnscp", "XNS Compatability" }, 
    { "2056", "frarp", "Frame Relay ARP" }, 
    { "2076", "symbl", "Symbolics Private" }, 
+   { "2114", "wol", "Wake On Lan" }, 
    { "2184-2186", "xyplx", "Xyplex" }, 
    { "2304", "ubdeb", "Ungermann-Bass net debugr" }, 
    { "2560", "pup.3", "Xerox IEEE802.3 PUP" }, 
@@ -183,7 +185,8 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "33012-33013", "kinet", "Kinetics" }, 
    { "33015", "aplo", "Apollo Computer" }, 
    { "33023", "wcp", "Wellfleet Compression Protocol" }, 
-   { "33024-33027", "well", "Wellfleet Communications" }, 
+   { "33024", "802.1q", "IEEE 802.1Q VLAN" }, 
+   { "33025-33027", "well", "Wellfleet Communications" }, 
    { "33031-33033", "symbl", "Symbolics Private" }, 
    { "33072", "hayes", "Hayes Microcomputers" }, 
    { "33073", "vglab", "VG Laboratory Systems" }, 

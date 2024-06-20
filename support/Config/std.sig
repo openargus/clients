@@ -1,6 +1,6 @@
 #
 #  Argus Clients Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 #  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
@@ -433,3 +433,16 @@ Service: ypserv          tcp port 32771 n =   436 src = "800000          0000000
 Service: ypserv          udp port 1023  n =   634 src = "        0000000000000002000186A4"  
 Service: ypserv          udp port 1023  n =   234 src = "3D8D    0000000000000002000186A4"  dst = "3D8D    000000000000000000000000"
 Service: ypserv          udp port 1023  n =    15 src = "3D8F    0000000000000002000186A4"  dst = "3D8F    000000010000000000000000"
+
+Service: mdns          udp port 5353  n = 1273725 src = "0000  0000  00  00  00          "  dst = "                                "  
+Service: mdns           udp port 5353  n = 194606 src = "    000000  00  00000000  5F    "  dst = "                                "  
+Service: mdns            udp port 5353  n = 31617 src = "008000        0000  00          "  dst = "0201000000001C200000000000000000"  
+Service: mdns            udp port 5353  n = 20370 src = "008000                          "  dst = "00000201000000001C20000000000000"  
+Service: mdns            udp port 5353  n =   113 src = "    0100000100000000000002    01"  dst = "4567840000010001000000  02    01"  
+Service: mdns            udp port 5353  n =    10 src = "00800001      0000800001      00"  dst = "00000201000000001C20000000000000"  
+
+Service: ssdp              udp port 1900  n = 677309 src = "4D2D534541524348202A20485454502F"  dst = "                                "  
+Service: ssdp              udp port 1900  n = 55153 src = "4E4F54494659202A20485454502F312E"  dst = "                                "  
+Service: ssdp              udp port 1900  n =   211 src = "3C3F786D6C2076657273696F6E3D2231"  dst = "                                "  
+
+Service: dddp              udp port 9131  n = 67744 src = "414D58423C2D555549443D          "  dst = "                                "  

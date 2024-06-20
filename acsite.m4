@@ -1,30 +1,28 @@
 dnl
-dnl Copyright (C) 2000-2022 QoSient, LLC.
+dnl Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+dnl Copyright (c) 2000-2024 QoSient, LLC
+dnl All rights reserved.
 dnl
-dnl Copyright (c) 1995, 1996, 1997, 1998
-dnl   The Regents of the University of California.  All rights reserved.
+dnl This program is free software, released under the GNU General
+dnl Public License; you can redistribute it and/or modify it under the terms
+dnl of the GNU General Public License as published by the Free Software
+dnl Foundation; either version 3, or any later version.
 dnl
-dnl Redistribution and use in source and binary forms, with or without
-dnl modification, are permitted provided that: (1) source code distributions
-dnl retain the above copyright notice and this paragraph in its entirety, (2)
-dnl distributions including binary code include the above copyright notice and
-dnl this paragraph in its entirety in the documentation or other materials
-dnl provided with the distribution, and (3) all advertising materials mentioning
-dnl features or use of this software display the following acknowledgement:
-dnl ``This product includes software developed by the University of California,
-dnl Lawrence Berkeley Laboratory and its contributors.'' Neither the name of
-dnl the University nor the names of its contributors may be used to endorse
-dnl or promote products derived from this software without specific prior
-dnl written permission.
-dnl THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
-dnl WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
-dnl MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+dnl Other licenses are available through QoSient, LLC.
+dnl Inquire at info@qosient.com.
 dnl
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
-dnl $DateTime: 2016/06/01 15:17:28 $
-dnl $Change: 3148 $
+dnl This program is distributed WITHOUT ANY WARRANTY; without even the
+dnl implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+dnl See the * GNU General Public License for more details.
 dnl
-
+dnl You should have received a copy of the GNU General Public License
+dnl along with this program; if not, write to the Free Software
+dnl Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+dnl
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
+dnl $DateTime: 2015/04/20 23:52:38 $
+dnl $Change: 3016 $
+dnl
 
 dnl QOSIENT and LBL autoconf macros
 dnl
@@ -104,7 +102,7 @@ m4_define([AC_LBL_C_INIT],
     AC_ARG_WITH(gcc, [  --without-gcc           don't use gcc])
     AC_ARG_WITH(examples, [  --without-examples      don't compile examples])
     AC_ARG_WITH(pluribus,
-            [AC_HELP_STRING([--with-pluribus],[Compile for pluribus])],
+            [AS_HELP_STRING([--with-pluribus],[Compile for pluribus])],
             with_pluribus="yes",
             with_pluribus="no")
     $1="-O"
@@ -162,9 +160,9 @@ m4_define([AC_LBL_C_INIT],
     else
        AC_MSG_CHECKING(that $CC handles ansi prototypes)
        AC_CACHE_VAL(ac_cv_lbl_cc_ansi_prototypes,
-       AC_TRY_COMPILE(
-          [#include <sys/types.h>],
-          [int frob(int, char *)],
+
+       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <sys/types.h>],
+                                          [int frob(int, char *)])],
           ac_cv_lbl_cc_ansi_prototypes=yes,
           ac_cv_lbl_cc_ansi_prototypes=no))
        AC_MSG_RESULT($ac_cv_lbl_cc_ansi_prototypes)
@@ -176,11 +174,13 @@ m4_define([AC_LBL_C_INIT],
              savedcflags="$CFLAGS"
              CFLAGS="-Aa -D_HPUX_SOURCE $CFLAGS"
              AC_CACHE_VAL(ac_cv_lbl_cc_hpux_cc_aa,
-            AC_TRY_COMPILE(
-                [#include <sys/types.h>],
-                [int frob(int, char *)],
-                ac_cv_lbl_cc_hpux_cc_aa=yes,
-                ac_cv_lbl_cc_hpux_cc_aa=no))
+
+             AC_COMPILE_IFELSE(
+               [AC_LANG_PROGRAM([#include <sys/types.h>],
+                               [int frob(int, char *)])],
+                [ac_cv_lbl_cc_hpux_cc_aa=yes],
+                [ac_cv_lbl_cc_hpux_cc_aa=no]))
+
              AC_MSG_RESULT($ac_cv_lbl_cc_hpux_cc_aa)
              if test $ac_cv_lbl_cc_hpux_cc_aa = no ; then
                 AC_MSG_ERROR(see the INSTALL doc for more info)
@@ -211,10 +211,9 @@ m4_define([AC_LBL_C_INIT],
        ultrix*)
           AC_MSG_CHECKING(that Ultrix $CC hacks const in prototypes)
           AC_CACHE_VAL(ac_cv_lbl_cc_const_proto,
-          AC_TRY_COMPILE(
-             [#include <sys/types.h>],
-             [struct a { int b; };
-             void c(const struct a *)],
+          AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <sys/types.h>],
+                                             [struct a { int b; };
+                                              void c(const struct a *)])],
              ac_cv_lbl_cc_const_proto=yes,
              ac_cv_lbl_cc_const_proto=no))
           AC_MSG_RESULT($ac_cv_lbl_cc_const_proto)
@@ -370,7 +369,15 @@ AC_DEFUN([AC_LBL_DEVEL],
              if test "$ac_cv_prog_cc_g" = yes ; then
                 $1="-g $$1"
              fi
-             $1="$$1 -Wall -Wmissing-prototypes"
+
+             case "$target_os" in
+                darwin*)
+                 $1="$$1 -Wall -Wmissing-prototypes"
+                 ;;
+                *)
+                 $1="$$1 -Wall -Wmissing-prototypes -Wno-format-overflow"
+                 ;;
+             esac
           fi
        else
           $1=`echo $$1 | sed -e 's/-O//'`
@@ -425,7 +432,7 @@ dnl
  
 AC_DEFUN([AC_QOSIENT_THREADS],
   [AC_ARG_WITH(threads,
-    [AC_HELP_STRING([--without-threads],[don't use native threads package])],
+    [AS_HELP_STRING([--without-threads],[don't use native threads package])],
       with_threads="$withval",
       with_threads="yes")
 
@@ -494,7 +501,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_FLOWTOOLS], [
    AC_ARG_WITH(libft,
-            [AC_HELP_STRING([--with-libft=DIR],[Compile with libft in <DIR>])],
+            [AS_HELP_STRING([--with-libft=DIR],[Compile with libft in <DIR>])],
             with_libft="$withval",
             with_libft="yes")
    dnl
@@ -549,7 +556,7 @@ AC_DEFUN([AC_QOSIENT_FLOWTOOLS], [
          else
             AC_MSG_CHECKING(for local ft library)
             places=`ls $srcdir/.. | sed -e 's,/$,,' -e "s,^,$srcdir/../," | \
-               egrep '/flow-tools-[[0-9]]*.[[0-9]]*.[[0-9]]*'`
+               grep -E '/flow-tools-[[0-9]]*.[[0-9]]*.[[0-9]]*'`
       
             for dir in $places/lib ; do
                if test -r $dir/libft.a ; then
@@ -637,14 +644,14 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_PCRE], [
    AC_ARG_WITH(libpcre,
-            [AC_HELP_STRING([--with-libpcre=DIR],[Compile with libpcre in <DIR>])],
+            [AS_HELP_STRING([--with-libpcre=DIR],[Compile with libpcre in <DIR>])],
             with_libpcre="$withval",
             with_libpcre="no")
 
    if test ${with_libpcre} != "no"; then
       AC_MSG_CHECKING(for pcre library)
       AC_ARG_WITH(pcre-config, 
-            [AC_HELP_STRING([--with-pcre-config=PATH], [Location of PCRE pcre-config (auto)])],
+            [AS_HELP_STRING([--with-pcre-config=PATH], [Location of PCRE pcre-config (auto)])],
             with_pcre_config="$withval", 
             with_pcre_config="yes")
 
@@ -666,10 +673,10 @@ AC_DEFUN([AC_QOSIENT_PCRE], [
          $1=$PCRE_LIBS;
          $2="$PCRE_CFLAGS $$2"
       else
-         AC_CHECK_HEADERS(regex.h,, AC_ERROR(neither pcre nor regex found))
+         AC_CHECK_HEADERS(regex.h,, AC_MSG_ERROR(neither pcre nor regex found))
       fi
    else
-      AC_CHECK_HEADERS(regex.h,, AC_ERROR(regex not found))
+      AC_CHECK_HEADERS(regex.h,, AC_MSG_ERROR(regex not found))
    fi
 ])
 
@@ -688,7 +695,7 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_READLINE], [
    AC_ARG_WITH(readline,
-            [AC_HELP_STRING([--with-readline=DIR],[Compile with readline in <DIR>])],
+            [AS_HELP_STRING([--with-readline=DIR],[Compile with readline in <DIR>])],
             with_readline="$withval",
             with_readline="yes")
 
@@ -708,23 +715,23 @@ AC_DEFUN([AC_QOSIENT_READLINE], [
                 LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
                 ;;
         darwin*)
-                dnl Workaround to look for readline on mac os x and solaris in /opt/local
-                CPPFLAGS="${saved_CPPFLAGS} -I/opt/local/include"
-                LDFLAGS="${save_LDFLAGS} -L/opt/local/lib"
+                dnl Workaround to look for readline on mac os x and solaris in /usr/local
+                CPPFLAGS="${saved_CPPFLAGS} -I/usr/local/include"
+                LDFLAGS="${save_LDFLAGS} -L/usr/local/lib"
                 ;;
         esac
      fi
 
      AC_CHECK_HEADERS(readline/readline.h,
-       AC_CHECK_DECLS([rl_event_hook, rl_catch_signals, rl_done, rl_set_keyboard_input_timeout, rl_replace_line, rl_delete_text, rl_resize_terminal, rl_save_prompt  ], [] , [] ,
-               [
-                  #include <stdlib.h>
-                  #include <stdio.h>
-                  #include <readline/readline.h>
-               ]), ac_cv_found_readline=no)
+       [AC_CHECK_DECLS([rl_event_hook, rl_catch_signals, rl_done, rl_set_keyboard_input_timeout, rl_replace_line, rl_delete_text, rl_resize_terminal, rl_save_prompt  ], [] , [] ,
+         [
+           #include <stdlib.h>
+           #include <stdio.h>
+           #include <readline/readline.h>
+         ])], ac_cv_found_readline=no)
  
      if test "$ac_cv_found_readline" != no; then
-       $1="-lreadline"
+       $1="${LDFLAGS} -lreadline"
        $2="${CPPFLAGS} $$2"
        AC_DEFINE([ARGUS_READLINE], [], [Using System Readline Library])
      else
@@ -894,7 +901,7 @@ ARGUS_MYSQL_MAKEFILE=no
          AC_EGREP_HEADER(my_bool, $ac_cv_mysql_where_inc/mysql.h,
             MYSQL_MY_BOOL_AVAILABLE=yes,)
 
-         if test "$MYSQL_MY_BOOL_AVAILABLE" = yes; then
+         if test "$MYSQL_BOOL_AVAILABLE" = yes; then
             AC_DEFINE([HAVE_MYSQL_MY_BOOL],[],
                [Define if your mysql implimentation defines my_bool type])
             AC_MSG_RESULT([yes])
@@ -904,6 +911,7 @@ ARGUS_MYSQL_MAKEFILE=no
 
          ARGUS_MYSQL="./ramysql"
          ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
+         ARGUS_MYSQL="ramysql"
          AC_SUBST(MYSQL_LDFLAGS)
          AC_SUBST(MYSQL_INCLS)
          AC_SUBST(ARGUS_MYSQL)
@@ -935,7 +943,7 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
    libwrap=FAIL
    lastdir=FAIL
    pwdir=`pwd`
-   places=`ls .. | sed -e 's,/$,,' -e 's,^,../,' | egrep 'tcp_wrappers'`
+   places=`ls .. | sed -e 's,/$,,' -e 's,^,../,' | grep -E 'tcp_wrappers'`
    for dir in $places; do
       if test $lastdir = $dir ; then
          dnl skip alphas when an actual release is present
@@ -957,13 +965,15 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
          LIBS="-lwrap"
          INCS=$$2
          $2=" "
-         AC_TRY_COMPILE(
+
+         AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
             [#include <tcpd.h>
              int deny_severity = 0, allow_severity = 0;],
             [struct request_info request;
-             fromhost(&request);],
+             fromhost(&request);])],
             ac_cv_qosient_wrapper=yes,
             ac_cv_qosient_wrapper=no)
+
          LIBS="$ac_save_LIBS"
          $2=$INCS])
       AC_MSG_RESULT($ac_cv_qosient_wrapper)
@@ -990,6 +1000,7 @@ AC_DEFUN([AC_QOSIENT_TCPWRAP],
          libwrap=FAIL
       fi
    fi])
+
 
 dnl
 dnl Improved version of AC_CHECK_LIB
@@ -1169,8 +1180,11 @@ AC_DEFUN([CMU_CHECK_HEADER_NOCACHE],
 [dnl Do the transliteration at runtime so arg 1 can be a shell variable.
 ac_safe=`echo "$1" | sed 'y%./+-%__p_%'`
 AC_MSG_CHECKING([for $1])
-AC_TRY_CPP([#include <$1>], eval "ac_cv_header_$ac_safe=yes",
+
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([#include <$1>])],
+  eval "ac_cv_header_$ac_safe=yes",
   eval "ac_cv_header_$ac_safe=no")
+
 if eval "test \"`echo '$ac_cv_header_'$ac_safe`\" = yes"; then
   AC_MSG_RESULT(yes)
   ifelse([$2], , :, [$2])
@@ -1183,7 +1197,7 @@ fi
 
 AC_DEFUN([CMU_FIND_LIB_SUBDIR],
 [dnl
-AC_ARG_WITH([lib-subdir], AC_HELP_STRING([--with-lib-subdir=DIR],[Find libraries in DIR instead of lib]))
+AC_ARG_WITH([lib-subdir], AS_HELP_STRING([--with-lib-subdir=DIR],[Find libraries in DIR instead of lib]))
 AC_CHECK_SIZEOF(long)
 AC_CACHE_CHECK([what directory libraries are found in], [ac_cv_cmu_lib_subdir],
 [test "X$with_lib_subdir" = "Xyes" && with_lib_subdir=
@@ -1206,7 +1220,7 @@ AC_SUBST(CMU_LIB_SUBDIR, $ac_cv_cmu_lib_subdir)
 dnl sasl.m4--sasl libraries and includes
 dnl Derrick Brashear
 dnl from KTH sasl and Arla
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 AC_DEFUN([CMU_SASL_INC_WHERE1], [
 saved_CPPFLAGS=$CPPFLAGS
@@ -1285,7 +1299,7 @@ if test ${with_sasl} != "no"; then
 	if test "$ac_cv_found_sasl" = yes; then
 	  LIB_SASL="$LIB_SASL -lsasl"
 	else
-          AC_ERROR( sasl not found )
+          AC_MSG_ERROR( sasl not found )
 	  LIB_SASL=""
 	  SASLFLAGS=""
 	fi
@@ -1297,14 +1311,14 @@ fi
 AC_DEFUN([CMU_SASL_REQUIRED],
 [AC_REQUIRE([CMU_SASL])
 if test "$ac_cv_found_sasl" != "yes"; then
-        AC_ERROR([Cannot continue without libsasl.
+        AC_MSG_ERROR([Cannot continue without libsasl.
 Get it from ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/.])
 fi])
 
 
 # sasl2.m4--sasl2 libraries and includes
 # Rob Siemborski
-# $Id: //depot/argus/clients/acsite.m4#45 $
+# $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 # SASL2_CRYPT_CHK
 # ---------------
@@ -1312,12 +1326,12 @@ AC_DEFUN([SASL_GSSAPI_CHK],
 [AC_REQUIRE([SASL2_CRYPT_CHK])
 AC_REQUIRE([CMU_SOCKETS])
 AC_ARG_ENABLE([gssapi],
-              [AC_HELP_STRING([--enable-gssapi=<DIR>],
+              [AS_HELP_STRING([--enable-gssapi=<DIR>],
                               [enable GSSAPI authentication [yes]])],
               [gssapi=$enableval],
               [gssapi=yes])
 AC_ARG_WITH([gss_impl],
-            [AC_HELP_STRING([--with-gss_impl={heimdal|mit|cybersafe|seam|auto}],
+            [AS_HELP_STRING([--with-gss_impl={heimdal|mit|cybersafe|seam|auto}],
                             [choose specific GSSAPI implementation [[auto]]])],
             [gss_impl=$withval],
             [gss_impl=auto])
@@ -1344,7 +1358,7 @@ if test "$gssapi" != no; then
       ;;
     *)
       if test "$gss_impl" = "cybersafe"; then
-        AC_ERROR([CyberSafe was forced, cannot continue as platform is not supported])
+        AC_MSG_ERROR([CyberSafe was forced, cannot continue as platform is not supported])
       fi
       ;;
   esac
@@ -1593,12 +1607,12 @@ AC_DEFUN([SASL_SET_GSSAPI_LIBS],
 AC_DEFUN([CMU_SASL2],
 [
    AC_ARG_WITH(sasl,
-            [AC_HELP_STRING([--with-sasl=DIR],[Compile with libsasl2 in <DIR>])],
+            [AS_HELP_STRING([--with-sasl=DIR],[Compile with libsasl2 in <DIR>])],
             with_sasl="$withval",
             with_sasl="no")
 
    AC_ARG_WITH(staticsasl,
-            [AC_HELP_STRING([--with-staticsasl=DIR],
+            [AS_HELP_STRING([--with-staticsasl=DIR],
                             [Compile with staticly linked libsasl in <DIR>])],
             [with_staticsasl="$withval";
              if test $with_staticsasl != "no"; then
@@ -1645,13 +1659,13 @@ AC_DEFUN([CMU_SASL2],
             done
          if test ! "$ac_cv_found_sasl" = "yes"; then
             AC_MSG_CHECKING([for static libsasl])
-            AC_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
+            AC_MSG_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
          fi])])
 
       if test "$ac_cv_found_sasl" = "yes"; then
          AC_MSG_RESULT([found])
       else
-         AC_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
+         AC_MSG_ERROR([Could not find ${with_staticsasl}/lib*/libsasl2.a])
       fi
    fi
 
@@ -1693,7 +1707,7 @@ AC_DEFUN([CMU_SASL2],
          AC_SUBST(LIB_SASL)
          AC_SUBST(SASLFLAGS)
       else
-         AC_ERROR([Could not find sasl2])
+         AC_MSG_ERROR([Could not find sasl2])
       fi
    fi
 
@@ -1712,11 +1726,11 @@ AC_DEFUN([CMU_SASL2_REQUIRE_VER],
 cmu_saved_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS $SASLFLAGS"
 
-AC_TRY_CPP([
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([
 #include <sasl/sasl.h>
 
 #ifndef SASL_VERSION_MAJOR
-#error SASL_VERSION_MAJOR not defined
+#error SASL_VERSION_MAJOR not defined 
 #endif
 #ifndef SASL_VERSION_MINOR
 #error SASL_VERSION_MINOR not defined
@@ -1724,12 +1738,13 @@ AC_TRY_CPP([
 #ifndef SASL_VERSION_STEP
 #error SASL_VERSION_STEP not defined
 #endif
-
+         
 #if SASL_VERSION_MAJOR < $1 || SASL_VERSION_MINOR < $2 || SASL_VERSION_STEP < $3
 #error SASL version is less than $1.$2.$3
-#endif
-],,
-           [AC_ERROR([Incorrect SASL headers found.  This package requires SASL $1.$2.$3 or newer.])])
+#endif      
+])],,
+           [AC_MSG_ERROR([Incorrect SASL headers found.  This package requires SASL $1.$2.$3 or newer.])])
+
 
 CPPFLAGS=$cmu_saved_CPPFLAGS
 ])# CMU_SASL2_REQUIRE_VER
@@ -1737,7 +1752,7 @@ CPPFLAGS=$cmu_saved_CPPFLAGS
 
 dnl
 dnl Additional macros for configure.in packaged up for easier theft.
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 dnl tjs@andrew.cmu.edu 6-may-1998
 dnl
 
@@ -1792,7 +1807,7 @@ AC_DEFUN([SASL2_CRYPT_CHK],[
 dnl bsd_sockets.m4--which socket libraries do we need?
 dnl Derrick Brashear
 dnl from Zephyr
-dnl $Id: //depot/argus/clients/acsite.m4#45 $
+dnl $Id: //depot/gargoyle/clients/acsite.m4#11 $
 
 dnl Hacked on by Rob Earhart to not just toss stuff in LIBS
 dnl It now puts everything required for sockets into LIB_SOCKET
@@ -1834,9 +1849,10 @@ dnl
 
 AC_DEFUN([AC_QOSIENT_GEOIP], [
    AC_ARG_WITH(GeoIP,
-            [AC_HELP_STRING([--with-GeoIP=DIR],[Compile with GeoIP in <DIR>])],
+            [AS_HELP_STRING([--with-GeoIP=DIR],[Compile with GeoIP in <DIR>])],
             with_geoip="$withval",
-            with_geoip="yes")
+            with_geoip="yes",
+            with_geoip="no")
    dnl
    dnl save a copy before locating libGeoIP.la
    dnl
@@ -1849,9 +1865,9 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
          AC_CHECK_LIB(GeoIP, GeoIP_open, geoip="-GeoIP")
          if test $geoip = FAIL ; then
             AC_MSG_CHECKING(for standard GeoIP installation)
-            for dir in /usr/local ; do
-               if test -r $dir/lib/libGeoIP.a ; then
-                   geoip=$dir/lib
+            for dir in /usr/lib64 /usr/local/lib ; do
+               if test -r $dir/libGeoIP.a ; then
+                   geoip=$dir
                    AC_MSG_RESULT($geoip)
                    $1="-L$geoip -lGeoIP"
                    AC_MSG_CHECKING(for specified GeoIP.h)
@@ -1859,19 +1875,16 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
                       d=$dir/include
                       AC_MSG_RESULT(found)
                       $2="-I$d $$2"
-                   else
-                      AC_MSG_RESULT(no)
                    fi
                    dnl continue and select the last one that exists
-               else
-                  AC_MSG_RESULT(no)
                fi
             done
 
             if test $geoip = FAIL; then
+               AC_MSG_RESULT(no)
                AC_MSG_CHECKING(for local GeoIP library and includes)
                places=`ls $srcdir/.. | sed -e 's,/$,,' -e "s,^,$srcdir/../," | \
-                  egrep '/GeoIP-[[0-9]]*.[[0-9]]*(.[[0-9]]*)?([[ab]][[0-9]]*)?$'`
+                  grep -E '/GeoIP-[[0-9]]*.[[0-9]]*(.[[0-9]]*)?([[ab]][[0-9]]*)?$'`
 
                for dir in $places ; do
                   basedir=`echo $dir | sed -e 's/[[ab]][[0-9]]*$//'`
@@ -1918,7 +1931,7 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
             fi
          done
          if test $geoip = FAIL; then
-            AC_MSG_RESULT(not found)
+            AC_MSG_RESULT(no)
          fi
       fi
          
@@ -1928,48 +1941,89 @@ AC_DEFUN([AC_QOSIENT_GEOIP], [
    fi
 ])
 
-dnl
-dnl Look for Perl distribution and executable.
-dnl
-dnl usage:
-dnl
-dnl   AC_QOSIENT_PERL(perldep)
-dnl
-dnl results:
-dnl
-dnl   $1 (geoipdep set)
-dnl
+AC_DEFUN([AC_QOSIENT_LIBUUID],[
+   AC_MSG_CHECKING([whether libuuid is found]);
+   AC_CHECK_LIB([uuid], [uuid_parse],[
+      AC_SUBST([UUID_LIBS],[-luuid])
+   ])
+])
 
-AC_DEFUN([AC_QOSIENT_PERL], [
-   AC_ARG_WITH(perl,
-            [AC_HELP_STRING([--with-perl=DIR],[Use perl in <DIR>])],
-            with_perl="$withval",
-            with_perl="yes")
+# AC_QOSIENT_MACHINE_ID
+# --------------------
+AC_DEFUN([AC_QOSIENT_MACHINE_ID],[
+      case "$target_os" in
+         linux*)
+           AC_MSG_CHECKING([whether machine_id is found]);
+           AC_CHECK_FILE("/var/lib/dbus/machine-id",
+             [AC_DEFINE([HAVE_MACHINE_ID], [], [Description])], no)
+         ;;
 
-   perl=FAIL
+         cygwin*)
+         ;;
 
-   if ! test ${with_perl} = "no"; then
-      if test ${with_perl} = "yes"; then
-         AC_MSG_CHECKING(for standard perl installation)
-         for dir in /usr /usr/local /opt /opt/local; do
-            if test -r $dir/bin/perl ; then
-                perl=$dir/bin/perl
-                AC_MSG_RESULT($perl)
-                $1="$perl"
-                break;
-            else
-               AC_MSG_RESULT(no)
-            fi
-         done
-      else
-         AC_MSG_CHECKING(for perl installation in ${with_perl})
-         if test -r ${with_perl}/perl ; then
-            perl=${with_perl}/perl
-            AC_MSG_RESULT($perl)
-            $1="$perl"
-         else
-            AC_MSG_RESULT(no)
-         fi
+        *bsd*)
+           AC_MSG_CHECKING([whether machine_id is found]);
+           AC_CHECK_FILE("/etc/machine-id",
+             [AC_DEFINE([HAVE_MACHINE_ID], [], [Description])], no)
+         ;;
+      esac
+])
+
+
+AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
+   AC_ARG_WITH([libmaxminddb],
+               [AS_HELP_STRING([--with-libmaxminddb],
+                               [Build with libmaxminddb for GeoIP2 labeling])],
+               [with_libmaxminddb="$withval"],
+               [with_libmaxminddb="no"])
+
+   if test x$with_geoip = "xyes"; then
+      AC_MSG_RESULT([cannot compile with both libmaxminddb and GeoIP])
+   else
+      if test "x$with_libmaxminddb" = "xyes"; then
+         PKG_CHECK_MODULES([LIBMAXMINDDB],
+                           [libmaxminddb >= 1.2.0],
+                           AC_DEFINE([ARGUS_GEOIP2], [], [Description]))
       fi
    fi
 ])
+
+AC_DEFUN([AC_QOSIENT_LIBCARES],[
+   AC_ARG_WITH([c-ares],
+               [AS_HELP_STRING([--with-c-ares],
+                               [Build with c-ares for name resolution])],
+               [with_c_ares="$withval"],
+               [with_c_ares="no"])
+
+      if test "x$with_c_ares" = "xyes"; then
+         PKG_CHECK_MODULES([LIBCARES],
+                           [libcares >= 1.10.0],
+                           AC_DEFINE([HAVE_LIBCARES], [], [Description]))
+      fi
+])
+
+dnl
+dnl Option to provide location of a curl.exe executable to package
+dnl with the windows software.  @ARGUS_CURLEXE@ will be replaced
+dnl with the value provided to --with-curlexe.  Additionally, the
+dnl C preprocessor macro ARGUS_CURLEXE will be defined as a string
+dnl containing the path.
+dnl
+dnl usage:
+dnl
+dnl   AC_QOSIENT_CURLEXE
+dnl
+
+AC_DEFUN([AC_QOSIENT_CURLEXE],
+  [AC_ARG_WITH(curlexe,
+    [AS_HELP_STRING([--with-curlexe=PATH],[location of the curl binary to be run from ramanage])],
+    [
+      AC_MSG_CHECKING([for curl binary])
+      if ! test -f "$withval" ; then
+         AC_MSG_ERROR([cannot find file $withval])
+      fi
+      AC_MSG_RESULT([found])
+      AC_DEFINE_UNQUOTED([ARGUS_CURLEXE], ["$withval"], [Path to curl executable])
+      AC_SUBST([ARGUS_CURLEXE], [$withval])
+    ]
+)])

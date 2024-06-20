@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_encapsulations.h#10 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_encapsulations.h#5 $
+ * $DateTime: 2015/04/13 16:50:31 $
+ * $Change: 2993 $
  */
 
 
@@ -42,39 +42,34 @@ struct ArgusEncapsulationStruct {
 };
 
 #define ARGUS_ENCAPS_TYPE       28
-
 #define ARGUS_ENCAPS_MPLS       0x01
 #define ARGUS_ENCAPS_ETHER      0x02
 #define ARGUS_ENCAPS_8021Q      0x04
 #define ARGUS_ENCAPS_LLC        0x08
 #define ARGUS_ENCAPS_PPP        0x10
-
 #define ARGUS_ENCAPS_ISL        0x20
 #define ARGUS_ENCAPS_GRE        0x40
 #define ARGUS_ENCAPS_AH         0x80
 #define ARGUS_ENCAPS_IP         0x100
 #define ARGUS_ENCAPS_IPV6       0x200
-
 #define ARGUS_ENCAPS_HDLC       0x400
 #define ARGUS_ENCAPS_CHDLC      0x800
 #define ARGUS_ENCAPS_ATM        0x1000
 #define ARGUS_ENCAPS_SLL        0x2000
 #define ARGUS_ENCAPS_FDDI       0x4000
-
 #define ARGUS_ENCAPS_SLIP       0x8000
 #define ARGUS_ENCAPS_ARCNET     0x10000
 #define ARGUS_ENCAPS_802_11     0x20000
 #define ARGUS_ENCAPS_PRISM      0x40000
 #define ARGUS_ENCAPS_AVS        0x80000
-
 #define ARGUS_ENCAPS_IB_LRH     0x100000
 #define ARGUS_ENCAPS_IB_GRH     0x200000
 #define ARGUS_ENCAPS_TEREDO     0x400000
 #define ARGUS_ENCAPS_UDT        0x800000
 #define ARGUS_ENCAPS_SPI        0x1000000
-
 #define ARGUS_ENCAPS_JUNIPER    0x2000000
-#define ARGUS_ENCAPS_ERSPAN_II  0x4000000
+#define ARGUS_ENCAPS_VXLAN      0x4000000
+#define ARGUS_ENCAPS_L2TP       0x8000000
 
 
 #if defined(ArgusUtil)
@@ -105,7 +100,8 @@ struct ArgusEncapsulationStruct argus_encapsulations [] = {
    { ARGUS_ENCAPS_UDT,"udt", "UDP-base Data Transfer"},
    { ARGUS_ENCAPS_SPI,"ipsec", "IPsec Tunneling"},
    { ARGUS_ENCAPS_JUNIPER, "juniper", "Juniper Ethernet"},
-   { ARGUS_ENCAPS_ERSPAN_II, "erspan", "Cisco ERSPAN II"},
+   { ARGUS_ENCAPS_VXLAN, "vxlan", "VxLan Encapsulation"},
+   { ARGUS_ENCAPS_L2TP,  "l2tp", "L2TP Encapsulation"},
    { 0, (char *) NULL, (char *) NULL }, 
 };
 

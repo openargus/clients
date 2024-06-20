@@ -1,0 +1,275 @@
+#!@V_PERL@
+
+use strict;
+use warnings;
+use Carp;
+use JSON;
+use DBI;
+use IPC::System::Simple qw(capture system);
+use POSIX qw(strftime);
+use Try::Tiny;
+use File::Temp qw(tempdir);
+use Getopt::Std;
+use qosient::rahisto;
+
+my $debug   = 0;    # print debugging messages (includes DBI messages)
+my $cleanup = 1;    # remove temporary directory if 1, leave if 0.
+
+my $dbuser   = 'root';
+my $dbase    = 'baseline';
+my $password = q{};
+my %attr     = ( PrintError => $debug, RaiseError => 0 );
+my $errcount = 0;
+
+sub ArgusDebug {
+    if ( !defined $debug || $debug == 0 ) {
+        return;
+    }
+
+    # no, this doesn't unpack @_ . . .
+    print STDERR join( ' ', @_ ) . "\n";
+    return;
+}
+
+sub ratimerange {
+    my ($filename) = @_;
+    my @args = qw{ratimerange -X -u -r};
+
+    push @args, $filename;
+    my $timestr = capture(@args);
+    chomp $timestr;
+    my @tary = split( / /, $timestr );
+
+    if ( scalar(@tary) != 3 ) {
+        return;
+    }
+
+    return \@tary;
+}
+
+sub rahisto {
+    my ( $models_aref, $filename, $outfile ) = @_;
+    my @args = ( 'rahisto', '-X', '-r', $filename, '-m', 'saddr', '-Mperflow',
+                 '-Mjson', '-Moutlayer' );
+
+    for my $model ( @{$models_aref} ) {
+        my $rangestr = rahisto_get_range($model);
+        my $buckets  = rahisto_get_bincount($model);
+        my $modelstr = rahisto_get_model($model);
+        my $logscale = rahisto_get_logscale($model);
+        if ( !defined $buckets || !defined $modelstr ) {
+            carp "unknown rahisto metric";
+            return;
+        }
+
+        if ( defined $rangestr ) {
+            $rangestr = ':' . $rangestr;
+        }
+        else {
+            $rangestr = '';
+        }
+
+        if ( defined $logscale ) {
+            $logscale = 'L';
+        }
+        else {
+            $logscale = '';
+        }
+
+        my @h_args = ( '-H', $modelstr, "${buckets}${logscale}${rangestr}" );
+        push @args, @h_args;
+    }
+
+    if ( defined $outfile ) {
+        push @args, ( '-w', $outfile );
+    }
+    ArgusDebug(@args);
+
+    my $jsontext = capture(@args);
+    return $jsontext;
+}
+
+sub rmonify {
+    my ( $infile, $outfile ) = @_;
+    my @args = ( 'ra', '-X', '-Mrmon', '-r', $infile, '-w', $outfile, '-', 'ip' );
+
+    ArgusDebug( join( ' ', @args ) );
+    system(@args);    # IPC::System::Simple::system() dies on erorr
+    return 1;
+}
+
+sub racluster_sidinf {
+    my ($filename, $filter) = @_;
+
+    my @args = qw(racluster -X -m sid inf -s sid inf -Mjson -r);
+    push @args, $filename;
+    push @args, qw(- ip);
+    if ( defined $filter ) {
+        push @args, ( 'and', '(', split(/ /, $filter), ')' );
+    }
+
+    ArgusDebug( join( ' ', @args ) );
+    my $jsontext = capture(@args);
+    return $jsontext;
+}
+
+sub decode_racluster_sidinf {
+    my ($jsonstr) = @_;
+    my $aref = [];
+    my $fh;
+
+    if ( !defined $jsonstr ) {
+        carp "no json data to parse for SID and Interface";
+        return;
+    }
+
+    # racluster emits one json "document" per line
+    open $fh, '<', \$jsonstr;
+    if ( !defined $fh ) {
+        carp "Unable to treat string as file?";
+        return;
+    }
+
+    while (<$fh>) {
+        my $sidinf = decode_json($_);
+
+        if ( !defined $sidinf ) {
+            carp "unable to decode racluster json";
+            return;
+        }
+        if ( !exists $sidinf->{'sid'} || !exists $sidinf->{'inf'} ) {
+            carp "no sid/inf data found";
+            return;
+        }
+        if (   length( $sidinf->{'sid'} ) == 0
+            || length( $sidinf->{'inf'} ) == 0 )
+        {
+            carp "sid/inf empty";
+            return;
+        }
+
+        push $aref, $sidinf;
+    }
+    close $fh;
+    return $aref;
+}
+
+sub read_config {
+    my ($configfile) = @_;
+    my $fh;
+    my $configh = {};
+
+    open($fh, '<', $configfile) or
+        return;
+
+    while (<$fh>) {
+        chomp $_;
+        if ( length($_) == 0 ) {
+            next;
+        }
+        if ( $_ =~ /^\#/ ) {
+            next;
+        }
+
+        my @ary = split(/=/, $_);
+        if ( scalar(@ary) != 2 ) {
+            croak "Invalid configuration";
+        }
+        $configh->{$ary[0]} = $ary[1];
+        ArgusDebug("config $ary[0] = $ary[1]");
+    }
+    close $fh;
+    return $configh;
+}
+
+my $env_filename = $ENV{'FILENAME'};
+my $metric       = rahisto_metric_by_name('dur');
+my @metric_ary   = (
+    rahisto_metric_by_name('dur'),   rahisto_metric_by_name('spkts'),
+    rahisto_metric_by_name('dpkts'), rahisto_metric_by_name('sbytes'),
+    rahisto_metric_by_name('dbytes'),
+);
+
+getopts("Dr:H:");
+our ( $opt_D, $opt_H, $opt_r );
+if ($opt_D) {
+    $debug = 1;
+}
+if ($opt_H) {
+
+    # clear the default array of metrics
+    @metric_ary = ();
+
+    for my $opt ( split( /,/, $opt_H ) ) {
+        my $tmp = rahisto_metric_by_name($opt);
+        if ( !defined $tmp ) {
+            croak qq{Unknown metric "$opt"};
+        }
+        push @metric_ary, $tmp;
+    }
+}
+if ($opt_r) {
+
+    # override environment variable, if present
+    $env_filename = $opt_r;
+}
+
+my $config_href = read_config('/usr/argus/rahisto-updatesql.conf');
+
+if ( scalar(@metric_ary) == 1 ) {
+    $metric = $metric_ary[0];
+    ArgusDebug("using metric $metric");
+}
+else {
+    ArgusDebug( "using metrics " . join( ', ', @metric_ary ) );
+}
+
+if ( !defined $env_filename ) {
+    croak "no filename in FILENAME environment variable or command line";
+}
+if ( length($env_filename) == 0 ) {
+    croak "filename is empty";
+}
+
+my $dbh = rahisto_opendb;
+if ( !defined $dbh ) {
+    croak "Unable to connect to database";
+}
+
+rahisto_create_index_table($dbh);
+my $times = ratimerange($env_filename)
+  ;    # need to be able to get start time from histo file
+my $tmpdir = tempdir( CLEANUP => $cleanup );
+my $tmprmon = "${tmpdir}/rmon";
+
+ArgusDebug("using temporary directory $tmpdir");
+rmonify( $env_filename, $tmprmon );
+my $filter;
+if (exists $config_href->{'RAHISTO_UPDATESQL_FILTER'}) {
+    $filter = $config_href->{'RAHISTO_UPDATESQL_FILTER'};
+}
+my $sidinf = decode_racluster_sidinf( racluster_sidinf($tmprmon, $filter) );
+if ( !defined $sidinf ) {
+    croak "unable to determine Source ID and/or Interface name";
+}
+
+for my $inf (@$sidinf) {
+    my $histo_jsontext =
+      rahisto( \@metric_ary, $tmprmon, undef, $inf->{'saddr'} );
+    if ( !defined $histo_jsontext ) {
+        croak "no json data";
+    }
+
+    my $histo_jsonhref = decode_json($histo_jsontext);
+    if ( !defined $histo_jsonhref ) {
+        croak "unable to decode rahisto json";
+    }
+
+    my $tnam = rahisto_create_values_table( $dbh, $times, $inf );
+    rahisto_update_values_table( $dbh, $tnam, $histo_jsonhref, $metric,
+        $inf->{'saddr'}, 128, $times );
+    rahisto_update_index_table( $dbh, $inf->{'saddr'}, 128, $inf, $times,
+        $histo_jsonhref, $tnam, $metric );
+}
+
+rahisto_closedb($dbh);

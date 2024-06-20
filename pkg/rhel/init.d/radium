@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 #
 #  Permission to use, copy, modify, and distribute this software and
@@ -44,7 +44,7 @@ fi
 # default, change DAEMON_ARGS in /etc/sysconfig/radium 
 #
 
-DAEMON_ARGS="-d"
+DAEMON_ARGS=""
 
 
 # Set radium path by defining $ARGUSHOME for this script.
@@ -67,7 +67,7 @@ start() {
 	# Start daemons.
 
 	echo -n "Starting radium: "
-	radium $DAEMON_ARGS > /dev/null 2>&1 && success || failure
+	radium -d $DAEMON_ARGS > /dev/null 2>&1 && success || failure
 	RETVAL=$?
 	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/radium
 	echo

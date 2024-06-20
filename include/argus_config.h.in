@@ -6,6 +6,9 @@
 /* Using Argus memory */
 #undef ARGUSMEMDEBUG
 
+/* Path to curl executable */
+#undef ARGUS_CURLEXE
+
 /* Using curses */
 #undef ARGUS_CURSES
 
@@ -17,6 +20,9 @@
 
 /* Description */
 #undef ARGUS_GEOIP
+
+/* Description */
+#undef ARGUS_GEOIP2
 
 /* Using System history routines */
 #undef ARGUS_HISTORY
@@ -75,11 +81,23 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
+/* Define to 1 if you have the <arpa/nameser_compat.h> header file. */
+#undef HAVE_ARPA_NAMESER_COMPAT_H
+
+/* Define to 1 if you have the <arpa/nameser.h> header file. */
+#undef HAVE_ARPA_NAMESER_H
+
 /* Define to 1 if you have the `backtrace' function. */
 #undef HAVE_BACKTRACE
 
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
+
+/* Have clock_gettime */
+#undef HAVE_CLOCK_GETTIME
+
+/* Have clock_nanosleep */
+#undef HAVE_CLOCK_NANOSLEEP
 
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
@@ -127,6 +145,9 @@
    */
 #undef HAVE_DIRENT_H
 
+/* Define to 1 if you have the <dns_sd.h> header file. */
+#undef HAVE_DNS_SD_H
+
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
 
@@ -138,6 +159,9 @@
 
 /* Define to 1 if you have the `ether_hostton' function. */
 #undef HAVE_ETHER_HOSTTON
+
+/* Define to 1 if you have the <EXTERN.h> header file. */
+#undef HAVE_EXTERN_H
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
@@ -162,6 +186,9 @@
 
 /* Define to 1 if you have the `gethostname' function. */
 #undef HAVE_GETHOSTNAME
+
+/* Define to 1 if you have the `gethostuuid' function. */
+#undef HAVE_GETHOSTUUID
 
 /* Define to 1 if you have the `getpass' function. */
 #undef HAVE_GETPASS
@@ -190,14 +217,29 @@
 /* Define to 1 if you have the `isascii' function. */
 #undef HAVE_ISASCII
 
+/* Define to 1 if you have the `isatty' function. */
+#undef HAVE_ISATTY
+
+/* Description */
+#undef HAVE_LIBCARES
+
+/* Define to 1 if you have a functional curl library. */
+#undef HAVE_LIBCURL
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
 
+/* Define to 1 if you have the <linux/uuid.h> header file. */
+#undef HAVE_LINUX_UUID_H
+
 /* Define to 1 if you have the `localtime_r' function. */
 #undef HAVE_LOCALTIME_R
+
+/* Description */
+#undef HAVE_MACHINE_ID
 
 /* Define to 1 if your system has a GNU libc compatible `malloc' function, and
    to 0 otherwise. */
@@ -205,6 +247,9 @@
 
 /* Define to 1 if you have the <malloc.h> header file. */
 #undef HAVE_MALLOC_H
+
+/* Define to 1 if you have the `memalign' function. */
+#undef HAVE_MEMALIGN
 
 /* Define to 1 if you have the `memchr' function. */
 #undef HAVE_MEMCHR
@@ -245,11 +290,17 @@
 /* Define to 1 if you have the `openlog' function. */
 #undef HAVE_OPENLOG
 
+/* Define to 1 if you have the `posix_memalign' function. */
+#undef HAVE_POSIX_MEMALIGN
+
 /* Define to 1 if you have the `pow' function. */
 #undef HAVE_POW
 
 /* Define to 1 if you have the `putenv' function. */
 #undef HAVE_PUTENV
+
+/* Define to 1 if you have the <Python.h> header file. */
+#undef HAVE_PYTHON_H
 
 /* Define to 1 if you have the <readline/readline.h> header file. */
 #undef HAVE_READLINE_READLINE_H
@@ -399,6 +450,9 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
+/* Define to 1 if you have the <sys/systm.h> header file. */
+#undef HAVE_SYS_SYSTM_H
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #undef HAVE_SYS_TIME_H
 
@@ -410,9 +464,6 @@
 
 /* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
 #undef HAVE_SYS_WAIT_H
-
-/* Using Tcp wrappers */
-#undef HAVE_TCP_WRAPPER
 
 /* Define to 1 if you have the <termios.h> header file. */
 #undef HAVE_TERMIOS_H
@@ -436,6 +487,12 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the <uuid.h> header file. */
+#undef HAVE_UUID_H
+
+/* Define to 1 if you have the <uuid/uuid.h> header file. */
+#undef HAVE_UUID_UUID_H
 
 /* Define to 1 if you have the <values.h> header file. */
 #undef HAVE_VALUES_H
@@ -473,6 +530,69 @@
 /* Description */
 #undef LBL_ALIGN
 
+/* Defined if libcurl supports AsynchDNS */
+#undef LIBCURL_FEATURE_ASYNCHDNS
+
+/* Defined if libcurl supports IDN */
+#undef LIBCURL_FEATURE_IDN
+
+/* Defined if libcurl supports IPv6 */
+#undef LIBCURL_FEATURE_IPV6
+
+/* Defined if libcurl supports KRB4 */
+#undef LIBCURL_FEATURE_KRB4
+
+/* Defined if libcurl supports libz */
+#undef LIBCURL_FEATURE_LIBZ
+
+/* Defined if libcurl supports NTLM */
+#undef LIBCURL_FEATURE_NTLM
+
+/* Defined if libcurl supports SSL */
+#undef LIBCURL_FEATURE_SSL
+
+/* Defined if libcurl supports SSPI */
+#undef LIBCURL_FEATURE_SSPI
+
+/* Defined if libcurl supports DICT */
+#undef LIBCURL_PROTOCOL_DICT
+
+/* Defined if libcurl supports FILE */
+#undef LIBCURL_PROTOCOL_FILE
+
+/* Defined if libcurl supports FTP */
+#undef LIBCURL_PROTOCOL_FTP
+
+/* Defined if libcurl supports FTPS */
+#undef LIBCURL_PROTOCOL_FTPS
+
+/* Defined if libcurl supports HTTP */
+#undef LIBCURL_PROTOCOL_HTTP
+
+/* Defined if libcurl supports HTTPS */
+#undef LIBCURL_PROTOCOL_HTTPS
+
+/* Defined if libcurl supports IMAP */
+#undef LIBCURL_PROTOCOL_IMAP
+
+/* Defined if libcurl supports LDAP */
+#undef LIBCURL_PROTOCOL_LDAP
+
+/* Defined if libcurl supports POP3 */
+#undef LIBCURL_PROTOCOL_POP3
+
+/* Defined if libcurl supports RTSP */
+#undef LIBCURL_PROTOCOL_RTSP
+
+/* Defined if libcurl supports SMTP */
+#undef LIBCURL_PROTOCOL_SMTP
+
+/* Defined if libcurl supports TELNET */
+#undef LIBCURL_PROTOCOL_TELNET
+
+/* Defined if libcurl supports TFTP */
+#undef LIBCURL_PROTOCOL_TFTP
+
 /* Define to 1 if `lstat' dereferences a symlink specified with a trailing
    slash. */
 #undef LSTAT_FOLLOWS_SLASHED_SYMLINK
@@ -494,9 +614,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#undef RETSIGTYPE
 
 /* Define to the type of arg 1 for `select'. */
 #undef SELECT_TYPE_ARG1
@@ -562,6 +679,9 @@
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
+
+/* Define curl_free() as free() if our version of curl lacks curl_free. */
+#undef curl_free
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t

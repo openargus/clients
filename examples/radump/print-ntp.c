@@ -23,10 +23,12 @@
  *   loosely based on print-bootp.c
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <argus_util.h>
 #include <argus_client.h>
@@ -138,7 +140,7 @@ ntp_print(register const u_char *cp, u_int length)
             break;
 
          case PRIM_REF:
-            if (fn_printn((u_char *)&(bp->refid), 4, snapend, ArgusBuf))
+            if (fn_printn((u_char *)&(bp->refid), 4, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
                goto trunc;
             break;
 

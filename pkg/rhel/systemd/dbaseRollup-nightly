@@ -1,0 +1,276 @@
+#!/usr/bin/perl
+#
+#   Argus-5.0 Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2024 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#   dbaseRollup-nightly - Rollup Argus Database nightly scripts to
+#                         manage many databases.
+#
+#
+# Complain about undeclared variables
+use v5.6.0;
+use strict;
+use warnings;
+use Carp;
+use Data::Dumper;
+
+use POSIX;
+use Time::Local;
+use Switch;
+
+use DBI;
+use File::Temp qw/ :POSIX /;
+use File::Which qw/ which where /;
+
+my $debug       = 0;
+my $dryrun      = 0;
+my $database;
+
+# opendb("databasename")
+sub opendb {
+    my ($dbase)  = @_;
+    my %attr     = ( PrintError => $debug, RaiseError => 0 );
+    my $dbuser   = 'root';
+    my $password = q{};
+    my $dsn      = "DBI:mysql:$dbase";
+    my $dbh      = DBI->connect( $dsn, $dbuser, $password, \%attr );
+    return $dbh;                     # undefined on error
+}
+
+sub closedb {
+    my ($dbh) = @_;
+
+    $dbh->disconnect();
+    return 0;
+}
+
+# return the number of rows in table.  return 0 if table is empty
+# or an error ocurred.
+sub row_count {
+    my ($dbh, $table) = @_;
+    my $query = "SELECT COUNT(*) from $table";
+    my $sth = $dbh->prepare($query);
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return 0;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return 0;
+    }
+
+    my $aryref = $sth->fetchrow_arrayref;
+    $sth->finish;
+    if ( $debug > 0 ) {
+        print "DEBUG: table $table has @${aryref[0]} rows\n";
+    }
+    return @$aryref[0];
+}
+
+# return 0 on success, undefined otherwise
+sub drop_table {
+    my ($dbh, $table) = @_;
+    my $query = "DROP TABLE $table";
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return;
+    }
+
+    $sth->finish;
+    return 0;
+}
+
+# return 0 on success, undefined otherwise
+sub rename_table {
+    my ($dbh, $oldname, $newname) = @_;
+    my $query = "RENAME TABLE $oldname TO $newname";
+    my $sth = $dbh->prepare($query);
+
+    if ( !defined $sth ) {
+        my $sub_name = ( caller(0) )[3];
+        carp "$sub_name: unable to prepare SQL statement";
+        return;
+    }
+
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $sth->finish;
+        return;
+    }
+
+    $sth->finish;
+    return 0;
+}
+
+# $dbaref is an array reference containing
+#   (database, base table name, primary key columns, all columns)
+# $dtime is a string representation of the table name's date component
+#   e.g., 2018_02_12 if operating on the table for Feb 12, 2018.
+#
+sub score_one_table {
+    my ($dbaref, $dtime) = @_;
+
+    my ($db, $table_bn, $keys, $fields) = @$dbaref;
+    my $dburi = "mysql://root\@localhost/$db";
+    my $table = "${table_bn}_${dtime}";
+    my $scorecmd = "rasql -r ${dburi}/${table} -w - | "
+                 . "rascore -f /usr/share/argus-clients/emerging-threats-current.conf"
+                 . "        -r - -r $dburi -m saddr -w - | "
+                 . "rasqlinsert -M time 1d -m $keys -s $fields -w ${dburi}/${table}_rascore";
+    print "DEBUG: ${scorecmd}\n" if $debug;
+    if ( system($scorecmd) != 0 ) {
+        warn "Unable to add score to table ${table}\n";
+        return;
+    }
+
+    my $dbh = opendb($db);
+    if ( ! $dbh ) {
+        warn "Unable to open database $db\n";
+        return;
+    }
+
+    if ( row_count( $dbh, "${table}_rascore" ) > 0 ) {
+        drop_table( $dbh, $table );
+        if ( !defined rename_table( $dbh, "${table}_rascore", $table ) ) {
+            closedb($dbh);
+            return;
+        }
+    } else {
+        warn "rascore generated no output\n";
+    }
+
+    closedb($dbh);
+    return 1;
+}
+
+my $tmpfile = tmpnam();
+
+$ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
+
+# Parse the arguments if any
+my @arglist = ();
+
+my $done        = 0;
+
+my $time = "";
+my ($dtime, $mtime, $ytime);
+
+ARG: while (my $arg = shift(@ARGV)) {
+    if (!$done) {
+      for ($arg) {
+         s/^-debug$//     && do { $debug++; next ARG; };
+         s/^-dryrun$//    && do { $dryrun++; next ARG; };
+         s/^-db$//        && do { $database = shift(@ARGV); next ARG; }; 
+         s/^-dbase$//     && do { $database = shift(@ARGV); next ARG; }; 
+         s/^-t$//         && do { $time  = shift(@ARGV); next ARG; };
+         s/^-time$//      && do { $time  = shift(@ARGV); next ARG; };
+      }
+    } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+   }
+    $arglist[@arglist + 0] = $arg;
+}
+
+if ($time eq "") {
+   my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+   my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+   ($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+
+     $time = sprintf "%4d/%02d/%02d", $year+1900, $mon+1, $mday;
+    $dtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
+    $mtime = sprintf "%4d_%02d", $year+1900, $mon+1;
+    $ytime = sprintf "%4d", $year+1900;
+
+} else {
+   ($dtime = $time) =~ s/\//_/g;
+   my ($year, $mon, $mday) = split("_", $dtime);
+   $mtime = sprintf "%4d_%02d", $year, $mon;
+   $ytime = sprintf "%4d", $year;
+}
+
+print "DEBUG: using date $time for query \n" if $debug;
+
+my $fname        = tmpnam();
+my $rasql        = which 'rasql';
+my $racluster    = which 'racluster';
+my $rasqlinsert  = which 'rasqlinsert';
+
+my @db1 = ( "inventory", "ipAddrs", "sid inf smac saddr", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state trans");
+my @db2 = ( "ipMatrix", "ip", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db3 = ( "dnsMatrix", "dns", "sid inf daddr saddr", "stime ltime sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db4 = ( "etherMatrix", "ether", "sid inf dmac smac", "stime ltime sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
+my @db5 = ( "ether", "ether", "sid inf smac etype", "stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state");
+
+my @databases = \(@db1, @db2, @db3, @db4, @db5);
+
+# first add score DSR to the daily table
+# score_one_table(\@db1, $dtime) or die;
+# Now update the monthly and yearly caches
+
+if (@databases) {
+   foreach my $i (0 .. $#databases) {
+      my $process = 0;
+      my ($db, $table, $keys, $fields) = @{$databases[$i]};
+
+      if (defined $database) {
+         if ($db eq $database) {
+            $process = 1;
+         }
+      } else {
+         $process = 1;
+      }
+
+      if ($process > 0) {
+         my $cmd = "$rasql -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -r mysql://root\@localhost/".$db."/".$table."_".$dtime." -w ".$tmpfile;
+         print "DEBUG: $cmd \n" if $debug;
+         `$cmd`;
+
+         if (-e $tmpfile) {
+            my $minsert = "$rasqlinsert -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -M cache time 1M -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$mtime." -s ".$fields;
+            my $yinsert = "$rasqlinsert -XF /srv/www/cgi-bin/conf/ra.conf -M nocorrect -M cache time 1y -r ".$tmpfile." -m $keys -w mysql://root\@localhost/".$db."/".$table."_".$ytime." -s ".$fields;
+
+            print "DEBUG: $minsert \n" if $debug;
+            if ($dryrun == 0) {
+               `$minsert`;
+            }
+
+            print "DEBUG: $yinsert \n" if $debug;
+            if ($dryrun == 0) {
+               `$yinsert`;
+            }
+            print "DEBUG: rm -f $tmpfile\n" if $debug;
+            `rm -f $tmpfile`;
+         }
+      }
+   }
+}
+

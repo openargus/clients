@@ -1,0 +1,63 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RADNS.CONF 1 "23 October 2019" "radns.conf 5.0.0"
+.SH NAME
+\fBradns.conf\fP \- \fBradns\fP resource file.
+.SH SYNOPSIS
+.B radns.conf
+.SH DESCRIPTION
+
+Radns will open this radns.conf if its installed as /etc/radns.conf.
+It will also search for this file as radns.conf in directories
+specified in $RADNSPATH, or $RADNSHOME, $RADNSHOME/lib,
+or $HOME, $HOME/lib, and parse it to set common configuration
+options.  All values in this file can be overriden by command
+line options, or other files of this format that can be read in
+using the -F option.
+
+.SH Variable Syntax
+
+Variable assignments must be of the form:
+.nf
+  VARIABLE=
+.fi
+with no white space between the VARIABLE and the '=' sign.
+Quotes are optional for string arguments, but if you want
+to embed comments, then quotes are required.
+
+.SH RADNS_ROOT_DOMAINS
+
+This comma separated list of NLD DNS domain names represent root
+domain names that are local to this \fBradns\P instance.
+
+There is no default value.
+
+Commandline equivalent  none
+
+\fBRADNS_ROOT_DOMAINS=\fP"qosient.com"
+
+
+.SH RADNS_ROOT_DEFAULT
+
+This variable assigns the default NLD DNS domain name for this region.
+DNS queries do not require the name to be fully qualified (FQDN). When the
+name in a query is not a FQDN, radns will use this \fBRADNS_ROOT_DEFAULT\fP
+to complete the name that is stored in its DNS cache.
+
+There is no default value.
+
+Commandline equivalent  none
+
+\fBRADNS_ROOT_DEFAULT=\fP"qosient.com"
+
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient  All rights reserved.
+
+.RE
+.SH SEE ALSO
+.BR radns (1)

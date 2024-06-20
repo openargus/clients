@@ -1,0 +1,200 @@
+#!/usr/bin/perl
+#
+#   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2024 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+# Distill the nightly DHCP database tables to get matrix and other types
+# of data used by the qosient WWW interface.
+
+use POSIX qw(strftime);
+use Time::Local;
+use qosient::util;
+use DBI;
+use Carp;
+use strict;
+use warnings;
+use Try::Tiny;
+
+my $debug        = 0;
+my $drop         = 0;
+my $time         = q{};                  # "yesterday" according to parsetime()
+my $dbase        = q{dhcpFlows};
+my $dbase_matrix = q{dhcpMatrix};
+my $table_detail = q{dhcp_detail_%Y_%m_%d};
+my $table_matrix = q{dhcp_matrix_%Y_%m_%d};
+my $table_ethers = q{dhcp_ethers_%Y_%m_%d};
+my $dsn;
+my $dbuser           = 'root';
+my $password         = q{};
+my %attr             = ( PrintError => 1, RaiseError => 0 );
+my $hostname_penalty = 2;
+my $errcount         = 0;
+
+sub usage {
+    print STDERR "usage: radhcp-nightly-derived [-dbase <database-name>] \\\n"
+      . "                              [-dbase-matrix <database-name>] \\\n"
+      . "                              [-table <IN-detail-table-name>] \\\n"
+      . "                              [-matrix <OUT-matrix-table-name>] \\\n"
+      . "                              [-ethers <OUT-ethers-table-name>] \\\n"
+      . "                              [-t <timerange>] [-drop] [-debug]\n";
+    return 1;
+}
+
+# Parse the arguments if any
+my @arglist;
+my $done = 0;
+ARG: while ( my $arg = shift(@ARGV) ) {
+    if ( !$done ) {
+        for ($arg) {
+            s/^-debug$//         && do { $debug++; next ARG; };
+            s/^-drop$//          && do { $drop++;  next ARG; };
+            s/^-t$//             && do { $time         = shift(@ARGV); next ARG; };
+            s/^-dbase-matrix$//  && do { $dbase_matrix = shift(@ARGV); next ARG; };
+            s/^-dbase$//         && do { $dbase        = shift(@ARGV); next ARG; };
+            s/^-table$//         && do { $table_detail = shift(@ARGV); next ARG; };
+            s/^-matrix$//        && do { $table_matrix = shift(@ARGV); next ARG; };
+            s/^-ethers$//        && do { $table_ethers = shift(@ARGV); next ARG; };
+            s/^-help//           && do { usage; exit(0); }
+        }
+    }
+    else {
+        for ($arg) {
+            s/\(/\\\(/ && do { ; };
+            s/\)/\\\)/ && do { ; };
+        }
+    }
+    $arglist[ @arglist + 0 ] = $arg;
+}
+
+my @time = parsetime($time);
+$table_detail = strftime $table_detail, @time;
+$table_matrix = strftime $table_matrix, @time;
+$table_ethers = strftime $table_ethers, @time;
+$dsn          = "DBI:mysql:$dbase";
+
+if ($debug) {
+    print "DEBUG: time=$time\n";
+    print "DEBUG: table_detail=$table_detail\n";
+    print "DEBUG: table_matrix=$table_matrix\n";
+    print "DEBUG: table_ethers=$table_ethers\n";
+    print "DEBUG: dsn=$dsn\n";
+}
+
+sub mkether_table {
+    my ($dbh) = @_;
+    my $query =
+        "CREATE TABLE $table_ethers AS "
+      . "SELECT clientmac, requested_hostname, hostname, 1 AS score "
+      . "FROM $table_detail WHERE 1 = 0";
+    my $sth = $dbh->prepare($query);
+    my $res = $sth->execute;
+    $sth->finish;
+    return $res;
+}
+
+sub mkether {
+    my ( $dbh, $comp, $score ) = @_;
+
+    my $query =
+        "INSERT INTO $table_ethers "
+      . "SELECT clientmac, requested_hostname, hostname, $score AS score "
+      . "FROM $table_detail "
+      . "WHERE (requested_hostname <> '' OR hostname <> '') "
+      . "AND servermac $comp clientmac "
+      . "GROUP BY clientmac, requested_hostname, hostname";
+
+    my $sth = $dbh->prepare($query);
+    my $res = $sth->execute;
+    $sth->finish;
+    return $res;
+}
+
+if (   ( $dbase_matrix.$table_matrix eq $dbase.$table_detail )
+    || ( $dbase.$table_ethers eq $dbase.$table_detail ) )
+{
+    croak 'Input table cannot also be output table';
+}
+
+my $dbh = DBI->connect( $dsn, $dbuser, $password, \%attr );
+if ( !defined $dbh ) {
+    croak 'Cannot connect to database';
+}
+
+$dbh->do("CREATE DATABASE IF NOT EXISTS $dbase_matrix");
+
+$dbh->{AutoCommit} = 0;
+$dbh->{RaiseError} = 1;
+
+try {
+    my $query =
+        "CREATE TABLE $dbase_matrix.$table_matrix AS "
+      . "SELECT servermac, clientmac, MIN(stime) AS stime, "
+      . "MAX(ltime)-MIN(stime) AS dur, count(stime) AS lease_count, "
+      . "MIN(nameserver_count) AS nameserver_count_min, "
+      . "MAX(nameserver_count) AS nameserver_count_max "
+      . "FROM $table_detail GROUP BY clientmac, servermac";
+
+    my $sth = $dbh->prepare($query);
+    my $res = $sth->execute;
+    if ( !defined $res ) {
+        $errcount = $errcount + 1;
+    }
+    $sth->finish;
+
+    # add min/max timeservers
+    # later add min/max relay hops
+
+    $res = mkether_table($dbh);
+    if ( !defined $res ) {
+        $dbh->disconnect();
+        exit(1);
+    }
+
+    # Create table entries when srvr mac != client mac
+    $res = mkether( $dbh, q(<>), 1 );
+    if ( !defined $res ) {
+        $errcount = $errcount + 1;
+    }
+
+    # Create table entries when srvr mac == client mac
+    $res = mkether( $dbh, q(=), 16 );
+    if ( !defined $res ) {
+        $errcount = $errcount + 1;
+    }
+
+    # Increase the score (toward "bad") a little if the DHCP server did not
+    # respond with the hostname of the client.
+    $sth =
+      $dbh->prepare( "UPDATE $table_ethers "
+          . "SET score = GREATEST(LEAST(score+$hostname_penalty, 16), 1) "
+          . "WHERE hostname = \"\"" );
+    $sth->execute;
+    $sth->finish;
+
+    $dbh->commit;
+}
+catch {
+    carp "Transaction aborted $@";
+    eval { $dbh->rollback };
+    eval { $errcount = $errcount + 1 };
+};
+
+$dbh->disconnect();
+
+if ( $errcount > 0 ) {
+    exit(1);
+}

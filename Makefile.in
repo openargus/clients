@@ -1,23 +1,25 @@
-#
-#  Argus Client Software. Tools to read, analyze and manage Argus data.
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-# 
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-# 
+#  This program is free software, released under the GNU General
+#  Public License; you can redistribute it and/or modify it under the terms
+#  of the GNU General Public License as published by the Free Software
+#  Foundation; either version 3, or any later version.
+#
+#  Other licenses are available through QoSient, LLC.
+#  Inquire at info@qosient.com.
+#
+#  This program is distributed WITHOUT ANY WARRANTY; without even the
+#  implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the * GNU General Public License for more details.
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
-# 
-# 
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+#
 
 NOOP = $(SHELL) -c true
 NOECHO = @
@@ -31,56 +33,54 @@ INSTALL_DATA = @INSTALL_DATA@
 DEFS = @DEFS@
 LIBS = @LIBS@
 WRAPLIBS = @WRAPLIBS@
+VERSION = @PACKAGE_VERSION@.@PACKAGE_RELEASE@
 
-CFLAGS = -g
+CFLAGS = -g $(EXTRA_CFLAGS)
 LDFLAGS = -g
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
+perlextlib = @PERL_EXT_LIB@
 
 srcdir = @srcdir@
 incdir = @prefix@/include
-docdir = @datadir@/doc/argus-clients-3.0
+docdir = @datadir@/doc/argus-clients-5.0
 
 #### End of system configuration section. ####
 
 SHELL = /bin/sh
 
 DIRS = @DIRS@
-INSTDIRS = ./clients ./examples ./common ./include
+INSTDIRS = @DIRS@ ./include
+OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
+CLEANDIRS = @DIRS@ ./pkg
 
-DISTFILES = AUTHORS CHANGES COPYING CREDITS ChangeLog INSTALL MANIFEST Makefile.in README VERSION \
-	include lib man support aclocal.m4 acsite.m4 config configure configure.ac .threads \
-	bin clients examples common debian pkg
+
+DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \
+	include lib man support aclocal.m4 acsite.m4 config configure configure.ac \
+	.threads bin clients examples common debian pkg perllib pythonlib README.rst VERSION 
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
 
-.PHONY: install installdirs
+.PHONY: install installdirs install-perl uninstall-perl
 
 all: force
-	@for i in  $(DIRS) ; do \
+	@set -e ; for i in  $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
 		(cd $$i > /dev/null; $(MAKE));\
 		fi; \
 	done
 
-.PHONY: all
+.PHONY: all uninstall uninstall-perl
 
 clients: common
 examples: common
 include: common
 
-install:  force
-	$(MAKE) installdirs
-	[ -d $(DESTDIR)@prefix@ ] || \
-		(mkdir -p $(DESTDIR)@prefix@; chmod 755 $(DESTDIR)@prefix@)
-	[ -d $(DESTDIR)@bindir@ ] || \
-		(mkdir -p $(DESTDIR)@bindir@; chmod 755 $(DESTDIR)@bindir@)
-	[ -d $(DESTDIR)$(exec_prefix)/argus ] || \
-		(mkdir -p $(DESTDIR)$(exec_prefix)/argus; chmod 755 $(DESTDIR)$(exec_prefix)/argus)
+install: install-perl force installdirs
 	@for i in  $(INSTDIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
@@ -90,6 +90,7 @@ install:  force
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/rarc $(DESTDIR)$(prefix)/argus/rarc
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/delegated-ipv4-latest $(DESTDIR)$(prefix)/argus/delegated-ipv4-latest
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/wireshark.manuf.txt $(DESTDIR)$(prefix)/argus/wireshark.manuf.txt
+	$(INSTALL) -m 0644 $(srcdir)/support/Config/std.sig $(DESTDIR)@datarootdir@/argus-clients/std.sig
 	$(INSTALL) -m 0755 $(srcdir)/bin/argusclientbug $(DESTDIR)@bindir@/argusclientbug
 	[ -d $(DESTDIR)@mandir@ ] || \
 		(mkdir -p $(DESTDIR)@mandir@; chmod 755 $(DESTDIR)@mandir@)
@@ -113,6 +114,8 @@ install:  force
 		$(DESTDIR)@mandir@/man1/raevent.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rafilteraddr.1 \
 		$(DESTDIR)@mandir@/man1/rafilteraddr.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragen.1 \
+		$(DESTDIR)@mandir@/man1/ragen.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragraph.1 \
 		$(DESTDIR)@mandir@/man1/ragraph.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ragrep.1 \
@@ -129,14 +132,18 @@ install:  force
 		$(DESTDIR)@mandir@/man1/rapolicy.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasort.1 \
 		$(DESTDIR)@mandir@/man1/rasort.1
-	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasplit.1 \
-		$(DESTDIR)@mandir@/man1/rasplit.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/ramanage.1 \
+		$(DESTDIR)@mandir@/man1/ramanage.1
+ifndef WORKSTATION_BUILD
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasql.1 \
 		$(DESTDIR)@mandir@/man1/rasql.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqlcheckconf.1 \
+		$(DESTDIR)@mandir@/man1/rasqlcheckconf.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqlinsert.1 \
 		$(DESTDIR)@mandir@/man1/rasqlinsert.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqltimeindex.1 \
 		$(DESTDIR)@mandir@/man1/rasqltimeindex.1
+endif
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rastream.1 \
 		$(DESTDIR)@mandir@/man1/rastream.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rastrip.1 \
@@ -166,10 +173,17 @@ install:  force
 		(mkdir -p $(DESTDIR)@prefix@; chmod 755 $(DESTDIR)@prefix@)
 	[ -d $(DESTDIR)$(docdir) ] || \
 		(mkdir -p $(DESTDIR)$(docdir); chmod 755 $(DESTDIR)$(docdir))
-	$(INSTALL) -m 0644 $(srcdir)/README $(DESTDIR)$(docdir)
-	$(INSTALL) -m 0644 $(srcdir)/COPYING $(DESTDIR)$(docdir)
+	$(INSTALL) -m 0644 $(srcdir)/README.rst $(DESTDIR)$(docdir)
 
-uninstall:
+install-perl:
+ifndef WORKSTATION_BUILD
+	@set -e ; \
+	mkdir -p $(DESTDIR)$(perlextlib)/qosient ; \
+	$(INSTALL) -m 0644 $(srcdir)/lib/perl5/qosient/util.pm \
+	           $(DESTDIR)$(perlextlib)/qosient/util.pm
+endif
+
+uninstall: uninstall-perl
 	@for i in  $(INSTDIRS) ; do \
 		if [ -d $$i ] ; then \
 			echo "making in $$i"; \
@@ -186,6 +200,7 @@ uninstall:
 	rm -f $(DESTDIR)@mandir@/man1/radump.1
 	rm -f $(DESTDIR)@mandir@/man1/raevent.1
 	rm -f $(DESTDIR)@mandir@/man1/rafilteraddr.1
+	rm -f $(DESTDIR)@mandir@/man1/ragen.1
 	rm -f $(DESTDIR)@mandir@/man1/ragraph.1
 	rm -f $(DESTDIR)@mandir@/man1/ragrep.1
 	rm -f $(DESTDIR)@mandir@/man1/rahisto.1
@@ -194,8 +209,8 @@ uninstall:
 	rm -f $(DESTDIR)@mandir@/man1/rapath.1
 	rm -f $(DESTDIR)@mandir@/man1/rapolicy.1
 	rm -f $(DESTDIR)@mandir@/man1/rasort.1
-	rm -f $(DESTDIR)@mandir@/man1/rasplit.1
 	rm -f $(DESTDIR)@mandir@/man1/rasql.1
+	rm -f $(DESTDIR)@mandir@/man1/rasqlcheckconf.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqlinsert.1
 	rm -f $(DESTDIR)@mandir@/man1/rasqltimeindex.1
 	rm -f $(DESTDIR)@mandir@/man1/rastream.1
@@ -206,12 +221,25 @@ uninstall:
 	rm -f $(DESTDIR)@mandir@/man5/ralabel.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/radium.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/ranonymize.5
+	rm -f $(DESTDIR)@mandir@/man5/racolor.conf.5
 	rm -f $(DESTDIR)@mandir@/man8/radium.8
+	rm -f $(DESTDIR)@mandir@/man8/ragen.8
 	rm -rf $(DESTDIR)$(docdir)
 	rm -rf $(DESTDIR)$(prefix)/argus
+	rm -f $(DESTDIR)@datarootdir@/argus-clients/std.sig
+
+uninstall-perl:
+ifndef WORKSTATION_BUILD
+	rm -f $(DESTDIR)$(perlextlib)/qosient/util.pm
+endif
 
 installdirs:
-	${srcdir}/config/mkinstalldirs $(bindir) $(infodir)
+	${srcdir}/config/mkinstalldirs \
+	  $(DESTDIR)@sbindir@ \
+	  $(DESTDIR)@bindir@ \
+	  $(DESTDIR)@infodir@ \
+          $(DESTDIR)$(prefix)/argus \
+	  $(DESTDIR)@datarootdir@/argus-clients
 
 Makefile: Makefile.in config.status
 	$(SHELL) config.status
@@ -222,11 +250,13 @@ config.status: configure
 TAGS: $(SRCS)
 	etags $(SRCS)
 
+
 .PHONY: clean mostlyclean distclean realclean dist
 
 clean: force
 	rm -f config.log
-	@for i in $(DIRS) ; do \
+	rm -f pkg/osx/*.pkg
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) clean ); \
 		fi; \
@@ -234,13 +264,14 @@ clean: force
 
 mostlyclean: clean
 
-distclean: clean
+distclean: force
 	rm -f config.*
 	rm -f TAGS
 	rm -f lib/*.a
 	rm -f bin/ra*
 	rm -f Makefile
-	@for i in $(DIRS) ; do \
+	rm -f *~
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
@@ -251,14 +282,22 @@ clobber realclean: force
 	rm -f lib/*.a
 	rm -f include/argus_config.h
 	rm -f include/tm.h
+	rm -f include/*~
 	rm -f bin/ra*
+	rm -f pkg/osx/*.pkg
+	rm -rf pkg/osx/BUILDROOT/
 	rm -rf log
-	@for i in $(DIRS) ; do \
+	rm -rf autom4te.cache
+
+	@for i in $(CLEANDIRS) ; do \
 		if [ -d $$i ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
 	done
+
+	rm -f *~
 	rm -f ./Makefile config.*
+
 
 dist: $(DISTFILES) distclean
 	echo argus-clients-`cat VERSION` > .fname
@@ -266,7 +305,7 @@ dist: $(DISTFILES) distclean
 	mkdir `cat .fname`
 	tar cf - $(DISTFILES) | (cd `cat .fname`; tar xpf -)
 	ls -lR `cat .fname` | fgrep CVS: | sed 's/:$///' > exfile
-	tar -X exfile -chozf `cat .fname`.tar.gz `cat .fname`
+	env COPYFILE_DISABLE=1 tar -X exfile -chzf `cat .fname`.tar.gz `cat .fname`
 	rm -rf `cat .fname` .fname exfile
 
 force:  /tmp

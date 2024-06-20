@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_metric.h#36 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_metric.h#11 $
+ * $DateTime: 2016/10/03 10:21:44 $
+ * $Change: 3208 $
  */
 
 #ifndef ArgusMetric_h
@@ -32,9 +32,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		115
-#define MAX_METRIC_ALG_TYPES		115
-
+#define ARGUS_MAX_METRIC_ALG		134
+#define MAX_METRIC_ALG_TYPES		134
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -47,6 +46,10 @@ long long ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns);
 long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcId (struct ArgusRecordStruct *ns);
+double ArgusFetchSID (struct ArgusRecordStruct *ns);
+double ArgusFetchInf (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns);
+double ArgusFetchDstStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchLastTime (struct ArgusRecordStruct *ns);
 double ArgusFetchAvgDuration (struct ArgusRecordStruct *ns);
@@ -58,10 +61,18 @@ double ArgusFetchDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchuSecDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcMac (struct ArgusRecordStruct *ns);
 double ArgusFetchDstMac (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcMacOui (struct ArgusRecordStruct *ns);
+double ArgusFetchDstMacOui (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcAddr (struct ArgusRecordStruct *ns);
 double ArgusFetchDstAddr (struct ArgusRecordStruct *ns);
+double ArgusFetchEtherType (struct ArgusRecordStruct *ns);
 double ArgusFetchProtocol (struct ArgusRecordStruct *ns);
 double ArgusFetchIpId (struct ArgusRecordStruct *ns);
+
+double ArgusFetchLocality (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcLocality (struct ArgusRecordStruct *ns);
+double ArgusFetchDstLocality (struct ArgusRecordStruct *ns);
+
 double ArgusFetchSrcPort (struct ArgusRecordStruct *ns);
 double ArgusFetchDstPort (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcMpls (struct ArgusRecordStruct *ns);
@@ -103,7 +114,6 @@ double ArgusFetchDstPktsCount (struct ArgusRecordStruct *ns);
 double ArgusFetchAppByteCount (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcAppByteCount (struct ArgusRecordStruct *ns);
 double ArgusFetchDstAppByteCount (struct ArgusRecordStruct *ns);
-
 double ArgusFetchAppByteRatio (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcTcpBase (struct ArgusRecordStruct *ns);
@@ -115,10 +125,14 @@ double ArgusFetchSrcTcpMax (struct ArgusRecordStruct *ns);
 double ArgusFetchDstTcpMax (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcGap (struct ArgusRecordStruct *ns);
 double ArgusFetchDstGap (struct ArgusRecordStruct *ns);
-/*
+
 double ArgusFetchSrcDup (struct ArgusRecordStruct *ns);
 double ArgusFetchDstDup (struct ArgusRecordStruct *ns);
-*/
+
+double ArgusFetchIntFlow (struct ArgusRecordStruct *ns);
+double ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns);
+double ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns);
+double ArgusFetchIntFlowStdDev (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcIntPktAct (struct ArgusRecordStruct *ns);
@@ -149,6 +163,9 @@ double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcWindow (struct ArgusRecordStruct *ns);
 double ArgusFetchDstWindow (struct ArgusRecordStruct *ns);
+double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
+
 double ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchDeltaLastTime (struct ArgusRecordStruct *ns);
@@ -315,7 +332,7 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
 #define ARGUSMETRICDSTWINDOW  63
    {"dwin", ArgusFetchDstWindow},
 #define ARGUSMETRICDELTADUR  64
-   {"deldur", ArgusFetchDeltaDuration},
+   {"dldur", ArgusFetchDeltaDuration},
 #define ARGUSMETRICDELTASTARTTIME 65
    {"dlstime", ArgusFetchDeltaStartTime},
 #define ARGUSMETRICDELTALASTTIME 66
@@ -396,7 +413,6 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"sgap", ArgusFetchSrcGap},
 #define ARGUSMETRICDSTTCPGAP  104
    {"dgap", ArgusFetchDstGap},
-
 #define ARGUSMETRICSRCINTPKTACTMIN  105
    {"sintpktactmin", ArgusFetchSrcIntPktActMin},
 #define ARGUSMETRICSRCINTPKTIDLMIN  106
@@ -405,7 +421,6 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"sintpktactmax", ArgusFetchSrcIntPktActMax},
 #define ARGUSMETRICSRCINTPKTIDLMAX  108
    {"sintpktidlmax", ArgusFetchSrcIntPktIdlMax},
-
 #define ARGUSMETRICDSTINTPKTACTMIN  109
    {"dintpktactmin", ArgusFetchDstIntPktActMin},
 #define ARGUSMETRICDSTINTPKTIDLMIN  110
@@ -414,17 +429,48 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    {"dintpktactmax", ArgusFetchDstIntPktActMax},
 #define ARGUSMETRICDSTINTPKTIDLMAX  112
    {"dintpktidlmax", ArgusFetchDstIntPktIdlMax},
-
 #define ARGUSMETRICAPPBYTERATIO  113
    {"abr", ArgusFetchAppByteRatio},
 #define ARGUSMETRICPRODUCERCONSUMERRATIO  114
    {"pcr", ArgusFetchAppByteRatio},
-/*
-#define ARGUSMETRICSRCDUP  115
+#define ARGUSMETRICLOCALITY        115
+   {"loc", ArgusFetchLocality},
+#define ARGUSMETRICSRCLOCALITY     116
+   {"sloc", ArgusFetchSrcLocality},
+#define ARGUSMETRICDSTLOCALITY     117
+   {"dloc", ArgusFetchDstLocality},
+#define ARGUSMETRICSRCMACOUI       118
+   {"soui", ArgusFetchSrcMacOui},
+#define ARGUSMETRICDSTMACOUI       119
+   {"doui", ArgusFetchDstMacOui},
+#define ARGUSMETRICSRCDUP          120
    {"sdup", ArgusFetchSrcDup},
-#define ARGUSMETRICDSTDUP  116
+#define ARGUSMETRICDSTDUP          121
    {"ddup", ArgusFetchDstDup},
-*/
+#define ARGUSMETRICSID		   122
+   {"sid", ArgusFetchSID},
+#define ARGUSMETRICINF		   123
+   {"inf", ArgusFetchInf},
+#define ARGUSMETRICETHERTYPE       124
+   {"etype", ArgusFetchEtherType},
+#define ARGUSMETRICMEANIDLE        125
+   {"idlmean", ArgusFetchIdleMean},
+#define ARGUSMETRICMINIDLE         126
+   {"idlmin", ArgusFetchIdleMin},
+#define ARGUSMETRICMAXIDLE         127
+   {"idlmax", ArgusFetchIdleMax},
+#define ARGUSMETRICSRCMSS          128
+   {"smss", ArgusFetchSrcMaxSeg},
+#define ARGUSMETRICDSTMSS          129
+   {"dmss", ArgusFetchDstMaxSeg},
+#define ARGUSMETRICINTFLOW         130
+   { "intflow", ArgusFetchIntFlow},
+#define ARGUSMETRICINTFLOWMAX      131
+   { "intflowmax", ArgusFetchIntFlowMax},
+#define ARGUSMETRICINTFLOWMIN      132
+   { "intflowmin", ArgusFetchIntFlowMin},
+#define ARGUSMETRICINTFLOWSTDDEV   133
+   { "intflowsdev", ArgusFetchIntFlowStdDev},
 };
 
 #else
@@ -432,7 +478,11 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
 extern struct ArgusFetchValueStruct RaFetchAlgorithmTable[];
 
 extern double ArgusFetchSrcId (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSID (struct ArgusRecordStruct *ns);
+extern double ArgusFetchInf (struct ArgusRecordStruct *ns);
 extern long long ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstStartTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 extern long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchLastTime (struct ArgusRecordStruct *ns);
@@ -447,6 +497,8 @@ extern double ArgusFetchSrcAddr (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstAddr (struct ArgusRecordStruct *ns);
 extern double ArgusFetchProtocol (struct ArgusRecordStruct *ns);
 extern double ArgusFetchIpId (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcLocality (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstLocality (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcPort (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstPort (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcMpls (struct ArgusRecordStruct *ns);
@@ -483,8 +535,32 @@ extern double ArgusFetchDstPktsCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcAppByteCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstAppByteCount (struct ArgusRecordStruct *ns);
-
 extern double ArgusFetchAppByteRatio (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchIntFlow (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchIntFlowStdDev (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchSrcIntPkt (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdl (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPkt (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdl (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchSrcIntPktActMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktActMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdlMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcIntPktIdlMax (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchDstIntPktAct (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdl (struct ArgusRecordStruct *ns);
+
+extern double ArgusFetchDstIntPktActMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktActMax (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdlMin (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstIntPktIdlMax (struct ArgusRecordStruct *ns);
 
 extern double ArgusFetchSrcTcpBase (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstTcpBase (struct ArgusRecordStruct *ns);
@@ -492,11 +568,15 @@ extern double ArgusFetchTcpRtt (struct ArgusRecordStruct *ns);
 extern double ArgusFetchTcpMax (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcWindow (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstWindow (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaLastTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaSrcPkts (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDeltaDstPkts (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcHopCount (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstHopCount (struct ArgusRecordStruct *ns);
 extern double ArgusFetchRetrans (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcRetrans (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstRetrans (struct ArgusRecordStruct *ns);
@@ -527,15 +607,17 @@ extern double ArgusFetchSrcJitterIdl (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitter (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitterAct (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
+extern double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
+extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 
 #define ARGUSMETRICSRCID		0
 #define ARGUSMETRICSTARTTIME		1
 #define ARGUSMETRICLASTTIME		2
 #define ARGUSMETRICTRANSACTIONS		3
 #define ARGUSMETRICDURATION		4
-#define ARGUSMETRICAVGDURATION		5
-#define ARGUSMETRICMINDURATION		6
-#define ARGUSMETRICMAXDURATION		7
+#define ARGUSMETRICMEAN			5
+#define ARGUSMETRICMIN			6
+#define ARGUSMETRICMAX			7
 #define ARGUSMETRICSRCMAC		8
 #define ARGUSMETRICDSTMAC		9
 #define ARGUSMETRICSRCADDR		10
@@ -629,6 +711,35 @@ extern double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
 #define ARGUSMETRICDSTJITTER		98
 #define ARGUSMETRICDSTJITTERACT		99
 #define ARGUSMETRICDSTJITTERIDL		100
+#define ARGUSMETRICSRCMEANPKTSIZE	101
+#define ARGUSMETRICDSTMEANPKTSIZE	102
+#define ARGUSMETRICSRCTCPGAP		103
+#define ARGUSMETRICDSTTCPGAP		104
+#define ARGUSMETRICSRCINTPKTACTMIN	105
+#define ARGUSMETRICSRCINTPKTIDLMIN	106
+#define ARGUSMETRICSRCINTPKTACTMAX	107
+#define ARGUSMETRICSRCINTPKTIDLMAX	108
+#define ARGUSMETRICDSTINTPKTACTMIN	109
+#define ARGUSMETRICDSTINTPKTIDLMIN	110
+#define ARGUSMETRICDSTINTPKTACTMAX	111
+#define ARGUSMETRICDSTINTPKTIDLMAX	112
+#define ARGUSMETRICAPPBYTERATIO		113
+#define ARGUSMETRICPRODUCERCONSUMERRATIO  114
+#define ARGUSMETRICLOCALITY      	115
+#define ARGUSMETRICSRCLOCALITY   	116
+#define ARGUSMETRICDSTLOCALITY   	117
+#define ARGUSMETRICSRCMACOUI     	118
+#define ARGUSMETRICDSTMACOUI     	119
+#define ARGUSMETRICSRCDUP        	120
+#define ARGUSMETRICDSTDUP        	121
+#define ARGUSMETRICSID		 	122
+#define ARGUSMETRICINF		 	123
+#define ARGUSMETRICETHERTYPE     	124
+#define ARGUSMETRICMEANIDLE      	125
+#define ARGUSMETRICMINIDLE       	126
+#define ARGUSMETRICMAXIDLE       	127
+#define ARGUSMETRICSRCMSS        	128
+#define ARGUSMETRICDSTMSS        	129
 #endif
 #ifdef __cplusplus
 }

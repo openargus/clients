@@ -1,0 +1,111 @@
+#!/usr/bin/perl
+#
+#   Argus-5.0 Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2024 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#   matrixData-nightly - nightly scripts to manage matrix databases.
+#                        used to generate matrix tables from Flow table data.
+#
+#
+# Complain about undeclared variables
+use v5.6.0;
+use strict;
+use warnings;
+
+use POSIX;
+use Time::Local;
+use File::Temp qw/ :POSIX /;
+use File::Which qw/ which where /;
+
+$ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
+
+# Parse the arguments if any
+my @arglist = ();
+
+my $debug       = 0;
+my $done        = 0;
+
+my $time = "";
+my $dtime = "";
+my $dbase = "";
+
+ARG: while (my $arg = shift(@ARGV)) {
+    if (!$done) {
+      for ($arg) {
+         s/^-debug$//      && do { $debug++; next ARG; };
+         s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
+         s/^-dbase$//      && do { $dbase = shift(@ARGV); next ARG; };
+      }
+    } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+   }
+    $arglist[@arglist + 0] = $arg;
+}
+
+if ($time eq "") {
+   my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+   my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+   ($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+
+     $time = sprintf "%4d/%02d/%02d", $year+1900, $mon+1, $mday;
+    $dtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
+
+} else {
+   ($dtime = $time) =~ s/\//_/g;
+   my ($year, $mon, $mday) = split("_", $dtime);
+}
+
+print "DEBUG: using date $time for query \n" if $debug;
+
+my $fname        = tmpnam();
+my $rasql        = which 'rasql';
+my $ralabel      = which 'ralabel';
+my $racluster    = which 'racluster';
+my $rasqlinsert  = which 'rasqlinsert';
+
+my @db1 = ( "dnsMatrix", "dns", "daddr saddr dmac smac sid inf", "stime ltime sid inf saddr daddr smac dmac spkts dpkts sbytes dbytes pcr", "udp and dst port 53");
+my @db2 = ( "ntpMatrix", "ntp", "daddr saddr dmac smac sid inf", "stime ltime sid inf saddr daddr smac dmac spkts dpkts sbytes dbytes pcr", "dst port 123");
+my @db3 = ( "ldapMatrix", "ldap", "daddr saddr dmac smac sid inf", "stime ltime sid inf saddr daddr smac dmac spkts dpkts sbytes dbytes pcr", "dst port 389");
+my @db4 = ( "smtpMatrix", "smtp", "daddr saddr dmac smac sid inf", "stime ltime sid inf saddr daddr smac dmac spkts dpkts sbytes dbytes pcr", "dst port 25");
+my @db5 = ( "imapsMatrix", "imaps", "daddr saddr dmac smac sid inf", "stime ltime sid inf saddr daddr smac dmac spkts dpkts sbytes dbytes pcr", "dst port 993");
+
+my @databases = \(@db1, @db2, @db3, @db4, @db5);
+
+foreach my $i (0 .. $#databases) {
+   my ($db, $srv, $keys, $fields, $filter) = @{$databases[$i]};
+
+   if (($dbase eq "") || ($dbase eq $srv)) {
+      my     $cmd = "$rasql -t $time -r mysql://root\@localhost/".$srv."Flows/".$srv."_%Y_%m_%d -M time 1d  -w - - ".$filter;
+      my   $label = "$ralabel -f /usr/argus/ralabel.local.conf -w - ";
+      my $cluster = "$racluster -r - -M dsrs='-agr -suser -duser' -m ".$keys." -w ".$fname;
+      my  $insert = "$rasqlinsert -r $fname -m ".$keys." -M drop time 1d -w mysql://root\@localhost/".$srv."Matrix/".$srv."_%Y_%m_%d -s ".$fields;
+
+      print "DEBUG: $cmd | $label | $cluster\n" if $debug;
+      `$cmd | $label | $cluster`;
+
+      print "DEBUG: $insert\n" if $debug;
+      `$insert`;
+
+      print "DEBUG: rm -f $fname\n" if $debug;
+      `rm -f $fname`;
+   }
+}
+

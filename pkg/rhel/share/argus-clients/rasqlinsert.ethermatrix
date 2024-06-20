@@ -1,0 +1,1 @@
+-m sid inf smac dmac etype -s stime dur sid inf smac dmac etype spkts dpkts sbytes dbytes pcr score -w mysql://root@localhost/etherMatrix/ether_%Y_%m_%d -M cache time 1d 

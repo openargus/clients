@@ -1,27 +1,15 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
 .\"
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
-.\" 
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
-.\" 
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\" 
-.
+.\".
 .de TQ
 .  br
 .  ns
 .  TP \\$1
 ..
-.TH RA 1 "12 November 2007" "ra 3.0.8"
+.TH RA 1 "17 October 2023" "ra 5.0.3.0"
 .SH NAME
 \fBra\fP \- read \fBargus(8)\fP data.
 .SH SYNOPSIS
@@ -139,22 +127,26 @@ are:
            jitter   Jitter data ([s|d]jit, [s|d]intpkt)
            ipattr   IP attributes ([s|d]ipid, [s|d]tos, [s|d]dsb, [s|d]ttl)
            psize    packet size information
-           mac      MAC addresses (smac, dmac)
+           mac      MAC addresses (smac, dmac, smacclass, dmacclass)
            icmp     ICMP specific data (icmpmap, inode)
            encaps   Flow encapsulation type indications
            behavior Behavioral metrics and data
+           local    Locality data
            tadj     Time adjustment data
            cor      Multi-probe correlation data
            cocode   Country Codes
            asn      Autonomous System Number data
            suser    src user captured data bytes (suser)
            duser    dst captured user data bytes (duser)
+           score    scoring data
  
       Examples are:
          -M dsrs=time,flow,metric
          -M dsrs=-suser,-duser
 
+   eframe=<int>     - set ethernet framing adjust for packet byte count.
    label="regex"    - match flow label with regex(3) regular expression.
+   lock[=nonblock]  - aquire an exclusive record lock on output file(s).
    man              - print management records
    noman            - do not print management records
    oui              - print oui labels in mac addresses
@@ -181,6 +173,7 @@ are:
    TZ="tzset"       - specify a tzset(3) time zone specification
    uni              - generate unidirectional flow data
    xml              - print output in xml format.
+   zero             - print blank port fields as zero, rather that space.
 
 .fi
 Illegal modes are not detectable by the standard library, and so unexpected
@@ -204,6 +197,10 @@ or process <num + 1> records starting at index number \fB<start>\fP.  The
 optional 1st character indicates whether the specification is applied to the input
 or the output stream of records, the default is input.  If applied to the input,
 these are the range of records that match the input filter.
+.TP 4 4
+.B \-o option
+Can be used to give options in the format used in the configuration file.  This is useful for specifying options for which there is no separate command-line
+flag.  For list of options, and their possible values, see rarc(5).
 .TP 4 4
 .B \-p <digits>
 Print \fB<digits>\fP number of units of precision for floating point values.
@@ -260,7 +257,15 @@ The available fields to print are:
 .RS
 .TP 12
 .B srcid
-argus source identifier.
+Argus source identifier.  In V3 records this is a 32-bit integer, IP address, or 4byte ascii string.
+In V5 records, the srcid is composed of the 128-bit 'sid' or source id, and an optional 4-char 'inf'
+or interface identifier, separated by a '/'.  You can print out the 'sid' and 'inf' components separately.
+.TP
+.B sid
+Argus source identifier. Introduced in V5 records. The 'sid' is a maximu
+.TP
+.B inf
+Optional 4-char string interface identifier for this flow data.
 .TP
 .B rank
 Ordinal value of this output flow record i.e. sequence number.
@@ -315,6 +320,18 @@ oui portion of the source MAC addr.
 .TP
 .B doui
 oui portion of the destination MAC addr.
+.TP
+.B smacclass
+class of the source MAC addr. (UAA, LAA, ELI, SAI, AAI, RES, LM)
+.TP
+.B dmacclass
+class of the destination MAC addr. (UAA, LAA, ELI, SAI, AAI, RES, LM)
+.TP
+.B senc
+source encapsulations processed.
+.TP
+.B denc
+destination encapsulations processed.
 .TP
 .B saddr
 source IP addr.
@@ -373,6 +390,15 @@ source MPLS identifier.
 .B dmpls
 destination MPLS identifier.
 .TP
+.B sgreaddr
+source GRE tunnel address.
+.TP
+.B dgreaddr
+destination GRE tunnel address.
+.TP
+.B greproto
+Next layer GRE tunnel protocol.
+.TP
 .B autoid
 Auto generated identifier (mysql).
 .TP
@@ -425,7 +451,7 @@ src -> dst application bytes.
 dst -> src application bytes.
 .TP
 .B pcr
-producer consumer  ratio.
+producer consumer ratio.
 .TP
 .B load
 bits per second.
@@ -592,6 +618,12 @@ source TCP base sequence number
 .B dtcpb
 destination TCP base sequence number
 .TP
+.B smss
+source TCP maximum segment size
+.TP
+.B dmss
+destination TCP maximum segment size
+.TP
 .B tcprtt
 TCP connection setup round-trip time, the sum of 'synack' and 'ackdat'.
 .TP
@@ -634,7 +666,6 @@ Mean of the flow packet size transmitted by the src (initiator).
 .TP
 .B dmeansz
 Mean of the flow packet size transmitted by the dst (target).
-
 .TP
 .B spktsz
 histogram for the src packet size distribution
@@ -653,10 +684,6 @@ minimum packet size for traffic transmitted by the src.
 .TP
 .B dminsz
 minimum packet size for traffic transmitted by the dst.
-
-.TP
-.B dminsz
-minimum packet size for traffic transmitted by the dst.
 .PD 1
 .RE
 .RS
@@ -665,9 +692,10 @@ Examles are:
 .nf
    -s saddr      print only the source address.
    -s -bytes     removes the bytes field from list.
-   -s +2srcid    adds the source identifier as the 2nd field.
+   -s +2srcid    adds the source identifier after the 2nd field.
    -s spkts:18   prints src pkt count with a column width of 18.
    -s smpls      print the local mpls label in the flow.
+   -s sgreaddr   print the src address of the GRE tunnel in the flow.
 .fi
 .RE
 .TP 4 4
@@ -786,7 +814,6 @@ status field when this is enabled are:
   'E' - TCP Established
   'f' - Fin Transmitted  (FIN Wait State 1)
   'F' - Fin Acknowledged (FIN Wait State 2)
-  'C' - Normal Closed
   'R' - TCP Reset
 .fi
 .TP 4 4
@@ -804,6 +831,10 @@ The characters that can be present in the status field when this is enabled are:
   '7' - Undefined 7th bit set
   '8' - Undefined 8th bit set
 .fi
+.TP 4 4
+.B \-3
+Generate Argus V3 (open source) formatted data when writing flow records
+to a file.
 
 .SH RETURN VALUES
 \fBra\fP exits with one of the following values:
@@ -940,9 +971,8 @@ True if the encapsulation used by the flow in the Argus record includes
 the \fItype\fP.  The list of valid encapsulation types is:
 .nf
 .sp .5
-   eth, mpls, 802q, llc, pppoe, isl, gre, erspan, ah, ipnip, ipnip6, hdlc, chdlc,
-   atm, sll, fddi, slip, arc, wlan, prism, avs, lrh, grh, teredo, udt, ipsec, juniper
 
+ mpls, eth, 802q, llc, pppoe, vxlan, isl, gre, ah, ipnip, ipnip6, chdlc
 .IP "\fBdst host \fIhost\fR"
 True if the IP destination field in the Argus record is \fIhost\fP,
 which may be either an address or a name.
@@ -1038,26 +1068,30 @@ involve an ethernet broadcast address.
 True if the Argus record is of ether type \fIprotocol\fR.
 \fIProtocol\fP can be a number or a name like
 \fIip\fP, \fIarp\fP, or \fIrarp\fP.
+
+.IP "\fB[src | dst] loc [gt | gte | lt | lte | eq] \fInumber\fR"
+True if the Locality value for addresses in the Argus record compares to \fInumber\fP.
+
 .IP "\fB[src | dst] ttl [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the TTL in the Argus record equals \fInumber\fP.
+True if the TTL in the Argus record compares to \fInumber\fP.
 .IP "\fB[src | dst] tos [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the TOS in the Argus record (default) equals \fInumber\fP.
+True if the TOS in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] vid [gt | gte | lt | lte | eq] \fInumber\fR"
-True if th VLAN id in the Argus record (default) equals \fInumber\fP.
+True if th VLAN id in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] vpri [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the VLAN priority in the Argus record (default) equals \fInumber\fP.
+True if the VLAN priority in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] mid [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the MPLS Label in the Argus record (default) equals \fInumber\fP.
+True if the MPLS Label in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] pkts [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the packet count in the Argus record (default) equals \fInumber\fP.
+True if the packet count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] bytes [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the byte count in the Argus record (default) equals \fInumber\fP.
+True if the byte count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] appbytes [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the application byte count in the Argus record (default) equals \fInumber\fP.
+True if the application byte count in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] rate [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the rate in the Argus record (default) equals \fInumber\fP.
+True if the rate in the Argus record (default) compares to \fInumber\fP.
 .IP "\fB[src | dst] load [gt | gte | lt | lte | eq] \fInumber\fR"
-True if the load in the Argus record (default) equals \fInumber\fP.
+True if the load in the Argus record (default) compares to \fInumber\fP.
 
 .LP
 Ra filter expressions support primitives that are specific
@@ -1103,11 +1137,31 @@ Primitives specific to TCP options are supported.
 \fIsecn\fP and
 \fIdecn\fP
 
+.LP
+Primitives specific to TCP metrics are supported.
+\fImaxseg\fP
+
 Primitives specific to ICMP flows are supported.
 \fIecho\fP,
-\fIunreach\fP,
-\fIredirect\fP and
-\fItimexed\fP
+\fIredirect\fP,
+\fItimexed\fP and
+\fIunreach\fP, which can be further specified using the keywords
+\fIunrnet\fP,
+\fIunrhost\fP,
+\fIunrproto\fP,
+\fIunrport\fP,
+\fIunrfrag\fP,
+\fIunrsrcfail\fP,
+\fIunrnetunk\fP,
+\fIunrhostunk\fP,
+\fIunriso\fP,
+\fIunrnetpro\fP,
+\fIunrhostpro\fP,
+\fIunrnettos\fP,
+\fIunrhosttos\fP,
+\fIunrfilter\fP,
+\fIunrhostpre\fP, and
+\fIunrprecut\fP, that each correspond to the unreachable icmp codes.
 
 .LP
 For some primitives, a direction qualifier is appropriate.
@@ -1255,7 +1309,6 @@ The format is:
  N        -  Netflow Originated Data
   *       -  Multiple sub-IP encapsulations
   e       -  Ethernet encapsulated flow
-  E       -  ERSPAN encapsulation
   M       -  Multiple mac addresses seen
   m       -  MPLS encapsulated flow
   l       -  LLC encapsulated flow
@@ -1263,6 +1316,7 @@ The format is:
   w       -  802.11 wireless encapsulation
   p       -  PPP over Enternet encapsulated flow
   i       -  ISL encapsulated flow
+  x       -  VXLAN encapsulation
   G       -  GRE encapsulation
   a       -  AH encapsulation
   P       -  IP tunnel encapsulation
@@ -1569,7 +1623,7 @@ Sat 12/03 15:29:39 *   tcp  i.qosient.com.1543   ->    qosient.com.smtp CLO
 .fi
 .br
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.
 .SH AUTHORS
 .nf
 Carter Bullard (carter@qosient.com).

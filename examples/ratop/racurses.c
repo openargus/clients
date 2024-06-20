@@ -1,23 +1,20 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- *     ratop - curses (color) based argus GUI modeled after the top program.
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
  *
  *  racurses.c - this module handles the curses screen input and
  *               output operations
@@ -25,10 +22,19 @@
  *  Author: Carter Bullard carter@qosient.com
  */
 
+/*
+ * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#21 $
+ * $DateTime: 2016/11/30 12:38:04 $
+ * $Change: 3249 $
+ */
+
 
 #ifdef HAVE_CONFIG_H
 #include "argus_config.h"
 #endif
+
+#include <sys/time.h>
+void RaResizeAlarmHandler(int);
 
 #if defined(CYGWIN)
 #define USE_IPV6
@@ -37,6 +43,8 @@
 #define RA_CURSES_MAIN
 #include <racurses.h>
 
+int ArgusDisplayColorsInitialized = 0;
+extern struct ArgusWirelessStruct *ArgusWireless;
 
 #if defined(ARGUS_CURSES) && defined(ARGUS_COLOR_SUPPORT)
 int ArgusColorAvailability(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusAttributeStruct *, short, attr_t);
@@ -48,6 +56,16 @@ void ArgusInitializeColorMap(struct ArgusParserStruct *, WINDOW *);
 short ArgusColorHighlight = ARGUS_WHITE;
 
 #endif
+
+#if defined(ARGUS_MYSQL)
+extern void RaMySQLInit (void);
+extern int ArgusReadSQLTables (struct ArgusParserStruct *);
+#endif
+
+int ArgusCursesProcessInitialized = 0;
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
+extern int argus_version;
 
 int
 main(int argc, char **argv)
@@ -71,18 +89,21 @@ main(int argc, char **argv)
       sigdelset(&blocked_signals, SIGTERM);
       sigdelset(&blocked_signals, SIGINT);
       sigdelset(&blocked_signals, SIGWINCH);
+      sigdelset(&blocked_signals, SIGALRM);
 
       pthread_sigmask(SIG_BLOCK, &blocked_signals, NULL);
-
-      if (ArgusCursesEnabled)
-         if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, NULL)) != 0)
-            ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
  
-      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, NULL)) != 0)
+      if (ArgusCursesEnabled)
+         if ((pthread_create(&RaCursesThread, NULL, ArgusCursesProcess, ArgusParser)) != 0)
+            ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
+
+      if ((pthread_create(&RaDataThread, NULL, ArgusProcessData, ArgusParser)) != 0)
          ArgusLog (LOG_ERR, "main() pthread_create error %s\n", strerror(errno));
 
       pthread_join(RaDataThread, NULL);
-      pthread_join(RaCursesThread, NULL);
+
+      if (ArgusCursesEnabled)
+         pthread_join(RaCursesThread, NULL);
 
       ArgusWindowClose();
 #endif
@@ -107,7 +128,7 @@ RaCursesSetWindowFocus(struct ArgusParserStruct *parser, WINDOW *win)
 
          if (ws->window == win) {
 #ifdef ARGUSDEBUG
-            ArgusDebug (1, "setting window focus to %s", ws->desc);
+            ArgusDebug (5, "setting window focus to %s", ws->desc);
 #endif
             RaFocusWindow = win;
             break;
@@ -177,10 +198,22 @@ void RaUpdateStatusWindow(WINDOW *);
 void *
 ArgusCursesProcess (void *arg)
 {
+   struct ArgusParserStruct *parser = (struct ArgusParserStruct *) arg;
    int done = 0, cnt = 0;
-   struct timeval ntvbuf, *ntvp = &ntvbuf;
+   struct timeval ntvbuf = {0, }, *ntvp = &ntvbuf;
+
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&parser->sync);
+#endif
 
    ArgusCursesProcessInit();
+
+#if defined(ARGUS_THREADS)
+   if (pthread_cond_signal(&parser->cond) != 0)
+      ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_cond_signal error %s", strerror(errno));
+   if (pthread_mutex_unlock(&parser->sync) != 0)
+      ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_mutex_unlock error %s", strerror(errno));
+#endif
 
    while (!done) {
       struct timeval tvbuf, *tvp = &tvbuf;
@@ -236,7 +269,7 @@ ArgusCursesProcess (void *arg)
       pthread_mutex_unlock(&RaCursesLock);
 #endif
       tsp->tv_sec  = 0;
-      tsp->tv_nsec = 2500000;
+      tsp->tv_nsec = 250000000;
       nanosleep(tsp, NULL);
    }
 
@@ -260,6 +293,7 @@ void ArgusProcessCursesInputInit(WINDOW *);
 int ArgusProcessTerminator (WINDOW *, int, int);
 int ArgusProcessNewPage (WINDOW *, int, int);
 int ArgusProcessDeviceControl (WINDOW *, int, int);
+int ArgusProcessError (WINDOW *, int, int);
 int ArgusProcessEscape (WINDOW *, int, int);
 int ArgusProcessEndofTransmission (WINDOW *, int, int);
 int ArgusProcessKeyUp (WINDOW *, int, int);
@@ -274,7 +308,7 @@ int ArgusProcessCharacter(WINDOW *, int, int);
 
 #define MAX_INPUT_OPERATORS	21
 struct ArgusInputCommand ArgusInputCommandTable [MAX_INPUT_OPERATORS] = {
-   {0,             ArgusProcessCharacter },
+   { 0,            ArgusProcessCharacter },
    {'\n',          ArgusProcessTerminator },
    {'\r',          ArgusProcessTerminator },
    {0x07,          ArgusProcessBell },
@@ -349,6 +383,8 @@ ArgusProcessCursesInput(void *arg)
       while (!ArgusWindowClosing && (select(1, &in, 0, 0, tvp) > 0)) {
          if ((ch = wgetch(RaStatusWindow)) != ERR) {
             RaInputStatus = ArgusProcessCommand (ArgusParser, RaInputStatus, ch);
+         } else {
+            ArgusProcessError(RaStatusWindow, RaInputStatus, ch);
          }
       }
       tvp->tv_sec = 0; tvp->tv_usec = 10000;
@@ -368,7 +404,7 @@ ArgusProcessCommand (struct ArgusParserStruct *parser, int status, int ch)
       wclear(RaCurrentWindow->window);
 
       RaInputString = RANEWCOMMANDSTR;
-      bzero(RaCommandInputStr, MAXSTRLEN);
+      bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
       RaCommandIndex = 0;
       RaCursorOffset = 0;
       RaWindowCursorY = 0;
@@ -389,10 +425,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 {
    struct ArgusParserStruct *parser = ArgusParser;
    int retn = status;
-   char *sbuf = NULL;
-
-   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
 
    if ((ch == '\n') || (ch == '\r')) {
       RaCursorOffset = 0;
@@ -411,11 +443,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGS: {
-            if (!(ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
+            if (!(ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
                ArgusLog (LOG_ALERT, "%s%s host not found", RaInputString, RaCommandInputStr);
             } else {
-               ArgusDeleteHostList(ArgusParser);
-               ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0);
+               ArgusDeleteServerList(ArgusParser);
+               ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0);
                ArgusParser->Sflag = 1;
                ArgusParser->RaParseDone = 0;
             }
@@ -454,7 +486,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   sprintf (strbuf, "%s:%d", input->hostname, input->portnum);
                   if ((strstr (RaCommandInputStr, strbuf))) {
                      ArgusRemoveFromQueue (ArgusParser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
-                     ArgusCloseInput(ArgusParser, input);
+                     ArgusDeleteInput(ArgusParser, input);
                      break;
                   }
                   input = (void *)input->qhdr.nxt;
@@ -516,9 +548,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ptr = NULL;
 
             if ((fretn = ArgusFilterCompile (&lfilter, ptr, 1)) < 0) {
+               char sbuf[2048];
                sprintf (sbuf, "%s %s syntax error", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
             } else {
+               char sbuf[2048];
                sprintf (sbuf, "%s %s filter accepted", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
                if ((str = ptr) != NULL)
@@ -576,7 +610,10 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 #if defined(ARGUS_THREADS)
             pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            ArgusParser->RaTasksToDo |= RA_SORTING;
+            RaUpdateDebugWindow(RaDebugWindow);
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
             if (parser->ArgusAggregator != NULL) {
                if (ArgusParser->ns) {
@@ -596,6 +633,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
             }
+            RaCursesProcess->queue->status |= RA_MODIFIED;
 
             RaWindowStatus = 1;
             break;
@@ -791,14 +829,14 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGM: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL;
+            char strbuf[1024], *str = strbuf, *tok = NULL, sbuf[1024];
             struct ArgusModeStruct *mode = NULL;
             int mretn = 0;
             char *tzptr;
 
-            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+            strncpy(strbuf, RaCommandInputStr, 1024);
 
-            if ((tzptr = strstr(strbuf, "TZ=")) != NULL) {
+            if ((tzptr = strstr(str, "TZ=")) != NULL) {
                if (ArgusParser->RaTimeZone)
                   free (ArgusParser->RaTimeZone);
                ArgusParser->RaTimeZone = strdup(tzptr);
@@ -829,15 +867,99 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusParser->RaCumulativeMerge = 1;
             }
 
-            if (strlen(strbuf) > 0) {
-               while ((tok = strtok(str, " \t\n")) != NULL) {
-                  if (!(strncasecmp (tok, "none", 4)))
-                     ArgusDeleteModeList(ArgusParser);
-                  else if (!(strncasecmp (tok, "default", 7))) {
-                     ArgusDeleteModeList(ArgusParser);
+            if (strlen(str) > 0) {
+               char strtokbuf[1024], *stbuf = strtokbuf;
+               sprintf (stbuf, "%s", str);
+
+               while ((tok = strtok(stbuf, " \t\n")) != NULL) {
+                  int ArgusAddMode = 1;
+                  if ((tzptr = strstr (tok, "printer=")) != NULL) {
+                     char *option = &tok[8];
+                     if (!(strncasecmp(option, "hex", 3))) {
+                        parser->eflag = ARGUS_HEXDUMP;
+                        ArgusAddMode = 0;
+                     } else
+                     if (!(strncasecmp(option, "ascii", 5))) {
+                        parser->eflag = ARGUS_ENCODE_ASCII;
+                        ArgusAddMode = 0;
+                     } else
+                     if (!(strncasecmp(option, "obfuscate", 2))) {
+                        parser->eflag = ARGUS_ENCODE_OBFUSCATE;
+                        ArgusAddMode = 0;
+                     } else
+                     if (!(strncasecmp(option, "encode64", 8))) {
+                        parser->eflag = ARGUS_ENCODE_64;
+                        ArgusAddMode = 0;
+                     } else
+                     if (!(strncasecmp(option, "encode32", 8))) {
+                        parser->eflag = ARGUS_ENCODE_32;
+                        ArgusAddMode = 0;
+                     }
                   } else
-                     ArgusAddModeList (ArgusParser, tok);
-                  str = NULL;
+                  if ((tzptr = strstr (tok, "label=")) != NULL) {
+                     parser->ArgusMatchLabel++;
+                     ArgusProcessLabelOptions(parser, &tok[6]);
+                  } else
+                  if ((tzptr = strstr (tok, "dsrs=")) != NULL) {
+                     parser->ArgusStripFields++;
+                     ArgusProcessStripOptions(parser, &tok[5]);
+                     ArgusAddMode = 0;
+                  } else
+                  if ((tzptr = strstr (tok, "sql=")) != NULL) {
+                     if (parser->ArgusSQLStatement != NULL)
+                        free (parser->ArgusSQLStatement);
+                     parser->ArgusSQLStatement = strdup(&tok[4]);
+                  } else
+                  if (!(strcmp (tok, "xml"))) {
+                     parser->ArgusPrintXml++;
+                     parser->Lflag = 0;
+                     ArgusAddMode = 0;
+                  } else
+                  if (!(strncasecmp (tok, "rtime", 5)) ||
+                     (!(strncasecmp (tok, "realtime", 8)))) {
+                     char *ptr = NULL;
+                     if ((ptr = strchr(tok, ':')) != NULL) {
+                        double value = 0.0;
+                        char *endptr = NULL;
+                        ptr++;
+                        value = strtod(ptr, &endptr);
+                        if (ptr != endptr) {
+                           parser->ProcessRealTime = value;
+                        }
+                     } else
+                        parser->ProcessRealTime = 1.0;
+                  } else
+                  if (!(strcmp (tok, "disa"))) {
+#define ARGUS_DISA_DSCODES	1
+                     parser->ArgusDSCodePoints = ARGUS_DISA_DSCODES;
+                     RaPrintAlgorithmTable[ARGUSPRINTSRCDSBYTE].length = 8;
+                     RaPrintAlgorithmTable[ARGUSPRINTDSTDSBYTE].length = 8;
+                  } else
+                  if ((tzptr = strstr (tok, "TZ="))) {
+                     if (parser->RaTimeZone != NULL)
+                        free (parser->RaTimeZone);
+                     parser->RaTimeZone = strdup(tok);
+#if HAVE_SETENV
+                     setenv("TZ", (parser->RaTimeZone + 3), 1);
+#else
+                     putenv(parser->RaTimeZone);
+#endif
+                     tzset();
+                  } else {
+#if defined(ARGUS_SASL)
+                  if ((tzptr = strstr (tok, "saslmech="))) {
+                     extern char *RaSaslMech;
+                     if (RaSaslMech)
+                        free (RaSaslMech);
+                     RaSaslMech=strdup(&tok[9]);
+                  }
+#endif /* ARGUS_SASL */
+                  }
+
+                  if (ArgusAddMode) 
+                     if (!(ArgusAddModeList (parser, tok)))
+                        ArgusLog(LOG_ERR, "error: adding %s as mode", tok);
+                  stbuf = NULL;
                }
             }
 
@@ -994,7 +1116,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          }
 
          case RAGETTINGn: {
-            char *name = NULL;;
+            char sbuf[2048], *name = NULL;;
             if (strstr(RaCommandInputStr, "all")) ArgusParser->nflag = 0; else
             if (strstr(RaCommandInputStr, "port")) ArgusParser->nflag = 1; else
             if (strstr(RaCommandInputStr, "proto")) ArgusParser->nflag = 2; else
@@ -1023,6 +1145,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (RaCommandInputStr != endptr) {
                ArgusParser->pflag = value;
             } else {
+               char sbuf[2048];
                sprintf (sbuf, "%s %s syntax error", RAGETTINGuSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
             }
@@ -1036,7 +1159,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (strlen(strbuf) > 0) {
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
-                  RaProcessRecursiveFiles (ptr);
+                  RaProcessRecursiveFiles (ptr, ARGUS_FILES_SORT);
                   str = NULL;
                }
             }
@@ -1055,18 +1178,43 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE;
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", ptr, 6))) {
+                     if (parser->readDbstr != NULL)
+                        free(parser->readDbstr);
+                     parser->readDbstr = strdup(ptr);
+                     type = ARGUS_DBASE_SOURCE;
+                     ptr += 6;
+                  } else
+#endif
+                  if (!(strncmp ("cisco:", ptr, 6))) {
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("jflow:", ptr, 6))) {
+                     type = ARGUS_JFLOW_DATA_SOURCE;
+                     parser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("sflow:", ptr, 6))) {
+                     type = ARGUS_SFLOW_DATA_SOURCE;
+                     ptr += 6;
+                  }
+
                   glob (ptr, 0, NULL, &globbuf);
                   if (globbuf.gl_pathc > 0) {
                      int i;
                      for (i = 0; i < globbuf.gl_pathc; i++)
-                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
+                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], type, -1, -1);
                   } else {
+                     char sbuf[2048];
                      sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
                      ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
                   }
                   str = NULL;
                }
-               ArgusParser->RaTasksToDo = 1;
+               ArgusParser->RaTasksToDo = RA_ACTIVE;
                ArgusParser->Sflag = 0;
                while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(RaCursesProcess->queue, ARGUS_LOCK)) != NULL)  {
                   if (ArgusSearchHitRecord == ns) {
@@ -1091,7 +1239,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGs: {
             char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
             int (*srtalg[ARGUS_MAX_SORT_ALG])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
-            int i, x, ind = 0;
+            int x, ind = 0;
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
@@ -1117,7 +1265,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 #if defined(ARGUS_THREADS)
             pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            ArgusParser->RaTasksToDo |= RA_SORTING;
+            RaUpdateDebugWindow(RaDebugWindow);
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            ArgusParser->RaTasksToDo &= ~RA_SORTING;
+/*
             if (ArgusParser->ns) {
                ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
                ArgusParser->ns = NULL;
@@ -1131,6 +1283,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                else
                   ArgusParser->ns = ArgusCopyRecordStruct (ns);
             }
+*/
 #if defined(ARGUS_THREADS)
             pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
@@ -1161,12 +1314,16 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusParser->timearg = strdup(RaCommandInputStr);
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
+#if defined(ARGUS_MYSQL)
+            ArgusReadSQLTables (ArgusParser);
+#endif
             break;
          }
 
          case RAGETTINGu: {
             double value = 0.0, ivalue, fvalue;
             char *endptr = NULL;
+            char sbuf[2048];
 #if defined(ARGUS_READLINE)
             int keytimeout;
 #endif
@@ -1201,6 +1358,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGU: {
             double value = 0.0;
             char *endptr = NULL;
+            char sbuf[2048];
  
             value = strtod(RaCommandInputStr, &endptr);
  
@@ -1223,7 +1381,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             struct ArgusWfileStruct *wfile = NULL;
             struct ArgusRecord *argusrec = NULL;
             struct ArgusRecordStruct *ns;
-            static char buf[0x10000];
             int i;
 
             if (strlen(RaCommandInputStr)) {
@@ -1244,11 +1401,17 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                           int rv;
+
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
-                           ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
+                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                      wfile, argusrec);
+                           if (rv < 0)
+                              ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                       __func__);
 
                         }
                      }
@@ -1260,7 +1423,6 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   ArgusParser->ArgusWfileList = wlist;
                }
             }
-
             break;   
          }
 
@@ -1315,7 +1477,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             if (RaCommandInputStr == endptr) {
                switch (*RaCommandInputStr) {
                   case 'q': {
-                     bzero (RaCommandInputStr, MAXSTRLEN);
+                     bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
                      RaParseComplete(SIGINT);
                      break;
@@ -1342,6 +1504,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          case RAGETTINGslash: {
             int linenum = RaWindowCursorY;
             int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
+            char sbuf[2048];
 
             if ((linenum = RaSearchDisplay(ArgusParser, RaCursesProcess->queue, ArgusSearchDirection, &cursx, &cursy, RaCommandInputStr, ARGUS_LOCK)) < 0) {
                if (ArgusSearchDirection == ARGUS_FORWARD) {
@@ -1373,7 +1536,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
                retn = RAGOTslash;
                RaInputString = RANEWCOMMANDSTR;
-               bzero(RaCommandInputStr, MAXSTRLEN);
+               bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                RaCommandIndex = 0;
                RaCursorOffset = 0;
                RaWindowCursorY = 0;
@@ -1394,10 +1557,9 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          RaCommandInputStr[0] = '\0';
       }
    }
-   if (sbuf != NULL) ArgusFree(sbuf);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessTerminator(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
+   ArgusDebug (5, "ArgusProcessTerminator(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1415,9 +1577,25 @@ ArgusProcessNewPage(WINDOW *win, int status, int ch)
    RaRefreshDisplay();
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessNewPage(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessNewPage(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
+}
+
+int                     
+ArgusProcessError(WINDOW *win, int status, int ch)
+{
+   RaInputString = RANEWCOMMANDSTR;
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
+   RaCommandIndex = 0;
+   RaCursorOffset = 0;
+   RaWindowCursorY = 0;
+   RaWindowCursorX = 0;
+            
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusProcessError(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, status);
+#endif
+   return (status);
 }
 
 int
@@ -1472,7 +1650,7 @@ ArgusProcessDeviceControl(WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessDeviceControl(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessDeviceControl(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1593,7 +1771,7 @@ ArgusProcessEscape(WINDOW *win, int status, int ch)
 #endif
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessEscape(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessEscape(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
 
    return (retn);
@@ -1604,12 +1782,12 @@ ArgusProcessEndofTransmission (WINDOW *win, int status, int ch)
 {
    int retn = status;
 
-   bzero (RaCommandInputStr, MAXSTRLEN);
+   bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
    RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessEndOfTransmission(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessEndOfTransmission(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
 
    return (retn);
@@ -1675,7 +1853,7 @@ ArgusProcessKeyUp (WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessKeyUp(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyUp(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
 
    return (retn);
@@ -1752,7 +1930,7 @@ ArgusProcessKeyDown (WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessKeyDown(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyDown(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1766,7 +1944,7 @@ ArgusProcessKeyLeft (WINDOW *win, int status, int ch)
       RaCursorOffset = RaCommandIndex;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessKeyLeft(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyLeft(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1780,7 +1958,7 @@ ArgusProcessKeyRight (WINDOW *win, int status, int ch)
       RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessKeyRight(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyRight(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1792,12 +1970,10 @@ ArgusProcessBell (WINDOW *win, int status, int ch)
 
    ArgusDisplayStatus = (ArgusDisplayStatus ? 0 : 1);
    ArgusZeroDebugString();
-   if (ArgusParser->Pauseflag)
-      ArgusSetDebugString ("Paused", LOG_ERR, ARGUS_LOCK);
    ArgusTouchScreen();
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessBell(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessBell(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1829,7 +2005,7 @@ ArgusProcessBackspace (WINDOW *win, int status, int ch)
       RaCommandIndex = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessBackspace(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessBackspace(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1840,12 +2016,12 @@ ArgusProcessDeleteLine (WINDOW *win, int status, int ch)
 {
    int retn = status;
 
-   bzero (RaCommandInputStr, MAXSTRLEN);
+   bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
    RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessDeleteLine(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessDeleteLine(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
 #endif
    return (retn);
 }
@@ -1887,11 +2063,13 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
       switch (retn) {
          case RAGOTcolon:
          case RAGOTslash: {
+            int awu = ArgusAlwaysUpdate;
             ArgusZeroDebugString();
             switch (ch) {
                case 0x07: {
                   ArgusDisplayStatus = (ArgusDisplayStatus ? 0 : 1);
                   ArgusTouchScreen();
+                  ArgusAlwaysUpdate = 1;
                   break;
                }
                case '%': {
@@ -1901,14 +2079,17 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   else
                      RaInputString = "Toggle percent off";
                   ArgusTouchScreen();
+                  ArgusAlwaysUpdate = 1;
                   break;
                }
                case 'A':
                   ArgusParser->Aflag = ArgusParser->Aflag ? 0 : 1;
                   break;
-               case 'H':
+               case 'H': {
+                  ArgusAlwaysUpdate = 1;
                   ArgusParser->Hflag = ArgusParser->Hflag ? 0 : 1;
                   break;
+               }
                case 'P': {
                   ArgusParser->Pauseflag = (ArgusParser->Pauseflag > 0.0) ? 0.0 : 1.0;
                   if (ArgusParser->Pauseflag)
@@ -1923,14 +2104,17 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      ArgusParser->vflag = 1;
                      ArgusReverseSortDir++;
                   }
-                  RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                  ArgusParser->RaTasksToDo |= RA_SORTING;
+                  RaUpdateDebugWindow(RaDebugWindow);
+                  RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                  ArgusParser->RaTasksToDo &= ~RA_SORTING;
                   break;
 
                case 'N': 
                   olddir = ArgusSearchDirection;
                   ArgusSearchDirection = (ArgusSearchDirection == ARGUS_FORWARD) ?  ARGUS_BACKWARD : ARGUS_FORWARD;
                case 'n': {
-                  char *ArgusSearchString = ArgusParser->ArgusSearchString, sbuf[1024];
+                  char *ArgusSearchString = ArgusParser->ArgusSearchString, sbuf[2048];
 
                   if ((retn == RAGOTslash) && ((ArgusSearchString != NULL) && strlen(ArgusSearchString))) {
                      int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
@@ -1965,6 +2149,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
 
                         RaWindowCursorX = cursx;
                         ArgusUpdateScreen();
+                        RaRefreshDisplay();
                      } 
 #if defined(ARGUS_THREADS)
                      pthread_mutex_unlock(&RaCursesLock);
@@ -2291,7 +2476,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   retn = RAGETTINGslash;
                   RaInputString = "?";
                   ArgusSearchDirection = ARGUS_BACKWARD;
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
@@ -2305,7 +2490,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   retn = RAGETTINGslash;
                   RaInputString = "/";
                   ArgusSearchDirection = ARGUS_FORWARD;
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
@@ -2318,13 +2503,15 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
 #else
                   retn = RAGETTINGcolon;
                   RaInputString = ":";
-                  bzero(RaCommandInputStr, MAXSTRLEN);
+                  bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
                   RaCommandIndex = 0;
                   RaWindowCursorX = 0;
 #endif
                   break;
                }
             }
+            ArgusDrawWindow(RaCurrentWindow);
+            ArgusAlwaysUpdate = awu;
             break;
          }
 
@@ -2370,7 +2557,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      retn = RAGETTINGd;
                      RaInputString = RAGETTINGdSTR;
 
-                     if (ArgusParser->ArgusRemoteHostList) {
+                     if (ArgusParser->ArgusRemoteServerList) {
                         struct ArgusInput *input = (void *)ArgusParser->ArgusActiveHosts->start;
                         do {
                            sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s:%d", input->hostname, input->portnum);
@@ -2513,31 +2700,68 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                      break;
 
                   case 'R': {
-                     struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+                     size_t len = strlen(RaCommandInputStr);
+                     size_t remain = sizeof(RaCommandInputStr) - len;
+                     struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
+
                      retn = RAGETTINGR;
                      RaInputString = RAGETTINGRSTR;
                      while (input) {
-                        sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s", input->filename);
-                        RaCommandIndex = strlen(RaCommandInputStr); 
+                        RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                         &len, &remain, " %s",
+                                                         input->filename);
                         input = (void *)input->qhdr.nxt;
                      }
                      break;
                   }
 
                   case 'r': {
-                     struct ArgusInput *input = ArgusParser->ArgusInputFileList;
+                     size_t len = strlen(RaCommandInputStr);
+                     size_t remain = sizeof(RaCommandInputStr) - len;
+                     struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
+
                      retn = RAGETTINGr;
                      RaInputString = RAGETTINGrSTR;
                      while (input) {
-                        sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], " %s", input->filename);
-                        RaCommandIndex = strlen(RaCommandInputStr); 
+                        switch (input->type) {
+                           case ARGUS_DATA_SOURCE:
+                           case ARGUS_V2_DATA_SOURCE:
+                           case ARGUS_NAMED_PIPE_SOURCE:
+                           case ARGUS_DOMAIN_SOURCE:
+                           case ARGUS_BASELINE_SOURCE:
+                           case ARGUS_DATAGRAM_SOURCE:
+                              break;
+                           case ARGUS_SFLOW_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "sflow:");
+                              break;
+                           case ARGUS_JFLOW_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "jflow:");
+                              break;
+                           case ARGUS_CISCO_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "cisco:");
+                              break;
+                           case ARGUS_IPFIX_DATA_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "ipfix:");
+                              break;
+                           case ARGUS_FLOW_TOOLS_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "ftools:");
+                              break;
+#if defined(ARGUS_MYSQL)
+                           case ARGUS_DBASE_SOURCE:
+                              snprintf_append(RaCommandInputStr, &len, &remain, "mysql:");
+                              break;
+#endif
+                        }
+                        RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                         &len, &remain, " %s",
+                                                         input->filename);
                         input = (void *)input->qhdr.nxt;
                      }
                      break;
                   }
 
                   case 'S': {
-                     struct ArgusInput *input = ArgusParser->ArgusRemoteHostList;
+                     struct ArgusInput *input = ArgusParser->ArgusRemoteServerList;
                      retn = RAGETTINGS;
                      RaInputString = RAGETTINGSSTR;
                      while (input) {
@@ -2633,7 +2857,10 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                         ArgusReverseSortDir++;
                      }
 
-                     RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                     ArgusParser->RaTasksToDo |= RA_SORTING;
+                     RaUpdateDebugWindow(RaDebugWindow);
+                     RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_LOCK);
+                     ArgusParser->RaTasksToDo &= ~RA_SORTING;
                      break;
 
                   case '=':  {
@@ -2691,6 +2918,9 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                }
                break;
             }
+            wclear(RaCurrentWindow->window);
+            ArgusTouchScreen();
+            RaRefreshDisplay();
          }
 
          default: {
@@ -2728,7 +2958,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessCharacter(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
+   ArgusDebug (5, "ArgusProcessCharacter(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -2738,6 +2968,7 @@ void
 ArgusDrawWindow(struct ArgusWindowStruct *ws)
 {
    WINDOW *win = ws->window;
+   
    if (win == RaCurrentWindow->window) {
       struct ArgusParserStruct *parser = ArgusParser;
       struct ArgusRecordStruct *ns = NULL;
@@ -2747,20 +2978,21 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
          int x = 0, cnt = 0;
 
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "RaDrawWindow(%p) RaWindowModified %d RaWindowStatus %d\n", ws, RaWindowModified, RaWindowStatus);
+         ArgusDebug (5, "RaDrawWindow(%p) RaWindowModified %d RaWindowStatus %d\n", ws, RaWindowModified, RaWindowStatus);
 #endif
-         parser->RaLabel = NULL;
-
          if (RaWindowStatus) {
+            if ((parser->status & ARGUS_FILE_LIST_PROCESSED) || (parser->ProcessRealTime > 0)) {
 #if defined(ARGUS_THREADS)
-            pthread_mutex_lock(&queue->lock);
+               pthread_mutex_lock(&queue->lock);
 #endif
-            if (parser->status & ARGUS_FILE_LIST_PROCESSED) {
                if (queue->status & RA_MODIFIED) {
 #ifdef ARGUSDEBUG
-                  ArgusDebug (1, "ArgusDrawWindow(%p) processing queue\n", ws);
+                  ArgusDebug (5, "ArgusDrawWindow(%p) processing queue\n", ws);
 #endif
-                  RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
+                  ArgusParser->RaTasksToDo |= RA_SORTING;
+                  RaUpdateDebugWindow(RaDebugWindow);
+                  RaSortItems = RaClientSortQueue(ArgusSorter, queue, ARGUS_NOLOCK);
+                  ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
                   if (queue->count) {
                      if (RaSortItems) {
@@ -2787,6 +3019,11 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                   }
                }
 
+               if (ArgusParser->ns)
+                  parser->RaLabel = ArgusGenerateLabel(parser, parser->ns);
+               else
+                  parser->RaLabel = NULL;
+
                if (queue->array != NULL) {
                   int i, firstRow = 1;
 
@@ -2802,8 +3039,8 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                      if ((ns = (struct ArgusRecordStruct *) queue->array[i]) != NULL) {
 #if defined(ARGUS_COLOR_SUPPORT)
                         int z, sz = -1, ez = 0;
-                        attr_t attr, tattr;
-                        short pair, tpair;
+                        attr_t attr = 0, tattr = 0;
+                        short pair = 0, tpair = 0;
 #endif
 
                         if (firstRow) {
@@ -2814,12 +3051,11 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                               wattron(win, attrs);
                            }
 #endif
-                           if (parser->RaLabel == NULL)
-                              parser->RaLabel = ArgusGenerateLabel(parser, parser->ns);
-
-                           mvwaddnstr (win, 0, 0, parser->RaLabel, RaScreenColumns);
-                           if (strlen(parser->RaLabel) < RaScreenColumns)
-                              wclrtoeol(win);
+                           if (parser->RaLabel != NULL) {
+                              mvwaddnstr (win, 0, 0, parser->RaLabel, RaScreenColumns);
+                              if (strlen(parser->RaLabel) < RaScreenColumns)
+                                 wclrtoeol(win);
+                           }
 #if defined(ARGUS_COLOR_SUPPORT)
                            if (ArgusTerminalColors) {
                               wattroff(win, attrs);
@@ -2889,7 +3125,7 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
                      int rank = ArgusSearchHitRecord->rank;
                      if (ArgusSearchHitRank && (ArgusSearchHitRank != rank)) {
 #ifdef ARGUSDEBUG
-                        ArgusDebug (1, "RaSearchResults: %d was %d\n", rank, ArgusSearchHitRank);
+                        ArgusDebug (3, "RaSearchResults: %d was %d\n", rank, ArgusSearchHitRank);
 #endif
                         if ((rank < RaWindowStartLine) || ((rank > (RaWindowStartLine + RaDisplayLines)))) {
                            int startline = ((rank - 1)/ RaDisplayLines) * RaDisplayLines;
@@ -2907,7 +3143,7 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
 
                   } else {
                      int linenum, cursx, cursy;
-                     char sbuf[1024];
+                     char sbuf[2048];
 
                      cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
                      if ((linenum = RaSearchDisplay(ArgusParser, RaCursesProcess->queue, ArgusSearchDirection, &cursx, &cursy, parser->ArgusSearchString, ARGUS_NOLOCK)) < 0) {
@@ -2942,11 +3178,11 @@ ArgusDrawWindow(struct ArgusWindowStruct *ws)
 
                   RaHighlightDisplay(ArgusParser, RaCursesProcess->queue, parser->ArgusSearchString);
                }
-            }
 
 #if defined(ARGUS_THREADS)
-            pthread_mutex_unlock(&queue->lock);
+               pthread_mutex_unlock(&queue->lock);
 #endif
+            }
          }
          wmove(RaCurrentWindow->window, RaWindowCursorY, RaWindowCursorX);
       }
@@ -2972,7 +3208,7 @@ RaResizeHandler (int sig)
    RaScreenResize = TRUE;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaResizeHandler(%d)\n", sig);
+   ArgusDebug (3, "RaResizeHandler(%d)\n", sig);
 #endif
 }
 
@@ -2983,15 +3219,14 @@ ArgusCursesProcessInit()
    struct ArgusWindowStruct *ws  = NULL;
 
 #if defined(ARGUS_THREADS)
-/*
    sigset_t blocked_signals;
 
    sigemptyset (&blocked_signals);
    sigaddset (&blocked_signals, SIGWINCH);
    pthread_sigmask(SIG_UNBLOCK, &blocked_signals, NULL);
-*/
 
    (void) signal (SIGWINCH,(void (*)(int)) RaResizeHandler);
+   (void) signal (SIGALRM,(void (*)(int)) RaResizeAlarmHandler);
 #endif
 
    if (ArgusCursesEnabled)
@@ -3066,6 +3301,8 @@ ArgusCursesProcessInit()
    if ((pthread_create(&RaCursesInputThread, NULL, ArgusProcessCursesInput, NULL)) != 0)
       ArgusLog (LOG_ERR, "ArgusCursesProcess() pthread_create error %s\n", strerror(errno));
 #endif
+
+   ArgusCursesProcessInitialized = 1;
 }
 
 
@@ -3093,7 +3330,7 @@ ArgusCursesProcessClose()
 int 
 RaInitCurses ()
 {
-   char sbuf[1024];
+   char sbuf[2048];
 #if defined(ARGUS_CURSES) && (defined(ARGUS_READLINE) || defined(ARGUS_EDITLINE))
 
 #if defined(ARGUS_READLINE)
@@ -3344,7 +3581,7 @@ ArgusWindowClose(void)
 
    ArgusParser->RaCursesMode = 0;
 #if defined(ARGUSDEBUG)
-   ArgusDebug (1, "ArgusWindowClose () returning\n");
+   ArgusDebug (3, "ArgusWindowClose () returning\n");
 #endif
 }
 
@@ -3461,12 +3698,12 @@ argus_getsearch_string(int dir)
    RaInputStatus = RAGETTINGslash;
    RaInputString = (dir == ARGUS_FORWARD) ? "/" : "?";
    ArgusSearchDirection = dir;
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    ArgusReadlinePoint = 0;
 
-   if ((line = readline("")) != NULL) {
+   if ((line = readline(NULL)) != NULL) {
       int linenum = RaWindowCursorY;
       int cursx = RaWindowCursorX, cursy = RaWindowCursorY + RaWindowStartLine;
 
@@ -3519,11 +3756,11 @@ argus_getsearch_string(int dir)
          RaWindowCursorX = cursx;
 
       } else {
-         char sbuf[1024];
+         char sbuf[2048];
          sprintf (sbuf, "Pattern not found: %s", ArgusParser->ArgusSearchString);
          ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
          RaInputString = RANEWCOMMANDSTR;
-         bzero(RaCommandInputStr, MAXSTRLEN);
+         bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
          RaCommandIndex = 0;
       }
 
@@ -3546,10 +3783,7 @@ argus_getsearch_string(int dir)
 void
 argus_command_string(void)
 {
-   char *line, *sbuf = NULL;
-
-   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+   char *line;
 
 #if defined(ARGUS_HISTORY)
    argus_disable_history();
@@ -3557,7 +3791,7 @@ argus_command_string(void)
 
    RaInputStatus = RAGETTINGcolon;
    RaInputString = ":";
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    ArgusReadlinePoint = 0;
@@ -3574,7 +3808,7 @@ argus_command_string(void)
    }
 
    if (*RaCommandInputStr == 'q') {
-      bzero (RaCommandInputStr, MAXSTRLEN);
+      bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
       ArgusTouchScreen();
       RaParseComplete(SIGINT);
    }
@@ -3605,11 +3839,12 @@ argus_command_string(void)
                RaDisplayLinesSet = 0;
 
             wclear(RaCurrentWindow->window);
+            RaRefreshDisplay();
             break;
          }
 
          case RAGETTINGS: {
-            if (!(ArgusAddHostList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
+            if (!(ArgusAddServerList (ArgusParser, RaCommandInputStr, (ArgusParser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), 0))) {
                ArgusLog (LOG_ALERT, "%s%s host not found", RaInputString, RaCommandInputStr);
             } else {
                ArgusParser->Sflag = 1;
@@ -3640,24 +3875,29 @@ argus_command_string(void)
                }
                ArgusTouchScreen();
             }
+            RaRefreshDisplay();
+            break;
          }
-         break;
 
          case RAGETTINGd: {
             struct ArgusInput *input;
-            char strbuf[MAXSTRLEN];
+            char *strbuf = NULL;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if ((input = (void *)ArgusParser->ArgusActiveHosts->start) != NULL) {
                do {
                   sprintf (strbuf, "%s:%d", input->hostname, input->portnum);
                   if ((strstr (RaCommandInputStr, strbuf))) {
                      ArgusRemoveFromQueue (ArgusParser->ArgusActiveHosts, &input->qhdr, ARGUS_LOCK);
-                     ArgusCloseInput(ArgusParser, input);
+                     ArgusDeleteInput(ArgusParser, input);
                      break;
                   }
                   input = (void *)input->qhdr.nxt;
                } while (input != (void *)ArgusParser->ArgusActiveHosts->start);
             }
+            ArgusFree(strbuf);
          }
          break;
 
@@ -3722,14 +3962,20 @@ argus_command_string(void)
                ind = ARGUS_REMOTE_FILTER;
             } else 
             if ((str = strstr (ptr, "none")) != NULL) {
+               ptr = strdup(RaCommandInputStr);
                ind = RaFilterIndex;
+            } else {
+               ptr = strdup(RaCommandInputStr);
             }
 
             if ((retn = ArgusFilterCompile (&lfilter, ptr, 1)) < 0) {
+               char sbuf[2048];
                sprintf (sbuf, "%s%s syntax error", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
-
-           } else {
+               if (ptr)
+                  free(ptr);
+            } else {
+               char sbuf[2048];
                sprintf (sbuf, "%s%s filter accepted", RAGETTINGfSTR, RaCommandInputStr);
                ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
                if ((str = ptr) != NULL)
@@ -3786,7 +4032,10 @@ argus_command_string(void)
 #if defined(ARGUS_THREADS)
                pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
-               RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+               ArgusParser->RaTasksToDo |= RA_SORTING;
+               RaUpdateDebugWindow(RaDebugWindow);
+               RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+               ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
                if (RaSortItems) {
                   if (ArgusParser->ns) {
@@ -3817,10 +4066,13 @@ argus_command_string(void)
                       
          case RAGETTINGm: {
             struct ArgusRecordStruct *ns = NULL;
-            char strbuf[MAXSTRLEN], *tok = NULL, *ptr;
             struct ArgusModeStruct *mode = NULL, *modelist = NULL, *list; 
             struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
+            char *strbuf = NULL, *tok = NULL, *ptr;
             int i;                                  
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if ((agg->modeStr == NULL) || strcmp(agg->modeStr, RaCommandInputStr)) {
                if (agg->modeStr != NULL)
@@ -3987,16 +4239,22 @@ argus_command_string(void)
 #endif
                werase(RaCurrentWindow->window);
                ArgusTouchScreen();
+               RaRefreshDisplay();
             }
-
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGM: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *tok = NULL;
+            char *strbuf, *str = NULL, *tok = NULL, *sbuf = NULL;
             struct ArgusModeStruct *mode = NULL;
             char *tzptr;
             int retn = 0;
+
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
 
@@ -4180,6 +4438,24 @@ argus_command_string(void)
                      }
 
                   } else {
+                  if (!(strncasecmp (mode->mode, "printer=", 8))) {
+                     char *option = &mode->mode[8];
+                     if (!(strncasecmp(option, "hex", 3))) {
+                        ArgusParser->eflag = ARGUS_HEXDUMP;
+                     } else
+                     if (!(strncasecmp(option, "ascii", 5))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_ASCII;
+                     } else
+                     if (!(strncasecmp(option, "obfuscate", 2))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_OBFUSCATE;
+                     } else
+                     if (!(strncasecmp(option, "encode64", 8))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_64;
+                     } else
+                     if (!(strncasecmp(option, "encode32", 8))) {
+                        ArgusParser->eflag = ARGUS_ENCODE_32;
+                     }
+                  } else
                      if (!(strncasecmp (mode->mode, "nomerge", 7))) {
                         ArgusParser->RaCumulativeMerge = 0;
                      } else
@@ -4192,11 +4468,16 @@ argus_command_string(void)
                }
             }
 
+            ArgusFree(sbuf);
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGn: {
-            char *name = NULL;;
+            char *sbuf = NULL, *name = NULL;
+               
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             if (strstr(RaCommandInputStr, "all")) ArgusParser->nflag = 0; else
             if (strstr(RaCommandInputStr, "port")) ArgusParser->nflag = 1; else
@@ -4214,11 +4495,12 @@ argus_command_string(void)
             sprintf (sbuf, "%s changed to %s ", RAGETTINGnSTR, name);
             ArgusSetDebugString (sbuf, 0, ARGUS_LOCK);
             ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+            ArgusFree(sbuf);
             break;
          }
 
          case RAGETTINGp: {
-            char *endptr = NULL;
+            char *endptr = NULL, sbuf[2048];
             int value = 0;
 
             value = strtod(RaCommandInputStr, &endptr);
@@ -4233,48 +4515,47 @@ argus_command_string(void)
             }
 
             ArgusUpdateScreen();
+            RaRefreshDisplay();
             break;
          }
 
          case RAGETTINGR: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
+            char *strbuf, *str = NULL, *ptr = NULL;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            str = strbuf;
+
             strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
 
             if (strlen(strbuf) > 0) {
                ArgusDeleteFileList(ArgusParser);
                while ((ptr = strtok(str, " ")) != NULL) {
-                  RaProcessRecursiveFiles (ptr);
+                  RaProcessRecursiveFiles (ptr, ARGUS_FILES_SORT);
                   str = NULL;
                }
             }
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGr: {
-            char strbuf[MAXSTRLEN], *str = strbuf, *ptr = NULL;
+            char *strbuf, *str = NULL, *ptr = NULL, *sbuf = NULL;
             glob_t globbuf;
 
-            bzero (strbuf, MAXSTRLEN);
-            strncpy(strbuf, RaCommandInputStr, MAXSTRLEN);
+            if ((sbuf = ArgusCalloc(1, 1024)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
-            if (strlen(strbuf) > 0) {
+            str = strbuf;
+            strncpy(str, RaCommandInputStr, MAXSTRLEN);
+
+            if (strlen(str) > 0) {
                struct ArgusRecordStruct *ns = NULL;
 
                ArgusDeleteFileList(ArgusParser);
-               while ((ptr = strtok(str, " ")) != NULL) {
-                  glob (ptr, 0, NULL, &globbuf);
-                  if (globbuf.gl_pathc > 0) {
-                     int i;
-                     for (i = 0; i < globbuf.gl_pathc; i++)
-                        ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], ARGUS_DATA_SOURCE, -1, -1);
-                  } else {
-                     sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
-                     ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
-                  }
-                  str = NULL;
-               }
-               ArgusParser->RaTasksToDo = 1;
-               ArgusParser->Sflag = 0;
 
 #if defined(ARGUS_THREADS)
                pthread_mutex_lock(&RaCursesProcess->queue->lock);
@@ -4300,16 +4581,81 @@ argus_command_string(void)
 #if defined(ARGUS_THREADS)
                pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
+
+               while ((ptr = strtok(str, " ")) != NULL) {
+                  int type = ARGUS_DATA_SOURCE;
+                  ArgusParser->Cflag = 0;
+
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", ptr, 6))) {
+                     if (ArgusParser->readDbstr != NULL)
+                        free(ArgusParser->readDbstr);
+                     ArgusParser->readDbstr = strdup(ptr);
+                     RaDatabase = NULL;
+                     RaMySQLInit();
+                     type = ARGUS_DBASE_SOURCE;
+                     ptr += 6;
+                  } else
+#endif
+                  if (!(strncmp ("cisco:", ptr, 6))) {
+                     ArgusParser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("jflow:", ptr, 6))) {
+                     type = ARGUS_JFLOW_DATA_SOURCE;
+                     ArgusParser->Cflag++;
+                     ptr += 6;
+                  } else
+                  if (!(strncmp ("sflow:", ptr, 6))) {
+                     type = ARGUS_SFLOW_DATA_SOURCE;
+                     ptr += 6;
+                  }
+
+                  switch (type) {
+#if defined(ARGUS_MYSQL)
+                     case ARGUS_DBASE_SOURCE: {
+                        ArgusAddFileList (ArgusParser, ptr, type, -1, -1);
+                        ArgusParser->status &=  ~ARGUS_FILE_LIST_PROCESSED;
+                        ArgusReadSQLTables (ArgusParser);
+                        break;
+                     }
+#endif
+                     default: {
+                        glob (ptr, 0, NULL, &globbuf);
+                        if (globbuf.gl_pathc > 0) {
+                           int i;
+                           for (i = 0; i < globbuf.gl_pathc; i++)
+                              ArgusAddFileList (ArgusParser, globbuf.gl_pathv[i], type, -1, -1);
+                        } else {
+                           sprintf (sbuf, "%s no files found for %s", RAGETTINGrSTR, ptr);
+                           ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
+                        }
+                        break;
+                     }
+                  }
+                  str = NULL;
+               }
+               ArgusParser->RaTasksToDo = RA_ACTIVE;
+               ArgusParser->Sflag = 0;
+
             }
+            ArgusFree(sbuf);
+            ArgusFree(strbuf);
             break;
          }
 
          case RAGETTINGs: {
-            char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
-            int (*srtalg[ARGUS_MAX_SORT_ALG])(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
-            int i, x, ind = 0;
+            char *strbuf = NULL, *ptr = NULL, *tok;
+            int (**srtalg)(struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+            int x, ind = 0;
+
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            if ((srtalg = (int (**)()) ArgusCalloc(ARGUS_MAX_SORT_ALG, sizeof(void *))) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+
+            ptr = strbuf;
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
-            bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
                   if (!strncmp (ArgusSortKeyWords[x], tok, strlen(ArgusSortKeyWords[x]))) {
@@ -4318,7 +4664,7 @@ argus_command_string(void)
                   }
                }
                if (x == ARGUS_MAX_SORT_ALG) {
-                  bzero(srtalg, sizeof(srtalg));
+                  srtalg[0] = NULL;
                   ArgusLog (LOG_ALERT, "sort keyword %s not valid", tok);
                   break;
                }
@@ -4330,11 +4676,16 @@ argus_command_string(void)
                   ArgusSorter->ArgusSortAlgorithms[x] = srtalg[x];
             }
 
+            ArgusParser->RaTasksToDo |= RA_SORTING;
+            RaUpdateDebugWindow(RaDebugWindow);
+
 #if defined(ARGUS_THREADS)
             pthread_mutex_lock(&RaCursesProcess->queue->lock);
 #endif
-            RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
-
+            RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_NOLOCK);
+            ArgusParser->RaTasksToDo &= ~RA_SORTING;
+            RaCursesProcess->queue->status |= RA_MODIFIED;
+/*
             if (ArgusParser->ns) {
                ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
                ArgusParser->ns = NULL;
@@ -4349,10 +4700,13 @@ argus_command_string(void)
                else
                   ArgusParser->ns = ArgusCopyRecordStruct (ns);
             }
+*/
 #if defined(ARGUS_THREADS)
             pthread_mutex_unlock(&RaCursesProcess->queue->lock);
 #endif
             ArgusTouchScreen();
+            ArgusFree(strbuf);
+            ArgusFree(srtalg);
             break;
          }
 
@@ -4370,6 +4724,8 @@ argus_command_string(void)
          }
 
          case RAGETTINGt: {
+            struct ArgusRecordStruct *ns = NULL;
+
             if (ArgusParser->timearg) {
                free (ArgusParser->timearg);
                ArgusParser->timearg = NULL;
@@ -4379,12 +4735,44 @@ argus_command_string(void)
                ArgusParser->timearg = strdup(RaCommandInputStr);
 
             ArgusCheckTimeFormat (&ArgusParser->RaTmStruct, ArgusParser->timearg);
+
+            ArgusDeleteFileList(ArgusParser);
+#if defined(ARGUS_MYSQL)
+            ArgusReadSQLTables (ArgusParser);
+#endif
+            ArgusParser->RaTasksToDo = RA_ACTIVE;
+            ArgusParser->Sflag = 0;
+
+#if defined(ARGUS_THREADS)
+            pthread_mutex_lock(&RaCursesProcess->queue->lock);
+#endif
+            while ((ns = (struct ArgusRecordStruct *) ArgusPopQueue(RaCursesProcess->queue, ARGUS_NOLOCK)) != NULL)  {
+               if (ArgusSearchHitRecord == ns) {
+                  ArgusResetSearch();
+               }
+               ArgusDeleteRecordStruct (ArgusParser, ns);
+            }
+
+            ArgusEmptyHashTable(RaCursesProcess->htable);
+
+            if (ArgusParser->ns != NULL) {
+               ArgusDeleteRecordStruct (ArgusParser, ArgusParser->ns);
+               ArgusParser->ns = NULL;
+            }
+
+            ArgusParser->RaClientUpdate.tv_sec = 0;
+            ArgusParser->status &= ~ARGUS_FILE_LIST_PROCESSED;
+            ArgusParser->ArgusLastTime.tv_sec  = 0;
+            ArgusParser->ArgusLastTime.tv_usec = 0;
+#if defined(ARGUS_THREADS)
+            pthread_mutex_unlock(&RaCursesProcess->queue->lock);
+#endif
             break;
          }
 
          case RAGETTINGu: {
             double value = 0.0, ivalue, fvalue;
-            char *endptr = NULL;
+            char *endptr = NULL, sbuf[2048];
        
             value = strtod(RaCommandInputStr, &endptr);
        
@@ -4408,7 +4796,7 @@ argus_command_string(void)
 
 
          case RAGETTINGU: {
-            char *endptr = NULL;
+            char *endptr = NULL, sbuf[2048];
             double value = 0.0;
        
             value = strtod(RaCommandInputStr, &endptr);
@@ -4432,7 +4820,6 @@ argus_command_string(void)
             struct ArgusWfileStruct *wfile = NULL;
             struct ArgusRecord *argusrec = NULL;
             struct ArgusRecordStruct *ns;
-            static char buf[0x10000];
             int i;
 
             if (strlen(RaCommandInputStr)) {
@@ -4456,12 +4843,17 @@ argus_command_string(void)
                      }
 
                      if (pass != 0) {
-                        if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
+                        if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
+                           int rv;
+
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
-                           ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
-
+                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                      wfile, argusrec);
+                           if (rv < 0)
+                              ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                       __func__);
                         }
                      }
                   }
@@ -4474,15 +4866,18 @@ argus_command_string(void)
                   ArgusParser->ArgusWfileList = wlist;
                }
             }
-
             break;   
          }
 
          case RAGETTINGF: {
             struct ArgusQueueStruct *queue = RaCursesProcess->queue;
-            char strbuf[MAXSTRLEN], *ptr = strbuf, *tok;
+            char *strbuf = NULL, *ptr = NULL, *tok;
             int x;
-
+            
+            if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+               ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            
+            ptr = strbuf;
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             bzero ((char *)ArgusParser->RaPrintOptionStrings, sizeof(ArgusParser->RaPrintOptionStrings));
             ArgusParser->RaPrintOptionIndex = 0;
@@ -4519,6 +4914,7 @@ argus_command_string(void)
             }
             ArgusInitializeColorMap(ArgusParser, RaDisplayWindow);
             ArgusTouchScreen();
+            ArgusFree(strbuf);
             break;
          }
 
@@ -4530,7 +4926,7 @@ argus_command_string(void)
             if (RaCommandInputStr == endptr) {
                switch (*RaCommandInputStr) {
                   case 'q': {
-                     bzero (RaCommandInputStr, MAXSTRLEN);
+                     bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
                      RaParseComplete(SIGINT);
                      break;
@@ -4558,12 +4954,11 @@ argus_command_string(void)
 
    RaInputStatus = RAGOTcolon;
    RaInputString = RANEWCOMMANDSTR;
-   bzero(RaCommandInputStr, MAXSTRLEN);
+   bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
    cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
-   if (sbuf != NULL) ArgusFree(sbuf);
 
 #if defined(ARGUS_HISTORY)
    argus_enable_history();
@@ -4574,8 +4969,13 @@ argus_command_string(void)
 int
 argus_process_command (struct ArgusParserStruct *parser, int status)
 {
-   char promptbuf[256], *prompt = promptbuf;
+   char *promptbuf = NULL, *prompt = NULL;
    int retn = status;
+               
+   if ((promptbuf = ArgusCalloc(1, 256)) == NULL)
+      ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
+            
+   prompt = promptbuf;
 
    if (strlen(rl_line_buffer) == 1) {
       switch (*rl_line_buffer) {
@@ -4751,27 +5151,64 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
              break;
 
           case 'R': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
-             retn = RAGETTINGR;
-             RaInputString = RAGETTINGRSTR;
-             while (input) {
-                sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", input->filename);
-                RaCommandIndex = strlen(RaCommandInputStr); 
+            size_t len = strlen(RaCommandInputStr);
+            size_t remain = sizeof(RaCommandInputStr) - len;
+            struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
+
+            retn = RAGETTINGR;
+            RaInputString = RAGETTINGRSTR;
+            while (input) {
+               RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                &len, &remain, " %s",
+                                                input->filename);
                 input = (void *) input->qhdr.nxt;
-             }
-             break;
+            }
+            break;
           }
 
           case 'r': {
-             struct ArgusInput *input = ArgusParser->ArgusInputFileList;
-             retn = RAGETTINGr;
-             RaInputString = RAGETTINGrSTR;
-             while (input) {
-                sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", input->filename);
-                RaCommandIndex = strlen(RaCommandInputStr); 
-                input = (void *) input->qhdr.nxt;
-             }
-             break;
+            size_t len = strlen(RaCommandInputStr);
+            size_t remain = sizeof(RaCommandInputStr) - len;
+            struct ArgusFileInput *input = ArgusParser->ArgusInputFileList;
+
+            retn = RAGETTINGr;
+            RaInputString = RAGETTINGrSTR;
+            while (input) {
+               switch (input->type) {
+                  case ARGUS_DATA_SOURCE:
+                  case ARGUS_V2_DATA_SOURCE:
+                  case ARGUS_NAMED_PIPE_SOURCE:
+                  case ARGUS_DOMAIN_SOURCE:
+                  case ARGUS_BASELINE_SOURCE:
+                  case ARGUS_DATAGRAM_SOURCE:
+                     break;
+                  case ARGUS_SFLOW_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "sflow:");
+                     break;
+                  case ARGUS_JFLOW_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "jflow:");
+                     break;
+                  case ARGUS_CISCO_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "cisco:");
+                     break;
+                  case ARGUS_IPFIX_DATA_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "ipfix:");
+                     break;
+                  case ARGUS_FLOW_TOOLS_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "ftools:");
+                     break;
+#if defined(ARGUS_MYSQL)
+                  case ARGUS_DBASE_SOURCE:
+                     snprintf_append(RaCommandInputStr, &len, &remain, "mysql:");
+                     break;
+#endif
+               }
+               RaCommandIndex = snprintf_append(RaCommandInputStr,
+                                                &len, &remain, "%s",
+                                                input->filename);
+               input = (void *) input->qhdr.nxt;
+            }
+            break;
           }
 
           case 'S': {
@@ -4872,7 +5309,10 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
                 ArgusReverseSortDir++;
              }
 
-             RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_LOCK);
+             ArgusParser->RaTasksToDo |= RA_SORTING;
+             RaUpdateDebugWindow(RaDebugWindow);
+             RaSortItems = RaClientSortQueue(ArgusSorter, RaCursesProcess->queue, ARGUS_LOCK);
+             ArgusParser->RaTasksToDo &= ~RA_SORTING;
 
 #if defined(HAVE_DECL_RL_DONE) && HAVE_DECL_RL_DONE
              rl_done = 1;
@@ -4965,6 +5405,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
       }
    }
 
+   ArgusFree(promptbuf);
    return (retn);
 }
 
@@ -5071,30 +5512,48 @@ RaRefreshDisplay (void)
 #if defined(ARGUS_CURSES)
 void
 RaUpdateHeaderWindow(WINDOW *win)
-{   
+{
 #if defined(ARGUS_CURSES)
    struct tm *tm, tmbuf;
    char stimebuf[128];
-#endif
+   char ssid[128], bssid[128];
+   int ssidlen = 0, bssidlen = 0;
 
    struct timeval tvpbuf, *tvp = &tvpbuf;
 
    gettimeofday (tvp, NULL);
+   bzero(bssid, 128);
+   bzero(ssid, 128);
+
+   if (ArgusWireless->bssid != NULL)
+      sprintf(bssid, "bssid:%s", ArgusWireless->bssid);
+
+   if (ArgusWireless->ssid != NULL)
+      sprintf(ssid, "ssid:%s", ArgusWireless->ssid);
 
    if (tvp->tv_sec > 0) {
       time_t tsec =  tvp->tv_sec;
       tm = localtime_r(&tsec, &tmbuf);
       strftime ((char *) stimebuf, 32, "%Y/%m/%d.%T", tm);
       sprintf ((char *)&stimebuf[strlen(stimebuf)], " ");
-      strftime(&stimebuf[strlen(stimebuf)], 32, "%Z ", tm);
+      strftime(&stimebuf[strlen(stimebuf)], 32, "%Z", tm);
 
    } else
       sprintf (stimebuf, " ");
 
    mvwaddnstr (win, 0, 0, ArgusGenerateProgramArgs(ArgusParser), RaScreenColumns - 5);
    wclrtoeol(win);
+
+   if ((bssidlen = strlen(bssid)) > 0) {
+      mvwaddnstr (win, 0, RaScreenColumns - (strlen(stimebuf) + bssidlen + 3) , bssid, bssidlen);
+      if ((ssidlen = strlen(ssid)) > 0) {
+         mvwaddnstr (win, 0, RaScreenColumns - (strlen(stimebuf) + bssidlen + ssidlen + 6) , ssid, ssidlen);
+      }
+   }
+
    mvwaddnstr (win, 0, RaScreenColumns - strlen(stimebuf) , stimebuf, strlen(stimebuf));
    touchwin(win);
+#endif
 }
 
 void
@@ -5107,12 +5566,14 @@ RaUpdateDebugWindow(WINDOW *win)
 #endif
 
    if (ArgusDisplayStatus && (ArgusParser->debugflag == 0)) {
+      char *status = NULL;
       char tbuf[MAXSTRLEN];
       struct timeval dtime;
       float secs, rate;
-  
-      dtime.tv_sec   = RaCursesStopTime.tv_sec  - RaCursesStartTime.tv_sec;
-      dtime.tv_usec  = RaCursesStopTime.tv_usec - RaCursesStartTime.tv_usec;
+      long long totalrecs = ArgusParser->ArgusTotalMarRecords + ArgusParser->ArgusTotalEventRecords + ArgusParser->ArgusTotalFarRecords;
+
+      dtime.tv_sec   = ArgusParser->ArgusLastRealTime.tv_sec  - ArgusParser->ArgusStartRealTime.tv_sec;
+      dtime.tv_usec  = ArgusParser->ArgusLastRealTime.tv_usec - ArgusParser->ArgusStartRealTime.tv_usec;
   
       if (dtime.tv_usec < 0) {
          dtime.tv_sec--;
@@ -5120,12 +5581,16 @@ RaUpdateDebugWindow(WINDOW *win)
       }
   
       secs = (dtime.tv_sec * 1.0) + ((dtime.tv_usec * 1.0)/1000000.0);
-      rate = (ArgusParser->ArgusTotalRecords * 1.0);
+      rate = (secs > 0.0) ? (totalrecs * 1.0) / secs : 0.0;
+
+      if (ArgusParser->Pauseflag) {
+         status = "Paused";
+      } else {
+         status = (ArgusParser->RaTasksToDo & RA_SORTING) ? "Sorting" : (ArgusParser->RaTasksToDo ? "Active" : "Idle");
+      }
 
       sprintf (tbuf, "ProcessQueue %6d DisplayQueue %6d TotalRecords %8lld  Rate %11.4f rps   Status %s",
-                          RaCursesProcess->queue->count, RaSortItems,
-                          ArgusParser->ArgusTotalRecords, rate/secs, 
-                          ArgusParser->RaTasksToDo ? "Active" : "Idle");
+                          RaCursesProcess->queue->count, RaSortItems, totalrecs, rate, status);
 
       ArgusSetDebugString (tbuf, 0, ARGUS_LOCK);
    }
@@ -5170,10 +5635,13 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
    struct ArgusRecordStruct *ns = NULL;
    regex_t pregbuf, *preg = &pregbuf;
    regmatch_t pmbuf[32], *pm = &pmbuf[0];
-   char *sbuf = NULL;
+   char sbuf[2048];
 
-   if ((sbuf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+   /* Do not attempt to search for empty string.  This will loop
+    * forever.
+    */
+   if (*pattern == '\0')
+      return -1;
 
 #if defined(ARGUS_PCRE)
    options = 0;
@@ -5187,8 +5655,8 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
    bzero (preg, sizeof(*preg));
 
    if ((rege = regcomp(preg, pattern, options)) != 0) {
-      char errbuf[MAXSTRLEN];
-      if (regerror(rege, preg, errbuf, MAXSTRLEN))
+      char errbuf[512];
+      if (regerror(rege, preg, errbuf, 512))
          sprintf (sbuf, "RaHighlightDisplay %s", errbuf);
       ArgusSetDebugString (sbuf, LOG_ERR, ARGUS_LOCK);
       return retn;
@@ -5230,8 +5698,6 @@ RaHighlightDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *q
       touchwin(RaCurrentWindow->window);
 
    regfree(preg);
-   if (sbuf != NULL) ArgusFree(sbuf);
-
    return (retn);
 }
 
@@ -5242,10 +5708,13 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    int retn = -1, x = 0, startline = *cursy, options, rege;
    struct ArgusRecordStruct *ns = NULL;
    regex_t pregbuf, *preg = &pregbuf;
-   char *buf = NULL, *ptr = NULL;
+   char buf[MAXSTRLEN], *ptr;
 
-   if ((buf = (char *)ArgusMalloc(MAXSTRLEN)) == NULL)
-      ArgusLog (LOG_ERR, "RaSQLProcessQueue: ArgusMalloc error %s", strerror(errno));
+   /* Do not attempt to search for empty string.  This will loop
+    * forever.
+    */
+   if (*pattern == '\0')
+      return -1;
 
 #if defined(ARGUS_PCRE)
    options = 0;
@@ -5259,8 +5728,8 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    bzero (preg, sizeof(*preg));
 
    if ((rege = regcomp(preg, pattern, options)) != 0) {
-      char errbuf[MAXSTRLEN];
-      if (regerror(rege, preg, errbuf, MAXSTRLEN))
+      char errbuf[512];
+      if (regerror(rege, preg, errbuf, 512))
          sprintf (buf, "RaSearchDisplay %s", errbuf);
       ArgusSetDebugString (buf, LOG_ERR, ARGUS_LOCK);
       return retn;
@@ -5435,7 +5904,6 @@ RaSearchDisplay (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    ArgusSearchHitRecord = NULL;
    ArgusSearchHitRank = 0;
    regfree(preg);
-   if (buf != NULL) ArgusFree(buf);
    return (-1);
 }
 
@@ -5449,6 +5917,17 @@ ArgusResetSearch (void)
    RaWindowStartLine = 0;
 }
 
+void
+RaResizeAlarmHandler(int sig)
+{
+#if defined(ARGUS_THREADS)
+   pthread_mutex_lock(&RaCursesLock);
+#endif
+   ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+#if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&RaCursesLock);
+#endif
+}
 
 void
 RaResizeScreen(void)
@@ -5498,7 +5977,7 @@ RaResizeScreen(void)
    queue->status |= RA_MODIFIED;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaResizeScreen() y %d x %d\n", RaScreenLines, RaScreenColumns);
+   ArgusDebug (3, "RaResizeScreen() y %d x %d\n", RaScreenLines, RaScreenColumns);
 #endif
 
 #else
@@ -5517,12 +5996,28 @@ RaResizeScreen(void)
          notimeout(dom->ws->window, TRUE);
       }
    }
-
 #endif    // ARGUS_SOLARIS 
 
-   ArgusTouchScreen();
-   RaRefreshDisplay();
+   {
+      struct itimerval it_val;
+
+      if (signal(SIGALRM, (void (*)(int)) RaResizeAlarmHandler) == SIG_ERR) {
+         ArgusLog (LOG_ERR, "RaResizeScreen() signal error %s\n", strerror(errno));
+      }
+      it_val.it_interval.tv_sec  = 0;
+      it_val.it_interval.tv_usec  = 0;
+      it_val.it_value.tv_sec  = 0;
+      it_val.it_value.tv_usec = 250000;
+
+      if (setitimer(ITIMER_REAL, &it_val, NULL) == -1) {
+         ArgusLog (LOG_ERR, "RaResizeScreen() setitimer error %s\n", strerror(errno));
+      }
+   }
    RaScreenResize = FALSE;
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "RaResizeScreen() y %d x %d\n", RaScreenLines, RaScreenColumns);
+#endif
 }
 
 
@@ -5623,68 +6118,110 @@ char *RaTable = NULL;
 char *
 ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
 {
+   size_t len = 0;
+   size_t remain = sizeof(RaProgramArgs);
    char *retn = RaProgramArgs;
    struct ArgusModeStruct *mode = NULL;
    struct ArgusInput *input = NULL;
+   struct ArgusFileInput *file = NULL;
    
-   sprintf (retn, "%s ", parser->ArgusProgramName);
+   snprintf_append(retn, &len, &remain, "%s ", parser->ArgusProgramName);
 
    if (parser->Aflag) {
-      sprintf (&retn[strlen(retn)], "-A ");
+      snprintf_append(retn, &len, &remain, "-A ");
    }
    if (parser->ArgusActiveHosts) {
       if (parser->Sflag) {
-         sprintf (&retn[strlen(retn)], "-S ");
+         snprintf_append(retn, &len, &remain, "-S ");
          if ((input = (void *)parser->ArgusActiveHosts->start) != NULL) {
             do {
-                  sprintf (&retn[strlen(retn)], "%s:%d ", input->hostname, input->portnum);
+                  snprintf_append(retn, &len, &remain, "%s:%d ",
+                                  input->hostname, input->portnum);
                input = (void *)input->qhdr.nxt;
             } while (input != (void *)parser->ArgusActiveHosts->start);
          }
       } else {
-         sprintf (&retn[strlen(retn)], "-r ");
-         if ((input = (void *)parser->ArgusInputFileList) != NULL) {
-            while (input != NULL) {
-               sprintf (&retn[strlen(retn)], "%s ", input->filename);
-               input = (void *)input->qhdr.nxt;
+#if defined(ARGUS_MYSQL)
+         if (parser->timearg) {
+            snprintf_append(retn, &len, &remain, "-t %s", parser->timearg);
+         } else {
+#endif
+            snprintf_append(retn, &len, &remain, "-r ");
+            if ((file = (void *)parser->ArgusInputFileList) != NULL) {
+               while (file != NULL) {
+                  switch (file->type) {
+                     case ARGUS_DATA_SOURCE:
+                     case ARGUS_V2_DATA_SOURCE:
+                     case ARGUS_NAMED_PIPE_SOURCE:
+                     case ARGUS_DOMAIN_SOURCE:
+                     case ARGUS_BASELINE_SOURCE:
+                     case ARGUS_DATAGRAM_SOURCE:
+                        break;
+                     case ARGUS_SFLOW_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "sflow:");
+                        break;
+                     case ARGUS_JFLOW_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "jflow:");
+                        break;
+                     case ARGUS_CISCO_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "cisco:");
+                        break;
+                     case ARGUS_IPFIX_DATA_SOURCE:
+                        snprintf_append(retn, &len, &remain, "ipfix:");
+                        break;
+                     case ARGUS_FLOW_TOOLS_SOURCE:
+                        snprintf_append(retn, &len, &remain, "ftools:");
+                        break;
+#if defined(ARGUS_MYSQL)
+                     case ARGUS_DBASE_SOURCE:
+                        snprintf_append(retn, &len, &remain, "mysql:");
+                        break;
+#endif
+                  }
+                  snprintf_append(retn, &len, &remain, "%s ", file->filename);
+                  file = (void *)file->qhdr.nxt;
+               }
+            } else {
+               snprintf_append(retn, &len, &remain, "- ");
             }
+#if defined(ARGUS_MYSQL)
          }
+#endif
       }
-
 
    } else {
       if (RaDatabase && RaTable) {
-         sprintf (&retn[strlen(retn)], "-P %s:%s ", RaDatabase, RaTable);
+         snprintf_append(retn, &len, &remain, "-P %s:%s ", RaDatabase, RaTable);
       }
    }
 
    if ((mode = parser->ArgusModeList) != NULL) { 
-      sprintf (&retn[strlen(retn)], "-M ");
+      snprintf_append(retn, &len, &remain, "-M ");
       while (mode) { 
-         sprintf (&retn[strlen(retn)], "%s ", mode->mode);
+         snprintf_append(retn, &len, &remain, "%s ", mode->mode);
          mode = mode->nxt;
       }
    }
 
    if (((mode = parser->ArgusMaskList) != NULL) || ((parser->ArgusAggregator != NULL) && (parser->ArgusAggregator->mask == 0))) {
-      sprintf (&retn[strlen(retn)], "-m ");
+      snprintf_append(retn, &len, &remain, "-m ");
       while (mode) {
-         sprintf (&retn[strlen(retn)], "%s ", mode->mode);
+         snprintf_append(retn, &len, &remain, "%s ", mode->mode);
          mode = mode->nxt;
       }
    }
 
-   if (parser->Hstr)
-      sprintf (&retn[strlen(retn)], "-H %s ", parser->Hstr);
+   if (parser->Hflag)
+      snprintf_append(retn, &len, &remain, "-H ");
 
    if ((parser->ArgusDisplayFilter) || parser->ArgusLocalFilter || parser->ArgusRemoteFilter) {
-      sprintf (&retn[strlen(retn)], "- ");
+      snprintf_append(retn, &len, &remain, "- ");
       if (parser->ArgusDisplayFilter)
-         sprintf (&retn[strlen(retn)], "display '%s' ", parser->ArgusDisplayFilter);
+         snprintf_append(retn, &len, &remain, "display '%s' ", parser->ArgusDisplayFilter);
       if (parser->ArgusLocalFilter)
-         sprintf (&retn[strlen(retn)], "local '%s' ", parser->ArgusLocalFilter);
+         snprintf_append(retn, &len, &remain, "local '%s' ", parser->ArgusLocalFilter);
       if (parser->ArgusRemoteFilter) 
-         sprintf (&retn[strlen(retn)], "remote '%s' ", parser->ArgusRemoteFilter);
+         snprintf_append(retn, &len, &remain, "remote '%s' ", parser->ArgusRemoteFilter);
    }
    return (retn);
 }
@@ -5735,7 +6272,7 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          }
 
          case ARGUS_NETFLOW:
-         case ARGUS_AFLOW:
+      case ARGUS_AFLOW:
          case ARGUS_FAR: {
             if (flow) {
                int i, done;
@@ -5745,21 +6282,21 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                      switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                         case ARGUS_TYPE_IPV4: {
                            if (ArgusTestMulticast(ns->input, flow->ip_flow.ip_src))
-                              ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BASE00);
+                              ArgusSrcAddrPair = COLOR_PAIR(ARGUS_VIOLET);
 
                            if (ArgusTestMulticast(ns->input, flow->ip_flow.ip_dst))
-                              ArgusDstAddrPair = COLOR_PAIR(ARGUS_BASE00);
+                              ArgusDstAddrPair = COLOR_PAIR(ARGUS_VIOLET);
 
                            if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                               int status;
 
-                              status = RaProcessAddress (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
                               }
 
-                              status = RaProcessAddress (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusDstAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusDstAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
@@ -5790,13 +6327,13 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                            if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                               int status;
 
-                              status = RaProcessAddress (parser, labeler, &flow->arp_flow.arp_spa, 32, ARGUS_TYPE_IPV4);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->arp_flow.arp_spa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusSrcAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
                               }
 
-                              status = RaProcessAddress (parser, labeler, &flow->arp_flow.arp_tpa, 32, ARGUS_TYPE_IPV4);
+                              status = RaProcessAddressLocality (parser, labeler, ns, &flow->arp_flow.arp_tpa, 32, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
                               switch (status) {
                                  case ARGUS_MY_ADDRESS: ArgusDstAddrPair = COLOR_PAIR(ARGUS_BLUE); break;
                                  case ARGUS_MY_NETWORK: ArgusDstAddrPair = COLOR_PAIR(ARGUS_CYAN); break;
@@ -5954,7 +6491,6 @@ ArgusColorGeoLocation(struct ArgusParserStruct *parser, struct ArgusRecordStruct
    return (retn);
 }
 
-int ArgusDisplayColorsInitialized = 0;
 
 void
 ArgusInitializeColorMap(struct ArgusParserStruct *parser, WINDOW *win)

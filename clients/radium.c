@@ -1,28 +1,25 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- */
-
-/* 
- * $Id: //depot/argus/clients/clients/radium.c#16 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/radium.c#20 $
+ * $DateTime: 2016/11/30 00:54:11 $
+ * $Change: 3245 $
  */
 
 /*
@@ -50,16 +47,32 @@
 #endif
 
 #include <argus_compat.h>
+#include <argus_util.h>
 #include <argus_output.h>
+#include "argus_clientconfig.h"
 
 #include <rabins.h>
 
-int RaRealTime = 0;
-float RaUpdateRate = 1.0;
-                                                                                                                           
+#if defined(HAVE_UUID_UUID_H)
+#include <uuid/uuid.h>
+#else
+#if defined(HAVE_UUID_H)
+#include <uuid.h>
+#else
+#if defined(HAVE_LINUX_UUID_H)
+#include <linux/uuid.h>
+#endif
+#endif
+#endif
+
+
+#define RADIUM_MAX_ANALYTICS    128
+struct ArgusRecordStruct *(*RadiumAnalyticAlgorithmTable[RADIUM_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
+   NULL, NULL, NULL
+};
+
+
 struct timeval ArgusLastRealTime = {0, 0};
-struct timeval ArgusLastTime     = {0, 0};
-struct timeval ArgusThisTime     = {0, 0};
                                                                                                                            
 struct timeval dLastTime = {0, 0};
 struct timeval dRealTime = {0, 0};
@@ -69,12 +82,86 @@ struct timeval dTime     = {0, 0};
 long long thisUsec = 0;
                                                                                                                            
 void RadiumSendFile (struct ArgusOutputStruct *, struct ArgusClientData *, char *, int);
+int RadiumParseSourceID (struct ArgusAddrStruct *, char *);
+int RadiumParseSrcidConversionFile (char *);
+
+static int RadiumMinSsf = 0;
+static int RadiumMaxSsf = 0;
+static int RadiumAuthLocalhost = 1;
+static int RadiumParseResourceLine (struct ArgusParserStruct *parser,
+                                    int linenum, char *optarg, int quoted,
+                                    int idx);
+
+const static unsigned int ArgusClientMaxQueueDepth = 500000;
 
 extern char *chroot_dir;
 extern uid_t new_uid;
 extern gid_t new_gid;
 
 void ArgusSetChroot(char *);
+
+#define RADIUM_RCITEMS                          28
+
+#define RADIUM_MONITOR_ID                       0
+#define RADIUM_MONITOR_ID_INCLUDE_INF		1
+#define RADIUM_ARGUS_SERVER                     2
+#define RADIUM_ARGUS_CLIENT			3
+#define RADIUM_DAEMON                           4
+#define RADIUM_CISCONETFLOW_PORT                5
+#define RADIUM_ACCESS_PORT                      6
+#define RADIUM_INPUT_FILE                       7
+#define RADIUM_USER_AUTH                        8
+#define RADIUM_AUTH_PASS                        9
+#define RADIUM_OUTPUT_FILE                      10
+#define RADIUM_OUTPUT_STREAM                    11
+#define RADIUM_MAR_STATUS_INTERVAL              12
+#define RADIUM_DEBUG_LEVEL                      13
+#define RADIUM_FILTER_OPTIMIZER                 14
+#define RADIUM_FILTER_TAG                       15
+#define RADIUM_BIND_IP                          16
+#define RADIUM_MIN_SSF                          17
+#define RADIUM_MAX_SSF                          18
+#define RADIUM_ADJUST_TIME                      19
+#define RADIUM_CHROOT_DIR                       20
+#define RADIUM_SETUSER_ID                       21
+#define RADIUM_SETGROUP_ID                      22
+#define RADIUM_CLASSIFIER_FILE                  23
+#define RADIUM_ZEROCONF_REGISTER                24
+#define RADIUM_V3_ACCESS_PORT                   25
+#define RADIUM_SRCID_CONVERSION_FILE            26
+#define RADIUM_AUTH_LOCALHOST                   27
+
+char *RadiumResourceFileStr [] = {
+   "RADIUM_MONITOR_ID=",
+   "RADIUM_MONITOR_ID_INCLUDE_INF=",
+   "RADIUM_ARGUS_SERVER=",
+   "RADIUM_ARGUS_CLIENT=",
+   "RADIUM_DAEMON=",
+   "RADIUM_CISCONETFLOW_PORT=",
+   "RADIUM_ACCESS_PORT=",
+   "RADIUM_INPUT_FILE=",
+   "RADIUM_USER_AUTH=",
+   "RADIUM_AUTH_PASS=",
+   "RADIUM_OUTPUT_FILE=",
+   "RADIUM_OUTPUT_STREAM=",
+   "RADIUM_MAR_STATUS_INTERVAL=",
+   "RADIUM_DEBUG_LEVEL=",
+   "RADIUM_FILTER_OPTIMIZER=",
+   "RADIUM_FILTER=",
+   "RADIUM_BIND_IP=",
+   "RADIUM_MIN_SSF=",
+   "RADIUM_MAX_SSF=",
+   "RADIUM_ADJUST_TIME=",
+   "RADIUM_CHROOT_DIR=",
+   "RADIUM_SETUSER_ID=",
+   "RADIUM_SETGROUP_ID=",
+   "RADIUM_CLASSIFIER_FILE=",
+   "RADIUM_ZEROCONF_REGISTER=",
+   "RADIUM_V3_ACCESS_PORT=",
+   "RADIUM_SRCID_CONVERSION_FILE=",
+   "RADIUM_AUTH_LOCALHOST=",
+};
+
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -85,38 +172,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    int pid, dflag;
 #if defined(ARGUS_THREADS)
    sigset_t blocked_signals;
-   int thread = 0;
-
-   thread++;
 #endif /* ARGUS_THREADS */
- 
-/*
-   if (thread == 0)
-      ArgusLog (LOG_ERR, "not compiled with pthread support.  exiting");
-*/
+
    parser->RaWriteOut = 1;
    parser->ArgusReverse = 1;
 
    if (!(parser->RaInitialized)) {
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
-            if (!(strncasecmp (mode->mode, "rtime", 5)) ||
-               (!(strncasecmp (mode->mode, "realtime", 8)))) {
-               char *ptr = NULL;
-               RaRealTime++;
-               if ((ptr = strchr(mode->mode, ':')) != NULL) {
-                  double value = 0.0;
-                  char *endptr = NULL;
-                  ptr++;
-                  value = strtod(ptr, &endptr);
-                  if (ptr != endptr) {
-                     RaUpdateRate = value;
-                  }
-               }
-            } else
-               if (isdigit(*optarg))
-                  setArgusMarReportInterval (ArgusParser, optarg);
-
+            if (!(strncasecmp (mode->mode, "zeroconf", 8)))
+               parser->ArgusZeroConf = 1;
             mode = mode->nxt;
          }
       }
@@ -128,10 +193,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewAggregator error");
 
       if (parser->ArgusFlowModelFile != NULL) {
-         RadiumParseResourceFile (parser, parser->ArgusFlowModelFile);
+         RaParseResourceFile (parser, parser->ArgusFlowModelFile,
+                              ARGUS_SOPTIONS_IGNORE, RadiumResourceFileStr,
+                              RADIUM_RCITEMS, RadiumParseResourceLine);
       } else {
          if (!(parser->Xflag)) {
-            RadiumParseResourceFile (parser, "/etc/radium.conf");
+            RaParseResourceFile (parser, "/etc/radium.conf",
+                                 ARGUS_SOPTIONS_IGNORE, RadiumResourceFileStr,
+                                 RADIUM_RCITEMS, RadiumParseResourceLine);
          }
       }
 
@@ -164,7 +233,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
                   umask(0);
     
-                  ArgusLog(LOG_WARNING, "started");
+                  ArgusLog(LOG_INFO, "started");
 
                   if ((tmpfile = freopen ("/dev/null", "r", stdin)) == NULL)
                      ArgusLog (LOG_ERR, "Cannot map stdout to /dev/null");
@@ -179,11 +248,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
-      if (parser->ArgusPortNum != 0) {
-         if (ArgusEstablishListen (parser, parser->ArgusPortNum, parser->ArgusBindAddr) < 0)
-            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
-      }
-
       if (chroot_dir != NULL)
          ArgusSetChroot(chroot_dir);
  
@@ -196,6 +260,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if (setuid(new_uid) < 0)
             ArgusLog (LOG_ERR, "ArgusInitOutput: setuid error %s", strerror(errno));
       }
+
 /*
    This is the basic new argus() strategy for processing output
    records.  The thread will do two basic things: 
@@ -203,7 +268,10 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          processing that this radium will do, such as time
          adjustment, aggregation, correction, and anonymization, etc...
 
-      2) it will manage the listen, to deal without remote client
+      2) it will establish the permanent and non-argus outputs
+         from the configuration file.
+
+      3) it will manage the listen, to deal without remote argus
          requests.  radium() can write its records to a file, and
          any number of remote clients, so ......
 
@@ -211,16 +279,31 @@ ArgusClientInit (struct ArgusParserStruct *parser)
    and so it should be run, probably 4x a second, just for good
    measure.
 */
-
       parser->ArgusReliableConnection++;
-      parser->RaInitialized++;
-
-      parser->ArgusOutput = ArgusNewOutput (parser);
-      ArgusInitOutput (parser->ArgusOutput);
 
       tvp = getArgusMarReportInterval(ArgusParser);
       if ((tvp->tv_sec == 0) && (tvp->tv_usec == 0)) {
-         setArgusMarReportInterval (ArgusParser, "60s");
+         setArgusMarReportInterval (ArgusParser, "5s");
+      }
+
+      if ((parser->ArgusOutput = ArgusNewOutput(parser, RadiumMinSsf,
+                                                RadiumMaxSsf,
+                                                RadiumAuthLocalhost)) == NULL)
+         ArgusLog (LOG_ERR, "could not create output: %s\n", strerror(errno));
+
+      /* Need valid parser->ArgusOutput before starting listener */
+      if (parser->ArgusPortNum != 0) {
+         if (ArgusEstablishListen (parser, parser->ArgusOutput,
+                                   parser->ArgusPortNum, parser->ArgusBindAddr,
+                                   ARGUS_VERSION) < 0)
+            ArgusLog (LOG_ERR, "setArgusPortNum: ArgusEstablishListen returned %s", strerror(errno));
+      }
+      if (parser->ArgusV3Port != 0) {
+         if (ArgusEstablishListen (parser, parser->ArgusOutput,
+                                   parser->ArgusV3Port, parser->ArgusBindAddr,
+                                   ARGUS_VERSION_3) < 0)
+            ArgusLog (LOG_ERR, "%s: ArgusEstablishListen returned %s",
+                      __func__, strerror(errno));
       }
 
 #if defined(ARGUS_THREADS)
@@ -236,6 +319,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTSTP, SIG_IGN);
       (void) signal (SIGTTOU, SIG_IGN);
       (void) signal (SIGTTIN, SIG_IGN);
+
+      parser->RaInitialized++;
    }
 }
 
@@ -263,16 +348,7 @@ RaParseComplete (int sig)
 
          while (queue->count > 0) {
             if ((input = (struct ArgusInput *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
-               ArgusCloseInput(ArgusParser, input);
-               if (input->hostname != NULL)
-                  free (input->hostname);
-               if (input->filename != NULL)
-                  free (input->filename);
-#if defined(HAVE_GETADDRINFO)
-               if (input->host != NULL)
-                  freeaddrinfo (input->host);
-#endif
-               ArgusFree(input);
+               ArgusDeleteInput(ArgusParser, input);
             }
          }
          ArgusDeleteQueue(queue);
@@ -280,9 +356,10 @@ RaParseComplete (int sig)
       }
 
       if (ArgusParser->ArgusOutput) {
-         if ((rec = ArgusGenerateStatusMarRecord(ArgusParser->ArgusOutput, ARGUS_SHUTDOWN)) != NULL)
+         if ((rec = ArgusGenerateStatusMarRecord(ArgusParser->ArgusOutput, ARGUS_SHUTDOWN, ARGUS_VERSION)) != NULL)
             ArgusPushBackList(ArgusParser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *)rec, ARGUS_LOCK);
       
+         ArgusCloseListen(ArgusParser);
          ArgusCloseOutput(ArgusParser->ArgusOutput);
          ArgusDeleteOutput(ArgusParser, ArgusParser->ArgusOutput);
          ArgusParser->ArgusOutput = NULL;
@@ -343,27 +420,7 @@ void
 ArgusClientTimeout ()
 {
    gettimeofday(&ArgusParser->ArgusRealTime, 0);
-
-   if (RaRealTime) {  /* establish value for time comparison */
-      if (ArgusLastTime.tv_sec != 0) {
-         if (ArgusLastRealTime.tv_sec > 0) {
-            RaDiffTime(&ArgusParser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-            thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-            dRealTime.tv_sec  = thisUsec / 1000000;
-            dRealTime.tv_usec = thisUsec % 1000000;
-                                                                                                                             
-            ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-            ArgusLastTime.tv_usec += dRealTime.tv_usec;
-                                                                                                                             
-            if (ArgusLastTime.tv_usec > 1000000) {
-               ArgusLastTime.tv_sec++;
-               ArgusLastTime.tv_usec -= 1000000;
-            }
-         }
-
-         ArgusLastRealTime = ArgusParser->ArgusRealTime;
-      }
-   }
+   ArgusParser->ArgusGlobalTime = ArgusParser->ArgusRealTime;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (6, "ArgusClientTimeout()\n");
@@ -396,13 +453,6 @@ usage ()
    fflush (stdout);
    exit(1);
 }
-
-
-#define RADIUM_MAX_ANALYTICS	128
-struct ArgusRecordStruct *(*RadiumAnalyticAlgorithmTable[RADIUM_MAX_ANALYTICS])(struct ArgusParserStruct *, struct ArgusRecordStruct *) = {
-   NULL, NULL, NULL
-};
-
 
 
 void
@@ -442,94 +492,72 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
          if (time != NULL) {
             if (parser->ArgusAdjustTime) {
-               long long ArgusDriftLevel = parser->ArgusAdjustTime * 1000000;
+               int secs = 0, usecs = 0;
 
-               if (time && ((argus->input->ArgusTimeDrift >  ArgusDriftLevel) || 
-                            (argus->input->ArgusTimeDrift < -ArgusDriftLevel))) {
-                  int secs  = argus->input->ArgusTimeDrift / 1000000;
-                  int usecs = argus->input->ArgusTimeDrift % 1000000;
+               if (parser->ProcessRealTime) {
+                  struct timeval tvpbuf, *now = &tvpbuf;
+                  double lastTime = ArgusFetchLastTime(argus);
 
-                  struct timeval startbuf, *start = &startbuf;
-                  struct timeval endbuf, *end = &endbuf;
+                  gettimeofday(now, NULL);
+                  secs  = now->tv_sec - (int)lastTime;
+                  usecs = now->tv_usec - ((lastTime - (int)lastTime) * 1000000);
+                  if (usecs < 0) { usecs += 1000000; secs--; }
 
-                  start->tv_sec  = time->src.start.tv_sec;
-                  start->tv_usec = time->src.start.tv_usec;
-
-                  end->tv_sec    = time->src.end.tv_sec;
-                  end->tv_usec   = time->src.end.tv_usec;
-
-#ifdef ARGUSDEBUG
-                  ArgusDebug (4, "RaProcessRecord() ArgusInput 0x%x adjusting timestamps by %d secs and %d usecs\n", argus->input, secs, usecs);
-#endif
-                  time->hdr.argus_dsrvl8.qual |= ARGUS_TIMEADJUST;
-                  start->tv_sec  +=  secs;
-                  start->tv_usec += usecs;
-                  if (start->tv_usec < 0) {
-                     start->tv_sec--; start->tv_usec += 1000000;
-                  }
-                  if (start->tv_usec > 1000000) {
-                     start->tv_sec++; start->tv_usec -= 1000000;
-                  }
-
-                  end->tv_sec  +=  secs;
-                  end->tv_usec += usecs;
-                  if (end->tv_usec < 0) {
-                     end->tv_sec--; end->tv_usec += 1000000;
-                  }
-                  if (end->tv_usec > 1000000) {
-                     end->tv_sec++; end->tv_usec -= 1000000;
-                  }
+               } else {
+                  long long ArgusDriftLevel = parser->ArgusAdjustTime * 1000000;
+                  if (time && ((argus->input->ArgusTimeDrift >  ArgusDriftLevel) || 
+                               (argus->input->ArgusTimeDrift < -ArgusDriftLevel))) {
+                        secs  = argus->input->ArgusTimeDrift / 1000000;
+                        usecs = argus->input->ArgusTimeDrift % 1000000;
+                     }
                }
-            }
 
-            ArgusThisTime.tv_sec  = time->src.start.tv_sec;
-            ArgusThisTime.tv_usec = time->src.start.tv_usec;
-
-            if (RaRealTime) {
-               if (ArgusLastTime.tv_sec == 0)
-                  ArgusLastTime = ArgusThisTime;
-                                                                                                                                 
-               if (!((ArgusLastTime.tv_sec  > ArgusThisTime.tv_sec) ||
-                  ((ArgusLastTime.tv_sec == ArgusThisTime.tv_sec) &&
-                   (ArgusLastTime.tv_usec > ArgusThisTime.tv_usec)))) {
-                                                                                                                                 
-                  while ((ArgusThisTime.tv_sec  > ArgusLastTime.tv_sec) ||
-                        ((ArgusThisTime.tv_sec == ArgusLastTime.tv_sec) &&
-                         (ArgusThisTime.tv_usec > ArgusLastTime.tv_usec))) {
-                     struct timespec ts = {0, 0};
-                     int thisRate;
-                                                                                                                                 
-                     RaDiffTime(&ArgusThisTime, &ArgusLastTime, &dThisTime);
-                     thisRate = ((dThisTime.tv_sec * 1000000) + dThisTime.tv_usec)/RaUpdateRate;
-                     thisRate = (thisRate > 100000) ? 100000 : thisRate;
-
-                     ts.tv_nsec = thisRate * 1000;
-                     nanosleep (&ts, NULL);
-                     ArgusClientTimeout ();
-
-                     gettimeofday(&parser->ArgusRealTime, 0);
-
-                     if (ArgusLastRealTime.tv_sec > 0) {
-                        RaDiffTime(&parser->ArgusRealTime, &ArgusLastRealTime, &dRealTime);
-                        thisUsec = ((dRealTime.tv_sec * 1000000) + dRealTime.tv_usec) * RaUpdateRate;
-                        dRealTime.tv_sec  = thisUsec / 1000000;
-                        dRealTime.tv_usec = thisUsec % 1000000;
-                                                                                                                                 
-                        ArgusLastTime.tv_sec  += dRealTime.tv_sec;
-                        ArgusLastTime.tv_usec += dRealTime.tv_usec;
-                        if (ArgusLastTime.tv_usec > 1000000) {
-                           ArgusLastTime.tv_sec++;
-                           ArgusLastTime.tv_usec -= 1000000;
+               if ((secs > 0) || (usecs > 0)) {
+                  if (time->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START)) {
+                     time->hdr.argus_dsrvl8.qual |= ARGUS_TIMEADJUST;
+                     if (time->hdr.subtype & ARGUS_TIME_SRC_START) {
+                        if (time->src.start.tv_sec > 0) {
+                           time->src.start.tv_sec  += secs;
+                           time->src.start.tv_usec += usecs;
+                           if (time->src.start.tv_usec > 1000000) {
+                              time->src.start.tv_sec++;
+                              time->src.start.tv_usec -= 1000000;
+                           }
+                        }
+                        if (time->src.end.tv_sec > 0) {
+                           time->src.end.tv_sec  += secs;
+                           time->src.end.tv_usec += usecs;
+                           if (time->src.end.tv_usec > 1000000) {
+                              time->src.end.tv_sec++;
+                              time->src.end.tv_usec -= 1000000;
+                           }
                         }
                      }
 
-                     ArgusLastRealTime = parser->ArgusRealTime;
+                     if (time->hdr.subtype & ARGUS_TIME_DST_START) {
+                        if (time->dst.start.tv_sec > 0) {
+                           time->dst.start.tv_sec  += secs;
+                           time->dst.start.tv_usec += usecs;
+                           if (time->dst.start.tv_usec > 1000000) {
+                              time->dst.start.tv_sec++;
+                              time->dst.start.tv_usec -= 1000000;
+                           }
+                        }
+                        if (time->dst.end.tv_sec > 0) {
+                           time->dst.end.tv_sec  += secs;
+                           time->dst.end.tv_usec += usecs;
+                           if (time->dst.end.tv_usec > 1000000) {
+                              time->dst.end.tv_sec++;
+                              time->dst.end.tv_usec -= 1000000;
+                           }
+                        }
+                     }
+#ifdef ARGUSDEBUG
+                     ArgusDebug (4, "RaProcessRecord() ArgusInput 0x%x adjusting timestamps by %d secs and %d usecs\n", argus->input, secs, usecs);
+#endif
                   }
                }
-
-            } else
-               ArgusLastTime = parser->ArgusRealTime;
-
+            }
          }
          break;
       }
@@ -551,14 +579,22 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    }
 
 #if defined(ARGUS_THREADS)
-   pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond); 
+   if (parser->ArgusOutput && parser->ArgusOutput->ArgusOutputList) {
+      unsigned int cnt;
 
-   if (parser->ArgusOutput->ArgusOutputList->count > 10000) {
-      struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
-      nanosleep (ts, NULL);
+      pthread_mutex_lock(&parser->ArgusOutput->ArgusOutputList->lock);
+      pthread_cond_signal(&parser->ArgusOutput->ArgusOutputList->cond);
+      cnt = parser->ArgusOutput->ArgusOutputList->count;
+      pthread_mutex_unlock(&parser->ArgusOutput->ArgusOutputList->lock);
+
+      if (cnt > ArgusClientMaxQueueDepth) {
+         struct timespec tsbuf = {0, 10000000}, *ts = &tsbuf;
+         nanosleep (ts, NULL);
+      }
    }
 
 #else
+   ArgusListenProcess(parser);
    ArgusOutputProcess(parser->ArgusOutput);
 #endif
 
@@ -577,401 +613,266 @@ void ArgusWindowClose(void) {
 #endif
 }
 
-#define RADIUM_RCITEMS                          22
+/* used by RadiumParseResourceLine */
+static int roption = 0;
 
-#define RADIUM_DAEMON                           0
-#define RADIUM_MONITOR_ID                       1
-#define RADIUM_ARGUS_SERVER                     2
-#define RADIUM_CISCONETFLOW_PORT                3
-#define RADIUM_ACCESS_PORT                      4
-#define RADIUM_INPUT_FILE                       5
-#define RADIUM_USER_AUTH                        6
-#define RADIUM_AUTH_PASS                        7
-#define RADIUM_OUTPUT_FILE                      8
-#define RADIUM_OUTPUT_STREAM                    9
-#define RADIUM_MAR_STATUS_INTERVAL              10
-#define RADIUM_DEBUG_LEVEL                      11
-#define RADIUM_FILTER_OPTIMIZER                 12
-#define RADIUM_FILTER_TAG                       13
-#define RADIUM_BIND_IP                          14
-#define RADIUM_MIN_SSF                          15
-#define RADIUM_MAX_SSF                          16
-#define RADIUM_ADJUST_TIME                      17
-#define RADIUM_CHROOT_DIR                       18
-#define RADIUM_SETUSER_ID                       19
-#define RADIUM_SETGROUP_ID                      20
-#define RADIUM_CLASSIFIER_FILE                  21
-
-char *RadiumResourceFileStr [] = {
-   "RADIUM_DAEMON=",
-   "RADIUM_MONITOR_ID=",
-   "RADIUM_ARGUS_SERVER=",
-   "RADIUM_CISCONETFLOW_PORT=",
-   "RADIUM_ACCESS_PORT=",
-   "RADIUM_INPUT_FILE=",
-   "RADIUM_USER_AUTH=",
-   "RADIUM_AUTH_PASS=",
-   "RADIUM_OUTPUT_FILE=",
-   "RADIUM_OUTPUT_STREAM=",
-   "RADIUM_MAR_STATUS_INTERVAL=",
-   "RADIUM_DEBUG_LEVEL=",
-   "RADIUM_FILTER_OPTIMIZER=",
-   "RADIUM_FILTER=",
-   "RADIUM_BIND_IP=",
-   "RADIUM_MIN_SSF=",
-   "RADIUM_MAX_SSF=",
-   "RADIUM_ADJUST_TIME=",
-   "RADIUM_CHROOT_DIR=",
-   "RADIUM_SETUSER_ID=",
-   "RADIUM_SETGROUP_ID=",
-   "RADIUM_CLASSIFIER_FILE=",
-};
-
-int
-RadiumParseResourceFile (struct ArgusParserStruct *parser, char *file)
+static int
+RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
+                         char *optarg, int quoted, int idx)
 {
    int retn = 0;
-   int i, len, done = 0, linenum = 0, Soption = 0, roption = 0, quoted = 0;
-   char strbuf[MAXSTRLEN], *str = strbuf, *optarg;
-   char result[MAXSTRLEN], *ptr;
-   FILE *fd;
+   char *ptr;
 
-   if (file) {
-      if ((fd = fopen (file, "r")) != NULL) {
-         while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-            done = 0; quoted = 0; linenum++;
-            while (*str && isspace((int)*str))
-                str++;
+   switch (idx) {
+      case RADIUM_MONITOR_ID: {
+         if (optarg && quoted) {   // Argus ID is a string.  Limit to date is 4 characters.
+            int slen = strlen(optarg);
+            if (slen > 4) optarg[4] = '\0';
+            if (optarg[3] == '\"') optarg[3] = '\0';
+            setParserArgusID (parser, optarg, 4, ARGUS_TYPE_STRING);
 
-            if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-               for (i = 0; i < RADIUM_RCITEMS && !done; i++) {
-                  len = strlen(RadiumResourceFileStr[i]);
-                  if (!(strncmp (str, RadiumResourceFileStr[i], len))) {
-                     optarg = &str[len];
-                     if (*optarg == '\"') { optarg++; quoted = 1; }
-                     if (optarg[strlen(optarg) - 1] == '\n')
-                        optarg[strlen(optarg) - 1] = '\0';
-                     if (optarg[strlen(optarg) - 1] == '\"')
-                        optarg[strlen(optarg) - 1] = '\0';
+         } else {
+            if (optarg && (*optarg == '`')) {
+               if (strrchr(optarg, (int) '`') != optarg) {
+                  char *val = ArgusExpandBackticks(optarg);
 
-                     switch (i) {
-                        case RADIUM_DAEMON: {
-                           if (!(strncasecmp(optarg, "yes", 3)))
-                              parser->dflag = 1;
-                           else
-                           if (!(strncasecmp(optarg, "no", 2)))
-                              parser->dflag = 0;
-
-                           break;
-                        }
-
-                        case RADIUM_MONITOR_ID: 
-                           if (optarg && quoted) {   // Argus ID is a string.  Limit to date is 4 characters.
-                              int slen = strlen(optarg);
-                              if (slen > 4) optarg[4] = '\0';
-                              setParserArgusID (parser, optarg, 4, ARGUS_IDIS_STRING);
- 
-                           } else {
-                           if (optarg && (*optarg == '`')) {
-                              if (optarg[strlen(optarg) - 1] == '`') {
-                                 FILE *tfd;
-
-                                 optarg++;
-                                 optarg[strlen(optarg) - 1] = '\0';
-                                 if (!(strcmp (optarg, "hostname"))) {
-                                    if ((tfd = popen("hostname", "r")) != NULL) {
-                                       if ((ptr = fgets(result, MAXSTRLEN, tfd)) != NULL) {
-                                          optarg = ptr;
-                                          optarg[strlen(optarg) - 1] = '\0';
-
-                                          if ((ptr = strstr(optarg, ".local")) != NULL) {
-                                             if (strlen(ptr) == strlen(".local"))
-                                                *ptr = '\0';
-                                          }
-
-                                       } else
-                                          ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) `hostname` failed %s.\n", file, strerror(errno));
-
-                                       pclose(tfd);
-                                    } else
-                                       ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) System error: popen() %s\n", file, strerror(errno));
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) unsupported command `%s` at line %d.\n", file, optarg, linenum);
-                              } else
-                                 ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
-                           }
-                           if (optarg && isalnum((int)*optarg)) {
-#if defined(HAVE_GETADDRINFO)
-                              struct addrinfo *host;
-                              int retn;
-
-                              if ((retn = getaddrinfo(optarg, NULL, NULL, &host)) == 0) {
-                                 struct addrinfo *hptr = host;
-                                 switch (host->ai_family) {
-                                    case AF_INET:  {
-                                       struct sockaddr_in *sa = (struct sockaddr_in *) host->ai_addr;
-                                       unsigned int addr;
-                                       bcopy ((char *)&sa->sin_addr, (char *)&addr, 4);
-                                       setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
-                                       break;
-                                    }
-                                    default:
-                                       ArgusLog (LOG_ERR, "Probe ID %s not in address family\n", optarg);
-                                       break;
-                                 }
-                                 freeaddrinfo(hptr);
-
-                              } else {
-                                 switch (retn) {
-                                    case EAI_AGAIN:
-                                       ArgusLog(LOG_ERR, "dns server not available");
-                                       break;
-                                    case EAI_NONAME:
-                                       ArgusLog(LOG_ERR, "srcid %s unknown", optarg);
-                                       break;
-#if defined(EAI_ADDRFAMILY)
-                                    case EAI_ADDRFAMILY:
-                                       ArgusLog(LOG_ERR, "srcid %s has no IP address", optarg);
-                                       break;
-#endif
-                                    case EAI_SYSTEM:
-                                       ArgusLog(LOG_ERR, "srcid %s name server error %s", optarg, strerror(errno));
-                                       break;
-                                 }
-                              }
-#else
-                              struct hostent *host;
-
-                              if ((host = gethostbyname(optarg)) != NULL) {
-                                 if ((host->h_addrtype == 2) && (host->h_length == 4)) {
-                                    unsigned int addr;
-                                    bcopy ((char *) *host->h_addr_list, (char *)&addr, host->h_length);
-                                    setParserArgusID (parser, &addr, 4, ARGUS_IDIS_IPV4);
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) host '%s' error %s\n", file, optarg, strerror(errno));
-                              } else
-                                 if (optarg && isdigit((int)*optarg)) {
-                                    setParserArgusID (parser, optarg, 4, ARGUS_IDIS_INT);
-                                 } else
-                                    ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
-
-#endif
-                           } else
-                              ArgusLog (LOG_ERR, "RadiumParseResourceFile(%s) syntax error line %d\n", file, linenum);
-                           }
-
-                           break;
-
-                        case RADIUM_ARGUS_SERVER:
-                           ++parser->Sflag;
-                           if (!Soption++ && (parser->ArgusRemoteHostList != NULL))
-                              ArgusDeleteHostList(parser);
-
-                           if (!(ArgusAddHostList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
-                              ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
-                           break;
-
-                        case RADIUM_CISCONETFLOW_PORT: {
-                           ++parser->Sflag; ++parser->Cflag;
-                           if (!Soption++ && (parser->ArgusRemoteHostList != NULL))
-                              ArgusDeleteHostList(parser);
-
-                           if (!(ArgusAddHostList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
-                              ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
-
-                           break;
-                        }
-
-                        case RADIUM_INPUT_FILE:
-                           if ((!roption++) && (parser->ArgusInputFileList != NULL))
-                              ArgusDeleteFileList(parser);
-
-                           if (!(ArgusAddFileList (parser, optarg, (parser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), -1, -1))) {
-                              ArgusLog (LOG_ERR, "%s: error: file arg %s\n", optarg);
-                           }
-                           break;
-                           
-                        case RADIUM_ACCESS_PORT:
-                           parser->ArgusPortNum = atoi(optarg);
-                           break;
-/*
-                        case RADIUM_USER_AUTH:
-                           ustr = strdup(optarg);
-                           break;
-
-                        case RADIUM_AUTH_PASS:
-                           pstr = strdup(optarg);
-                           break;
-*/
-                        case RADIUM_OUTPUT_FILE: 
-                        case RADIUM_OUTPUT_STREAM: {
-                           char *filter = NULL, *fptr;
-
-                           if ((filter = strchr (optarg, ' ')) != NULL) {
-                              *filter++ = '\0';
-
-                              if ((fptr = strchr (filter, '"')) != NULL) {
-                                 *fptr++ = '\0';
-                                 filter = fptr;
-                              }
-                           }
-
-                           setArgusWfile (parser, optarg, filter);
-                           break;
-                        }
-
-                        case RADIUM_MAR_STATUS_INTERVAL:
-                           setArgusMarReportInterval (parser, optarg);
-                           break;
-
-                        case RADIUM_DEBUG_LEVEL:
-                           parser->debugflag = atoi(optarg);
-                           break;
-                        
-                        case RADIUM_FILTER_OPTIMIZER:
-                           if ((strncasecmp(optarg, "yes", 3)))
-                              setArgusOflag  (parser, 1);
-                           else
-                              setArgusOflag  (parser, 0);
-                           break;
-
-                        case RADIUM_FILTER_TAG:
-                           if ((parser->ArgusRemoteFilter = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
-                              struct nff_program filter;
-
-                              ptr = parser->ArgusRemoteFilter;
-                              str = optarg;
-                              while (*str) {
-                                 if ((*str == '\\') && (str[1] == '\n')) {
-                                    if (fgets(str, MAXSTRLEN, fd) != NULL)
-                                    while (*str && (isspace((int)*str) && (str[1] && isspace((int)str[1]))))
-                                       str++;
-                                 }
-                                 
-                                 if ((*str != '\n') && (*str != '"'))
-                                    *ptr++ = *str++;
-                                 else
-                                    str++;
-                              }
-
-                              if (ArgusFilterCompile (&filter, parser->ArgusRemoteFilter, 0) < 0)
-                                 ArgusLog (LOG_ERR, "RaParseResourceFile: remote filter syntax error");
 #ifdef ARGUSDEBUG
-                              ArgusDebug (1, "RadiumParseResourceFile: ArgusFilter \"%s\" \n", parser->ArgusRemoteFilter);
-#endif 
-                           }
-                           break;
-
-                        case RADIUM_BIND_IP:
-                           if (*optarg != '\0')
-                              setArgusBindAddr (parser, optarg);
-#ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusBindAddr \"%s\" \n", parser->ArgusBindAddr);
-#endif 
-                           break;
-
-                        case RADIUM_MIN_SSF:
-                           if (*optarg != '\0') {
-#ifdef ARGUS_SASL
-                              ArgusMinSsf = atoi(optarg);
-#ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusMinSsf \"%s\" \n", ArgusMinSsf);
+                  ArgusDebug(1, "expanded %s to %s\n", optarg, val);
 #endif
-#endif
-                           }
-                           break;
-
-                        case RADIUM_MAX_SSF:
-                           if (*optarg != '\0') {
-#ifdef ARGUS_SASL
-                              ArgusMaxSsf = atoi(optarg);
-#ifdef ARGUSDEBUG
-                              ArgusDebug (1, "RadiumParseResourceFile: ArgusMaxSsf \"%s\" \n", ArgusMaxSsf);
-#endif
-#endif
-                           }
-                           break;
-
-                        case RADIUM_ADJUST_TIME: {
-                           char *ptr;
-                           parser->ArgusAdjustTime = strtol(optarg, (char **)&ptr, 10);
-                           if (ptr == optarg)
-                              ArgusLog (LOG_ERR, "%s syntax error: line %d", file, linenum);
-                           
-                           if (isalpha((int) *ptr)) {
-                              switch (*ptr) {
-                                 case 's': break;
-                                 case 'm': parser->ArgusAdjustTime *= 60; break;
-                                 case 'h': parser->ArgusAdjustTime *= 3600; break;
-                              }
-                           }
-#ifdef ARGUSDEBUG
-                           ArgusDebug (1, "RadiumParseResourceFile: ArgusAdjustTime is %d secs\n", parser->ArgusAdjustTime);
-#endif
-                           break;
-                        }
-
-                        case RADIUM_CHROOT_DIR: {
-                           if (chroot_dir != NULL)
-                              free(chroot_dir);
-                           chroot_dir = strdup(optarg);
-                           break;
-                        }
-                        case RADIUM_SETUSER_ID: {
-                           struct passwd *pw;
-                           if ((pw = getpwnam(optarg)) == NULL)
-                              ArgusLog (LOG_ERR, "unknown user \"%s\"\n", optarg);
-                           new_uid = pw->pw_uid;
-                           endpwent();
-                           break;
-                        }
-                        case RADIUM_SETGROUP_ID: {
-                           struct group *gr;
-                           if ((gr = getgrnam(optarg)) == NULL)
-                               ArgusLog (LOG_ERR, "unknown group \"%s\"\n", optarg);
-                           new_gid = gr->gr_gid;
-                           endgrent();
-                           break;
-                        }
-
-
-                        case RADIUM_CLASSIFIER_FILE: {
-                           if (parser->ArgusLabeler == NULL) {
-                              if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
-                           }
-
-                           if (RaLabelParseResourceFile (parser, parser->ArgusLabeler, optarg) != 0)
-                              ArgusLog (LOG_ERR, "ArgusClientInit: label conf file error %s", strerror(errno));
-
-                           RadiumAnalyticAlgorithmTable[0] = ArgusLabelRecord;
-                           break;
-                        }
-                     }
-
-                     done = 1;
-                     break;
-                  }
+                  ArgusParseSourceID(parser, val);
+                  free(val);
+               } else {
+                  ArgusLog (LOG_ERR, "%s: syntax error line %d\n", __func__, linenum);
                }
+            } else {
+               ArgusParseSourceID(parser, optarg);
+            }
+         }
+         break;
+      }
+
+      case RADIUM_MONITOR_ID_INCLUDE_INF:
+         setArgusManInf(parser, optarg);
+         break;
+
+      case RADIUM_ARGUS_CLIENT:
+         break;
+
+      case RADIUM_ARGUS_SERVER:
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
+
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+         break;
+
+      case RADIUM_CISCONETFLOW_PORT: {
+         ++parser->Cflag;
+         if (!parser->Sflag++ && (parser->ArgusRemoteServerList != NULL))
+            ArgusDeleteServerList(parser);
+
+         if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+
+         break;
+      }
+
+      case RADIUM_DAEMON: {
+         if (!(strncasecmp(optarg, "yes", 3)))
+            parser->dflag = 1;
+         else
+         if (!(strncasecmp(optarg, "no", 2)))
+            parser->dflag = 0;
+         break;
+      }
+
+      case RADIUM_INPUT_FILE:
+         if ((!roption++) && (parser->ArgusInputFileList != NULL))
+            ArgusDeleteFileList(parser);
+
+         if (!(ArgusAddFileList (parser, optarg, (parser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), -1, -1))) {
+            ArgusLog (LOG_ERR, "%s: error: file arg %s\n", optarg);
+         }
+         break;
+
+      case RADIUM_ACCESS_PORT:
+         parser->ArgusPortNum = atoi(optarg);
+         break;
+/*
+      case RADIUM_USER_AUTH:
+         ustr = strdup(optarg);
+         break;
+
+      case RADIUM_AUTH_PASS:
+         pstr = strdup(optarg);
+         break;
+*/
+      case RADIUM_OUTPUT_FILE:
+      case RADIUM_OUTPUT_STREAM: {
+         char *filter = NULL, *fptr;
+
+         if ((filter = strchr (optarg, ' ')) != NULL) {
+            *filter++ = '\0';
+
+            if ((fptr = strchr (filter, '"')) != NULL) {
+               *fptr++ = '\0';
+               filter = fptr;
             }
          }
 
-         fclose(fd);
-
-      } else {
-         retn++;
-#ifdef ARGUSDEBUG
-         ArgusDebug (1, "RadiumParseResourceFile: open %s %s\n", file, strerror(errno));
-#endif 
+         setArgusWfile (parser, optarg, filter);
+         break;
       }
+
+      case RADIUM_V3_ACCESS_PORT:
+         parser->ArgusV3Port = atoi(optarg);
+         break;
+
+      case RADIUM_SRCID_CONVERSION_FILE:
+         parser->RadiumSrcidConvertFile = strdup(optarg);
+         RadiumParseSrcidConversionFile (parser->RadiumSrcidConvertFile);
+         break;
+
+      case RADIUM_MAR_STATUS_INTERVAL:
+         setArgusMarReportInterval (parser, optarg);
+         break;
+
+      case RADIUM_DEBUG_LEVEL:
+         parser->debugflag = atoi(optarg);
+         break;
+
+      case RADIUM_FILTER_OPTIMIZER:
+         if ((strncasecmp(optarg, "yes", 3)))
+            setArgusOflag  (parser, 1);
+         else
+            setArgusOflag  (parser, 0);
+         break;
+
+      case RADIUM_FILTER_TAG:
+         if ((parser->ArgusRemoteFilter = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+            char *str = optarg;
+            ptr = parser->ArgusRemoteFilter;
+            while (*str) {
+               if ((*str != '\n') && (*str != '"'))
+                  *ptr++ = *str++;
+               else
+                  str++;
+            }
+#ifdef ARGUSDEBUG
+            ArgusDebug (1, "%s: ArgusFilter \"%s\" \n", __func__, parser->ArgusRemoteFilter);
+#endif
+         }
+         break;
+
+      case RADIUM_BIND_IP:
+         if (*optarg != '\0')
+            setArgusBindAddr (parser, optarg);
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: ArgusBindAddr \"%s\" \n", __func__, parser->ArgusBindAddr);
+#endif
+         break;
+
+      case RADIUM_MIN_SSF:
+         if (*optarg != '\0') {
+#ifdef ARGUS_SASL
+            RadiumMinSsf = atoi(optarg);
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: RadiumMinSsf \"%d\" \n", __func__, RadiumMinSsf);
+#endif
+#endif
+         }
+         break;
+
+      case RADIUM_MAX_SSF:
+         if (*optarg != '\0') {
+#ifdef ARGUS_SASL
+            RadiumMaxSsf = atoi(optarg);
+#ifdef ARGUSDEBUG
+            ArgusDebug (1, "%s: RadiumMaxSsf \"%d\" \n", __func__, RadiumMaxSsf);
+#endif
+#endif
+         }
+         break;
+
+      case RADIUM_ADJUST_TIME: {
+         char *ptr;
+         parser->ArgusAdjustTime = strtol(optarg, (char **)&ptr, 10);
+         if (ptr == optarg)
+            ArgusLog (LOG_ERR, "%s: syntax error: line %d", __func__, linenum);
+
+         if (isalpha((int) *ptr)) {
+            switch (*ptr) {
+               case 's': break;
+               case 'm': parser->ArgusAdjustTime *= 60; break;
+               case 'h': parser->ArgusAdjustTime *= 3600; break;
+            }
+         }
+#ifdef ARGUSDEBUG
+         ArgusDebug (1, "%s: ArgusAdjustTime is %d secs\n", __func__, parser->ArgusAdjustTime);
+#endif
+         break;
+      }
+
+      case RADIUM_CHROOT_DIR: {
+         if (chroot_dir != NULL)
+            free(chroot_dir);
+         chroot_dir = strdup(optarg);
+         break;
+      }
+      case RADIUM_SETUSER_ID: {
+         struct passwd *pw;
+         if ((pw = getpwnam(optarg)) == NULL)
+            ArgusLog (LOG_ERR, "unknown user \"%s\"\n", optarg);
+         new_uid = pw->pw_uid;
+         endpwent();
+         break;
+      }
+      case RADIUM_SETGROUP_ID: {
+         struct group *gr;
+         if ((gr = getgrnam(optarg)) == NULL)
+             ArgusLog (LOG_ERR, "unknown group \"%s\"\n", optarg);
+         new_gid = gr->gr_gid;
+         endgrent();
+         break;
+      }
+
+      case RADIUM_CLASSIFIER_FILE: {
+         if (parser->ArgusLabeler == NULL) {
+            if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+               ArgusLog (LOG_ERR, "%s: ArgusNewLabeler error", __func__);
+         }
+
+         if (RaLabelParseResourceFile (parser, parser->ArgusLabeler, optarg) != 0)
+            ArgusLog (LOG_ERR, "%s: label conf file error %s", __func__, strerror(errno));
+
+         RadiumAnalyticAlgorithmTable[0] = ArgusLabelRecord;
+         break;
+      }
+
+      case RADIUM_ZEROCONF_REGISTER: {
+         if ((strncasecmp(optarg, "yes", 3)))
+            setArgusZeroConf (parser, 0);
+         else
+            setArgusZeroConf (parser, 1);
+         break;
+
+         break;
+      }
+
+      case RADIUM_AUTH_LOCALHOST:
+         if (strncasecmp(optarg, "no", 2) == 0)
+            RadiumAuthLocalhost = 0;
+         break;
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RadiumParseResourceFile (%s) returning %d\n", file, retn);
-#endif 
+   ArgusDebug (1, "%s(%d,%s%s,%d) returning %d\n", __func__, linenum,
+               RadiumResourceFileStr[idx], optarg, idx, retn);
+#endif
 
    return (retn);
 }
+
 
 void
 clearRadiumConfiguration (void)
@@ -987,8 +888,8 @@ clearRadiumConfiguration (void)
 
    ArgusParser->dflag = 0;
 
-   if (ArgusParser->ArgusRemoteHostList != NULL)
-      ArgusDeleteHostList(ArgusParser);
+   if (ArgusParser->ArgusRemoteServerList != NULL)
+      ArgusDeleteServerList(ArgusParser);
 
    if (ArgusParser->ArgusInputFileList) {
       ArgusDeleteFileList(ArgusParser);
@@ -1002,4 +903,94 @@ clearRadiumConfiguration (void)
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "clearRadiumConfiguration () returning\n");
 #endif 
+}
+
+
+int
+RadiumParseSourceID (struct ArgusAddrStruct *srcid, char *optarg)
+{
+   return ArgusCommonParseSourceID(srcid, NULL, optarg);
+}
+
+
+/*
+   RadiumParseSrcidConversionFile (char *file)
+      srcid 	conversionValue
+*/
+
+extern struct cnamemem converttable[HASHNAMESIZE];
+
+int 
+RadiumParseSrcidConversionFile (char *file)
+{
+   struct stat statbuf;
+   FILE *fd = NULL;
+   int retn = 0;
+
+   if (file != NULL) {
+      if (stat(file, &statbuf) >= 0) {
+         if ((fd = fopen(file, "r")) != NULL) {
+            char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
+            char *srcid = NULL, *convert = NULL;
+
+            retn = 1;
+
+            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
+               str = strbuf;
+               while (*str && isspace((int)*str))
+                   str++;
+
+#define RA_READING_SRCID                0
+#define RA_READING_ALIAS                1
+
+               if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+                  int state = RA_READING_SRCID;
+                  struct cnamemem  *ap;
+                  int done = 0;
+                  u_int hash;
+
+                  while ((optarg = strtok(str, " \t\n")) != NULL) {
+                     switch (state) {
+                        case RA_READING_SRCID: {
+                           int i, len = strlen(optarg);
+                           for (i = 0; i < len; i++)
+                              optarg[i] = tolower(optarg[i]);
+                           srcid = optarg;
+                           state = RA_READING_ALIAS;
+                           break;
+                        }
+
+                        case RA_READING_ALIAS: {
+                           convert = optarg;
+                           done = 1;
+                           break;
+                        }
+                     }
+                     str = NULL;
+                    
+                     if (done)
+                        break;
+                  }
+
+                  hash = getnamehash((const u_char *)srcid);
+                  ap = &converttable[hash % (HASHNAMESIZE-1)];
+                  while (ap->n_nxt)
+                     ap = ap->n_nxt;
+     
+                  ap->hashval = hash;
+                  ap->name = strdup((char *) srcid);
+
+                  ap->type = RadiumParseSourceID(&ap->addr, convert);
+                  ap->n_nxt = (struct cnamemem *)calloc(1, sizeof(*ap));
+               }
+            }
+         }
+      }
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "RadiumParseSrcidConversionFile (%s) returning %d\n", file, retn);
+#endif
+
+   return (retn);
 }

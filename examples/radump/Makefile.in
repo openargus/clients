@@ -1,24 +1,22 @@
-#
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
 # 
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-# 
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-# 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
 #
-# Various configurable paths (remember to edit Makefile.in, not Makefile)
+#  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
 
 # Top level hierarchy
@@ -50,12 +48,12 @@ CC = @CC@
 CCOPT = @V_CCOPT@
 INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @DNSLIB@ @ZLIB@ @LIBMAXMINDDB_LIBS@
 
 MYSQLLIB = @MYSQL_LDFLAGS@ 
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@
@@ -84,7 +82,7 @@ SRC =	radump.c print-aodv.c print-arp.c print-beep.c print-bfd.c print-bgp.c \
 	print-lmp.c print-msdp.c print-ntp.c print-pim.c print-pptp.c print-snmp.c \
 	print-syslog.c print-rip.c print-telnet.c print-tftp.c print-isoclns.c \
 	print-ether.c print-timed.c print-radius.c print-rx.c print-smb.c \
-	print-stp.c print-isakmp.c print-igmp.c print-dvmrp.c smbutil.c gmpls.c
+	print-stp.c print-isakmp.c print-igmp.c print-dvmrp.c print-wol.c smbutil.c gmpls.c
 
 PROGS = $(INSTALLBIN)/radump
 
@@ -96,7 +94,7 @@ OBJ =	$(SRC:.c=.o)
 all: $(PROGS)
 
 $(INSTALLBIN)/radump: $(OBJ) $(LIB)
-	$(CC) $(CCOPT) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ $(OBJ) $(LIB) $(COMPATLIB)
 
 
 CLEANFILES = $(OBJ) $(PROGS)

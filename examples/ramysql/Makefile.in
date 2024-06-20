@@ -1,24 +1,27 @@
-#
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
+# 
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+# 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+# 
+#  Various configurable paths (remember to edit Makefile.in, not Makefile)
 #
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-#
-#
-# Various configurable paths (remember to edit Makefile.in, not Makefile)
+# 
+#  $Id: //depot/gargoyle/clients/examples/ramysql/Makefile.in#9 $
+#  $DateTime: 2016/11/03 09:47:16 $
+#  $Change: 3238 $
 #
 
 # Top level hierarchy
@@ -44,6 +47,9 @@ LDFLAGS = @LDFLAGS@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
+# Pathname of preferred perl to use for perl scripts
+PERL = @V_PERL@
+
 #
 # You shouldn't need to edit anything below.
 #
@@ -52,7 +58,7 @@ CC = @CC@
 CCOPT = @V_CCOPT@
 INCLS = @INCLS@ -I. -I../../include -I../../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @DNSLIB@ @ZLIB@ @LIBMAXMINDDB_LIBS@
 
 
 MYSQLLIB = @MYSQL_LDFLAGS@ 
@@ -60,7 +66,7 @@ CURSESLIB = @CURSESLIB@ @V_READLINE@
 
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS)
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@
@@ -80,24 +86,64 @@ YACC = @V_YACC@
 # problem if you don't own the file but can write to the directory.
 .c.o:
 	@rm -f $@
-	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+	$(CC) $(CFLAGS) -DRABINPATH=\"$(BINDIR)\" -c $(srcdir)/$*.c
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC =	rasql.c rasqlinsert.c raclient.c rasqltimeindex.c
 
-PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rasqlinsert $(INSTALLBIN)/rasqltimeindex
+SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c \
+	rastatus.c rasql_common.c
+
+PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
+	$(INSTALLBIN)/rasqltimeindex $(INSTALLBIN)/rasqlcheckconf \
+	$(INSTALLBIN)/rastatus $(INSTALLBIN)/rastatus-cpustats \
+	$(INSTALLBIN)/rastatus-diskstats $(INSTALLBIN)/rastatus-loadavg \
+	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs \
+	$(INSTALLBIN)/radbaserollup
 
 all: $(PROGS)
 
-$(INSTALLBIN)/rasql: rasql.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasql.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+$(INSTALLBIN)/rascore: rascore.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
-$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o $(LIB)
-	$(CC) $(CCOPT) -o $@ raclient.o rasqlinsert.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB) $(CURSESLIB)
+$(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rasqlinsert: rasqlinsert.o raclient.o rasql_common.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
+
+$(INSTALLBIN)/rastatus: rastatus.o raclient.o rasql_common.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ $^ @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(COMPATLIB) $(CURSESLIB)
 
 $(INSTALLBIN)/rasqltimeindex: rasqltimeindex.o $(LIB)
-	$(CC) $(CCOPT) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+	$(CC) $(CFLAGS) -o $@ rasqltimeindex.o @V_PCRE@ $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rastatus-cpustats: rastatus-cpustats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-cpustats.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-diskstats: rastatus-diskstats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-diskstats.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-dailylogs: rastatus-dailylogs.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-dailylogs.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-loadavg: rastatus-loadavg.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-loadavg.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/rastatus-memstats: rastatus-memstats.pl
+	sed 's+@PERLBIN@+$(PERL)+' rastatus-memstats.pl > $@
+	chmod +x $@
+
+$(INSTALLBIN)/radbaserollup: radbaserollup.pl
+	sed 's+@PERLBIN@+$(PERL)+' radbaserollup.pl > $@
+	chmod +x $@
 
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -114,13 +160,31 @@ install: force all
 	[ -d $(BINDIR) ] || \
 		(mkdir -p $(BINDIR); chmod 755 $(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/rasql $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rascore $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlinsert $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqltimeindex $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rasqlcheckconf $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-cpustats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-dailylogs $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-diskstats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-loadavg $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rastatus-memstats $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/radbaserollup $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
+	rm -f $(DESTDIR)$(BINDIR)/rascore
 	rm -f $(DESTDIR)$(BINDIR)/rasqlinsert
+	rm -f $(DESTDIR)$(BINDIR)/rastatus
 	rm -f $(DESTDIR)$(BINDIR)/rasqltimeindex
+	rm -f $(DESTDIR)$(BINDIR)/rasqlcheckconf
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-cpustats
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-dailylogs
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-diskstats
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-loadavg
+	rm -f $(DESTDIR)$(BINDIR)/rastatus-memstats
+	rm -f $(DESTDIR)$(BINDIR)/radbaserollup
 
 clean:
 	rm -f $(CLEANFILES)

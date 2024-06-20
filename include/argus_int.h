@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/include/argus_int.h#14 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_int.h#7 $
+ * $DateTime: 2016/03/16 16:19:09 $
+ * $Change: 3122 $
  */
 
 #ifndef Argus_int_h
@@ -106,7 +106,7 @@ extern long timestamp_scale;
 extern void timestampinit(void);
 
 extern int fn_print(const u_char *, const u_char *, char *);
-extern int fn_printn(const u_char *, u_int, const u_char *, char *);
+extern char *fn_printn(const u_char *, u_int, const u_char *, char *);
 extern char *dnaddr_string(u_short);
 extern char *savestr(const char *);
 

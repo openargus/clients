@@ -1,0 +1,205 @@
+#!@V_PERL@
+
+use strict;
+use warnings;
+use Carp;
+use JSON;
+use DBI;
+use IPC::System::Simple qw(capture);
+use POSIX qw(strftime);
+use Try::Tiny;
+use Getopt::Std;
+use Time::Local qw(timegm);
+use qosient::XS::util;
+use qosient::rahisto;
+
+my $debug;
+
+# create an array of time bounds from the -t option to be used by the
+# aggregate function
+sub handle_opt_t {
+    my ($str) = @_;
+
+    my @timary = qosient::XS::util::ArgusParseTime($str);
+    if ($timary[0] == 0) {
+        carp "Invalid time string";
+        return;
+    }
+
+    my $times = [ $timary[1], '-', $timary[2] ];
+
+    if ($debug) {
+        print STDERR "parsed time range " . join( ' ', @$times ) . "\n";
+    }
+    return $times;
+}
+
+my $query_prefixes;
+my $query_times;
+my $query_compare_times;
+my $query_infs;
+my $query_sids;
+my $query_model = rahisto_metric_by_name('dur');
+
+# -D    debug
+# -a    comma or space separated list of addresses
+# -t    time range
+# -i    comma or space separated list of argus "inf"s
+# -s    comma or space separated list of argus "sid"s
+# -c    time range for comparison with the -t time range:
+#       calculates KL divergence.
+# -k    calculate KL divergence for every sequential pair of histograms
+#       found in query time range (divergence as time series).
+#       Output stime[0], ltime[0], stime[1], ltime[1], bins, diverg.
+#       Mutually exclusive with -c.
+
+getopts("Da:t:i:s:C:kH:");
+our ( $opt_D, $opt_a, $opt_t, $opt_i, $opt_s, $opt_C, $opt_k, $opt_H );
+
+if ( $opt_C && $opt_k ) {
+    croak "Cannot specify both -C and -k.";
+}
+if ($opt_D) {
+    $debug = 1;
+}
+if ($opt_a) {
+    @{$query_prefixes} = split( /[ ,]/x, $opt_a );
+}
+if ($opt_t) {
+    $query_times = handle_opt_t($opt_t);
+    if ( !defined $query_times ) {
+        exit(1);
+    }
+}
+if ($opt_i) {
+    @{$query_infs} = split( /[ ,]/x, $opt_i );
+
+    # TODO: validation
+}
+if ($opt_s) {
+    @{$query_sids} = split( /[ ,]/x, lc $opt_s );
+
+    # TODO: validation
+}
+if ($opt_C) {
+    $query_compare_times = handle_opt_t($opt_C);
+    if ( !defined $query_compare_times ) {
+        exit(1);
+    }
+}
+
+if ($opt_H) {
+    $query_model = rahisto_metric_by_name($opt_H);
+    if ( !defined $query_model ) {
+        croak qq{Unknown rahisto metric "$opt_H"};
+    }
+}
+
+my $dbh = rahisto_opendb;
+if ( !defined $dbh ) {
+    croak "Unable to connect to database";
+}
+
+my $index_href =
+  rahisto_index_search_prefixes( $dbh, $query_prefixes, $query_sids,
+    $query_infs );
+if ( !defined $index_href ) {
+    print STDERR "No results found\n";
+    exit(1);
+}
+else {
+    #   use Data::Dumper;
+    #   print Dumper($index_href);
+}
+
+if ( !$opt_k ) {
+    my $grandtotal_href =
+      rahisto_aggregate_query( $dbh, $index_href, $query_prefixes, $query_times,
+        $query_model );
+    if ($opt_C) {
+        my $comparison_grandtotal_href =
+          rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
+            $query_compare_times, $query_model );
+        my $d = rahisto_kldiv( $grandtotal_href, $comparison_grandtotal_href );
+        if ($d) {
+            print "KL divergence = $d\n";
+        }
+    }
+    else {
+        my $total = $grandtotal_href->{''}->{'freq'};
+        delete $grandtotal_href->{''};
+
+        printf("%5s %15s %10s %10s\n", 'Class', 'Interval', 'Freq', 'Rel.Freq');
+        for my $k ( sort {$a <=> $b} keys $grandtotal_href ) {
+            my $elem = $grandtotal_href->{$k};
+
+            if ( length($k) == 0 ) {
+                next;
+            }
+
+            printf("%5d %15.6e %10u %10.6f%%\n", $elem->{'class'},
+              $elem->{'bin_interval'}, $elem->{'freq'},
+              ( $elem->{'freq'} / $total * 100 ));
+        }
+    }
+}
+else {
+    my $stimes =
+      rahisto_stimes_query( $dbh, $index_href, $query_prefixes, $query_times,
+        $query_model );
+    if ( scalar( @{$stimes} ) < 2 ) {
+        croak
+          "Need more than one histogram to generate any sort of comparison.";
+    }
+
+    my @divergences = ();   # should only ever have two entries: (last, current)
+    my @histograms  = ();
+    my @one_query_time = ( $stimes->[0], '-', $stimes->[1] );
+    push @histograms,
+      rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
+        \@one_query_time, $query_model );
+
+    for ( my $i = 1 ; $i < scalar( @{$stimes} ) - 1 ; $i++ ) {
+        shift @one_query_time;    # old value
+        shift @one_query_time;    # hyphen
+        push @one_query_time, ( '-', $stimes->[ $i + 1 ] );
+        push @histograms,
+          rahisto_aggregate_query( $dbh, $index_href, $query_prefixes,
+            \@one_query_time, $query_model );
+        my $kldiv = rahisto_kldiv(@histograms);
+        my $jsdiv = rahisto_jsdiv(@histograms);
+        if ( defined $kldiv || defined $jsdiv) {
+            push @divergences,
+              {
+                'stime'      => $one_query_time[0],
+                'ltime'      => $one_query_time[2],
+                'kldiv'      => $kldiv,
+                'jsdiv'      => $jsdiv,
+              };
+            shift @histograms;
+        }
+        else {
+            # This histogram could not be used to generate a divergence, so
+            # discard it.
+            pop @histograms;
+        }
+    }
+
+    printf( "# %-25s %-25s %-15s %-15s\n", 'Start time', 'End time',
+            'KL-Divergence', 'JS-Divergence' );
+    for my $x (@divergences) {
+        my $kldiv = $x->{'kldiv'};
+        my $jsdiv = $x->{'jsdiv'};
+
+        if ( !defined $kldiv ) {
+            # indicate that the kl-divergence was undefined by printing -1.
+            # This is easy to skip over in gnuplot, etc.
+            $kldiv = -1;
+        }
+
+        printf( "  %-25s %-25s %-15f %-15f\n",
+            $x->{'stime'}, $x->{'ltime'}, $kldiv, $jsdiv );
+    }
+}
+
+rahisto_closedb($dbh);

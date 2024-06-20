@@ -1,21 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  
  *
  */
 
@@ -27,9 +27,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_grep.c#17 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_grep.c#8 $
+ * $DateTime: 2016/07/13 18:38:48 $
+ * $Change: 3170 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -48,6 +48,8 @@
 #include <argus_main.h>
 #include <argus_filter.h>
 #include <argus_grep.h>
+
+int ArgusGrepBuf (regex_t *, char *, char *);
 
 void
 ArgusInitializeGrep (struct ArgusParserStruct *parser)
@@ -86,14 +88,14 @@ ArgusInitializeGrep (struct ArgusParserStruct *parser)
    is a match of any kind.  The idea is for every string in the
    buffer, just call regexec() with the strings. */
 
-static int
+int
 ArgusGrepBuf (regex_t *preg, char *beg, char *lim)
 {
    int retn = 0, b;
    char *p = beg;
 
    while (!(p > lim)) {
-      regmatch_t pmbuf, *pm = &pmbuf;;
+      regmatch_t pmbuf, *pm = &pmbuf;
       int nmatch = 0;
 
       bzero(pm, sizeof(*pm));
@@ -150,11 +152,9 @@ ArgusGrepUserData (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
          } else
             len = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
 
-         for (i = 0; i < parser->ArgusRegExItems; i++) {
-            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len]))) {
-               found++;
-               break;
-            }
+         for (i = 0; !found && i < parser->ArgusRegExItems; i++) {
+            if ((retn = ArgusGrepBuf (&parser->upreg[i], buf, &buf[len])))
+               found = 1;
          }
       }
    }

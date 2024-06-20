@@ -1,0 +1,1 @@
+-m none -s stime ltime sid -w mysql://root@localhost/man/man_%Y_%m_%d -M time 1d - inf man0 or rad0

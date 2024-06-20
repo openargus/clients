@@ -1,18 +1,18 @@
 /*
- * Argus Software Common include files -  output structures
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Software Common include files -  output structures
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,9 +20,9 @@
  */
 
 /*
- * $Id: //depot/argus/clients/include/argus_isis.h#11 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/include/argus_isis.h#8 $
+ * $DateTime: 2016/09/13 10:40:12 $
+ * $Change: 3180 $
  */
 
 #ifndef ArgusIsis_h
@@ -33,8 +33,10 @@ extern "C" {
 #endif
 
 #include <sys/time.h>
-#if defined(ARGUS_SOLARIS) || defined(CYGWIN)
+#if defined(ARGUS_SOLARIS)
+#if !defined(ARGUS_PLURIBUS)
 #include <net/etherdefs.h>
+#endif
 #endif
 #include <argus_ethertype.h>
 

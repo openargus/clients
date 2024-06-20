@@ -20,6 +20,7 @@ argus-clients.xcodeproj/xcuserdata/
 .devel
 .nfs*
 
+*.a
 *.o
 *.swp
 Makefile
@@ -35,11 +36,10 @@ include/argus_config.h
 /common/scanner.c
 /common/tokdefs.h
 /common/version.c
-/lib/*.a
 /autom4te.cache
 /argus-clients-*.tar.gz
 /lib/argus-clients.spec
-/pkg/win7/argus-clients.wxs
+/pkg/win/argus-clients.wxs
 /pkg/osx/BUILDROOT
 /examples/radhcp/radhcp-query
 /examples/rahisto/rahisto-delsql
@@ -64,3 +64,15 @@ include/argus_config.h
 /examples/rasql_udf_cidr/config.h
 /examples/rasql_udf_cidr/rasql_udf_cidr.la
 /examples/rasql_udf_cidr/rasql_udf_cidr_la-rasql_udf_cidr.lo
+
+# radhcp intermediates
+/examples/radhcp/example-libargus_dhcp
+
+# pythonlib
+/pythonlib/argusWgan.py
+/pythonlib/argusWgan_wrap.c
+/pythonlib/build/
+/pythonlib/swig.stamp
+/pythonlib/argusPython.py
+/pythonlib/argusPython_wrap.c
+

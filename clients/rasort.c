@@ -1,26 +1,25 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * 
- * $Id: //depot/argus/clients/clients/rasort.c#53 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/clients/rasort.c#18 $
+ * $DateTime: 2016/11/07 12:39:19 $
+ * $Change: 3240 $
  */
 
 /*
@@ -54,6 +53,7 @@
 #include <signal.h>
 #include <ctype.h>
 
+static int argus_version = ARGUS_VERSION;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -66,6 +66,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       parser->RaWriteOut = 0;
 
@@ -169,7 +172,7 @@ RaParseComplete (int sig)
 
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
-         int rank = 1;
+         int rank = 0;
 
          ArgusParser->RaParseCompleting += sig;
 
@@ -204,18 +207,21 @@ RaParseComplete (int sig)
          count = ArgusSorter->ArgusRecordQueue->count;
 
          if (count > 0) {
-            ArgusSortQueue (ArgusSorter, ArgusSorter->ArgusRecordQueue);
-            count = ArgusSorter->ArgusRecordQueue->arraylen;
+            ArgusSortQueue (ArgusSorter, ArgusSorter->ArgusRecordQueue, ARGUS_LOCK);
  
             for (i = 0; i < count; i++) {
-               struct ArgusRecordStruct *ns = (struct ArgusRecordStruct *) ArgusSorter->ArgusRecordQueue->array[i];
-               ns->rank = rank++;
+               struct ArgusRecordStruct *ns = (void *) ArgusPopQueue(ArgusSorter->ArgusRecordQueue, ARGUS_LOCK);
+               if (ns != NULL) {
+                  ns->rank = rank++;
 
-               if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= ns->rank) && (ArgusParser->sNoflag <= ns->rank)))
-                  RaSendArgusRecord (ns);
-               else
-                  if (ArgusParser->eNoflag < ns->rank) 
-                     break;
+                  if ((ArgusParser->eNoflag == 0 ) || ((ArgusParser->eNoflag >= (ns->rank + 1)) && (ArgusParser->sNoflag <= (ns->rank + 1))))
+                     RaSendArgusRecord (ns);
+                  else
+                     if (ArgusParser->eNoflag < (ns->rank + 1)) 
+                        break;
+
+                  ArgusDeleteRecordStruct (ArgusParser, ns);
+               }
             }
          }
       }
@@ -227,7 +233,8 @@ RaParseComplete (int sig)
             if ((wfile = (void *)ArgusParser->ArgusWfileList->start) != NULL) {
                fflush (wfile->fd);
                rename (wfile->filename, file->filename);
-               fclose (wfile->fd);
+               if (wfile->fd != NULL)
+                  fclose (wfile->fd);
                wfile->fd = NULL;
             }
 
@@ -358,8 +365,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
-         break;
-
       case ARGUS_EVENT:
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
@@ -373,11 +378,13 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    }
 }
 
+
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
 int
 RaSendArgusRecord(struct ArgusRecordStruct *ns)
 {
    int retn = 1;
-   char buf[0x10000];
 
    if (ns->status & ARGUS_RECORD_WRITTEN)
       return (retn);
@@ -399,11 +406,16 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                if (pass != 0) {
                   if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
                      struct ArgusRecord *argusrec = NULL;
-                     if ((argusrec = ArgusGenerateRecord (ns, 0L, buf)) != NULL) {
+                     int rv;
+
+                     if ((argusrec = ArgusGenerateRecord (ns, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
                         ArgusHtoN(argusrec);
 #endif
-                        ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
+                        rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n", __func__);
                      }
                   }
                }
@@ -413,8 +425,10 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
       }
 
    } else {
+      char buf[MAXSTRLEN];
+
       if (!ArgusParser->qflag) {
-         if (ArgusParser->Lflag) {
+         if (!(ArgusParser->ArgusPrintJson) && (ArgusParser->Lflag)) {
             if (ArgusParser->RaLabel == NULL)
                ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, ns);
  
@@ -425,10 +439,11 @@ RaSendArgusRecord(struct ArgusRecordStruct *ns)
                ArgusParser->Lflag = 0;
          }
 
-         *(int *)&buf = 0;
+         buf[0] = 0;
          ArgusPrintRecord(ArgusParser, buf, ns, MAXSTRLEN);
+
          if (fprintf (stdout, "%s\n", buf) < 0)
-           RaParseComplete(SIGQUIT);
+            RaParseComplete (SIGQUIT);
 
          if (ArgusParser->eflag == ARGUS_HEXDUMP) {
             int i;

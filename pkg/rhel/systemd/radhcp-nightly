@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+#
+#   Argus-5.0 Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2024 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#   radhcp-nightly - DHCP nightly scripts to manage dhcp databases.
+#
+#
+# Complain about undeclared variables
+use v5.6.0;
+use strict;
+use warnings;
+
+use POSIX;
+use File::Which qw/ which where /;
+use Time::Local;
+
+$ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/usr/local/bin";
+
+# Parse the arguments if any
+my @arglist = ();
+
+my $rasql   = which 'rasql';
+my $radhcp  = which 'radhcp';
+my $debug   = 0;
+my $done    = 0;
+
+my $time;
+my $dbtime;
+my $filter;
+my @dbaseList;
+my $dbase     = "";
+my $table;
+my @stages;
+
+
+ARG: while (my $arg = shift(@ARGV)) {
+    if (!$done) {
+      for ($arg) {
+         s/^-debug$//      && do { $debug++; next ARG; };
+         s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
+         s/^-dbase$//      && do { $dbase = shift(@ARGV); next ARG; };
+         s/^-db$//         && do { $dbase = shift(@ARGV); next ARG; };
+         s/^-table$//      && do { $table = shift(@ARGV); next ARG; };
+      }
+    } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+   }
+    $arglist[@arglist + 0] = $arg;
+}
+
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+   $dbtime = "-3d+2d";
+} else {
+   my($y, $m, $d) = $time =~ m<^(\d+)/(\d+)/(\d+)$>;
+   my $ptime = timelocal(0,0,12,$d,$m - 1,$y) - 24*60*60;
+   my($sec, $min, $hour, $mday, $mon, $year) = localtime($ptime);
+   $dbtime = sprintf "%4d/%02d/%02d+2d", $year+1900, $mon+1, $mday;
+
+   print "DEBUG: time:$time ptime:$ptime dbtime:$dbtime\n" if $debug;
+}
+
+my $cmd;
+
+push @stages, "$rasql -r mysql://root\@localhost/dhcpFlows/dhcp_%Y_%m_%d -M time 1d -t $dbtime -w - ";
+push @stages, "radhcp -r - -M 'query:SEARCH:\ when=-1d,table=dhcp_detail_%Y_%m_%d' -M 'query:SEARCH:\ when=-1d,table=dhcp_summary_%Y_%m_%d,pullup' -w mysql://root\@localhost/dhcpFlows/ -M time 1d"; 
+
+$cmd = join(" | ", @stages);
+$cmd .= " 2>&1";
+print "DEBUG: $cmd\n" if $debug;
+
+system($cmd);
+exit 0;
+
+
+sub RaTodaysDate {
+  my($day, $month, $year)=(localtime)[3,4,5];
+  return sprintf( "%04d/%02d/%02d", $year+1900, $month+1, $day);
+}

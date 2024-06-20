@@ -19,10 +19,12 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "argus_config.h"
+#endif
+
 #include <unistd.h>
 #include <stdlib.h>
-
-#include <argus_compat.h>
 
 #include <rabins.h>
 #include <argus_util.h>
@@ -208,7 +210,7 @@ ns_nprint(register const u_char *cp, register const u_char *bp)
                return(NULL);
             }
          } else {
-            if (fn_printn(cp, l, snapend, ArgusBuf))
+            if (fn_printn(cp, l, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
                return(NULL);
          }
 
@@ -238,7 +240,7 @@ ns_cprint(register const u_char *cp)
    if (!TTEST2(*cp, 1))
       return (NULL);
    i = *cp++;
-   if (fn_printn(cp, i, snapend, ArgusBuf))
+   if (fn_printn(cp, i, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
       return (NULL);
    return (cp + i);
 }
@@ -487,7 +489,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    case T_UNSPECA:      /* One long string */
       if (!TTEST2(*cp, len))
          return(NULL);
-      if (fn_printn(cp, len, snapend, ArgusBuf))
+      if (fn_printn(cp, len, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
          return(NULL);
       break;
 

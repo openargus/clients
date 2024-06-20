@@ -1,25 +1,21 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
-
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
-
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
  *
- */
-
-/*
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
  * rarpwatch.c  - IPv4 and IPv6 arpwatch, driven by argus flow data.
  *
  * written by Carter Bullard
@@ -28,9 +24,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/examples/rarpwatch/rarpwatch.c#11 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/examples/rarpwatch/rarpwatch.c#14 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,6 +54,7 @@
 #include <argus_cluster.h>
 #include <netinet/ip_icmp.h>
 
+static int argus_version = ARGUS_VERSION;
 
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
@@ -71,6 +68,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       (void) signal (SIGTERM, (void (*)(int)) RaParseComplete);
       (void) signal (SIGQUIT, (void (*)(int)) RaParseComplete);
       (void) signal (SIGINT,  (void (*)(int)) RaParseComplete);
+
+      if (parser->ver3flag)
+         argus_version = ARGUS_VERSION_3;
 
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
@@ -118,10 +118,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          parser->ArgusAggregator->correct = strdup("yes");
       }
       
-      if (parser->Hstr)
-         if (!(ArgusHistoMetricParse (parser, parser->ArgusAggregator)))
-            usage ();
-
       if (parser->vflag)
          ArgusReverseSortDir++;
 
@@ -165,6 +161,9 @@ RaParseComplete (int sig)
       if (!(ArgusParser->RaParseCompleting++)) {
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
 
+         if (ArgusParser->ArgusPrintJson)
+            fprintf (stdout, "\n");
+
          ArgusParser->RaParseCompleting += sig;
 
          if (ArgusParser->ArgusReplaceMode && file) {
@@ -202,7 +201,7 @@ RaParseComplete (int sig)
                   }
                }
 
-               ArgusSortQueue (ArgusSorter, agg->queue);
+               ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);
        
                argus = ArgusCopyRecordStruct((struct ArgusRecordStruct *) agg->queue->array[0]);
 
@@ -386,7 +385,6 @@ usage ()
 void RaProcessThisRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 int RaValidateArpFlowRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
-
 int
 RaValidateArpFlowRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
@@ -417,10 +415,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
    switch (ns->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_EVENT:
-      case ARGUS_AFLOW:
       case ARGUS_NETFLOW:
          break;
 
+      case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
 
@@ -433,13 +431,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                            case ARGUS_TYPE_ARP:
                            case ARGUS_TYPE_RARP: {
-                              ArgusProcessServiceAvailability(parser, ns);
-                              if (ns->status & RA_SVCPASSED) {
-#ifdef ARGUSDEBUG
-                                 ArgusDebug (3, "RaProcessRecord (%p, %p) service test failed", parser, ns);
-#endif
-                                 RaProcessThisRecord(parser, ns);
-                              }
+                              RaProcessThisRecord(parser, ns);
                               break;
                            }
                         }
@@ -450,12 +442,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
                }
 
                case ARGUS_FLOW_ARP: {
-                  if (RaValidateArpFlowRecord(parser, ns))  {
-                     ArgusProcessServiceAvailability(parser, ns);
-
-                     if (ns->status & RA_SVCPASSED)
-                        RaProcessThisRecord(parser, ns);
-                  }
+                     RaProcessThisRecord(parser, ns);
                   break;
                }
 
@@ -474,6 +461,9 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
    struct ArgusAggregatorStruct *agg = parser->ArgusAggregator;
    struct ArgusHashStruct *hstruct = NULL;
    int found = 0;
+
+   ArgusProcessServiceAvailability(parser, argus);
+   RaValidateArpFlowRecord(parser, argus);
 
    while (agg && !found) {
       int retn = 0, fretn = -1, lretn = -1;
@@ -502,6 +492,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
             agg->rap = agg->drap;
 
          ArgusGenerateNewFlow(agg, ns);
+         agg->ArgusMaskDefs = NULL;
 
          if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
             ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
@@ -728,11 +719,13 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 }
 
 
+char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+
+
 int
 RaSendArgusRecord(struct ArgusRecordStruct *argus)
 {
    struct ArgusRecord *argusrec = NULL;
-   char buf[0x10000], argusbuf[0x10000];
    int retn = 1;
 
    if (ArgusParser->RaAgMode)
@@ -741,7 +734,7 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
    if (argus->status & ARGUS_RECORD_WRITTEN)
       return (retn);
 
-   if ((argusrec = ArgusGenerateRecord (argus, 0L, argusbuf)) != NULL) {
+   if ((argusrec = ArgusGenerateRecord (argus, 0L, ArgusRecordBuffer, argus_version)) != NULL) {
 #ifdef _LITTLE_ENDIAN
       ArgusHtoN(argusrec);
 #endif
@@ -761,7 +754,13 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                   if (pass != 0) {
                      if ((ArgusParser->exceptfile == NULL) || strcmp(wfile->filename, ArgusParser->exceptfile)) {
-                        ArgusWriteNewLogfile (ArgusParser, argus->input, wfile, argusrec);
+                        int rv;
+
+                        rv = ArgusWriteNewLogfile (ArgusParser, argus->input,
+                                                   wfile, argusrec);
+                        if (rv < 0)
+                           ArgusLog(LOG_ERR, "%s unable to open file\n",
+                                    __func__);
                      }
                   }
 
@@ -771,8 +770,9 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
          }
 
       } else {
+         char buf[MAXSTRLEN];
          if (!ArgusParser->qflag) {
-            if (ArgusParser->Lflag) {
+            if (ArgusParser->Lflag && (!(ArgusParser->ArgusPrintXml) && !(ArgusParser->ArgusPrintJson))) {
                if (ArgusParser->RaLabel == NULL)
                   ArgusParser->RaLabel = ArgusGenerateLabel(ArgusParser, argus);
  
@@ -783,10 +783,16 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
                   ArgusParser->Lflag = 0;
             }
 
-            *(int *)&buf = 0;
+            buf[0] = 0;
             ArgusPrintRecord(ArgusParser, buf, argus, MAXSTRLEN);
-            if (fprintf (stdout, "%s\n", buf) < 0)
-               RaParseComplete(SIGQUIT);
+            if (ArgusParser->ArgusPrintJson) {
+               if (fprintf (stdout, "%s", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            } else {
+               if (fprintf (stdout, "%s\n", buf) < 0)
+                  RaParseComplete (SIGQUIT);
+            }
+
             fflush(stdout);
          }
       }

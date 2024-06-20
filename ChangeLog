@@ -1,10 +1,32 @@
-Sun Jun  5 15:34:56 EDT 2016
-Mods for racluster.conf strategy for using "none" to force no aggregation
+Sat Nov 26 15:18:51 EST 2016
+Fix for rasqlinsert stack problems.
 
-Wed Jun  1 14:45:00 EDT 2016
-Many, many, many, many changes to fix bugs and to support new features from argus and argus use.
-Consider this a major bug release from 3.0.8 clients but is basically backward compatible.
-Primary changes are in ratop.1, rabins.1, ralabel.1, ra.1 and radium.1.
+Mon Oct 17 12:03:30 EDT 2016
+Change to ratop.1 to reenable lsof event correlation.
+Default flow key for aggregation and comparison needs to use the sid, rather than the srcid, so that the event originated flows (evt0) can match the observed flows (i.e. en0).
+
+Sat Oct  1 20:18:54 EDT 2016
+Added support for inf in events and management records.
+Added filters for inf and sid, and cleaned up the configuration for argus
+
+Tue Sep 27 20:07:59 EDT 2016
+Added rasqlcheckconf to import an argus.conf file into a database table,
+then to compare the contents with the database, replacing the contents
+if there is a difference, and its configured to "-M replace" the table
+
+Thu Sep 15 14:41:58 EDT 2016
+Changes to support ekinzie mods
+
+Sun Oct  4 15:23:19 EDT 2015
+Added control channel to argus_output.c for ratop remote coupling.
+Allows to send to ratop 'highlight' 'search' 'filter' etc directives,
+so that another application can use ratop() as a display.
+
+Tue Oct 21 16:40:33 EDT 2014
+Added l2tp encapsulation parsing
+
+Mon Oct 13 11:12:51 EST 2014
+Added vxlan encapsulation parsing
 
 Tue Aug 26 09:10:03 EDT 2014
 Fixes for pkg'ing.
@@ -227,6 +249,18 @@ Mods for allocating blocks in ArgusMergeData.
 
 Fri May 11 12:47:25 EDT 2012
 Add events to srcid filter
+Mods for objective-c client linking - move argus_int.h definitions into argus_util.c
+Mods to bring gargoyle and argus into sync with label processing.
+   - artificial limit to 4 values per attribute to handle argus-events
+
+Wed May  2 18:28:05 EDT 2012
+Fixes for memory leaks in Aggregators
+Modified label and user data buffer processing for buffer overflow issues.
+
+Thu Jun 21 15:26:04 EDT 2012
+Fix country code aggregation issues
+
+Fri May 11 12:47:25 EDT 2012
 Mods for objective-c client linking - move argus_int.h definitions into argus_util.c
 Mods to bring gargoyle and argus into sync with label processing.
    - artificial limit to 4 values per attribute to handle argus-events

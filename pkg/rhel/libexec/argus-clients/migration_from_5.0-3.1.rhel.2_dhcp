@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+# DHCP leases are now stored in a database named dhcpFlows.  Rename the
+# "dhcp" database to "dhcpFlows".  This really involves creating the
+# new database and renaming all of the tables in dhcp so that the tables
+# are moved to dhcpFlows, since mysql does not support database renaming.
+
+use DBI;
+
+use Carp;
+use strict;
+use warnings;
+
+my $orig_database = "dhcp";
+my $dsn      = "DBI:mysql:$orig_database";
+my $dbuser   = 'root';
+my $password = q{};
+my %attr     = ( PrintError => 0, RaiseError => 0 );
+my $table;
+my $target_database = "dhcpFlows";
+
+my $dbh = DBI->connect( $dsn, $dbuser, $password, \%attr );
+if ( !defined $dbh ) {
+    croak 'Cannot connect to database';
+}
+
+my $query = "CREATE DATABASE $target_database";
+my $sth = $dbh->prepare($query);
+my $res = $sth->execute;
+my $exists = 0;
+
+if ( !defined $res ) {
+    if ( scalar($sth->errstr) =~ /database exists/ ) {
+        $exists = 1;
+    } else {
+        print scalar($sth->errstr) . "\n";
+        exit(1);
+    }
+}
+$sth->finish;
+
+$query = "SHOW TABLES";
+$sth = $dbh->prepare($query);
+$res = $sth->execute;
+if ( ! defined $res ) {
+    print "Unable to query list of tables in database.\n";
+    exit(1);
+}
+$sth->bind_columns(\$table);
+
+my $errcount = 0;
+while ($sth->fetch) {
+    my $ren = $dbh->prepare("RENAME TABLE $table TO $target_database.$table");
+    $res = $ren->execute;
+    if ( ! defined $res ) {
+        $errcount = $errcount + 1;
+    }
+    $ren->finish;
+}
+$sth->finish;
+
+if ( $errcount > 0 ) {
+    print "Unable to move $errcount table(s).  Leaving original database.\n";
+    exit(1);
+}
+$sth = $dbh->prepare( qq(DROP DATABASE $orig_database) );
+$sth->execute;
+$sth->finish;

@@ -1,18 +1,18 @@
 /*
- * Argus Software
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
+ * the Free Software Foundation; either version 3, or (at your option)
  * any later version.
-
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
-
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -41,9 +41,9 @@
  */
 
 /* 
- * $Id: //depot/argus/clients/common/argus_code.c#109 $
- * $DateTime: 2016/06/01 15:17:28 $
- * $Change: 3148 $
+ * $Id: //depot/gargoyle/clients/common/argus_code.c#27 $
+ * $DateTime: 2016/10/10 23:14:45 $
+ * $Change: 3219 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -62,6 +62,8 @@
 #include <netinet/in.h>
 #include <net/if.h>
 
+#include <netinet/tcp.h>
+
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -77,6 +79,7 @@
 #include <argus_filter.h>
 #include <argus_dscodepoints.h>
 #include <argus_encapsulations.h>
+#include <argus_macclass.h>
 #include <argus_ethertype.h>
 
 #include <signal.h>
@@ -127,22 +130,52 @@ static void freechunks(void);
 static struct ablock *new_block(int);
 static struct slist *new_stmt(int);
 static struct ablock *Argusgen_retblk(int);
+static struct ablock *Argusgen_recordtype(unsigned int);
 static void syntax(void);
 
 #if defined(ARGUSFORKFILTER)
 static void deadman(pid_t);
 #endif
 
+static struct ablock *new_block(int);
+static void backpatch(struct ablock *, struct ablock *);
+
+char *Argussdup(char *);
+
+struct ablock *Argusgen_inbound(int);
+struct ablock *Argusgen_multicast(int);
+struct ablock *Argusgen_broadcast(int);
+struct ablock *Argusgen_byteop(int, int, int);
+struct ablock *Argusgen_less(int);
+struct ablock *Argusgen_greater(int);
+
+struct arth *ArgusNeg(struct arth *);
+struct arth *ArgusLoadI(int);
+struct arth *ArgusLoad(int, struct arth *, int);
+
+struct ablock *Argusgen_relation(int, struct arth *, struct arth *, int);
+struct ablock *Argusgen_proto_abbrev(int);
+
+void Argusgen_and(struct ablock *, struct ablock *);
+void Argusgen_or(struct ablock *, struct ablock *);
+void Argusgen_not(struct ablock *);
+void Argussappend(struct slist *, struct slist *);
+
+static struct slist *xfer_to_a(struct arth *);
+static struct slist *xfer_to_x(struct arth *);
+
 static void backpatch(struct ablock *, struct ablock *);
 static void merge(struct ablock *, struct ablock *);
+static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_cmp(int, u_int, u_int, u_int, u_int, int);
 static struct ablock *Argusgen_mcmp(int, u_int, u_int, u_int, u_int, u_int, int);
 static struct ablock *Argusgen_bcmp(int, u_int, u_int, u_char *, int);
 static struct ablock *Argusgen_prototype(u_int, u_int);
 static struct ablock *Argusgen_hostop(u_int *, u_int *, int, int, u_int);
-static struct ablock *Argusgen_ehostop(u_char *, int);
+static struct ablock *Argusgen_ehostop(u_char *, int, int);
 static struct ablock *Argusgen_host(u_int *, u_int *, int, int, int);
-static struct ablock *Argusgen_srcid(u_int, u_int, int);
+static struct ablock *Argusgen_srcid(u_int *, u_int, int);
+static struct ablock *Argusgen_inf(char *);
 static struct ablock *Argusgen_inode(u_int, u_int, int);
 static struct ablock *Argusgen_gateway(u_char *, u_int *, int, int, int);
 static struct ablock *Argusgen_portatom(int, long, int);
@@ -152,6 +185,7 @@ static int Arguslookup_proto(char *, int);
 static struct ablock *Argusgen_flow(int);
 static struct ablock *Argusgen_proto(int, int, int);
 static struct ablock *Argusgen_ipid(int, int, u_int);
+static struct ablock *Argusgen_masklen(int, int, u_int);
 static struct ablock *Argusgen_ttl(int, int, u_int);
 static struct ablock *Argusgen_tos(int, int, u_int);
 static struct ablock *Argusgen_vid(int, int, u_int);
@@ -161,7 +195,8 @@ static struct ablock *Argusgen_byte(int, int, u_int);
 static struct ablock *Argusgen_pkt(int, int, u_int);
 static struct ablock *Argusgen_nstroke(int, int, u_int);
 static struct ablock *Argusgen_seq(int, int, u_int);
-static struct ablock *Argusgen_dup(int, u_int);
+static struct ablock *Argusgen_dup(int, int, u_int);
+static struct ablock *Argusgen_maxseg(int, int, u_int);
 static struct ablock *Argusgen_tcpbase(int, int, u_int);
 static struct ablock *Argusgen_trans(int, int, u_int);
 static struct ablock *Argusgen_deltadur(int, int, u_int);
@@ -169,22 +204,30 @@ static struct ablock *Argusgen_deltastart(int, int, u_int);
 static struct ablock *Argusgen_deltalast(int, int, u_int);
 static struct ablock *Argusgen_rate(float, int, u_int);
 static struct ablock *Argusgen_load(float, int, u_int);
+static struct ablock *Argusgen_gap(float, int, u_int);
+static struct ablock *Argusgen_loss(float, int, u_int);
 static struct ablock *Argusgen_inter(float, int, int, u_int);
+static struct ablock *Argusgen_interflow(float, int, int, u_int);
+static struct ablock *Argusgen_interflowstddev(float, int, int, u_int);
 static struct ablock *Argusgen_jitter(float, int, int, u_int);
 static struct ablock *Argusgen_dur(float, int, u_int);
 static struct ablock *Argusgen_mean(float, int, u_int);
 static struct ablock *Argusgen_encaps(int, int, u_int);
-static u_int net_mask(u_int *);
+static struct ablock *Argusgen_macclass(char *, int, u_int);
 static struct slist *xfer_to_x(struct arth *);
 static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_linktype(unsigned int);
+static struct ablock *Argusgen_flowtype(unsigned int);
+
+#if !defined(CYGWIN)
+static u_int net_mask(u_int *);
+#endif
 
 extern void ArgusLog (int, char *, ...);
 
 static void *
-newchunk(n)
-u_int n;
+newchunk(u_int n)
 {
    struct chunk *cp;
    int k, size;
@@ -229,8 +272,7 @@ freechunks()
  */
 
 char *
-Argussdup(s)
-char *s;
+Argussdup(char *s)
 {
    int n = strlen(s) + 1;
    char *cp = newchunk(n);
@@ -242,8 +284,7 @@ char *s;
 }
 
 static struct ablock *
-new_block(code)
-int code;
+new_block(int code)
 {
    struct ablock *p;
 
@@ -258,8 +299,7 @@ int code;
 }
 
 static struct slist *
-new_stmt(code)
-int code;
+new_stmt(int code)
 {
    struct slist *p;
 
@@ -304,22 +344,29 @@ deadman(pid_t pid)
 static void
 syntax()
 {
-   extern struct ArgusParserStruct *ArgusParser;
-   char response, *errormsg = "ERROR: syntax error in filter expression";
-   int len;
+   char *errormsg = "ERROR: syntax error in filter expression";
 
-#if defined(ARGUSDEBUG)
-      ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
+#if defined(ARGUSFORKFILTER)
+   extern struct ArgusParserStruct *ArgusParser;
+// char response;
+   int len;
 #endif
 
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "ArgusFilterCompile syntax() %s\n", errormsg);
+#endif
+
+#if defined(ARGUSFORKFILTER)
    if (ArgusParser->ArgusFilterFiledes[1] != -1) {
       if ((len = write (ArgusParser->ArgusFilterFiledes[1], errormsg, strlen(errormsg))) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: write retn %s\n", strerror(errno));
+/*
       if ((len = read (ArgusParser->ArgusControlFiledes[0], &response, 1)) < 0)
          ArgusLog (LOG_ERR, "ArgusFilterCompile: read retn %s\n", strerror(errno));
+*/
    } else
+#endif
       ArgusLog (LOG_ERR, errormsg);
-   exit (1);
 }
 
 
@@ -423,7 +470,6 @@ ArgusFilterCompile(struct nff_program *program, char *buf, int optimize)
       ArgusDebug (4, "ArgusFilterCompile () waiting for filter process %d on pipe %d\n", pid, ArgusParser->ArgusFilterFiledes[0]);
 #endif
 
-
       while (((deltatime = RaDeltaFloatTime(&now, &then)) <= ArgusParser->RaFilterTimeout) && 
              (select (width, &readmask, NULL, NULL, &wait) >= 0)) {
          if (FD_ISSET (ArgusParser->ArgusFilterFiledes[0], &readmask)) {
@@ -512,7 +558,7 @@ ArgusFilterCompile(struct nff_program *program, char *buf, int optimize)
 #endif /* ARGUSFORKFILTER */
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (2, "ArgusFilterCompile () done %d\n", retn);
+   ArgusDebug (2, "ArgusFilterCompile('%s') done %d\n", buf, retn);
 #endif
 
    return (retn);
@@ -526,8 +572,7 @@ ArgusFilterCompile(struct nff_program *program, char *buf, int optimize)
  */
 
 static void
-backpatch(list, target)
-struct ablock *list, *target;
+backpatch(struct ablock *list, struct ablock *target)
 {
    struct ablock *next;
 
@@ -585,8 +630,7 @@ Argusfinish_parse(struct ablock *p)
 }
 
 void
-Argusgen_and(b0, b1)
-struct ablock *b0, *b1;
+Argusgen_and(struct ablock *b0, struct ablock *b1)
 {
    if (b0 != b1) {
       backpatch(b0, b1->head);
@@ -603,8 +647,7 @@ struct ablock *b0, *b1;
 }
 
 void
-Argusgen_or(b0, b1)
-struct ablock *b0, *b1;
+Argusgen_or(struct ablock *b0, struct ablock *b1)
 {
    if (b0 != b1) {
       b0->sense = !b0->sense;
@@ -620,8 +663,7 @@ struct ablock *b0, *b1;
 }
 
 void
-Argusgen_not(b)
-struct ablock *b;
+Argusgen_not(struct ablock *b)
 {
    b->sense = !b->sense;
 
@@ -634,23 +676,29 @@ static struct ablock *
 Argusgen_cmp(int dsr, u_int offset, u_int size, u_int v, u_int op, int type)
 {
    struct slist *s;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    s = new_stmt(NFF_LD|NFF_DSR|size);
    s->s.dsr = dsr;
    s->s.data.k = offset;
 
    switch (op) {
-      case Q_EQUAL:   b = new_block(JMP(NFF_JEQ)); break;
-      case Q_LESS:    b = new_block(JMP(NFF_JGE)); b->sense = !b->sense; break;
-      case Q_GREATER: b = new_block(JMP(NFF_JGT)); break;
-      case Q_GEQ:     b = new_block(JMP(NFF_JGE)); break;
-      case Q_LEQ:     b = new_block(JMP(NFF_JGT)); b->sense = !b->sense; break;
+      case Q_EQUAL:    b = new_block(JMP(NFF_JEQ)); break;
+      case Q_NOTEQUAL: b = new_block(JMP(NFF_JEQ)); b->sense = !b->sense; break;
+      case Q_LESS:     b = new_block(JMP(NFF_JGE)); b->sense = !b->sense; break;
+      case Q_GREATER:  b = new_block(JMP(NFF_JGT)); break;
+      case Q_GEQ:      b = new_block(JMP(NFF_JGE)); break;
+      case Q_LEQ:      b = new_block(JMP(NFF_JGT)); b->sense = !b->sense; break;
    }
+
+   if (b == NULL)
+      goto out;
+
    b->stmts = s;
    b->s.data.k = v;
    b->s.type = type;
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (7, "Argusgen_cmp (%d, %d, %d, %d, %d, %d) returns %p\n", dsr, offset, size, v, op, type, b);
 #endif
@@ -663,23 +711,28 @@ static struct ablock *
 Argusgen_fcmp(int dsr, u_int offset, u_int size, float v, u_int op, int type)
 {
    struct slist *s;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    s = new_stmt(NFF_LD|NFF_DSR|size);
    s->s.dsr = dsr;
    s->s.data.k = offset;
 
    switch (op) {
-      case Q_EQUAL:   b = new_block(JMP(NFF_JEQ|NFF_F)); break;
-      case Q_LESS:    b = new_block(JMP(NFF_JGE|NFF_F)); b->sense = !b->sense; break;
-      case Q_GREATER: b = new_block(JMP(NFF_JGT|NFF_F)); break;
-      case Q_GEQ:     b = new_block(JMP(NFF_JGE|NFF_F)); break;
-      case Q_LEQ:     b = new_block(JMP(NFF_JGT|NFF_F)); b->sense = !b->sense; break;
+      case Q_EQUAL:    b = new_block(JMP(NFF_JEQ|NFF_F)); break;
+      case Q_NOTEQUAL: b = new_block(JMP(NFF_JEQ|NFF_F)); b->sense = !b->sense; break;
+      case Q_LESS:     b = new_block(JMP(NFF_JGE|NFF_F)); b->sense = !b->sense; break;
+      case Q_GREATER:  b = new_block(JMP(NFF_JGT|NFF_F)); break;
+      case Q_GEQ:      b = new_block(JMP(NFF_JGE|NFF_F)); break;
+      case Q_LEQ:      b = new_block(JMP(NFF_JGT|NFF_F)); b->sense = !b->sense; break;
    }
+
+   if (b == NULL)
+      goto out;
 
    b->stmts = s;
    b->s.data.f = v;
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (7, "Argusgen_fcmp (%d, %d, %f, %d, %d) returns %p\n", offset, size, v, op, type, b);
 #endif
@@ -854,7 +907,7 @@ Argusgen_ipstatustype(unsigned int proto)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_tcpstatustype () returns %p\n", b1);
+   ArgusDebug (4, "Argusgen_ipstatustype () returns %p\n", b1);
 #endif
    return (b1);
 }
@@ -915,11 +968,30 @@ Argusgen_ipattrstatustype(unsigned int status)
 }
 
 static struct ablock *
+Argusgen_farstatustype(unsigned int status)
+{
+   struct ablock *b1, *b0;
+   struct ArgusRecordStruct argus;
+   int offset;
+
+   b0 = Argusgen_recordtype(ARGUS_FAR);
+
+   offset = ((char *)&argus.status - (char *)&argus);
+   b1 = Argusgen_mcmp(-1, offset, NFF_L, status, status, Q_EQUAL, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_farstatustype (%d) returns %p\n", status, b1);
+#endif
+   return (b1);
+}
+
+static struct ablock *
 Argusgen_causetype(unsigned int cause)
 {
    struct ablock *b0 = NULL;
-   struct ArgusCanonRecord canon;
-   int offset = ((char *)&canon.hdr.cause - (char *)&canon);
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.hdr.cause - (char *)&argus);
 
    switch (cause) {
       case ARGUS_START:
@@ -927,6 +999,7 @@ Argusgen_causetype(unsigned int cause)
       case ARGUS_STOP:
       case ARGUS_TIMEOUT:
       case ARGUS_SHUTDOWN:
+      case ARGUS_SRC_RADIUM:
          b0 = Argusgen_mcmp(-1, offset, NFF_B, (u_int) cause, cause, Q_EQUAL, Q_DEFAULT);
          break;
    }
@@ -942,8 +1015,8 @@ static struct ablock *
 Argusgen_recordtype(unsigned int type)
 {
    struct ablock *b0 = NULL;
-   struct ArgusCanonRecord canon;
-   int offset = ((char *)&canon.hdr.type - (char *)&canon);
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.hdr.type - (char *)&argus);
 
    switch (type) {
       case ARGUS_MAR:
@@ -983,15 +1056,80 @@ Argusgen_vlan(unsigned int proto)
 
    return(b1);
 }
+
+static struct ablock *
+Argusgen_vxlan(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusVlanStruct vlan;
+   int offset = ((char *)&vlan.hdr.type - (char *)&vlan);
+   b1 = Argusgen_cmp(ARGUS_VXLAN_INDEX, offset, NFF_B, (u_int) ARGUS_VXLAN_DSR, Q_EQUAL, Q_DEFAULT);
+
+   return(b1);
+}
+
+static struct ablock *
+Argusgen_gre(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusVlanStruct vlan;
+   int offset = ((char *)&vlan.hdr.type - (char *)&vlan);
+   b1 = Argusgen_cmp(ARGUS_GRE_INDEX, offset, NFF_B, (u_int) ARGUS_GRE_DSR, Q_EQUAL, Q_DEFAULT);
+
+   return(b1);
+}
  
 
 static struct ablock *
 Argusgen_linktype(unsigned int proto)
 {
    struct ablock *b1 = NULL;
+
+   if (proto == 0) {
+      b1 = Argusgen_flowtype(proto);
+
+   } else {
+      struct ArgusFlow flow;
+      int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
+      switch (proto) {
+         case ETHERTYPE_REVARP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ARP, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_ARP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ARP, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_IP:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_IPV4, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_IPV6:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_IPV6, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+         case ETHERTYPE_ISIS:
+            b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int) ARGUS_TYPE_ISIS, 0x1F, Q_EQUAL, Q_DEFAULT);
+            break;
+
+         default: {
+            struct ArgusMacStruct mac;
+            offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_type - (char *)&mac);
+            b1 = Argusgen_cmp(ARGUS_MAC_INDEX, offset, NFF_H, (u_int) proto, Q_EQUAL, Q_DEFAULT);
+            break;
+         }
+      }
+   }
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
+#endif
+
+   return (b1);
+}
+
+
+static struct ablock *
+Argusgen_flowtype(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
    struct ArgusFlow flow;
    int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
- 
    switch (proto) {
       default:
          switch (proto) {
@@ -1027,7 +1165,7 @@ Argusgen_linktype(unsigned int proto)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_linktype (0x%x) returns %p\n", proto, b1);
+   ArgusDebug (4, "Argusgen_flowtype (0x%x) returns %p\n", proto, b1);
 #endif
 
    return (b1);
@@ -1039,7 +1177,8 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 {
    struct ArgusFlow flow;
    struct ArgusNetworkStruct net;
-   struct ablock *b0, *b1;
+   struct ablock *b0;
+   struct ablock *b1 = NULL;
    int offset;
 
    switch (v) {
@@ -1047,7 +1186,7 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
          switch (proto) {
             case Q_IPV4:
                offset = ((char *)&flow.ip_flow.ip_p - (char *)&flow);
-               b0 = Argusgen_linktype(ETHERTYPE_IP);
+               b0 = Argusgen_flowtype(ETHERTYPE_IP);
                b1 = Argusgen_cmp(ARGUS_FLOW_INDEX, offset, NFF_B, v, Q_EQUAL, Q_DEFAULT);
                Argusgen_and(b0, b1);
                return b1;
@@ -1058,7 +1197,7 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 #else
                offset = ((char *)&flow.ipv6_flow - (char *)&flow) + 32;
 #endif
-               b0 = Argusgen_linktype(ETHERTYPE_IPV6);
+               b0 = Argusgen_flowtype(ETHERTYPE_IPV6);
                b1 = Argusgen_cmp(ARGUS_FLOW_INDEX, offset, NFF_B, v, Q_EQUAL, Q_DEFAULT);
                Argusgen_and(b0, b1);
                return b1;
@@ -1108,34 +1247,70 @@ Argusgen_prototype(unsigned int v, unsigned int proto)
 static struct ablock *
 Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsigned int proto)
 {
-   int offset, src_off = 0, dst_off = 0, len = 0;
-   struct ablock *b0 = NULL, *b1 = NULL;
+   int offset, src_off = 0, dst_off = 0, len = 0, findex = 0;
+   struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
+   struct ArgusGreStruct gre;
    struct ArgusFlow flow;
-
+ 
    switch (proto) {
+      case Q_GRE:
+         src_off = ((char *)&gre.tflow.ip_flow.ip_src - (char *)&gre);
+         dst_off = ((char *)&gre.tflow.ip_flow.ip_dst - (char *)&gre);
+         len = sizeof(gre.tflow.ip_flow.ip_src);
+         findex = ARGUS_GRE_INDEX;
+         break;
+
       case ETHERTYPE_IP:
          src_off = ((char *)&flow.ip_flow.ip_src - (char *)&flow);
          dst_off = ((char *)&flow.ip_flow.ip_dst - (char *)&flow);
          len = sizeof(flow.ip_flow.ip_src);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_IPV6:
          src_off = ((char *)&flow.ipv6_flow.ip_src - (char *)&flow);
          dst_off = ((char *)&flow.ipv6_flow.ip_dst - (char *)&flow);
          len = sizeof(flow.ipv6_flow.ip_src);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_ARP:
          src_off = ((char *)&flow.arp_flow.arp_spa - (char *)&flow);
          dst_off = ((char *)&flow.arp_flow.arp_tpa - (char *)&flow);
          len = sizeof(flow.arp_flow.arp_spa);
+         findex = ARGUS_FLOW_INDEX;
          break;
 
       case ETHERTYPE_REVARP:
          break;
    }
 
+/*
+#define ARGUS_SRC_LOCAL                 0x01
+#define ARGUS_DST_LOCAL                 0x02
+*/
+#define ARGUS_LOCAL_MASK                0x03
+
    switch (dir) {
+      case Q_LOCAL: {
+         struct ArgusNetspatialStruct local;
+         offset = ((char *)&local.status - (char *)&local);;
+         b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_SRC_LOCAL, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+ 
+         b1 = Argusgen_hostop(addr, mask, type, Q_SRC, proto);
+         Argusgen_and(b0, b1);
+ 
+         b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_DST_LOCAL, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT); 
+         b2 = Argusgen_hostop(addr, mask, type, Q_DST, proto);
+         Argusgen_and(b0, b2);
+         Argusgen_or(b2, b1);
+         return b1;
+      }
+
+      case Q_REMOTE:
+         offset = dst_off;
+         break;
+
       case Q_SRC:
          offset = src_off;
          break;
@@ -1144,10 +1319,22 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
          offset = dst_off;
          break;
 
+      case Q_LAND:
+         b0 = Argusgen_hostop(addr, mask, type, Q_LOCAL, proto);
+         b1 = Argusgen_hostop(addr, mask, type, Q_REMOTE, proto);
+         Argusgen_and(b0, b1);
+         return b1;
+
       case Q_AND:
          b0 = Argusgen_hostop(addr, mask, type, Q_SRC, proto);
          b1 = Argusgen_hostop(addr, mask, type, Q_DST, proto);
          Argusgen_and(b0, b1);
+         return b1;
+
+      case Q_LOR:
+         b0 = Argusgen_hostop(addr, mask, type, Q_LOCAL, proto);
+         b1 = Argusgen_hostop(addr, mask, type, Q_REMOTE, proto);
+         Argusgen_or(b0, b1);
          return b1;
 
       case Q_OR:
@@ -1163,8 +1350,8 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
 
    switch (len) {
       case 0: break;
-      case 1: b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
-      case 2: b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_H, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
+      case 1: b1 = Argusgen_mcmp(findex, offset, NFF_B, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
+      case 2: b1 = Argusgen_mcmp(findex, offset, NFF_H, (u_int)*addr, (u_int)*mask, Q_EQUAL, Q_DEFAULT); break;
 
       case 4:
       case 8: 
@@ -1173,9 +1360,9 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
          for (i = 0; i < len/4; i++) {
             if (mask[i] != 0) {
                if (b1 == NULL) {
-                  b1 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
+                  b1 = Argusgen_mcmp(findex, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
                } else {
-                  b0 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
+                  b0 = Argusgen_mcmp(findex, offset + i*4, NFF_W, (u_int)addr[i], (u_int)mask[i], Q_EQUAL, Q_DEFAULT);
                   Argusgen_and(b0, b1);
                }
             }
@@ -1192,7 +1379,7 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
 
 
 static struct ablock *
-Argusgen_ehostop( u_char *eaddr, int dir)
+Argusgen_ehostop( u_char *eaddr, int dir, int len)
 {
    struct ablock *b0 = NULL, *b1 = NULL;
    struct ArgusMacStruct mac;
@@ -1205,26 +1392,25 @@ Argusgen_ehostop( u_char *eaddr, int dir)
    switch (dir) {
       case Q_SRC: {
          offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_shost - (char *)&mac);
-         
-         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, 6, eaddr, Q_DEFAULT);
+         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, len, eaddr, Q_DEFAULT);
       }
 
       case Q_DST: {
          offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_dhost - (char *)&mac);
-         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, 6, eaddr, Q_DEFAULT);
+         return Argusgen_bcmp (ARGUS_MAC_INDEX, offset, len, eaddr, Q_DEFAULT);
       }
 
       case Q_AND: {
-         b0 = Argusgen_ehostop(eaddr, Q_SRC);
-         b1 = Argusgen_ehostop(eaddr, Q_DST);
+         b0 = Argusgen_ehostop(eaddr, Q_SRC, len);
+         b1 = Argusgen_ehostop(eaddr, Q_DST, len);
          Argusgen_and(b0, b1);
          return b1;
       }
 
       case Q_DEFAULT:
       case Q_OR: {
-         b0 = Argusgen_ehostop(eaddr, Q_SRC);
-         b1 = Argusgen_ehostop(eaddr, Q_DST);
+         b0 = Argusgen_ehostop(eaddr, Q_SRC, len);
+         b1 = Argusgen_ehostop(eaddr, Q_DST, len);
          Argusgen_or(b0, b1);
          return b1;
       }
@@ -1240,6 +1426,9 @@ static struct ablock *
 Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
 {
    struct ablock *b0 = NULL, *b1 = NULL;
+
+   if ((dir == Q_LOCAL) || (dir == Q_REMOTE))
+      proto = Q_IPV4;
 
    switch (proto) {
       case Q_DEFAULT: {
@@ -1271,6 +1460,11 @@ Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
             } else
                Argusgen_or(b0, b1);
          }
+         break;
+      }
+
+      case Q_GRE: {
+         b1 = Argusgen_hostop(addr, mask, type, dir, Q_GRE);
          break;
       }
 
@@ -1380,31 +1574,73 @@ Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
 
 
 static struct ablock *
-Argusgen_srcid(u_int addr, u_int mask, int type)
+Argusgen_srcid(u_int *addr, u_int mask, int type)
 {
-   struct ablock *b1 = NULL, *b0 = NULL, *tmp;
+   struct ablock *b2 = NULL, *b1 = NULL, *b0 = NULL, *tmp;
    struct ArgusTransportStruct trans;
    struct ArgusRecord mar;
 
    int offset = ((char *)&mar.argus_mar.argusid - (char *)&mar);
 
    tmp = Argusgen_recordtype(ARGUS_MAR);
-   b1 = Argusgen_mcmp(ARGUS_MAR_INDEX, offset, NFF_W, (u_int)addr, mask, Q_EQUAL, type);
+   b1 = Argusgen_mcmp(ARGUS_MAR_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
    Argusgen_and(tmp, b1);
 
    offset = ((char *)&trans.srcid - (char *)&trans);
 
    tmp = Argusgen_recordtype(ARGUS_FAR);
    b0  = Argusgen_recordtype(ARGUS_EVENT);
-   Argusgen_or(b0, tmp);
+   Argusgen_or(tmp, b0);
 
-   b0 = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)addr, mask, Q_EQUAL, type);
-   Argusgen_and(tmp, b0);
+   tmp = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
+
+   offset = ((char *)&trans.srcid.inf - (char *)&trans);
+   b2  = Argusgen_mcmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, (u_int)*addr, mask, Q_EQUAL, type);
+
+   Argusgen_or(tmp, b2);
+
+   Argusgen_and(b2, b0);
 
    Argusgen_or(b0, b1);
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_srcid (0x%x, 0x%x) returns %p\n", addr, mask, b1);
+   ArgusDebug (4, "Argusgen_srcid (0x%x, 0x%x) returns %p\n", *addr, mask, b1);
+#endif
+
+   return (b1);
+}
+
+static struct ablock *
+Argusgen_inf(char *inf)
+{
+   struct ablock *b1 = NULL, *tmp;
+
+   if (strcmp(inf, "man0") == 0) {
+      tmp =  Argusgen_recordtype(ARGUS_MAR);
+      b1 = Argusgen_causetype(ARGUS_SRC_RADIUM);
+      Argusgen_not(b1);
+      Argusgen_and(tmp, b1);
+
+   } else
+   if (strcmp(inf, "rad0") == 0) {
+      tmp =  Argusgen_recordtype(ARGUS_MAR);
+      b1 = Argusgen_causetype(ARGUS_SRC_RADIUM);
+      Argusgen_and(tmp, b1);
+   } else
+   if (strcmp(inf, "evt0") == 0) {
+      b1 =  Argusgen_recordtype(ARGUS_EVENT);
+   } else {
+      struct ArgusTransportStruct trans;
+      int offset = (char *)&trans.srcid.inf - (char *)&trans;
+      u_int value = *(u_int *)inf;
+
+      tmp = Argusgen_recordtype(ARGUS_FAR);
+      b1 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset, NFF_W, value, Q_EQUAL, Q_DEFAULT);
+      Argusgen_and(tmp, b1);
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_inf (%s) returns %p\n", inf, b1);
 #endif
 
    return (b1);
@@ -1446,7 +1682,7 @@ Argusgen_gateway( u_char *eaddr, u_int *alist, int type, int proto, int dir)
       case Q_ARP:
       case Q_RARP:
          *mask = 0xffffffffL;
-         b0 = Argusgen_ehostop(eaddr, Q_OR);
+         b0 = Argusgen_ehostop(eaddr, Q_OR, 6);
          b1 = Argusgen_host(alist, mask, type, proto, Q_OR);
          Argusgen_not(b1);
          Argusgen_and(b0, b1);
@@ -1467,8 +1703,7 @@ Argusgen_gateway( u_char *eaddr, u_int *alist, int type, int proto, int dir)
 #include <netinet/igmp.h>
 
 struct ablock *
-Argusgen_proto_abbrev(proto)
-int proto;
+Argusgen_proto_abbrev(int proto)
 {
    struct ablock *b0, *b1 = NULL;
 
@@ -1521,6 +1756,14 @@ int proto;
          b1 = Argusgen_vlan(Q_DEFAULT);
          break;
 
+      case Q_VXLAN:
+         b1 = Argusgen_vxlan(Q_DEFAULT);
+         break;
+
+      case Q_GRE:
+         b1 = Argusgen_gre(Q_DEFAULT);
+         break;
+
       case Q_RARP:
          b1 =  Argusgen_linktype(ETHERTYPE_REVARP);
          break;
@@ -1557,6 +1800,14 @@ int proto;
 
       case Q_INDEX:
          b1 =  Argusgen_recordtype(ARGUS_INDEX);
+         break;
+
+      case Q_BASELINE:
+         b1 =  Argusgen_farstatustype(ARGUS_RECORD_BASELINE);
+         break;
+
+      case Q_MATCH:
+         b1 =  Argusgen_farstatustype(ARGUS_RECORD_MATCH);
          break;
 
       case Q_CONNECTED:
@@ -1601,6 +1852,53 @@ int proto;
          offset = ((char *)&icmp.hdr.argus_dsrvl8.qual - (char *)&icmp);
          b0 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, ARGUS_ICMPUNREACH_MAPPED, Q_EQUAL, Q_DEFAULT);
          Argusgen_or(b0, b1);
+         break;
+      }
+
+      case Q_UNREACHNET:
+      case Q_UNREACHHOST:
+      case Q_UNREACHPROTO:
+      case Q_UNREACHPORT:
+      case Q_UNREACHFRAG:
+      case Q_UNREACHSRCFAIL:
+      case Q_UNREACHNETUNKNOWN:
+      case Q_UNREACHHOSTUNKNOWN:
+      case Q_UNREACHHOSTISOLATED:
+      case Q_UNREACHHOSTPROHIBITED:
+      case Q_UNREACHNETPROHIBITED:
+      case Q_UNREACHNETTOS:
+      case Q_UNREACHHOSTTOS:
+      case Q_UNREACHFILTER:
+      case Q_UNREACHHOSTPRECEDENCE:
+      case Q_UNREACHPRECUTOFF: {
+         struct ArgusIcmpStruct icmp;
+         int offset = ((char *)&icmp.icmp_type - (char *)&icmp);
+         u_int code = 0;
+
+         b0 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, (u_int)  0x03, Q_EQUAL, Q_DEFAULT);
+
+         switch (proto) {
+            case Q_UNREACHNET:            code = ICMP_UNREACH_NET; break;
+            case Q_UNREACHHOST:           code = ICMP_UNREACH_HOST; break;
+            case Q_UNREACHPROTO:          code = ICMP_UNREACH_PROTOCOL; break;
+            case Q_UNREACHPORT:           code = ICMP_UNREACH_PORT; break;
+            case Q_UNREACHFRAG:           code = ICMP_UNREACH_NEEDFRAG; break;
+            case Q_UNREACHSRCFAIL:        code = ICMP_UNREACH_SRCFAIL; break;
+            case Q_UNREACHNETUNKNOWN:     code = ICMP_UNREACH_NET_UNKNOWN; break;
+            case Q_UNREACHHOSTUNKNOWN:    code = ICMP_UNREACH_HOST_UNKNOWN; break;
+            case Q_UNREACHHOSTISOLATED:   code = ICMP_UNREACH_ISOLATED; break;
+            case Q_UNREACHNETPROHIBITED:  code = ICMP_UNREACH_NET_PROHIB; break;
+            case Q_UNREACHHOSTPROHIBITED: code = ICMP_UNREACH_HOST_PROHIB; break;
+            case Q_UNREACHNETTOS:         code = ICMP_UNREACH_TOSNET; break;
+            case Q_UNREACHHOSTTOS:        code = ICMP_UNREACH_TOSHOST; break;
+            case Q_UNREACHFILTER:         code = ICMP_UNREACH_FILTER_PROHIB; break;
+            case Q_UNREACHHOSTPRECEDENCE: code = ICMP_UNREACH_HOST_PRECEDENCE; break;
+            case Q_UNREACHPRECUTOFF:      code = ICMP_UNREACH_PRECEDENCE_CUTOFF; break;
+         }
+
+         offset = ((char *)&icmp.icmp_code - (char *)&icmp);
+         b1 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, code, Q_EQUAL, Q_DEFAULT);
+         Argusgen_and(b0, b1);
          break;
       }
 
@@ -1913,6 +2211,19 @@ Argusgen_encapsatom(int off, u_int v, u_int op)
 }
 
 static struct ablock *
+Argusgen_macclassatom(int off, u_int mask, u_int v, u_int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_mcmp(ARGUS_MAC_INDEX, off, NFF_B, v, mask, Q_EQUAL, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_macclassatom (%d, 0x%x, 0x%x) returns 0x%x\n", off, mask, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_portatom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -1924,6 +2235,20 @@ Argusgen_portatom( int off, long v, int op)
 #endif
    return b0;
 }
+
+static struct ablock *
+Argusgen_masklenatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_FLOW_INDEX, off, NFF_B, (u_int)v, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_masklenatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
 
 static struct ablock *
 Argusgen_pktatom( int off, long v, int op)
@@ -1952,6 +2277,19 @@ Argusgen_byteatom( int off, long v, int op)
 }
 
 static struct ablock *
+Argusgen_lossatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(-1, off, NFF_W, (u_int)v, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_byteatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_nstrokeatom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -1964,18 +2302,20 @@ Argusgen_nstrokeatom( int off, long v, int op)
    return b0;
 }
 
+/*
 static struct ablock *
-Argusgen_dupatom(int off, long v, int op)
+Argusgen_dupatom( int off, long v, int op)
 {
    struct ablock *b0;
 
-   b0 = Argusgen_mcmp(ARGUS_NETWORK_INDEX, off, NFF_W, (u_int)v, (u_int)v, op, Q_DEFAULT);
+   b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_W, (u_int)v, op, Q_DEFAULT);
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_dupatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
 #endif
    return b0;
 }
+*/
 
 static struct ablock *
 Argusgen_tcpbaseatom( int off, long v, int op)
@@ -1989,6 +2329,20 @@ Argusgen_tcpbaseatom( int off, long v, int op)
 #endif
    return b0;
 }
+
+static struct ablock *
+Argusgen_maxsegatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_NETWORK_INDEX, off, NFF_W, (u_int)v, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_maxsegatom (%d, 0x%x, %d) returns 0x%x\n", off, v, op, b0);
+#endif
+   return b0;
+}
+
 
 static struct ablock *
 Argusgen_transatom( int off, long v, int op)
@@ -2152,6 +2506,18 @@ Argusgen_asnatom( int off, long v, int op)
 }
 
 static struct ablock *
+Argusgen_locatom( int off, long v, int op)
+{
+   struct ablock *b0;
+
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, off, NFF_B, v, op, Q_DEFAULT);
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_locatom (%d, 0x%x) returns 0x%x\n", off, v, b0);
+#endif
+   return b0;
+}
+
+static struct ablock *
 Argusgen_coratom( int off, long v, int op)
 {
    struct ablock *b0;
@@ -2299,8 +2665,13 @@ Arguslookup_proto( char *name, int proto)
             ArgusLog(LOG_ERR, "unknown proto '%s'", name);
          break;
 
+      case Q_ETHER:
       case Q_LINK:
          /* XXX should look up h/w protocol type based on linktype */
+         if (!(strcmp(name, "ipv4"))) {
+            name = "ip";
+         }
+
          v = argus_nametoeproto(name);
          if (v == PROTO_UNDEF)
             ArgusLog(LOG_ERR, "unknown ether proto '%s'", name);
@@ -2503,6 +2874,57 @@ Argusgen_ipid(int v, int dir, u_int op)
 }
 
 
+
+static struct ablock *
+Argusgen_masklen(int v, int dir, u_int op)
+{
+   struct ablock *b0, *b1 = NULL, *tmp;
+   struct ArgusFlow flow;
+
+   int offset = ((char *)&flow.hdr.argus_dsrvl8.qual - (char *)&flow);
+   int soffset = ((char *)&flow.ip_flow.smask - (char *)&flow);
+   int doffset = ((char *)&flow.ip_flow.dmask - (char *)&flow);
+
+   b0 = Argusgen_mcmp(ARGUS_FLOW_INDEX, offset, NFF_B, ARGUS_MASKLEN, ARGUS_MASKLEN, Q_EQUAL, Q_DEFAULT);
+ 
+   switch (dir) {
+   case Q_SRC: {
+      b1 = Argusgen_masklenatom(soffset, (u_int)v, op);
+      break;
+   }
+
+   case Q_DST: {
+      b1 = Argusgen_masklenatom(doffset, (u_int)v, op);
+      break;
+   }
+
+   case Q_OR:
+   case Q_DEFAULT:
+      tmp = Argusgen_masklenatom(soffset, (u_int)v, op);
+      b1 = Argusgen_masklenatom(doffset, (u_int)v, op);
+      Argusgen_or(tmp, b1);
+      break;
+
+   case Q_AND:
+      tmp = Argusgen_masklenatom(soffset, (u_int)v, op);
+      b1 = Argusgen_masklenatom(doffset, (u_int)v, op);
+      Argusgen_and(tmp, b1);
+      break;
+
+   default:
+      abort();
+   }
+
+   Argusgen_and(b0, b1);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_masklen (0x%x, %d, %d) returns %p\n", v, dir, op, b1);
+#endif
+ 
+   return b1;
+}
+
+
 static struct ablock *
 Argusgen_ttl(int v, int dir, u_int op)
 {
@@ -2643,7 +3065,6 @@ Argusgen_dsb(int v, int dir, u_int op)
 static struct ablock *
 Argusgen_cocode(char *v, int dir, u_int op)
 {
-   extern struct ArgusParserStruct *ArgusParser;
    struct ablock *b0 = NULL, *b1 = NULL;
    struct ArgusCountryCodeStruct cocode;
    unsigned short val;
@@ -2873,6 +3294,59 @@ Argusgen_encaps(int v, int dir, u_int op)
 
 
 static struct ablock *
+Argusgen_macclass(char *class, int dir, u_int op)
+{
+   struct ablock *b0 = NULL, *b1 = NULL;
+   struct ArgusMacStruct mac;
+   int offset, mask = 0, v = 0;
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_macclass (%s, %d)\n", class, dir);
+#endif
+
+   extern struct ArgusMacClassStruct argus_macclass [];
+   struct ArgusMacClassStruct *macclass = argus_macclass;
+   while (macclass->id != 0) {
+      if (strncasecmp(macclass->class, class, strlen(macclass->class)) == 0) {
+         mask = macclass->mask;
+         v = macclass->value;
+         break;
+      }
+      macclass++;
+   }
+
+   switch (dir) {
+      case Q_SRC: {
+         offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_shost - (char *)&mac);
+         return Argusgen_macclassatom(offset, mask, v, op);
+      }
+
+      case Q_DST: {
+         offset = ((char *)&mac.mac.mac_union.ether.ehdr.ether_dhost - (char *)&mac);
+         return Argusgen_macclassatom(offset, mask, v, op);
+      }
+
+      case Q_AND: {
+         b0 = Argusgen_macclass(class, Q_SRC, op);
+         b1 = Argusgen_macclass(class, Q_DST, op);
+         Argusgen_and(b0, b1);
+         return b1;
+      }
+
+      case Q_DEFAULT:
+      case Q_OR: {
+         b0 = Argusgen_macclass(class, Q_SRC, op);
+         b1 = Argusgen_macclass(class, Q_DST, op);
+         Argusgen_or(b0, b1);
+         return b1;
+      }
+   }
+   abort();
+   /* NOTREACHED */
+}
+
+
+static struct ablock *
 Argusgen_trans(int v, int dir, u_int op)
 {
    struct ablock *b1 = NULL;
@@ -2898,28 +3372,28 @@ Argusgen_rate(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b0 = Argusgen_rateatom(offset, v, op);
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.srate - (char *)&argus.hdr);
+      offset = ((char *)&argus.srate - (char *)&argus);
       b0 = Argusgen_rateatom(offset, v, op);
-      offset = ((char *)&argus.drate - (char *)&argus.hdr);
+      offset = ((char *)&argus.drate - (char *)&argus);
       b1 = Argusgen_rateatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -2944,28 +3418,28 @@ Argusgen_load(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b0 = Argusgen_loadatom(offset, v, op);
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sload - (char *)&argus.hdr);
+      offset = ((char *)&argus.sload - (char *)&argus);
       b0 = Argusgen_loadatom(offset, v, op);
-      offset = ((char *)&argus.dload - (char *)&argus.hdr);
+      offset = ((char *)&argus.dload - (char *)&argus);
       b1 = Argusgen_loadatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -2981,7 +3455,6 @@ Argusgen_load(float v, int dir, u_int op)
    return b1;
 }
 
-/*
 static struct ablock *
 Argusgen_loss(float v, int dir, u_int op)
 {
@@ -2991,28 +3464,28 @@ Argusgen_loss(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b0 = Argusgen_lossatom(offset, v, op);
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sloss - (char *)&argus);
       b0 = Argusgen_lossatom(offset, v, op);
-      offset = ((char *)&argus.dloss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dloss - (char *)&argus);
       b1 = Argusgen_lossatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3027,7 +3500,6 @@ Argusgen_loss(float v, int dir, u_int op)
 
    return b1;
 }
-*/
 
 static struct ablock *
 Argusgen_ploss(float v, int dir, u_int op)
@@ -3038,28 +3510,28 @@ Argusgen_ploss(float v, int dir, u_int op)
 
    switch (dir) {
    case Q_SRC:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       break;
 
    case Q_DST:
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       break;
 
    case Q_OR:
    case Q_DEFAULT:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b0 = Argusgen_plossatom(offset, v, op);
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       Argusgen_or(b0, b1);
       break;
 
    case Q_AND:
-      offset = ((char *)&argus.sploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.sploss - (char *)&argus);
       b0 = Argusgen_plossatom(offset, v, op);
-      offset = ((char *)&argus.dploss - (char *)&argus.hdr);
+      offset = ((char *)&argus.dploss - (char *)&argus);
       b1 = Argusgen_plossatom(offset, v, op);
       Argusgen_and(b0, b1);
       break;
@@ -3075,7 +3547,152 @@ Argusgen_ploss(float v, int dir, u_int op)
    return b1;
 }
 
+static struct ablock *
+Argusgen_gap(float v, int dir, u_int op)
+{
+   struct ablock *b1 = NULL;
+/*
+   struct ablock *b0;
+   struct ArgusRecordStruct argus;
+   int offset;
 
+   switch (dir) {
+   case Q_SRC:
+      break;
+
+   case Q_DST:
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      break;
+
+   case Q_AND:
+      break;
+
+   default:
+      abort();
+   }
+*/
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_gap (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
+Argusgen_lat(float v, int dir, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusGeoLocationStruct geo;
+   int offset;
+
+   switch (dir) {
+      case Q_SRC:
+         offset = (char *)&geo.src.lat - (char *)&geo;
+         b1 = Argusgen_fcmp(ARGUS_GEO_INDEX, offset, NFF_F, v, op, Q_DEFAULT);
+         break;
+
+      case Q_DST:
+         offset = (char *)&geo.dst.lat - (char *)&geo;
+         b1 = Argusgen_fcmp(ARGUS_GEO_INDEX, offset, NFF_F, v, op, Q_DEFAULT);
+         break;
+
+      case Q_OR:
+         break;
+
+      case Q_DEFAULT:
+      case Q_AND:
+         break;
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_lat (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+   
+   return b1;
+}
+
+static struct ablock *
+Argusgen_lon(float v, int dir, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusGeoLocationStruct geo;
+   int offset;
+
+   switch (dir) {
+      case Q_SRC:
+         offset = (char *)&geo.src.lon - (char *)&geo;
+         b1 = Argusgen_fcmp(ARGUS_GEO_INDEX, offset, NFF_F, v, op, Q_DEFAULT);
+         break;
+
+      case Q_DST:
+         offset = (char *)&geo.dst.lon - (char *)&geo;
+         b1 = Argusgen_fcmp(ARGUS_GEO_INDEX, offset, NFF_F, v, op, Q_DEFAULT);
+         break;
+
+      case Q_OR:
+         break;
+
+      case Q_DEFAULT:
+      case Q_AND:
+         break;
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_lon (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+   
+   return b1;
+}
+
+static struct ablock *
+Argusgen_loc(int v, int dir, u_int op)
+{
+   struct ablock *b1 = NULL, *b2 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset;
+
+   switch (dir) {
+   case Q_SRC:
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, v, op);
+      break;
+
+   case Q_DST:
+      offset = ((char *)&local.dloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, v, op);
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, v, op);
+      offset = ((char *)&local.dloc - (char *)&local);
+      b2 = Argusgen_locatom(offset, v, op);
+      Argusgen_or(b2, b1);
+      break;
+
+   case Q_AND:
+      offset = ((char *)&local.sloc - (char *)&local);
+      b1 = Argusgen_locatom(offset, v, op);
+      offset = ((char *)&local.dloc - (char *)&local);
+      b2 = Argusgen_locatom(offset, v, op);
+      Argusgen_and(b2, b1);
+      break;
+
+   default:
+      abort();
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_loc (0x%x, %d) returns 0x%x\n", v, dir, b1);
+#endif
+
+   return b1;
+}
 
 
 static struct ablock *
@@ -3083,7 +3700,7 @@ Argusgen_pcr(float v, int dir, u_int op)
 {
    struct ArgusRecordStruct argus;
    struct ablock *b1 = NULL, *b0 = NULL;
-   int offset = ((char *)&argus.pcr - (char *)&argus.hdr);
+   int offset = ((char *)&argus.pcr - (char *)&argus);
 
    b0 = Argusgen_recordtype(ARGUS_FAR);
    b1 = Argusgen_pcratom(offset, v, op);
@@ -3097,12 +3714,52 @@ Argusgen_pcr(float v, int dir, u_int op)
 }
 
 static struct ablock *
+Argusgen_interflow(float v, int dir, int type, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusAgrStruct agr;
+   float value = v;
+   int offset = (char *)&agr.idle.meanval - (char *)&agr;
+
+   b1 = Argusgen_fcmp(ARGUS_AGR_INDEX, offset, NFF_F, value, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_interflow (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
+Argusgen_interflowstddev(float v, int dir, int type, u_int op)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusAgrStruct agr;
+   float value = v;
+   int offset = (char *)&agr.idle.stdev - (char *)&agr;
+
+   b1 = Argusgen_fcmp(ARGUS_AGR_INDEX, offset, NFF_F, value, op, Q_DEFAULT);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_interflowstddev (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
+#endif
+
+   return b1;
+}
+
+static struct ablock *
 Argusgen_inter(float v, int dir, int type, u_int op)
 {
    struct ablock *b1 = NULL, *b0 = NULL;
    struct ArgusJitterStruct jitter;
    float value = v * 1000.0;
-   int offset;
+   int offset = -1;
+
+   /* If type is not one of these, offset will not hold a valid value
+    * at the end of the nested switches.
+    */
+   if (type != Q_INTER && type != Q_INTERACTIVE && type != Q_INTERIDLE)
+      goto out;
 
    switch (dir) {
       case Q_SRC:
@@ -3155,6 +3812,7 @@ Argusgen_inter(float v, int dir, int type, u_int op)
          break;
    }
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_inter (%f, %d, %d) returns 0x%x\n", v, dir, op, b1);
 #endif
@@ -3168,7 +3826,10 @@ Argusgen_jitter(float v, int dir, int type, u_int op)
    struct ablock *b1 = NULL, *b0 = NULL;
    struct ArgusJitterStruct jitter;
    float value = v * 1000.0;
-   int offset;
+   int offset = -1;
+
+   if (type != Q_JITTER && type != Q_JITTERACTIVE && type != Q_JITTERIDLE)
+      goto out;
 
    switch (dir) {
       case Q_SRC:
@@ -3221,6 +3882,7 @@ Argusgen_jitter(float v, int dir, int type, u_int op)
          break;
    }
 
+out:
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_jitter (%f, %d) returns 0x%x\n", v, dir, b1);
 #endif
@@ -3241,7 +3903,7 @@ Argusgen_dur(float v, int dir, u_int op)
       case Q_OR:
       case Q_DEFAULT:
       case Q_AND:
-         offset = ((char *)&argus.dur - (char *)&argus.hdr);
+         offset = ((char *)&argus.dur - (char *)&argus);
          b1 = Argusgen_duratom(offset, v, op);
          break;
 
@@ -3269,7 +3931,7 @@ Argusgen_mean(float v, int dir, u_int op)
    case Q_OR:
    case Q_DEFAULT:
    case Q_AND:
-      offset = ((char *)&argus.mean - (char *)&argus.hdr);
+      offset = ((char *)&argus.mean - (char *)&argus);
       b1 = Argusgen_meanatom(offset, v, op);
       break;
 
@@ -3507,38 +4169,48 @@ Argusgen_spi(u_int v, int dir, u_int op)
    return b1;
 }
 
+
 static struct ablock *
-Argusgen_dup(int dir, u_int op)
+Argusgen_dup(int v, int dir, u_int op)
 {
    struct ablock *b1 = NULL;
+/*
+   struct ablock *b0;
    struct ArgusNetworkStruct net;
-   int v, offset = ((char *)&net.net_union.tcp.status - (char *)&net);
+   int offset;
 
    switch (dir) {
-      case Q_SRC:
-         v = ARGUS_SRC_DUPLICATES;
-         b1 = Argusgen_dupatom(offset, (u_int)v, op);
-         break;
+   case Q_SRC:
+      offset = ((char *)&net.net_union.tcp.sdups - (char *)&net);
+      b1 = Argusgen_dupatom(offset, (u_int)v, op);
+      break;
 
-      case Q_DST:
-         v = ARGUS_DST_DUPLICATES;
-         b1 = Argusgen_dupatom(offset, (u_int)v, op);
-         break;
+   case Q_DST:
+      offset = ((char *)&net.net_union.tcp.ddups - (char *)&net);
+      b1 = Argusgen_dupatom(offset, (u_int)v, op);
+      break;
 
-      case Q_OR:
-      case Q_DEFAULT:
-         v = (ARGUS_SRC_DUPLICATES | ARGUS_DST_DUPLICATES);
-         b1 = Argusgen_dupatom(offset, (u_int)v, op);
-         break;
+   case Q_OR:
+   case Q_DEFAULT:
+      offset = ((char *)&net.net_union.tcp.sdups - (char *)&net);
+      b0 = Argusgen_dupatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.ddups - (char *)&net);
+      b1 = Argusgen_dupatom(offset, (u_int)v, op);
+      Argusgen_or(b0, b1);
+      break;
 
-      case Q_AND:
-         v = (ARGUS_SRC_DUPLICATES | ARGUS_DST_DUPLICATES);
-         b1 = Argusgen_dupatom(offset, (u_int)v, op);
-         break;
+   case Q_AND:
+      offset = ((char *)&net.net_union.tcp.sdups - (char *)&net);
+      b0 = Argusgen_dupatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.ddups - (char *)&net);
+      b1 = Argusgen_dupatom(offset, (u_int)v, op);
+      Argusgen_and(b0, b1);
+      break;
 
-      default:
-         abort();
+   default:
+      abort();
    }
+*/
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_dup (0x%x, %d) returns 0x%x\n", v, dir, b1);
@@ -3589,6 +4261,53 @@ Argusgen_tcpbase(int v, int dir, u_int op)
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_tcpbase (0x%x, %d) returns 0x%x\n", v, dir, b1);
+#endif
+ 
+   return b1;
+}
+
+
+static struct ablock *
+Argusgen_maxseg(int v, int dir, u_int op)
+{
+   struct ablock *b0, *b1 = NULL;
+   struct ArgusNetworkStruct net;
+   int offset;
+ 
+   switch (dir) {
+   case Q_SRC:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      break;
+
+   case Q_DST:
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      break;
+
+   case Q_OR:
+   case Q_DEFAULT:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b0 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      Argusgen_or(b0, b1);
+      break;
+
+   case Q_AND:
+      offset = ((char *)&net.net_union.tcp.src.maxseg - (char *)&net);
+      b0 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      offset = ((char *)&net.net_union.tcp.dst.maxseg - (char *)&net);
+      b1 = Argusgen_maxsegatom(offset, (u_int)v, op);
+      Argusgen_and(b0, b1);
+      break;
+
+   default:
+      abort();
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_maxseg (0x%x, %d) returns 0x%x\n", v, dir, b1);
 #endif
  
    return b1;
@@ -3813,10 +4532,9 @@ Argusgen_nstroke(int v, int dir, u_int op)
 #define TH_CWR  0x80
 #endif
 
-
+#if !defined(CYGWIN)
 static u_int
-net_mask(addr)
-u_int *addr;
+net_mask(u_int *addr)
 {
    register u_int m = 0xffffffff;
 
@@ -3830,9 +4548,8 @@ u_int *addr;
  
    return m;
 }
+#endif
 
-
-#include <netinet/tcp.h>
 
 struct ablock *
 Argusgen_ocode(int name, struct qual q)
@@ -4094,10 +4811,6 @@ Argusgen_tcode(int name, struct qual q)
          Argusgen_and(b0, b1);
          break;
       }
-
-      case Q_DUP:
-         b1 = Argusgen_dup(dir, Q_EQUAL);
-         break;
    }
 
 #if defined(ARGUSDEBUG)
@@ -4137,9 +4850,7 @@ Argusgen_scode(char *name, struct qual q)
 
    switch (q.addr) {
       case Q_NET: {
-#if defined(CYGWIN)
-         ArgusLog(LOG_ERR, "cygwin does not support net");
-#else
+#if !defined(CYGWIN)
          u_int addr = 0;
          struct netent *np;
          if ((np = getnetbyname(name)) != NULL)
@@ -4155,11 +4866,12 @@ Argusgen_scode(char *name, struct qual q)
       case Q_DEFAULT:
       case Q_HOST:
          switch (proto) {
-            case Q_LINK: {
+            case Q_LINK:
+            case Q_ETHER: {
                eaddr = argus_ether_hostton(name);
                if (eaddr == NULL)
                   ArgusLog(LOG_ERR, "unknown ether host '%s'", name);
-               b = Argusgen_ehostop(eaddr, dir);
+               b = Argusgen_ehostop(eaddr, dir, 6);
                break;
             }
             case Q_DECNET: {
@@ -4262,7 +4974,23 @@ Argusgen_scode(char *name, struct qual q)
          }
          break;
 
+      case Q_NODE: {
+         extern struct anamemem  aliastable[];
+         char *srcid = NULL;
+
+         if ((srcid = lookup_alias((const u_char *)name, aliastable)) != NULL) {
+#if defined(ARGUSDEBUG)
+            ArgusDebug (4, "Argusgen_scode (%s, 0x%x) Q_NODE srcid is %s\n", name, q, srcid);
+#endif
+            b = Argusgen_ucode(srcid, q);
+         } else {
+            ArgusLog(LOG_ERR, "no node named %s", name);
+         }
+         break;
+      }
+
       case Q_INODE: 
+      case Q_SID:
       case Q_SRCID: {
          if (type == Q_STRING) {
             *mask = 0xffffffff;
@@ -4277,7 +5005,7 @@ Argusgen_scode(char *name, struct qual q)
                   break;
 
                case Q_SRCID:
-                  b = Argusgen_srcid(addr, *mask, type);
+                  b = Argusgen_srcid(&addr, *mask, type);
                   break;
             }
             break;
@@ -4300,6 +5028,7 @@ Argusgen_scode(char *name, struct qual q)
                      proto = Q_IPV4;
                      *mask = 0xffffffff;
                      addr[0] = ntohl(addr[0]);
+                     tmp = NULL;
 
                      switch (q.addr) {
                         case Q_INODE: 
@@ -4307,13 +5036,15 @@ Argusgen_scode(char *name, struct qual q)
                            break;
 
                         case Q_SRCID: 
-                           tmp = Argusgen_srcid(addr[0], *mask, type);
+                           tmp = Argusgen_srcid(&addr[0], *mask, type);
                            break;
                      }
 
-                     if (b != NULL)
-                        Argusgen_or(b, tmp);
-                     b = tmp;
+                     if (tmp != NULL) {
+                        if (b != NULL)
+                           Argusgen_or(b, tmp);
+                        b = tmp;
+                     }
                      break;
                   }
                }
@@ -4363,9 +5094,9 @@ Argusgen_scode(char *name, struct qual q)
                }
             }
             case Q_SRCID: {
-               b = Argusgen_srcid(**alist++, 0xffffffffL, type);
+               b = Argusgen_srcid(*alist++, 0xffffffffL, type);
                while (*alist) {
-                  tmp = Argusgen_srcid(**alist++, 0xffffffffL, type);
+                  tmp = Argusgen_srcid(*alist++, 0xffffffffL, type);
                   Argusgen_or(b, tmp);
                   b = tmp;
                }
@@ -4373,6 +5104,11 @@ Argusgen_scode(char *name, struct qual q)
          }
 #endif
          }
+         break;
+      }
+
+      case Q_INF: {
+         b = Argusgen_inf(name);
          break;
       }
 
@@ -4501,7 +5237,6 @@ Argusgen_scode(char *name, struct qual q)
          if (alist == NULL || *alist == NULL)
             ArgusLog(LOG_ERR, "unknown host '%s'", name);
          b = Argusgen_gateway(eaddr, *alist, type, proto, dir);
-
 #endif
          break;
 
@@ -4555,19 +5290,66 @@ Argusgen_scode(char *name, struct qual q)
          break;
       }
 
+      case Q_CLASS: {
+         extern struct ArgusMacClassStruct argus_macclass [];
+	 struct ArgusMacClassStruct *macclass = argus_macclass;
+	 while (macclass->id != 0) {
+            if (strncasecmp(macclass->class, name, strlen(macclass->class)) == 0) {
+               b = Argusgen_macclass(name, dir, Q_EQUAL);
+               break;
+	    }
+	    macclass++;
+	 }
+	 break;
+      }
+
       case Q_UNDEF:
          syntax();
          /* NOTREACHED */
    }
 
    if (b == NULL)
-      ArgusLog(LOG_ERR, "Argusgen_scode error");
+      syntax();
 
 #if defined(ARGUSDEBUG)
    ArgusDebug (4, "Argusgen_scode (%s, 0x%x) returns %p\n", name, q, b);
 #endif
 
    return b;
+}
+
+struct ablock *
+Argusgen_ucode(char *uuid, struct qual q)
+{
+   struct ArgusTransportStruct trans;
+   int len = 16, i, offset = ((char *)&trans.srcid.a_un.value - (char *)&trans);
+   union {
+      u_int ui[4];
+      unsigned char uc[16];
+   } u;
+   struct ablock *b0 = NULL, *b1 = NULL;
+   const char *cptr = (const char *) uuid;
+
+   bzero(&u, len);
+
+   for (i = 0; i < len; i++) {
+      sscanf((const char *) cptr, "%2hhx", &u.uc[i]);
+      cptr += 2;
+      if (*cptr == '-') cptr++;
+   }
+
+   b1 = Argusgen_recordtype(ARGUS_FAR);
+
+   for (i = 0; i < 4; i++) {
+      b0 = Argusgen_cmp(ARGUS_TRANSPORT_INDEX, offset + i*4, NFF_W, u.ui[i], Q_EQUAL, Q_DEFAULT);
+      Argusgen_and(b0, b1);
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_ucode (%s, 0x%x) returns %p\n", uuid, q, b1);
+#endif
+
+   return b1;
 }
 
 struct ablock *
@@ -4617,9 +5399,9 @@ Argusgen_mcode(char *s1, char *s2, int masklen, struct qual q)
 struct ablock *
 Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 {
-   int dir = q.dir, vlen, proto = q.proto, type = q.type;
+   int dir = q.dir, vlen = -1, proto = q.proto, type = q.type;
    u_int *addr = NULL, maskbuf[4], *mask = maskbuf;
-   struct ablock *b;
+   struct ablock *b = NULL;
 
    bzero(mask, sizeof(maskbuf));
    switch (type) {
@@ -4646,6 +5428,28 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
                ArgusLog(LOG_ERR, "illegal link layer address");
                break;
 
+            case Q_GRE: {
+               *mask = 0xffffffff;
+               if ((s == NULL) && (q.addr == Q_NET)) {
+                  /* Promote short net number */
+                  while (v && (v & 0xff000000) == 0) {
+                     v <<= 8;
+                     *mask <<= 8;
+                  }
+               } else if (vlen >= 0) {
+                  /* Promote short ipaddr */
+                  v <<= 32 - vlen;
+                  *mask <<= 32 - vlen;
+               }
+#ifdef ARGUSDEBUG
+               else {
+                  ArgusDebug(9, "%s: unable to 'promote' short ipaddr\n", __func__);
+               }
+#endif
+               addr = (u_int *)&v;
+               break;
+            }
+
             case Q_IPV6: {
                struct ArgusCIDRAddr *cidraddr = RaParseCIDRAddr (ArgusParser, s);
                int i, len;
@@ -4668,11 +5472,16 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
                      v <<= 8;
                      *mask <<= 8;
                   }
-               } else {
+               } else if (vlen >= 0) {
                   /* Promote short ipaddr */
                   v <<= 32 - vlen;
                   *mask <<= 32 - vlen;
                }
+#ifdef ARGUSDEBUG
+               else {
+                  ArgusDebug(9, "%s: unable to 'promote' short ipaddr\n", __func__);
+               }
+#endif
                addr = (u_int *)&v;
                break;
             }
@@ -4683,7 +5492,7 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
       case Q_SRCID:
          *mask = 0xffffffff;
-         b = Argusgen_srcid(v, *mask, type);
+         b = Argusgen_srcid((unsigned int *)&v, *mask, type);
          break;
 
       case Q_INODE:
@@ -4716,6 +5525,10 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
       case Q_IPID:
          b = Argusgen_ipid((int)v, dir, op);
+         break;
+
+      case Q_MASKLEN:
+         b = Argusgen_masklen((int)v, dir, op);
          break;
 
       case Q_TTL:
@@ -4770,6 +5583,10 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
          b = Argusgen_tcpbase((int)v, dir, op);
          break;
 
+      case Q_MAXSEG:
+         b = Argusgen_maxseg((int)v, dir, op);
+         break;
+
       case Q_TRANS:
          b = Argusgen_trans((int)v, dir, op);
          break;
@@ -4781,23 +5598,33 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
       case Q_RATE:
          b = Argusgen_rate(v, dir, op);
          break;
-/*
+
       case Q_LOSS:
          b = Argusgen_loss(v, dir, op);
          break;
-*/
+
       case Q_PLOSS:
          b = Argusgen_ploss(v, dir, op);
          break;
 
-/*
       case Q_GAP:
          b = Argusgen_gap(v, dir, op);
          break;
-*/
+
+      case Q_DUP:
+         b = Argusgen_dup(v, dir, op);
+         break;
 
       case Q_PCR:
          b = Argusgen_pcr(v, dir, op);
+         break;
+
+      case Q_INTERFLOW:
+         b = Argusgen_interflow((int)v, dir, type, op);
+         break;
+
+      case Q_INTERFLOWSTDDEV:
+         b = Argusgen_interflowstddev((int)v, dir, type, op);
          break;
 
       case Q_INTER:
@@ -4848,6 +5675,23 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
          b = Argusgen_cor((int)v, dir, op);
          break;
 
+      case Q_LAT: {
+         float f = v; 
+         b = Argusgen_lat(f, dir, op);
+         break;
+      }
+      case Q_LON: {
+         float f = v; 
+         b = Argusgen_lon(f, dir, op);
+         break;
+      }
+
+      case Q_LOC: {
+         float f = v; 
+         b = Argusgen_loc(f, dir, op);
+         break;
+      }
+
       case Q_UNDEF:
          syntax();
          /* NOTREACHED */
@@ -4863,6 +5707,44 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
 
    return b;
 }
+
+
+struct ablock *
+Argusgen_pcode( u_char *e1, u_char *e2, int masklen, struct qual q)
+{
+   struct ablock *b0 = NULL, *b1 = NULL;
+   struct ArgusFlow flow;
+   int offset, len = masklen / 8;
+
+   switch (q.proto) {
+      case Q_LINK:
+      case Q_ETHER:
+         if (q.addr == Q_HOST || q.addr == Q_DEFAULT)
+            b0 = Argusgen_ehostop(e1, (int)q.dir, len);
+         break;
+
+      case Q_ARP:
+         if (q.addr == Q_HOST) {
+            b1 =  Argusgen_linktype(ETHERTYPE_ARP);
+            offset = ((char *)&flow.arp_flow.haddr.h_un.ethernet - (char *)&flow);
+            len = sizeof(flow.arp_flow.haddr.h_un.ethernet);
+            b0 = Argusgen_bcmp (ARGUS_FLOW_INDEX, offset, len, e1, Q_DEFAULT);
+            Argusgen_and(b1, b0);
+         }
+         break;
+
+      default:
+         ArgusLog(LOG_ERR, "ethernet address used in non-ether expression");
+   }
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_pcode (%p, %p, %d, %p) returns %p\n", e1, e2, masklen, q, b0);
+#endif
+
+   return b0;
+}
+
+
 
 struct ablock *
 Argusgen_fcode(char *s, float v, struct qual q, u_int op)
@@ -4921,6 +5803,15 @@ Argusgen_fcode(char *s, float v, struct qual q, u_int op)
          b = Argusgen_pcr(v, dir, op);
          break;
 
+      case Q_LAT:
+         b = Argusgen_lat(v, dir, op);
+         break;
+
+      case Q_LON:
+         b = Argusgen_lon(v, dir, op);
+         break;
+
+
       case Q_UNDEF:
          syntax();
          /* NOTREACHED */
@@ -4948,7 +5839,7 @@ Argusgen_ecode( u_char *eaddr, struct qual q)
       case Q_LINK:
       case Q_ETHER:
          if (q.addr == Q_HOST || q.addr == Q_DEFAULT)
-            b0 = Argusgen_ehostop(eaddr, (int)q.dir);
+            b0 = Argusgen_ehostop(eaddr, (int)q.dir, 6);
          break;
 
       case Q_ARP:
@@ -4974,8 +5865,7 @@ Argusgen_ecode( u_char *eaddr, struct qual q)
 
 
 void
-Argussappend(s0, s1)
-struct slist *s0, *s1;
+Argussappend(struct slist *s0, struct slist *s1)
 {
    /*
     * This is definitely not the best way to do this, but the
@@ -4991,8 +5881,7 @@ struct slist *s0, *s1;
 }
 
 static struct slist *
-xfer_to_x(a)
-struct arth *a;
+xfer_to_x(struct arth *a)
 {
    struct slist *s;
 
@@ -5007,8 +5896,7 @@ struct arth *a;
 }
 
 static struct slist *
-xfer_to_a(a)
-struct arth *a;
+xfer_to_a(struct arth *a)
 {
    struct slist *s;
 
@@ -5023,10 +5911,7 @@ struct arth *a;
 }
 
 struct arth *
-ArgusLoad(proto, index, size)
-int proto;
-struct arth *index;
-int size;
+ArgusLoad(int proto, struct arth *index, int size)
 {
    struct slist *s, *tmp;
    struct ablock *b;
@@ -5119,10 +6004,7 @@ int size;
 }
 
 struct ablock *
-Argusgen_relation(code, a0, a1, reversed)
-int code;
-struct arth *a0, *a1;
-int reversed;
+Argusgen_relation(int code, struct arth *a0, struct arth *a1, int reversed)
 {
    struct slist *s0, *s1, *s2;
    struct ablock *b, *tmp;
@@ -5185,8 +6067,7 @@ ArgusLoadLen()
 }
 
 struct arth *
-ArgusLoadI(val)
-int val;
+ArgusLoadI(int val)
 {
    struct arth *a;
    struct slist *s;
@@ -5211,8 +6092,7 @@ int val;
 }
 
 struct arth *
-ArgusNeg(a)
-struct arth *a;
+ArgusNeg(struct arth *a)
 {
    struct slist *s;
 
@@ -5301,8 +6181,7 @@ alloc_reg()
  */
 
 static void
-free_reg(n)
-int n;
+free_reg(int n)
 {
    regused[n] = 0;
 
@@ -5312,8 +6191,7 @@ int n;
 }
 
 static struct ablock *
-Argusgen_len(jmp, n)
-int jmp, n;
+Argusgen_len(int jmp, int n)
 {
    struct slist *s;
    struct ablock *b;
@@ -5332,8 +6210,7 @@ int jmp, n;
 }
 
 struct ablock *
-Argusgen_greater(n)
-int n;
+Argusgen_greater(int n)
 {
    struct ablock *b;
 
@@ -5347,8 +6224,7 @@ int n;
 }
 
 struct ablock *
-Argusgen_less(n)
-int n;
+Argusgen_less(int n)
 {
    struct ablock *b;
 
@@ -5363,8 +6239,7 @@ int n;
 }
 
 struct ablock *
-Argusgen_byteop(op, idx, val)
-int op, idx, val;
+Argusgen_byteop(int op, int idx, int val)
 {
    struct ablock *b;
    struct slist *s;
@@ -5408,38 +6283,20 @@ int op, idx, val;
 }
 
 struct ablock *
-Argusgen_broadcast(proto)
-int proto;
+Argusgen_broadcast(int proto)
 {
    struct ablock *b0 = NULL, *b1 = NULL;
-   static u_char ebroadcast[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-   u_int netaddr = 0xffffffffL, mask;
-/*
-   u_int classmask = 0xffffffffL;
-*/
 
    switch (proto) {
-      case Q_LINK:
-         b0 = Argusgen_ehostop(ebroadcast, Q_OR);
+      case Q_LINK: {
+         static u_char ebroadcast[] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+         b0 = Argusgen_ehostop(ebroadcast, Q_OR, 6);
          break;
+      }
 
-      case Q_IP:
+      case Q_IP: {
+         u_int netaddr = 0xffffffffL, mask;
          mask = 0xffffffffL;
-/*
-         if (ArgusParser->ArgusCurrentInput) {
-            netaddr = ArgusParser->ArgusLocalNet & ArgusParser->ArgusNetMask;
-            classmask = ipaddrtonetmask(ArgusParser->ArgusLocalNet);
-            b1 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-            netaddr |= ~(~0 & ArgusNetMask);
-            b0 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-            Argusgen_or(b1, b0);
-            if (classmask != ArgusNetMask) {
-               netaddr = ArgusParser->ArgusLocalNet & classmask;
-               b1 = Argusgen_host((u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
-               Argusgen_or(b1, b0);
-            }
-         }
-*/
          netaddr = ~0;
          b1 = Argusgen_host( (u_int *)&netaddr, &mask, Q_IPV4, proto, Q_OR);
          if (b0 != NULL)
@@ -5447,6 +6304,7 @@ int proto;
          else
             b0 = b1;
          break;
+      }
 
       case Q_DEFAULT:
          ArgusLog(LOG_ERR, "only ether/ip broadcast filters supported");
@@ -5460,31 +6318,19 @@ int proto;
 }
 
 struct ablock *
-Argusgen_multicast(proto)
-int proto;
+Argusgen_multicast(int proto)
 {
    register struct ablock *b0 = NULL, *b1 = NULL;
-   register struct slist *s;
 
    switch (proto) {
-      case Q_LINK:
-         s = new_stmt(NFF_LD|NFF_B|NFF_ABS);
-         s->s.data.k = 92;
-         b0 = new_block(JMP(NFF_JSET));
-         b0->s.data.k = 1;
-         b0->stmts = s;
-
-         s = new_stmt(NFF_LD|NFF_B|NFF_ABS);
-         s->s.data.k = 98;
-         b1 = new_block(JMP(NFF_JSET));
-         b1->s.data.k = 1;
-         b1->stmts = s;
-   
-         Argusgen_or(b0, b1);
+      case Q_ETHER:
+      case Q_LINK: {
+         static u_char emulticast[] = { 0x33, 0x33, 0xff, 0xff, 0xff, 0xff };
+         b1 = Argusgen_ehostop(emulticast, Q_OR, 2);
          break;
+      }
 
-      case Q_IP:
-      case Q_DEFAULT: {
+      case Q_IP: {
          struct ArgusFlow flow;
          int src_off = 0, dst_off = 0;
 
@@ -5500,6 +6346,9 @@ int proto;
          Argusgen_and(b0, b1);
          break;
       }
+
+      case Q_DEFAULT:
+         ArgusLog(LOG_ERR, "only ether/ip multicast filters supported");
    }
 
 #if defined(ARGUSDEBUG)
@@ -5510,14 +6359,65 @@ int proto;
 }
 
 /*
+ * generate command for intranet/internet.  this uses Netspatial DSR to
+ * test if traffic addresses are both local or both remote.
+ *
+ */
+
+struct ablock *
+Argusgen_intranet(void)
+{
+   register struct ablock *b = NULL, *b0 = NULL, *b1 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+
+   b = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+
+   offset = ((char *)&local.sloc - (char *)&local);
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_GEQ, Q_DEFAULT);
+   offset = ((char *)&local.dloc - (char *)&local);
+   b1 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_GEQ, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+   Argusgen_and(b1, b);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_intranet(void) returns %p\n", b);
+#endif
+
+   return b;
+}
+
+struct ablock *
+Argusgen_internet(void)
+{
+   register struct ablock *b = NULL, *b0 = NULL, *b1 = NULL;
+   struct ArgusNetspatialStruct local;
+   int offset = ((char *)&local.hdr.argus_dsrvl8.qual - (char *)&local);
+
+   b = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_LOCAL_MASK, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
+
+   offset = ((char *)&local.sloc - (char *)&local);
+   b0 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_LESS, Q_DEFAULT);
+   offset = ((char *)&local.dloc - (char *)&local);
+   b1 = Argusgen_cmp(ARGUS_LOCAL_INDEX, offset, NFF_B, 3, Q_LESS, Q_DEFAULT);
+   Argusgen_and(b0, b1);
+   Argusgen_and(b1, b);
+
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_intranet(void) returns %p\n", b);
+#endif
+
+   return b;
+}
+
+/*
  * generate command for inbound/outbound.  It's here so we can
  * make it link-type specific.  'dir' = 0 implies "inbound",
  * = 1 implies "outbound".
  */
 
 struct ablock *
-Argusgen_inbound(dir)
-int dir;
+Argusgen_inbound(int dir)
 {
    register struct ablock *b0;
 
@@ -5527,7 +6427,7 @@ int dir;
            dir);
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (4, "Argusgen_multicast (0x%x) returns %p\n", dir, b0);
+   ArgusDebug (4, "Argusgen_inbound (0x%x) returns %p\n", dir, b0);
 #endif
 
    return (b0);

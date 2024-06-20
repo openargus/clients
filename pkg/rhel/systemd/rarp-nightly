@@ -1,0 +1,92 @@
+#!/usr/bin/perl
+#
+#   Gargoyle Client Software.  Tools to read, analyze and manage Argus data.
+#   Copyright (c) 2000-2024 QoSient, LLC
+#   All Rights Reserved
+#
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+#
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#   rarp-nightly - ARP nightly scripts to manage dns databases.
+#                  Need to generate and maintain arpMatrix table.
+#
+#
+# Complain about undeclared variables
+use v5.6.0;
+use strict;
+use warnings;
+
+use POSIX;
+use Time::Local;
+use File::Temp qw/ :POSIX /;
+use File::Which qw/ which where /;
+
+$ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/sbin:/usr/local/bin";
+
+# Parse the arguments if any
+my @arglist = ();
+
+my $debug       = 0;
+my $done        = 0;
+
+my $dtime = "";
+my $dbase = "";
+
+my ($sec, $min, $hour, $mday, $mon, $year) = localtime();
+my  $yesterday = timelocal(0,0,12,$mday,$mon,$year) - 24*60*60;
+($sec, $min, $hour, $mday, $mon, $year) = localtime($yesterday);
+
+my   $time = sprintf "%4d/%02d/%02d", $year+1900, $mon+1, $mday;
+my $dbtime = sprintf "%4d_%02d_%02d", $year+1900, $mon+1, $mday;
+
+my $fname        = tmpnam();
+my $rasql        = which 'rasql';
+my $ralabel      = which 'ralabel';
+my $racluster    = which 'racluster';
+my $rascore      = which 'rascore';
+my $rasqlinsert  = which 'rasqlinsert';
+
+my @services    = qw( arp );
+
+ARG: while (my $arg = shift(@ARGV)) {
+    if (!$done) {
+      for ($arg) {
+         s/^-debug$//      && do { $debug++; next ARG; };
+         s/^-t$//          && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//       && do { $time = shift(@ARGV); next ARG; };
+         s/^-dbase$//      && do { $dbase = shift(@ARGV); next ARG; };
+      }
+    } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+   }
+    $arglist[@arglist + 0] = $arg;
+}
+
+foreach my $i (0 .. $#services) {
+   my     $srv = $services[$i];
+   my     $cmd = "$rasql -t $time -r mysql://root\@localhost/".$srv."Flows/".$srv."_%Y_%m_%d -M time 1d  -w - ";
+   my   $label = "$ralabel -f /usr/argus/ralabel.local.conf -w - ";
+   my $cluster = "$racluster -r - -M nocorrect dsrs='-agr' -m sid inf saddr daddr -w - ";
+   my   $score = "$rascore -Xf conf/reputation.current.conf -r - -r mysql://root\@localhost/arpMatrix -m saddr -w $fname -t $time";
+   my  $insert = "$rasqlinsert -r $fname -m dmac daddr smac saddr sid inf -M drop time 1d -w mysql://root\@localhost/".$srv."Matrix/".$srv."_%Y_%m_%d -s stime ltime sid inf smac dmac saddr daddr spkts dpkts sbytes dbytes pcr score";
+
+   print "DEBUG: rarp-nightly $cmd | $label | $cluster | $score\n" if $debug;
+   `$cmd | $label | $cluster | $score`;
+
+   print "DEBUG: rarp-nightly $insert\n" if $debug;
+   `$insert`;
+   unlink $fname;
+}

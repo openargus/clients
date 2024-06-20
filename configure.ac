@@ -1,42 +1,49 @@
 # 
-#  Argus Software
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
 # 
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
-#  any later version.
+#  This program is free software, released under the GNU General
+#  Public License; you can redistribute it and/or modify it under the terms
+#  of the GNU General Public License as published by the Free Software
+#  Foundation; either version 3, or any later version.
 #
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
+#  Other licenses are available through QoSient, LLC.
+#  Inquire at info@qosient.com.
+#
+#  This program is distributed WITHOUT ANY WARRANTY; without even the
+#  implied warranty of * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the * GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
 # 
-#  $Id: //depot/argus/clients/configure.ac#47 $
-#  $DateTime: 2016/06/01 15:17:28 $
-#  $Change: 3148 $
+#  $Id: //depot/gargoyle/clients/configure.ac#28 $
+#  $DateTime: 2016/10/10 23:14:45 $
+#  $Change: 3219 $
 #
 #
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.61])
-AC_INIT([Argus Client Programs],[3.0.8],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+m4_include([m4/python.m4])
+
+
+AC_PREREQ([2.69])
+AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+PACKAGE_RELEASE='3.6'
+AC_CONFIG_MACRO_DIR([./m4])
 AC_CONFIG_SRCDIR([clients/ra.c])
 AC_CONFIG_AUX_DIR([config])
-AC_CONFIG_HEADER([include/argus_config.h])
+AC_CONFIG_HEADERS([include/argus_config.h])
 AC_CANONICAL_TARGET
 
-AC_QOSIENT_PERL(V_PERL)
+AC_LBL_C_INIT(V_CCOPT, V_INCLS)
 
 # Checks for programs.
-AC_LBL_C_INIT(V_CCOPT, V_INCLS)
 AC_PROG_LN_S
-AC_PROG_LEX
+AC_PROG_LEX(noyywrap)
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 AC_PROG_YACC
@@ -45,12 +52,13 @@ AC_CHECK_PROGS(V_RANLIB, ranlib, @true)
 AC_QOSIENT_LEX_AND_YACC(V_LEX, V_YACC, argus_)
 
 # Checks for libraries.
-AC_QOSIENT_READLINE(V_READLINE, V_INCLS)
+AC_QOSIENT_READLINE(V_READLINE, V_READLINE_INCLS)
 
 CMU_SASL2(V_INCLS)
 AC_CMU_MYSQL
 
 AC_CHECK_HEADERS(zlib.h, [AC_CHECK_LIB(z, uncompress, ZLIB="-lz")])
+AC_CHECK_HEADERS(dns_sd.h, [AC_CHECK_LIB(dns_sd, DNSServiceRegister, DNSLIB="-ldns_sd")])
 AC_QOSIENT_FLOWTOOLS(V_FLOWTOOLS, V_INCLS)
 
 if test ! -z "$V_FLOWTOOLS"; then
@@ -71,16 +79,34 @@ if test ! -z "$V_FLOWTOOLS"; then
 fi
 
 AC_QOSIENT_PCRE(V_PCRE, V_INCLS)
+if test ! -z "$V_PCRE"; then
+   if test -f "$V_PCRE"; then
+      if test -f lib/libpcre.a; then
+         rm -rf lib/libpcre.a
+      fi
+      pcredir=`echo $V_PCRE | sed -e 's/\.\./..\/../'`
+   fi
+   LIBS="$LIBS $V_PCRE"
+fi
 
 # Checks for header files.
 AC_HEADER_DIRENT
-AC_HEADER_STDC
+AC_PROG_EGREP
+
 AC_HEADER_SYS_WAIT
 
 AC_CHECK_HEADERS([sys/types.h sys/sockio.h sys/file.h string.h fcntl.h syslog.h stdbool.h])
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h libintl.h malloc.h memory.h netdb.h netinet/in.h net/if_dl.h])
 AC_CHECK_HEADERS([stdlib.h stddef.h string.h strings.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h])
-AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h])
+
+AC_CHECK_HEADERS([sys/mount.h sys/time.h sys/vfs.h syslog.h termios.h unistd.h values.h ifaddrs.h dns_sd.h])
+AC_CHECK_HEADERS([uuid/uuid.h linux/uuid.h uuid.h])
+AC_CHECK_HEADERS([sys/systm.h])
+AC_CHECK_HEADERS([arpa/nameser.h])
+AC_CHECK_HEADERS([arpa/nameser_compat.h])
+AC_CHECK_HEADERS([stdbool.h])
+
+saved_CPPFLAGS=$CPPFLAGS
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -104,7 +130,8 @@ AC_TYPE_UID_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 
-AC_HEADER_TIME
+AC_CHECK_HEADERS_ONCE([sys/time.h])
+
 AC_STRUCT_TM
 AC_STRUCT_TIMEZONE
 
@@ -114,13 +141,11 @@ AC_FUNC_VPRINTF
 AC_FUNC_CLOSEDIR_VOID
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_FORK
-AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_MKTIME
 AC_FUNC_REALLOC
 AC_FUNC_SELECT_ARGTYPES
-AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRFTIME
 AC_FUNC_STRTOD
@@ -135,6 +160,7 @@ AC_CHECK_FUNCS(setlinebuf)
 AC_CHECK_FUNCS(strerror strtof)
 AC_CHECK_FUNCS(floorf remainderf)
 AC_CHECK_FUNCS(timegm)
+AC_CHECK_FUNCS(isatty)
 
 needsnprintf=no
 AC_CHECK_FUNCS(vsnprintf snprintf,, [needsnprintf=yes])
@@ -151,36 +177,45 @@ AC_CHECK_FUNCS([ether_hostton getaddrinfo gethostname])
 AC_CHECK_FUNCS([alarm bzero endgrent endpwent floor gethostbyaddr gethostbyname getpass gettimeofday inet_ntoa isascii localtime_r])
 AC_CHECK_FUNCS([memchr memmove memset mkdir modf pow putenv realpath regcomp select setenv socket sqrt strcasecmp strchr])
 AC_CHECK_FUNCS([strdup strerror strlcat strncasecmp strpbrk strerror strrchr strstr strtol strtof srandomdev tzset])
+AC_CHECK_FUNCS([gethostuuid])
+AC_CHECK_FUNCS([posix_memalign memalign])
+
+AC_SEARCH_LIBS([clock_gettime], [rt], [
+    AC_DEFINE(HAVE_CLOCK_GETTIME, 1,[Have clock_gettime])
+])
+AC_SEARCH_LIBS([clock_nanosleep], [rt], [
+    AC_DEFINE(HAVE_CLOCK_NANOSLEEP, 1,[Have clock_nanosleep])
+])
 
 case "$target_os" in
    *) COMPATLIB="-lm"
 esac
 
 AC_QOSIENT_THREADS(V_THREADS)
-AC_QOSIENT_TCPWRAP(V_WRAPDEP, V_INCLS)
-if test ! -z "$V_WRAPDEP"; then
-   if test -f "$V_WRAPDEP"; then
-      if test -f lib/libwrap.a; then
-         rm -rf lib/libwrap.a
-      fi
-      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
-      ln -s $wrapdir lib/libwrap.a
-      V_WRAPDEP="../lib/libwrap.a"
-   else
-      if test "$V_WRAPDEP" = "-lwrap" ; then
-         if test -f lib/libwrap.a; then
-            rm -rf lib/libwrap.a
-         fi
-         case "$target_os" in
-         linux*)
-            V_WRAPDEP="$V_WRAPDEP -lnsl";;
-         esac
-      fi
-   fi
-   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
-   WRAPLIBS="$V_WRAPDEP"
-fi
 
+#AC_QOSIENT_TCPWRAP(V_WRAPDEP, V_INCLS)
+#if test ! -z "$V_WRAPDEP"; then
+#   if test -f "$V_WRAPDEP"; then
+#      if test -f lib/libwrap.a; then
+#         rm -rf lib/libwrap.a
+#      fi
+#      wrapdir=`echo $V_WRAPDEP | sed -e 's/^\.\./..\/../'`
+#      ln -s $wrapdir lib/libwrap.a
+#      V_WRAPDEP="../lib/libwrap.a"
+#   else
+#      if test "$V_WRAPDEP" = "-lwrap" ; then
+#         if test -f lib/libwrap.a; then
+#            rm -rf lib/libwrap.a
+#         fi
+#         case "$target_os" in
+#         linux*)
+#            V_WRAPDEP="$V_WRAPDEP -lnsl";;
+#         esac
+#      fi
+#   fi
+#   AC_DEFINE([HAVE_TCP_WRAPPER], [], [Using Tcp wrappers])
+#   WRAPLIBS="$V_WRAPDEP"
+#fi
 
 saved_CPPFLAGS=$CPPFLAGS
 saved_LIBS=$LIBS
@@ -213,6 +248,30 @@ saved_LDFLAGS=$LDFLAGS
 saved_LIBS=$LIBS
 
 case "$target_os" in
+   cygwin*)
+      NCURSES_INCLS="-I/usr/include/ncurses"
+      NCURSES_LDFLAGS="-L/usr/lib"
+      CPPFLAGS="${saved_CPPFLAGS} ${NCURSES_INCLS}"
+      LDFLAGS="${saved_LDFLAGS} ${NCURSES_LDFLAGS}"
+
+      AC_CHECK_HEADERS(ncurses.h, CURSESLIB="-lncurses",
+         [AC_CHECK_HEADERS(curses.h, CURSESLIB="-lcurses")],)
+
+      if test "$CURSESLIB" = "-lncurses"; then
+         AC_CHECK_LIB(ncurses, initscr,
+           [AC_DEFINE([ARGUS_CURSES], [], [Using ncurses])
+            CURSES_INCLS="-I/usr/include/ncurses"
+            LIBS="$LIBS -L/usr/lib" ],)
+      else
+         if test "$CURSESLIB" = "-lcurses"; then
+            AC_DEFINE([ARGUS_CURSES], [], [Using curses])
+         fi
+      fi
+
+      CPPFLAGS="${saved_CPPFLAGS}"
+      LDFLAGS="${saved_LDFLAGS}"
+      ;;
+
    solaris*)
       NCURSES_INCLS="-I/usr/include/ncurses"
       NCURSES_LDFLAGS="-L/usr/gnu/lib"
@@ -279,6 +338,8 @@ aix*)
 
 darwin*)
 	have_darwin=yes;
+	saved_LDFLAGS=$LDFLAGS
+	LDFLAGS="${saved_LDFLAGS} -Wlinker -rpath /usr/local/mysql/lib"
 	;;
 
 hpux9*)
@@ -346,6 +407,7 @@ if test "$have_cygwin" = yes ; then
    AC_DEFINE([CYGWIN], [], [Using cygwin])
 fi
 
+AC_QOSIENT_LIBMAXMINDDB
 AC_QOSIENT_GEOIP(V_GEOIPDEP, V_INCLS)
 
 AC_CACHE_CHECK([tm_gmtoff in struct tm], tcl_cv_member_tm_gmtoff, [
@@ -379,13 +441,115 @@ fi
 
 V_INCLS_EXAMPLES=`echo $V_INCLS | sed -e 's/\.\./..\/../'`
 
+# from https://www.freedesktop.org/software/systemd/man/daemon.html
+
+PKG_PROG_PKG_CONFIG
+
+if test -d "/usr/lib/systemd"; then
+  if test -n "$PKG_CONFIG"; then
+  AC_ARG_WITH([systemdsystemunitdir],
+     [AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files])],,
+     [with_systemdsystemunitdir=auto])
+  AS_IF([test "x$with_systemdsystemunitdir" = "xyes" -o "x$with_systemdsystemunitdir" = "xauto"], [
+     def_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+
+     AS_IF([test "x$def_systemdsystemunitdir" = "x"],
+   [AS_IF([test "x$with_systemdsystemunitdir" = "xyes"],
+    [AC_MSG_ERROR([systemd support requested but pkg-config unable to query systemd package])])
+    with_systemdsystemunitdir=no],
+   [with_systemdsystemunitdir="$def_systemdsystemunitdir"])])
+  AS_IF([test "x$with_systemdsystemunitdir" != "xno"],
+      [AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])])
+  fi
+fi
+
+LIBCURL_CHECK_CONFIG
+AC_QOSIENT_CURLEXE
+AC_QOSIENT_LIBUUID
+AC_QOSIENT_MACHINE_ID
+
+AC_QOSIENT_LIBCARES
+
+#
+# Perl stuff
+#
+
+AX_PERL_EXT
+if test x"$PERL" = x; then
+    AC_MSG_ERROR("cannot find Perl")
+fi
+V_PERL=$PERL
+ 
+PERL_CFLAGS=`perl -MExtUtils::Embed -e ccopts`
+PERL_LDFLAGS=`perl -MExtUtils::Embed -e ldopts`
+ 
+saved_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="${saved_CPPFLAGS} ${PERL_CFLAGS}"
+AC_CHECK_HEADERS(EXTERN.h)
+CPPFLAGS="${saved_CPPFLAGS}"
+
+#
+# Python stuff
+#
+
+case "$target_os" in 
+darwin*)
+        am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
+        ;;
+*) 
+        am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+        ;;
+esac
+ 
+V_PYTHON_INCLS="-I"$am_cv_python_inc
+CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
+AC_CHECK_HEADERS(Python.h)
+CPPFLAGS="${saved_CPPFLAGS}"
+
+AC_ARG_ENABLE(python,
+   AS_HELP_STRING([--disable-python], [Disable scripts that depends on python]),
+   [case "${enableval}" in
+          yes) HAVE_PYTHON=yes ;;
+          no)  HAVE_PYTHON=no ;;
+          *) AC_MSG_ERROR([bad value ${enableval} for --enable-python]) ;;
+   esac],[HAVE_PYTHON=yes])
+
+if test "x$HAVE_PYTHON" = "xyes" ; then
+   AM_PATH_PYTHON([3],, [:])
+   AM_CHECK_PYMOD(numpy,,[HAVE_PYTHON_NUMPY=yes],[HAVE_PYTHON_NUMPY=no])
+fi
+
+AC_CHECK_PROG([HAVE_SWIG], [swig], ["yes"], ["no"])
+if test "x$HAVE_SWIG" = "xyes" ; then
+  case "$target_os" in
+  darwin*)
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
+        DIRS="$DIRS ./pythonlib"
+fi
+if test "x$ac_cv_header_EXTERN_h" = xyes; then :
+        DIRS="$DIRS ./perllib"
+fi
+        ;;
+  *)
+if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
+        DIRS="$DIRS ./pythonlib"
+fi
+if test "x$ac_cv_header_EXTERN_h" = xyes; then :
+        DIRS="$DIRS ./perllib"
+fi
+        ;;
+  esac
+fi
+
 AC_SUBST(PACKAGE_VERSION)
+AC_SUBST(PACKAGE_RELEASE)
 AC_SUBST(LIBS)
 AC_SUBST(DIRS)
 AC_SUBST(INCLS)
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
 AC_SUBST(V_INCLS_EXAMPLES)
+AC_SUBST(V_PYTHON_INCLS)
 AC_SUBST(V_RANLIB)
 AC_SUBST(V_YACC)
 AC_SUBST(V_LEX)
@@ -394,14 +558,16 @@ AC_SUBST(V_THREADS)
 AC_SUBST(V_FTDEP)
 AC_SUBST(V_PCRE)
 AC_SUBST(V_READLINE)
+AC_SUBST(V_READLINE_INCLS)
 AC_SUBST(V_GEOIPDEP)
 AC_SUBST(WRAPLIBS)
 AC_SUBST(COMPATLIB)
 AC_SUBST(ZLIB)
+AC_SUBST(DNSLIB)
 AC_SUBST(CURSESLIB)
 AC_SUBST(CURSES_INCLS)
-AC_SUBST(XDR_INCLS)
 AC_SUBST(LIB_XDR)
+AC_SUBST(XDR_INCLS)
 AC_SUBST(INSTALL_LIB)
 AC_SUBST(INSTALL_BIN)
 AC_SUBST(PCRE_CFLAGS)
@@ -412,37 +578,44 @@ AC_CONFIG_FILES([
    ./include/Makefile
    ./clients/Makefile 
    ./lib/argus-clients.pc
+   ./pkg/rhel/systemd/rasqlinsert-setup
+   ./pkg/Makefile
+   ./perllib/Makefile
+   ./pythonlib/Makefile
+   ./lib/argus-clients.spec
 ])
 
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
       ./examples/Makefile
       ./examples/raconvert/Makefile
-      ./examples/radark/Makefile
+      ./examples/radbase/Makefile
       ./examples/radecode/Makefile
+      ./examples/radns/Makefile
       ./examples/radump/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
       ./examples/ragraph/Makefile
       ./examples/ragrep/Makefile
       ./examples/rahisto/Makefile
-      ./examples/rahosts/Makefile
       ./examples/ralabel/Makefile
    ])
    
    AS_IF([test "$ARGUS_MYSQL_MAKEFILE" != no],
       [AC_CONFIG_FILES([
          ./examples/ramysql/Makefile
+         ./examples/rahosts/Makefile
       ])
    ])
    
    AC_CONFIG_FILES([
+      ./examples/ramatrix/Makefile
       ./examples/rapath/Makefile
       ./examples/rapolicy/Makefile
       ./examples/raports/Makefile
+      ./examples/raqsort/Makefile
       ./examples/rarpwatch/Makefile
       ./examples/raservices/Makefile
-      ./examples/rastream/Makefile
       ./examples/rastrip/Makefile
       ./examples/ratop/Makefile
       ./examples/ratimerange/Makefile

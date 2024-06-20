@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>KeepAlive</key>
+        <true/>
+        <key>Label</key>
+        <string>com.qosient.argus.rastream</string>
+        <key>ProgramArguments</key>
+        <array>
+                <string>/usr/local/bin/rastream</string>
+                <string>-S</string>
+                <string>localhost:562</string>
+                <string>-f</string>
+                <string>/usr/local/bin/rastream.sh</string>
+                <string>-B</string>
+                <string>10s</string>
+                <string>-M</string>
+                <string>time</string>
+                <string>5m</string>
+                <string>-w</string>
+                <string>/usr/local/argus/$srcid/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S</string>
+        </array>
+        <key>OnDemand</key>
+        <false/>
+        <key>ServiceDescription</key>
+        <string>rastream</string>
+</dict>
+</plist>

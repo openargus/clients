@@ -1,0 +1,61 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RAMANAGE 1 "13 November 2023" "ramanage 5.0.3"
+.SH NAME
+\fBramanage\fP \- utility for argus file archive management
+.SH SYNOPSIS
+.B ramanage
+.I [raoptions] -r filename
+
+.SH DESCRIPTION
+.IX  "ramanage command"  ""  "\fLramanage\fP \(em filename"
+.LP
+.B Ramanage
+is a utility to handle the common tasks associated with managing long-term
+storage of argus data files.
+It provides three operations: compress, upload and delete.
+Compression is always gzip and is built into the command via libz.
+Uploads are handled by libcurl, if available, and handled by an external
+curl executable otherwise.
+Uploads use HTTPS for transport and can be authenticated with either
+BasicAuth or SPNEGO.
+On Windows systems, SPNEGO will provide Kerberos V5 authentication if
+the system is part of a Domain (and has a host key).
+
+.LP
+.SH OPTIONS
+Ramanage ignores most client options.
+It does pay attention to the "-f" option to read a configuration file,
+and requires a single "-r" option (only one file).
+The configuration must enable at least one command since all are off
+by default.
+
+.SH EXAMPLE INVOCATION
+
+This example runs \fBracount\fP with a specific configuration file.
+
+.nf
+.ft CW
+.ps 8
+% ramanage -f ./ramanage-alt-config.conf \\
+.in +0.5i
+-r argus.2012.02.13.17.20.00.out
+.in -0.5i
+.ps
+.ft P
+.fi
+
+.SH AUTHORS
+.nf
+Eric Kinzie <eric@qosient.com>
+.fi
+
+.SH SEE ALSO
+.BR ramanage.conf (5)
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient. All rights reserved.

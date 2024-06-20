@@ -1,0 +1,30 @@
+#
+#  Argus Client Software
+#  Copyright (c) 2000-2024 QoSient, LLC
+#  All rights reserved.
+#
+#
+# Ralabel Layer 2 IEEE Style Address Configuration File
+#
+# Carter Bullard
+# QoSient, LLC
+#
+#  This configuration is a ralabel(1) address configuration file.
+#
+#  This file allows you to specify IEEE 802.3 addresses, 
+#  and to provide optional labels that can be associated with
+#  those addresses.
+#
+#  Here is a valid and simple configuration file.   It represents
+#  the internal QoSient ethernet address space.
+#
+#  This style of configuation file is primarily used for LOCAL and
+#  non-LOCAL label assignments, using tools like rotop() and
+#  general aggregators, that will use the labels as aggregation
+#  keys.
+#   
+#  Local Address Classifications
+#   
+   00:23:32:2f:ac:9c 		thoth:en0
+   00:23:32:2f:ac:9d 		thoth:en1
+   00:1d:4f:ff:a6:ad 		thoth:fw0

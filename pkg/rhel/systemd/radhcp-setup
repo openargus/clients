@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -e
+
+typeset -r RADHCP_CONF=/run/argus/radhcp.conf
+typeset -r RADHCP_CACHE=/run/argus/radhcp.cache
+
+# Minimal configuration
+radhcp_configure(){
+	echo "RA_RELIABLE_CONNECT=yes"
+	echo "RA_PRINT_UNIX_TIME=yes"
+	echo "RA_USEC_PRECISION=3"
+	echo 'RA_FILTER="udp and ( port 67 or port 68 )"'
+}
+
+# Read records from database used to "prime" radhcp with
+# the last 24 hours of dhcp messages
+radhcp_build_cache(){
+	rm -f ${RADHCP_CACHE}
+	rasql -r mysql://root@localhost/dhcpFlows/dhcp_%Y_%m_%d -Mtime 1d \
+	 -t -24h -w ${RADHCP_CACHE}
+}
+
+if (( $# == 0 )) ; then
+	exit 1
+fi
+
+if [[ "$1" == start ]] ; then
+	mkdir -p $(dirname ${RADHCP_CONF})
+	radhcp_configure > ${RADHCP_CONF}
+	radhcp_build_cache
+elif [[ "$1" == stop ]] ; then
+	rm -f ${RADHCP_CONF}
+	rm -f ${RADHCP_CACHE}
+fi
+

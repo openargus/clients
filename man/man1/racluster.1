@@ -1,26 +1,15 @@
-.\" Copyright (c) 2000-2022 QoSient, LLC
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
 .\" All rights reserved.
-.\" 
-.\" This program is free software; you can redistribute it and/or modify
-.\" it under the terms of the GNU General Public License as published by
-.\" the Free Software Foundation; either version 2, or (at your option)
-.\" any later version.
 .\"
-.\" This program is distributed in the hope that it will be useful,
-.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
-.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-.\" GNU General Public License for more details.
 .\"
-.\" You should have received a copy of the GNU General Public License
-.\" along with this program; if not, write to the Free Software
-.\" Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-.\"
-.TH RACLUSTER 1 "07 October 2003" "racluster 3.0.8"
+.TH RACLUSTER 1 "07 October 2023" "racluster 5.0.3"
 .SH NAME
 \fBracluster\fP \- aggregate \fBargus(8)\fP data files.
 .SH SYNOPSIS
 .B racluster
-[\fB\-f\fP \fIconf\fP] [\fB\-m\fP \fIagr(s)\fP] [\fB\-M\fP \fImode(s)\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+[\fB\-f\fP \fIconf\fP] [\fB\-m\fP \fIagr(s)\fP] [\fB\-M\fP \fImode(s)\fP] [\fB\-P\fP \fIprocnum\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
 .SH DESCRIPTION
 .IX  "racluster command"  ""  "\fLracluster\fP \(em argus data"
 .LP
@@ -64,7 +53,10 @@ Supported aggregation objects are:
 .RS
 .TP 15
 .B none
-use a null flow key.
+do not merge records (results in no aggregation).
+.TP
+.B all
+merge all records into a single record.
 .TP
 .B srcid
 argus source identifier.
@@ -182,6 +174,10 @@ Replace each inputfile contents, with the aggregated output. The initial file co
 .PD
 .RE
 .TP 4 4
+.BI \-P <procnum>
+Specify the number of processors to use for aggregation.  Default is 1.
+.RE
+.TP 4 4
 .BI \-V 
 Verbose operation, printing a line of output for each input file processed.
 Very useful when using the ra() -R option.
@@ -241,7 +237,7 @@ as a percent of the total.
 .fi
 
 .SH COPYRIGHT
-Copyright (c) 2000-2022 QoSient. All rights reserved.
+Copyright (c) 2000-2024 QoSient. All rights reserved.
 .SH SEE ALSO
 .BR racluster(5),
 .BR ra(1),

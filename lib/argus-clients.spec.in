@@ -1,0 +1,402 @@
+%define srcname    argus-clients
+%define ver     @PACKAGE_VERSION@
+%if %{?rel:0}%{!?rel:1}
+%define rel     @PACKAGE_RELEASE@
+%endif
+%if %{?srcext:0}%{!?srcext:1}
+%define srcext .gz
+%endif
+Summary: Argus-5.0 Client Software
+Name: argus-clients%{?_workstation:-workstation}
+Version: %ver
+Release: %rel%{dist}.3
+License: Proprietary
+Group: Applications/Internet
+Source: %{srcname}-%{version}.%{rel}.tar%{srcext}
+URL: http://qosient.com/argus
+Buildroot: %{_tmppath}/%{srcname}-%{ver}-root
+%{?systemd_requires}
+BuildRequires: systemd
+BuildRequires: ncurses-devel, readline-devel, zlib-devel
+BuildRequires: pcre-devel
+BuildRequires: libmaxminddb-devel
+BuildRequires: mariadb-devel
+BuildRequires: cyrus-sasl-devel
+BuildRequires: libuuid-devel
+BuildRequires: autoconf-archive
+BuildRequires: perl-generators
+BuildRequires: libcurl-devel
+BuildRequires: c-ares-devel
+BuildRequires: swig > 2.0
+BuildRequires: perl-devel
+BuildRequires: flex
+BuildRequires: bison
+Requires: cyrus-sasl
+Conflicts: argus-clients-misc < 5.0-3.1%{dist}.1
+
+%description
+Argus Clients contains a number of programs that process Argus data.
+Copyright 2000-2024 QoSient, LLC
+
+%define argusdir        /usr
+%define argusman        /usr/share/man
+%define argusdocs       /usr/share/doc/%{srcname}-%{ver}
+
+%define argusbin        %{argusdir}/bin
+%define argussbin       %{argusdir}/sbin
+%define argusdata       %{argusdir}/argus
+
+%prep
+%setup -n %{srcname}-%{ver}.%{rel}
+%build
+%configure --with-sasl --with-c-ares --with-GeoIP=no --with-libmaxminddb \
+	%{?_workstation:--without-mysql} PERL_EXT_LIB=%{perl_vendorlib}
+make EXTRA_CFLAGS="-ggdb" %{?_workstation:WORKSTATION_BUILD=1}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make DESTDIR="$RPM_BUILD_ROOT" %{?_workstation:WORKSTATION_BUILD=1} install
+
+cp -av support $RPM_BUILD_ROOT/%{argusdocs}/
+
+%if 0%{!?_workstation:1}
+%post
+mkdir -p /home/argus
+%systemd_post radium.service
+%systemd_post rastream.service
+%systemd_post rastatus.service
+ln -s %{argusbin}/rastream %{argusbin}/rasplit
+ln -s /etc/pam.d/system-auth /etc/pam.d/radium
+
+%preun
+%systemd_preun radium.service
+%systemd_preun rastream.service
+%systemd_preun rastatus.service
+%systemd_preun rasqlinsert@ipv4matrix
+
+%postun
+%systemd_postun_with_restart radium.service
+%systemd_postun_with_restart rastream.service
+%systemd_postun_with_restart rastatus.service
+rm -f %{argusbin}/rasplit
+rm -f /etc/pam.d/radium
+%else
+%post
+ln -s %{argusbin}/rastream %{argusbin}/rasplit
+%postun
+rm -f %{argusbin}/rasplit
+%endif
+
+
+%files
+%defattr(-,root,root)
+
+%{argusdata}
+
+%doc %{argusdocs}
+
+%{argusman}/man1/ra.1.gz
+%{argusman}/man1/rabins.1.gz
+%{argusman}/man1/racluster.1.gz
+%{argusman}/man1/racount.1.gz
+%{argusman}/man5/radium.conf.5.gz
+%{argusman}/man8/radium.8.gz
+%{argusman}/man1/ranonymize.1.gz
+%{argusman}/man1/rasort.1.gz
+%ghost %{argusman}/man1/rasplit.1.gz
+%{argusman}/man1/rastream.1.gz
+%{argusman}/man1/ramanage.1.gz
+%{argusman}/man5/ramanage.conf.5.gz
+
+%{argusbin}/ra
+%{argusbin}/rabins
+%{argusbin}/racluster
+%{argusbin}/racount
+%{argusbin}/ranonymize
+%{argusbin}/rasort
+%{argusbin}/rastream
+%{argusbin}/ramanage
+%{argusbin}/racompare
+%ghost %{argusbin}/rasplit
+%{argussbin}/radium
+%config /etc/ra.conf
+%config /etc/radium.conf
+%{_datarootdir}/argus-clients/std.sig
+%if 0%{!?_workstation:1}
+%config /etc/sasl2/radium.conf
+%config /usr/argus/ralabel.country.conf
+%ghost /etc/pam.d/radium
+%{argussbin}/radium-setup
+%{argussbin}/rastatus-setup
+%{_unitdir}/radium.service
+%{_unitdir}/rastream.service
+%{_unitdir}/rastatus.service
+%config /etc/sysconfig/radium
+%config /etc/sysconfig/rastream
+%{argussbin}/rastream-process
+%{_unitdir}/rahosts-nightly.timer
+%{_unitdir}/rahosts-nightly.service
+%{_unitdir}/raports-nightly.timer
+%{_unitdir}/raports-nightly.service
+%{argussbin}/rawatcher-process
+%{perl_vendorlib}/qosient/util.pm
+%else
+%{_unitdir}/rasplit.service
+%config /etc/sysconfig/rasplit
+%endif
+
+%{perl_vendorarch}/qosient/XS/util.pm
+%{perl_vendorarch}/auto/qosient/XS/util/util.so
+
+%ghost /home/argus
+
+%package examples
+Summary: Argus Client Example Programs
+Group: Applications/Internet
+Requires: cyrus-sasl
+Requires: perl-DBD-MySQL
+
+%description examples
+argus-client-examples contains the compiled examples from the source
+distribution.
+
+%files examples
+%defattr(-,root,root)
+%{_bindir}/argusclientbug
+%{_bindir}/raced
+%{_bindir}/raconvert
+%{_bindir}/radecode
+%{_bindir}/radump
+%{_bindir}/raevent
+%{_bindir}/rafilteraddr
+%{_bindir}/ragrep
+%{_bindir}/rahisto
+%{_bindir}/ralabel
+%{_bindir}/ramatrix
+%{_bindir}/rampc
+%{_bindir}/rampcd
+%{_bindir}/rap
+%{_bindir}/rapath
+%{_bindir}/rapolicy
+%{_bindir}/raqsort
+%{_bindir}/rarpwatch
+%{_bindir}/raservices
+%{_bindir}/rastrip
+%{_bindir}/ratemplate
+%{_bindir}/ratimerange
+%{_bindir}/ratod
+%{_bindir}/ratop
+%{_bindir}/ratrace
+%{_bindir}/ratree
+%{_bindir}/rauserdata
+%{_mandir}/man1/raconvert.1.gz
+%{_mandir}/man1/radecode.1.gz
+%{_mandir}/man1/radump.1.gz
+%{_mandir}/man1/raevent.1.gz
+%{_mandir}/man1/rafilteraddr.1.gz
+%{_mandir}/man1/ragrep.1.gz
+%{_mandir}/man1/rahisto.1.gz
+%{_mandir}/man1/ralabel.1.gz
+%{_mandir}/man1/rapath.1.gz
+%{_mandir}/man1/rapolicy.1.gz
+%{_mandir}/man1/rastrip.1.gz
+%{_mandir}/man1/ratop.1.gz
+%{_mandir}/man5/racluster.5.gz
+%{_mandir}/man5/racolor.conf.5.gz
+%{_mandir}/man5/ralabel.conf.5.gz
+%{_mandir}/man5/ranonymize.5.gz
+%{_mandir}/man5/rarc.5.gz
+
+%if 0%{!?_workstation:1}
+%{_bindir}/radark
+%{_bindir}/rahosts
+%{_bindir}/rahostsdaily
+%{_bindir}/raports
+%{_bindir}/raportsdaily
+%{_bindir}/rascan
+%{_bindir}/rahisto-querysql
+%{_bindir}/rahisto-updatesql
+%{_bindir}/rahisto-delsql
+%{perl_vendorlib}/qosient/rahisto.pm
+%{_unitdir}/rahisto-delsql.timer
+%{_unitdir}/rahisto-delsql.service
+%ghost %{_sysconfdir}/rastream.d/01rahisto-updatesql
+%endif
+
+
+%package arp
+Summary: Argus ARP-tracking Client Software
+Group: Applications/Internet
+Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.25
+
+%description arp
+Argus ARP-tracking Client Software
+
+%files arp
+%defattr(-,root,root)
+%if 0%{!?_workstation:1}
+%{_sbindir}/rarp-nightly
+%{_unitdir}/rarp-nightly.timer
+%{_unitdir}/rarp-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.arp
+%endif
+
+
+%package dhcp
+Summary: Argus DHCP-tracking Client Software
+Group: Applications/Internet
+Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.22
+%if 0%{!?_workstation:1}
+Requires: argus-clients-sql
+Requires: perl-DBD-MySQL
+%endif
+
+%description dhcp
+Argus DHCP-tracking Client Software
+
+%files dhcp
+%defattr(-,root,root)
+%{_sbindir}/radhcp-setup
+%{_unitdir}/radhcp.service
+%{_bindir}/radhcp*
+%if 0%{!?_workstation:1}
+%{_sbindir}/radhcp-nightly
+%{_sbindir}/radhcp-nightly-derived
+%{_unitdir}/radhcp-nightly.timer
+%{_unitdir}/radhcp-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.dhcp
+%{_libexecdir}/argus-clients/migration_from_5.0-3.1.rhel.2_dhcp
+%{_libexecdir}/argus-clients/migration_from_5.0-3.4.rhel.23_dhcp
+%{perl_vendorlib}/qosient/radhcp.pm
+%endif
+
+%post dhcp
+%systemd_post radhcp.service
+
+%preun dhcp
+%systemd_preun radhcp.service
+
+%postun dhcp
+%systemd_postun_with_restart radhcp.service
+
+
+%package dns
+Summary: Argus DNS-tracking Client Software
+Group: Applications/Internet
+Conflicts: argus-clients-examples <= 5.0-3.0%{dist}.25
+
+%description dns
+Argus DNS-tracking Client Software
+
+%files dns
+%defattr(-,root,root)
+%{_bindir}/radns
+%{_bindir}/radnsdb
+%if 0%{!?_workstation:1}
+%{_sbindir}/radns-nightly
+%{_unitdir}/radns-nightly.timer
+%{_unitdir}/radns-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.dns
+%endif
+
+%package devel
+Summary: Argus Client Software Development Libraries
+Group: Applications/Internet
+Requires: libmaxminddb-devel >= 1.2.0
+Requires: zlib-devel
+Requires: cyrus-sasl-devel
+
+%description devel
+Argus Clients contains a number of programs that process Argus data.
+Copyright 2000-2024 QoSient, LLC
+
+%files devel
+%defattr(-,root,root)
+%{_includedir}/argus
+%{_libdir}/argus_client.a
+%{_libdir}/argus_common.a
+%{_libdir}/argus_parse.a
+%{_libdir}/pkgconfig/argus-clients.pc
+
+%package graph
+Summary: Argus Client Software Graph Tool
+Group: Applications/Internet
+Requires: argus-clients%{?_workstation:-workstation}
+
+%description graph
+Tool to graph Argus data
+Copyright 2000-2024 QoSient, LLC
+
+%files graph
+%defattr(-,root,root)
+%{argusbin}/ragraph
+%{argusman}/man1/ragraph.1.gz
+
+%if 0%{!?_workstation:1}
+%package sql
+Summary: Argus Client Software SQL Tools
+Group: Applications/Internet
+Requires: argus-clients, mariadb-libs
+
+%description sql
+Tools to view modify Argus data in SQL databases
+Copyright 2000-2024 QoSient, LLC
+
+%files sql
+%defattr(-,root,root)
+%{argussbin}/rasqlinsert-setup
+%{argusbin}/rasql*
+%{_bindir}/rastatus*
+%{_bindir}/radbaserollup
+%{argusbin}/raipdbase
+%{argusbin}/rascore
+%{argusman}/man1/rasql*
+%{_unitdir}/rasqlinsert@.service
+%{argusbin}/rascanner*
+%{_unitdir}/rascanners-nightly.timer
+%{_unitdir}/rascanners-nightly.service
+%{_sbindir}/matrixData-nightly
+%{_unitdir}/matrixData-nightly.timer
+%{_unitdir}/matrixData-nightly.service
+%{_sbindir}/dbaseRollup-nightly
+%{_unitdir}/dbaseRollup-nightly.timer
+%{_unitdir}/dbaseRollup-nightly.service
+%{_datarootdir}/argus-clients/rasqlinsert.ethermatrix
+%{_datarootdir}/argus-clients/rasqlinsert.ether
+%{_datarootdir}/argus-clients/rasqlinsert.ipmatrix
+%{_datarootdir}/argus-clients/rasqlinsert.l2_l3
+%{_datarootdir}/argus-clients/rasqlinsert.eflows
+%{_datarootdir}/argus-clients/rasqlinsert.ldap
+%{_datarootdir}/argus-clients/rasqlinsert.man
+%{_datarootdir}/argus-clients/rasqlinsert.ntp
+%{_datarootdir}/argus-clients/emerging-Block-IPs*.conf
+%ghost %{_datarootdir}/argus-clients/emerging-threats-current.conf
+%{_sysconfdir}/rastream.d/00rasqltimeindex
+%dir %{_sysconfdir}/rastream.d
+
+%post sql
+ln -f -s %{_datarootdir}/argus-clients/emerging-Block-IPs-2018-03-22.conf \
+         %{_datarootdir}/argus-clients/emerging-threats-current.conf
+
+%postun sql
+if [ $1 -eq 0 ] ; then
+	rm -f %{_datarootdir}/argus-clients/emerging-threats-current.conf
+fi
+
+
+%package policy
+Summary: Argus Client Software Policy Validation Tools
+Group: Applications/Internet
+Requires: argus-clients, mariadb-libs
+%description policy
+Tools to evaluate argus flow data for policy conformance
+Copyright 2024 QoSient, LLC
+%files policy
+%{_bindir}/raup
+
+%endif
+
+%changelog
+* Tue May 02 2017 eric@qosient.com
+- rebuilt
+

@@ -4,11 +4,41 @@ pkg/ubuntu/default/radium /etc/default/
 pkg/ubuntu/init.d/rasplit /etc/init.d/
 pkg/ubuntu/default/rasplit /etc/default/
 
-debian/tmp/usr/bin/ usr/
-debian/tmp/usr/sbin/ usr/
-debian/tmp/usr/lib/ usr/
-debian/tmp/usr/include/ usr/
+support/  usr/share/doc/argus-clients
+man/ usr/share/man
 
-debian/tmp/usr/argus/ usr/share/
-support/ usr/share/doc/argus-clients
+bin/argusclientbug usr/bin/
+bin/ra usr/bin/
+bin/rabins usr/bin/
+bin/racluster usr/bin/
+bin/raconvert usr/bin/
+bin/racount usr/bin/
+bin/radark usr/bin/
+bin/radecode usr/bin/
+bin/radump usr/bin/
+bin/raevent usr/bin/
+bin/rafilteraddr usr/bin/
+bin/ragraph usr/bin/
+bin/ragrep usr/bin/
+bin/rahisto usr/bin/
+bin/rahosts usr/bin/
+bin/ralabel usr/bin/
+bin/ranonymize usr/bin/
+bin/rapath usr/bin/
+bin/rapolicy usr/bin/
+bin/raports usr/bin/
+bin/rarpwatch usr/bin/
+bin/raservices usr/bin/
+bin/rasort usr/bin/
+bin/rasplit usr/bin/
+bin/rasql usr/bin/
+bin/rasqlinsert usr/bin/
+bin/rasqltimeindex usr/bin/
+bin/rastream usr/bin/
+bin/rastrip usr/bin/
+bin/ratemplate usr/bin/
+bin/ratimerange usr/bin/
+bin/ratop usr/bin/
+bin/rauserdata usr/bin/
 
+bin/radium usr/sbin/ 

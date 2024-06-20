@@ -1,0 +1,11 @@
+[Unit]
+Description=Process DNS transactions
+
+[Timer]
+# daily at 0015 hrs
+OnCalendar=*-*-* 00:15:00
+Persistent=true
+
+[Install]
+Also=radns-nightly.service
+WantedBy=multi-user.target

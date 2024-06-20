@@ -1,0 +1,8 @@
+[Unit]
+Description=Process Matrix Database tables
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/matrixData-nightly
+TimeoutStartSec=1hr
+

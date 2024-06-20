@@ -1,11 +1,11 @@
 #
-#  Argus Client Software. Tools to read, analyze and manage Argus data.
-#  Copyright (c) 2000-2022 QoSient, LLC
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
 #  All rights reserved.
-# 
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2, or (at your option)
+#  the Free Software Foundation; either version 3, or (at your option)
 #  any later version.
 # 
 #  This program is distributed in the hope that it will be useful,
@@ -15,9 +15,9 @@
 # 
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.  */
+#  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 # 
-# 
+#
 
 NOOP = $(SHELL) -c true
 NOECHO = @
@@ -32,7 +32,7 @@ DEFS = @DEFS@
 LIBS = @LIBS@
 WRAPLIBS = @WRAPLIBS@
 
-CFLAGS = -g
+CFLAGS = -g $(EXTRA_CFLAGS)
 LDFLAGS = -g
 
 prefix = @prefix@
@@ -47,9 +47,9 @@ docdir = @datadir@/doc/argus-clients-3.0
 
 SHELL = /bin/sh
 
-DIRS = ./raconvert ./radark ./radecode ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto \
-	./rahosts ./ralabel ./rapath ./rapolicy ./raports ./rarpwatch ./raservices \
-	./rastream ./rastrip ./ratop ./rasdn ./ratimerange ./ratemplate @ARGUS_MYSQL@ 
+DIRS = ./raconvert ./radecode ./radns ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto ./ralabel \
+	./ramatrix ./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip \
+	./ratop ./ratimerange ./ratemplate @ARGUS_MYSQL@
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -57,7 +57,7 @@ DIRS = ./raconvert ./radark ./radecode ./radump ./raevent ./rafilter ./ragraph .
 .PHONY: install 
 
 all: force
-	@for i in  $(DIRS) ; do \
+	@set -e ; for i in  $(DIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
 		(cd $$i > /dev/null; $(MAKE)); \
@@ -66,10 +66,10 @@ all: force
 
 .PHONY: all
 
+race: ../common
 raconvert: ../common
-racurses: ../common
 radark: ../common
-radecode: ../common
+radns: ../common
 radump: ../common
 raevent: ../common
 rafilter: ../common
@@ -78,16 +78,15 @@ ragrep: ../common
 rahisto: ../common
 rahosts: ../common
 ralabel: ../common
+ramatrix: ../common
 ramysql: ../common
 rapath: ../common
 rapolicy: ../common
 raports: ../common
 rarpwatch: ../common
 raservices: ../common
-rastream: ../common
 rastrip: ../common
 ratop: ../common
-rasdn: ../common
 ratimerange: ../common
 ratemplate: ../common
 

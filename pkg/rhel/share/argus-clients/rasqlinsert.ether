@@ -1,0 +1,1 @@
+-M rmon -M dsrs=-suser,-duser -m sid inf smac etype  -w mysql://root@localhost/ether/ether_%Y_%m_%d -s stime ltime sid inf smac etype spkts dpkts sbytes dbytes pcr trans state -M cache time 1d 
