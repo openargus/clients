@@ -623,31 +623,30 @@ RaMySQLInit ()
 
    sprintf (sbuf, "USE argus");
 
-   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) != 0)
-      ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+   if ((retn = mysql_real_query(RaMySQL, sbuf, strlen(sbuf))) == 0) {
+      if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
+         char sbuf[MAXSTRLEN];
 
-   if ((mysqlRes = mysql_list_tables(RaMySQL, NULL)) != NULL) {
-      char sbuf[MAXSTRLEN];
+         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+            while ((row = mysql_fetch_row(mysqlRes))) {
+               unsigned long *lengths;
+               lengths = mysql_fetch_lengths(mysqlRes);
+               bzero(sbuf, sizeof(sbuf));
+                  for (x = 0; x < retn; x++)
+                  sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
 
-      if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-         while ((row = mysql_fetch_row(mysqlRes))) {
-            unsigned long *lengths;
-            lengths = mysql_fetch_lengths(mysqlRes);
-            bzero(sbuf, sizeof(sbuf));
-               for (x = 0; x < retn; x++)
-               sprintf(&sbuf[strlen(sbuf)], "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
-
-            if (!(strncmp(sbuf, "Seconds", 8))) {
-               ArgusSQLSecondsTable = 1;
+               if (!(strncmp(sbuf, "Seconds", 8))) {
+                  ArgusSQLSecondsTable = 1;
+               }
             }
-         }
 
-      } else {
+         } else {
 #ifdef ARGUSDEBUG
-         ArgusDebug (2, "list argus database returned no tables.\n");
+            ArgusDebug (2, "list argus database returned no tables.\n");
 #endif
+         }
+         mysql_free_result(mysqlRes);
       }
-      mysql_free_result(mysqlRes);
    }
 
    if (!RaSQLNoCreate) {
