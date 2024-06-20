@@ -42,4 +42,8 @@ int ArgusLabelRecordGeoIP(struct ArgusParserStruct *,
 int ArgusLabelRecordGeoIP2(struct ArgusParserStruct *,
                            struct ArgusRecordStruct *, char *, size_t, int *);
 int ArgusGeoIP2FindObject(const char * const);
+
+int geoip2_path_compare(const void *, const void *);
+int ArgusLabelRecordGeoIP2(struct ArgusParserStruct *, struct ArgusRecordStruct *, char *, size_t, int *);
+int ArgusGeoIP2FindObject(const char * const);
 #endif
