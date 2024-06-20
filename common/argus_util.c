@@ -979,41 +979,43 @@ ArgusShutDown (int sig)
 #ifdef ARGUSDEBUG
       ArgusDebug (2, "RaParseComplete(caught signal %d)\n", sig);
 #endif
-      switch (sig) {
-         case SIGHUP:
-         case SIGINT:
-         case SIGTERM:
-         case SIGPIPE:
-         case SIGQUIT: {
-            struct ArgusWfileStruct *wfile = NULL;
+      if (sig != 0) {
+         switch (sig) {
+            case SIGHUP:
+            case SIGINT:
+            case SIGTERM:
+            case SIGPIPE:
+            case SIGQUIT: {
+               struct ArgusWfileStruct *wfile = NULL;
 
-            if (ArgusParser->ArgusWfileList != NULL) {
-               struct ArgusListObjectStruct *lobj = NULL;
-               int i, count = ArgusParser->ArgusWfileList->count;
+               if (ArgusParser->ArgusWfileList != NULL) {
+                  struct ArgusListObjectStruct *lobj = NULL;
+                  int i, count = ArgusParser->ArgusWfileList->count;
 
-               if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
-                  for (i = 0; i < count; i++) {
-                     if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
-                        if (wfile->fd != NULL) {
+                  if ((lobj = ArgusParser->ArgusWfileList->start) != NULL) {
+                     for (i = 0; i < count; i++) {
+                        if ((wfile = (struct ArgusWfileStruct *) lobj) != NULL) {
+                           if (wfile->fd != NULL) {
 #ifdef ARGUSDEBUG
-                           ArgusDebug (2, "RaParseComplete: closing %s\n", wfile->filename);
+                              ArgusDebug (2, "RaParseComplete: closing %s\n", wfile->filename);
 #endif
-                           fflush (wfile->fd);
-                           fclose (wfile->fd);
-                           wfile->fd = NULL;
+                              fflush (wfile->fd);
+                              fclose (wfile->fd);
+                              wfile->fd = NULL;
+                           }
                         }
+                        lobj = lobj->nxt;
                      }
-                     lobj = lobj->nxt;
                   }
                }
+               exit (ArgusParser->ArgusExitStatus);
+               break;
             }
-            exit (ArgusParser->ArgusExitStatus);
-            break;
-         }
 
-         case -1:
-            exit (ArgusParser->ArgusExitStatus);
-            break;
+            case -1:
+               exit (ArgusParser->ArgusExitStatus);
+               break;
+         }
       }
    }
 }
