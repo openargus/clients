@@ -2932,6 +2932,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                      }
 
                      case ARGUS_JITTER_INDEX: {
+#if defined(HAVE_XDR)
                         struct ArgusJitterStruct *jitter = (struct ArgusJitterStruct *) dsr;
                         struct ArgusJitterStruct *tjit   = (struct ArgusJitterStruct *) dsrptr;
                         int size = sizeof(struct ArgusStatsObject) / 4;
@@ -2988,6 +2989,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                         tjit->hdr.argus_dsrvl8.len = len;
                         break;
+#endif
                      }
 
                      case ARGUS_IPATTR_INDEX: {
