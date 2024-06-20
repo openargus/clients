@@ -30,7 +30,7 @@
 m4_include([m4/python.m4])
 
 
-AC_PREREQ([2.72])
+AC_PREREQ([2.69])
 AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_MACRO_DIR([./m4])
@@ -40,12 +40,6 @@ AC_CONFIG_HEADERS([include/argus_config.h])
 AC_CANONICAL_TARGET
 
 AC_LBL_C_INIT(V_CCOPT, V_INCLS)
-
-AX_PERL_EXT
-if test x"$PERL" = x; then
-    AC_MSG_ERROR("cannot find Perl")
-fi
-V_PERL=$PERL
 
 # Checks for programs.
 AC_PROG_LN_S
@@ -113,20 +107,6 @@ AC_CHECK_HEADERS([arpa/nameser_compat.h])
 AC_CHECK_HEADERS([stdbool.h])
 
 saved_CPPFLAGS=$CPPFLAGS
-
-case "$target_os" in 
-darwin*)
-        am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
-        ;;
-*) 
-        am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
-        ;;
-esac
-
-V_PYTHON_INCLS="-I"$am_cv_python_inc
-CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
-AC_CHECK_HEADERS(Python.h, EXTERN.h)
-CPPFLAGS="${saved_CPPFLAGS}"
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -491,8 +471,41 @@ AC_QOSIENT_MACHINE_ID
 AC_QOSIENT_LIBCARES
 
 #
+# Perl stuff
+#
+
+AX_PERL_EXT
+if test x"$PERL" = x; then
+    AC_MSG_ERROR("cannot find Perl")
+fi
+V_PERL=$PERL
+ 
+PERL_CFLAGS=`perl -MExtUtils::Embed -e ccopts`
+PERL_LDFLAGS=`perl -MExtUtils::Embed -e ldopts`
+ 
+saved_CPPFLAGS=$CPPFLAGS
+CPPFLAGS="${saved_CPPFLAGS} ${PERL_CFLAGS}"
+AC_CHECK_HEADERS(EXTERN.h)
+CPPFLAGS="${saved_CPPFLAGS}"
+
+#
 # Python stuff
 #
+
+case "$target_os" in 
+darwin*)
+        am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
+        ;;
+*) 
+        am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
+        ;;
+esac
+ 
+V_PYTHON_INCLS="-I"$am_cv_python_inc
+CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
+AC_CHECK_HEADERS(Python.h)
+CPPFLAGS="${saved_CPPFLAGS}"
+
 AC_ARG_ENABLE(python,
    AS_HELP_STRING([--disable-python], [Disable scripts that depends on python]),
    [case "${enableval}" in
@@ -513,13 +526,17 @@ if test "x$HAVE_SWIG" = "xyes" ; then
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
+if test "x$ac_cv_header_EXTERN_h" = xyes; then :
         DIRS="$DIRS ./perllib"
+fi
         ;;
   *)
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
 fi
+if test "x$ac_cv_header_EXTERN_h" = xyes; then :
         DIRS="$DIRS ./perllib"
+fi
         ;;
   esac
 fi
