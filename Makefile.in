@@ -108,6 +108,8 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/racount.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/radecode.1 \
 		$(DESTDIR)@mandir@/man1/radecode.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/radns.1 \
+		$(DESTDIR)@mandir@/man1/radns.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/radump.1 \
 		$(DESTDIR)@mandir@/man1/radump.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/raevent.1 \
