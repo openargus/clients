@@ -104,7 +104,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-#define ARGUSFORKFILTER   1
+//#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -1058,6 +1058,17 @@ Argusgen_vlan(unsigned int proto)
 }
 
 static struct ablock *
+Argusgen_geneve(unsigned int proto)
+{
+   struct ablock *b1 = NULL;
+   struct ArgusGeneveStruct gen;
+   int offset = ((char *)&gen.hdr.type - (char *)&gen);
+   b1 = Argusgen_cmp(ARGUS_GENEVE_INDEX, offset, NFF_B, (u_int) ARGUS_GENEVE_DSR, Q_EQUAL, Q_DEFAULT);
+
+   return(b1);
+}
+
+static struct ablock *
 Argusgen_vxlan(unsigned int proto)
 {
    struct ablock *b1 = NULL;
@@ -1754,6 +1765,10 @@ Argusgen_proto_abbrev(int proto)
 
       case Q_VLAN:
          b1 = Argusgen_vlan(Q_DEFAULT);
+         break;
+
+      case Q_GENEVE:
+         b1 = Argusgen_geneve(Q_DEFAULT);
          break;
 
       case Q_VXLAN:
@@ -4840,7 +4855,8 @@ Argusgen_scode(char *name, struct qual q)
 #endif
    u_char *eaddr;
 
-   slen = strlen(name);
+   if (name != NULL)
+      slen = strlen(name);
 
    if ((name[0] == '\"') && (name[strlen(name) - 1] == '\"')) {
       name++;

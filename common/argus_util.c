@@ -19873,8 +19873,9 @@ ArgusPrintSrcEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
       unsigned int i, types = encaps->src, ind = 0;
 
       for (i = 0; i < ARGUS_ENCAPS_TYPE; i++) {
-         if (types & (0x01 << i)) {
-            switch (0x01 << i) {
+         unsigned int v = 0x01 << i;
+         if (types & v) {
+            switch (v) {
                   case ARGUS_ENCAPS_ETHER:  ebuf[ind++] = 'e'; break;
                   case ARGUS_ENCAPS_LLC:    ebuf[ind++] = 'l'; break;
                   case ARGUS_ENCAPS_MPLS:   ebuf[ind++] = 'm'; break;
@@ -19897,6 +19898,7 @@ ArgusPrintSrcEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                   case ARGUS_ENCAPS_AVS:    ebuf[ind++] = 'a'; break;
                   case ARGUS_ENCAPS_TEREDO: ebuf[ind++] = 'T'; break;
                   case ARGUS_ENCAPS_VXLAN:  ebuf[ind++] = 'x'; break;
+                  case ARGUS_ENCAPS_GENEVE: ebuf[ind++] = 'g'; break;
             }
          }
       }
@@ -27380,6 +27382,13 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
+                  case ARGUS_GENEVE_DSR: {
+                     struct ArgusGeneveStruct *gen = (struct ArgusGeneveStruct *) dsr;
+                     gen->ptype = ntohs(gen->ptype);
+                     gen->vni = ntohl(gen->vni);
+                     break;
+                  }
+
                   case ARGUS_MPLS_DSR: {
                      struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                      unsigned int *label = (unsigned int *)(dsr + 1);
@@ -28063,6 +28072,13 @@ ArgusHtoN (struct ArgusRecord *argus)
                      struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *) dsr;
                      vxlan->svnid = htonl(vxlan->svnid);
                      vxlan->dvnid = htonl(vxlan->dvnid);
+                     break;
+                  }
+
+                  case ARGUS_GENEVE_DSR: {
+                     struct ArgusGeneveStruct *gen = (struct ArgusGeneveStruct *) dsr;
+                     gen->ptype = htons(gen->ptype);
+                     gen->vni = htonl(gen->vni);
                      break;
                   }
 

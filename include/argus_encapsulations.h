@@ -41,7 +41,8 @@ struct ArgusEncapsulationStruct {
    char *label, *desc;
 };
 
-#define ARGUS_ENCAPS_TYPE       28
+#define ARGUS_ENCAPS_TYPE       30
+
 #define ARGUS_ENCAPS_MPLS       0x01
 #define ARGUS_ENCAPS_ETHER      0x02
 #define ARGUS_ENCAPS_8021Q      0x04
@@ -70,6 +71,7 @@ struct ArgusEncapsulationStruct {
 #define ARGUS_ENCAPS_JUNIPER    0x2000000
 #define ARGUS_ENCAPS_VXLAN      0x4000000
 #define ARGUS_ENCAPS_L2TP       0x8000000
+#define ARGUS_ENCAPS_GENEVE     0x10000000
 
 
 #if defined(ArgusUtil)
@@ -102,6 +104,7 @@ struct ArgusEncapsulationStruct argus_encapsulations [] = {
    { ARGUS_ENCAPS_JUNIPER, "juniper", "Juniper Ethernet"},
    { ARGUS_ENCAPS_VXLAN, "vxlan", "VxLan Encapsulation"},
    { ARGUS_ENCAPS_L2TP,  "l2tp", "L2TP Encapsulation"},
+   { ARGUS_ENCAPS_GENEVE,  "geneve", "GENEVE Encapsulation"},
    { 0, (char *) NULL, (char *) NULL }, 
 };
 
