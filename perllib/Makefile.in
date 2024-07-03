@@ -85,7 +85,7 @@ uninstall-perl:
 	rm -f $(DESTDIR)$(perlvendorarch)/auto/qosient/XS/util.pm
 	rm -f $(DESTDIR)$(perlvendorarch_auto)/util$(SOEXT)
 
-util$(SOEXT): swig_ArgusParseTime.o swig_ArgusParseTime_wrap.o argus_parse_time.o ../common/argus_util.o
+util$(SOEXT): swig_ArgusParseTime.o swig_ArgusParseTime_wrap.o argus_parse_time.o
 	$(CC) $(CFLAGS) `$(PERL) -MConfig -e 'print $$Config{lddlflags}'` $^ -o $@
 argus_parse_time.o: ../common/argus_parse_time.c
 	$(CC) $(CFLAGS) -I../include -I../common $(PERL_CFLAGS) -c $(filter %.c, $^)
