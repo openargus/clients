@@ -111,7 +111,7 @@ ArgusParseTime (char *wildcarddate, struct tm *startm, struct tm *endtm, char *b
    /* if %d is > 1000000, then assume its a unix timestamp */
 
    bzero(str, sizeof(strbuf));
-   strncpy(str, buf, sizeof(strbuf));
+   strncpy(str, buf, sizeof(strbuf) - 1);
 
    if (!(isdigit((int)*str)) && !(*str == '-') && !(*str == '*')) {
       retn = -1;

@@ -91,7 +91,9 @@
 
 #if defined(HAVE_XDR)
 #include <rpc/types.h>
+#if defined(HAVE_RPC_XDR_H)
 #include <rpc/xdr.h>
+#endif
 #endif
 
 #include <sys/socket.h>
@@ -2824,7 +2826,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 #if defined(HAVE_XDR)
                         struct ArgusJitterStruct *jitter = &canon->jitter;
                         struct ArgusStatsObject *tjit = (struct ArgusStatsObject *) (dsr + 1);
-                        struct ArgusOutputStatObject *stat;
+                        struct ArgusStatObject *stat;
                         XDR xdrbuf, *xdrs = &xdrbuf;
                         unsigned int fdist, i;
 
@@ -2846,31 +2848,18 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  xdr_u_int(xdrs, &fdist);
                                  for (i = 0; i < 4; i++) {
                                     unsigned char value = *ptr++;
-                                    stat->dist_union.fdist[(i*2)]   = (value & 0xF0) >> 4;
-                                    stat->dist_union.fdist[(i*2)+1] = (value & 0x0F);
+                                    stat->fdist[(i*2)]   = (value & 0xF0) >> 4;
+                                    stat->fdist[(i*2)+1] = (value & 0x0F);
                                  }
                                  tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
                                  break;
                               }
                               case ARGUS_HISTO_LINEAR: {
-                                 struct ArgusHistoObject *histo = (struct ArgusHistoObject *)&tjit->dist_union.linear;
-                                 int len = 4;
-
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR) {
-                                    bcopy((char *)histo, &stat->dist_union.linear, sizeof (*histo));
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(*histo)/4) {
-                                       len = ((histo->hdr.argus_dsrvl8.len - sizeof(*histo)/4) + 1) * 4;
-                                       stat->dist_union.linear.data = input->ArgusSrcActDist;
-                                       bcopy((char *)&histo->data, (char *)stat->dist_union.linear.data, len);
-                                    }
-                                 }
-                                 tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
-                                 tjit = (void *)((char *) tjit - 4 + (sizeof(*histo) + (len - 4)));
                                  break;
                               }
 
                               default:
-                                 tjit = (struct ArgusStatsObject *)(&tjit->dist_union);
+                                 tjit++;
                                  break;
                            }
                         } else
@@ -2891,30 +2880,18 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  xdr_u_int(xdrs, &fdist);
                                  for (i = 0; i < 4; i++) {
                                     unsigned char value = *ptr++;
-                                    stat->dist_union.fdist[(i*2)]   = (value & 0xF0) >> 4;
-                                    stat->dist_union.fdist[(i*2)+1] = (value & 0x0F);
+                                    stat->fdist[(i*2)]   = (value & 0xF0) >> 4;
+                                    stat->fdist[(i*2)+1] = (value & 0x0F);
                                  }
                                  tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
                                  break;
                               }
                               case ARGUS_HISTO_LINEAR: {
-                                 struct ArgusHistoObject *histo = (struct ArgusHistoObject *)&tjit->dist_union.linear;
-                                 int len = 4;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR) {
-                                    bcopy((char *)histo, &stat->dist_union.linear, sizeof (*histo));
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(*histo)/4) {
-                                       len = ((histo->hdr.argus_dsrvl8.len - sizeof(*histo)/4) + 1) * 4;
-                                       stat->dist_union.linear.data = input->ArgusSrcIdleDist;
-                                       bcopy((char *)&histo->data, (char *)stat->dist_union.linear.data, len);
-                                    }
-                                 }
-                                 tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
-                                 tjit = (void *)((char *) tjit - 4 + (sizeof(*histo) + (len - 4)));
                                  break;
                               }
 
                               default:
-                                 tjit = (struct ArgusStatsObject *)(&tjit->dist_union);
+                                 tjit++;
                                  break;
                            }
                         } else
@@ -2935,30 +2912,18 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  xdr_u_int(xdrs, &fdist);
                                  for (i = 0; i < 4; i++) {
                                     unsigned char value = *ptr++;
-                                    stat->dist_union.fdist[(i*2)]   = (value & 0xF0) >> 4;
-                                    stat->dist_union.fdist[(i*2)+1] = (value & 0x0F);
+                                    stat->fdist[(i*2)]   = (value & 0xF0) >> 4;
+                                    stat->fdist[(i*2)+1] = (value & 0x0F);
                                  }
                                  tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
                                  break;
                               }
                               case ARGUS_HISTO_LINEAR: {
-                                 struct ArgusHistoObject *histo = (struct ArgusHistoObject *)&tjit->dist_union.linear;
-                                 int len = 4;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR) {
-                                    bcopy((char *)histo, &stat->dist_union.linear, sizeof (*histo));
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(*histo)/4) {
-                                       len = ((histo->hdr.argus_dsrvl8.len - sizeof(*histo)/4) + 1) * 4;
-                                       stat->dist_union.linear.data = input->ArgusDstActDist;
-                                       bcopy((char *)&histo->data, (char *)stat->dist_union.linear.data, len);
-                                    }
-                                 }
-                                 tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
-                                 tjit = (void *)((char *) tjit - 4 + (sizeof(*histo) + (len - 4)));
                                  break;
                               }
 
                               default:
-                                 tjit = (struct ArgusStatsObject *)(&tjit->dist_union);
+                                 tjit++;
                                  break;
                            }
                         } else
@@ -2979,30 +2944,18 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  xdr_u_int(xdrs, &fdist);
                                  for (i = 0; i < 4; i++) {
                                     unsigned char value = *ptr++;
-                                    stat->dist_union.fdist[(i*2)]   = (value & 0xF0) >> 4;
-                                    stat->dist_union.fdist[(i*2)+1] = (value & 0x0F);
+                                    stat->fdist[(i*2)]   = (value & 0xF0) >> 4;
+                                    stat->fdist[(i*2)+1] = (value & 0x0F);
                                  }
                                  tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
                                  break;
                               }
                               case ARGUS_HISTO_LINEAR: {
-                                 struct ArgusHistoObject *histo = (struct ArgusHistoObject *)&tjit->dist_union.linear;
-                                 int len = 4;
-                                 if (histo->hdr.type == ARGUS_HISTO_DSR) {
-                                    bcopy((char *)histo, &stat->dist_union.linear, sizeof (*histo));
-                                    if (histo->hdr.argus_dsrvl8.len > sizeof(*histo)/4) {
-                                       len = ((histo->hdr.argus_dsrvl8.len - sizeof(*histo)/4) + 1) * 4;
-                                       stat->dist_union.linear.data = input->ArgusDstIdleDist;
-                                       bcopy((char *)&histo->data, (char *)stat->dist_union.linear.data, len);
-                                    }
-                                 }
-                                 tjit = (struct ArgusStatsObject *)((char *)tjit + 6*4);
-                                 tjit = (void *)((char *) tjit - 4 + (sizeof(*histo) + (len - 4)));
                                  break;
                               }
 
                               default:
-                                 tjit = (struct ArgusStatsObject *)(&tjit->dist_union);
+                                 tjit++;
                                  break;
                            }
                         } else
@@ -3923,6 +3876,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_COCODE_INDEX:
                                  case ARGUS_COR_INDEX: 
                                  case ARGUS_GEO_INDEX: 
+                                 case ARGUS_JITTER_INDEX: 
                                  case ARGUS_LOCAL_INDEX: {
                                     if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
                                        ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
@@ -3954,56 +3908,6 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                        }
                                     }
                                     bcopy((char *)rec->dsrs[i], (char *)retn->dsrs[i], len * 4);
-                                    break;
-                                 }
-
-                                 case ARGUS_JITTER_INDEX: {
-                                    struct ArgusJitterStruct *tjit, *jitter = (void *)rec->dsrs[i];
-
-                                    if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
-                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
-
-                                    tjit = (void *)retn->dsrs[i];
-                                    bcopy((char *)rec->dsrs[i], (char *)tjit, len * 4);
-
-                                    if (jitter->hdr.subtype & ARGUS_HISTO_LINEAR) {
-                                       struct ArgusHistoObject *histo  = &jitter->src.act.dist_union.linear;
-                                       struct ArgusHistoObject *thisto = &tjit->src.act.dist_union.linear;
-
-                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                             thisto->data = ArgusCalloc(1, len);
-                                             bcopy((char *)histo->data, thisto->data, len);
-                                          }
-
-                                       histo  = &jitter->src.idle.dist_union.linear;
-                                       thisto = &tjit->src.idle.dist_union.linear;
-                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                             thisto->data = ArgusCalloc(1, len);
-                                             bcopy((char *)histo->data, thisto->data, len);
-                                          }
-
-                                       histo = &jitter->dst.act.dist_union.linear;
-                                       thisto = &tjit->dst.act.dist_union.linear;
-                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                             thisto->data = ArgusCalloc(1, len);
-                                             bcopy((char *)histo->data, thisto->data, len);
-                                          }
-
-                                       histo = &jitter->dst.idle.dist_union.linear;
-                                       thisto = &tjit->dst.idle.dist_union.linear;
-                                       if (histo->hdr.type == ARGUS_HISTO_DSR)
-                                          if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4) {
-                                             int len = ((histo->hdr.argus_dsrvl8.len - sizeof(histo)/4) + 1) * 4;
-                                             thisto->data = ArgusCalloc(1, len);
-                                             bcopy((char *)histo->data, thisto->data, len);
-                                          }
-                                    }
                                     break;
                                  }
 
@@ -4165,25 +4069,6 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
 
                if (jitter != NULL) {
                   if (jitter->hdr.subtype & ARGUS_HISTO_LINEAR) {
-                     struct ArgusHistoObject *histo = &jitter->src.act.dist_union.linear;
-                     if (histo->hdr.type == ARGUS_HISTO_DSR)
-                        if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4)
-                           ArgusFree((char *)histo->data);
-
-                     histo = &jitter->src.idle.dist_union.linear;
-                     if (histo->hdr.type == ARGUS_HISTO_DSR)
-                        if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4)
-                           ArgusFree((char *)histo->data);
-
-                     histo = &jitter->dst.act.dist_union.linear;
-                     if (histo->hdr.type == ARGUS_HISTO_DSR)
-                        if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4)
-                           ArgusFree((char *)histo->data);
-
-                     histo = &jitter->dst.idle.dist_union.linear;
-                     if (histo->hdr.type == ARGUS_HISTO_DSR)
-                        if (histo->hdr.argus_dsrvl8.len > sizeof(histo)/4)
-                           ArgusFree((char *)histo->data);
                   }
                }
                break;
@@ -7331,10 +7216,17 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  }
                               }
                            }
+                        } else {
+                           if (!(p1) && p2) {
+                              if ((p1 = ArgusCalloc(1, sizeof(*p1))) == NULL)
+                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                              bcopy ((char *)p2, (char *)p1, sizeof(*p2));
+                              ns1->dsrs[ARGUS_PSIZE_INDEX] = (struct ArgusDSRHeader *) p1;
+                              ns1->dsrindex |= (0x01 << ARGUS_PSIZE_INDEX);
+                           }
                         }
                         break;
                      }
-
 
 // Merging the aggregation object results in ns1 having
 // a valid aggregation object, with updates to the various
@@ -7577,7 +7469,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     int x, max, tot, val[8];
 
                                     for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                                       val[x] = (j1->src.act.dist_union.fdist[x] + j2->src.act.dist_union.fdist[x]);
+                                       val[x] = (j1->src.act.fdist[x] + j2->src.act.fdist[x]);
                                        tot += val[x];
                                        if (max < val[x])
                                           max = val[x];
@@ -7589,7 +7481,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           if (val[x] == 0)
                                              val[x] = 1;
                                        }
-                                       j1->src.act.dist_union.fdist[x] = val[x];
+                                       j1->src.act.fdist[x] = val[x];
                                     }
                                     break;
                                  }
@@ -7633,7 +7525,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     int x, max, tot, val[8];
 
                                     for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                                       val[x] = (j1->src.idle.dist_union.fdist[x] + j2->src.idle.dist_union.fdist[x]);
+                                       val[x] = (j1->src.idle.fdist[x] + j2->src.idle.fdist[x]);
                                        tot += val[x];
                                        if (max < val[x])
                                           max = val[x];
@@ -7645,7 +7537,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           if (val[x] == 0)
                                              val[x] = 1;
                                        }
-                                       j1->src.idle.dist_union.fdist[x] = val[x];
+                                       j1->src.idle.fdist[x] = val[x];
                                     }
                                     break;
                                  }
@@ -7689,7 +7581,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     int x, max, tot, val[8];
 
                                     for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                                       val[x] = (j1->dst.act.dist_union.fdist[x] + j2->dst.act.dist_union.fdist[x]);
+                                       val[x] = (j1->dst.act.fdist[x] + j2->dst.act.fdist[x]);
                                        tot += val[x];
                                        if (max < val[x])
                                           max = val[x];
@@ -7701,7 +7593,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           if (val[x] == 0)
                                              val[x] = 1;
                                        }
-                                       j1->dst.act.dist_union.fdist[x] = val[x];
+                                       j1->dst.act.fdist[x] = val[x];
                                     }
                                     break;
                                  }
@@ -7745,7 +7637,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     int x, max, tot, val[8];
 
                                     for (x = 0, max = 0, tot = 0; x < 8; x++) {
-                                       val[x] = (j1->dst.idle.dist_union.fdist[x] + j2->dst.idle.dist_union.fdist[x]);
+                                       val[x] = (j1->dst.idle.fdist[x] + j2->dst.idle.fdist[x]);
                                        tot += val[x];
                                        if (max < val[x])
                                           max = val[x];
@@ -7757,7 +7649,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           if (val[x] == 0)
                                              val[x] = 1;
                                        }
-                                       j1->dst.idle.dist_union.fdist[x] = val[x];
+                                       j1->dst.idle.fdist[x] = val[x];
                                     }
                                     break;
                                  }
@@ -8456,7 +8348,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                } else {
                   if (!(a1 || a2)) {
                      if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                        ArgusLog (LOG_ERR, "ArgusIntersectRecords: ArgusCalloc error %s", strerror(errno));
 
                      a1->hdr.type            = ARGUS_AGR_DSR;
                      a1->hdr.subtype         = 0x01;
@@ -8467,7 +8359,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                   } else
                   if (a2) {
                      if ((a1 = ArgusCalloc(1, sizeof(*a1))) == NULL)
-                        ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                        ArgusLog (LOG_ERR, "ArgusIntersectRecords: ArgusCalloc error %s", strerror(errno));
 
                      bcopy((char *)a2, (char *)a1, sizeof(*a1));
                      a1->count++;

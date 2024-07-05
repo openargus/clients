@@ -42,8 +42,14 @@ available the argus clients library routines to python scripts.
 
 The key to generating a working python library is to provide
 acccess to the key python libraries needed, in particular,
-the tensorflow_framework.  This my require some hand editing to
-get the path correct, at this time ...
+the tensorflow_framework.  This may require some hand editing to
+get the path correct, at this time if you have a non-standard
+python install ...
+
+This library assumes that you have installed:
+   python3-devel
+   numpy (pip install numpy)
+   libcurl-devel
 
 
 Problems, bugs, questions, desirable enhancements, source code

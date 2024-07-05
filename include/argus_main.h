@@ -200,6 +200,7 @@ void ArgusProcessStripOptions (struct ArgusParserStruct *, char *);
 
 void read_udp_services (char *);
 
+int RaProcessArchiveFiles (char *, int);
 int RaProcessRecursiveFiles (char *, int);
 
 int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
@@ -314,7 +315,10 @@ extern int getArgusRank(struct ArgusParserStruct *);
 extern void setArgusArchive(struct ArgusParserStruct *, char *);
 extern void setArgusLfile(struct ArgusParserStruct *, char *);
 extern void setArgusWfile(struct ArgusParserStruct *, char *, char *);
+
+extern int RaProcessArchiveFiles (char *, int);
 extern int RaProcessRecursiveFiles (char *, int);
+
 extern int RaScheduleRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 extern int ArgusHandleDatum (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, struct nff_program *);
 extern int ArgusHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct ArgusRecord *, unsigned long, struct nff_program *);

@@ -198,5 +198,7 @@ endif
 
 uninstall::
 
+.PHONY: clean distclean
+
 # Prevent GNU make v3 from overflowing arg limit on SysV.
 .NOEXPORT:

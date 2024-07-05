@@ -1010,7 +1010,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             } else {
                if (pid) {
                   int status;
-                  struct timespec ts = {0, 200000000};
+                  struct timespec ts = {0, 20000000};
 
                   nanosleep(&ts, NULL);
                   waitpid(pid, &status, WNOHANG);

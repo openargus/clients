@@ -7,5 +7,6 @@
 extern int swig_ArgusParseTime (char *time_string, int *start, int *end);
 %}
 
-/* newer versions of swig use the %rename directive */
-%name(ArgusParseTime) extern int swig_ArgusParseTime (char *time_string, int *start, int *end);
+/* assume using newer versions of swig ... use the %rename directive */
+%rename(ArgusParseTime) swig_ArgusParseTime;
+extern int swig_ArgusParseTime (char *time_string, int *start, int *end);

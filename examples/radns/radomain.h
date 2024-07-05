@@ -202,6 +202,7 @@ struct ArgusDomainResourceRecord {
 };
 
 struct ArgusDomainQueryStruct {
+   struct ArgusDomainQueryStruct *nxt;
    unsigned char qr, opcode, rcode, status;
    unsigned char flags[2];
    unsigned short seqnum;
@@ -234,7 +235,7 @@ struct ArgusDomainStruct {
    struct ArgusDomainQueryStruct *response;
 };
 
-struct ArgusDomainStruct *ArgusParseDNSRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDomainStruct *);
+struct ArgusDomainStruct *ArgusParseDNSRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct ArgusDomainStruct *, int);
 
 /*
  * Define constants based on rfc883

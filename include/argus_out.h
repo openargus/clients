@@ -802,6 +802,7 @@ struct ArgusHistoObject {
    unsigned char *data;
 };
 
+/*
 struct ArgusOutputStatObject {
    int n;
    float minval;
@@ -813,7 +814,7 @@ struct ArgusOutputStatObject {
       struct ArgusHistoObject linear;
    } dist_union;
 };
-
+*/
 
 struct ArgusStatsObject {
    int n;
@@ -832,7 +833,7 @@ struct ArgusOutputAgrStruct {
    struct ArgusDSRHeader hdr;
    unsigned int count;
    struct ArgusTime laststartime, lasttime;
-   struct ArgusOutputStatObject act, idle;
+   struct ArgusStatObject act, idle;
 };
 
 struct ArgusStatIntObject {
@@ -883,7 +884,7 @@ struct ArgusScoreStruct {
 #define behvScore score_union.score
 
 struct ArgusJitterObject {
-   struct ArgusOutputStatObject act, idle;
+   struct ArgusStatObject act, idle;
 };
 
 struct ArgusJitterStruct {

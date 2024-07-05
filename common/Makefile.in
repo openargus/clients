@@ -46,7 +46,7 @@ INCLS = -I. -I../include @V_INCLS@ @MYSQL_INCLS@ @XDR_INCLS@
 DEFS = @DEFS@ -DARGUS_SYSLOG
 
 # Standard CFLAGS
-CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
+CFLAGS = $(CCOPT) -fPIC $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 
 INSTALL = @INSTALL@
 RANLIB = @V_RANLIB@
@@ -86,19 +86,21 @@ OBJ =	$(COMMONOBJ) $(PARSEOBJ) $(CLIENTOBJ) $(OUTPUTOBJ) $(EVENTOBJ) $(TIMEROBJ)
 CLEANFILES = $(LIBS) $(OBJ) $(GENSRC) $(GENHDR) $(VSRC) lex.yy.c 
 
 COMMONSRC = argus_code.c argus_filter.c argus_util.c argus_auth.c argus_parser.c \
-            $(GENSRC) $(VSRC) argus_lockfile.c argus_clientconfig.c argus_parse_time.c 
+            $(GENSRC) $(VSRC) argus_lockfile.c argus_clientconfig.c argus_parse_time.c \
+	    argus_windows_registry.c
 
 COMMONOBJ = argus_code.o argus_filter.o argus_util.o argus_auth.o argus_parser.o \
             scanner.o grammar.o version.o argus_lockfile.o argus_clientconfig.o \
-            argus_parse_time.o
+            argus_parse_time.o \
+	    argus_windows_registry.o
 
 PARSESRC  = argus_main.c
 PARSEOBJ  = argus_main.o
 
-CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c \
+CLIENTSRC = argus_client.c argus_import.c argus_label.c argus_grep.c argus_label_geoip.c \
             argus_output.c argus_json.c ring.c argus_split_mode.c
 
-CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o \
+CLIENTOBJ = argus_client.o argus_import.o argus_label.o argus_grep.o argus_label_geoip.o \
             argus_output.o argus_json.o ring.o argus_split_mode.o
 
 EVENTSRC  = argus_event.c

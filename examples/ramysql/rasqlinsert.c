@@ -825,42 +825,42 @@ RaSQLQueryProbes ()
 #endif
 
    if (MUTEX_LOCK(&RaMySQLlock) == 0) {
-   if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
-      ArgusLog(LOG_INFO, "RaSQLQueryProbes: mysql_real_query error %s", mysql_error(RaMySQL));
+      if ((retn = mysql_real_query(RaMySQL, buf, strlen(buf))) != 0)
+         ArgusLog(LOG_INFO, "RaSQLQueryProbes: mysql_real_query error %s", mysql_error(RaMySQL));
 
-   else {
-      if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-         if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-            while ((row = mysql_fetch_row(mysqlRes))) {
-               unsigned long *lengths;
-    
-               lengths = mysql_fetch_lengths(mysqlRes);
-               bzero(sbuf, sizeof(sbuf));
+      else {
+         if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+            if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+               while ((row = mysql_fetch_row(mysqlRes))) {
+                  unsigned long *lengths;
+       
+                  lengths = mysql_fetch_lengths(mysqlRes);
+                  bzero(sbuf, sizeof(sbuf));
 
-               if ((sqry = (void *) ArgusCalloc (1, sizeof(*sqry))) == NULL)
-                  ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+                  if ((sqry = (void *) ArgusCalloc (1, sizeof(*sqry))) == NULL)
+                     ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));
 
-               for (x = 0; x < retn; x++) {
-                  snprintf(sbuf, 2048, "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
-                  switch (x) {
-                     case RAMYSQL_PROBETABLE_PROBE:
-                        sqry->probe = strtol(sbuf, &endptr, 10);
-                        if (sbuf == endptr)
-                           ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
-                        break;
+                  for (x = 0; x < retn; x++) {
+                     snprintf(sbuf, 2048, "%.*s", (int) lengths[x], row[x] ? row[x] : "NULL");
+                     switch (x) {
+                        case RAMYSQL_PROBETABLE_PROBE:
+                           sqry->probe = strtol(sbuf, &endptr, 10);
+                           if (sbuf == endptr)
+                              ArgusLog(LOG_ERR, "mysql database error: second returned %s", sbuf);
+                           break;
 
-                     case RAMYSQL_PROBETABLE_NAME:
-                        sqry->name = strdup(sbuf);
-                        break;
+                        case RAMYSQL_PROBETABLE_NAME:
+                           sqry->name = strdup(sbuf);
+                           break;
+                     }
                   }
+                  ArgusAddToQueue (ArgusProbeQueue, &sqry->qhdr, ARGUS_LOCK);
                }
-               ArgusAddToQueue (ArgusProbeQueue, &sqry->qhdr, ARGUS_LOCK);
             }
+            mysql_free_result(mysqlRes);
          }
-         mysql_free_result(mysqlRes);
       }
-   }
-   MUTEX_UNLOCK(&RaMySQLlock);
+      MUTEX_UNLOCK(&RaMySQLlock);
    }
 }
 

@@ -54,7 +54,7 @@ SHELL = /bin/sh
 DIRS = @DIRS@
 INSTDIRS = @DIRS@ ./include
 OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
-CLEANDIRS = @DIRS@ ./pkg ./pythonlib ./perllib
+CLEANDIRS = @DIRS@ ./pkg
 
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \

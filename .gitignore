@@ -73,4 +73,6 @@ include/argus_config.h
 /pythonlib/argusWgan_wrap.c
 /pythonlib/build/
 /pythonlib/swig.stamp
+/pythonlib/argusPython.py
+/pythonlib/argusPython_wrap.c
 
