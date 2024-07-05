@@ -104,7 +104,7 @@ static int snaplen;
 
 #define JMP(c) ((c)|NFF_JMP|NFF_K)
 
-//#define ARGUSFORKFILTER   1
+#define ARGUSFORKFILTER   1
 
 static u_int off_nl = 0;
 
@@ -1261,6 +1261,7 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
    int offset, src_off = 0, dst_off = 0, len = 0, findex = 0;
    struct ablock *b0 = NULL, *b1 = NULL, *b2 = NULL;
    struct ArgusGreStruct gre;
+   struct ArgusGeneveStruct gen;
    struct ArgusFlow flow;
  
    switch (proto) {
@@ -1269,6 +1270,13 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
          dst_off = ((char *)&gre.tflow.ip_flow.ip_dst - (char *)&gre);
          len = sizeof(gre.tflow.ip_flow.ip_src);
          findex = ARGUS_GRE_INDEX;
+         break;
+
+      case Q_GENEVE:
+         src_off = ((char *)&gen.tflow.ip_flow.ip_src - (char *)&gen);
+         dst_off = ((char *)&gen.tflow.ip_flow.ip_dst - (char *)&gen);
+         len = sizeof(gen.tflow.ip_flow.ip_src);
+         findex = ARGUS_GENEVE_INDEX;
          break;
 
       case ETHERTYPE_IP:
@@ -1474,8 +1482,9 @@ Argusgen_host(u_int *addr, u_int *mask, int type, int proto, int dir)
          break;
       }
 
-      case Q_GRE: {
-         b1 = Argusgen_hostop(addr, mask, type, dir, Q_GRE);
+      case Q_GRE:
+      case Q_GENEVE: {
+         b1 = Argusgen_hostop(addr, mask, type, dir, proto);
          break;
       }
 
