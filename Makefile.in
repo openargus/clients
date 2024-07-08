@@ -199,6 +199,7 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@mandir@/man1/raconvert.1
 	rm -f $(DESTDIR)@mandir@/man1/racount.1
 	rm -f $(DESTDIR)@mandir@/man1/radecode.1
+	rm -f $(DESTDIR)@mandir@/man1/radns.1
 	rm -f $(DESTDIR)@mandir@/man1/radump.1
 	rm -f $(DESTDIR)@mandir@/man1/raevent.1
 	rm -f $(DESTDIR)@mandir@/man1/rafilteraddr.1
