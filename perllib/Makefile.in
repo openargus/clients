@@ -42,11 +42,14 @@ MANDEST = @mandir@
 srcdir = @srcdir@
 VPATH = @srcdir@
 
+
 CC = @CC@
 CCOPT = @V_CCOPT@
 INCLS = -I. -I../include -I../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
 DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+
+CLIENTLIB = ../lib/argus_common.a ../lib/argus_client.a
+COMPATLIB = @V_PCRE@ @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@ @DNSLIB@ @LIBMAXMINDDB_LIBS@
 
 MYSQLLIB = @MYSQL_LDFLAGS@ 
 
@@ -86,7 +89,7 @@ uninstall-perl:
 	rm -f $(DESTDIR)$(perlvendorarch_auto)/util$(SOEXT)
 
 util$(SOEXT): swig_ArgusParseTime.o swig_ArgusParseTime_wrap.o argus_parse_time.o
-	$(CC) $(CFLAGS) `$(PERL) -MConfig -e 'print $$Config{lddlflags}'` $^ -o $@
+	$(CC) $(CFLAGS) `$(PERL) -MConfig -e 'print $$Config{lddlflags}'` $^ $(CLIENTLIB) $(COMPATLIB) -o $@
 argus_parse_time.o: ../common/argus_parse_time.c
 	$(CC) $(CFLAGS) -I../include -I../common $(PERL_CFLAGS) -c $(filter %.c, $^)
 swig_ArgusParseTime.o: swig_ArgusParseTime.c

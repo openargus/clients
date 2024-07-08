@@ -43,7 +43,7 @@
 #define ARGUS_SEC       	6
 #define RA_HASHTABLESIZE	2048
 
-extern int RaDaysInAMonth[12];
+static int RaDaysInAMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 extern struct ArgusParserStruct *ArgusParser;
 
 void usage (void) { return; }
