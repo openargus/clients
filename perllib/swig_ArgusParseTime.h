@@ -30,4 +30,11 @@ void ArgusLog (int d, char *fmt, ...);
 void ArgusDebug (int d, char *fmt, ...);
 int swig_ArgusParseTime (char *time_string, int *start, int *end);
 
+void usage (void);
+void RaParseComplete (int);
+void RaProcessRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+int RaSendArgusRecord(struct ArgusRecordStruct *);
+void ArgusClientTimeout (void);
+void ArgusWindowClose(void);
+
 #endif

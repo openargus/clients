@@ -43,13 +43,6 @@
 #define ARGUS_SEC       	6
 #define RA_HASHTABLESIZE	2048
 
-/*
-struct ArgusParserStruct *ArgusNewParser(char *);
-static void ArgusInitializeParser(struct ArgusParserStruct *);
-
-
-*/
-
 extern int RaDaysInAMonth[12];
 extern struct ArgusParserStruct *ArgusParser;
 
