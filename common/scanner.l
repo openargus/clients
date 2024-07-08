@@ -163,6 +163,7 @@ isis	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytex
 
 vxlan	 return VXLAN;
 gre	 return GRE;
+geneve	 return GENEVE;
 
 vlan	 return VLAN;
 vid	 return VID;
@@ -195,7 +196,6 @@ mlen     return MASKLEN;
 
 port     return PORT;
 proto    return PROTO;
-encaps   return ENCAPS;
 
 ttl      return TTL;
 tos      return TOS;

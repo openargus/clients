@@ -52,6 +52,7 @@ struct tok {
 #include <netinet/if_ether.h>
 #include <netinet/rtp.h>
 #include <argus_gre.h>
+#include <argus_geneve.h>
 #include <argus_llc.h>
 #include <argus_isis.h>
 #include <argus_udt.h>
@@ -920,6 +921,14 @@ struct ArgusGreStruct {
    struct ArgusFlow tflow;
 };
 
+struct ArgusGeneveStruct {
+   struct ArgusDSRHeader hdr;
+   unsigned char ver_opt, flags;
+   unsigned short ptype;
+   unsigned int vni;
+   struct ArgusFlow tflow;
+};
+
 struct ArgusIPAttrStruct {
    struct ArgusDSRHeader hdr;
    struct ArgusIPAttrObject src, dst;
@@ -1035,6 +1044,7 @@ struct ArgusCanonRecord {
    struct ArgusMacStruct         mac;
    struct ArgusVlanStruct        vlan;
    struct ArgusVxLanStruct       vxlan;
+   struct ArgusGeneveStruct      gen;
    struct ArgusGreStruct         gre;
    struct ArgusMplsStruct        mpls;
    struct ArgusIcmpStruct        icmp;

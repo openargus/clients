@@ -43,12 +43,22 @@
 #define ARGUS_SEC       	6
 #define RA_HASHTABLESIZE	2048
 
+/*
 struct ArgusParserStruct *ArgusNewParser(char *);
 static void ArgusInitializeParser(struct ArgusParserStruct *);
 
 
+*/
+
 extern int RaDaysInAMonth[12];
 extern struct ArgusParserStruct *ArgusParser;
+
+void usage (void) { return; }
+void RaParseComplete (int sig) { return; }
+void RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *rec) { return; }
+int RaSendArgusRecord(struct ArgusRecordStruct *rec) { return 0 ; }
+void ArgusClientTimeout (void) { return; }
+void ArgusWindowClose(void) { return; }
 
 int
 swig_ArgusParseTime (char *time_string, int *start, int *end)
@@ -367,7 +377,6 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen, struc
    }
    return (int)len;
 }
-*/
 
 
 struct ArgusParserStruct *
@@ -470,3 +479,4 @@ ArgusInitializeParser(struct ArgusParserStruct *parser)
    gettimeofday(&parser->ArgusStartRealTime, 0L);
    gettimeofday(&parser->ArgusRealTime, 0L);
 }
+*/

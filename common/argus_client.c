@@ -2725,6 +2725,15 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
+                     case ARGUS_GENEVE_DSR: {
+                        struct ArgusGeneveStruct *gen = (struct ArgusGeneveStruct *) dsr;
+
+                        bcopy((char *)gen, (char *)&canon->gen, cnt);
+                        retn->dsrs[ARGUS_GENEVE_INDEX] = (struct ArgusDSRHeader*) &canon->gen;
+                        retn->dsrindex |= (0x01 << ARGUS_GENEVE_INDEX);
+                        break;
+                     }
+
                      case ARGUS_GRE_DSR: {
                         struct ArgusGreStruct *gre = (struct ArgusGreStruct *) dsr;
 
