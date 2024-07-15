@@ -179,6 +179,7 @@ hello    return HELLO;
 svc      return SVC;
 spi      return SPI;
 
+encaps   return ENCAPS;
 addr     return HOST;
 host     return HOST;
 srcid    return SRCID;

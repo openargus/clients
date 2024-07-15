@@ -161,7 +161,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 clobber realclean distclean:
-	rm -f $(CLEANFILES) Makefile 
+	rm -f $(CLEANFILES) Makefile *.o
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
