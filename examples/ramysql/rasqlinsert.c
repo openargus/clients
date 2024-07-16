@@ -309,8 +309,7 @@ RasqlInsertSetupRewriteAgg(struct ArgusParserStruct *parser,
    if (parser->ArgusAggregator)
       ArgusDeleteAggregator(parser, parser->ArgusAggregator);
 
-   parser->ArgusAggregator = ArgusNewAggregator(parser, NULL,
-                                                ARGUS_RECORD_AGGREGATOR);
+   parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
 
    if (parser->ArgusAggregator == NULL)
       return 0;

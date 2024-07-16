@@ -831,14 +831,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                ArgusLog(LOG_ERR, "cannot rewrite records from file.\n");
 
             if (parser->sflag)
-               ArgusLog(LOG_WARNING,
-                        "Fields specified with -s ignored during rewrite\n");
+               ArgusLog(LOG_WARNING, "Fields specified with -s ignored during rewrite\n");
 
             /* Read and write from the same table(s) */
             if (parser->readDbstr)
                free(parser->readDbstr);
             parser->readDbstr = strdup(parser->writeDbstr);
             ArgusAddFileList (parser, parser->readDbstr, ARGUS_DATA_SOURCE, -1, -1);
+
+            if (parser->ArgusMaskList != NULL)
+               ArgusLog(LOG_WARNING, "Fields specified with -m ignored during rewrite\n");
          }
 
          if (parser->ArgusFlowModelFile)

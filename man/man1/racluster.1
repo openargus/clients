@@ -4,7 +4,7 @@
 .\" All rights reserved.
 .\"
 .\"
-.TH RACLUSTER 1 "07 October 2023" "racluster 5.0.3"
+.TH RACLUSTER 1 "07 October 2023" "racluster 5.0.0"
 .SH NAME
 \fBracluster\fP \- aggregate \fBargus(8)\fP data files.
 .SH SYNOPSIS
@@ -34,7 +34,7 @@ measurements, routing loop detection, traceroute path data recovery,
 and complex availability/reachability reports, to name just a few
 useful applications.
 
-Please see racluster.5 for detailed information regarding racluster
+Please see racluster.conf.5 for detailed information regarding racluster
 configuration.  
 
 .SH OPTIONS
@@ -46,6 +46,12 @@ data.  See \fBra(1)\fP for a complete description of \fBra options\fP.
 \fBracluster(1)\fP specific options are:
 .PP
 .PD 0
+.RE
+.TP 4 4
+.BI \-f "\| racluster.conf\^"
+Specify an aggregation definition configuration.  see racluster.conf.5
+.PD
+.RE
 .TP 4 4
 .BI \-m "\| aggregation object\^"
 Supported aggregation objects are:
@@ -239,7 +245,7 @@ as a percent of the total.
 .SH COPYRIGHT
 Copyright (c) 2000-2024 QoSient. All rights reserved.
 .SH SEE ALSO
-.BR racluster(5),
+.BR racluster.conf(5),
 .BR ra(1),
 .BR rarc(5),
 .BR argus(8),
