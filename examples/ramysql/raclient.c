@@ -839,6 +839,9 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             parser->readDbstr = strdup(parser->writeDbstr);
             ArgusAddFileList (parser, parser->readDbstr, ARGUS_DATA_SOURCE, -1, -1);
 
+            if (parser->ArgusFlowModelFile)
+               ArgusLog(LOG_WARNING, "Aggregation config using -f option ignored during rewrite\n");
+
             if (parser->ArgusMaskList != NULL)
                ArgusLog(LOG_WARNING, "Fields specified with -m ignored during rewrite\n");
          }
