@@ -158,8 +158,8 @@ endif
 		(mkdir -p $(DESTDIR)@mandir@/man8; chmod 755 $(DESTDIR)@mandir@/man8)
 	$(INSTALL) -m 0644 $(srcdir)/man/man5/rarc.5 \
 		$(DESTDIR)@mandir@/man5/rarc.5
-	$(INSTALL) -m 0644 $(srcdir)/man/man5/racluster.5 \
-		$(DESTDIR)@mandir@/man5/racluster.5
+	$(INSTALL) -m 0644 $(srcdir)/man/man5/racluster.conf.5 \
+		$(DESTDIR)@mandir@/man5/racluster.conf.5
 	$(INSTALL) -m 0644 $(srcdir)/man/man5/racolor.conf.5 \
 		$(DESTDIR)@mandir@/man5/racolor.conf.5
 	$(INSTALL) -m 0644 $(srcdir)/man/man5/ralabel.conf.5 \
@@ -220,7 +220,7 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@mandir@/man1/rastrip.1
 	rm -f $(DESTDIR)@mandir@/man1/ratop.1
 	rm -f $(DESTDIR)@mandir@/man5/rarc.5
-	rm -f $(DESTDIR)@mandir@/man5/racluster.5
+	rm -f $(DESTDIR)@mandir@/man5/racluster.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/ralabel.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/radium.conf.5
 	rm -f $(DESTDIR)@mandir@/man5/ranonymize.5
