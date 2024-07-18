@@ -102,7 +102,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 
 %type	<blk>	expr id nid pid term rterm qid tid oid
 %type	<blk>	head thead
-%type	<i>	pqual dqual lqual aqual iqual ndaqual 
+%type	<i>	etype ptype pqual dqual lqual aqual equal iqual ndaqual 
 %type	<f>	fqual
 %type	<a>	arth narth
 %type	<i>	oname pname sname tname pnum relop irelop
