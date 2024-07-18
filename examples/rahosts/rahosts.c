@@ -66,7 +66,7 @@ int RaHostsLabelStartTreeLevel = 0;
 int RaHostsPrintTreeLevel = 1000000;
 int RaHostsPrintTreeDebug = 0;
 
-char RaAddrTreeArray[MAXSTRLEN];
+extern char RaAddrTreeArray[];
 
 char *RaTableCreationString = "CREATE TABLE IF NOT EXISTS %s (region VARCHAR(8), sid VARCHAR(64), inf VARCHAR(4), saddr VARCHAR(64) NOT NULL, sloc TINYINT, count INTEGER, hoststring TEXT, PRIMARY KEY ( region,saddr,sid,inf ))";
 
