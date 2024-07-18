@@ -102,7 +102,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 
 %type	<blk>	expr id nid pid term rterm qid tid oid
 %type	<blk>	head thead
-%type	<i>	ptype pqual dqual lqual aqual iqual ndaqual 
+%type	<i>	etype ptype pqual dqual lqual aqual equal iqual ndaqual 
 %type	<f>	fqual
 %type	<a>	arth narth
 %type	<i>	oname pname sname tname pnum relop irelop
@@ -261,6 +261,7 @@ head:	  pqual dqual aqual	{ QSET($$.q, $1, $2, $3); }
 	| ptype dqual aqual	{ QSET($$.q, $1, $2, $3); }
 	| ptype aqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
 	| pqual ndaqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
+	| etype equal		{ QSET($$.q, $1, Q_DEFAULT, $2); }
 	;
 
 thead:	  pqual dqual		{ QSET($$.q, $1, $2, Q_DEFAULT); }
@@ -273,11 +274,15 @@ rterm:	  head id		{ $$ = $2; }
 	| paren expr ')'	{ $$.b = $2.b; $$.q = $1.q; }
 	| pname			{ $$.b = Argusgen_proto_abbrev($1); $$.q = qerr; }
 	| sname			{ $$.b = Argusgen_proto_abbrev($1); $$.q = qerr; }
+	| etype equal		{ $$.b = Argusgen_scode(argus_yytext, $$.q); }
 	| tid			{ $$ = $1; }
 	| oid			{ $$ = $1; }
 	| arth relop arth	{ $$.b = Argusgen_relation($2, $1, $3, 0); $$.q = qerr; }
 	| arth irelop arth	{ $$.b = Argusgen_relation($2, $1, $3, 1); $$.q = qerr; }
 	| other			{ $$.b = $1; $$.q = qerr; }
+	;
+
+etype:    ENCAPS		{ $$ = Q_ENCAPS; }
 	;
 
 /* protocol level qualifiers */
@@ -314,6 +319,9 @@ aqual:	  HOST			{ $$ = Q_HOST; }
 	| CLASS			{ $$ = Q_CLASS; }
 	;
 
+equal:    ENCAPS		{ $$ = Q_ENCAPS; }
+	;
+
 /* identifier types */
 iqual:    PORT			{ $$ = Q_PORT; }
 	| IPID			{ $$ = Q_IPID; }
@@ -335,7 +343,6 @@ iqual:    PORT			{ $$ = Q_PORT; }
 	| GAP   		{ $$ = Q_GAP; }
 	| MAXSEG   		{ $$ = Q_MAXSEG; }
 	| SPI	  		{ $$ = Q_SPI; }
-	| ENCAPS		{ $$ = Q_ENCAPS; }
 	| DELTADUR		{ $$ = Q_DELTADUR; }
 	| DELTASTART		{ $$ = Q_DELTASTART; }
 	| DELTALAST		{ $$ = Q_DELTALAST; }
