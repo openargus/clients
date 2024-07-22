@@ -2747,7 +2747,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         struct ArgusMplsStruct *mpls = (struct ArgusMplsStruct *) dsr;
                         unsigned int *mlabel = (unsigned int *)(dsr + 1);
 
-//                      bzero((char *)&canon->mpls, sizeof(*mpls));
                         bcopy((char *)&mpls->hdr, (char *)&canon->mpls.hdr, 4);
                         canon->mpls.slabel = *mlabel++;
                         canon->mpls.dlabel = *mlabel++;

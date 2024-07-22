@@ -11310,7 +11310,7 @@ void
 ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char protoStrBuf[16], *protoStr = NULL;
-   u_char proto; 
+   unsigned short proto; 
  
    bzero (protoStrBuf, sizeof(protoStrBuf));
    protoStr = protoStrBuf;
@@ -11330,14 +11330,20 @@ ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          struct ArgusGreStruct *gre = NULL;
 
          if ((gre = (void *)argus->dsrs[ARGUS_GRE_INDEX]) != NULL) {
+            char *name = NULL;
             proto = gre->proto;
 
-            if (ip_proto_string[proto] == NULL)
-               ip_proto_string[proto] = "unas";
+	    if ((name = ArgusEtherProtoString(parser, proto)) == NULL) {
+	       if (proto < IPPROTOSTR) 
+                  name =  ip_proto_string[proto];
+
+               if (name == NULL) name = "unas";
+	    }
+
             if (parser->nflag > 2)
                sprintf (protoStr, "%u", proto); 
             else
-               sprintf (protoStr, "%s", ip_proto_string[proto]); 
+               sprintf (protoStr, "%s", name); 
             break;
          }
       }
@@ -27714,6 +27720,13 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
+                 case ARGUS_GRE_DSR: {
+                     struct ArgusGreStruct *gre = (struct ArgusGreStruct *) dsr;
+                     gre->flags = ntohs(gre->flags);
+                     gre->proto = ntohs(gre->proto);
+                     break;
+                  }
+
                   case ARGUS_VXLAN_DSR: {
                      struct ArgusVxLanStruct *vxlan = (struct ArgusVxLanStruct *) dsr;
                      vxlan->svnid = ntohl(vxlan->svnid);
@@ -28404,6 +28417,13 @@ ArgusHtoN (struct ArgusRecord *argus)
                      struct ArgusVlanStruct *vlan = (struct ArgusVlanStruct *) dsr;
                      vlan->sid = htons(vlan->sid);
                      vlan->did = htons(vlan->did);
+                     break;
+                  }
+
+                 case ARGUS_GRE_DSR: {
+                     struct ArgusGreStruct *gre = (struct ArgusGreStruct *) dsr;
+                     gre->flags = htons(gre->flags);
+                     gre->proto = htons(gre->proto);
                      break;
                   }
 
