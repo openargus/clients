@@ -123,6 +123,9 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 %token  TCPTIMESTAMP TCPCC TCPCCNEW TCPCCECHO SECN DECN
 
 %token  ENCAPS ETHER MPLS VLAN VXLAN GRE GENEVE ANON VID VPRI MPLSID SPI
+%token  PQ LLC L2TP PPPOE ISL AH IPNIP IPNIP6 HDLC CHDLC ATM SLL FDDI ARC WLAN
+%token	PRISM AVS LRH GRH TEREDO ENC JUNIPER
+
 %token  RTP RTCP ESP DECNET MOPRC MOPDL
 %token  TK_BROADCAST TK_MULTICAST FRAG FRAG_ONLY 
 %token  ABR PCR RATE LOAD LOSS PLOSS GAP MAXSEG CO 
@@ -447,6 +450,28 @@ pname:	  IP			{ $$ = Q_IP; }
 	| DECNET		{ $$ = Q_DECNET; }
 	| MOPDL			{ $$ = Q_MOPDL; }
 	| MOPRC			{ $$ = Q_MOPRC; }
+	| PQ			{ $$ = Q_802PQ; }
+	| LLC			{ $$ = Q_LLC; }
+	| L2TP			{ $$ = Q_L2TP; }
+	| PPPOE			{ $$ = Q_PPPOE; }
+	| ISL			{ $$ = Q_ISL; }
+	| AH			{ $$ = Q_AH; }
+	| IPNIP			{ $$ = Q_IPNIP; }
+	| IPNIP6		{ $$ = Q_IPNIP6; }
+	| HDLC			{ $$ = Q_HDLC; }
+	| CHDLC			{ $$ = Q_CHDLC; }
+	| ATM			{ $$ = Q_ATM; }
+	| SLL			{ $$ = Q_SLL; }
+	| FDDI			{ $$ = Q_FDDI; }
+	| ARC			{ $$ = Q_ARC; }
+	| WLAN			{ $$ = Q_WLAN; }
+	| PRISM			{ $$ = Q_PRISM; }
+	| AVS			{ $$ = Q_AVS; }
+	| LRH			{ $$ = Q_LRH; }
+	| GRH			{ $$ = Q_GRH; }
+	| TEREDO		{ $$ = Q_TEREDO; }
+	| ENC			{ $$ = Q_ENC; }
+	| JUNIPER		{ $$ = Q_JUNIPER; }
 	;
 
 tname:	  DUP			{ $$ = Q_DUP; }

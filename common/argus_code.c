@@ -2103,7 +2103,7 @@ Argusgen_proto_abbrev(int proto)
          ArgusLog(LOG_ERR, "link layer applied in wrong context");
 
       default:
-         abort();
+         break;
    }
 
 #if defined(ARGUSDEBUG)

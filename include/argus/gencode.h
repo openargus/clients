@@ -218,6 +218,28 @@
 #define Q_GRE   	195
 #define Q_GENEVE   	196
 
+#define Q_802PQ		197
+#define Q_L2TP		198
+#define Q_PPPOE		199
+#define Q_ISL		200
+#define Q_AH		201
+#define Q_IPNIP		202
+#define Q_IPNIP6	203
+#define Q_HDLC		204
+#define Q_CHDLC		205
+#define Q_ATM		206
+#define Q_SLL		207
+#define Q_FDDI		208
+#define Q_ARC		209
+#define Q_WLAN		210
+#define Q_PRISM		211
+#define Q_AVS		212
+#define Q_LRH		213
+#define Q_GRH		214
+#define Q_TEREDO	215
+#define Q_ENC		216
+#define Q_JUNIPER	217
+
 #define Q_RTR   	112
 #define Q_MBR   	113
 #define Q_LVG   	114

@@ -161,9 +161,36 @@ igmp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytex
 mpls	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return MPLS; } 
 isis	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ISIS; } 
 
-vxlan	 return VXLAN;
-gre	 return GRE;
-geneve	 return GENEVE;
+pq	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return PQ; } 
+llc	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LLC; } 
+l2tp	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return L2TP; } 
+pppoe	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return PPPOE; } 
+isl	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ISL; } 
+ah	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return AH; } 
+ipnip	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPNIP; } 
+ipnip6	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return IPNIP6; } 
+
+hdlc	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return HDLC; } 
+chdlc	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return CHDLC; } 
+atm	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ATM; } 
+sll	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return SLL; } 
+fddi	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return FDDI; } 
+arc	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ARC; } 
+
+wlan	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return WLAN; } 
+prism	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return PRISM; } 
+avs	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return AVS; } 
+lrh	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return LRH; } 
+grh	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return GRH; } 
+teredo	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return TEREDO; } 
+enc	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return ENC; } 
+
+juniper	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return JUNIPER; } 
+
+
+vxlan	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return VXLAN; } 
+gre	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return GRE; } 
+geneve	{ if (argus_yytext != NULL) free(argus_yytext); argus_yytext = strdup(yytext); return GENEVE; } 
 
 vlan	 return VLAN;
 vid	 return VID;
