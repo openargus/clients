@@ -102,7 +102,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 
 %type	<blk>	expr id nid pid term rterm qid tid oid
 %type	<blk>	head thead
-%type	<i>	ptype pqual dqual lqual aqual iqual ndaqual 
+%type	<i>	pqual dqual lqual aqual iqual ndaqual 
 %type	<f>	fqual
 %type	<a>	arth narth
 %type	<i>	oname pname sname tname pnum relop irelop
@@ -256,10 +256,7 @@ head:	  pqual dqual aqual	{ QSET($$.q, $1, $2, $3); }
 	| pqual fqual 		{ QSET($$.q, $1, Q_DEFAULT, $2); $$.q.type = Q_FLOAT; }
 	| pqual dqual iqual 	{ QSET($$.q, $1, $2, $3); $$.q.type = Q_INTEGER; }
 	| pqual dqual fqual 	{ QSET($$.q, $1, $2, $3); $$.q.type = Q_FLOAT; }
-	| ptype PROTO		{ QSET($$.q, $1, Q_DEFAULT, Q_PROTO); }
-	| ptype dqual		{ QSET($$.q, $1, $2, Q_DEFAULT); }
-	| ptype dqual aqual	{ QSET($$.q, $1, $2, $3); }
-	| ptype aqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
+	| pqual PROTO		{ QSET($$.q, $1, Q_DEFAULT, Q_PROTO); }
 	| pqual ndaqual		{ QSET($$.q, $1, Q_DEFAULT, $2); }
 	;
 
@@ -281,9 +278,6 @@ rterm:	  head id		{ $$ = $2; }
 	;
 
 /* protocol level qualifiers */
-ptype:	  LINK			{ $$ = Q_LINK; }
-	| ETHER			{ $$ = Q_ETHER; }
-	;
 pqual:	  pname
 	|			{ $$ = Q_DEFAULT; }
 	;
@@ -417,7 +411,9 @@ sname:	  START			{ $$ = Q_START; }
 	| COCODE		{ $$ = Q_COCODE; }
 	;
 
-pname:	  IP			{ $$ = Q_IP; }
+pname:	  LINK			{ $$ = Q_LINK; }
+	| ETHER			{ $$ = Q_ETHER; }
+	| IP			{ $$ = Q_IP; }
 	| IPV4			{ $$ = Q_IPV4; }
 	| IPV6			{ $$ = Q_IPV6; }
 	| ARP			{ $$ = Q_ARP; }
@@ -478,9 +474,7 @@ oname:     TCPOPT               { $$ = Q_TCPOPT; }
 	;
 
 other:	  pqual TK_BROADCAST	{ $$ = Argusgen_broadcast($1); }
-	| ptype TK_BROADCAST	{ $$ = Argusgen_broadcast($1); }
 	| pqual TK_MULTICAST	{ $$ = Argusgen_multicast($1); }
-	| ptype TK_MULTICAST	{ $$ = Argusgen_multicast($1); }
 	| INTRANET		{ $$ = Argusgen_intranet(); }
 	| INTERNET		{ $$ = Argusgen_internet(); }
 	| INBOUND		{ $$ = Argusgen_inbound(0); }
