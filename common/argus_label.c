@@ -54,6 +54,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <ifaddrs.h>
 #include <arpa/inet.h>
 
@@ -2354,7 +2355,7 @@ RaInsertAddressTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    struct ArgusCIDRAddr *cidr, scidr, dcidr;
    char *sptr = NULL, *eptr = NULL, *cptr = NULL;
    char *ptr = NULL, *label = NULL;
-   char tstrbuf[MAXSTRLEN], *tptr = NULL;
+   char *tstrbuf, *tptr = NULL;
    long long i, step = 0, arange;
    unsigned int masklen = 32;
    double mstep = 0;
@@ -2363,8 +2364,12 @@ RaInsertAddressTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    if (labeler != NULL) {
       struct RaAddressStruct **ArgusAddrTree = labeler->ArgusAddrTree;
       int state = ARGUS_PARSING_START_ADDRESS;
+      int slen = (strlen(str) > MAXSTRLEN) ? strlen(str) : MAXSTRLEN;
 
-      snprintf (tstrbuf, MAXSTRLEN, "%s", str);
+      if ((tstrbuf = malloc(slen + 1)) == NULL) 
+         ArgusLog (LOG_ERR, "RaInsertAddressTree: malloc error %s", strerror(errno));
+
+      snprintf (tstrbuf, slen, "%s", str);
       ptr = tstrbuf;
 
       while ((sptr = strtok(ptr, "\t\n\r")) != NULL) {
@@ -2659,6 +2664,7 @@ RaInsertAddressTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
             step = mstep;
          }
       }
+      free(tstrbuf);
    }
 
 #ifdef ARGUSDEBUG
@@ -2741,7 +2747,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    struct RaAddressStruct *saddr = NULL, *node;
    struct ArgusCIDRAddr *cidr, scidr, dcidr;
    char *sptr = NULL, *eptr = NULL, *ptr = NULL;
-   char tstrbuf[MAXSTRLEN], *tptr = NULL, *label = NULL, *group = NULL;
+   char *tstrbuf, *tptr = NULL, *label = NULL, *group = NULL;
    int retn = 0, locality = -1, asn = -1;
    long long i, step = 0, arange;
    unsigned int masklen = 32;
@@ -2750,8 +2756,12 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    if (labeler != NULL) {
       int state = ARGUS_PARSING_START_ADDRESS;
       struct enamemem *tp = NULL;
+      int slen = (strlen(str) > MAXSTRLEN) ? strlen(str) : MAXSTRLEN;
 
-      snprintf (tstrbuf, MAXSTRLEN, "%s", str);
+      if ((tstrbuf = malloc(slen + 1)) == NULL) 
+         ArgusLog (LOG_ERR, "RaInsertAddressTree: malloc error %s", strerror(errno));
+
+      snprintf (tstrbuf, slen, "%s", str);
       ptr = tstrbuf;
 
       while ((sptr = strtok(ptr, " \t\r\n\"")) != NULL) {
@@ -2952,6 +2962,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
             }
          }
       }
+      free (tstrbuf);
    }
 
 #ifdef ARGUSDEBUG
@@ -2975,9 +2986,6 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    FILE *fd =  NULL;
 
    if (labeler != NULL) {
-      if ((str = ArgusMalloc(MAXSTRLEN)) == NULL)
-         ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusMalloc error %s\n", strerror(errno));
-
       if (labeler->ArgusAddrTree == NULL)
          if ((labeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
             ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusCalloc error %s\n", strerror(errno));
@@ -2988,7 +2996,16 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
 //  
 
       if ((fd = fopen (file, "r")) != NULL) {
-         while ((ptr = fgets (str, MAXSTRLEN, fd)) != NULL) {
+         struct stat statbuf;
+         int bufsize;
+
+         stat(file, &statbuf);
+	 bufsize = (statbuf.st_size > MAXSTRLEN) ? statbuf.st_size + 1 : MAXSTRLEN;
+
+         if ((str = ArgusMalloc(bufsize)) == NULL)
+            ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusMalloc error %s\n", strerror(errno));
+
+         while ((ptr = fgets (str, bufsize, fd)) != NULL) {
 //          linenum++;
             while (isspace((int)*ptr)) ptr++;
             switch (*ptr) {
