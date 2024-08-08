@@ -25,7 +25,7 @@ PERL = @V_PERL@
 PERL_CFLAGS = $(shell $(PERL) -MConfig -e \
 	'print join(" ", @Config{qw(ccflags optimize cccdlflags)}, \
 	"-I$$Config{archlib}/CORE")' )
-perlvendorarch = $(shell $(PERL) -MConfig -e \ 'print $$Config{vendorarch}' )
+perlvendorarch = $(shell $(PERL) -MConfig -e \ 'print $$Config{sitelib}' )
 perlvendorarch_qosient = $(perlvendorarch)/qosient/XS
 perlvendorarch_auto = $(perlvendorarch)/auto/qosient/XS/util
 

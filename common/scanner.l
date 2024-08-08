@@ -208,6 +208,7 @@ cocode   return COCODE;
 as       return ASN;
 asn      return ASN;
 
+count    return TRANS;
 trans    return TRANS;
 pkt      return PKT;
 pkts     return PKT;
