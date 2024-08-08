@@ -48,7 +48,7 @@ include/argus_config.h
 /man/man5/ramanage.conf.5
 
 # compiled perl library
-/perllib/qosient
+/perllib/qosient/XS
 /perllib/swig.stamp
 /perllib/swig_ArgusParseTime_wrap.c
 /perllib/util.so

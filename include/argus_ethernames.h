@@ -109,7 +109,7 @@ struct ArgusEtherTypeStruct argus_ethertype_names [] = {
    { "24583", "lavc", "DEC LAVC,  SCA" }, 
    { "24584-24585", "decun", "DEC Unassigned" }, 
    { "24586-24596", "3com", "3Com Corporation" }, 
-   { "25944", "trans", "Trans Ether Bridging" }, 
+   { "25944", "bridge", "Transparent Ethernet Bridging" }, 
    { "25945", "rawfr", "Raw Frame Relay" }, 
    { "28672", "dbdwn", "Ungermann-Bass download" }, 
    { "28674", "ubdia", "Ungermann-Bass dia/loop" }, 
