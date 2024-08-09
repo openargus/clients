@@ -1,0 +1,8 @@
+[Unit]
+Description=Process Behavioral Alarms and Alerts
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/behave-nightly
+TimeoutStartSec=1hr
+
