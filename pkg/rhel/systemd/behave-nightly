@@ -36,8 +36,8 @@ $ENV{'PATH'} = "/bin:/usr/bin:/usr/sbin:/usr/local/bin";
 # Parse the arguments if any
 my @arglist = ();
 
-my $rootdir   = "/var/www";
-my $behave    = "$rootdir/cgi-bin/behave.pl";
+my $rootdir   = "/var/www/cgi-bin";
+my $behave    = "$rootdir/behave.pl";
 my $debug     = 0;
 my $dryrun    = 0;
 my $done      = 0;
