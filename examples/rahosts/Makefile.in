@@ -131,4 +131,4 @@ tags: $(TAGFILES)
 
 force:  /tmp
 depend: $(GENSRC) force
-        ../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
+	../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
