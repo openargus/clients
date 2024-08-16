@@ -3498,13 +3498,6 @@ time that needs to lapse */
 
                         ArgusClientTimeout ();
 
-                        if (parser->Tflag) {
-                           if ((parser->Tflag - 1) == 0) {
-                              ArgusShutDown(0);
-                           }
-                           parser->Tflag--;
-                        }
-
                         timeoutValue = parser->ArgusRealTime;
                         timeoutValue.tv_sec  += parser->RaClientTimeout.tv_sec;
                         timeoutValue.tv_usec += parser->RaClientTimeout.tv_usec;

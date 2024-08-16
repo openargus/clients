@@ -584,7 +584,7 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
    int retn = 0, done = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusReadFileStream() starting\n");
+   ArgusDebug (3, "ArgusReadFileStream() starting\n");
 #endif
    parser->status &= ~(ARGUS_READING_FILES | ARGUS_READING_STDIN | ARGUS_READING_REMOTE);
    parser->status |=   ARGUS_READING_FILES;
@@ -606,15 +606,8 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
       }
 
-      if (parser->RaClientTimeoutAbs.tv_sec > 0 && ArgusCheckTimeout(parser, input)) {
+      if ((parser->RaClientTimeoutAbs.tv_sec > 0) && ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
-
-         if (ArgusParser->Tflag) {
-            if ((ArgusParser->Tflag - 1) == 0) {
-               ArgusShutDown(0);
-            }
-            ArgusParser->Tflag--;
-         }
       }
       ArgusSetTimeout(parser, input);
    }
@@ -818,7 +811,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
       if (width >= 0) {
          width++;
          wait.tv_sec = 0;
-         wait.tv_usec = 500000;
+         wait.tv_usec = 250000;
 
          started = 1;
 
@@ -931,13 +924,6 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
          ArgusClientTimeout ();
          ArgusSetTimeout(parser, input);
 
-         if (parser->Tflag) {
-            struct timeval diff;
-            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
-            if (diff.tv_sec >= parser->Tflag)
-               ArgusShutDown(0);
-         }
-
 #if !defined(ARGUS_THREADS)
          if (parser->ArgusReliableConnection) {
             struct ArgusInput *addr;
@@ -984,6 +970,12 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
             }
          }
 #endif
+         if (parser->Tflag) {
+            struct timeval diff;
+            RaDiffTime (&rtime, &parser->ArgusStartRealTime, &diff);
+            if (diff.tv_sec >= parser->Tflag)
+               ArgusShutDown(0);
+         }
       }
    }
 
