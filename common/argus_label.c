@@ -3062,6 +3062,7 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
             }
          }
 
+         ArgusFree(str);
          fclose(fd);
 
       } else
@@ -3071,7 +3072,6 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
          RaPruneAddressTree(labeler, labeler->ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_ADJ, 0);
 
       if (banner != NULL) free(banner);
-      ArgusFree(str);
    }
 
 #ifdef ARGUSDEBUG
