@@ -68,7 +68,7 @@ if ((not defined $time) || ($time eq "-1d") || ($time eq "Yesterday")) {
    }
 }
 
-my $cmd = "$behave -time $time";
+my $cmd = "$behave -time $time -web";
 $cmd = $cmd." -debug" if $debug;
 print "DEBUG: Argus Behavioral anomaly cmd: $cmd\n" if $debug;
 if ($dryrun == 0) {

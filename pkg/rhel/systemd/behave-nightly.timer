@@ -3,7 +3,7 @@ Description=Process Behavioral Alarms and Alerts
 
 [Timer]
 # daily at 0015 hrs
-OnCalendar=*-*-* 00:35:00
+OnCalendar=*-*-* 02:35:00
 Persistent=true
 
 [Install]
