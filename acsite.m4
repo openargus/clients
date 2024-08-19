@@ -909,8 +909,7 @@ ARGUS_MYSQL_MAKEFILE=no
             AC_MSG_RESULT([no])
          fi
 
-         ARGUS_MYSQL="./ramysql"
-         ARGUS_MYSQL_MAKEFILE="./examples/ramysql/Makefile"
+         ARGUS_MYSQL_MAKEFILE="yes"
          ARGUS_MYSQL="ramysql"
          AC_SUBST(MYSQL_LDFLAGS)
          AC_SUBST(MYSQL_INCLS)
