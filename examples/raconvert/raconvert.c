@@ -366,6 +366,7 @@ ArgusClientInit(struct ArgusParserStruct *parser)
 
    if ((mode = ArgusParser->ArgusModeList) != NULL) {
       while (mode) {
+// Scan the modes	      
          for (i = 0, ind = -1; i < RASCII_MAXMODES; i++) {
             if (!(strncasecmp (mode->mode, RaConvertDaemonModes[i], 3))) {
                ind = i;
@@ -382,8 +383,9 @@ ArgusClientInit(struct ArgusParserStruct *parser)
 
          switch (ind) {
             case RASCIIDEBUG: {
+// Scan the debug modes	      
                for (x = 0, ind = -1; x < RASCII_MAXDEBUG; x++) {
-                  if (!(strncasecmp (mode->mode, RaConvertDaemonModes[x], 3))) {
+                  if (!(strncasecmp (mode->mode, ArgusDebugModes[x], 3))) {
                      ArgusDebugMode |= 0x01 << x;
                      switch (ind) {
                         case RASCII_DEBUGTASKS:
