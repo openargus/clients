@@ -714,6 +714,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
          if (retn != 0) {
             struct ArgusRecordStruct *tns, *ns;
+            struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
 
             ns = ArgusCopyRecordStruct(argus);
 
@@ -729,7 +730,6 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
 
                if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) != NULL) {
                   if ((tns = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
-                     struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
                      if (!parser->RaMonMode && parser->ArgusReverse) {
                         int tryreverse = 0;
 
@@ -961,9 +961,49 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         }
                      }
 
+                     {
+// Test for TCP port reuse
+                        struct ArgusNetworkStruct *nnet = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
+                        struct ArgusNetworkStruct *tnet = (struct ArgusNetworkStruct *)tns->dsrs[ARGUS_NETWORK_INDEX];
+                        struct ArgusTCPObject *ntcp = NULL;
+                        struct ArgusTCPObject *ttcp = NULL;
+
+                        switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                           case ARGUS_TYPE_IPV4: {
+                              switch (flow->ip_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if ((nnet != NULL) && (tnet != NULL)) {
+                                       ntcp = &nnet->net_union.tcp;
+                                       ttcp = &tnet->net_union.tcp;
+                                    }
+                                 }
+                              }
+                              break;
+                           }
+
+                           case ARGUS_TYPE_IPV6: {
+                              switch (flow->ipv6_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if ((nnet != NULL) && (tnet != NULL)) {
+                                       ntcp = &nnet->net_union.tcp;
+                                       ttcp = &tnet->net_union.tcp;
+                                    }
+                                 }
+                              }
+                              break;
+                           }
+                        }
+                        if (ntcp && ttcp) {
+                           if (((ttcp->status & 0x0F) == 0x0F) && (ntcp->status & ARGUS_SAW_SYN)) {
+                              if (ntcp->status & ARGUS_PORT_REUSE) {
+                                 RaSendArgusRecord(tns);
+                              }
+                           }
+                        }
+                     }
+
                      if (tns->status & ARGUS_RECORD_WRITTEN) {
                         ArgusZeroRecord (tns);
-
                      } else {
                         if ((agg->statusint > 0) || (agg->idleint > 0)) {   // if any timers, need to flush if needed
                            double dur, nsst, tnsst, nslt, tnslt;
@@ -985,6 +1025,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                  ArgusZeroRecord(tns);
                               }
                            }
+
                         }
                      }
 
