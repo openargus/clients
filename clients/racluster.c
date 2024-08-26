@@ -996,7 +996,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                         if (ntcp && ttcp) {
                            if (((ttcp->status & 0x0F) == 0x0F) && (ntcp->status & ARGUS_SAW_SYN)) {
                               if (ntcp->status & ARGUS_PORT_REUSE) {
-                                 RaSendArgusRecord(tns);
+//                               RaSendArgusRecord(tns);
                               }
                            }
                         }
