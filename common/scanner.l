@@ -346,6 +346,7 @@ corolated    return CORRELATED;
 dup          return DUP;
 ecn          return ECN;
 drop         return RETRANS;
+reuse        return REUSE;
 retrans      return RETRANS;
 outoforder   return OUTOFORDER;
 ooo          return OUTOFORDER;

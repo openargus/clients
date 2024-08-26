@@ -169,6 +169,7 @@
 #define Q_TIMEDOUT	70
 #define Q_WINSHUT	71
 #define Q_ESTABLISHED	72
+#define Q_REUSE		197
 #define Q_RETRANS	73
 #define Q_SRCRETRANS	74
 #define Q_DSTRETRANS	75

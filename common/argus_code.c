@@ -924,6 +924,7 @@ Argusgen_tcpstatustype(unsigned int proto)
    b0 = Argusgen_prototype(IPPROTO_TCP, Q_DEFAULT);
 
    switch (proto) {
+      case ARGUS_PORT_REUSE:
       case ARGUS_SRC_CONGESTED:
       case ARGUS_DST_CONGESTED:
       case ARGUS_SRC_RESET:
@@ -1978,6 +1979,10 @@ Argusgen_proto_abbrev(int proto)
 
       case Q_TIMEDOUT:
          b1 = Argusgen_causetype(ARGUS_TIMEOUT);
+         break;
+
+      case Q_REUSE:
+         b1 = Argusgen_tcpstatustype(ARGUS_PORT_REUSE);
          break;
 
       case Q_RETRANS:
@@ -4611,6 +4616,11 @@ Argusgen_tcode(int name, struct qual q)
             default:
             case Q_OR:  b1 = Argusgen_proto_abbrev(Q_OUTOFORDER); break;
          }
+         break;
+      }
+
+      case Q_REUSE: {
+         b1 = Argusgen_proto_abbrev(Q_REUSE);
          break;
       }
 
