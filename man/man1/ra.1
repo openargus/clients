@@ -1117,6 +1117,7 @@ Primitives specific to TCP flows are supported.
 \fIfin\fP,
 \fIfinack\fP,
 \fIreset\fP,
+\fIreuse\fP,
 \fIretrans\fP,
 \fIoutoforder\fP and
 \fIwinshut\fP
@@ -1331,6 +1332,7 @@ The format is:
    U      -  ICMP Unreachable event mapped to this flow
    R      -  ICMP Redirect event mapped to this flow
    T      -  ICMP Time Exceeded mapped to this flow
+    R     -  TCP port reuse seen
     *     -  Both Src and Dst loss/retransmission
     s     -  Src loss/retransmissions
     d     -  Dst loss/retransmissions
