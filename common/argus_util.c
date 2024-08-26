@@ -4640,44 +4640,6 @@ ArgusZeroRecordWithFlag (struct ArgusRecordStruct *argus, int flag)
          mar->clients = 0;
          mar->bufs = 0;
          mar->bytes = 0;
-/*
-
-struct ArgusMarStruct {
-   unsigned int status, argusid;
-   unsigned int localnet, netmask;
-   unsigned int nextMrSequenceNum; 
-   struct ArgusTime startime, now;
-
-   unsigned char  major_version, minor_version; 
-   unsigned char interfaceType, interfaceStatus;
-
-   unsigned short reportInterval, argusMrInterval;
-   unsigned long long pktsRcvd, bytesRcvd;
-   long long drift;
-
-   unsigned int records, flows, dropped;
-   unsigned int queue, output, clients;
-   unsigned int bufs, bytes;
-   unsigned short suserlen, duserlen;
-
-   union {
-      unsigned int value;
-      unsigned int ipv4;
-      unsigned char ethersrc[6];
-      unsigned char str[4];
-      unsigned char uuid[16];
-      unsigned int ipv6[4];
-
-      struct {
-         unsigned int pad[3];
-         unsigned int thisid;
-      };
-   };
-
-   unsigned int record_len;
-};
-*/
-
          break;
       }
 
@@ -8860,6 +8822,9 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
                                     struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
                                     unsigned int status = tcp->status;
 
+                                    if (status & ARGUS_PORT_REUSE) {
+                                       buf[3] =  'R';
+                                    } else
                                     if (status & ARGUS_PKTS_RETRANS) {
                                        if ((status & ARGUS_SRC_PKTS_RETRANS) && (status & ARGUS_DST_PKTS_RETRANS))
                                           buf[3] =  '*';
@@ -8973,6 +8938,9 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
                               case  IPPROTO_TCP: {
                                  if (net != NULL) {
                                     struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                                    if (tcp->status & ARGUS_PORT_REUSE) {
+                                       buf[3] =  'R';
+                                    } else
                                     if (tcp->src.status & ARGUS_PKTS_RETRANS) {
                                        if ((tcp->status & ARGUS_SRC_PKTS_RETRANS) && (tcp->status & ARGUS_DST_PKTS_RETRANS))
                                           buf[3] =  '*';
