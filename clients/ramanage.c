@@ -39,10 +39,13 @@
 #include <sys/syslog.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <zlib.h>
 #include <utime.h>
 #include <libgen.h>
 #include <unistd.h>
+
+#ifdef HAVE_ZLIB_H
+#include <zlib.h>
+#endif
 
 #ifdef HAVE_LIBCARES
 # ifdef HAVE_NETDB_H
@@ -764,6 +767,7 @@ __parse_network_address(const char * const src, struct sockaddr_storage *dst)
    return 0;
 }
 
+#ifdef HAVE_ZLIB_H
 /* __gzip() returns 0 on success, -1 otherwise. */
 static int
 __gzip(const char * const filename, const char * const gzfilename,
@@ -846,6 +850,7 @@ __gzip(const char * const filename, const char * const gzfilename,
    fclose(fp);
    return gzerr;
 }
+#endif
 
 #ifdef HAVE_LIBCURL
 # include <curl/curl.h>
@@ -1476,6 +1481,8 @@ RamanageConfigure(struct ArgusParserStruct * const parser,
    return 0;
 }
 
+
+#ifdef HAVE_ZLIB_H
 static int
 RamanageCompress(const struct ArgusParserStruct * const parser,
                  struct ArgusFileInput **filvec, size_t filcount,
@@ -1563,6 +1570,7 @@ RamanageCompress(const struct ArgusParserStruct * const parser,
    ArgusFree(buf);
    return 0;
 }
+#endif
 
 static int
 RamanageUpload(const struct ArgusParserStruct * const parser,
@@ -2074,12 +2082,14 @@ main(int argc, char **argv)
    }
 #endif
 
+#ifdef HAVE_ZLIB_H
    if (cmdmask & RAMANAGE_CMDMASK_COMPRESS) {
       cmdres = RamanageCompress(parser, &filvec[filindex], filcount,
                                 &global_config);
       if (cmdres)
          goto out;
    }
+#endif
    if (cmdmask & RAMANAGE_CMDMASK_UPLOAD) {
       cmdres = RamanageUpload(parser, &filvec[filindex], filcount,
                               &global_config);
