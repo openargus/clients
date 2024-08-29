@@ -5606,7 +5606,7 @@ $as_echo "no" >&6; }
          fi
 
          ARGUS_MYSQL_MAKEFILE="yes"
-         ARGUS_MYSQL="ramysql"
+         ARGUS_MYSQL="ramysql rahosts"
 
 
 

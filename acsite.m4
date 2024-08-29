@@ -910,7 +910,7 @@ ARGUS_MYSQL_MAKEFILE=no
          fi
 
          ARGUS_MYSQL_MAKEFILE="yes"
-         ARGUS_MYSQL="ramysql"
+         ARGUS_MYSQL="ramysql rahosts"
          AC_SUBST(MYSQL_LDFLAGS)
          AC_SUBST(MYSQL_INCLS)
          AC_SUBST(ARGUS_MYSQL)
