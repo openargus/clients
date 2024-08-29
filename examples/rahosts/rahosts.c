@@ -77,7 +77,7 @@ char **RaTables = NULL;
 extern int ArgusTimeRangeStrategy;
 
 void ArgusProcessAddressData(struct ArgusParserStruct *, char *, char *, char *, char *, char *, char *, char *);
-int RaHostsPrintTreeEntries (struct RaAddressStruct *);
+int RaHostsCountTreeEntries (struct RaAddressStruct *);
 void RaHostsPrintTreeContents (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int, int);
 char *RaHostsPrintTreeLabeler(struct RaAddressStruct *, int *, char *, int);
 int ArgusRaHostsHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
@@ -1449,7 +1449,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          nadp->count = 1;
       }
 
-      RaMySQLInit();
+      if (ArgusParser->ArgusWfileList != NULL) {
+         RaMySQLInit();
 
 
 // so we've been given a time filter, so we have a start and end time
@@ -1461,160 +1462,161 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 // So the actual table, datatbase, etc..., were set in the RaMySQLInit()
 // call so we can test some values here.
 // 
-      RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
+         RaTables = ArgusCreateSQLTimeTableNames(parser, RaTable);
 
-      if (RaTables == NULL) {
-         char *sptr, *str = NULL, *base = NULL;
-         char *year = NULL, *month = NULL;
-         int n = 0;
+         if (RaTables == NULL) {
+            char *sptr, *str = NULL, *base = NULL;
+            char *year = NULL, *month = NULL;
+            int n = 0;
 
-         if (RaTable != NULL) {
-            sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
-            str = strdup(ArgusSQLTableNameBuf);
-
-         } else {
-            if (RaDatabase == NULL) {
-               RaDatabase = strdup("inventory");
-            }
-
-            if (strcmp(RaDatabase, "inventory") == 0) {
-               struct timeval now;
-               struct tm tmval;
-               gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
-               strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
+            if (RaTable != NULL) {
+               sprintf (ArgusSQLTableNameBuf, "%s", RaTable);
                str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
 
-            } else
-            if (strcmp(RaDatabase, "ipMatrix") == 0) {
-               struct timeval now;
-               struct tm tmval;
-               gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
-               strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
-               str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
+            } else {
+               if (RaDatabase == NULL) {
+                  RaDatabase = strdup("inventory");
+               }
 
-            } else
-            if (strcmp(RaDatabase, "dnsMatrix") == 0) {
-               struct timeval now;
-               struct tm tmval;
-               gettimeofday (&now, 0L);
-               localtime_r(&now.tv_sec, &tmval);
-               strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
-               str = strdup(ArgusSQLTableNameBuf);
-               *ArgusSQLTableNameBuf = '\0';
-            }
-         }
+               if (strcmp(RaDatabase, "inventory") == 0) {
+                  struct timeval now;
+                  struct tm tmval;
+                  gettimeofday (&now, 0L);
+                  localtime_r(&now.tv_sec, &tmval);
+                  strftime (ArgusSQLTableNameBuf, 256, "ipAddrs_%Y_%m_%d", &tmval);
+                  str = strdup(ArgusSQLTableNameBuf);
+                  *ArgusSQLTableNameBuf = '\0';
 
-         if (str != NULL) {
-            if ((RaTables = ArgusCalloc(sizeof(void *), 5)) == NULL)
-               ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
+               } else
+               if (strcmp(RaDatabase, "ipMatrix") == 0) {
+                  struct timeval now;
+                  struct tm tmval;
+                  gettimeofday (&now, 0L);
+                  localtime_r(&now.tv_sec, &tmval);
+                  strftime (ArgusSQLTableNameBuf, 256, "ip_%Y_%m_%d", &tmval);
+                  str = strdup(ArgusSQLTableNameBuf);
+                  *ArgusSQLTableNameBuf = '\0';
 
-            while ((sptr = strsep(&str, "_")) != NULL) {
-               switch (n++) {
-                  case 0:  base = strdup(sptr); break;
-                  case 1:  year = strdup(sptr); break;
-                  case 2:  month = strdup(sptr); break;
+               } else
+               if (strcmp(RaDatabase, "dnsMatrix") == 0) {
+                  struct timeval now;
+                  struct tm tmval;
+                  gettimeofday (&now, 0L);
+                  localtime_r(&now.tv_sec, &tmval);
+                  strftime (ArgusSQLTableNameBuf, 256, "dns_%Y_%m_%d", &tmval);
+                  str = strdup(ArgusSQLTableNameBuf);
+                  *ArgusSQLTableNameBuf = '\0';
                }
             }
 
-            RaTables[0] = strdup(ArgusSQLTableNameBuf);
+            if (str != NULL) {
+               if ((RaTables = ArgusCalloc(sizeof(void *), 5)) == NULL)
+                  ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
-            if (str != NULL) free(str);
-            if (base != NULL) free(base);
-            if (year != NULL) free(year);
-            if (month != NULL) free(month);
-#ifdef ARGUSDEBUG
-            ArgusDebug (2, "%s: opening tables %s, %s, %s", __func__, RaTables[0], RaTables[1], RaTables[2]);
-#endif
-         }
-      }
-
-      bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
-
-      if (RaTables != NULL) {
-         tableIndex = 0;
-         retn = -1;
-         while ((table = RaTables[tableIndex]) != NULL) {
-            tableIndex++;
-         }
-         for (x = 0; x < tableIndex; x++) {
-            table = RaTables[x];
-            if (strcmp("Seconds", table)) {
-               sprintf (ArgusSQLStatement, "desc %s", table);
-               if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
-                  if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
-                     ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
-#ifdef ARGUSDEBUG
-                  } else {
-                     ArgusDebug (4, "%s: skip missing table %s", __func__, table);
-#endif
+               while ((sptr = strsep(&str, "_")) != NULL) {
+                  switch (n++) {
+                     case 0:  base = strdup(sptr); break;
+                     case 1:  year = strdup(sptr); break;
+                     case 2:  month = strdup(sptr); break;
                   }
-               } else {
-                  break;
                }
+
+               RaTables[0] = strdup(ArgusSQLTableNameBuf);
+
+               if (str != NULL) free(str);
+               if (base != NULL) free(base);
+               if (year != NULL) free(year);
+               if (month != NULL) free(month);
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "%s: opening tables %s, %s, %s", __func__, RaTables[0], RaTables[1], RaTables[2]);
+#endif
             }
          }
 
-         if (retn == 0) {
-            if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
-               if ((retn = mysql_num_fields(mysqlRes)) > 0) {
-                  int ind = 0;
-                  while ((row = mysql_fetch_row(mysqlRes)))
-                     ArgusTableColumnName[ind++] = strdup(row[0]);
+         bzero(&ArgusTableColumnName, sizeof (ArgusTableColumnName));
 
-                  mysql_free_result(mysqlRes);
+         if (RaTables != NULL) {
+            tableIndex = 0;
+            retn = -1;
+            while ((table = RaTables[tableIndex]) != NULL) {
+               tableIndex++;
+            }
+            for (x = 0; x < tableIndex; x++) {
+               table = RaTables[x];
+               if (strcmp("Seconds", table)) {
+                  sprintf (ArgusSQLStatement, "desc %s", table);
+                  if ((retn = mysql_real_query(RaMySQL, ArgusSQLStatement , strlen(ArgusSQLStatement))) != 0) {
+                     if (mysql_errno(RaMySQL) != ER_NO_SUCH_TABLE) {
+                        ArgusLog(LOG_ERR, "mysql_real_query error %s", mysql_error(RaMySQL));
+#ifdef ARGUSDEBUG
+                     } else {
+                        ArgusDebug (4, "%s: skip missing table %s", __func__, table);
+#endif
+                     }
+                  } else {
+                     break;
+                  }
                }
             }
 
-            if (retn > 0) {
-               int x, i = 0;
+            if (retn == 0) {
+               if ((mysqlRes = mysql_store_result(RaMySQL)) != NULL) {
+                  if ((retn = mysql_num_fields(mysqlRes)) > 0) {
+                     int ind = 0;
+                     while ((row = mysql_fetch_row(mysqlRes)))
+                        ArgusTableColumnName[ind++] = strdup(row[0]);
 
-               while (parser->RaPrintAlgorithmList[i] != NULL) {
-                 ArgusFree(parser->RaPrintAlgorithmList[i]);
-                 parser->RaPrintAlgorithmList[i] = NULL;
-                 i++;
+                     mysql_free_result(mysqlRes);
+                  }
                }
 
-               for (x = 0; (ArgusTableColumnName[x] != NULL) && (x < ARGUSSQLMAXCOLUMNS); x++) {
-                  for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-                     if (!strcmp(RaPrintAlgorithmTable[i].field, ArgusTableColumnName[x])) {
-                        if ((parser->RaPrintAlgorithmList[x] = ArgusCalloc(1, sizeof(*parser->RaPrintAlgorithm))) == NULL)
-                           ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+               if (retn > 0) {
+                  int x, i = 0;
 
-                        bcopy(&RaPrintAlgorithmTable[i], parser->RaPrintAlgorithmList[x], sizeof(*parser->RaPrintAlgorithm));
+                  while (parser->RaPrintAlgorithmList[i] != NULL) {
+                    ArgusFree(parser->RaPrintAlgorithmList[i]);
+                    parser->RaPrintAlgorithmList[i] = NULL;
+                    i++;
+                  }
+
+                  for (x = 0; (ArgusTableColumnName[x] != NULL) && (x < ARGUSSQLMAXCOLUMNS); x++) {
+                     for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
+                        if (!strcmp(RaPrintAlgorithmTable[i].field, ArgusTableColumnName[x])) {
+                           if ((parser->RaPrintAlgorithmList[x] = ArgusCalloc(1, sizeof(*parser->RaPrintAlgorithm))) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusCalloc error %s", strerror(errno));
+
+                           bcopy(&RaPrintAlgorithmTable[i], parser->RaPrintAlgorithmList[x], sizeof(*parser->RaPrintAlgorithm));
+                        }
                      }
                   }
+
+                  ArgusProcessSOptions(parser);
                }
 
-               ArgusProcessSOptions(parser);
-            }
+               if ((RaMatrixProcess = RaCursesNewProcess(parser)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
 
-            if ((RaMatrixProcess = RaCursesNewProcess(parser)) == NULL)
-               ArgusLog (LOG_ERR, "ArgusClientInit: RaCursesNewProcess error");
+               if (RaTables) {
+                  struct ArgusQueueStruct *queue;
+                  RaSQLQueryTable (RaTables[0], RaMatrixProcess);
 
-            if (RaTables) {
-               struct ArgusQueueStruct *queue;
-               RaSQLQueryTable (RaTables[0], RaMatrixProcess);
-
-               if ((queue = RaMatrixProcess->queue) != NULL) {
-                  if (queue->count > 0) {
+                  if ((queue = RaMatrixProcess->queue) != NULL) {
+                     if (queue->count > 0) {
+                     }
                   }
-               }
 
-               RaParseComplete (SIGINT);
-               found++;
+                  RaParseComplete (SIGINT);
+                  found++;
+               }
             }
          }
-      }
 
-      if (!found) {
+         if (!found) {
 #ifdef ARGUSDEBUG
-         ArgusDebug (1, "No SQL tables found ... exiting\n");
+            ArgusDebug (1, "No SQL tables found ... exiting\n");
 #endif
-         RaParseComplete(0);
+            RaParseComplete(0);
+         }
       }
    }
 }
@@ -2315,7 +2317,7 @@ RaHostsProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStru
 
 
 int
-RaHostsPrintTreeEntries (struct RaAddressStruct *node)
+RaHostsCountTreeEntries (struct RaAddressStruct *node)
 {
    int retn = 0, level = 0;
    if (node != NULL) {
@@ -2324,12 +2326,12 @@ RaHostsPrintTreeEntries (struct RaAddressStruct *node)
          return(retn);
 
       if (level >= RaHostsLabelStartTreeLevel) {
+         if (node->r) retn += RaHostsCountTreeEntries(node->r);
+         if (node->l) retn += RaHostsCountTreeEntries(node->l);
+
          if ((node->r == NULL) && (node->l == NULL))
             retn++;
       }
-
-      if (node->r) retn += RaHostsPrintTreeEntries(node->r);
-      if (node->l) retn += RaHostsPrintTreeEntries(node->l);
    }
    return(retn);
 }
@@ -2339,7 +2341,6 @@ unsigned int startseries = 0, lastseries = 0;
 char *
 RaHostsPrintTreeLabeler(struct RaAddressStruct *node, int *count, char *buf, int len)
 {
-   int print = 0, carry = 0;
    char *retn = NULL;
 
    if (node && buf && (len > 0)) {
@@ -2349,41 +2350,12 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, int *count, char *buf, int
       if ((node->r == NULL) && (node->l == NULL)) {
          *count -= 1;
 
-         if (startseries == 0) {
-            startseries = node->addr.addr[0];
-            lastseries = node->addr.addr[0];
-         } else {
-            if ((lastseries + 1) == node->addr.addr[0]) {
-               lastseries = node->addr.addr[0];
-            } else {
-               carry = 1;
-               print = 1;
-            }
+         int slen = strlen(buf);
+         if (slen > 0) {
+            snprintf (&buf[slen], len - slen, ",");
+            slen++;
          }
-         if (print || (*count == 0)) {
-            int slen = strlen(buf);
-            if (slen > 0) {
-               snprintf (&buf[slen], len - slen, ",");
-               slen++;
-            }
-            if (startseries != lastseries) {
-               if ((startseries + 1) == lastseries)
-                  snprintf (&buf[slen], len - slen, "%s,", intoa(startseries));
-               else
-                  snprintf (&buf[slen], len - slen, "%s-", intoa(startseries));
-               slen = strlen(buf);
-               snprintf (&buf[slen], len - slen, "%s", intoa(lastseries));
-            } else {
-               snprintf (&buf[slen], len - slen, "%s", intoa(startseries));
-            }
-            if (carry) {
-               startseries = node->addr.addr[0];
-               lastseries = node->addr.addr[0];
-            } else {
-               startseries = 0;
-               lastseries = 0;
-            }
-         }
+         snprintf (&buf[slen], len - slen, "%s,", intoa(node->addr.addr[0]));
       }
       retn = buf;
    }
@@ -2432,7 +2404,7 @@ RaHostsPrintTreeContents (struct ArgusLabelerStruct *labeler, struct RaAddressSt
                   }
 
                   if (node->labeler && node->labeler->ArgusAddrTree) {
-                     if ((count = RaHostsPrintTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
+                     if ((count = RaHostsCountTreeEntries(node->labeler->ArgusAddrTree[AF_INET])) > 0) {
                         int tcount = count;
                         startseries = 0; lastseries = 0;
                         hoststring = strdup(RaHostsPrintTreeLabeler(node->labeler->ArgusAddrTree[AF_INET], &tcount, RaHostsAddressList, RAHOSTSADDRESSLIST));
