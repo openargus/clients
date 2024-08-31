@@ -1,0 +1,261 @@
+#!@V_PERL@
+# 
+#  Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+#  Copyright (c) 2000-2024 QoSient, LLC
+#  All rights reserved.
+# 
+#  THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+#  AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+#  EXPRESS PERMISSION OF QoSIENT, LLC.
+# 
+#  QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+#  SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+#  AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+#  SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+#  IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+#  ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+#  THIS SOFTWARE.
+#
+#  
+#   ra() based host use report
+#  
+#  $Id: //depot/gargoyle/clients/examples/raports/raports.pl#5 $
+#  $DateTime: 2014/10/07 15:00:33 $
+#  $Change: 2938 $
+# 
+
+#
+# Complain about undeclared variables
+
+use v5.6.0;
+use strict;
+
+local $ENV{PATH} = "$ENV{PATH}:/bin:/usr/bin:/usr/local/bin";
+
+# Used modules
+use POSIX;
+use POSIX qw(strftime);
+use URI::URL;
+use DBI;
+
+use Time::Local;
+use File::DosGlob qw/ bsd_glob /;
+use File::Temp qw/ tempfile tempdir /;
+use File::Which qw/ which /;
+use qosient::XS::util; # parsetime
+
+# Global variables
+my $VERSION = "5.0.3";
+my $done    = 0;
+my $debug   = 0;
+my $dryrun  = 0;
+my $drop    = 0;
+my $time;
+my $archive;
+my $scheme;
+my $netloc;
+my $path;
+
+my $raports = which 'raports';
+
+my @dates;
+
+my $f;
+my $fname;
+($f,  $fname)   = tempfile();
+
+my ($val, $stime, $etime);
+my ($user, $pass, $host, $port, $space, $db, $table);
+my $dbh;
+
+# Parse the arguments if any
+
+my @arglist;
+ARG: while (my $arg = shift(@ARGV)) {
+  if (!$done) {
+     for ($arg) {
+         s/^-D$//      && do { $debug = shift(@ARGV); next ARG; };
+         s/^-debug$//  && do { $debug++; next ARG; };
+         s/^-dryrun$// && do { $dryrun++; next ARG; };
+         s/^-drop$//   && do { $drop = 1; next ARG; };
+         s/^-r$//      && do { $archive = shift(@ARGV); next ARG; };
+         s/^-t$//      && do { $time = shift(@ARGV); next ARG; };
+         s/^-time$//   && do { $time = shift(@ARGV); next ARG; };
+     }
+  } else {
+      for ($arg) {
+         s/\(/\\\(/        && do { ; };
+         s/\)/\\\)/        && do { ; };
+      }
+  }
+  $arglist[@arglist + 0] = $arg;
+}
+
+
+if ((not defined $time) || ($time eq "-1d") || ($time eq "Today")) {
+   $time = RaTodaysDate();
+}
+
+RaPortsDailyProcessParameters($fname);
+RaPortsDailyRunRoutines($fname);
+RaPortsDailyCleanUp($fname);
+exit;
+
+sub RaPortsDailyProcessParameters {
+  if (defined $time) {
+    ($val, $stime, $etime) = qosient::XS::util::ArgusParseTime($time);
+    print "DEBUG: RaCalendarProcessParameters: time:'$time' val:'$val' stime:'$stime' etime:'$etime'\n" if $debug;
+
+    @dates =  RaPortsDailyGetDates($stime,$etime);
+  }
+
+  if (not defined ($archive)) {
+    $archive = "/home/argus/uploads/\$sid/\$inf/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S";
+  }
+  print "DEBUG: raportsdaily: archive: $archive\n" if $debug;
+ 
+  $archive =~ s/\/%d\/.*/\/%d/;
+  my @dirs = split ( /(\/)/, $archive);
+  $archive = "";
+  foreach my $i (@dirs) {
+     if (index($i, "\$") != -1) {
+        $archive .= "*";
+     } else {
+        $archive .= $i;
+     }
+  }
+  print "DEBUG: raportsdaily: using $archive as source files.\n" if $debug;
+
+  my $uri = "mysql://root\@localhost/portsInventory";
+
+  my $url = URI::URL->new($uri);
+  $scheme = $url->scheme;
+  $netloc = $url->netloc;
+  $path   = $url->path;
+  
+  if ($netloc ne "") {
+     ($user, $host) = split /@/, $netloc;
+     if ($user =~ m/:/) {
+        ($user , $pass) = split/:/, $user;
+     }
+     if ($host =~ m/:/) {
+        ($host , $port) = split/:/, $host;
+     }
+  }
+  if ($path ne "") {
+     ($space, $db, $table)  = split /\//, $path;
+  }
+
+  print "DEBUG: DBI->connect('DBI:$scheme:;host=$host', $user, $pass)\n" if $debug;
+
+  $dbh = DBI->connect("DBI:$scheme:;host=$host", $user, $pass) || die "Could not connect to database: $DBI::errstr";
+  $dbh->do("CREATE DATABASE IF NOT EXISTS $db");
+  $dbh->do("use $db");
+}
+
+sub RaPortsDailyRunRoutines {
+   for my $i (0 .. $#dates) {
+      my $times  = $dates[$i];
+      my $date   = $times->[0];
+      my $dstime = $times->[1];
+      my @time   = localtime($dstime);
+
+      my $dbdate = $date;
+      $dbdate =~ s/\//_/g;
+
+      my $pattern = strftime $archive, @time;
+      chomp($pattern);
+
+      my $srcOptions = "-M src -w mysql://root\@localhost/portsInventory/srcPorts_$dbdate";
+      my $dstOptions = "-M dst -w mysql://root\@localhost/portsInventory/dstPorts_$dbdate";
+      my $filter     = "- tcp or udp";
+      my @files   = glob $pattern; 
+
+      print "DEBUG: raportsdaily: '$date' for date and '$pattern' for files\n" if $debug;
+
+      if ($debug > 0) {
+         $srcOptions .= " -debug ";
+         $dstOptions .= " -debug ";
+      }
+      if ($drop == 1) {
+         $srcOptions .= " -drop ";
+         $dstOptions .= " -drop ";
+      }
+
+# Drop table 'foo'. This may fail, if 'foo' doesn't exist
+# Thus we put an eval around it.
+
+      local $dbh->{RaiseError} = 0;
+      local $dbh->{PrintError} = 0;
+
+      $table = "portsInventory.srcPorts_$dbdate";
+      print "DEBUG: raportsdaily: dbh->do('DROP TABLE IF EXISTS $table')\n" if $debug;
+      if ($dryrun == 0) {
+         eval { $dbh->do("DROP TABLE IF EXISTS $table") };
+      }
+
+      $table = "portsInventory.dstPorts_$dbdate";
+      print "DEBUG: raportsdaily: dbh->do('DROP TABLE IF EXISTS $table')\n" if $debug;
+      if ($dryrun == 0) {
+         eval { $dbh->do("DROP TABLE IF EXISTS $table") };
+      }
+
+      foreach my $file (@files) {
+         if (index($file, "man") == -1) {
+            if (index($file, "evt") == -1) {
+               if (index($file, "rad") == -1) {
+                  my $cmd = $raports . " " . $srcOptions . " -R $file $filter";
+      
+                  print "DEBUG: raportsdaily: $cmd\n" if $debug;
+                  if ($dryrun == 0) {
+                     if (system($cmd) != 0) {
+                        print "raportsdaily: error: $cmd failed\n";
+                        exit -1;
+                     }
+                  }
+                  $cmd = $raports . " " . $dstOptions . " -R $file $filter";
+                  print "DEBUG: raportsdaily: $cmd\n" if $debug;
+                  if ($dryrun == 0) {
+                     if (system($cmd) != 0) {
+                        print "raportsdaily: error: $cmd failed\n";
+                        exit -1;
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}
+
+sub RaPortsDailyCleanUp {
+   my $file = shift;
+   print "DEBUG: deleting '$file'\n" if $debug;
+   unlink $file;
+}
+
+sub RaPortsDailyGetDates {
+   my $stime = shift;
+   my $etime = shift;
+   my @dates = ();
+
+   print "DEBUG: RaPortsDailyGetDates: stime $stime etime $etime\n" if $debug;
+
+   while ($stime < $etime) {
+      my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($stime);
+      my $date = sprintf("%4d/%02d/%02d", $year+1900, $mon + 1, $mday);
+      push @dates, [$date, $stime];
+      $stime += 86400;
+   }
+
+   my $dlen = scalar @dates;
+   print "DEBUG: RaPortsDailyGetDates: found $dlen values\n" if $debug;
+   return @dates;
+}
+
+sub RaTodaysDate {
+  my($day, $month, $year)=(localtime)[3,4,5];
+  return sprintf( "%04d/%02d/%02d", $year+1900, $month+1, $day);
+}
+
