@@ -1449,9 +1449,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          nadp->count = 1;
       }
 
-      if (ArgusParser->ArgusWfileList != NULL) {
+      if (ArgusParser->writeDbstr != NULL) {
          RaMySQLInit();
-
 
 // so we've been given a time filter, so we have a start and end time
 // stored in parser->startime_t && parser->lasttime_t, and we support
@@ -2355,7 +2354,7 @@ RaHostsPrintTreeLabeler(struct RaAddressStruct *node, int *count, char *buf, int
             snprintf (&buf[slen], len - slen, ",");
             slen++;
          }
-         snprintf (&buf[slen], len - slen, "%s,", intoa(node->addr.addr[0]));
+         snprintf (&buf[slen], len - slen, "%s", intoa(node->addr.addr[0]));
       }
       retn = buf;
    }

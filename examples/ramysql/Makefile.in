@@ -101,6 +101,12 @@ PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
 	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs \
 	$(INSTALLBIN)/radbaserollup
 
+SCRIPTS = radbaserollup.pl rastatus-cpustats.pl rastatus-dailylogs.pl \
+	rastatus-diskstats.pl rastatus-loadavg.pl rastatus-memstats.pl
+
+.PHONY = radbaserollup.pl rastatus-cpustats.pl rastatus-dailylogs.pl \
+	rastatus-diskstats.pl rastatus-loadavg.pl rastatus-memstats.pl
+
 all: $(PROGS)
 
 $(INSTALLBIN)/rascore: rascore.o $(LIB)
@@ -122,27 +128,27 @@ $(INSTALLBIN)/rasqlcheckconf: rasqlcheckconf.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rasqlcheckconf.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rastatus-cpustats: rastatus-cpustats.pl
-	sed 's+@PERLBIN@+$(PERL)+' rastatus-cpustats.pl > $@
+	cp rastatus-cpustats.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/rastatus-diskstats: rastatus-diskstats.pl
-	sed 's+@PERLBIN@+$(PERL)+' rastatus-diskstats.pl > $@
+	cp rastatus-diskstats.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/rastatus-dailylogs: rastatus-dailylogs.pl
-	sed 's+@PERLBIN@+$(PERL)+' rastatus-dailylogs.pl > $@
+	cp rastatus-dailylogs.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/rastatus-loadavg: rastatus-loadavg.pl
-	sed 's+@PERLBIN@+$(PERL)+' rastatus-loadavg.pl > $@
+	cp rastatus-loadavg.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/rastatus-memstats: rastatus-memstats.pl
-	sed 's+@PERLBIN@+$(PERL)+' rastatus-memstats.pl > $@
+	cp rastatus-memstats.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/radbaserollup: radbaserollup.pl
-	sed 's+@PERLBIN@+$(PERL)+' radbaserollup.pl > $@
+	cp radbaserollup.pl $@
 	chmod +x $@
 
 
@@ -190,7 +196,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)

@@ -621,6 +621,33 @@ AS_IF([test "$with_examples" != no],
       ./examples/ratimerange/Makefile
       ./examples/ratemplate/Makefile
    ])
+
+   AS_IF([test x"$PERL" != x],
+      AS_IF([test "$ARGUS_MYSQL_MAKEFILE" != no],
+         [AC_CONFIG_FILES([
+            ./examples/rahosts/raclique.pl
+            ./examples/rahosts/rahostsdaily.pl
+            ./examples/rahosts/rahostsv6.pl
+         ])
+      ])
+
+      AC_CONFIG_FILES([
+         ./examples/radark/radark.pl
+         ./examples/radbase/raipdbase.pl
+         ./examples/radecode/radecode.pl
+         ./examples/radns/radnsdb.pl
+         ./examples/ragraph/ragraph.pl
+         ./examples/ragraph/raplot.pl
+         ./examples/ramysql/radbaserollup.pl
+         ./examples/ramysql/rastatus-cpustats.pl
+         ./examples/ramysql/rastatus-dailylogs.pl
+         ./examples/ramysql/rastatus-diskstats.pl
+         ./examples/ramysql/rastatus-loadavg.pl
+         ./examples/ramysql/rastatus-memstats.pl
+         ./examples/raports/raportsdaily.pl
+         ./examples/raports/raports.pl
+      ])
+   ])
 ])
 
 AC_OUTPUT

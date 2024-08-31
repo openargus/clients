@@ -183,8 +183,31 @@ the installation strategy that we provide, all you need to do
 
    # make install
 
-If you are unsure about the standard installtion, run
 
+By default, "make install" will install the argus-clients
+programs, scripts, and configuration files into:
+   /usr/local/bin
+   /usr/local/sbin
+   /usr/local/argus
+
+This convention is a compromise between Unix, Linux, Debian, and
+MacOS, which have different philosophies regarding expected paths
+for user and system programs.
+
+Attempts are made to ensure that all scripts adhere to this
+convention, although many of the programs are developed in many
+different groups and environments, and there maybe some inconsistency 
+when working with the example programs.
+
+Please check that your scripts have valid pathnames for system programs
+and system / group configurations, which could refer to other Linux
+standard installation destinations, such as:
+   /usr/argus
+   /etc/argus
+
+
+If you are unsure about the standard installtion, run
+ 
    % make -n install
 
 to review what make will try to do.  If you would like to

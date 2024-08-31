@@ -5605,7 +5605,7 @@ $as_echo "yes" >&6; }
 $as_echo "no" >&6; }
          fi
 
-         ARGUS_MYSQL_MAKEFILE="yes"
+         ARGUS_MYSQL_MAKEFILE=yes
          ARGUS_MYSQL="ramysql rahosts"
 
 
@@ -11583,6 +11583,18 @@ fi
    ac_config_files="$ac_config_files ./examples/ramatrix/Makefile ./examples/rapath/Makefile ./examples/rapolicy/Makefile ./examples/raports/Makefile ./examples/raqsort/Makefile ./examples/rarpwatch/Makefile ./examples/raservices/Makefile ./examples/rastrip/Makefile ./examples/ratop/Makefile ./examples/ratimerange/Makefile ./examples/ratemplate/Makefile"
 
 
+   if test x"$PERL" != x; then :
+  if test "$ARGUS_MYSQL_MAKEFILE" != no; then :
+  ac_config_files="$ac_config_files ./examples/rahosts/raclique.pl ./examples/rahosts/rahostsdaily.pl ./examples/rahosts/rahostsv6.pl"
+
+
+fi
+
+      ac_config_files="$ac_config_files ./examples/radark/radark.pl ./examples/radbase/raipdbase.pl ./examples/radecode/radecode.pl ./examples/radns/radnsdb.pl ./examples/ragraph/ragraph.pl ./examples/ragraph/raplot.pl ./examples/ramysql/radbaserollup.pl ./examples/ramysql/rastatus-cpustats.pl ./examples/ramysql/rastatus-dailylogs.pl ./examples/ramysql/rastatus-diskstats.pl ./examples/ramysql/rastatus-loadavg.pl ./examples/ramysql/rastatus-memstats.pl ./examples/raports/raportsdaily.pl ./examples/raports/raports.pl"
+
+
+fi
+]
 fi
 
 cat >confcache <<\_ACEOF
@@ -12313,6 +12325,23 @@ do
     "./examples/ratop/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratop/Makefile" ;;
     "./examples/ratimerange/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratimerange/Makefile" ;;
     "./examples/ratemplate/Makefile") CONFIG_FILES="$CONFIG_FILES ./examples/ratemplate/Makefile" ;;
+    "./examples/rahosts/raclique.pl") CONFIG_FILES="$CONFIG_FILES ./examples/rahosts/raclique.pl" ;;
+    "./examples/rahosts/rahostsdaily.pl") CONFIG_FILES="$CONFIG_FILES ./examples/rahosts/rahostsdaily.pl" ;;
+    "./examples/rahosts/rahostsv6.pl") CONFIG_FILES="$CONFIG_FILES ./examples/rahosts/rahostsv6.pl" ;;
+    "./examples/radark/radark.pl") CONFIG_FILES="$CONFIG_FILES ./examples/radark/radark.pl" ;;
+    "./examples/radbase/raipdbase.pl") CONFIG_FILES="$CONFIG_FILES ./examples/radbase/raipdbase.pl" ;;
+    "./examples/radecode/radecode.pl") CONFIG_FILES="$CONFIG_FILES ./examples/radecode/radecode.pl" ;;
+    "./examples/radns/radnsdb.pl") CONFIG_FILES="$CONFIG_FILES ./examples/radns/radnsdb.pl" ;;
+    "./examples/ragraph/ragraph.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ragraph/ragraph.pl" ;;
+    "./examples/ragraph/raplot.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ragraph/raplot.pl" ;;
+    "./examples/ramysql/radbaserollup.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/radbaserollup.pl" ;;
+    "./examples/ramysql/rastatus-cpustats.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/rastatus-cpustats.pl" ;;
+    "./examples/ramysql/rastatus-dailylogs.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/rastatus-dailylogs.pl" ;;
+    "./examples/ramysql/rastatus-diskstats.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/rastatus-diskstats.pl" ;;
+    "./examples/ramysql/rastatus-loadavg.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/rastatus-loadavg.pl" ;;
+    "./examples/ramysql/rastatus-memstats.pl") CONFIG_FILES="$CONFIG_FILES ./examples/ramysql/rastatus-memstats.pl" ;;
+    "./examples/raports/raportsdaily.pl") CONFIG_FILES="$CONFIG_FILES ./examples/raports/raportsdaily.pl" ;;
+    "./examples/raports/raports.pl") CONFIG_FILES="$CONFIG_FILES ./examples/raports/raports.pl" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

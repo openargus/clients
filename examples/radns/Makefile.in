@@ -84,6 +84,8 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 SRC   =	radns.c radomain.c rasql.c
 
 PROGS = $(INSTALLBIN)/radns  $(INSTALLBIN)/radnsdb 
+SCRIPTS = radnsdb.pl
+.PHONY: radnsdb.pl
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -96,7 +98,7 @@ $(INSTALLBIN)/radns: $(OBJ) $(LIB)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/radnsdb: radnsdb.pl
-	sed 's+@PERLBIN@+$(PERL)+' radnsdb.pl > $@
+	cp radnsdb.pl $@
 	chmod +x $@
 
 CLEANFILES = $(OBJ) $(PROGS)
@@ -119,7 +121,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile config.cache config.log config.status \
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile config.cache config.log config.status \
 	    gnuc.h os-proto.h bpf_filter.c net
 
 tags: $(TAGFILES)

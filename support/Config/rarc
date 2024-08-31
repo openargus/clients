@@ -318,7 +318,7 @@ RA_ETHERNET_VENDORS="/usr/argus/wireshark.manuf.txt"
 #
 # No Commandline equivalent
 #
-#RA_DELEGATED_IP="/usr/argus/delegated-ipv4-latest"
+RA_DELEGATED_IP="/usr/argus/delegated-ipv4-latest"
 
 
 # All ra* clients can reliably connect to remote data sources.

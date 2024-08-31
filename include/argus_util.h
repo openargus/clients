@@ -1502,9 +1502,9 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTDSTOUINAME		244
    { "dmacoui", "", 7 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCMACOUI, ArgusPrintDstMacOuiAddress, ArgusPrintDstMacOuiAddressLabel, "varchar(24)", 0},
 #define ARGUSPRINTSRCMACCLASS		245
-   { "smacclass", "%s", 9 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCMACCLASS, ArgusPrintSrcMacClass, ArgusPrintSrcMacClassLabel, "int", 0},
+   { "smacclass", "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCMACCLASS, ArgusPrintSrcMacClass, ArgusPrintSrcMacClassLabel, "varchar(4)", 0},
 #define ARGUSPRINTDSTMACCLASS		246
-   { "dmacclass", "%s", 9 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTMACCLASS, ArgusPrintDstMacClass, ArgusPrintDstMacClassLabel, "int", 0},
+   { "dmacclass", "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTMACCLASS, ArgusPrintDstMacClass, ArgusPrintDstMacClassLabel, "varchar(4)", 0},
 #define ARGUSPRINTGRESRCADDR		247
    { "sgreaddr", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTGRESRCADDR, ArgusPrintGreSrcAddr, ArgusPrintGreSrcAddrLabel, "varchar(64) not null", 0},
 #define ARGUSPRINTGREDSTADDR		248

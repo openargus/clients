@@ -86,11 +86,12 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 SRC = radark.pl
 
 PROGS = $(INSTALLBIN)/radark
+SCRIPTS = radark.pl
 
 all: $(PROGS)
 
 $(INSTALLBIN)/radark: radark.pl
-	sed 's+@PERLBIN@+$(PERL)+' radark.pl > $@
+	cp radark.pl $@
 	chmod +x $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -112,7 +113,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile 
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile 
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)

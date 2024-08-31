@@ -57,17 +57,17 @@ INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@
 
 PROGS = $(INSTALLBIN)/ragraph $(INSTALLBIN)/raplot
+SCRIPTS = ragraph.pl raplot.pl
+.PHONY: ragraph.pl raplot.pl
 
 all: $(PROGS)
 
 $(INSTALLBIN)/ragraph: ragraph.pl
-	sed 's+@BINDIR@+$(DESTDIR)$(BINDIR)+' ragraph.pl | \
-	sed 's+@PERLBIN@+$(PERL)+' > $@
+	cp ragraph.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/raplot: raplot.pl
-	sed 's+@BINDIR@+$(DESTDIR)$(BINDIR)+' raplot.pl | \
-	sed 's+@PERLBIN@+$(PERL)+' > $@
+	cp raplot.pl $@
 	chmod +x $@
 
 CLEANFILES = $(PROGS)
@@ -84,7 +84,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
