@@ -47,6 +47,9 @@ include/argus_config.h
 /examples/rahisto/rahisto-updatesql
 /man/man5/ramanage.conf.5
 
+# configured perl scripts
+/examples/*/*.pl
+
 # compiled perl library
 /perllib/qosient/XS
 /perllib/swig.stamp
