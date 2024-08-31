@@ -56,12 +56,13 @@ INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@
 
 PROGS = $(INSTALLBIN)/radecode
+SCRIPTS = radecode.pl
+.PHONY: radecode.pl
 
 all: $(PROGS)
 
 $(INSTALLBIN)/radecode: radecode.pl
-	sed 's+@BINDIR@+$(DESTDIR)$(BINDIR)+' radecode.pl | \
-	sed 's+@PERLBIN@+$(PERL)+' > $@
+	cp radecode.pl $@
 	chmod +x $@
 
 CLEANFILES = $(PROGS)
@@ -78,7 +79,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)

@@ -89,6 +89,8 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 SRC = rahosts.c
 
 PROGS = $(INSTALLBIN)/rahosts $(INSTALLBIN)/rahostsdaily $(INSTALLBIN)/raclique
+SCRIPTS = raclique.pl rahostsdaily.pl rahostsv6.pl
+.PHONY: raclique.pl rahostsdaily.pl rahostsv6.pl
 
 all: $(PROGS)
 
@@ -96,11 +98,11 @@ $(INSTALLBIN)/rahosts: rahosts.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rahosts.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rahostsdaily: rahostsdaily.pl
-	sed 's+@PERLBIN@+$(PERL)+' rahostsdaily.pl > $@
+	cp rahostsdaily.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/raclique: raclique.pl
-	sed 's+@PERLBIN@+$(PERL)+' raclique.pl > $@
+	cp raclique.pl $@
 	chmod +x $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -124,7 +126,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile 
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile 
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)

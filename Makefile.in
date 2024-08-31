@@ -90,7 +90,7 @@ install: install-perl force installdirs
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/rarc $(DESTDIR)$(prefix)/argus/rarc
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/delegated-ipv4-latest $(DESTDIR)$(prefix)/argus/delegated-ipv4-latest
 	$(INSTALL) -m 0644 $(srcdir)/support/Config/wireshark.manuf.txt $(DESTDIR)$(prefix)/argus/wireshark.manuf.txt
-	$(INSTALL) -m 0644 $(srcdir)/support/Config/std.sig $(DESTDIR)@datarootdir@/argus-clients/std.sig
+	$(INSTALL) -m 0644 $(srcdir)/support/Config/std.sig $(DESTDIR)$(prefix)/argus/std.sig
 	$(INSTALL) -m 0755 $(srcdir)/bin/argusclientbug $(DESTDIR)@bindir@/argusclientbug
 	[ -d $(DESTDIR)@mandir@ ] || \
 		(mkdir -p $(DESTDIR)@mandir@; chmod 755 $(DESTDIR)@mandir@)
@@ -136,7 +136,6 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/rasort.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ramanage.1 \
 		$(DESTDIR)@mandir@/man1/ramanage.1
-ifndef WORKSTATION_BUILD
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasql.1 \
 		$(DESTDIR)@mandir@/man1/rasql.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqlcheckconf.1 \
@@ -145,7 +144,6 @@ ifndef WORKSTATION_BUILD
 		$(DESTDIR)@mandir@/man1/rasqlinsert.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rasqltimeindex.1 \
 		$(DESTDIR)@mandir@/man1/rasqltimeindex.1
-endif
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rastream.1 \
 		$(DESTDIR)@mandir@/man1/rastream.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rastrip.1 \
@@ -178,12 +176,10 @@ endif
 	$(INSTALL) -m 0644 $(srcdir)/README.rst $(DESTDIR)$(docdir)
 
 install-perl:
-ifndef WORKSTATION_BUILD
 	@set -e ; \
 	mkdir -p $(DESTDIR)$(perlextlib)/qosient ; \
 	$(INSTALL) -m 0644 $(srcdir)/lib/perl5/qosient/util.pm \
 	           $(DESTDIR)$(perlextlib)/qosient/util.pm
-endif
 
 uninstall: uninstall-perl
 	@for i in  $(INSTDIRS) ; do \
@@ -232,17 +228,15 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@datarootdir@/argus-clients/std.sig
 
 uninstall-perl:
-ifndef WORKSTATION_BUILD
 	rm -f $(DESTDIR)$(perlextlib)/qosient/util.pm
-endif
 
 installdirs:
 	${srcdir}/config/mkinstalldirs \
-	  $(DESTDIR)@sbindir@ \
-	  $(DESTDIR)@bindir@ \
-	  $(DESTDIR)@infodir@ \
-          $(DESTDIR)$(prefix)/argus \
-	  $(DESTDIR)@datarootdir@/argus-clients
+	$(DESTDIR)@sbindir@ \
+	$(DESTDIR)@bindir@ \
+	$(DESTDIR)@infodir@ \
+	$(DESTDIR)$(prefix)/argus \
+	$(DESTDIR)@datarootdir@/argus-clients
 
 Makefile: Makefile.in config.status
 	$(SHELL) config.status

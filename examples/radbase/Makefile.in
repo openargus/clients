@@ -57,12 +57,13 @@ INSTALL    = @INSTALL@
 INSTALLBIN = ../@INSTALL_BIN@
 
 PROGS = $(INSTALLBIN)/raipdbase
+SCRIPTS = raipdbase.pl
+.PHONY: raipdbase.pl
 
 all: $(PROGS)
 
 $(INSTALLBIN)/raipdbase: raipdbase.pl
-	sed 's+@BINDIR@+$(DESTDIR)$(BINDIR)+' raipdbase.pl | \
-	sed 's+@PERLBIN@+$(PERL)+' > $@
+	cp raipdbase.pl $@
 	chmod +x $@
 
 CLEANFILES = $(PROGS)
@@ -79,7 +80,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)

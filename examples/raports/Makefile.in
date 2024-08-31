@@ -86,15 +86,17 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 SRC = raports.pl raportsdaily.pl
 
 PROGS = $(INSTALLBIN)/raports $(INSTALLBIN)/raportsdaily
+SCRIPTS = raports.pl raportsdaily.pl
+.PHONY: raports.pl raportsdaily.pl
 
 all: $(PROGS)
 
 $(INSTALLBIN)/raports: raports.pl
-	sed 's+@PERLBIN@+$(PERL)+' raports.pl > $@
+	cp raports.pl $@
 	chmod +x $@
 
 $(INSTALLBIN)/raportsdaily: raportsdaily.pl
-	sed 's+@PERLBIN@+$(PERL)+' raportsdaily.pl > $@
+	cp raportsdaily.pl $@
 	chmod +x $@
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
@@ -118,7 +120,7 @@ clean:
 	rm -f $(CLEANFILES)
 
 distclean:
-	rm -f $(CLEANFILES) Makefile 
+	rm -f $(CLEANFILES) $(SCRIPTS) Makefile 
 
 tags: $(TAGFILES)
 	ctags -wtd $(TAGFILES)
