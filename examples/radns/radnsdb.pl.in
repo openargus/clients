@@ -244,21 +244,23 @@ sub RaDnsDBProcessData {
               }
 
               print "DEBUG: RaDNSDb: processing dbase:$db table:$table calling Program $Program\n" if $debug;
-              open(SESAME, "$Program |");
-              while (my $data = <SESAME>) {
-                 chomp($data);
-                 if (length($data)) {
-                    if ($data !~ /\^/) {
-                       eval {
-                          my $decoded = JSON->new->utf8->decode($data);
-                          push(@$results_ref, $decoded);
-                          print "DEBUG: RaDnsDb: push decoded: $data\n" if $debug > 1;
-                       } or do {
+              if ($dryrun == 0) {
+                 open(SESAME, "$Program |");
+                 while (my $data = <SESAME>) {
+                    chomp($data);
+                    if (length($data)) {
+                       if ($data !~ /\^/) {
+                          eval {
+                             my $decoded = JSON->new->utf8->decode($data);
+                             push(@$results_ref, $decoded);
+                             print "DEBUG: RaDnsDb: push decoded: $data\n" if $debug > 1;
+                          } or do {
+                          }
                        }
                     }
                  }
+                 close(SESAME);
               }
-              close(SESAME);
 
               my $num = scalar @results;
               if ($num > 0) {
