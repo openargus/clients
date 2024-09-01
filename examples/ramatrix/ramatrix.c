@@ -314,6 +314,19 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
    agg = ArgusParser->ArgusPathAggregator;
 
    if ((n = agg->queue->count) > 1) {
+      for (i = 0; i < n; i++) {
+         if ((argus = (void *) ArgusPopQueue(agg->queue, ARGUS_NOLOCK)) != NULL) {
+            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+            if (mac != NULL) {
+               ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_NOLOCK);         // use the agg queue as an idle timeout queue
+            } else {
+               ArgusDeleteRecordStruct (parser, argus);
+            }
+         }
+      }
+   }
+
+   if ((n = agg->queue->count) > 1) {
       double (*matrix)[n] = (double(*)[n])calloc(sizeof(double), n * n);
       double (*category)[n] = (double(*)[n])calloc(sizeof(double), n * n);
       int rank = 0;
