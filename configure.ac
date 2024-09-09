@@ -648,7 +648,7 @@ AS_IF([test "$with_examples" != no],
          ./examples/raports/raports.pl
       ])
    ])
-])
+)
 
 AC_OUTPUT
 
