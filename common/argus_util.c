@@ -10067,9 +10067,6 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
    char classbuf[32];
    int macclass = -1;
 
-   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
-      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
-
    if ((format == NULL) || (strlen(format) == 0)) {
       format = "%s";
    }
@@ -10148,9 +10145,6 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
    char *format = NULL;
    char classbuf[32];
    int macclass = -1;
-
-   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
-      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((format == NULL) || (strlen(format) == 0)) {
       format = "%s";

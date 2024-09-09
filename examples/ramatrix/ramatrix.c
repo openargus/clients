@@ -340,7 +340,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
             struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
             if (mac != NULL) {
-               char addr[64], ouiaddr[64], oui[64], pcr[64];
+               char addr[64], ouiaddr[64], oui[64], class[5], pcr[64];
                char *color = NULL, *category;
                struct enamemem *tp = NULL;
                argus->rank = rank++;
@@ -354,6 +354,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
 	       parser->ArgusPrintEthernetVendors = 1;
                ArgusPrintSrcMacAddress(parser, ouiaddr, argus, 20);
                ArgusPrintSrcOui(parser, oui, argus, 20);
+               ArgusPrintSrcMacClass(parser, class, argus, 5);
                ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
 
                if (strstr(oui, "IPv6-Neighbor-Di") != NULL) {
@@ -382,10 +383,11 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                if (color == NULL) color = "#AAAAAA";
                if (argus->rank > 0) printf (",");
 
-               printf ("{name:\"%s\", addr:\"%s\", oui:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+               printf ("{name:\"%s\", addr:\"%s\", oui:\"%s\", class:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
                          ArgusTrimString(ouiaddr), 
                          ArgusTrimString(addr), 
                          ArgusTrimString(oui),
+                         ArgusTrimString(class),
                          ArgusTrimString(pcr),
                          category, color);
 
