@@ -27270,6 +27270,10 @@ ArgusNtoH (struct ArgusRecord *argus)
                      struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
                      encaps->src = ntohl(encaps->src);
                      encaps->dst = ntohl(encaps->dst);
+                     if (encaps->hdr.argus_dsrvl8.len > 3) {
+                        encaps->slen = ntohs(encaps->slen);
+                        encaps->dlen = ntohs(encaps->dlen);
+		     }
                      break;
                   }
 
@@ -27971,6 +27975,10 @@ ArgusHtoN (struct ArgusRecord *argus)
                      struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
                      encaps->src = htonl(encaps->src);
                      encaps->dst = htonl(encaps->dst);
+                     if (encaps->hdr.argus_dsrvl8.len > 3) {
+                        encaps->slen = ntohs(encaps->slen);
+                        encaps->dlen = ntohs(encaps->dlen);
+                     }
                      break;
                   }
 

@@ -2045,8 +2045,27 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      case ARGUS_ENCAPS_DSR: {
                         struct ArgusEncapsStruct *encaps  = (struct ArgusEncapsStruct *) dsr;
                         struct ArgusEncapsStruct *cncaps = &canon->encaps;
+                        int len = encaps->hdr.argus_dsrvl8.len;
+                        int tlen = (len > 3) ? 4 : 3;
+// the structure for encaps is 3 ints of basic data, and if there is an encapsulation
+// header buffer, then the 4th int holds the sbuf and dbuf lengths. 
+// if these lengths are > 0, then allocate buffers and copy into sbuf, and dbuf ...
 
-                        bcopy((char *) encaps, (char *) cncaps, sizeof(*encaps));
+                        memcpy((char *) cncaps, (char *) encaps, tlen * 4);
+                        if (len > 3) {
+                           unsigned char *cptr = (void *) &encaps->sbuf;
+                           if (encaps->slen > 0) {
+                              int clen = encaps->slen;
+                              cncaps->sbuf = ArgusCalloc(1, clen);
+                              memcpy(cncaps->sbuf, cptr, clen);
+                              cptr += clen;
+			   }
+			   if (encaps->dlen > 0) {
+                              int clen = encaps->dlen;
+                              cncaps->dbuf = ArgusCalloc(1, clen);
+                              memcpy(cncaps->dbuf, cptr, clen);
+			   }
+			}
 
                         retn->dsrs[ARGUS_ENCAPS_INDEX] = &cncaps->hdr;
                         retn->dsrindex |= (0x01 << ARGUS_ENCAPS_INDEX);
