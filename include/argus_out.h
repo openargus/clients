@@ -765,6 +765,8 @@ struct ArgusEventTimeStruct {
 struct ArgusEncapsStruct {
    struct ArgusDSRHeader hdr;
    unsigned int src, dst;
+   unsigned short slen, dlen;
+   unsigned char *sbuf, *dbuf;
 };
 
 struct ArgusUniStats {
