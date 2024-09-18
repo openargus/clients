@@ -48,8 +48,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	253
-#define MAX_PRINT_ALG_TYPES     	253
+#define ARGUS_MAX_PRINT_ALG     	255
+#define MAX_PRINT_ALG_TYPES     	255
 
 
 #include <argus/CflowdFlowPdu.h>
@@ -684,6 +684,8 @@ void ArgusPrintInode (struct ArgusParserStruct *, char *, struct ArgusRecordStru
 void ArgusPrintByteOffset (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcEncaps (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstEncaps (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintSrcEncapsBuffer (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintDstEncapsBuffer (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcMaxPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcMinPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -955,6 +957,8 @@ void ArgusPrintDstGapLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintInodeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintByteOffsetLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcEncapsLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintDstEncapsBufferLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintSrcEncapsBufferLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstEncapsLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintMaxPktSizeLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcPktSizeLabel (struct ArgusParserStruct *, char *, int);
@@ -1517,6 +1521,10 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "dgenaddr", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTGENDSTADDR, ArgusPrintGeneveDstAddr, ArgusPrintGeneveDstAddrLabel, "varchar(64) not null", 0},
 #define ARGUSPRINTGENPROTO		252
    { "genproto", "", 6 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTGENPROTO, ArgusPrintGeneveProto, ArgusPrintGeneveProtoLabel, "varchar(16) not null", 0},
+#define ARGUSPRINTSRCENCAPSBUFFER	253
+   { "sencbuf", "", 12 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSRCENCAPSBUFFER, ArgusPrintSrcEncapsBuffer, ArgusPrintSrcEncapsBufferLabel, "varchar(32)", 0},
+#define ARGUSPRINTDSTENCAPSBUFFER	254
+   { "dencbuf", "", 12 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTENCAPSBUFFER, ArgusPrintDstEncapsBuffer, ArgusPrintDstEncapsBufferLabel, "varchar(32)", 0},
 };
 
 
