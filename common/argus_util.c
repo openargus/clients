@@ -20253,6 +20253,67 @@ ArgusPrintDstEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
 }
 
 
+void
+ArgusPrintSrcEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusEncapsStruct *encaps = NULL;
+   char ebuf[32];
+
+   bzero(ebuf, sizeof(ebuf));
+   if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
+      ArgusDump (encaps->sbuf, encaps->slen, NULL);
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " SrcEncapsBuffer = \"%s\"", ebuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(ebuf);
+      } else {
+         if (strlen(ebuf) > len) {
+            ebuf[len - 1] = '*';
+            ebuf[len]     = '\0'; 
+         }        
+      }
+      sprintf (buf, "%*.*s ", len, len, ebuf);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintSrcEncapsBuffer (%p, %p)", buf, argus);
+#endif
+}
+
+void
+ArgusPrintDstEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct ArgusEncapsStruct *encaps = NULL;
+   char ebuf[32];
+
+   bzero(ebuf, sizeof(ebuf));
+   if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
+      
+   }
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " DstEncapsBuffer = \"%s\"", ebuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(ebuf);
+      } else {
+         if (strlen(ebuf) > len) {
+            ebuf[len - 1] = '*';
+            ebuf[len]     = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, ebuf);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintDstEncapsBuffer (%p, %p)", buf, argus);
+#endif
+}
+
+
 char RaPrecisionPad[128], RaTimePad[128], RaDateBuf[128];
 
 
@@ -22079,6 +22140,18 @@ void
 ArgusPrintDstEncapsLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "dEnc");
+}
+
+void
+ArgusPrintSrcEncapsBufferLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "sEnB");
+}
+
+void
+ArgusPrintDstEncapsBufferLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "dEnB");
 }
 
 void
@@ -31807,9 +31880,9 @@ ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
 
 #define HEXDUMP_BYTES_PER_LINE 16
 #define HEXDUMP_SHORTS_PER_LINE (HEXDUMP_BYTES_PER_LINE / 2)
+#define HEXDUMP_HEXSTUFF_PER_BYTE 3  /* 2 hex digits and a space */
 #define HEXDUMP_HEXSTUFF_PER_SHORT 5 /* 4 hex digits and a space */
-#define HEXDUMP_HEXSTUFF_PER_LINE \
-                (HEXDUMP_HEXSTUFF_PER_SHORT * HEXDUMP_SHORTS_PER_LINE)
+#define HEXDUMP_HEXSTUFF_PER_LINE (HEXDUMP_HEXSTUFF_PER_BYTE * HEXDUMP_BYTES_PER_LINE)
 
 
 void
@@ -31826,39 +31899,36 @@ ArgusDump (const u_char *cp, int length, char *prefix)
 {
    u_int oset = 0;
    register u_int i;
-   register int s1, s2;
-   register int nshorts;
-   char hexstuff[HEXDUMP_SHORTS_PER_LINE*HEXDUMP_HEXSTUFF_PER_SHORT+1], *hsp;
+   register int s1;
+   register int nbytes;
+   char hexstuff[HEXDUMP_BYTES_PER_LINE*HEXDUMP_HEXSTUFF_PER_BYTE+1], *hsp;
    char asciistuff[HEXDUMP_BYTES_PER_LINE+1], *asp;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "ArgusDump(0x%x, %d)", cp, length);
 #endif
 
-   nshorts = length / sizeof(u_short);
+   nbytes = length;
    i = 0;
    hsp = hexstuff; asp = asciistuff;
-   while (--nshorts >= 0) {
-           s1 = *cp++;
-           s2 = *cp++;
-           (void)snprintf(hsp, sizeof(hexstuff) - (hsp - hexstuff),
-               " %02x%02x", s1, s2);
-           hsp += HEXDUMP_HEXSTUFF_PER_SHORT;
-           *(asp++) = (isgraph(s1) ? s1 : '.');
-           *(asp++) = (isgraph(s2) ? s2 : '.');
-           if (++i >= HEXDUMP_SHORTS_PER_LINE) {
-               *hsp = *asp = '\0';
-               if (prefix != NULL)
-                  (void)printf("\n%s0x%04x\t%-*s\t%s", prefix,
+   while (--nbytes >= 0) {
+      s1 = *cp++;
+      (void)snprintf(hsp, sizeof(hexstuff) - (hsp - hexstuff), " %02x", s1);
+      hsp += HEXDUMP_HEXSTUFF_PER_BYTE;
+      *(asp++) = (isgraph(s1) ? s1 : '.');
+      if (++i >= HEXDUMP_BYTES_PER_LINE) {
+         *hsp = *asp = '\0';
+         if (prefix != NULL)
+            (void)printf("\n%s%06x\t%-*s\t%s", prefix,
                             oset, HEXDUMP_HEXSTUFF_PER_LINE,
                             hexstuff, asciistuff);
-               else
-                  (void)printf("\n0x%04x\t%-*s\t%s",
+         else
+            (void)printf("\n%06x\t%-*s\t%s",
                             oset, HEXDUMP_HEXSTUFF_PER_LINE,
                             hexstuff, asciistuff);
-               i = 0; hsp = hexstuff; asp = asciistuff;
-               oset += HEXDUMP_BYTES_PER_LINE;
-           }
+         i = 0; hsp = hexstuff; asp = asciistuff;
+         oset += HEXDUMP_BYTES_PER_LINE;
+      }
    }
    if (length & 1) {
       s1 = *cp++;
@@ -31870,11 +31940,11 @@ ArgusDump (const u_char *cp, int length, char *prefix)
    if (i > 0) {
       *hsp = *asp = '\0';
       if (prefix != NULL)
-         (void)printf("\n%s0x%04x\t%-*s\t%s", prefix,
+         (void)printf("\n%s%06x\t%-*s\t%s", prefix,
                         oset, HEXDUMP_HEXSTUFF_PER_LINE,
                         hexstuff, asciistuff);
       else
-         (void)printf("\n0x%04x\t%-*s\t%s",
+         (void)printf("\n%06x\t%-*s\t%s",
                         oset, HEXDUMP_HEXSTUFF_PER_LINE,
                         hexstuff, asciistuff);
    }
@@ -34348,9 +34418,8 @@ bittok2str(const struct tok *lp, const char *fmt, int v)
 
 #define ASCII_LINELENGTH		300
 #define HEXDUMP_BYTES_PER_LINE		16
-#define HEXDUMP_SHORTS_PER_LINE		(HEXDUMP_BYTES_PER_LINE / 2)
-#define HEXDUMP_HEXSTUFF_PER_SHORT	5
-#define HEXDUMP_HEXSTUFF_PER_LINE	(HEXDUMP_HEXSTUFF_PER_SHORT * HEXDUMP_SHORTS_PER_LINE)
+#define HEXDUMP_HEXSTUFF_PER_BYTE	3
+#define HEXDUMP_HEXSTUFF_PER_LINE	(HEXDUMP_HEXSTUFF_PER_BYTE * HEXDUMP_BYTES_PER_LINE)
 
 void
 hex_print_with_offset(const u_char *ident, const u_char *cp, u_int length, u_int oset)
