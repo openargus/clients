@@ -157,12 +157,12 @@ my $racluster    = which 'racluster';
 my $rasqlinsert  = which 'rasqlinsert';
 
 my @db1 = ( "inventory", "ipAddrs", "smac saddr sid inf", "stime dur sid inf smac saddr sco spkts dpkts sbytes dbytes pcr state trans");
-my @db2 = ( "ipMatrix", "ip", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db2 = ( "ipMatrix", "ip", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db3 = ( "dnsMatrix", "dns", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db4 = ( "etherMatrix", "ether", "dmac smac sid inf", "stime dur sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
-my @db5 = ( "ntpMatrix", "ntp", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db6 = ( "ldapMatrix", "ldap", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
-my @db7 = ( "arpMatrix", "arg", "daddr saddr sid inf", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db4 = ( "etherMatrix", "ether", "sid inf macmatrix", "stime dur sid inf smac dmac spkts dpkts sbytes dbytes pcr trans");
+my @db5 = ( "ntpMatrix", "ntp", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db6 = ( "ldapMatrix", "ldap", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
+my @db7 = ( "arpMatrix", "arg", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db8 = ( "ether", "ether", "smac etype sid inf", "stime dur sid inf smac smacclass etype spkts dpkts sbytes dbytes pcr trans state");
 
 #my @databases = \(@db1, @db2);
@@ -187,7 +187,7 @@ foreach my $i (0 .. $#databases) {
          my ($class, $year, $month) = split('_', $tbl);
 
          print "DEBUG: process db:$dbase year:$year month:$month tbl:$tbl keys:$keys fields:$fields\n" if $debug;
-	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m_%d -M time 1d -t ".$year."/".$month."/01+1M -M nocorrect -w - | $racluster -m $keys -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
+	 my $cmd = "$rasql -Xr mysql://root\@localhost/".$dbase."/".$class."_%Y_%m_%d -M time 1d -t ".$year."/".$month."/01+1M -M nocorrect -w - | $racluster -X -m $keys -M nocorrect -w - | $rasqlinsert -XM drop nocorrect -m $keys -w mysql://root\@localhost/$dbase/$tbl -s ".$fields;
 
          print "DEBUG: $cmd \n" if $debug;
          if ($dryrun == 0) {
