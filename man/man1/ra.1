@@ -145,6 +145,7 @@ are:
          -M dsrs=-suser,-duser
 
    eframe=<int>     - set ethernet framing adjust for packet byte count.
+   json             - print output in json format
    label="regex"    - match flow label with regex(3) regular expression.
    lock[=nonblock]  - aquire an exclusive record lock on output file(s).
    man              - print management records
@@ -526,13 +527,13 @@ source interpacket arrival time distribution
 source active interpacket arrival time (mSec)
 .TP
 .B sintdistact
-source active interpacket arrival time (mSec)
+source active interpacket arrival time distribution
 .TP
 .B sintpktidl
 source idle interpacket arrival time (mSec)
 .TP
 .B sintdistidl
-source idle interpacket arrival time (mSec)
+source idle interpacket arrival time distribution
 .TP
 .B dintpkt
 destination interpacket arrival time (mSec)
@@ -1267,9 +1268,16 @@ transaction data from \fIstdin\fP:
 Read an \fIargus-file\fP at twice normal speed.
 .RS
 .nf
-\fBra -r argus.file -M rtime:2
+\fBra -r argus.file -M rtime:2\fP
 .fi
-
+.RE
+.LP
+Write \fBra\fP output in standard formats other than space separated columns.
+.RS
+.nf
+\fBra -r argus.file -M json\fP
+\fBra -r argus.file -M xml\fP
+.fi
 .RE
 .br
 .SH OUTPUT FORMAT
@@ -1277,12 +1285,13 @@ Read an \fIargus-file\fP at twice normal speed.
 The following is a brief description of the default output of .B ra.
 While this is by no means the 'preferred' set of data that one should
 generate, it represents a starting point for using flow data in general.
-This also looks pretty good on 80 column terminals.  The format is:
+This also looks pretty good on 80 column terminals.  The standard 5-tuple
+flow format is:
 .RE
 .RS
 .nf
 .sp .1
-\fI  time  flgs proto  shost  dir  daddr metrics state\fP
+\fI  time flgs proto saddr.sport dir daddr.dport pkts bytes state\fP
 .sp .1
 .fi
 .RE
@@ -1294,7 +1303,7 @@ syntax supported by the routine
 The default is '%T'.
 .B Argus
 transactional data contains both starting and ending transaction times,
-with precision to the microsecond. However,
+with precision down to the nanosecond. However,
 .B ra
 by default prints out the 'stime' field, the records starting time.
 .TP 4 4
@@ -1512,6 +1521,7 @@ specific aspects of the ICMP type.  ICMP state can have the values:
 \fBNNA\fP     Neighbor Discovery Neighbor Advertisement
 \fBPTB\fP     Packet Too Big
 .fi
+
 
 .LP
 .br
