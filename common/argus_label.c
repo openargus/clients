@@ -452,7 +452,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                            char *sptr, *fptr, *tptr;
                            int ind = 0, x;
 
-                           bzero(labeler->RaLabelGeoIPCityLabels, sizeof(labeler->RaLabelGeoIPCityLabels));
+                           bzero(labeler->RaLabelGeoIPLabels, sizeof(labeler->RaLabelGeoIPLabels));
 
                            if ((tptr = strchr(optarg, ':')) != NULL) {
                               *tptr++ = '\0';
@@ -495,10 +495,38 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
 
 #if defined(ARGUS_GEOIP2)
                      case RALABEL_GEOIP_ASN:
-                        if (!(strncasecmp(optarg, "yes", 3))) {
-                           labeler->RaLabelGeoIPAsn = 1;
-                        } else {
+                        if (!(strncasecmp(optarg, "no", 3))) {
                            labeler->RaLabelGeoIPAsn = 0;
+                        } else {
+                           char *sptr, *fptr, *tptr;
+                           int ind = 0;
+                           int maxlabels = sizeof(labeler->RaLabelGeoIPAsnLabels)/
+                                           sizeof(labeler->RaLabelGeoIPAsnLabels[0]);
+
+                           bzero(labeler->RaLabelGeoIPAsnLabels, sizeof(labeler->RaLabelGeoIPAsnLabels));
+
+                           if ((tptr = strchr(optarg, ':')) != NULL) {
+                              *tptr++ = '\0';
+
+                              while ((fptr = strtok(optarg, ",")) != NULL) {
+                                 if (!strncmp(fptr, "*", 1))     labeler->RaLabelGeoIPAsn |= ARGUS_ADDR_MASK; else
+                                 if (!strncmp(fptr, "saddr", 5)) labeler->RaLabelGeoIPAsn |= ARGUS_SRC_ADDR; else
+                                 if (!strncmp(fptr, "daddr", 5)) labeler->RaLabelGeoIPAsn |= ARGUS_DST_ADDR; else
+                                 if (!strncmp(fptr, "inode", 5)) labeler->RaLabelGeoIPAsn |= ARGUS_INODE_ADDR;
+                                 optarg = NULL;
+                              }
+                           } else
+                              labeler->RaLabelGeoIPAsn |= ARGUS_ADDR_MASK;
+
+                           while ((sptr = strtok(tptr, ",")) != NULL && ind < maxlabels) {
+                              int obidx = ArgusGeoIP2FindObject(sptr);
+
+                              tptr = NULL;
+                              if (obidx >= 0) {
+                                 labeler->RaLabelGeoIPAsnLabels[ind] = obidx;
+                                 ind++;
+                              }
+                           }
                         }
                         break;
 
@@ -508,9 +536,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         int status = MMDB_open(optarg, MMDB_MODE_MMAP, &labeler->RaGeoIPAsnObject);
 
                         if (status != MMDB_SUCCESS) {
-                           ArgusLog(LOG_ERR,
-                                    "%s: failed to open GeoIP2 ASN database: %s\n",
-                                    __func__, MMDB_strerror(status));
+                           ArgusLog(LOG_ERR, "%s: failed to open GeoIP2 ASN database: %s\n", __func__, MMDB_strerror(status));
                         }
                         break;
                      }
@@ -536,8 +562,10 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                                  if (!strncmp(fptr, "inode", 5)) labeler->RaLabelGeoIPCity |= ARGUS_INODE_ADDR;
                                  optarg = NULL;
                               }
-                           } else
+                           } else {
                               labeler->RaLabelGeoIPCity |= ARGUS_ADDR_MASK;
+                              tptr = optarg;
+                           }
 
                            while ((sptr = strtok(tptr, ",")) != NULL && ind < maxlabels) {
                               int obidx = ArgusGeoIP2FindObject(sptr);
@@ -2981,9 +3009,12 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    char *str, *ptr;
    char labelbuf[256], *label = NULL;
    int retn = 1, fhl = 0;
-// int linenum = 0;
    char *banner = NULL;
    FILE *fd =  NULL;
+
+#ifdef ARGUSDEBUG
+   int linenum = 0;
+#endif
 
    if (labeler != NULL) {
       if (labeler->ArgusAddrTree == NULL)
@@ -3006,7 +3037,9 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
             ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusMalloc error %s\n", strerror(errno));
 
          while ((ptr = fgets (str, bufsize, fd)) != NULL) {
-//          linenum++;
+#ifdef ARGUSDEBUG
+            linenum++;
+#endif
             while (isspace((int)*ptr)) ptr++;
             switch (*ptr) {
                case '#': {
@@ -3045,17 +3078,19 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
                }
 
                default: {
-                  if (strchr(ptr, '|')) {
-                     RaInsertRIRTree (parser, labeler, ptr);
-                  } else {
-                     if ((!strcmp(ptr, "0.0.0.0/8\n") && (fhl >= 1)) ||
-                         (!strcmp(ptr, "10.0.0.0/8\n") && (fhl >= 1)) ||
-                         (!strcmp(ptr, "127.0.0.0/8\n") && (fhl >= 1)) ||
-                         (!strcmp(ptr, "169.254.0.0/16\n") && (fhl >= 1)) ||
-                         (!strcmp(ptr, "192.168.0.0/16\n") && (fhl >= 1)) ||
-                         (!strcmp(ptr, "224.0.0.0/3\n") && (fhl >= 1))) {
-		     } else
-                        RaInsertAddressTree (parser, labeler, ptr, label);
+                  if (strlen(ptr) > 0) {
+                     if (strchr(ptr, '|')) {
+                        RaInsertRIRTree (parser, labeler, ptr);
+                     } else {
+                        if ((!strcmp(ptr, "0.0.0.0/8\n") && (fhl >= 1)) ||
+                            (!strcmp(ptr, "10.0.0.0/8\n") && (fhl >= 1)) ||
+                            (!strcmp(ptr, "127.0.0.0/8\n") && (fhl >= 1)) ||
+                            (!strcmp(ptr, "169.254.0.0/16\n") && (fhl >= 1)) ||
+                            (!strcmp(ptr, "192.168.0.0/16\n") && (fhl >= 1)) ||
+                            (!strcmp(ptr, "224.0.0.0/3\n") && (fhl >= 1))) {
+		        } else
+                           RaInsertAddressTree (parser, labeler, ptr, label);
+                     }
                   }
                   break;
                }

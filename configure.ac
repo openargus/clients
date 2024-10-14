@@ -408,7 +408,9 @@ if test "$have_cygwin" = yes ; then
 fi
 
 AC_QOSIENT_LIBMAXMINDDB
-AC_QOSIENT_GEOIP(V_GEOIPDEP, V_INCLS)
+if test "x$LIBMAXMINDDB_LIBS" = "x"; then
+   AC_QOSIENT_GEOIP(V_GEOIPDEP, V_INCLS)
+fi
 
 AC_CACHE_CHECK([tm_gmtoff in struct tm], tcl_cv_member_tm_gmtoff, [
    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <time.h>]], [[struct tm tm; tm.tm_gmtoff;]])],[tcl_cv_member_tm_gmtoff=yes],[tcl_cv_member_tm_gmtoff=no])])
