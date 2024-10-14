@@ -503,7 +503,7 @@ AC_DEFUN([AC_QOSIENT_FLOWTOOLS], [
    AC_ARG_WITH(libft,
             [AS_HELP_STRING([--with-libft=DIR],[Compile with libft in <DIR>])],
             with_libft="$withval",
-            with_libft="yes")
+            with_libft="no")
    dnl
    dnl save a copy before locating libft.a
    dnl
@@ -1974,14 +1974,14 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
                [AS_HELP_STRING([--with-libmaxminddb],
                                [Build with libmaxminddb for GeoIP2 labeling])],
                [with_libmaxminddb="$withval"],
-               [with_libmaxminddb="no"])
+               [with_libmaxminddb="yes"])
 
    if test x$with_geoip = "xyes"; then
       AC_MSG_RESULT([cannot compile with both libmaxminddb and GeoIP])
    else
       if test "x$with_libmaxminddb" = "xyes"; then
          PKG_CHECK_MODULES([LIBMAXMINDDB],
-                           [libmaxminddb >= 1.2.0],
+                           [libmaxminddb >= 1.4.0],
                            AC_DEFINE([ARGUS_GEOIP2], [], [Description]))
       fi
    fi

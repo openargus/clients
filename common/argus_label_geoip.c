@@ -1,6 +1,6 @@
 /*
  * Argus Client Software. Tools to read, analyze and manage Argus data.
- * Copyright (c) 2000-2022 QoSient, LLC
+ * Copyright (c) 2000-2024 QoSient, LLC
  * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -73,8 +73,9 @@
 #define ARGUS_GEOIP_CONTINENT_CODE      12
 #define ARGUS_GEOIP_NETMASK             13
 #define ARGUS_GEOIP_ASN			14
+#define ARGUS_GEOIP_ASNORG		15
 
-#if defined(ARGUS_GEOIP) && !defined(ARGUS_GEOIP2)
+#if defined(ARGUS_GEOIP)
 #include <GeoIPCity.h>
 
 struct ArgusGeoIPCityObject ArgusGeoIPCityObjects[] = {
@@ -418,7 +419,7 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
    return 1;
 }
 
-#elif !defined(ARGUS_GEOIP) && defined(ARGUS_GEOIP2)
+#elif defined(ARGUS_GEOIP2)
 #include <maxminddb.h>
 #include "maxminddb-compat-util.h"
 
@@ -532,6 +533,26 @@ ArgusFormatDSR_ASN(struct ArgusParserStruct *parser,
    return 1;
 }
 
+static int
+ArgusFormatDSR_ASNORG(struct ArgusParserStruct *parser,
+                   struct ArgusRecordStruct *argus,
+                   MMDB_entry_data_list_s *const value,
+                   void *user,
+                   int dir)
+{
+   struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+
+   if (value->entry_data.type != MMDB_DATA_TYPE_UTF8_STRING) {
+      ArgusLog(LOG_WARNING, "%s: unexpected libmaxminddb type %d\n", __func__, value->entry_data.type);
+      return -1;
+   }
+
+   if (!labeler->RaLabelGeoIPAsn)
+      return 0;
+   return 1;
+}
+
+
 static int _geoip2_to_argus_names_sorted = 0;
 typedef struct _geoip2_to_argus_names {
    char *geoip2_path;
@@ -550,7 +571,8 @@ static geoip2_to_argus_names_t geoip2_to_argus_names[] = {
    { "location longitude", "lon", ARGUS_GEOIP_LONGITUDE, ArgusFormatDSR_GEO },
    { "location metro_code", "metro", ARGUS_GEOIP_METRO_CODE, NULL },
    { "continent code", "cont", ARGUS_GEOIP_CONTINENT_CODE, NULL },
-   { "autonomous_system_number", NULL, ARGUS_GEOIP_ASN, ArgusFormatDSR_ASN },
+   { "autonomous_system_number", "asn", ARGUS_GEOIP_ASN, ArgusFormatDSR_ASN },
+   { "autonomous_system_organization", "asorg", ARGUS_GEOIP_ASNORG, ArgusFormatDSR_ASNORG },
 };
 static const size_t geoip2_to_argus_names_len =
    sizeof(geoip2_to_argus_names)/sizeof(geoip2_to_argus_names[0]);
@@ -565,7 +587,7 @@ int geoip2_path_compare(const void *a, const void *b) {
 
 static const size_t ARGUS_GEOIP2_MAX_PATH = 128;
 
-/* look through the configured city label types for @item and return 1
+/* look through the configured label types [city,asn] for @item and return 1
  * if found
  */
 static int
@@ -573,15 +595,32 @@ is_item_enabled(struct ArgusParserStruct *parser, int item)
 {
     int ena = 0;
     int ind;
-    static const int maxlabels =
-       sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels)/
-       sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels[0]);
-    for (ind = 0; ind < maxlabels && !ena; ind++) {
-       int i = parser->ArgusLabeler->RaLabelGeoIPCityLabels[ind];
 
-       if (geoip2_to_argus_names[i].item == item)
-          ena = 1;
+    if (ena == 0) {
+       static const int maxlabels =
+          sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels)/
+          sizeof(parser->ArgusLabeler->RaLabelGeoIPCityLabels[0]);
+
+       for (ind = 0; ind < maxlabels && !ena; ind++) {
+          int i = parser->ArgusLabeler->RaLabelGeoIPCityLabels[ind];
+
+          if (geoip2_to_argus_names[i].item == item)
+             ena = 1;
+       }
     }
+    if (ena == 0) {
+       static const int maxlabels =
+          sizeof(parser->ArgusLabeler->RaLabelGeoIPAsnLabels)/
+          sizeof(parser->ArgusLabeler->RaLabelGeoIPAsnLabels[0]);
+
+       for (ind = 0; ind < maxlabels && !ena; ind++) {
+          int i = parser->ArgusLabeler->RaLabelGeoIPAsnLabels[ind];
+
+          if (geoip2_to_argus_names[i].item == item)
+             ena = 1;
+       }
+    }
+
     return ena;
 }
 
@@ -599,242 +638,231 @@ dump_entry_data_list(
     int dir,
     int *status)
 {
-    geoip2_to_argus_names_t gkey = {NULL, };
-    geoip2_to_argus_names_t *xlate;
-    char dirprefix = ' ';
-    int skip = 1;
+   geoip2_to_argus_names_t gkey = {NULL, };
+   geoip2_to_argus_names_t *xlate;
+   char dirprefix = ' ';
+   int skip = 1;
 
-    switch (entry_data_list->entry_data.type) {
-    case MMDB_DATA_TYPE_MAP:
-        {
-            uint32_t size = entry_data_list->entry_data.data_size;
-            char *nextpath;
+   switch (entry_data_list->entry_data.type) {
+      case MMDB_DATA_TYPE_MAP: {
+         uint32_t size = entry_data_list->entry_data.data_size;
+         char *key = NULL, *nextpath = NULL;
 
-            for (entry_data_list = entry_data_list->next;
-                 size && entry_data_list; size--) {
+         for (entry_data_list = entry_data_list->next; size && entry_data_list; size--) {
+            if (MMDB_DATA_TYPE_UTF8_STRING != entry_data_list->entry_data.type) {
+               *status = MMDB_INVALID_DATA_ERROR;
+               return NULL;
+            }
 
-                if (MMDB_DATA_TYPE_UTF8_STRING !=
-                    entry_data_list->entry_data.type) {
-                    *status = MMDB_INVALID_DATA_ERROR;
-                    return NULL;
-                }
-                char *key =
-                    mmdb_strndup(
-                        (char *)entry_data_list->entry_data.utf8_string,
-                        entry_data_list->entry_data.data_size);
-                if (NULL == key) {
-                    *status = MMDB_OUT_OF_MEMORY_ERROR;
-                    return NULL;
-                }
+            key = mmdb_strndup( (char *)entry_data_list->entry_data.utf8_string,
+                                              entry_data_list->entry_data.data_size);
+            if (NULL == key) {
+               *status = MMDB_OUT_OF_MEMORY_ERROR;
+               return NULL;
+            }
 
-                nextpath = ArgusMalloc(ARGUS_GEOIP2_MAX_PATH);
-                if (nextpath == NULL)
-                    ArgusLog(LOG_ERR, "%s: unable to allocate path buffer",
-                             __func__);
+            nextpath = ArgusMalloc(ARGUS_GEOIP2_MAX_PATH);
+            if (nextpath == NULL)
+               ArgusLog(LOG_ERR, "%s: unable to allocate path buffer", __func__);
 
-                snprintf(nextpath, ARGUS_GEOIP2_MAX_PATH, "%s%s%s", path,
-                         *path == 0 ? "" : " ", key);
-                free(key);
+            snprintf(nextpath, ARGUS_GEOIP2_MAX_PATH, "%s%s%s", path, *path == 0 ? "" : " ", key);
+            free(key);
 
-                entry_data_list = entry_data_list->next;
-                entry_data_list =
-                    dump_entry_data_list(parser, argus, entry_data_list, nextpath, str,
+            entry_data_list = entry_data_list->next;
+            entry_data_list = dump_entry_data_list(parser, argus, entry_data_list, nextpath, str,
                                          str_offset, str_remain, dir, status);
 
-                ArgusFree(nextpath);
+            ArgusFree(nextpath);
 
-                if (MMDB_SUCCESS != *status) {
-                    return NULL;
-                }
+            if (MMDB_SUCCESS != *status) {
+               return NULL;
             }
-        }
-        goto out;
-        break;
-    case MMDB_DATA_TYPE_ARRAY:
-        {
-            uint32_t size = entry_data_list->entry_data.data_size;
+         }
+         goto out;
+         break;
+      }
+      case MMDB_DATA_TYPE_ARRAY: {
+         uint32_t size = entry_data_list->entry_data.data_size;
 
-            for (entry_data_list = entry_data_list->next;
-                 size && entry_data_list; size--) {
-                entry_data_list =
-                    dump_entry_data_list(parser, argus, entry_data_list, path, str,
+         for (entry_data_list = entry_data_list->next; size && entry_data_list; size--) {
+            entry_data_list = dump_entry_data_list(parser, argus, entry_data_list, path, str,
                                          str_offset, str_remain, dir, status);
-                if (MMDB_SUCCESS != *status) {
-                    return NULL;
-                }
+            if (MMDB_SUCCESS != *status) {
+               return NULL;
             }
-        }
-        goto out;
-        break;
-    }
+         }
+         goto out;
+         break;
+      }
+   }
 
-
-    /* Check if Argus knows anything about the current datum */
-    gkey.geoip2_path = strdup(path);
-    if (gkey.geoip2_path == NULL)
-        ArgusLog(LOG_ERR, "%s: unable to duplicate path string");
+   /* Check if Argus knows anything about the current datum */
+   gkey.geoip2_path = strdup(path);
+   if (gkey.geoip2_path == NULL)
+      ArgusLog(LOG_ERR, "%s: unable to duplicate path string");
 
 #ifdef ARGUSDEBUG
-    ArgusDebug(4, "looking for \"%s\"\n", path);
+   ArgusDebug(4, "looking for \"%s\"\n", path);
 #endif
 
-    xlate = bsearch(&gkey, geoip2_to_argus_names, geoip2_to_argus_names_len,
+   xlate = bsearch(&gkey, geoip2_to_argus_names, geoip2_to_argus_names_len,
                     sizeof(geoip2_to_argus_names[0]), geoip2_path_compare);
 
-    if (xlate == NULL) {
-        free(gkey.geoip2_path);
-        gkey.geoip2_path = NULL;
+   if (xlate == NULL) {
+      free(gkey.geoip2_path);
+      gkey.geoip2_path = NULL;
 
-        /* skip to the next key/map/list */
-        if (entry_data_list)
-           entry_data_list = entry_data_list->next;
-        goto out;
-    }
+      /* skip to the next key/map/list */
+      if (entry_data_list)
+         entry_data_list = entry_data_list->next;
+      goto out;
+   }
 
-    if (dir == ARGUS_SRC_ADDR)
-       dirprefix = 's';
-    else if (dir == ARGUS_DST_ADDR)
-       dirprefix = 'd';
-    else if (dir == ARGUS_INODE_ADDR)
-       dirprefix = 'i';
+   if (dir == ARGUS_SRC_ADDR)
+      dirprefix = 's';
+   else if (dir == ARGUS_DST_ADDR)
+      dirprefix = 'd';
+   else if (dir == ARGUS_INODE_ADDR)
+      dirprefix = 'i';
 
-    if (xlate->fmt_dsr_func) {
-        int res;
-        char *key = strrchr(gkey.geoip2_path, ' ');
+   if (xlate->fmt_dsr_func) {
+      char *key = strrchr(gkey.geoip2_path, ' ');
+      int res;
 
-        if (key == NULL)
-           key = gkey.geoip2_path;
-        else
-           key++;
+      if (key == NULL)
+         key = gkey.geoip2_path;
+      else
+         key++;
 
-        res = xlate->fmt_dsr_func(parser, argus, entry_data_list, key, dir);
-        if (res < 0)
-            ArgusLog(LOG_WARNING,
-                     "%s: path=\"%s\": DSR formatting function failed\n",
-                     __func__, path);
-    }
-    free(gkey.geoip2_path);
-    gkey.geoip2_path = NULL;
+      res = xlate->fmt_dsr_func(parser, argus, entry_data_list, key, dir);
+      if (res < 0)
+         ArgusLog(LOG_WARNING, "%s: path=\"%s\": DSR formatting function failed\n", __func__, path);
+   }
+   free(gkey.geoip2_path);
+   gkey.geoip2_path = NULL;
 
-    if (is_item_enabled(parser, xlate->item))
-       skip = 0;
+   if (is_item_enabled(parser, xlate->item))
+      skip = 0;
 
-    /* if no label key or field not requested, continue on to the next
-     * list item
-     */
-    if (skip || xlate->argus_name == NULL) {
-        if (entry_data_list)
-           entry_data_list = entry_data_list->next;
-        goto out;
-    }
+   /* if no label key or field not requested, continue on to the next
+    * list item
+    */
+   if (skip || xlate->argus_name == NULL) {
+      if (entry_data_list)
+         entry_data_list = entry_data_list->next;
+      goto out;
+   }
 
-    switch (entry_data_list->entry_data.type) {
-    case MMDB_DATA_TYPE_UTF8_STRING:
-        {
-            char *string =
-                mmdb_strndup((char *)entry_data_list->entry_data.utf8_string,
-                             entry_data_list->entry_data.data_size);
-            if (NULL == string) {
-                *status = MMDB_OUT_OF_MEMORY_ERROR;
-                return NULL;
-            }
-            (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
-                                  dirprefix, xlate->argus_name, string);
-            free(string);
-            entry_data_list = entry_data_list->next;
-        }
-        break;
-    case MMDB_DATA_TYPE_BYTES:
-        {
-#if 0
-            char *hex_string =
-                bytes_to_hex((uint8_t *)entry_data_list->entry_data.bytes,
-                             entry_data_list->entry_data.data_size);
-            if (NULL == hex_string) {
-                *status = MMDB_OUT_OF_MEMORY_ERROR;
-                return NULL;
-            }
-            (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
-                                  dirprefix, key.argus_name, hex_string);
-            free(hex_string);
-#endif
-            entry_data_list = entry_data_list->next;
-        }
-        break;
-    case MMDB_DATA_TYPE_DOUBLE:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.double_value);
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_FLOAT:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.float_value);
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_UINT16:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.uint16);
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_UINT32:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.uint32);
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_BOOLEAN:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.boolean ? "true" : "false");
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_UINT64:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%" PRIu64,
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.uint64);
-        entry_data_list = entry_data_list->next;
-        break;
-    case MMDB_DATA_TYPE_UINT128: {
-#if MMDB_UINT128_IS_BYTE_ARRAY
-# if 0
-        char *hex_string =
-            bytes_to_hex((uint8_t *)entry_data_list->entry_data.uint128, 16);
-        if (NULL == hex_string) {
+   switch (entry_data_list->entry_data.type) {
+      case MMDB_DATA_TYPE_UTF8_STRING: {
+         char *string = mmdb_strndup((char *)entry_data_list->entry_data.utf8_string,
+                                             entry_data_list->entry_data.data_size);
+         if (NULL == string) {
             *status = MMDB_OUT_OF_MEMORY_ERROR;
             return NULL;
-        }
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
-                              dirprefix, xlate->argus_name, hex_string);
-        free(hex_string);
+         }
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                                 dirprefix, xlate->argus_name, string);
+         free(string);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_BYTES: {
+#if 0
+         char *hex_string = bytes_to_hex((uint8_t *)entry_data_list->entry_data.bytes,
+                                                    entry_data_list->entry_data.data_size);
+         if (NULL == hex_string) {
+            *status = MMDB_OUT_OF_MEMORY_ERROR;
+            return NULL;
+         }
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s", dirprefix, key.argus_name, hex_string);
+         free(hex_string);
+#endif
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_DOUBLE: {
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.double_value);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_FLOAT: {
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%f",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.float_value);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_UINT16: {
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.uint16);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_UINT32: {
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%u",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.uint32);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_BOOLEAN: {
+       (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.boolean ? "true" : "false");
+       entry_data_list = entry_data_list->next;
+       break;
+      }
+      case MMDB_DATA_TYPE_UINT64: {
+       (void)snprintf_append(str, str_offset, str_remain, "%c%s=%" PRIu64,
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.uint64);
+       entry_data_list = entry_data_list->next;
+       break;
+      }
+      case MMDB_DATA_TYPE_UINT128: {
+#if MMDB_UINT128_IS_BYTE_ARRAY
+# if 0
+         char *hex_string =
+             bytes_to_hex((uint8_t *)entry_data_list->entry_data.uint128, 16);
+         if (NULL == hex_string) {
+             *status = MMDB_OUT_OF_MEMORY_ERROR;
+             return NULL;
+         }
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
+                             dirprefix, xlate->argus_name, hex_string);
+         free(hex_string);
 # endif
 #else
-        uint64_t high = entry_data_list->entry_data.uint128 >> 64;
-        uint64_t low = (uint64_t)entry_data_list->entry_data.uint128;
-        (void)snprintf_append(str, str_offset, str_remain,
-                              "%c%s=0x%016" PRIX64 "%016" PRIX64,
-                              dirprefix, xlate->argus_name, high, low);
+         uint64_t high = entry_data_list->entry_data.uint128 >> 64;
+         uint64_t low = (uint64_t)entry_data_list->entry_data.uint128;
+         (void)snprintf_append(str, str_offset, str_remain,
+                             "%c%s=0x%016" PRIX64 "%016" PRIX64,
+                             dirprefix, xlate->argus_name, high, low);
 #endif
-        entry_data_list = entry_data_list->next;
-        break;
-    }
-    case MMDB_DATA_TYPE_INT32:
-        (void)snprintf_append(str, str_offset, str_remain, "%c%s=%d",
-                              dirprefix, xlate->argus_name,
-                              entry_data_list->entry_data.int32);
-        entry_data_list = entry_data_list->next;
-        break;
-    default:
-        *status = MMDB_INVALID_DATA_ERROR;
-        return NULL;
-    }
-    (void)snprintf_append(str, str_offset, str_remain, ",");
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+      case MMDB_DATA_TYPE_INT32: {
+         (void)snprintf_append(str, str_offset, str_remain, "%c%s=%d",
+                             dirprefix, xlate->argus_name,
+                             entry_data_list->entry_data.int32);
+         entry_data_list = entry_data_list->next;
+         break;
+      }
+
+      default:
+         *status = MMDB_INVALID_DATA_ERROR;
+         return NULL;
+   }
+   (void)snprintf_append(str, str_offset, str_remain, ",");
 
 out:
-    *status = MMDB_SUCCESS;
-    return entry_data_list;
+   *status = MMDB_SUCCESS;
+   return entry_data_list;
 }
 
 static MMDB_entry_data_list_s *
@@ -986,7 +1014,7 @@ ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
                         label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
 
          }
-         if (labeler->RaLabelGeoIPAsn) {
+         if (labeler->RaLabelGeoIPAsn & ARGUS_DST_ADDR) {
             addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_src);
             lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
                        label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
@@ -998,7 +1026,7 @@ ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
                         label, &str_offset, &str_remain, ARGUS_DST_ADDR);
 
          }
-         if (labeler->RaLabelGeoIPAsn) {
+         if (labeler->RaLabelGeoIPAsn & ARGUS_DST_ADDR) {
             addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_dst);
             lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
                        label, &str_offset, &str_remain, ARGUS_DST_ADDR);
@@ -1014,7 +1042,7 @@ ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
                            label, &str_offset, &str_remain, ARGUS_INODE_ADDR);
             }
          }
-         if (labeler->RaLabelGeoIPAsn) {
+         if (labeler->RaLabelGeoIPAsn & ARGUS_INODE_ADDR) {
             struct ArgusIcmpStruct *icmp;
 
             icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
