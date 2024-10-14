@@ -761,6 +761,10 @@ dump_entry_data_list(
             *status = MMDB_OUT_OF_MEMORY_ERROR;
             return NULL;
          }
+
+         for(int i = 0; string[i]; i++){
+            string[i] = tolower(string[i]);
+          }
          (void)snprintf_append(str, str_offset, str_remain, "%c%s=%s",
                                  dirprefix, xlate->argus_name, string);
          free(string);
