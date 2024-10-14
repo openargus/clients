@@ -452,7 +452,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                            char *sptr, *fptr, *tptr;
                            int ind = 0, x;
 
-                           bzero(labeler->RaLabelGeoIPCityLabels, sizeof(labeler->RaLabelGeoIPCityLabels));
+                           bzero(labeler->RaLabelGeoIPLabels, sizeof(labeler->RaLabelGeoIPLabels));
 
                            if ((tptr = strchr(optarg, ':')) != NULL) {
                               *tptr++ = '\0';
