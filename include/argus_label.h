@@ -117,23 +117,22 @@ struct ArgusLabelerStruct {
    char RaLabelLocalityOverwrite;
    char RaLabelLocalityInterfaceIsMe;
 
-#if defined(ARGUS_GEOIP) && !defined(ARGUS_GEOIP2)
+#if defined(ARGUS_GEOIP2)
+   int RaLabelGeoIPAsn;
+   MMDB_s RaGeoIPAsnObject;
+   int RaLabelGeoIPAsnLabels[16];
+   int RaLabelGeoIPCity;
+   MMDB_s RaGeoIPCityObject;
+   int RaLabelGeoIPCityLabels[16];
+#elif defined(ARGUS_GEOIP)
    int RaLabelGeoIPAsn;
    GeoIP *RaGeoIPv4AsnObject;
    GeoIP *RaGeoIPv6AsnObject;
+   int RaLabelGeoIPAsnLabels[16];
 
    int RaLabelGeoIPCity;
    GeoIP *RaGeoIPv4CityObject;
    GeoIP *RaGeoIPv6CityObject;
-   int RaLabelGeoIPCityLabels[16];
-#endif
-
-#if defined(ARGUS_GEOIP2) && !defined(ARGUS_GEOIP)
-   int RaLabelGeoIPAsn;
-   MMDB_s RaGeoIPAsnObject;
-
-   int RaLabelGeoIPCity;
-   MMDB_s RaGeoIPCityObject;
    int RaLabelGeoIPCityLabels[16];
 #endif
 
