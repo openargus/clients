@@ -11264,8 +11264,8 @@ if test -n "$LIBMAXMINDDB_CFLAGS"; then
     pkg_cv_LIBMAXMINDDB_CFLAGS="$LIBMAXMINDDB_CFLAGS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libmaxminddb") 2>&5
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.4.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.4.0") 2>&5
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
@@ -11281,8 +11281,8 @@ if test -n "$LIBMAXMINDDB_LIBS"; then
     pkg_cv_LIBMAXMINDDB_LIBS="$LIBMAXMINDDB_LIBS"
  elif test -n "$PKG_CONFIG"; then
     if test -n "$PKG_CONFIG" && \
-    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "libmaxminddb") 2>&5
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libmaxminddb >= 1.4.0\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libmaxminddb >= 1.4.0") 2>&5
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
@@ -11342,37 +11342,25 @@ fi
 elif test $pkg_failed = untried; then
      	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-	as_ac_File=`printf "%s\n" "ac_cv_file_"/opt/homebrew/include/maxminddb.h"" | sed "$as_sed_sh"`
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for \"/opt/homebrew/include/maxminddb.h\"" >&5
-printf %s "checking for \"/opt/homebrew/include/maxminddb.h\"... " >&6; }
-if eval test \${$as_ac_File+y}
-then :
-  printf %s "(cached) " >&6
-else case e in #(
-  e) test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r ""/opt/homebrew/include/maxminddb.h""; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi ;;
-esac
-fi
-eval ac_res=\$$as_ac_File
-	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-printf "%s\n" "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_File"\" = x"yes"
-then :
+	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf "%s\n" "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
 
-fi
-,
-                               V_INCLS="$V_INCLS -I/opt/homebrew/include"
+Alternatively, you may set the environment variables LIBMAXMINDDB_CFLAGS
+and LIBMAXMINDDB_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See 'config.log' for more details" "$LINENO" 5; }
 else
 	LIBMAXMINDDB_CFLAGS=$pkg_cv_LIBMAXMINDDB_CFLAGS
 	LIBMAXMINDDB_LIBS=$pkg_cv_LIBMAXMINDDB_LIBS
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-	printf "%s\n" "#define ARGUS_GEOIP2 1" >>confdefs.h
+
+printf "%s\n" "#define ARGUS_GEOIP2 /**/" >>confdefs.h
 
 fi
       fi
@@ -13102,20 +13090,6 @@ fi
 
 ac_config_files="$ac_config_files Makefile ./common/Makefile ./include/Makefile ./clients/Makefile ./lib/argus-clients.pc ./pkg/rhel/systemd/rasqlinsert-setup ./pkg/Makefile ./lib/argus-clients.spec"
 
-
-if test "$with_perllib" != no
-then :
-  ac_config_files="$ac_config_files ./perllib/Makefile"
-
-
-fi
-
-if test "$with_pythonlib" != no
-then :
-  ac_config_files="$ac_config_files ./pythonlib/Makefile"
-
-
-fi
 
 if test "$with_examples" != no
 then :
