@@ -503,7 +503,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                            int maxlabels = sizeof(labeler->RaLabelGeoIPAsnLabels)/
                                            sizeof(labeler->RaLabelGeoIPAsnLabels[0]);
 
-                           bzero(labeler->RaLabelGeoIPAsnLabels, sizeof(labeler->RaLabelGeoIPAsnLabels));
+                           memset(labeler->RaLabelGeoIPAsnLabels, -1, sizeof(labeler->RaLabelGeoIPAsnLabels));
 
                            if ((tptr = strchr(optarg, ':')) != NULL) {
                               *tptr++ = '\0';
@@ -550,7 +550,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                            int maxlabels = sizeof(labeler->RaLabelGeoIPCityLabels)/
                                            sizeof(labeler->RaLabelGeoIPCityLabels[0]);
 
-                           bzero(labeler->RaLabelGeoIPCityLabels, sizeof(labeler->RaLabelGeoIPCityLabels));
+                           memset(labeler->RaLabelGeoIPCityLabels, -1, sizeof(labeler->RaLabelGeoIPCityLabels));
 
                            if ((tptr = strchr(optarg, ':')) != NULL) {
                               *tptr++ = '\0';
@@ -3110,7 +3110,7 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "RaReadAddressConfig (0x%x, 0x%x, %s) returning %d\n", parser, labeler, file, retn);
+   ArgusDebug (10, "RaReadAddressConfig (0x%x, 0x%x, %s) read %d lines ... returning %d\n", parser, labeler, file, linenum, retn);
 #endif
 
    return (retn);

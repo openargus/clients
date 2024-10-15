@@ -29,17 +29,24 @@
 #include <argus_client.h>
 #include "argus_parser.h"
 
-#if defined(ARGUS_GEOIP)
+#if defined(ARGUS_GEOIP2)
+int ArgusLabelRecordGeoIP2(struct ArgusParserStruct *,
+                           struct ArgusRecordStruct *, char *, size_t, int *);
+int ArgusGeoIP2FindObject(const char * const);
+
+int geoip2_path_compare(const void *, const void *);
+
+int lookup_asn(struct ArgusParserStruct *, struct ArgusRecordStruct *, const char *,
+            struct sockaddr *, char *, size_t *, size_t *, int);
+
+int lookup_city(struct ArgusParserStruct *, struct ArgusRecordStruct *, const char *,
+            struct sockaddr *, char *, size_t *, size_t *, int);
+
+#elif defined(ARGUS_GEOIP)
 #define ARGUS_GEOIP_TOTAL_OBJECTS       14
 extern struct ArgusGeoIPCityObject ArgusGeoIPCityObjects[];
 
 int ArgusLabelRecordGeoIP(struct ArgusParserStruct *,
                           struct ArgusRecordStruct *, char *, size_t, int *);
 
-#endif
-
-#if defined(ARGUS_GEOIP2)
-int ArgusLabelRecordGeoIP2(struct ArgusParserStruct *,
-                           struct ArgusRecordStruct *, char *, size_t, int *);
-int ArgusGeoIP2FindObject(const char * const);
 #endif

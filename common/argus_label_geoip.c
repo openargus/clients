@@ -57,8 +57,6 @@
 #include <netinet/igmp.h>
 #include <netinet/tcp.h>
 
-#include "argus_label_geoip.h"
-
 #define ARGUS_GEOIP_COUNTRY_CODE        1
 #define ARGUS_GEOIP_COUNTRY_CODE_3      2
 #define ARGUS_GEOIP_COUNTRY_NAME        3
@@ -420,6 +418,8 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
 }
 
 #elif defined(ARGUS_GEOIP2)
+
+#include <argus_label_geoip.h>
 #include <maxminddb.h>
 #include "maxminddb-compat-util.h"
 
@@ -478,11 +478,8 @@ ArgusFormatDSR_ASN(struct ArgusParserStruct *parser,
                    void *user,
                    int dir)
 {
-   uint32_t vasn = value->entry_data.uint32;
-   struct ArgusAsnStruct *asn = (struct ArgusAsnStruct *) argus->dsrs[ARGUS_ASN_INDEX];
-   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
-   struct ArgusIcmpStruct *icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
+   uint32_t vasn = value->entry_data.uint32;
 
    if (value->entry_data.type != MMDB_DATA_TYPE_UINT32) {
       ArgusLog(LOG_WARNING, "%s: unexpected libmaxminddb type %d\n",
@@ -493,42 +490,48 @@ ArgusFormatDSR_ASN(struct ArgusParserStruct *parser,
    if (!labeler->RaLabelGeoIPAsn)
       return 0;
 
-   if (flow == NULL)
-      return 0;
+   if (argus != NULL) {
+      struct ArgusAsnStruct *asn = (struct ArgusAsnStruct *) argus->dsrs[ARGUS_ASN_INDEX];
+      struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+      struct ArgusIcmpStruct *icmp = (void *)argus->dsrs[ARGUS_ICMP_INDEX];
 
-   if (asn == NULL) {
-      if ((asn = ArgusCalloc(1, sizeof(*asn))) == NULL)
-         ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s", strerror(errno));
+      if (flow == NULL)
+         return 0;
 
-      asn->hdr.type              = ARGUS_ASN_DSR;
-      asn->hdr.subtype           = ARGUS_ASN_ORIGIN;
-      asn->hdr.argus_dsrvl8.qual = 0;
-      asn->hdr.argus_dsrvl8.len  = 3;
+      if (asn == NULL) {
+         if ((asn = ArgusCalloc(1, sizeof(*asn))) == NULL)
+            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s", strerror(errno));
 
-      argus->dsrs[ARGUS_ASN_INDEX] = (struct ArgusDSRHeader *) asn;
-      argus->dsrindex |= (0x01 << ARGUS_ASN_INDEX);
-   }
+         asn->hdr.type              = ARGUS_ASN_DSR;
+         asn->hdr.subtype           = ARGUS_ASN_ORIGIN;
+         asn->hdr.argus_dsrvl8.qual = 0;
+         asn->hdr.argus_dsrvl8.len  = 3;
 
-   switch (flow->hdr.subtype & 0x3F) {
-      case ARGUS_FLOW_CLASSIC5TUPLE:
-      case ARGUS_FLOW_LAYER_3_MATRIX:
-         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-            case ARGUS_TYPE_IPV4:
-            case ARGUS_TYPE_IPV6:
+         argus->dsrs[ARGUS_ASN_INDEX] = (struct ArgusDSRHeader *) asn;
+         argus->dsrindex |= (0x01 << ARGUS_ASN_INDEX);
+      }
 
-               if (dir & ARGUS_SRC_ADDR)
-                  asn->src_as = asn->src_as ? asn->src_as : vasn;
-               else if (dir & ARGUS_DST_ADDR)
-                  asn->dst_as = asn->dst_as ? asn->dst_as : vasn;
-               else if (dir == ARGUS_INODE_ADDR && icmp) {
-                  if (icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) {
-                     asn->inode_as = vasn;
-                     asn->hdr.argus_dsrvl8.len  = 4;
+      switch (flow->hdr.subtype & 0x3F) {
+         case ARGUS_FLOW_CLASSIC5TUPLE:
+         case ARGUS_FLOW_LAYER_3_MATRIX:
+            switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+               case ARGUS_TYPE_IPV4:
+               case ARGUS_TYPE_IPV6:
+
+                  if (dir & ARGUS_SRC_ADDR)
+                     asn->src_as = asn->src_as ? asn->src_as : vasn;
+                  else if (dir & ARGUS_DST_ADDR)
+                     asn->dst_as = asn->dst_as ? asn->dst_as : vasn;
+                  else if (dir == ARGUS_INODE_ADDR && icmp) {
+                     if (icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMP_MAPPED) {
+                        asn->inode_as = vasn;
+                        asn->hdr.argus_dsrvl8.len  = 4;
+                     }
                   }
+                  break;
                }
-               break;
-            }
-         break;
+            break;
+      }
    }
    return 1;
 }
@@ -604,8 +607,11 @@ is_item_enabled(struct ArgusParserStruct *parser, int item)
        for (ind = 0; ind < maxlabels && !ena; ind++) {
           int i = parser->ArgusLabeler->RaLabelGeoIPCityLabels[ind];
 
-          if (geoip2_to_argus_names[i].item == item)
-             ena = 1;
+          if (i >= 0) {
+             if (geoip2_to_argus_names[i].item == item)
+                ena = 1;
+          } else
+             break;
        }
     }
     if (ena == 0) {
@@ -616,8 +622,11 @@ is_item_enabled(struct ArgusParserStruct *parser, int item)
        for (ind = 0; ind < maxlabels && !ena; ind++) {
           int i = parser->ArgusLabeler->RaLabelGeoIPAsnLabels[ind];
 
-          if (geoip2_to_argus_names[i].item == item)
-             ena = 1;
+          if (i >= 0) {
+             if (geoip2_to_argus_names[i].item == item)
+                ena = 1;
+          } else
+             break;
        }
     }
 
@@ -725,24 +734,26 @@ dump_entry_data_list(
    else if (dir == ARGUS_INODE_ADDR)
       dirprefix = 'i';
 
-   if (xlate->fmt_dsr_func) {
-      char *key = strrchr(gkey.geoip2_path, ' ');
-      int res;
-
-      if (key == NULL)
-         key = gkey.geoip2_path;
-      else
-         key++;
-
-      res = xlate->fmt_dsr_func(parser, argus, entry_data_list, key, dir);
-      if (res < 0)
-         ArgusLog(LOG_WARNING, "%s: path=\"%s\": DSR formatting function failed\n", __func__, path);
-   }
-   free(gkey.geoip2_path);
-   gkey.geoip2_path = NULL;
-
-   if (is_item_enabled(parser, xlate->item))
+   if (is_item_enabled(parser, xlate->item)) {
       skip = 0;
+
+      if (xlate->fmt_dsr_func) {
+         char *key = strrchr(gkey.geoip2_path, ' ');
+         int res;
+
+         if (key == NULL)
+            key = gkey.geoip2_path;
+         else
+            key++;
+
+         res = xlate->fmt_dsr_func(parser, argus, entry_data_list, key, dir);
+         if (res < 0)
+            ArgusLog(LOG_WARNING, "%s: path=\"%s\": DSR formatting function failed\n", __func__, path);
+      }
+
+      free(gkey.geoip2_path);
+      gkey.geoip2_path = NULL;
+   }
 
    /* if no label key or field not requested, continue on to the next
     * list item
@@ -915,7 +926,7 @@ dump_result_entry_data_list(
    return rv;
 }
 
-static int
+int
 lookup_city(
     struct ArgusParserStruct *parser,
     struct ArgusRecordStruct *argus,
@@ -942,7 +953,7 @@ lookup_city(
    return 0;
 }
 
-static int
+int
 lookup_asn(
     struct ArgusParserStruct *parser,
     struct ArgusRecordStruct *argus,
