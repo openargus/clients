@@ -614,6 +614,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/raservices/Makefile
       ./examples/rastrip/Makefile
       ./examples/ratop/Makefile
+      ./examples/ratrace/Makefile
       ./examples/ratimerange/Makefile
       ./examples/ratemplate/Makefile
    ])
