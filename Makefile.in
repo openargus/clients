@@ -53,7 +53,7 @@ SHELL = /bin/sh
 
 DIRS = @DIRS@
 INSTDIRS = @DIRS@ ./include
-OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop
+OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop ./examples/ratrace
 CLEANDIRS = @DIRS@ ./pkg
 
 
@@ -148,6 +148,8 @@ install: install-perl force installdirs
 		$(DESTDIR)@mandir@/man1/rastream.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rastrip.1 \
 		$(DESTDIR)@mandir@/man1/rastrip.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/ratrace.1 \
+		$(DESTDIR)@mandir@/man1/ratrace.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ratop.1 \
 		$(DESTDIR)@mandir@/man1/ratop.1
 	[ -d $(DESTDIR)@mandir@/man5 ] || \
@@ -214,6 +216,7 @@ uninstall: uninstall-perl
 	rm -f $(DESTDIR)@mandir@/man1/rasqltimeindex.1
 	rm -f $(DESTDIR)@mandir@/man1/rastream.1
 	rm -f $(DESTDIR)@mandir@/man1/rastrip.1
+	rm -f $(DESTDIR)@mandir@/man1/ratrace.1
 	rm -f $(DESTDIR)@mandir@/man1/ratop.1
 	rm -f $(DESTDIR)@mandir@/man5/rarc.5
 	rm -f $(DESTDIR)@mandir@/man5/racluster.conf.5
