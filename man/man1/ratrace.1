@@ -1,0 +1,239 @@
+.\"
+.\" Argus-5.0 Software
+.\" Copyright (c) 2000-2024 QoSient, LLC
+.\" All rights reserved.
+.\"
+.\"
+.TH RATRACE 1 "07 October 2023" "ratrace 5.0.3"
+.SH NAME
+\fBratrace\fP \- trace the route to remote addresses seen in \fBargus(8)\fP data streams / files.
+.SH SYNOPSIS
+.B ratrace
+[\fB\-f\fP \fIconf\fP] [\fB\-m\fP \fIagr(s)\fP] [\fB\-M\fP \fImode(s)\fP] [\fB\-P\fP \fIprocnum\fP] [\fBraoptions\fP] [\fB--\fP \fIfilter-expression\fP]
+.SH DESCRIPTION
+.IX  "ratrace command"  ""  "\fLratrace\fP \(em synthetic argus data"
+.LP
+.B Ratrace
+reads
+.BR argus
+data from an \fIargus-data\fP source, and traces the path to the IP addresses
+contained in the flow data.
+
+This tool is primarily used to support detailed network awareness, visibility and
+location of IP addresses encountered.
+
+Please see ratrace.5 for detailed information regarding ratrace configuration.  
+
+.SH OPTIONS
+Ratrace, like all ra based clients, supports a number of
+\fBra options\fP including filtering of input argus
+records through a terminating filter expression, and the ability
+to specify the output style, format and contents for printing
+data.  See \fBra(1)\fP for a complete description of \fBra options\fP.
+\fBratrace(1)\fP specific options are:
+.PP
+.PD 0
+.TP 4 4
+.BI \-m "\| aggregation object\^"
+Supported aggregation objects are:
+.PP
+.RS
+.TP 15
+.B none
+do not merge records (results in no aggregation).
+.TP
+.B all
+merge all records into a single record.
+.TP
+.B srcid
+argus source identifier.
+.TP
+.B smac
+source mac(ether) addr.
+.TP
+.B dmac
+destination mac(ether) addr.
+.TP
+.B soui
+oui portion of the source mac(ether) addr.
+.TP
+.B doui
+oui portion of the destination mac(ether) addr.
+.TP
+.B smpls
+source mpls label.
+.TP
+.B dmpls
+destination label addr.
+.TP
+.B svlan
+source vlan label.
+.TP
+.B dvlan
+destination vlan addr.
+.TP
+.B saddr/[l|m]
+source IP addr/[cidr len | m.a.s.k].
+.TP
+.B daddr/[l|m]
+destination IP addr/[cidr len | m.a.s.k].
+.TP
+.B matrix/l
+sorted src and dst IP addr/cidr len.
+.TP
+.B proto
+transaction protocol.
+.TP
+.B sport
+source port number. Implies use of 'proto'.
+.TP
+.B dport
+destination port number. Implies use of 'proto'.
+.TP
+.B stos
+source TOS byte value.
+.TP
+.B dtos
+destination TOS byte value.
+.TP
+.B sttl
+src -> dst TTL value.
+.TP
+.B dttl
+dst -> src TTL value.
+.TP
+.B stcpb
+src -> dst TCP base sequence number.
+.TP
+.B dtcpb
+dst -> src TCP base sequence number.
+.TP
+.B inode[/l|m]]
+intermediate node IP addr/[cidr len | m.a.s.k], source of ICMP mapped events.
+.TP
+.B sco
+source ARIN country code, if present.
+.TP
+.B dco
+destination ARIN country code, if present.
+.TP
+.B sas
+source node origin AS number, if available.
+.TP
+.B das
+destination node origin AS number, if available.
+.TP
+.B ias
+intermediate node origin AS number, if available.
+
+.TP
+.RE
+.TP 4 4
+.BI \-M "\| modes\^"
+Supported modes are:
+.PP
+.RS
+.TP 15
+.B correct
+Attempt to correct the direction of flows by also searching the reverse
+flow key, if a match isn't found in the cache.  This mode is on by default
+when using the default full 5-tuple flow key definitions.
+.TP
+.B nocorrect
+Turn off flow correction for direction.  This mode is used by default
+if the flow key has been changed.
+.TP
+.B norep
+Do not generate an aggregate statistic for each flow.  This is used
+primarily when the output represents a single object.  Primarily used
+when merging status records to generate single flows that represent
+single transactions.
+.TP
+.B rmon
+Generate data suitable for producing RMON types of metrics.
+.TP
+.B ind
+Process each input file independantly, so that after the end of
+each inputfile, ratrace flushes its output.
+.TP 
+.B replace
+Replace each inputfile contents, with the aggregated output. The initial file compression status is maintained
+.PD
+.RE
+.TP 4 4
+.BI \-P <procnum>
+Specify the number of processors to use for aggregation.  Default is 1.
+.RE
+.TP 4 4
+.BI \-V 
+Verbose operation, printing a line of output for each input file processed.
+Very useful when using the ra() -R option.
+.RE
+
+.SH INVOCATION
+A sample invocation of \fBratrace(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and aggregates the TCP protocol based \fBargus(8)\fP data.
+By default, \fBratrace(1)\fP merges using the standard 5-tuple flow key.
+This method is used to merge multiple status records into a single flow record
+per transaction.
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+% ra -r argus.tcp.2012.02.13.12.20.00 
+    StartTime      Dur Trans      Flgs  Proto        SrcAddr  Sport   Dir        DstAddr  Dport  TotPkts State 
+ 12:23:07.268    0.997     1  e i         tcp   192.168.0.68.59016     ->  208.59.201.75.http        298   CON
+ 12:23:08.294    1.000     1  e           tcp   192.168.0.68.59016     ->  208.59.201.75.http        111   CON
+ 12:23:09.294    0.991     1  e d         tcp   192.168.0.68.59016     ->  208.59.201.75.http        637   CON
+ 12:23:10.331    0.330     1  e           tcp   192.168.0.68.59016     ->  208.59.201.75.http         89   CON
+ 12:23:32.183    0.010     1  e           tcp   192.168.0.68.59016     ->  208.59.201.75.http          3   FIN
+
+% ratrace -r argus.tcp.2012.02.13.12.20.00
+    StartTime      Dur Trans      Flgs  Proto        SrcAddr  Sport   Dir        DstAddr  Dport  TotPkts State 
+ 12:23:07.268   24.925     5  e d         tcp   192.168.0.68.59016     ->  208.59.201.75.http       1138   FIN
+.vs
+.ps
+.ft P
+.fi
+
+A sample invocation of \fBratrace(1)\fP.  This call reads \fBargus(8)\fP data
+from \fBinputfile\fP and aggregates the TCP protocol based \fBargus(8)\fP data,
+based on the source and destination address matrix and the protocol.  It reports the metrics
+as a percent of the total.  
+
+.nf
+.ft CW
+.ps 6
+.vs 7
+
+% ratrace -r argus.2012.02.13.17.20.00 -m saddr/16 daddr proto -% \\
+       -s stime dur trans proto saddr dir daddr pkts state - tcp and port https
+
+    StartTime      Dur   pTrans  Proto        SrcAddr  Dir        DstAddr  pTotPkts State 
+ 17:49:54.225    8.101   33.333    tcp 192.168.0.0/16   ->   17.154.66.18    23.372   FIN
+ 17:48:42.607  179.761   13.333    tcp 192.168.0.0/16   ->  17.172.224.25    31.052   FIN
+ 17:50:01.113    0.803    6.667    tcp 192.168.0.0/16   -> 17.250.248.161     5.676   FIN
+ 17:49:54.525    1.153    6.667    tcp 192.168.0.0/16   ->  64.12.173.137     5.509   FIN
+ 17:50:35.411  101.133   26.667    tcp 192.168.0.0/16   ->  184.28.150.87    19.199   RST
+ 17:49:56.061   73.415    6.667    tcp 192.168.0.0/16   ->   205.188.8.47    11.018   RST
+ 17:49:55.677    0.434    6.667    tcp 192.168.0.0/16   -> 205.188.101.10     4.174   FIN
+.vs
+.ps
+.ft P
+.fi
+
+.SH COPYRIGHT
+Copyright (c) 2000-2024 QoSient. All rights reserved.
+.SH SEE ALSO
+.BR racluster(5),
+.BR ra(1),
+.BR rarc(5),
+.BR argus(8),
+.SH FILES
+
+.SH AUTHORS
+.nf
+Carter Bullard (carter@qosient.com).
+.fi
+.SH BUGS
