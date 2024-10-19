@@ -15,19 +15,37 @@
  * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
+ *
  */
 
 /*
- * ralabel - add descriptor labels to flows.
- *           this particular labeler adds descriptors based
- *           on addresses.
+ * ratrace  - repeatedly provide an active trace capability for 
+ *            IP addresses as they are learned from a stream.
+ *            
+ *            We'll provide an opportunity to configure the tool with
+ *            an IANA country code file (delegated-ipv4-latest) to
+ *            seed the country patricia tree, and then, as addresses
+ *            are learned, we insert into the tree.  This gives us a
+ *            good data structure to track and schedule traces.
+ *            The tree lets us limit traces based on CIDR prefix length
+ *            so we're not hitting the same subnet with multiple traces.
+ *            
+ *            Using the tree, we can schedule traces based on country
+ *            as well as CIDR division.
+ *            
+ *            There is no reason for us to track the actual path generation
+ *            as we're just the active part, but we can to manage the
+ *            whole process.
+ *
+ *            Everything will driven by ArgusClientTimeout() to scan the
+ *            tree and to schedule new traces.
  *
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ralabel/ralabel.c#17 $
- * $DateTime: 2016/11/30 00:54:11 $
- * $Change: 3245 $
+ * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#17 $
+ * $DateTime: 2016/10/28 18:37:18 $
+ * $Change: 3235 $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -173,7 +191,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                if (!(strncasecmp (mode->mode, "debug.cco", 9)))
                   RaPruneAddressTree(ArgusLabeler, ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_CCO | ARGUS_TREE_PRUNE_ADJ, 0);
 
-               RaPrintLabelTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
+               RaPrintTraceTree (ArgusLabeler, ArgusAddrTree[AF_INET], 0, 0);
                ArgusAddrTree[AF_INET] = NULL;
                RaParseComplete(0);
 
@@ -317,6 +335,8 @@ RaParseComplete (int sig)
 #endif
 }
 
+int ArgusScanTreeForWork (struct ArgusLabelerStruct *, struct RaAddressStruct *, int, int);
+
 int
 ArgusScanTreeForWork (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *node, int level, int dir)
 {
@@ -324,7 +344,7 @@ ArgusScanTreeForWork (struct ArgusLabelerStruct *labeler, struct RaAddressStruct
 
    if (level > RaPrintTraceTreeLevel)
       return (0);
- 
+
    if (node != NULL) {
       if (node->addr.masklen > 31) {
          if (node->ns != NULL) {
@@ -383,12 +403,11 @@ void
 usage ()
 {
    extern char version[];
-   fprintf (stdout, "RaLabeler Version %s\n", version);
-   fprintf (stdout, "usage: %s \n", ArgusParser->ArgusProgramName);
-   fprintf (stdout, "usage: %s [ra-options] -S remoteServer  [- filter-expression]\n", ArgusParser->ArgusProgramName);
-   fprintf (stdout, "usage: %s [ra-options] -r argusDataFile [- filter-expression]\n\n", ArgusParser->ArgusProgramName);
-   fprintf (stdout, "options: -f <conffile>     read ralabel spec from <conffile>.\n");
-   fflush (stdout);
+   fprintf (stderr, "Ratrace Version %s\n", version);
+   fprintf (stderr, "usage: %s \n", ArgusParser->ArgusProgramName);
+   fprintf (stderr, "usage: %s [options] [- filter-expression]\n\n", ArgusParser->ArgusProgramName);
+
+   fprintf (stderr, "options: -f <conffile>     read service signatures from <conffile>.\n");
    exit(1);
 }
 
@@ -488,6 +507,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 }
 
 
+int RaProcessThisAddress (struct ArgusParserStruct *, struct ArgusLabelerStruct *, struct ArgusRecordStruct *, unsigned int *, int, int);
 
 int
 RaProcessThisAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, struct ArgusRecordStruct *argus, unsigned int *addr, int masklen, int type)
@@ -651,7 +671,6 @@ RaProcessICMPPathRecord (struct ArgusParserStruct *parser, struct ArgusRecordStr
     ArgusDebug (6, "ArgusProcessICMPPathRecord () returning\n");
 #endif
 }
-
 
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
