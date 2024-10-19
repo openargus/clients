@@ -49,7 +49,7 @@ SHELL = /bin/sh
 
 DIRS = ./raconvert ./radecode ./radns ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto \
 	./ralabel ./ramatrix ./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip \
-	./ratop ./ratimerange ./ratemplate @ARGUS_MYSQL@
+	./ratrace ./ratop ./ratimerange ./ratemplate @ARGUS_MYSQL@
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -87,6 +87,7 @@ rarpwatch: ../common
 raservices: ../common
 rastrip: ../common
 ratop: ../common
+ratrace: ../common
 ratimerange: ../common
 ratemplate: ../common
 
