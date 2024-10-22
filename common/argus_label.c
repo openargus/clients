@@ -3110,7 +3110,7 @@ RaReadAddressConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "RaReadAddressConfig (0x%x, 0x%x, %s) returning %d\n", parser, labeler, file, retn);
+   ArgusDebug (10, "RaReadAddressConfig (0x%x, 0x%x, %s) lines %d, returning %d\n", parser, labeler, file, linenum, retn);
 #endif
 
    return (retn);

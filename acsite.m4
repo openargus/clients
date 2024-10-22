@@ -1983,6 +1983,8 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
          PKG_CHECK_MODULES([LIBMAXMINDDB],
                            [libmaxminddb >= 1.4.0],
                            AC_DEFINE([ARGUS_GEOIP2], [], [Description]))
+         AC_CHECK_FILE("/opt/homebrew/include/maxminddb.h",
+             [V_INCLS="$V_INCLS -I/opt/homebrew/include"], no)
       fi
    fi
 ])
