@@ -11324,6 +11324,33 @@ printf "%s\n" "yes" >&6; }
 printf "%s\n" "#define ARGUS_GEOIP2 /**/" >>confdefs.h
 
 fi
+         as_ac_File=`printf "%s\n" "ac_cv_file_"/opt/homebrew/include/maxminddb.h"" | sed "$as_sed_sh"`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for \"/opt/homebrew/include/maxminddb.h\"" >&5
+printf %s "checking for \"/opt/homebrew/include/maxminddb.h\"... " >&6; }
+if eval test \${$as_ac_File+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""/opt/homebrew/include/maxminddb.h""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi ;;
+esac
+fi
+eval ac_res=\$$as_ac_File
+	       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+printf "%s\n" "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"
+then :
+  V_INCLS="$V_INCLS -I/opt/homebrew/include"
+else case e in #(
+  e) no ;;
+esac
+fi
+
       fi
    fi
 
