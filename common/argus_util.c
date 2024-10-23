@@ -20262,7 +20262,7 @@ ArgusPrintSrcEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct A
 
    bzero(ebuf, sizeof(ebuf));
    if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
-      ArgusDump (encaps->sbuf, encaps->slen, NULL);
+      ArgusDump (encaps->sbuf, encaps->slen, NULL, buf);
    }
 
    if (parser->ArgusPrintXml) {
@@ -20292,7 +20292,7 @@ ArgusPrintDstEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct A
 
    bzero(ebuf, sizeof(ebuf));
    if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
-      
+      ArgusDump (encaps->dbuf, encaps->dlen, NULL, buf);
    }
 
    if (parser->ArgusPrintXml) {
@@ -22258,8 +22258,6 @@ ArgusPrintLabelLabel (struct ArgusParserStruct *parser, char *buf, int len)
    sprintf (buf, "%*.*s ", len, len, "Label");
 }
 
-
-void ArgusDump (const u_char *, int, char *);
 
 void
 ArgusPrintSrcUserData (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
@@ -31633,7 +31631,6 @@ out:
 
 
 void ArgusRecordDump (struct ArgusRecord *);
-void ArgusDump (const u_char *, int, char *);
 int setArgusRemoteFilter(struct ArgusParserStruct *, char *);
 
 int
@@ -31871,28 +31868,36 @@ ArgusDeleteInput(struct ArgusParserStruct *parser, struct ArgusInput *input)
 #define HEXDUMP_HEXSTUFF_PER_SHORT 5 /* 4 hex digits and a space */
 #define HEXDUMP_HEXSTUFF_PER_LINE (HEXDUMP_HEXSTUFF_PER_BYTE * HEXDUMP_BYTES_PER_LINE)
 
+#define ARGUSDUMPLEN		0x10000
 
 void
 ArgusRecordDump (struct ArgusRecord *argus)
 {
    int length = argus->hdr.len;
    const u_char *cp = (const u_char *) argus;
+   char *buf;
 
-   ArgusDump (cp, length, NULL);
+   if ((buf = ArgusCalloc(1, ARGUSDUMPLEN)) != NULL) {
+      ArgusDump (cp, length, NULL, buf);
+      printf ("%s\n", buf);
+      ArgusFree(buf);
+   }
 }
 
+
 void
-ArgusDump (const u_char *cp, int length, char *prefix)
+ArgusDump (const u_char *cp, int length, char *prefix, char *buf)
 {
    u_int oset = 0;
    register u_int i;
    register int s1;
    register int nbytes;
+
    char hexstuff[HEXDUMP_BYTES_PER_LINE*HEXDUMP_HEXSTUFF_PER_BYTE+1], *hsp;
    char asciistuff[HEXDUMP_BYTES_PER_LINE+1], *asp;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "ArgusDump(0x%x, %d)", cp, length);
+   ArgusDebug (2, "ArgusDump(%p, %d, %s, %p)", cp, length, prefix, buf);
 #endif
 
    nbytes = length;
@@ -31906,11 +31911,11 @@ ArgusDump (const u_char *cp, int length, char *prefix)
       if (++i >= HEXDUMP_BYTES_PER_LINE) {
          *hsp = *asp = '\0';
          if (prefix != NULL)
-            (void)printf("\n%s%06x\t%-*s\t%s", prefix,
+            (void)sprintf(&buf[strlen(buf)], "\n%s%06x\t%-*s\t%s", prefix,
                             oset, HEXDUMP_HEXSTUFF_PER_LINE,
                             hexstuff, asciistuff);
          else
-            (void)printf("\n%06x\t%-*s\t%s",
+            (void)sprintf(&buf[strlen(buf)], "\n%06x\t%-*s\t%s",
                             oset, HEXDUMP_HEXSTUFF_PER_LINE,
                             hexstuff, asciistuff);
          i = 0; hsp = hexstuff; asp = asciistuff;
@@ -31927,15 +31932,15 @@ ArgusDump (const u_char *cp, int length, char *prefix)
    if (i > 0) {
       *hsp = *asp = '\0';
       if (prefix != NULL)
-         (void)printf("\n%s%06x\t%-*s\t%s", prefix,
+         (void)sprintf(&buf[strlen(buf)], "\n%s%06x\t%-*s\t%s", prefix,
                         oset, HEXDUMP_HEXSTUFF_PER_LINE,
                         hexstuff, asciistuff);
       else
-         (void)printf("\n%06x\t%-*s\t%s",
+         (void)sprintf(&buf[strlen(buf)], "\n%06x\t%-*s\t%s",
                         oset, HEXDUMP_HEXSTUFF_PER_LINE,
                         hexstuff, asciistuff);
    }
-   (void)printf("\n");
+   (void)sprintf(&buf[strlen(buf)], "\n");
 }
 
 
