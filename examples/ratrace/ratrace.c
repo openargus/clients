@@ -72,8 +72,40 @@
 #include <argus_main.h>
 #include <argus_cluster.h>
 
+struct ArgusQueueStruct *ArgusModelerQueue = NULL;
+struct ArgusQueueStruct *ArgusFileQueue = NULL;
+struct ArgusQueueStruct *ArgusProbeQueue = NULL;
+
+struct ArgusAggregatorStruct *ArgusMatrixAggregator = NULL;
+struct ArgusAggregatorStruct *ArgusFlowAggregator = NULL;
+
+char *RaLabelConfiguration[] = {
+    "RALABEL_GEOIP_ASN=*:asn,asorg",
+    "RALABEL_GEOIP_ASN_FILE=GeoLite2-ASN.mmdb",
+    "RALABEL_GEOIP_CITY=*:lat,lon",
+    "RALABEL_GEOIP_CITY_FILE=GeoLite2-City.mmdb",
+    NULL,
+};
+
+char *RaMatrixAggregationConfig[] = {
+    "RACLUSTER_PRESERVE_FIELDS=yes",
+    "                   model=\"srcid saddr daddr\"        status=0   idle=3600\n",
+    NULL,
+};
+
+char *RaPathAggregationConfig[] = {
+    "RACLUSTER_PRESERVE_FIELDS=yes",
+    "filter=\"icmpmap\" model=\"srcid saddr daddr proto sttl inode\"  status=120 idle=3600\n",
+    "                   model=\"srcid saddr daddr proto sttl\"        status=0   idle=3600\n",
+    NULL,
+};
+
+unsigned int RaMapHash = 0;
+unsigned int RaHashSize  = 0;
+
 int ArgusDebugTree = 0;
 int RaPrintTraceTreeLevel = 1000000;
+
 static int argus_version = ARGUS_VERSION;
 extern char RaAddrTreeArray[];
 
@@ -364,6 +396,9 @@ RaProcessThisAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
 
 
 void RaProcessThisRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+void RaProcessICMPPathRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
+struct ArgusRecordStruct *RaProcessAggregation(struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *);
+
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
@@ -378,6 +413,43 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
+         struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
+         struct ArgusGeoLocationStruct *geo = NULL;
+         struct ArgusIcmpStruct *icmp = NULL;
+
+	 int longitude, latitude;
+                
+         ArgusProcessServiceAvailability(parser, ns);
+         ArgusLabelRecord(parser, ns);
+                
+         if ((geo = (struct ArgusGeoLocationStruct *)ns->dsrs[ARGUS_GEO_INDEX]) != NULL) {
+            if ((geo->src.lat != 0) || (geo->src.lon != 0)) {
+               longitude = geo->src.lon;
+               latitude  = geo->src.lat;
+                            
+            } else {
+               if ((geo->dst.lat != 0) || (geo->dst.lon != 0)) {
+                  longitude = geo->dst.lon;
+                  latitude  = geo->dst.lat;
+               }
+            }
+         }
+
+         if ((icmp = (struct ArgusIcmpStruct *) ns->dsrs[ARGUS_ICMP_INDEX]) != NULL) {
+            if ((icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMPUNREACH_MAPPED) ||
+                (icmp->hdr.argus_dsrvl8.qual & ARGUS_ICMPTIMXCED_MAPPED)) {
+
+               unsigned int srchost, dsthost, intnode;
+
+               srchost = flow->ip_flow.ip_src;
+               dsthost = flow->ip_flow.ip_dst;
+               intnode = icmp->osrcaddr;
+
+               if (!((intnode == srchost) || (intnode == dsthost))) {
+                  RaProcessICMPPathRecord (parser, ns);
+               }
+            }
+         }
 
          if (parser->RaMonMode) {
             struct ArgusRecordStruct *tns = ArgusCopyRecordStruct(ns);
@@ -487,6 +559,107 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
             RaParseComplete(SIGQUIT);
       }
 }
+
+struct ArgusRecordStruct *
+RaProcessAggregation(struct ArgusParserStruct *parser, struct ArgusAggregatorStruct *agg, struct ArgusRecordStruct *ns)
+{
+    struct ArgusHashStruct *hstruct = NULL;
+    struct ArgusRecordStruct *retn = NULL;
+    
+    if ((agg != NULL) && (ns != NULL)) {
+        if ((agg->rap = RaFlowModelOverRides(agg, ns)) == NULL)
+            agg->rap = agg->drap;
+        
+        ArgusGenerateNewFlow(agg, ns);
+        
+        if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
+            ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+        
+        if ((retn = ArgusFindRecord(agg->htable, hstruct)) != NULL) {
+            if (parser->Aflag) {
+                if ((retn->status & RA_SVCTEST) != (ns->status & RA_SVCTEST)) {
+                    RaSendArgusRecord(retn);
+                    ArgusZeroRecord(retn);
+                    retn->status &= ~(RA_SVCTEST);
+                    retn->status |= (ns->status & RA_SVCTEST);
+                }
+            }
+            ArgusMergeRecords (agg, retn, ns);
+            
+        } else {
+            if (!parser->RaMonMode) {
+                struct ArgusFlow *flow = (struct ArgusFlow *) ns->dsrs[ARGUS_FLOW_INDEX];
+                int tryreverse = 1;
+                
+                if (flow != NULL) {
+                    switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                        case ARGUS_TYPE_IPV4: {
+                            switch (flow->ip_flow.ip_p) {
+                                case IPPROTO_ESP:
+                                    tryreverse = 0;
+                                    break;
+                            }
+                        }
+                    }
+                }
+                
+                if (tryreverse) {
+                    if ((hstruct = ArgusGenerateReverseHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
+                        ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                    
+                    if ((retn = ArgusFindRecord(agg->htable, hstruct)) == NULL) {
+                        if ((hstruct = ArgusGenerateHashStruct(agg, ns, (struct ArgusFlow *)&agg->fstruct)) == NULL)
+                            ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusGenerateHashStruct error %s", strerror(errno));
+                        
+                    } else {
+                        ArgusReverseRecord (ns);
+                    }
+                }
+            }
+            
+            if (retn != NULL) {
+                ArgusMergeRecords (agg, retn, ns);
+            } else {
+                retn = ArgusCopyRecordStruct(ns);
+                ArgusAddHashEntry (agg->htable, retn, hstruct);
+                ArgusAddToQueue (agg->queue, &retn->qhdr, ARGUS_NOLOCK);
+            }
+        }
+    }
+    
+    return retn;
+}
+
+void
+RaProcessICMPPathRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
+{
+    struct ArgusAggregatorStruct *agg  = parser->ArgusPathAggregator;
+    struct ArgusRecordStruct *tns, *cns;
+    
+    struct nff_insn *fcode = agg->filter.bf_insns;
+    
+    if (ArgusFilterRecord (fcode, ns) != 0) {
+        if ((cns = ArgusCopyRecordStruct(ns)) == NULL)
+            ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusCopyRecordStruct error %s", strerror(errno));
+                
+        if ((tns = RaProcessAggregation(parser, agg, cns)) != NULL) {
+            if (tns->agg == NULL)
+                if ((tns->agg = ArgusCopyAggregator(ArgusFlowAggregator)) == NULL)
+                    ArgusLog (LOG_ERR, "RaProcessThisRecod: ArgusCopyAggregator error");
+            
+            if (tns != NULL)
+                RaProcessAggregation(parser, tns->agg, cns);
+        }
+        
+        ArgusDeleteRecordStruct(parser, cns);
+    }
+    
+#if defined(ARGUSDEBUG)
+    ArgusDebug (6, "ArgusProcessICMPPathRecord () returning\n");
+#endif
+}
+
+
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
