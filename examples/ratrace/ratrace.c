@@ -648,7 +648,6 @@ RaProcessICMPPathRecord (struct ArgusParserStruct *parser, struct ArgusRecordStr
 {
     struct ArgusAggregatorStruct *agg  = parser->ArgusPathAggregator;
     struct ArgusRecordStruct *tns, *cns;
-    
     struct nff_insn *fcode = agg->filter.bf_insns;
     
     if (ArgusFilterRecord (fcode, ns) != 0) {
@@ -671,7 +670,6 @@ RaProcessICMPPathRecord (struct ArgusParserStruct *parser, struct ArgusRecordStr
     ArgusDebug (6, "ArgusProcessICMPPathRecord () returning\n");
 #endif
 }
-
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
