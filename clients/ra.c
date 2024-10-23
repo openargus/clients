@@ -507,7 +507,12 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      RaParseComplete (SIGQUIT);
       
                   if (parser->eflag == ARGUS_HEXDUMP) {
+                     char *buf;
                      int i;
+
+                     if ((buf = ArgusCalloc(1, 65536)) == NULL)
+                        ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusCalloc error");
+
                      for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
                         if (parser->RaPrintAlgorithmList[i] != NULL) {
                            struct ArgusDataStruct *user = NULL;
@@ -522,7 +527,8 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                                        
                                     slen = (user->count < slen) ? user->count : slen;
                                     slen = (slen > len) ? len : slen;
-                                    ArgusDump ((const u_char *) &user->array, slen, "      ");
+                                    ArgusDump ((const u_char *) &user->array, slen, "      ", buf);
+                                    printf ("%s\n", buf);
                                  }
                               }
                            }
@@ -537,13 +543,15 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          
                                     slen = (user->count < slen) ? user->count : slen;
                                     slen = (slen > len) ? len : slen;
-                                    ArgusDump ((const u_char *) &user->array, slen, "      ");
+                                    ArgusDump ((const u_char *) &user->array, slen, "      ", buf);
+                                    printf ("%s\n", buf);
                                  }
                               }
                            }
                         } else
                            break;
                      }
+                     ArgusFree(buf);
                   }
          
                   fprintf (stdout, "\n");

@@ -370,40 +370,51 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
          fprintf (stdout, "%s", buf);
 
          if (parser->eflag == ARGUS_HEXDUMP) {
+            char *sbuf;
             int i;
+
+            if ((sbuf = ArgusCalloc(1, 65536)) == NULL)
+               ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusCalloc error");
+
             for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-               struct ArgusDataStruct *user = NULL;
-               if (parser->RaPrintAlgorithmList[i]->print == ArgusPrintSrcUserData) {
-                  int slen = 0, len = parser->RaPrintAlgorithmList[i]->length;
-                  if (len > 0) {
-                     if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX]) != NULL) {
-                        if (user->hdr.type == ARGUS_DATA_DSR) {
-                           slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-                        } else
-                           slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
+               if (ArgusParser->RaPrintAlgorithmList[i] != NULL) {
+                  struct ArgusDataStruct *user = NULL;
+                  if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintSrcUserData) {
+                     int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
+                     if (len > 0) {
+                        if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_SRCUSERDATA_INDEX]) != NULL) {
+                           if (user->hdr.type == ARGUS_DATA_DSR) {
+                              slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
+                           } else
+                              slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
 
-                        slen = (user->count < slen) ? user->count : slen;
-                        slen = (slen > len) ? len : slen;
-                        ArgusDump ((const u_char *) &user->array, slen, "      ");
+                           slen = (user->count < slen) ? user->count : slen;
+                           slen = (slen > len) ? len : slen;
+                           ArgusDump ((const u_char *) &user->array, slen, "      ", sbuf);
+                           printf ("%s\n", sbuf);
+                        }
                      }
                   }
-               }
-               if (parser->RaPrintAlgorithmList[i]->print == ArgusPrintDstUserData) {
-                  int slen = 0, len = parser->RaPrintAlgorithmList[i]->length;
-                  if (len > 0) {
-                     if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX]) != NULL) {
-                        if (user->hdr.type == ARGUS_DATA_DSR) {
-                           slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
-                        } else
-                           slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
+                  if (ArgusParser->RaPrintAlgorithmList[i]->print == ArgusPrintDstUserData) {
+                     int slen = 0, len = ArgusParser->RaPrintAlgorithmList[i]->length;
+                     if (len > 0) {
+                        if ((user = (struct ArgusDataStruct *)argus->dsrs[ARGUS_DSTUSERDATA_INDEX]) != NULL) {
+                           if (user->hdr.type == ARGUS_DATA_DSR) {
+                              slen = (user->hdr.argus_dsrvl16.len - 2 ) * 4;
+                           } else
+                              slen = (user->hdr.argus_dsrvl8.len - 2 ) * 4;
 
-                        slen = (user->count < slen) ? user->count : slen;
-                        slen = (slen > len) ? len : slen;
-                        ArgusDump ((const u_char *) &user->array, slen, "      ");
+                           slen = (user->count < slen) ? user->count : slen;
+                           slen = (slen > len) ? len : slen;
+                           ArgusDump ((const u_char *) &user->array, slen, "      ", sbuf);
+                           printf ("%s\n", sbuf);
+                        }
                      }
                   }
-               }
+               } else
+                  break;
             }
+            ArgusFree(sbuf);
          }
 
          if (strlen(buf) && !(parser->ArgusPrintJson))
