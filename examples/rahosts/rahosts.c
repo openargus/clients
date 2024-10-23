@@ -640,7 +640,12 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
             RaParseComplete (SIGQUIT);
 
          if (ArgusParser->eflag == ARGUS_HEXDUMP) {
+            char *sbuf;
             int i;
+
+            if ((sbuf = ArgusCalloc(1, 65536)) == NULL)
+               ArgusLog (LOG_ERR, "RaProcessThisRecord: ArgusCalloc error");
+
             for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
                if (ArgusParser->RaPrintAlgorithmList[i] != NULL) {
                   struct ArgusDataStruct *user = NULL;
@@ -655,7 +660,8 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                            slen = (user->count < slen) ? user->count : slen;
                            slen = (slen > len) ? len : slen;
-                           ArgusDump ((const u_char *) &user->array, slen, "      ");
+                           ArgusDump ((const u_char *) &user->array, slen, "      ", sbuf);
+                           printf ("%s\n", sbuf);
                         }
                      }
                   }
@@ -670,13 +676,15 @@ RaSendArgusRecord(struct ArgusRecordStruct *argus)
 
                            slen = (user->count < slen) ? user->count : slen;
                            slen = (slen > len) ? len : slen;
-                           ArgusDump ((const u_char *) &user->array, slen, "      ");
+                           ArgusDump ((const u_char *) &user->array, slen, "      ", sbuf);
+                           printf ("%s\n", sbuf);
                         }
                      }
                   }
                } else
                   break;
             }
+            ArgusFree(sbuf);
          }
          fflush(stdout);
       }
