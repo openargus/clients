@@ -1686,7 +1686,7 @@ int ArgusPrintTime(struct ArgusParserStruct *, char *, size_t, struct timeval *)
 char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 void ArgusPrintRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *ptr, int);
-void ArgusDump (const u_char *, int, char *);
+void ArgusDump (const u_char *, int, char *, char *);
 
 
 char *RaGetUserDataString (struct ArgusRecordStruct *);
@@ -2116,7 +2116,7 @@ extern int ArgusPrintTime(struct ArgusParserStruct *, char *, size_t, struct tim
 extern char *ArgusGenerateLabel(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 extern void ArgusPrintRecord (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *ptr, int);
-extern void ArgusDump (const u_char *, int, char *);
+extern void ArgusDump (const u_char *, int, char *, char *);
 
 extern void ArgusMainInit (struct ArgusParserStruct *, int, char **);
 extern int RaParseResourceFile (struct ArgusParserStruct *parser, char *file,
