@@ -20257,26 +20257,21 @@ void
 ArgusPrintSrcEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusEncapsStruct *encaps = NULL;
-   char ebuf[32];
+   char *ebuf = NULL;
 
-   bzero(ebuf, sizeof(ebuf));
+   if ((ebuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusPrintSrcEncapsBuffer: ArgusCalloc: error %s", strerror(errno));
+
    if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
-      ArgusDump (encaps->sbuf, encaps->slen, NULL, buf);
+      ArgusDump (encaps->sbuf, encaps->slen, NULL, ebuf);
    }
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " SrcEncapsBuffer = \"%s\"", ebuf);
    } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(ebuf);
-      } else {
-         if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0'; 
-         }        
-      }
-      sprintf (buf, "%*.*s ", len, len, ebuf);
+      sprintf (buf, "%s ", ebuf);
    }
+   ArgusFree(ebuf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintSrcEncapsBuffer (%p, %p)", buf, argus);
@@ -20287,26 +20282,21 @@ void
 ArgusPrintDstEncapsBuffer (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusEncapsStruct *encaps = NULL;
-   char ebuf[32];
+   char *ebuf = NULL;
 
-   bzero(ebuf, sizeof(ebuf));
+   if ((ebuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog(LOG_ERR, "ArgusPrintDstEncapsBuffer: ArgusCalloc: error %s", strerror(errno));
+
    if ((encaps = (struct ArgusEncapsStruct *)argus->dsrs[ARGUS_ENCAPS_INDEX]) != NULL) {
-      ArgusDump (encaps->dbuf, encaps->dlen, NULL, buf);
+      ArgusDump (encaps->dbuf, encaps->dlen, NULL, ebuf);
    }
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " DstEncapsBuffer = \"%s\"", ebuf);
    } else {
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = strlen(ebuf);
-      } else {
-         if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0';
-         }
-      }
-      sprintf (buf, "%*.*s ", len, len, ebuf);
+      sprintf (buf, "%s ", ebuf);
    }
+   ArgusFree(ebuf);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintDstEncapsBuffer (%p, %p)", buf, argus);
