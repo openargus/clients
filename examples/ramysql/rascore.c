@@ -1430,6 +1430,9 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
    struct RaMySQLFileStruct *fstruct = NULL;
    struct RaMySQLSecondsTable *sqry = NULL, *tsqry = NULL;
 
+   if (queue == NULL)
+      return;
+
    while (queue->count) {
       if ((sqry = (struct RaMySQLSecondsTable *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
          int i, cnt = queue->count;

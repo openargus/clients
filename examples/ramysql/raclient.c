@@ -2302,6 +2302,9 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
    int retn = 0, x, z, count;
    struct timeval lasttime;
 
+   if (queue == NULL)
+      return (retn);
+
    if (MUTEX_LOCK(&queue->lock) == 0) {
       count = queue->count;
       for (x = 0, z = count; x < z; x++) {

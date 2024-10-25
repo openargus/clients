@@ -1122,8 +1122,13 @@ RaTimeSortRoutine (const void *void1, const void *void2)
 void
 RaTimeSortQueue (struct ArgusQueueStruct *queue)
 {
-   int i = 0, cnt = queue->count;
    struct ArgusQueueHeader *qhdr;
+   int i = 0, cnt = 0;
+
+   if (queue == NULL)
+      return;
+
+   cnt = queue->count;
 
    if (queue->array != NULL) {
       ArgusFree(queue->array);
