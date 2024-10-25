@@ -1029,7 +1029,7 @@ ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
                         label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
 
          }
-         if (labeler->RaLabelGeoIPAsn & ARGUS_DST_ADDR) {
+         if (labeler->RaLabelGeoIPAsn & ARGUS_SRC_ADDR) {
             addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_src);
             lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
                        label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
