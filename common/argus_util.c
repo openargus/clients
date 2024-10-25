@@ -22664,12 +22664,16 @@ ArgusDeleteQueue (struct ArgusQueueStruct *queue)
 int
 ArgusGetQueueCount(struct ArgusQueueStruct *queue)
 {
+   int count = 0;
+
+   if (queue != NULL) {
+      count = queue->count;
+   }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusGetQueueCount (%p) returning %d\n", queue, queue->count);
+      ArgusDebug (10, "ArgusGetQueueCount (%p) returning %d\n", queue, count);
 #endif
-
-   return (queue->count);
+   return (count);
 }
 
 
