@@ -2668,6 +2668,9 @@ ArgusProcessQueue (struct ArgusQueueStruct *queue)
    struct timeval tbuf, *tvp = &tbuf;
    int retn = 0, x, z;
 
+   if (queue == NULL)
+      return (retn); 
+
    if ((ArgusParser->timeout.tv_sec > 0) || (ArgusParser->timeout.tv_usec > 0)) {
          struct ArgusRecordStruct *ns;
          struct timeval lasttime;
@@ -2770,6 +2773,9 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
    struct ArgusRecordStruct *ns;
    int retn = 0, x, z, count;
    struct timeval lasttime;
+
+   if (queue == NULL)
+      return (retn);
 
    if (RaEventProcess != NULL) {
       if (RaEventProcess->queue->count) {
@@ -3710,6 +3716,9 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
 {
    struct RaMySQLFileStruct *fstruct = NULL;
    struct RaMySQLSecondsTable *sqry = NULL, *tsqry = NULL;
+
+   if (queue == NULL)
+      return; 
 
    while (queue->count) {
       if ((sqry = (struct RaMySQLSecondsTable *) ArgusPopQueue(queue, ARGUS_LOCK)) != NULL) {
