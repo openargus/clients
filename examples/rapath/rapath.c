@@ -326,6 +326,9 @@ RaPathBuildPath (struct ArgusQueueStruct *queue)
    struct ArgusRecordStruct *ns, *argus;
    int count = 0;
 
+   if (queue == NULL)
+      return (path);
+
    if ((count = queue->count) > 0) {
       unsigned int pttl, tttl, as;
       int i = 0;
