@@ -525,12 +525,6 @@ AC_CHECK_PROG([HAVE_SWIG], [swig], ["yes"], ["no"])
 if test "x$HAVE_SWIG" = "xyes" ; then
   case "$target_os" in
   darwin*)
-if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
-        DIRS="$DIRS ./pythonlib"
-fi
-if test "x$ac_cv_header_EXTERN_h" = xyes; then :
-        DIRS="$DIRS ./perllib"
-fi
         ;;
   *)
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
