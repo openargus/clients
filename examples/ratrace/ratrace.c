@@ -43,6 +43,11 @@
 #include <signal.h>
 #include <ctype.h>
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+
 #if defined(ARGUS_SOLARIS)
 #include <strings.h>
 #include <string.h>
