@@ -2056,7 +2056,6 @@ ArgusCreateSQLSaveTable(char *table)
 
       if ((ArgusParser->ArgusAggregator != NULL) || ArgusAutoId) {
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
-
          long long mask = 0;
 
          while (agg != NULL) {
