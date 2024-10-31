@@ -2058,11 +2058,9 @@ ArgusCreateSQLSaveTable(char *table)
          struct ArgusAggregatorStruct *agg = ArgusParser->ArgusAggregator;
 
          long long mask = 0;
-         int status = 0;
 
          while (agg != NULL) {
             mask |= agg->mask;
-            status |= agg->status;
             agg = agg->nxt;
          }
 
