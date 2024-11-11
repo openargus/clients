@@ -437,6 +437,14 @@ if test "$with_examples" != no; then
    DIRS="$DIRS ./examples"
 fi
 
+if test "$with_perllib" != no; then
+   DIRS="$DIRS ./perllib"
+fi    
+
+if test "$with_pythonlib" != no; then
+   DIRS="$DIRS ./pythonlib"
+fi    
+
 if test "$with_pluribus" != no; then
    AC_DEFINE([ARGUS_PLURIBUS], [], [Building for pluribus])
 fi
@@ -525,12 +533,6 @@ AC_CHECK_PROG([HAVE_SWIG], [swig], ["yes"], ["no"])
 if test "x$HAVE_SWIG" = "xyes" ; then
   case "$target_os" in
   darwin*)
-if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
-        DIRS="$DIRS ./pythonlib"
-fi
-if test "x$ac_cv_header_EXTERN_h" = xyes; then :
-        DIRS="$DIRS ./perllib"
-fi
         ;;
   *)
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
@@ -582,10 +584,20 @@ AC_CONFIG_FILES([
    ./lib/argus-clients.pc
    ./pkg/rhel/systemd/rasqlinsert-setup
    ./pkg/Makefile
-   ./perllib/Makefile
-   ./pythonlib/Makefile
    ./lib/argus-clients.spec
 ])
+
+AS_IF([test "$with_perllib" != no],
+   [AC_CONFIG_FILES([
+      ./perllib/Makefile
+   ])]
+)
+
+AS_IF([test "$with_pythonlib" != no],
+   [AC_CONFIG_FILES([
+      ./pythonlib/Makefile
+   ])]
+)
 
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
