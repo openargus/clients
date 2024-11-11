@@ -101,6 +101,14 @@ m4_define([AC_LBL_C_INIT],
     AC_BEFORE([$0], [AC_QOSIENT_DEBUG])
     AC_ARG_WITH(gcc, [  --without-gcc           don't use gcc])
     AC_ARG_WITH(examples, [  --without-examples      don't compile examples])
+    AC_ARG_WITH(perllib,
+            [AS_HELP_STRING([--with-perllib],[Compile perl libraries])],
+            with_perllib="yes",
+            with_perllib="no")
+    AC_ARG_WITH(pythonlib,
+            [AS_HELP_STRING([--with-pythonlib],[Compile python libraries])],
+            with_pythonlib="yes",
+            with_pythonlib="no")
     AC_ARG_WITH(pluribus,
             [AS_HELP_STRING([--with-pluribus],[Compile for pluribus])],
             with_pluribus="yes",
