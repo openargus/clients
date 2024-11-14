@@ -458,7 +458,7 @@ usage ()
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
-   struct ArgusRecordStruct *ns;
+   struct ArgusRecordStruct *ns = NULL;
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
