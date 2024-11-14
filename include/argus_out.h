@@ -304,7 +304,7 @@ struct ArgusTCPObjectMetrics {
 struct ArgusTCPObjectV1 {
    unsigned int status, state, options;
    unsigned int synAckuSecs, ackDatauSecs;
-   struct ArgusTCPObjectMetrics src, dst;
+   struct ArgusTCPObjectMetricsV1 src, dst;
 };
 
 struct ArgusTCPObject {
