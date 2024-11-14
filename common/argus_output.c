@@ -720,7 +720,7 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
                if (output->ArgusInitMar != NULL)
                   ArgusFree (output->ArgusInitMar);
 
-               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, client->version)) == NULL)
+               if ((output->ArgusInitMar = ArgusGenerateInitialMar(output, ARGUS_VERSION)) == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusGenerateInitialMar error %s", strerror(errno));
 
                len = ntohs(output->ArgusInitMar->hdr.len) * 4;
@@ -794,6 +794,7 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
                      if (strstr (wfile->filename, "ipfix")) wfile->format = ARGUS_IPFIX_DATA;
 
                      client->format = wfile->format;
+                     client->version = ARGUS_VERSION;
 
                   } else {
                      if ((client->fd = open (wfile->filename, O_WRONLY|O_APPEND|O_CREAT|O_NONBLOCK, 0x1a4)) < 0)
@@ -801,6 +802,7 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
 
                      wfile->format = ARGUS_DATA;
                      client->format = wfile->format;
+                     client->version = ARGUS_VERSION;
                   }
 
                } else {
@@ -3430,9 +3432,6 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 #endif
       struct ArgusListStruct *list = NULL;
       struct ArgusRecordStruct *rec = NULL;
-      int have_argus_client = 0;
-      int have_argusv3_client = 0;
-      int have_ciscov5_client = 0;
 
       if (output && ((list = output->ArgusOutputList) != NULL)) {
          gettimeofday (&output->ArgusGlobalTime, 0L);
@@ -3441,7 +3440,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
             ((output->ArgusGlobalTime.tv_sec >  ArgusNextUpdate.tv_sec) ||
             ((output->ArgusGlobalTime.tv_sec == ArgusNextUpdate.tv_sec) &&
              (output->ArgusGlobalTime.tv_usec > ArgusNextUpdate.tv_usec)))) {
-
+/*
             have_argus_client = 0;
             have_argusv3_client = 0;
             have_ciscov5_client = 0;
@@ -3452,9 +3451,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                int i;
 
                for (i = 0; i < count && client; i++) {
-                  if (client->sock &&
-                      client->sock->filename == NULL &&
-                      client->fd != -1) {
+                  if (client->sock && (client->fd != -1)) {
                      if (client->format == ARGUS_DATA) {
                         if (client->version == ARGUS_VERSION_3)
                            have_argusv3_client = 1;
@@ -3469,20 +3466,21 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                }
             }
             MUTEX_UNLOCK(&output->ArgusClients->lock);
-
+*/
             ArgusNextUpdate.tv_sec  += ArgusUpDate.tv_sec;
             ArgusNextUpdate.tv_usec += ArgusUpDate.tv_usec;
             if (ArgusNextUpdate.tv_usec > 1000000) {
                ArgusNextUpdate.tv_sec++;
                ArgusNextUpdate.tv_usec -= 1000000;
             }
-
          }
 
+         /* FIXME: Need to generate a Status MAR if live interface */
          /* FIXME: Need to also generate a V3 MAR if there are any v3 clients */
-         if (ArgusOutputStatusTime(output) &&
-             (rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS, ARGUS_VERSION)) != NULL) {
-            ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
+
+         if ((*portnum != 0) && ArgusOutputStatusTime(output)) {
+            if ((rec = ArgusGenerateStatusMarRecord(output, ARGUS_STATUS, ARGUS_VERSION)) != NULL) 
+               ArgusPushBackList(list, (struct ArgusListRecord *)rec, ARGUS_LOCK);
          }
 
          while (output->ArgusOutputList && !(ArgusListEmpty(output->ArgusOutputList))) {
@@ -3527,28 +3525,45 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                   if (output->ArgusClients->count) {
                      struct ArgusClientData *client = (void *)output->ArgusClients->start;
                      int i, ArgusWriteRecord = 0;
+                     int have_argus_client = 0;
+                     int have_argusv3_client = 0;
+                     int have_ciscov5_client = 0;
+
 #ifdef ARGUSDEBUG
-                  ArgusDebug(5, "%s/%s() %d client(s) for record 0x%x\n",
-                             caller, __func__, output->ArgusClients->count,
-                             rec);
+                     ArgusDebug(5, "%s/%s() %d client(s) for record 0x%x\n", caller, __func__, output->ArgusClients->count, rec);
 #endif
-
-                     if (have_argus_client)
-                        arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION);
-                     else
-                        arg = NULL;
-
-                     if (have_argusv3_client)
-                        argv3 = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION_3);
-                     else
-                        argv3 = NULL;
-
-                     if (have_ciscov5_client)
-                        v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA, 0);
-                     else
-                        v5 = NULL;
-
                      for (i = 0; i < output->ArgusClients->count; i++) {
+                        have_argus_client = 0;
+                        have_argusv3_client = 0;
+                        have_ciscov5_client = 0;
+
+                        if (client->sock && (client->fd != -1)) {
+                           if (client->format == ARGUS_DATA) {
+                              if (client->version == ARGUS_VERSION_3)
+                                 have_argusv3_client = 1;
+                              else
+                                 have_argus_client = 1;
+                           }
+                           else if (client->format == ARGUS_CISCO_V5_DATA) {
+                              have_ciscov5_client = 1;
+                           }
+                        }
+
+                        if (have_argus_client)
+                           arg = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION);
+                        else
+                           arg = NULL;
+
+                        if (have_argusv3_client)
+                           argv3 = NewArgusWireFmtBuffer(rec, ARGUS_DATA, ARGUS_VERSION_3);
+                        else
+                           argv3 = NULL;
+
+                        if (have_ciscov5_client)
+                           v5 = NewArgusWireFmtBuffer(rec, ARGUS_CISCO_V5_DATA, 0);
+                        else
+                           v5 = NULL;
+
                         if ((client->fd != -1) && (client->sock != NULL) && client->ArgusClientStart) {
 #ifdef ARGUSDEBUG
                            ArgusDebug(5, "%s/%s() client 0x%x ready fd %d sock 0x%x start %d",
@@ -3563,8 +3578,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                            if (ArgusWriteRecord) {
                               /* post record for transmit */
                               if (client->format == ARGUS_DATA) {
-                                 if (client->version == ARGUS_VERSION
-                                     && have_argus_client)
+                                 if (client->version == ARGUS_VERSION && have_argus_client)
                                     ArgusWriteSocket (output, client, arg);
                                  else if (client->version == ARGUS_VERSION_3
                                           && have_argusv3_client)
@@ -3637,7 +3651,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
 #if defined(ARGUS_THREADS)
          pthread_mutex_lock(&output->ArgusClients->lock);
 #endif
-         if ((*portnum != 0) && (output->ArgusClients->count)) {
+         if ((*portnum != 0) && output->ArgusClients->count) {
             struct ArgusClientData *client = (void *)output->ArgusClients->start;
             int i, status;
 
@@ -3645,8 +3659,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                if ((client->fd != -1) && (client->sock != NULL)) {
                   if ((output->status & ARGUS_STOP) || (output->status & ARGUS_SHUTDOWN)) {
 #ifdef ARGUSDEBUG
-                     ArgusDebug(1, "%s/%s() draining queue\n",
-                                caller, __func__);
+                     ArgusDebug(1, "%s/%s() draining queue\n", caller, __func__);
 #endif
                      ArgusWriteOutSocket (output, client);
                      ArgusDeleteSocket(output, client);
@@ -3678,7 +3691,6 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                      }
                      if (delete)
                         ArgusDeleteSocket(output, client);
-
                   }
                }
                client = (void *) client->qhdr.nxt;
