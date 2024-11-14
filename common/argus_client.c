@@ -2677,7 +2677,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  tcp->synAckuSecs = tcpperf->synAckuSecs;
                                  tcp->ackDatauSecs = tcpperf->ackDatauSecs;
                                  bcopy((char *)&tcpperf->src, (char *)&tcp->src, sizeof(tcpperf->src));
-                                 bcopy((char *)&tcpperf->dst, (char *)&tcp->src, sizeof(tcpperf->dst));
+                                 bcopy((char *)&tcpperf->dst, (char *)&tcp->dst, sizeof(tcpperf->dst));
                                  tcp->src.maxseg = 0;
                                  tcp->dst.maxseg = 0;
 
@@ -3887,6 +3887,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_ENCAPS_INDEX:
                                  case ARGUS_MAC_INDEX:
                                  case ARGUS_VLAN_INDEX:
+                                 case ARGUS_VXLAN_INDEX:
                                  case ARGUS_MPLS_INDEX:
                                  case ARGUS_ASN_INDEX:
                                  case ARGUS_AGR_INDEX:
