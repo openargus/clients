@@ -3863,6 +3863,8 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_VLAN_INDEX:
                                  case ARGUS_VXLAN_INDEX:
                                  case ARGUS_MPLS_INDEX:
+                                 case ARGUS_GRE_INDEX:
+                                 case ARGUS_GENEVE_INDEX:
                                  case ARGUS_ASN_INDEX:
                                  case ARGUS_AGR_INDEX:
                                  case ARGUS_BEHAVIOR_INDEX:
