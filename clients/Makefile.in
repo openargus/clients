@@ -127,7 +127,7 @@ ramanage_sha1.o: ../common/sha1.c
 
 OBJ =	$(SRC:.c=.o)
 
-CLEANFILES = $(OBJ) $(PROGS)
+CLEANFILES = $(OBJ) $(PROGS) ramanage_sha1.o
 
 install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
