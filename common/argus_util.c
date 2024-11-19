@@ -10104,7 +10104,7 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       char macclassstr[4];
    
       if (strstr(format,"%s") != NULL) {
-         for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
+         memset(macclassstr, 0, sizeof(macclassstr));
          if (macclass & ARGUS_ETHER_UAA) {
             bcopy("UAA", macclassstr, 4);
          } else {
@@ -10183,7 +10183,7 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
       char macclassstr[4];
                
       if (strstr(format,"%s") != NULL) {
-         for (int i = 0; i < 4; i++) macclassstr[i] = '\0';
+         memset(macclassstr, 0, sizeof(macclassstr));
          if (macclass & ARGUS_ETHER_UAA) {
             bcopy("UAA", macclassstr, 4);
          } else {
