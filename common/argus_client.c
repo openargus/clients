@@ -609,14 +609,16 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
       if (parser->RaClientTimeoutAbs.tv_sec > 0 && ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
 
-         if (ArgusParser->Tflag) {
-            if ((ArgusParser->Tflag - 1) == 0) {
+         if (parser->Tflag) {
+            struct timeval rtime, diff;
+            rtime = parser->ArgusRealTime;
+            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
+            if (diff.tv_sec >= parser->Tflag)
                ArgusShutDown(0);
-            }
-            ArgusParser->Tflag--;
          }
+
+         ArgusSetTimeout(parser, input);
       }
-      ArgusSetTimeout(parser, input);
    }
 
 #ifdef ARGUSDEBUG
