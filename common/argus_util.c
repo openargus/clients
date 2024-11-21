@@ -1855,7 +1855,6 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
             parser->Tflag = (int)strtol(optarg, (char **)NULL, 10);
             break;
          }
-         
 
          case 'u': {
             if (!(strncmp(parser->ArgusProgramName, "radium", 6))) {
@@ -3499,10 +3498,11 @@ time that needs to lapse */
                         ArgusClientTimeout ();
 
                         if (parser->Tflag) {
-                           if ((parser->Tflag - 1) == 0) {
+                           struct timeval rtime, diff;
+                           rtime = parser->ArgusRealTime;
+                           RaDiffTime (&rtime, &ns->input->ArgusStartTime, &diff);
+                           if (diff.tv_sec >= parser->Tflag)
                               ArgusShutDown(0);
-                           }
-                           parser->Tflag--;
                         }
 
                         timeoutValue = parser->ArgusRealTime;
