@@ -229,7 +229,7 @@ RaLabelParseResourceFile (struct ArgusParserStruct *parser, struct ArgusLabelerS
 
    if (file) {
       if ((strbuf = (void *)ArgusCalloc(MAXSTRLEN, sizeof(char))) == NULL) 
-         ArgusLog (LOG_ERR, "RaRealFlowLabels: ArgusCalloc error %s\n", strerror(errno));
+         ArgusLog (LOG_ERR, "RaLabelParseResourceFile: ArgusCalloc error %s\n", strerror(errno));
 
       str = strbuf;
 
@@ -672,14 +672,14 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
 {
    struct ArgusLabelerStruct *labeler = parser->ArgusLabeler;
    struct ArgusRecordStruct *retn = argus;
-   char label[MAXSTRLEN];
+   char *label = NULL, *rstr = NULL;
    int found = 0, slen = 0;
-   char *rstr = NULL;
 
    if (labeler == NULL)
       return (retn);
 
-   bzero(label, MAXSTRLEN);
+   if ((label = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "ArgusLabelRecord: ArgusCalloc error %s", strerror(errno));
 
    if (labeler->RaLabelIanaAddress) {
       if ((rstr = RaAddressLabel (parser, argus)) != NULL) {
@@ -757,7 +757,11 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    }
 
    if (labeler->RaLabelIanaPort) {
-      char buf[MAXSTRLEN];
+      char *buf = NULL;
+
+      if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusLabelRecord: ArgusCalloc error %s", strerror(errno));
+
       if ((rstr = RaPortLabel (parser, argus, buf, MAXSTRLEN)) != NULL) {
          if (strlen(rstr)) {
             slen = strlen(label);
@@ -769,10 +773,15 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
             found++;
          }
       }
+      ArgusFree(buf);
    }
 
    if (labeler->RaLabelArgusFlow) {
-      char buf[MAXSTRLEN];
+      char *buf = NULL;
+
+      if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "ArgusLabelRecord: ArgusCalloc error %s", strerror(errno));
+
       if ((rstr = RaFlowLabel (parser, argus, buf, MAXSTRLEN)) != NULL) {
          if (strlen(rstr)) {
             slen = strlen(label);
@@ -784,6 +793,7 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
             found++;
          }
       }
+      ArgusFree(buf);
    }
 
    if (labeler->RaLabelLocality) {
@@ -809,7 +819,9 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    if (found)
       ArgusAddToRecordLabel (parser, argus, label);
 
+   ArgusFree(label);
    retn->status |=  ARGUS_RECORD_MODIFIED;
+
    return (retn);
 }
 
@@ -1148,11 +1160,11 @@ RaReadFlowLabels (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 
    if (labeler != NULL) {
       if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
-         ArgusLog (LOG_ERR, "RaInsertRIRTree: ArgusCalloc error %s\n", strerror(errno));
+         ArgusLog (LOG_ERR, "RaReadFlowLabels: ArgusCalloc error %s\n", strerror(errno));
 
       if (labeler->ArgusFlowQueue == NULL)
          if ((labeler->ArgusFlowQueue = ArgusNewQueue()) == NULL)
-            ArgusLog (LOG_ERR, "RaReadAddressConfig: ArgusNewList error %s\n", strerror(errno));
+            ArgusLog (LOG_ERR, "RaReadFlowLabels: ArgusNewList error %s\n", strerror(errno));
 
       if ((fd = fopen (file, "r")) != NULL) {
          while ((ptr = fgets (strbuf, MAXSTRLEN, fd)) != NULL) {
@@ -3132,12 +3144,17 @@ char *RaLocalResourceFileStr [] = {
 int
 RaReadLocalityConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, char *file)
 {
-   char strbuf[MAXSTRLEN], *str = strbuf, *ptr;
+   char *strbuf, *str, *ptr;
    int retn = 1, found = 0;
    int linenum = 0;
    FILE *fd =  NULL;
 
    if (labeler != NULL) {
+      if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "RaReadLocalityConfig: ArgusCalloc error %s\n", strerror(errno));
+
+      str = strbuf;
+
       if (labeler->ArgusAddrTree == NULL) {
          if ((labeler->ArgusAddrTree = ArgusCalloc(128, sizeof(void *))) == NULL)
             ArgusLog (LOG_ERR, "RaReadLocalityConfig: ArgusCalloc error %s\n", strerror(errno));
@@ -3245,6 +3262,7 @@ RaReadLocalityConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
             RaPruneAddressTree(labeler, labeler->ArgusAddrTree[AF_INET], ARGUS_TREE_PRUNE_LABEL, 0);
          }
       }
+      ArgusFree(strbuf);
    }
 
 #ifdef ARGUSDEBUG
@@ -3369,10 +3387,15 @@ RaReadPortConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 {
    struct RaPortStruct *tp, *port, **array = NULL;
    int retn = 0, lines = 0;
-   char buf[MAXSTRLEN], *str = buf;
+   char *buf, *str;
    FILE *fd;
 
    if (file) {
+      if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "RaReadPortConfig: ArgusCalloc error %s\n", strerror(errno));
+
+      str = buf;
+
       if ((fd = fopen (file, "r")) != NULL) {
          while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
             lines++;
@@ -3421,7 +3444,13 @@ RaReadPortConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
                               if (plabel && strlen(plabel)) {
                                  char *tlabel = tp->label;
                                  if (strlen(tlabel)) {
-                                    char tbuf[MAXSTRLEN], *tok, *tptr = tbuf;
+                                    char *tbuf, *tok, *tptr = tbuf;
+                                    
+				    if ((tbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+                                       ArgusLog (LOG_ERR, "RaReadPortConfig: ArgusCalloc error %s\n", strerror(errno));
+
+                                    tptr = tbuf;
+
                                     snprintf (tbuf, MAXSTRLEN, "%s", tlabel);
                                     while (!found && ((tok = strtok (tptr, ":")) != NULL)) {
                                        if (!strcmp(tok, plabel))
@@ -3437,6 +3466,8 @@ RaReadPortConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
                                        port->label = strdup(tbuf);
                                     } else
                                        port->label = strdup(tlabel);
+
+                                    ArgusFree(tbuf);
                                  }
                               }
                               if (tp->label != NULL)
@@ -3460,6 +3491,8 @@ RaReadPortConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 
       } else 
          ArgusLog (LOG_ERR, "RaReadPortConfig: fopen error %s", strerror(errno));
+
+      ArgusFree(buf);
    }
    return (retn);
 }
@@ -3786,9 +3819,10 @@ void
 RaPrintSrvTree (struct ArgusLabelerStruct *labeler, struct RaSrvTreeNode *node, int level, int dir)
 {
    int i = 0, length, len, olen = strlen(RaSrvTreeArray);
-   char str[MAXSTRLEN], chr = ' ';
+   char *str, chr = ' ';
 
-   bzero(str, MAXSTRLEN);
+   if ((str = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaPrintSrvTree: ArgusCalloc error %s\n", strerror(errno));
 
    if (node != NULL) {
       if (dir == RA_SRV_LEFT) {
@@ -3840,6 +3874,7 @@ RaPrintSrvTree (struct ArgusLabelerStruct *labeler, struct RaSrvTreeNode *node, 
       for (i = olen, len = strlen(RaSrvTreeArray); i < len; i++)
          RaSrvTreeArray[i] = '\0';
    }
+   ArgusFree(str);
 }
 
 
@@ -3951,9 +3986,14 @@ RaReadSrvSignature(struct ArgusParserStruct *parser, struct ArgusLabelerStruct *
 {
    int retn = 0;
    struct RaSrvSignature *srv = NULL;
-   char strbuf[MAXSTRLEN], *str = strbuf, **model = NULL;
+   char *strbuf, *str, **model = NULL;
    int i = 0, RaSigLineNumber = 0;
    FILE *fd;
+
+   if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaReadSrvSignature: ArgusCalloc error %s\n", strerror(errno));
+
+   str = strbuf;
 
    bzero ((char *) RaTCPSrcArray, sizeof(RaTCPSrcArray));
    bzero ((char *) RaTCPDstArray, sizeof(RaTCPDstArray));
@@ -4014,6 +4054,7 @@ RaReadSrvSignature(struct ArgusParserStruct *parser, struct ArgusLabelerStruct *
    if (RaSigLineNumber > 0)
       retn = RaGenerateBinaryTrees(parser, labeler);
 
+   ArgusFree(strbuf);
    return (retn);
 }
 
@@ -4270,7 +4311,7 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    struct ArgusFlow *flow = NULL;
 #ifdef ARGUSDEBUG
    int srcScore = 0, dstScore = 0;
-   char buf[MAXSTRLEN];
+   char *buf = NULL;
 #endif
    struct RaSrvTreeNode *tree = NULL;
    int status = 0 ,found = 0;
@@ -4428,6 +4469,9 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    }
 
 #ifdef ARGUSDEBUG
+   if ((buf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+      ArgusLog (LOG_ERR, "RaValidateService: ArgusCalloc error %s\n", strerror(errno));
+
    ArgusPrintRecord(parser, buf, argus, MAXSTRLEN);
 #endif
 
@@ -4532,6 +4576,10 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
          }
       }
    }
+
+#ifdef ARGUSDEBUG
+   ArgusFree(buf);
+#endif
 
    return (retn);
 }
@@ -5535,14 +5583,15 @@ RaPrintLabelTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
 {
    int i = 0, length, len;
    int olen = strlen(RaAddrTreeArray);
-   char str[MAXSTRLEN], chr = ' ';
-
-   bzero(str, MAXSTRLEN);
 
    if (node != NULL) {
+      char *str, chr = ' ';
 
       if (node->addr.masklen > RaPrintLabelTreeLevel)
          return;
+
+      if ((str = ArgusCalloc(1, MAXSTRLEN)) == NULL)
+         ArgusLog (LOG_ERR, "RaPrintLabelTree: ArgusCalloc error %s\n", strerror(errno));
 
       switch (labeler->RaPrintLabelTreeMode) {
          case ARGUS_TREE:
@@ -5845,6 +5894,7 @@ RaPrintLabelTree (struct ArgusLabelerStruct *labeler, struct RaAddressStruct *no
            break;
         }
       }
+      ArgusFree(str);
    }
    fflush(stdout);
 }
