@@ -3860,7 +3860,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_PSIZE_INDEX:
                                  case ARGUS_IPATTR_INDEX:
                                  case ARGUS_ICMP_INDEX:
-                                 case ARGUS_ENCAPS_INDEX:
+
                                  case ARGUS_MAC_INDEX:
                                  case ARGUS_VLAN_INDEX:
                                  case ARGUS_VXLAN_INDEX:
@@ -3929,6 +3929,31 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                           bcopy((char *)label->l_un.label, tlabel->l_un.label, (blen > slen) ? slen : blen);
                                        }
                                     }
+                                    break;
+                                 }
+
+                                 case ARGUS_ENCAPS_INDEX: {
+                                    struct ArgusEncapsStruct *enc  = (struct ArgusEncapsStruct *) rec->dsrs[i];
+                                    struct ArgusEncapsStruct *renc = NULL;
+
+                                    if ((retn->dsrs[i] = ArgusCalloc(1, sizeof(struct ArgusEncapsStruct))) == NULL)
+                                       ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+
+                                    renc  = (struct ArgusEncapsStruct *) retn->dsrs[i];
+
+                                    bcopy((char *)enc, (char *)renc, sizeof(struct ArgusEncapsStruct));
+				    renc->sbuf = NULL; renc->dbuf = NULL;
+
+                                    if ((enc->slen > 0) && (enc->sbuf != NULL)) {
+                                       if ((renc->sbuf = ArgusCalloc(1, enc->slen)) == NULL)
+                                          ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                       bcopy((char *)enc->sbuf, (char *)renc->sbuf, enc->slen);
+	                            }
+                                    if ((enc->dlen > 0) && (enc->dbuf != NULL)) {
+                                       if ((renc->dbuf = ArgusCalloc(1, enc->dlen)) == NULL)
+                                          ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
+                                       bcopy((char *)enc->dbuf, (char *)renc->dbuf, enc->dlen);
+	                            }
                                     break;
                                  }
 
@@ -4069,6 +4094,21 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
                   if (jitter->hdr.subtype & ARGUS_HISTO_LINEAR) {
                   }
                }
+               break;
+            }
+
+            case ARGUS_ENCAPS_INDEX: {
+               struct ArgusEncapsStruct *encaps  = (struct ArgusEncapsStruct *) ns->dsrs[i];
+               if (encaps != NULL) {
+                  if ((encaps->slen > 0) && (encaps->sbuf != NULL)) {
+                     ArgusFree(encaps->sbuf);
+                     encaps->sbuf = NULL;
+	          }
+                  if ((encaps->dlen > 0) && (encaps->dbuf != NULL)) {
+                     ArgusFree(encaps->dbuf);
+                     encaps->dbuf = NULL;
+	          }
+	       }
                break;
             }
          }
