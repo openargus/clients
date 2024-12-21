@@ -3580,8 +3580,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                               if (client->format == ARGUS_DATA) {
                                  if (client->version == ARGUS_VERSION && have_argus_client)
                                     ArgusWriteSocket (output, client, arg);
-                                 else if (client->version == ARGUS_VERSION_3
-                                          && have_argusv3_client)
+                                 else if (client->version == ARGUS_VERSION_3 && have_argusv3_client)
                                     ArgusWriteSocket (output, client, argv3);
                               }
                               else if ((client->format == ARGUS_CISCO_V5_DATA) && have_ciscov5_client) {
@@ -3622,15 +3621,14 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                            }
                         }
                         client = (void *) client->qhdr.nxt;
+
+                        if (have_argus_client)
+                           FreeArgusWireFmtBuffer(arg);
+                        if (have_argusv3_client)
+                           FreeArgusWireFmtBuffer(argv3);
+                        if (have_ciscov5_client)
+                           FreeArgusWireFmtBuffer(v5);
                      }
-
-                     if (have_argus_client)
-                        FreeArgusWireFmtBuffer(arg);
-                     if (have_argusv3_client)
-                        FreeArgusWireFmtBuffer(argv3);
-                     if (have_ciscov5_client)
-                        FreeArgusWireFmtBuffer(v5);
-
                   }
 #if defined(ARGUS_THREADS)
                   pthread_mutex_unlock(&output->ArgusClients->lock);
