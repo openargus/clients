@@ -6550,8 +6550,8 @@ ArgusPrintBssid (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
                case RA_FIXED_WIDTH: {
                   sprintf (buf, "%*.*s ", len, len, ArgusBssidStr);
                   if (strlen(ArgusBssidStr) > len) {
-                     buf[len - 1] = '*';
-                     buf[len]     = '\0';
+                     buf[len - 2] = '*';
+                     buf[len - 1] = '\0';
                   }
                   break;
                }
@@ -6630,8 +6630,8 @@ ArgusPrintSsid (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
                case RA_FIXED_WIDTH:
                   sprintf (buf, "%*.*s ", len, len, ArgusSsidStr);
                   if (strlen(ArgusSsidStr) > len) {
-                     buf[len - 1] = '*';
-                     buf[len]     = '\0';
+                     buf[len - 2] = '*';
+                     buf[len - 1] = '\0';
                   }
                   break;
                default:
@@ -6670,8 +6670,8 @@ ArgusPrintCause (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(ArgusCauseStr);
       else {
          if (strlen(ArgusCauseStr) > len) {
-            ArgusCauseStr[len - 1] = '*';
-            ArgusCauseStr[len]     = '\0';
+            ArgusCauseStr[len - 2] = '*';
+            ArgusCauseStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ArgusCauseStr);
@@ -6723,8 +6723,8 @@ ArgusPrintStartDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0';
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -6775,8 +6775,8 @@ ArgusPrintLastDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0';
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -6829,8 +6829,8 @@ ArgusPrintSrcStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -6882,8 +6882,8 @@ ArgusPrintSrcLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -6937,8 +6937,8 @@ ArgusPrintDstStartDate (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -6991,8 +6991,8 @@ ArgusPrintDstLastDate (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -7058,8 +7058,8 @@ ArgusPrintRelativeDate (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -7089,8 +7089,8 @@ ArgusPrintByteOffset (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -7120,8 +7120,8 @@ ArgusPrintAutoId (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -7863,8 +7863,8 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             snprintf (trans, 64, "%*.*s ", len, len, pbuf);
@@ -7900,8 +7900,8 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(trans);
       } else {
          if (strlen(trans) > len) {
-            trans[len - 1] = '*';
-            trans[len]     = '\0'; 
+            trans[len - 2] = '*';
+            trans[len - 1] = '\0'; 
          }        
       }
       snprintf(&buf[strlen(buf)], (MAXSTRLEN - strlen(buf)), "%*.*s ", len, len, trans);
@@ -7979,8 +7979,8 @@ ArgusPrintCor (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          len = strlen(cbuf);
       } else {
          if (strlen(cbuf) > len) {
-            cbuf[len - 1] = '*';
-            cbuf[len]     = '\0'; 
+            cbuf[len - 2] = '*';
+            cbuf[len - 1] = '\0'; 
          }        
       }
       snprintf(&buf[strlen(buf)], (MAXSTRLEN - strlen(buf)), "%*.*s ", len, len, cbuf);
@@ -8030,8 +8030,8 @@ ArgusPrintMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(avg);
       } else {
          if (strlen(avg) > len) {
-            avg[len - 1] = '*';
-            avg[len]     = '\0';
+            avg[len - 2] = '*';
+            avg[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, avg);
@@ -8081,8 +8081,8 @@ ArgusPrintIdleMean (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(avg);
       } else {
          if (strlen(avg) > len) {
-            avg[len - 1] = '*';
-            avg[len]     = '\0';
+            avg[len - 2] = '*';
+            avg[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, avg);
@@ -8127,8 +8127,8 @@ ArgusPrintSum (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          len = strlen(sum);
       } else {
          if (strlen(sum) > len) {
-            sum[len - 1] = '*';
-            sum[len]     = '\0';
+            sum[len - 2] = '*';
+            sum[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, sum);
@@ -8173,8 +8173,8 @@ ArgusPrintIdleSum (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(sum);
       } else {
          if (strlen(sum) > len) {
-            sum[len - 1] = '*';
-            sum[len]     = '\0';
+            sum[len - 2] = '*';
+            sum[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, sum);
@@ -8218,8 +8218,8 @@ ArgusPrintRunTime (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(sum);
       } else {
          if (strlen(sum) > len) {
-            sum[len - 1] = '*';
-            sum[len]     = '\0';
+            sum[len - 2] = '*';
+            sum[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, sum);
@@ -8263,8 +8263,8 @@ ArgusPrintMin (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          len = strlen(minval);
       } else {
          if (strlen(minval) > len) {
-            minval[len - 1] = '*';
-            minval[len]     = '\0';
+            minval[len - 2] = '*';
+            minval[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, minval);
@@ -8307,8 +8307,8 @@ ArgusPrintIdleMin (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(minval);
       } else {
          if (strlen(minval) > len) {
-            minval[len - 1] = '*';
-            minval[len]     = '\0';
+            minval[len - 2] = '*';
+            minval[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, minval);
@@ -8352,8 +8352,8 @@ ArgusPrintMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
          len = strlen(maxval);
       } else {
          if (strlen(maxval) > len) {
-            maxval[len - 1] = '*';
-            maxval[len]     = '\0';
+            maxval[len - 2] = '*';
+            maxval[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, maxval);
@@ -8397,8 +8397,8 @@ ArgusPrintIdleMax (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(maxval);
       } else {
          if (strlen(maxval) > len) {
-            maxval[len - 1] = '*';
-            maxval[len]     = '\0';
+            maxval[len - 2] = '*';
+            maxval[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, maxval);
@@ -8444,8 +8444,8 @@ ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(stddev);
       } else {
          if (strlen(stddev) > len) {
-            stddev[len - 1] = '*';
-            stddev[len]     = '\0';
+            stddev[len - 2] = '*';
+            stddev[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, stddev);
@@ -8491,8 +8491,8 @@ ArgusPrintIdleStdDeviation (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(stddev);
       } else {
          if (strlen(stddev) > len) {
-            stddev[len - 1] = '*';
-            stddev[len]     = '\0';
+            stddev[len - 2] = '*';
+            stddev[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, stddev);
@@ -8533,8 +8533,8 @@ ArgusPrintIdleTime (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(idle);
       } else {
          if (strlen(idle) > len) {
-            idle[len - 1] = '*';
-            idle[len]     = '\0';
+            idle[len - 2] = '*';
+            idle[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, idle);
@@ -8569,8 +8569,8 @@ ArgusPrintStartRange (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(ebuf);
       } else {
          if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0';
+            ebuf[len - 2] = '*';
+            ebuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ebuf);
@@ -8604,8 +8604,8 @@ ArgusPrintEndRange (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ebuf);
       } else {
          if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0';
+            ebuf[len - 2] = '*';
+            ebuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ebuf);
@@ -8632,8 +8632,8 @@ ArgusPrintDuration (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(durbuf);
       } else {
          if (strlen(durbuf) > len) {
-            durbuf[len - 1] = '*';
-            durbuf[len]     = '\0';
+            durbuf[len - 2] = '*';
+            durbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, durbuf);
@@ -8660,8 +8660,8 @@ ArgusPrintSrcDuration (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(dur);
       } else {
          if (strlen(dur) > len) {
-            dur[len - 1] = '*';
-            dur[len]     = '\0';
+            dur[len - 2] = '*';
+            dur[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, dur);
@@ -8688,8 +8688,8 @@ ArgusPrintDstDuration (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(dur);
       } else {
          if (strlen(dur) > len) {
-            dur[len - 1] = '*';
-            dur[len]     = '\0';
+            dur[len - 2] = '*';
+            dur[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, dur);
@@ -9181,8 +9181,8 @@ ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
             len = strlen(value);
          } else {
             if (strlen(value) > len) {
-               value[len - 1] = '*';
-               value[len]     = '\0';
+               value[len - 2] = '*';
+               value[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, value);
@@ -9274,8 +9274,8 @@ ArgusPrintSID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
             len = strlen(value);
          } else {
             if (strlen(value) > len) {
-               value[len - 1] = '*';
-               value[len]     = '\0';
+               value[len - 2] = '*';
+               value[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, value);
@@ -9372,8 +9372,8 @@ ArgusPrintNode (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
             len = strlen(value);
          } else {
             if (strlen(value) > len) {
-               value[len - 1] = '*';
-               value[len]     = '\0';
+               value[len - 2] = '*';
+               value[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, value);
@@ -9440,8 +9440,8 @@ ArgusPrintInf (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordSt
             len = strlen(value);
          } else {
             if (strlen(value) > len) {
-               value[len - 1] = '*';
-               value[len]     = '\0';
+               value[len - 2] = '*';
+               value[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, value);
@@ -9502,8 +9502,8 @@ ArgusPrintStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(status);
       } else {
          if (strlen(status) > len) {
-            status[len - 1] = '*';
-            status[len]     = '\0';
+            status[len - 2] = '*';
+            status[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, status);
@@ -9559,8 +9559,8 @@ ArgusPrintScore (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(score);
       } else {
          if (strlen(score) > len) {
-            score[len - 1] = '*';
-            score[len]     = '\0';
+            score[len - 2] = '*';
+            score[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, score);
@@ -9591,8 +9591,8 @@ ArgusPrintRank (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(rank);
       } else {
          if (strlen(rank) > len) {
-            rank[len - 1] = '*';
-            rank[len]     = '\0';
+            rank[len - 2] = '*';
+            rank[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, rank);
@@ -9613,8 +9613,8 @@ ArgusPrintBinNumber (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(binbuf);
       } else {
          if (strlen(binbuf) > len) {
-            binbuf[len - 1] = '*';
-            binbuf[len]     = '\0';
+            binbuf[len - 2] = '*';
+            binbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, binbuf);
@@ -9635,8 +9635,8 @@ ArgusPrintBins (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(binbuf);
       } else {
          if (strlen(binbuf) > len) {
-            binbuf[len - 1] = '*';
-            binbuf[len]     = '\0';
+            binbuf[len - 2] = '*';
+            binbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, binbuf);
@@ -9685,8 +9685,8 @@ ArgusPrintHashRef (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(hashbuf);
       } else {
          if (strlen(hashbuf) > len) {
-            hashbuf[len - 1] = '*';
-            hashbuf[len]     = '\0';
+            hashbuf[len - 2] = '*';
+            hashbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, hashbuf);
@@ -9735,8 +9735,8 @@ ArgusPrintHashIndex (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(hashbuf);
       } else {
          if (strlen(hashbuf) > len) {
-            hashbuf[len - 1] = '*';
-            hashbuf[len]     = '\0';
+            hashbuf[len - 2] = '*';
+            hashbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, hashbuf);
@@ -9777,8 +9777,8 @@ ArgusPrintSequenceNumber (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -9815,8 +9815,8 @@ ArgusPrintFlags (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(flags);
       } else {
          if (strlen(flags) > len) {
-            flags[len - 1] = '*';
-            flags[len]     = '\0';
+            flags[len - 2] = '*';
+            flags[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, flags);
@@ -9852,8 +9852,8 @@ ArgusPrintSrcMacAddress (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(macstr);
       } else {
          if (strlen(macstr) > len) {
-            macstr[len - 1] = '*';
-            macstr[len]     = '\0';
+            macstr[len - 2] = '*';
+            macstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, macstr);
@@ -9889,8 +9889,8 @@ ArgusPrintDstMacAddress (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(macstr);
       } else {
          if (strlen(macstr) > len) {
-            macstr[len - 1] = '*';
-            macstr[len]     = '\0';
+            macstr[len - 2] = '*';
+            macstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, macstr);
@@ -9930,8 +9930,8 @@ ArgusPrintSrcMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(macstr);
       } else {
          if (strlen(macstr) > len) {
-            macstr[len - 1] = '*';
-            macstr[len]     = '\0';
+            macstr[len - 2] = '*';
+            macstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, macstr);
@@ -9971,8 +9971,8 @@ ArgusPrintDstMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(macstr);
       } else {
          if (strlen(macstr) > len) {
-            macstr[len - 1] = '*';
-            macstr[len]     = '\0';
+            macstr[len - 2] = '*';
+            macstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, macstr);
@@ -10013,8 +10013,8 @@ ArgusPrintSrcOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(strbuf);
       } else {
          if (strlen(strbuf) > len) {
-            strbuf[len - 1] = '*';
-            strbuf[len]     = '\0';
+            strbuf[len - 2] = '*';
+            strbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, strbuf);
@@ -10055,8 +10055,8 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(strbuf);
       } else {
          if (strlen(strbuf) > len) {
-            strbuf[len - 1] = '*';
-            strbuf[len]     = '\0';
+            strbuf[len - 2] = '*';
+            strbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, strbuf);
@@ -10133,8 +10133,8 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(classbuf);
       } else {
          if (strlen(classbuf) > len) {
-            classbuf[len - 1] = '*';
-            classbuf[len]     = '\0';
+            classbuf[len - 2] = '*';
+            classbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, classbuf);
@@ -10212,8 +10212,8 @@ ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(classbuf);
       } else {
          if (strlen(classbuf) > len) {
-            classbuf[len - 1] = '*';
-            classbuf[len]     = '\0';
+            classbuf[len - 2] = '*';
+            classbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, classbuf);
@@ -10340,8 +10340,8 @@ ArgusPrintEtherType (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(etypeStr);
       } else {
          if (strlen(etypeStr) > len) {
-            etypeStr[len - 1] = '*';
-            etypeStr[len]     = '\0';
+            etypeStr[len - 2] = '*';
+            etypeStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, etypeStr);
@@ -10520,8 +10520,8 @@ ArgusPrintProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(protoStr);
       } else {
          if (strlen(protoStr) > len) {
-            protoStr[len - 1] = '*';
-            protoStr[len]     = '\0';
+            protoStr[len - 2] = '*';
+            protoStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, protoStr);
@@ -10562,8 +10562,8 @@ ArgusPrintSrcNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -10680,8 +10680,8 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -10731,8 +10731,8 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             switch (parser->RaFieldWidth) {
                case RA_FIXED_WIDTH:
                   if (strlen(value) > len) {
-                     value[len - 1] = '*';
-                     value[len]     = '\0';
+                     value[len - 2] = '*';
+                     value[len - 1] = '\0';
                   }
                   sprintf (buf, "%*.*s ", len, len, value);
                   break;
@@ -10931,8 +10931,8 @@ ArgusPrintDstNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -11312,8 +11312,8 @@ ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(protoStr);
       } else {
          if (strlen(protoStr) > len) {
-            protoStr[len - 1] = '*';
-            protoStr[len]     = '\0';
+            protoStr[len - 2] = '*';
+            protoStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, protoStr);
@@ -11623,8 +11623,8 @@ ArgusPrintGeneveProto (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(protoStr);
       } else {
          if (strlen(protoStr) > len) {
-            protoStr[len - 1] = '*';
-            protoStr[len]     = '\0';
+            protoStr[len - 2] = '*';
+            protoStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, protoStr);
@@ -11659,8 +11659,8 @@ ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -12006,8 +12006,8 @@ ArgusPrintSrcPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             switch (parser->RaFieldWidth) {
                case RA_FIXED_WIDTH:
                   if (strlen(pbuf) > len) {
-                     pbuf[len - 1] = '*';
-                     pbuf[len]     = '\0';
+                     pbuf[len - 2] = '*';
+                     pbuf[len - 1] = '\0';
                   }
                   sprintf (buf, "%*.*s ", len, len, pbuf);
                   break;
@@ -12130,8 +12130,8 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
             switch (parser->RaFieldWidth) {
                case RA_FIXED_WIDTH:
                   if (strlen(pbuf) > len) {
-                     pbuf[len - 1] = '*';
-                     pbuf[len]     = '\0';
+                     pbuf[len - 2] = '*';
+                     pbuf[len - 1] = '\0';
                   }
                   sprintf (buf, "%*.*s ", len, len, pbuf);
                   break;
@@ -12235,8 +12235,8 @@ ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                         sprintf (chksum, "0x%x", flow->flow_un.isis.chksum);
 
                         if (strlen(chksum) > len)
-                           chksum[len - 1] = '*';
-                        chksum[len]     = '\0';
+                           chksum[len - 2] = '*';
+                        chksum[len - 1] = '\0';
                         sprintf (buf, "%-*.*s ", len, len, chksum);
                         done++;
                         break;
@@ -12437,8 +12437,8 @@ ArgusPrintEspSpi (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 
             sprintf (spibuf, "0x%8.8x", spi);
             if (strlen(spibuf) > len) {
-               spibuf[len - 1] = '*';
-               spibuf[len]     = '\0';
+               spibuf[len - 2] = '*';
+               spibuf[len - 1] = '\0';
             }
 
             if (parser->RaSeparateAddrPortWithPeriod) {
@@ -12580,8 +12580,8 @@ ArgusPrintSrcDSByte (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12627,8 +12627,8 @@ ArgusPrintDstDSByte (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12667,8 +12667,8 @@ ArgusPrintSrcTos (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12707,8 +12707,8 @@ ArgusPrintDstTos (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12761,8 +12761,8 @@ ArgusPrintSrcTtl (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12801,8 +12801,8 @@ ArgusPrintDstTtl (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12850,8 +12850,8 @@ ArgusPrintSrcHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -12898,8 +12898,8 @@ ArgusPrintDstHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -13012,8 +13012,8 @@ ArgusPrintKeyStrokeNStroke (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -13058,8 +13058,8 @@ ArgusPrintKeyStrokeSrcNStroke (struct ArgusParserStruct *parser, char *buf, stru
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -13104,8 +13104,8 @@ ArgusPrintKeyStrokeDstNStroke (struct ArgusParserStruct *parser, char *buf, stru
          len = strlen(obuf);
       else {
          if (strlen(obuf) > len) {
-            obuf[len - 1] = '*';
-            obuf[len]     = '\0';
+            obuf[len - 2] = '*';
+            obuf[len - 1] = '\0';
          } 
       } 
       sprintf (buf, "%*.*s ", len, len, obuf);
@@ -13288,8 +13288,8 @@ ArgusPrintPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13335,8 +13335,8 @@ ArgusPrintPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
                   len = strlen(pbuf);
                else {
                   if (strlen(pbuf) > len) {
-                     pbuf[len - 1] = '*';
-                     pbuf[len]     = '\0';
+                     pbuf[len - 2] = '*';
+                     pbuf[len - 1] = '\0';
                   }
                }
                sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13379,8 +13379,8 @@ ArgusPrintSrcPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13427,8 +13427,8 @@ ArgusPrintSrcPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13470,8 +13470,8 @@ ArgusPrintDstPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13518,8 +13518,8 @@ ArgusPrintDstPackets (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13565,8 +13565,8 @@ ArgusPrintBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13615,8 +13615,8 @@ ArgusPrintBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
                len = strlen(pbuf);
             else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13658,8 +13658,8 @@ ArgusPrintSrcBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0'; 
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0'; 
                }        
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13709,8 +13709,8 @@ ArgusPrintSrcBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0'; 
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0'; 
                }        
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13752,8 +13752,8 @@ ArgusPrintDstBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13803,8 +13803,8 @@ ArgusPrintDstBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13845,8 +13845,8 @@ ArgusPrintAppBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13897,8 +13897,8 @@ ArgusPrintAppBytes (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13939,8 +13939,8 @@ ArgusPrintSrcAppBytes (struct ArgusParserStruct *parser, char *buf, struct Argus
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -13990,8 +13990,8 @@ ArgusPrintSrcAppBytes (struct ArgusParserStruct *parser, char *buf, struct Argus
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14032,8 +14032,8 @@ ArgusPrintDstAppBytes (struct ArgusParserStruct *parser, char *buf, struct Argus
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14083,8 +14083,8 @@ ArgusPrintDstAppBytes (struct ArgusParserStruct *parser, char *buf, struct Argus
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14132,8 +14132,8 @@ ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *parser, char *buf, st
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14182,8 +14182,8 @@ ArgusPrintTransEfficiency (struct ArgusParserStruct *parser, char *buf, struct A
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14231,8 +14231,8 @@ ArgusPrintSrcTransEfficiency (struct ArgusParserStruct *parser, char *buf, struc
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14280,8 +14280,8 @@ ArgusPrintDstTransEfficiency (struct ArgusParserStruct *parser, char *buf, struc
                len = strlen(pbuf);
             } else {
                if (strlen(pbuf) > len) {
-                  pbuf[len - 1] = '*';
-                  pbuf[len]     = '\0';
+                  pbuf[len - 2] = '*';
+                  pbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -14321,8 +14321,8 @@ ArgusPrintSrcLatitude (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14360,8 +14360,8 @@ ArgusPrintDstLatitude (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14398,8 +14398,8 @@ ArgusPrintInodeLatitude (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14437,8 +14437,8 @@ ArgusPrintSrcLongitude (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14475,8 +14475,8 @@ ArgusPrintDstLongitude (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14514,8 +14514,8 @@ ArgusPrintInodeLongitude (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14552,8 +14552,8 @@ ArgusPrintLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14617,8 +14617,8 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14683,8 +14683,8 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -14892,8 +14892,8 @@ ArgusPrintSrcPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -14938,8 +14938,8 @@ ArgusPrintSrcMaxPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
 
@@ -14984,8 +14984,8 @@ ArgusPrintSrcMinPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15035,8 +15035,8 @@ ArgusPrintSrcMeanPktSize (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -15109,8 +15109,8 @@ ArgusPrintDstPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15154,8 +15154,8 @@ ArgusPrintDstMaxPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15199,8 +15199,8 @@ ArgusPrintDstMinPktSize (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15249,8 +15249,8 @@ ArgusPrintDstMeanPktSize (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -15302,8 +15302,8 @@ ArgusPrintSrcIntPkt (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15432,8 +15432,8 @@ ArgusPrintSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15507,8 +15507,8 @@ ArgusPrintActiveSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, stru
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15582,8 +15582,8 @@ ArgusPrintIdleSrcIntPktDist (struct ArgusParserStruct *parser, char *buf, struct
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15637,8 +15637,8 @@ ArgusPrintDstIntPkt (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15766,8 +15766,8 @@ ArgusPrintDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15841,8 +15841,8 @@ ArgusPrintActiveDstIntPktDist (struct ArgusParserStruct *parser, char *buf, stru
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15916,8 +15916,8 @@ ArgusPrintIdleDstIntPktDist (struct ArgusParserStruct *parser, char *buf, struct
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15955,8 +15955,8 @@ ArgusPrintActiveSrcIntPkt (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -15995,8 +15995,8 @@ ArgusPrintActiveDstIntPkt (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16035,8 +16035,8 @@ ArgusPrintIdleSrcIntPkt (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16078,8 +16078,8 @@ ArgusPrintIdleDstIntPkt (struct ArgusParserStruct *parser, char *buf, struct Arg
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16128,8 +16128,8 @@ ArgusPrintSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct Argu
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16176,8 +16176,8 @@ ArgusPrintSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16218,8 +16218,8 @@ ArgusPrintDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16257,8 +16257,8 @@ ArgusPrintDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16296,8 +16296,8 @@ ArgusPrintActiveSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struc
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16335,8 +16335,8 @@ ArgusPrintActiveSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struc
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16374,8 +16374,8 @@ ArgusPrintActiveDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struc
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16413,8 +16413,8 @@ ArgusPrintActiveDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struc
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16451,8 +16451,8 @@ ArgusPrintIdleSrcIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16489,8 +16489,8 @@ ArgusPrintIdleSrcIntPktMin (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16527,8 +16527,8 @@ ArgusPrintIdleDstIntPktMax (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16565,8 +16565,8 @@ ArgusPrintIdleDstIntPktMin (struct ArgusParserStruct *parser, char *buf, struct 
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }  
       } 
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16613,8 +16613,8 @@ ArgusPrintIntFlow (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16684,8 +16684,8 @@ ArgusPrintIntFlowDist (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(value);
       } else {
          if (strlen(value) > len) {
-            value[len - 1] = '*';
-            value[len]     = '\0';
+            value[len - 2] = '*';
+            value[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, value);
@@ -16729,8 +16729,8 @@ ArgusPrintIntFlowMax (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16776,8 +16776,8 @@ ArgusPrintIntFlowStdDev (struct ArgusParserStruct *parser, char *buf, struct Arg
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16823,8 +16823,8 @@ ArgusPrintIntFlowMin (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16903,8 +16903,8 @@ ArgusPrintSrcJitter (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                len = strlen(value);
             } else {
                if (strlen(value) > len) {
-                  value[len - 1] = '*';
-                  value[len]     = '\0';
+                  value[len - 2] = '*';
+                  value[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, value);
@@ -16981,8 +16981,8 @@ ArgusPrintDstJitter (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                len = strlen(sbuf);
             } else {
                if (strlen(sbuf) > len) {
-                  sbuf[len - 1] = '*';
-                  sbuf[len]     = '\0';
+                  sbuf[len - 2] = '*';
+                  sbuf[len - 1] = '\0';
                }  
             } 
             sprintf (buf, "%*.*s ", len, len, sbuf);
@@ -17032,8 +17032,8 @@ ArgusPrintActiveSrcJitter (struct ArgusParserStruct *parser, char *buf, struct A
                len = strlen(sbuf);
             } else {
                if (strlen(sbuf) > len) {
-                  sbuf[len - 1] = '*';
-                  sbuf[len]     = '\0';
+                  sbuf[len - 2] = '*';
+                  sbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, sbuf);
@@ -17082,8 +17082,8 @@ ArgusPrintActiveDstJitter (struct ArgusParserStruct *parser, char *buf, struct A
                len = strlen(sbuf);
             } else {
                if (strlen(sbuf) > len) {
-                  sbuf[len - 1] = '*';
-                  sbuf[len]     = '\0';
+                  sbuf[len - 2] = '*';
+                  sbuf[len - 1] = '\0';
                }
             }
             sprintf (buf, "%*.*s ", len, len, sbuf);
@@ -17127,8 +17127,8 @@ ArgusPrintIdleSrcJitter (struct ArgusParserStruct *parser, char *buf, struct Arg
             len = strlen(sbuf);
          } else {
             if (strlen(sbuf) > len) {
-               sbuf[len - 1] = '*';
-               sbuf[len]     = '\0';
+               sbuf[len - 2] = '*';
+               sbuf[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, sbuf);
@@ -17170,8 +17170,8 @@ ArgusPrintIdleDstJitter (struct ArgusParserStruct *parser, char *buf, struct Arg
             len = strlen(sbuf);
          } else {
             if (strlen(sbuf) > len) {
-               sbuf[len - 1] = '*';
-               sbuf[len]     = '\0';
+               sbuf[len - 2] = '*';
+               sbuf[len - 1] = '\0';
             }
          }
          sprintf (buf, "%*.*s ", len, len, sbuf);
@@ -17217,8 +17217,8 @@ ArgusPrintSrcRate (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17262,8 +17262,8 @@ ArgusPrintDstRate (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17306,8 +17306,8 @@ ArgusPrintRate (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17342,8 +17342,8 @@ ArgusPrintSrcLoss (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17378,8 +17378,8 @@ ArgusPrintDstLoss (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17415,8 +17415,8 @@ ArgusPrintLoss (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17452,8 +17452,8 @@ ArgusPrintSrcRetrans (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17488,8 +17488,8 @@ ArgusPrintDstRetrans (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17525,8 +17525,8 @@ ArgusPrintRetrans (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17554,8 +17554,8 @@ ArgusPrintPercentSrcRetrans (struct ArgusParserStruct *parser, char *buf, struct
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17582,8 +17582,8 @@ ArgusPrintPercentDstRetrans (struct ArgusParserStruct *parser, char *buf, struct
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17610,8 +17610,8 @@ ArgusPrintPercentRetrans (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17646,8 +17646,8 @@ ArgusPrintSrcNacks (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17682,8 +17682,8 @@ ArgusPrintDstNacks (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17719,8 +17719,8 @@ ArgusPrintNacks (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17748,8 +17748,8 @@ ArgusPrintPercentSrcNacks (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17776,8 +17776,8 @@ ArgusPrintPercentDstNacks (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17804,8 +17804,8 @@ ArgusPrintPercentNacks (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17841,8 +17841,8 @@ ArgusPrintSrcSolo (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17877,8 +17877,8 @@ ArgusPrintDstSolo (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17914,8 +17914,8 @@ ArgusPrintSolo (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17943,8 +17943,8 @@ ArgusPrintPercentSrcSolo (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17971,8 +17971,8 @@ ArgusPrintPercentDstSolo (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -17999,8 +17999,8 @@ ArgusPrintPercentSolo (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18036,8 +18036,8 @@ ArgusPrintSrcFirst (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18072,8 +18072,8 @@ ArgusPrintDstFirst (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18109,8 +18109,8 @@ ArgusPrintFirst (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18138,8 +18138,8 @@ ArgusPrintPercentSrcFirst (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18166,8 +18166,8 @@ ArgusPrintPercentDstFirst (struct ArgusParserStruct *parser, char *buf, struct A
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18194,8 +18194,8 @@ ArgusPrintPercentFirst (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18222,8 +18222,8 @@ ArgusPrintPercentSrcLoss (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18250,8 +18250,8 @@ ArgusPrintPercentDstLoss (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18278,8 +18278,8 @@ ArgusPrintPercentLoss (struct ArgusParserStruct *parser, char *buf, struct Argus
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18315,8 +18315,8 @@ ArgusPrintSrcLoad (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18351,8 +18351,8 @@ ArgusPrintDstLoad (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18394,8 +18394,8 @@ ArgusPrintLoad (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -18431,8 +18431,8 @@ ArgusPrintSrcVID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(vlanbuf);
       } else {
          if (strlen(vlanbuf) > len) {
-            vlanbuf[len - 1] = '*';
-            vlanbuf[len]     = '\0';
+            vlanbuf[len - 2] = '*';
+            vlanbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, vlanbuf);
@@ -18467,8 +18467,8 @@ ArgusPrintDstVID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(vlanbuf);
       } else {
          if (strlen(vlanbuf) > len) {
-            vlanbuf[len - 1] = '*';
-            vlanbuf[len]     = '\0';
+            vlanbuf[len - 2] = '*';
+            vlanbuf[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, vlanbuf);
@@ -18522,8 +18522,8 @@ ArgusPrintSrcVlan (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(vstr);
       } else {
          if (strlen(vstr) > len) {
-            vstr[len - 1] = '*';
-            vstr[len]     = '\0';
+            vstr[len - 2] = '*';
+            vstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, vstr);
@@ -18551,8 +18551,8 @@ ArgusPrintDstVlan (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(vstr);
       } else {
          if (strlen(vstr) > len) {
-            vstr[len - 1] = '*';
-            vstr[len]     = '\0'; 
+            vstr[len - 2] = '*';
+            vstr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, vstr);
@@ -18585,8 +18585,8 @@ ArgusPrintSrcMpls (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -18618,8 +18618,8 @@ ArgusPrintDstMpls (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
          len = strlen(tbuf);
       } else {
          if (strlen(tbuf) > len) {
-            tbuf[len - 1] = '*';
-            tbuf[len]     = '\0'; 
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, tbuf);
@@ -18660,8 +18660,8 @@ ArgusPrintSrcVirtualNID (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(vstr);
       } else {
          if (strlen(vstr) > len) {
-            vstr[len - 1] = '*';
-            vstr[len]     = '\0';
+            vstr[len - 2] = '*';
+            vstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, vstr);
@@ -18689,8 +18689,8 @@ ArgusPrintDstVirtualNID (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(vstr);
       } else {
          if (strlen(vstr) > len) {
-            vstr[len - 1] = '*';
-            vstr[len]     = '\0';
+            vstr[len - 2] = '*';
+            vstr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, vstr);
@@ -18800,8 +18800,8 @@ ArgusPrintSrcWindow (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(winbuf);
       } else {
          if (strlen(winbuf) > len) {
-            winbuf[len - 1] = '*';
-            winbuf[len]     = '\0'; 
+            winbuf[len - 2] = '*';
+            winbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, winbuf);
@@ -18877,8 +18877,8 @@ ArgusPrintDstWindow (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(winbuf);
       } else {
          if (strlen(winbuf) > len) {
-            winbuf[len - 1] = '*';
-            winbuf[len]     = '\0'; 
+            winbuf[len - 2] = '*';
+            winbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, winbuf);
@@ -18952,8 +18952,8 @@ ArgusPrintSrcMaxSeg (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(mssbuf);
       } else {
          if (strlen(mssbuf) > len) {
-            mssbuf[len - 1] = '*';
-            mssbuf[len]     = '\0'; 
+            mssbuf[len - 2] = '*';
+            mssbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, mssbuf);
@@ -19026,8 +19026,8 @@ ArgusPrintDstMaxSeg (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(mssbuf);
       } else {
          if (strlen(mssbuf) > len) {
-            mssbuf[len - 1] = '*';
-            mssbuf[len]     = '\0'; 
+            mssbuf[len - 2] = '*';
+            mssbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, mssbuf);
@@ -19059,8 +19059,8 @@ ArgusPrintTCPRTT (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0'; 
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19089,8 +19089,8 @@ ArgusPrintTCPSynAck (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0'; 
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19119,8 +19119,8 @@ ArgusPrintTCPAckDat (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0'; 
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19149,8 +19149,8 @@ ArgusPrintTCPSrcMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0'; 
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19179,8 +19179,8 @@ ArgusPrintTCPDstMax (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0'; 
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19216,8 +19216,8 @@ ArgusPrintSrcGap (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19252,8 +19252,8 @@ ArgusPrintDstGap (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(ptr);
       } else { 
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }        
       }              
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19289,8 +19289,8 @@ ArgusPrintSrcDup (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(ptr);
       } else {
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19325,8 +19325,8 @@ ArgusPrintDstDup (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
          len = strlen(ptr);
       } else { 
          if (strlen(ptr) > len) {
-            ptr[len - 1] = '*';
-            ptr[len]     = '\0';
+            ptr[len - 2] = '*';
+            ptr[len - 1] = '\0';
          }        
       }              
       sprintf (buf, "%*.*s ", len, len, ptr);
@@ -19396,8 +19396,8 @@ ArgusPrintTCPSrcBase (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(pbuf);
       } else {
          if (strlen(pbuf) > len) {
-            pbuf[len - 1] = '*';
-            pbuf[len]     = '\0'; 
+            pbuf[len - 2] = '*';
+            pbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -19464,8 +19464,8 @@ ArgusPrintTCPDstBase (struct ArgusParserStruct *parser, char *buf, struct ArgusR
          len = strlen(pbuf);
       } else {
          if (strlen(pbuf) > len) {
-            pbuf[len - 1] = '*';
-            pbuf[len]     = '\0'; 
+            pbuf[len - 2] = '*';
+            pbuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, pbuf);
@@ -19709,8 +19709,8 @@ ArgusPrintState (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          len = slen;
       } else {
          if (slen > len) {
-            ArgusProcessStr[len - 1] = '*';
-            ArgusProcessStr[len]     = '\0';
+            ArgusProcessStr[len - 2] = '*';
+            ArgusProcessStr[len - 1] = '\0';
          }
       }
       sprintf (buf, "%*.*s ", len, len, ArgusProcessStr);
@@ -19744,8 +19744,8 @@ ArgusPrintDeltaDuration (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(deltadur);
       } else {
          if (strlen(deltadur) > len) {
-            deltadur[len - 1] = '*';
-            deltadur[len]     = '\0'; 
+            deltadur[len - 2] = '*';
+            deltadur[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, deltadur);
@@ -19788,8 +19788,8 @@ ArgusPrintDeltaStartTime (struct ArgusParserStruct *parser, char *buf, struct Ar
          len = strlen(deltastart);
       } else {
          if (strlen(deltastart) > len) {
-            deltastart[len - 1] = '*';
-            deltastart[len]     = '\0'; 
+            deltastart[len - 2] = '*';
+            deltastart[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, deltastart);
@@ -19823,8 +19823,8 @@ ArgusPrintDeltaLastTime (struct ArgusParserStruct *parser, char *buf, struct Arg
          len = strlen(deltalast);
       } else {
          if (strlen(deltalast) > len) {
-            deltalast[len - 1] = '*';
-            deltalast[len]     = '\0'; 
+            deltalast[len - 2] = '*';
+            deltalast[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, deltalast);
@@ -19858,8 +19858,8 @@ ArgusPrintDeltaSrcPkts (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(deltaspkts);
       } else {
          if (strlen(deltaspkts) > len) {
-            deltaspkts[len - 1] = '*';
-            deltaspkts[len]     = '\0'; 
+            deltaspkts[len - 2] = '*';
+            deltaspkts[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, deltaspkts);
@@ -19892,8 +19892,8 @@ ArgusPrintDeltaDstPkts (struct ArgusParserStruct *parser, char *buf, struct Argu
          len = strlen(deltadpkts);
       } else {
          if (strlen(deltadpkts) > len) {
-            deltadpkts[len - 1] = '*';
-            deltadpkts[len]     = '\0'; 
+            deltadpkts[len - 2] = '*';
+            deltadpkts[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, deltadpkts);
@@ -20182,8 +20182,8 @@ ArgusPrintSrcEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ebuf);
       } else {
          if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0'; 
+            ebuf[len - 2] = '*';
+            ebuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ebuf);
@@ -20241,8 +20241,8 @@ ArgusPrintDstEncaps (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          len = strlen(ebuf);
       } else {
          if (strlen(ebuf) > len) {
-            ebuf[len - 1] = '*';
-            ebuf[len]     = '\0'; 
+            ebuf[len - 2] = '*';
+            ebuf[len - 1] = '\0'; 
          }        
       }
       sprintf (buf, "%*.*s ", len, len, ebuf);
