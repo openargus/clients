@@ -27191,7 +27191,7 @@ ArgusNtoH (struct ArgusRecord *argus)
             char *end = (char *)argus + (hdr->len * 4);
             int cnt;
             while ((char *) dsr < end) {
-               cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
+               cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
                       ((dsr->subtype & ARGUS_LEN_16BITS)  ? ntohs(dsr->argus_dsrvl16.len) :
                                                                   dsr->argus_dsrvl8.len))) * 4;
                if (cnt == 0)
@@ -28517,7 +28517,7 @@ ArgusHtoN (struct ArgusRecord *argus)
                   }
                }
 
-               if ((cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? 1 :
+               if ((cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
                            ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
                                                                  dsr->argus_dsrvl8.len))) * 4) > 0) {
                   if (dsr->subtype & ARGUS_LEN_16BITS)  

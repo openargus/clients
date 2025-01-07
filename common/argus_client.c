@@ -1720,7 +1720,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                unsigned char qual = 0;
                int cnt;
 
-               if ((cnt = (((type & ARGUS_IMMEDIATE_DATA) ? 1 :
+               if ((cnt = (((type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
                            ((subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
                                                             dsr->argus_dsrvl8.len))) * 4) > 0) {
 
