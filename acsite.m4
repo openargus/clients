@@ -1990,9 +1990,10 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
       if test "x$with_libmaxminddb" = "xyes"; then
          PKG_CHECK_MODULES([LIBMAXMINDDB],
                            [libmaxminddb],
-                           [AC_DEFINE([ARGUS_GEOIP2])], 
-                           [AC_CHECK_FILE("/opt/homebrew/include/maxminddb.h",
-                               [V_INCLS="$V_INCLS -I/opt/homebrew/include"])])
+                           AC_DEFINE([ARGUS_GEOIP2], [], [Description])) 
+
+         AC_CHECK_FILE("/opt/homebrew/include/maxminddb.h",
+                       [V_INCLS="$V_INCLS -I/opt/homebrew/include"])
       fi
    fi
 ])
