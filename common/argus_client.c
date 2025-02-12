@@ -15,16 +15,16 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA. 
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  */
-
+ 
 /*
  * Argus-5.0 Client Library
- *
+ * 
  * written by Carter Bullard
  * QoSient, LLC
- *
+ * 
  */
 
 /* 
@@ -608,16 +608,15 @@ ArgusReadFileStream (struct ArgusParserStruct *parser, struct ArgusInput *input)
 
       if (parser->RaClientTimeoutAbs.tv_sec > 0 && ArgusCheckTimeout(parser, input)) {
          ArgusClientTimeout ();
-
-         if (parser->Tflag) {
-            struct timeval rtime, diff;
-            rtime = parser->ArgusRealTime;
-            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
-            if (diff.tv_sec >= parser->Tflag)
-               ArgusShutDown(0);
-         }
-
          ArgusSetTimeout(parser, input);
+      }
+
+      if (parser->Tflag) {
+         struct timeval rtime, diff;
+         rtime = parser->ArgusRealTime;
+         RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
+         if (diff.tv_sec >= parser->Tflag)
+            ArgusShutDown(0);
       }
    }
 
@@ -917,75 +916,77 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
 #endif
       }
 
-      if (parser->RaClientTimeoutAbs.tv_sec == 0) {
+      if (input != NULL) {
+         if (parser->RaClientTimeoutAbs.tv_sec == 0) {
 #if defined(ARGUS_THREADS)
-         pthread_mutex_lock(&parser->lock);
+            pthread_mutex_lock(&parser->lock);
 #endif
-         gettimeofday (&ArgusParser->ArgusRealTime, NULL);
-         rtime = parser->ArgusRealTime;
+            gettimeofday (&ArgusParser->ArgusRealTime, NULL);
+            rtime = parser->ArgusRealTime;
 #if defined(ARGUS_THREADS)
-         pthread_mutex_unlock(&parser->lock);
+            pthread_mutex_unlock(&parser->lock);
 #endif
-         ArgusSetTimeout(parser, input);
-      }
-
-      if (ArgusCheckTimeout(parser, input)) {
-         ArgusClientTimeout ();
-         ArgusSetTimeout(parser, input);
-
-         if (parser->Tflag) {
-            struct timeval diff;
-            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
-            if (diff.tv_sec >= parser->Tflag)
-               ArgusShutDown(0);
+            ArgusSetTimeout(parser, input);
          }
+
+         if (ArgusCheckTimeout(parser, input)) {
+            ArgusClientTimeout ();
+            ArgusSetTimeout(parser, input);
 
 #if !defined(ARGUS_THREADS)
-         if (parser->ArgusReliableConnection) {
-            struct ArgusInput *addr;
-            int flags;
+            if (parser->ArgusReliableConnection) {
+               struct ArgusInput *addr;
+               int flags;
 
-            if ((addr = (void *)ArgusPopQueue(ArgusParser->ArgusRemoteHosts, ARGUS_LOCK)) != NULL) {
-               if (addr->fd != -1) close(addr->fd);
-               if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) { 
-                  if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
+               if ((addr = (void *)ArgusPopQueue(ArgusParser->ArgusRemoteHosts, ARGUS_LOCK)) != NULL) {
+                  if (addr->fd != -1) close(addr->fd);
+                  if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) { 
+                     if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
 #if defined(ARGUS_THREADS)
-                     pthread_mutex_lock(&ArgusParser->lock);
+                        pthread_mutex_lock(&ArgusParser->lock);
 #endif
-                     ArgusParser->ArgusTotalMarRecords++;
-                     ArgusParser->ArgusTotalRecords++;
+                        ArgusParser->ArgusTotalMarRecords++;
+                        ArgusParser->ArgusTotalRecords++;
 #if defined(ARGUS_THREADS)
-                     pthread_mutex_unlock(&ArgusParser->lock);
+                        pthread_mutex_unlock(&ArgusParser->lock);
 #endif
-      
-                     if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)  
-                        ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
          
-                     if (fcntl(addr->fd, F_SETFL, flags | O_NONBLOCK) < 0)
-                        ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
-      
-                     if (ArgusParser->RaPollMode)
-                        ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
-      
-                     ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
+                        if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)  
+                           ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
+            
+                        if (fcntl(addr->fd, F_SETFL, flags | O_NONBLOCK) < 0)
+                           ArgusLog (LOG_WARNING, "ArgusConnectRemote: fcntl error %s", strerror(errno));
+         
+                        if (ArgusParser->RaPollMode)
+                           ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
+         
+                        ArgusAddToQueue(ArgusParser->ArgusActiveHosts, &addr->qhdr, ARGUS_LOCK);
 #if defined(ARGUS_THREADS)
-                     pthread_mutex_lock(&ArgusParser->lock);
+                        pthread_mutex_lock(&ArgusParser->lock);
 #endif
-                     ArgusParser->ArgusHostsActive++;
+                        ArgusParser->ArgusHostsActive++;
 #if defined(ARGUS_THREADS)
-                     pthread_mutex_unlock(&ArgusParser->lock);
+                        pthread_mutex_unlock(&ArgusParser->lock);
 #endif
-       
-                  } else {
-                     close(addr->fd);
-                     addr->fd = -1;
+          
+                     } else {
+                        close(addr->fd);
+                        addr->fd = -1;
+                        ArgusAddToQueue(ArgusParser->ArgusRemoteHosts, &addr->qhdr, ARGUS_LOCK);
+                     }
+                  } else
                      ArgusAddToQueue(ArgusParser->ArgusRemoteHosts, &addr->qhdr, ARGUS_LOCK);
-                  }
-               } else
-                  ArgusAddToQueue(ArgusParser->ArgusRemoteHosts, &addr->qhdr, ARGUS_LOCK);
+               }
             }
-         }
 #endif
+         }
+
+         if (ArgusParser->Tflag) {
+            struct timeval diff;
+            RaDiffTime (&rtime, &input->ArgusStartTime, &diff);
+            if (diff.tv_sec >= ArgusParser->Tflag)
+               ArgusShutDown(0);
+         }
       }
    }
 
@@ -1607,6 +1608,8 @@ ArgusConnect(int s, const struct sockaddr *name, socklen_t namelen, int timeout)
 struct ArgusRecordStruct ArgusGenerateRecordBuffer;
 struct ArgusCanonRecord  ArgusGenerateCanonBuffer;
 char ArgusCanonLabelBuffer[MAXBUFFERLEN];
+unsigned char ArgusCanonSrcEncapsBuffer[MAXBUFFERLEN];
+unsigned char ArgusCanonDstEncapsBuffer[MAXBUFFERLEN];
 
 struct ArgusRecordStruct *
 ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *input, struct ArgusRecord *argus)
@@ -1720,7 +1723,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                unsigned char qual = 0;
                int cnt;
 
-               if ((cnt = (((type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
+               if ((cnt = (((type & ARGUS_IMMEDIATE_DATA) ? 1 :
                            ((subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
                                                             dsr->argus_dsrvl8.len))) * 4) > 0) {
 
@@ -2066,13 +2069,13 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                            unsigned char *cptr = (void *) &encaps->sbuf;
                            if (encaps->slen > 0) {
                               int clen = encaps->slen;
-                              cncaps->sbuf = ArgusCalloc(1, clen);
+                              cncaps->sbuf = ArgusCanonSrcEncapsBuffer;
                               memcpy(cncaps->sbuf, cptr, clen);
                               cptr += clen;
 			   }
 			   if (encaps->dlen > 0) {
                               int clen = encaps->dlen;
-                              cncaps->dbuf = ArgusCalloc(1, clen);
+                              cncaps->dbuf = ArgusCanonDstEncapsBuffer;
                               memcpy(cncaps->dbuf, cptr, clen);
 			   }
 			}
@@ -3860,7 +3863,6 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_PSIZE_INDEX:
                                  case ARGUS_IPATTR_INDEX:
                                  case ARGUS_ICMP_INDEX:
-
                                  case ARGUS_MAC_INDEX:
                                  case ARGUS_VLAN_INDEX:
                                  case ARGUS_VXLAN_INDEX:
@@ -3942,18 +3944,18 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                     renc  = (struct ArgusEncapsStruct *) retn->dsrs[i];
 
                                     bcopy((char *)enc, (char *)renc, sizeof(struct ArgusEncapsStruct));
-				    renc->sbuf = NULL; renc->dbuf = NULL;
+                                    renc->sbuf = NULL; renc->dbuf = NULL;
 
                                     if ((enc->slen > 0) && (enc->sbuf != NULL)) {
                                        if ((renc->sbuf = ArgusCalloc(1, enc->slen)) == NULL)
                                           ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
                                        bcopy((char *)enc->sbuf, (char *)renc->sbuf, enc->slen);
-	                            }
+                                    }
                                     if ((enc->dlen > 0) && (enc->dbuf != NULL)) {
                                        if ((renc->dbuf = ArgusCalloc(1, enc->dlen)) == NULL)
                                           ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));
                                        bcopy((char *)enc->dbuf, (char *)renc->dbuf, enc->dlen);
-	                            }
+                                    }
                                     break;
                                  }
 
@@ -4100,15 +4102,15 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
             case ARGUS_ENCAPS_INDEX: {
                struct ArgusEncapsStruct *encaps  = (struct ArgusEncapsStruct *) ns->dsrs[i];
                if (encaps != NULL) {
-                  if ((encaps->slen > 0) && (encaps->sbuf != NULL)) {
+                  if ((encaps->sbuf != NULL) && (encaps->slen > 0)) {
                      ArgusFree(encaps->sbuf);
                      encaps->sbuf = NULL;
-	          }
-                  if ((encaps->dlen > 0) && (encaps->dbuf != NULL)) {
+                  }
+                  if ((encaps->dbuf != NULL) && (encaps->dlen > 0)) {
                      ArgusFree(encaps->dbuf);
                      encaps->dbuf = NULL;
-	          }
-	       }
+                  }
+               }
                break;
             }
          }
