@@ -215,7 +215,7 @@ ArgusCursesProcess (void *arg)
       ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_mutex_unlock error %s", strerror(errno));
 #endif
 
-   while (!done) {
+   while ((!done) && (!parser->RaShutDown)) {
       struct timeval tvbuf, *tvp = &tvbuf;
       int ArgusDisplayNeedsRefreshing = 0;
       struct timespec tsbuf, *tsp = &tsbuf;
