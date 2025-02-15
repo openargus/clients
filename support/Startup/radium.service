@@ -13,7 +13,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/radium
+ExecStart=/usr/local/sbin/radium
 
 [Install]
 WantedBy=multi-user.target

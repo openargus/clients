@@ -3445,7 +3445,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                     struct ArgusTCPStatus *tcp = (struct ArgusTCPStatus *) &canon->net.net_union.tcpstatus;
                                     char TcpShouldReverse = 0;
 
-                                    if (!(status & ARGUS_DIRECTION)) {
+//                                  if (!(status & ARGUS_DIRECTION)) {
                                     if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
                                        if (!(tcp->status & ARGUS_SAW_SYN) && (tcp->status & ARGUS_SAW_SYN_SENT)) {
                                           switch (canon->net.hdr.subtype) {
@@ -3495,6 +3495,20 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                                 break;
                                              }
                                           }
+
+                                       } else {
+                                          switch (canon->net.hdr.subtype) {
+                                             case ARGUS_TCP_INIT: {
+                                                break;
+                                             }
+                                             case ARGUS_TCP_PERF: {
+                                                struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &canon->net.net_union.tcp;
+
+                                                if ((tcp->src.status & ARGUS_SAW_SYN_SENT) || (tcp->dst.status & ARGUS_SAW_SYN)) 
+                                                   TcpShouldReverse = 1;
+                                                break;
+                                             }
+                                          }
                                        }
 #define TCPPORT_FTP_DATA   20
                                     } else {
@@ -3517,12 +3531,12 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                              TcpShouldReverse = 1;
                                        }
                                     }
-                                    }
+//                                  }
 
                                     if (TcpShouldReverse) {
                                        ArgusReverseRecord (retn);
-                                       tcp->status |= ARGUS_DIRECTION;
-                                       flow->hdr.argus_dsrvl8.qual |= ARGUS_DIRECTION;
+                                       tcp->status ^= ARGUS_DIRECTION;
+                                       flow->hdr.argus_dsrvl8.qual ^= ARGUS_DIRECTION;
                                     }
                                     break;
                                  }
