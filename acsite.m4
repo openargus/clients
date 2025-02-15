@@ -1962,7 +1962,9 @@ AC_DEFUN([AC_QOSIENT_MACHINE_ID],[
          linux*)
            AC_MSG_CHECKING([whether machine_id is found]);
            AC_CHECK_FILE("/var/lib/dbus/machine-id",
-             [AC_DEFINE([HAVE_MACHINE_ID], [], [Description])], no)
+             AC_DEFINE([HAVE_MACHINE_ID], [], [Description]))
+           AC_CHECK_FILE("/etc/machine-id",
+             AC_DEFINE([HAVE_MACHINE_ID], [], [Description]))
          ;;
 
          cygwin*)
@@ -1971,7 +1973,7 @@ AC_DEFUN([AC_QOSIENT_MACHINE_ID],[
         *bsd*)
            AC_MSG_CHECKING([whether machine_id is found]);
            AC_CHECK_FILE("/etc/machine-id",
-             [AC_DEFINE([HAVE_MACHINE_ID], [], [Description])], no)
+             AC_DEFINE([HAVE_MACHINE_ID], [], [Description]))
          ;;
       esac
 ])
