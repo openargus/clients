@@ -10222,13 +10222,6 @@ if test "$with_examples" != no; then
    DIRS="$DIRS ./examples"
 fi
 
-if test "$with_perllib" != no; then
-   DIRS="$DIRS ./perllib"
-fi
-
-if test "$with_pythonlib" != no; then
-   DIRS="$DIRS ./pythonlib"
-fi
 
 if test "$with_pluribus" != no; then
 
@@ -11589,15 +11582,22 @@ fi
 if test "x$HAVE_SWIG" = "xyes" ; then
   case "$target_os" in
   darwin*)
-        ;;
+     ;;
   *)
-if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
-        DIRS="$DIRS ./pythonlib"
-fi
-if test "x$ac_cv_header_EXTERN_h" = xyes; then :
-        DIRS="$DIRS ./perllib"
-fi
-        ;;
+     if test "$with_perllib" != no; then
+        if test "x$ac_cv_header_EXTERN_h" = xyes; then :
+           DIRS="$DIRS ./perllib"
+        fi
+     fi
+
+     if test "$with_pythonlib" != no; then
+        if test "x$HAVE_PYTHON" = "xyes" ; then
+           if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
+              DIRS="$DIRS ./pythonlib"
+           fi
+        fi
+     fi
+     ;;
   esac
 fi
 
@@ -11636,8 +11636,11 @@ ac_config_files="$ac_config_files Makefile ./common/Makefile ./include/Makefile 
 
 
 if test "$with_perllib" != no; then :
+  if test "x$ac_cv_header_EXTERN_h" = xyes; then :
   ac_config_files="$ac_config_files ./perllib/Makefile"
 
+
+fi
 
 fi
 
