@@ -14846,12 +14846,18 @@ ArgusPrintSrcPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
+         struct ArgusMetricStruct *metric = NULL;
+         long long pkts = 0;
+
+         if (argus && ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL))
+            pkts = metric->src.pkts;
+
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
             if (psize->hdr.subtype & ARGUS_PSIZE_HISTO) {
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = psize->src.psize[i];
+                  tpkts[i] = (pkts > 0) ? psize->src.psize[i] : 0;
                   max = (max < psize->src.psize[i]) ? psize->src.psize[i] : max;
                }
 
@@ -14862,7 +14868,7 @@ ArgusPrintSrcPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                   for (i = 0; i < 8; i++) {
                      if (tpkts[i]) {
                         tpkts[i] = (tpkts[i] * tmax) / max;
-                        if (tpkts[i] == 0)
+                        if (pkts && (tpkts[i] == 0))
                            tpkts[i] = 1;
                      }
                   } 
@@ -15063,12 +15069,18 @@ ArgusPrintDstPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
+         struct ArgusMetricStruct *metric = NULL;
+         long long pkts = 0;
+
+         if (argus && ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL))
+            pkts = metric->dst.pkts;
+
          if ((psize = (struct ArgusPacketSizeStruct *)argus->dsrs[ARGUS_PSIZE_INDEX]) != NULL) {
             if (psize->hdr.subtype & ARGUS_PSIZE_HISTO) {
                int i, tpkts[8], max = 0, tlen, tmax;
 
                for (i = 0; i < 8; i++) {
-                  tpkts[i] = psize->dst.psize[i];
+                  tpkts[i] = (pkts > 0) ? psize->dst.psize[i] : 0;
                   max = (max < psize->dst.psize[i]) ? psize->dst.psize[i] : max;
                }
 
@@ -15079,7 +15091,7 @@ ArgusPrintDstPktSize (struct ArgusParserStruct *parser, char *buf, struct ArgusR
                   for (i = 0; i < 8; i++) {
                      if (tpkts[i]) {
                         tpkts[i] = (tpkts[i] * tmax) / max;
-                        if (tpkts[i] == 0)
+                        if (pkts && (tpkts[i] == 0))
                            tpkts[i] = 1;
                      }
                   } 
