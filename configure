@@ -9872,7 +9872,7 @@ fi
 if test "${with_libmaxminddb+set}" = set; then :
   withval=$with_libmaxminddb; with_libmaxminddb="$withval"
 else
-  with_libmaxminddb="yes"
+  with_libmaxminddb="no"
 fi
 
 
