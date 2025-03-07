@@ -4403,9 +4403,7 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
          }
       }
       srcGuess = RaBestGuess;
-#ifdef ARGUSDEBUG
       srcScore = RaBestGuessScore;
-#endif
    }
 
    if (duser != NULL) {
@@ -4458,10 +4456,8 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
          }
       }
 
-#ifdef ARGUSDEBUG
       dstGuess = RaBestGuess;
       dstScore = RaBestGuessScore;
-#endif
    }
 
 #ifdef ARGUSDEBUG
@@ -4566,6 +4562,10 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
 
          } else {
             retn = NULL;
+            if ((srcGuess) && (dstGuess)) {
+               if (srcGuess == dstGuess)
+                  retn = srcGuess;
+            }
          }
       }
    }
