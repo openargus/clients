@@ -3035,7 +3035,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         bzero((char *)label, llen + 1);
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
                         bcopy((char *)&tlabel->l_un.label, label, llen);
-                        canon->label.l_un.label = strdup(label);
+                        canon->label.l_un.label = ArgusCanonLabelBuffer;
+                        bcopy((char *)ArgusCanonLabelBuffer, label, llen);
+                        ArgusCanonLabelBuffer[llen] = '\0';
                         retn->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
                         retn->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);
                         break;
