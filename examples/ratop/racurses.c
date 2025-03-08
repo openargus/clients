@@ -215,16 +215,16 @@ ArgusCursesProcess (void *arg)
       ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_mutex_unlock error %s", strerror(errno));
 #endif
 
-   while ((!done) && (!parser->RaShutDown)) {
+   while ((!done) && (!parser->RaShutDown) && (!ArgusParser->RaParseDone)) {
       struct timeval tvbuf, *tvp = &tvbuf;
       int ArgusDisplayNeedsRefreshing = 0;
       struct timespec tsbuf, *tsp = &tsbuf;
 
-      gettimeofday(tvp, NULL);
-
 #if defined(ARGUS_THREADS)
       pthread_mutex_lock(&RaCursesLock);
 #endif
+      gettimeofday(tvp, NULL);
+
       if (RaScreenResize == TRUE) 
          RaResizeScreen();
 
@@ -1479,7 +1479,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   case 'q': {
                      bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
-                     RaParseComplete(SIGINT);
+                     ArgusParser->RaParseDone++;
                      break;
                   }
                }
@@ -2517,7 +2517,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
 
          case RAGETTINGq:
             if (*RaCommandInputStr == 'y') {
-               RaParseComplete(SIGINT);
+               ArgusParser->RaParseDone++;
             } else {
                retn = RAGOTslash;
                RaInputString = RANEWCOMMANDSTR;
@@ -3810,7 +3810,7 @@ argus_command_string(void)
    if (*RaCommandInputStr == 'q') {
       bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
       ArgusTouchScreen();
-      RaParseComplete(SIGINT);
+      ArgusParser->RaParseDone++;
    }
 
    if (strlen(RaCommandInputStr)) {
@@ -4928,7 +4928,7 @@ argus_command_string(void)
                   case 'q': {
                      bzero (RaCommandInputStr, sizeof(RaCommandInputStr));
                      ArgusTouchScreen();
-                     RaParseComplete(SIGINT);
+                     ArgusParser->RaParseDone++;
                      break;
                   }
                }

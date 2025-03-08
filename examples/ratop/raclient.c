@@ -1191,6 +1191,9 @@ void RaArgusInputComplete (struct ArgusInput *input) {
 void
 RaParseComplete (int sig)
 {
+   ArgusParser->RaParseDone = 1;
+   ArgusCloseDown = 1;
+
    if (sig >= 0) {
       if (ArgusParser && !ArgusParser->RaParseCompleting++) {
 #ifdef ARGUSDEBUG
@@ -1202,9 +1205,9 @@ RaParseComplete (int sig)
             case SIGTERM:
             case SIGQUIT: {
 //             struct ArgusWfileStruct *wfile = NULL;
-
-               ArgusParser->RaParseDone = 1;
-               ArgusCloseDown = 1;
+#if defined(ARGUS_THREADS)
+               pthread_mutex_lock(&RaCursesLock);
+#endif
 
                RaCursesDeleteProcess (ArgusParser, RaEventProcess);
                RaEventProcess = NULL;
@@ -1231,6 +1234,9 @@ RaParseComplete (int sig)
                   }
                }
 */
+#if defined(ARGUS_THREADS)
+               pthread_mutex_unlock(&RaCursesLock);
+#endif
                break;
             }
          }
@@ -2777,7 +2783,7 @@ ArgusCorrelateQueue (struct ArgusQueueStruct *queue)
    if (queue == NULL)
       return (retn);
 
-   if (RaEventProcess != NULL) {
+   if ((RaEventProcess != NULL) && (RaEventProcess->queue != NULL)) {
       if (RaEventProcess->queue->count) {
 
 #if defined(ARGUS_THREADS)
