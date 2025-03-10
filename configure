@@ -11614,10 +11614,14 @@ if test "x$HAVE_SWIG" = "xyes" ; then
         ;;
   *)
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
+   if test "x$with_pythonllib" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
+   fi
 fi
-if test "x$ac_cv_header_EXTERN_h" = xyes; then :
+if test "x$ac_cv_header_EXTERN_h" = "xyes"; then
+   if test "x$with_perllib" = "xyes"; then
         DIRS="$DIRS ./perllib"
+   fi
 fi
         ;;
   esac
