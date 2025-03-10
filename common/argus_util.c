@@ -33331,19 +33331,17 @@ ArgusCommonParseSourceID(struct ArgusAddrStruct *srcid,
 // 
 //    uuid
 //
-      if (strchr(optarg, '-')) {
-         if (strlen(optarg) == 36) {
-            const char *cptr = (const char *) optarg;
-            int i;
+      if ((strlen(optarg) == 32) || (strchr(optarg, '-'))) {
+         const char *cptr = (const char *) optarg;
+         int i;
 
-            for (i = 0; i < 16; i++) {
+         for (i = 0; i < 16; i++) {
                sscanf((const char *) cptr, "%2hhx", &buf[i]);
                cptr += 2;
                if (*cptr == '-') cptr++;
-            }
-            slen = 16;
-            type = ARGUS_TYPE_UUID;
          }
+         slen = 16;
+         type = ARGUS_TYPE_UUID;
       } else
       if (strchr(optarg, '.')) {
 #if defined(HAVE_INET_ATON)

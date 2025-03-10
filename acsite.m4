@@ -1994,8 +1994,11 @@ AC_DEFUN([AC_QOSIENT_LIBMAXMINDDB],[
                            [libmaxminddb],
                            AC_DEFINE([ARGUS_GEOIP2], [], [Description])) 
 
+         AC_CHECK_FILE("/usr/include/maxminddb.h",
+                       [V_INCLS="$V_INCLS -I/usr/include"],
+
          AC_CHECK_FILE("/opt/homebrew/include/maxminddb.h",
-                       [V_INCLS="$V_INCLS -I/opt/homebrew/include"])
+                       [V_INCLS="$V_INCLS -I/opt/homebrew/include"]))
       fi
    fi
 ])
