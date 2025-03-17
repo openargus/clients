@@ -278,7 +278,7 @@ void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct Argus
 #define RA_LOCAL				63
 #define RA_LOCAL_DIRECTION			64
 #define RA_PORT_DIRECTION			65
-#define RA_SERVICES_SIGNATURES			66
+#define RA_SERVICE_SIGNATURES			66
 #define RA_COLOR_SUPPORT			67
 #define RA_COLOR_CONFIG				68
 #define RA_CORRELATE_EVENTS			69
@@ -363,7 +363,7 @@ char *ArgusResourceFileStr [] = {
    "RA_LOCAL=",
    "RA_LOCAL_DIRECTION=",
    "RA_PORT_DIRECTION=",
-   "RA_SERVICES_SIGNATURES=",
+   "RA_SERVICE_SIGNATURES=",
    "RA_COLOR_SUPPORT=",
    "RA_COLOR_CONFIG=",
    "RA_CORRELATE_EVENTS=",
@@ -2702,7 +2702,7 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
             break;
          }
 
-         case RA_SERVICES_SIGNATURES: {
+         case RA_SERVICE_SIGNATURES: {
             if (parser->ArgusLabeler == NULL)
                if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
                   ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
@@ -4924,7 +4924,7 @@ ArgusReverseLabel(struct ArgusLabelStruct *l)
             tlen++;
          }
 
-         if (obj != NULL) {
+         if ((obj != NULL) && (strncmp(obj, "srv=", 4))) {
             char replace = '\0';
             
             if (*obj == 's') replace = 'd';

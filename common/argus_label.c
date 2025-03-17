@@ -126,7 +126,7 @@ int RaPrintLabelTreeLevel = 1000000;
 
 int RaPrintLabelTreeDebug = 0;
 
-#define RALABEL_RCITEMS                         26
+#define RALABEL_RCITEMS                         29
 
 #define RALABEL_IANA_ADDRESS                    0
 #define RALABEL_IANA_ADDRESS_FILE               1
@@ -154,7 +154,9 @@ int RaPrintLabelTreeDebug = 0;
 #define RALABEL_PRINT_LOCALONLY			23
 #define RALABEL_BIND_NON_BLOCKING		24
 #define RALABEL_DNS_NAME_CACHE_TIMEOUT		25
-#define RALABEL_FIREHOL_FILES			27
+#define RALABEL_ARGUS_FLOW_SERVICE              26
+#define RALABEL_SERVICE_SIGNATURES              27
+#define RALABEL_FIREHOL_FILES			28
 
 char *RaLabelResourceFileStr [] = {
    "RALABEL_IANA_ADDRESS=",
@@ -183,6 +185,8 @@ char *RaLabelResourceFileStr [] = {
    "RALABEL_PRINT_LOCALONLY=",
    "RALABEL_BIND_NON_BLOCKING=",
    "RALABEL_DNS_NAME_CACHE_TIMEOUT=",
+   "RALABEL_ARGUS_FLOW_SERVICE=",
+   "RALABEL_SERVICE_SIGNATURES=",
    "RALABEL_FIREHOL_FILES=",
 };
 
@@ -593,6 +597,24 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         break;
                      }
 #endif
+                     case RALABEL_ARGUS_FLOW_SERVICE: {
+                        if (!(strncasecmp(optarg, "yes", 3))) {
+                           labeler->RaLabelArgusFlowService = 1;
+                        } else {
+                           labeler->RaLabelArgusFlowService = 0;
+                        }
+                        break;
+                     }
+
+                     case RALABEL_SERVICE_SIGNATURES: {
+                        if (parser->ArgusLabeler == NULL)
+                           if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+                        RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
+                        break;
+                     }
+
                      default:
                         break;
                   }
@@ -799,6 +821,21 @@ ArgusLabelRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
          }
       }
    }
+
+   if (labeler->RaLabelArgusFlowService) {
+      if ((rstr = RaServiceLabel (parser, argus)) != NULL) {
+         if (strlen(rstr)) {
+            slen = strlen(label);
+            if (found) {
+               snprintf (&label[slen], MAXSTRLEN - slen, ":");
+               slen++;
+            }
+            snprintf (&label[slen], MAXSTRLEN - slen, "%s", rstr);
+            found++;
+         }
+      }
+   }
+
 
 #if defined(ARGUS_GEOIP)
    ArgusLabelRecordGeoIP(parser, argus, label, MAXSTRLEN, &found);
@@ -5002,6 +5039,95 @@ RaLocalityLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
    if (found)
       retn = RaLocalityLabelBuffer;
+
+   return (retn);
+}
+
+
+static char RaServiceLabelBuffer[256];
+
+char *
+RaServiceLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
+{
+   struct ArgusLabelerStruct *labeler;
+   struct RaSrvSignature *sig = NULL;
+   int type, process = 0, found = 0;
+   char *retn = NULL;
+
+   if ((labeler = parser->ArgusLocalLabeler) != NULL) {
+      bzero(RaServiceLabelBuffer, sizeof(RaServiceLabelBuffer));
+
+      if (labeler->ArgusAddrTree) {
+         struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+
+         if (flow != NULL) {
+            if (argus->dsrs[ARGUS_SRCUSERDATA_INDEX] || argus->dsrs[ARGUS_DSTUSERDATA_INDEX]) {
+               switch(flow->hdr.subtype & 0x3F) {
+                  case ARGUS_FLOW_CLASSIC5TUPLE: {
+                     struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
+          
+                     switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                        case ARGUS_TYPE_IPV4:
+                           switch (flow->ip_flow.ip_p) {
+                              case IPPROTO_TCP:
+                              case IPPROTO_UDP: {
+                                 process++;
+                                 break;
+                              }
+                           }
+                           break; 
+
+                        case ARGUS_TYPE_IPV6: {
+                           switch (flow->ipv6_flow.ip_p) {
+                              case IPPROTO_TCP:
+                              case IPPROTO_UDP: {
+                                 process++;
+                                 break;
+                              }
+                           }
+                           break; 
+                        }
+                     }
+                     if (net && (net->hdr.subtype == ARGUS_RTP_FLOW)) {
+                        snprintf (RaServiceLabelBuffer, 128, "%s", "rtp");
+                        found++;
+                     } else
+                     if (net && (net->hdr.subtype == ARGUS_RTCP_FLOW)) {
+                        snprintf (RaServiceLabelBuffer, 128, "%s", "rtcp");
+                        found++;
+                     }
+                     break; 
+                  }
+                  break;
+               }
+
+               if (process) {
+                  int length = 0;
+#ifdef ARGUSDEBUG
+                  ArgusDebug (5, "RaProcessRecord (0x%x) validating service", argus);
+#endif
+                  if (!(sig = RaValidateService (parser, argus))) {
+                     struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
+                     if ((metric != NULL) && (metric->dst.pkts)) {
+                        ArgusReverseRecord(argus);
+                        sig = RaValidateService (parser, argus);
+                        ArgusReverseRecord(argus);
+                     }
+                  }
+                  if (sig != NULL) {
+                     length = strlen(sig->name) + 5;
+                     length = ((length > 32) ? 32 : length);
+                     snprintf ((char *)RaServiceLabelBuffer, length, "srv=%s", sig->name);
+                     found++;
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   if (found)
+      retn = RaServiceLabelBuffer;
 
    return (retn);
 }

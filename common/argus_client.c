@@ -632,6 +632,8 @@ ArgusConnectRemotes (void *arg)
 #if defined(ARGUS_THREADS)
    struct ArgusQueueStruct *queue = arg;
    struct ArgusInput *addr = NULL;
+   struct timespec tsbuf = {0, 250000000};
+   struct timespec *ts = &tsbuf;
    int status, retn, done = 0;
    pthread_attr_t attr;
 
@@ -652,7 +654,7 @@ ArgusConnectRemotes (void *arg)
          }
       }
 
-      sleep(1);
+      nanosleep(ts, NULL);
    }
 #endif
 
@@ -3036,7 +3038,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
                         bcopy((char *)&tlabel->l_un.label, label, llen);
                         canon->label.l_un.label = ArgusCanonLabelBuffer;
-                        bcopy((char *)ArgusCanonLabelBuffer, label, llen);
+                        bcopy(label, (char *)ArgusCanonLabelBuffer, llen);
                         ArgusCanonLabelBuffer[llen] = '\0';
                         retn->dsrs[ARGUS_LABEL_INDEX] = (struct ArgusDSRHeader*) &canon->label;
                         retn->dsrindex |= (0x01 << ARGUS_LABEL_INDEX);

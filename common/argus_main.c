@@ -492,6 +492,9 @@ extern void * ArgusTimeoutProcess (void *);
 
    if (ArgusParser->dns != (pthread_t) 0)
       pthread_join(ArgusParser->dns, NULL);
+
+   if (ArgusParser->remote != (pthread_t) 0)
+      pthread_join(ArgusParser->remote, NULL);
 #endif
 
    ArgusExitStatus = ArgusParser->ArgusExitStatus;
