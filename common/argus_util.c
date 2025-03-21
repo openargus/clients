@@ -4924,7 +4924,7 @@ ArgusReverseLabel(struct ArgusLabelStruct *l)
             tlen++;
          }
 
-         if ((obj != NULL) && (strncmp(obj, "srv=", 4))) {
+         if ((obj != NULL) && (strncmp(obj, "srv", 3) != 0)) {
             char replace = '\0';
             
             if (*obj == 's') replace = 'd';
@@ -4934,10 +4934,8 @@ ArgusReverseLabel(struct ArgusLabelStruct *l)
                *obj = replace;
                replaced++;
             }
-            snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s=%s", obj, label);
-
-         } else
-            snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s", label);
+         }
+         snprintf (&ArgusReverseLabelBuf[tlen], MAXBUFFERLEN - tlen, "%s=%s", obj, label);
          ptr = NULL;
       }
 
