@@ -530,9 +530,7 @@ ArgusProcessData (void *arg)
          } else {
 #if defined(ARGUS_THREADS)
             parser->RaDonePending++;
-            parser->RaParseDone++;
 #else
-            parser->RaParseDone++;
 #endif
          }
 
