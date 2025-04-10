@@ -454,6 +454,24 @@ static int RaDescend(char *, size_t, size_t);
 time_t timegm (struct tm *);
 #endif
 
+
+#if defined(HAVE_BACKTRACE)
+#include <execinfo.h>
+
+void
+ArgusBacktrace (void)
+{
+   void* callstack[128];
+   int i, frames = backtrace(callstack, 128);
+   char** strs = backtrace_symbols(callstack, frames);
+
+   for (i = 0; i < frames; ++i) {
+      ArgusLog(LOG_WARNING, "%s", strs[i]);
+   }
+   free(strs);
+}
+#endif
+
 #ifdef __sun
 # pragma weak RaParseOptHStr
 #endif
@@ -1727,12 +1745,33 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
 #if defined(ARGUS_MYSQL)
                if (!(strncmp ("mysql:", optarg, 6))) {
+                  char *dbstr = NULL;
                   if (parser->readDbstr != NULL)
                      free(parser->readDbstr);
                   parser->readDbstr = strdup(optarg);
                   type &= ~ARGUS_DATA_SOURCE;
                   type |= ARGUS_DBASE_SOURCE;
                   optarg += 6;
+                  if ((dbstr = strstr(optarg, "inventory")) != NULL) {
+                     if (!(ArgusAddMaskList (parser, "sid,inf,smac,saddr")))
+                        ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
+                     parser->ArgusPerformCorrection = 0;
+                  } else
+                  if ((dbstr = strstr(optarg, "ether")) != NULL) {
+                     if (!(ArgusAddMaskList (parser, "sid,inf,smac,etype")))
+                        ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
+                     parser->ArgusPerformCorrection = 0;
+                  } else
+                  if ((dbstr = strstr(optarg, "ipMatrix")) != NULL) {
+                     if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr")))
+                        ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
+                     parser->ArgusPerformCorrection = 0;
+                  } else
+                  if ((dbstr = strstr(optarg, "etherMatrix")) != NULL) {
+                     if (!(ArgusAddMaskList (parser, "sid,inf,smac,dmac")))
+                        ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
+                     parser->ArgusPerformCorrection = 0;
+                  }
                }
 #endif
 
@@ -33162,11 +33201,33 @@ void
 setParserArgusID(struct ArgusParserStruct *parser, void *ptr, int len, unsigned int type)
 {
    struct ArgusTransportStruct *trans = &parser->trans;
+   char strbuf[128], *sptr = strbuf;
+
    setTransportArgusID(trans, ptr, len, type);
    bcopy(trans, &parser->canon.trans, sizeof(*trans));
+
+   switch (type) {
+      case ARGUS_TYPE_UUID:
+         sptr = ArgusGetUuidString(parser, (u_char *)&trans->srcid.a_un.uuid, 16);
+	 break;
+      case ARGUS_TYPE_IPV4:
+         sptr = ArgusGetName(parser, (u_char *)&trans->srcid.a_un.ipv4);
+	 break;
+      case ARGUS_TYPE_IPV6:
+         sptr = ArgusGetV6Name(parser, (u_char *)&trans->srcid.a_un.ipv6);
+	 break;
+      case ARGUS_TYPE_INT:
+         snprintf (sptr, sizeof(strbuf), "%d", trans->srcid.a_un.value);
+         break;
+      case ARGUS_TYPE_STRING: 
+	 sptr = ArgusGetString(parser, (u_char *)&trans->srcid.a_un.str, 4); break;
+         break;
+   }
    
-   parser->ArgusSourceIDString = strdup(ptr);
-   parser->ArgusIDType = type;
+   if (sptr) {
+      parser->ArgusSourceIDString = strdup(sptr);
+      parser->ArgusIDType = type;
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "setParserArgusID(%p, %p, %p, 0x%x) done", parser, ptr, type);

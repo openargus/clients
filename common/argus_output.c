@@ -184,6 +184,9 @@ DrainArgusSocketQueue(struct ArgusClientData *client)
       FreeArgusQueueNode(node);
       FreeArgusWireFmtBuffer(awf);
    }
+#ifdef ARGUSDEBUG
+   ArgusDebug (2, "DrainArgusSocketQueue(%p) returning\n", client);
+#endif
 }
 
 void
@@ -3332,12 +3335,7 @@ void *ArgusListenProcess(void *arg)
                struct ArgusClientData *client;
                char pchar;
 
-#ifdef ARGUSDEBUG
-               ArgusDebug(3, "%s() select returned with tasks\n", __func__);
-#endif
-
                for (cur = 0; cur < nbout; cur++) {
-
                   if (FD_ISSET(lfd[cur], &readmask))
                      ArgusCheckClientStatus(outputs[cur], lfd[cur], lfdver[cur]);
 
@@ -3667,6 +3665,7 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                      if (client->readable || RingNullTerm(&client->ring)) {
                         if (checkmessage(output, client) < 0)
                            delete = 1;
+
                         client->readable = 0;
 
 #if defined(ARGUS_THREADS)
@@ -3687,8 +3686,9 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                            }
                         }
                      }
-                     if (delete)
+                     if (delete) {
                         ArgusDeleteSocket(output, client);
+                     }
                   }
                }
                client = (void *) client->qhdr.nxt;
@@ -3895,7 +3895,7 @@ ArgusCheckClientStatus (struct ArgusOutputStruct *output, int s,
                if (strlen(clienthost) > 0)
                   client->hostname = strdup(clienthost);
 #ifdef ARGUSDEBUG
-               ArgusDebug (6, "ArgusCheckClientStatus() new client %s\n", client->hostname);
+               ArgusDebug (1, "ArgusCheckClientStatus() new client %p: hostname %s\n", client, client->hostname);
 #endif
                if ((client->sock = ArgusNewSocket(fd)) == NULL)
                   ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusNewSocket error %s", strerror(errno));
@@ -4022,9 +4022,12 @@ no_auth:
                   }
 
                } else {
-                     ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
+                  ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
                }
 #else
+#ifdef ARGUSDEBUG
+               ArgusDebug (2, "ArgusCheckClientStatus: client %p added to queue\n", client);
+#endif
                ArgusAddToQueue(output->ArgusClients, &client->qhdr, ARGUS_LOCK);
 #endif
             } else {
@@ -4942,13 +4945,20 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
    
       ArgusFree (asock);
       client->sock = NULL;
-      client->delete = 1;
    }
 
+   client->delete = 1;
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusDeleteSocket (0x%x) returning\n", asock);
+#if defined(HAVE_BACKTRACE)
+   if ((ArgusParser != NULL) && (ArgusParser->debugflag > 1)) {
+      ArgusDebug(2, "ArgusDeleteSocket(%p, %p)", output, client);
+      ArgusBacktrace();
+   }
 #endif
-}  
+   ArgusDebug (2, "ArgusDeleteSocket (0x%x) returning\n", asock);
+#endif
+}
 
 
 #include <sys/stat.h>

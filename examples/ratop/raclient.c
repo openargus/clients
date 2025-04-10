@@ -647,6 +647,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&RaCursesLock, NULL);
 #endif
+   parser->ArgusPerformCorrection = 1;
 
    if (parser != NULL) {
       parser->RaWriteOut = 1;
@@ -3164,6 +3165,7 @@ RaMySQLInit ()
             char *tmp = RaDatabase;
             RaDatabase = strdup(&RaDatabase[6]);
             free(tmp);
+            ArgusParser->ArgusPerformCorrection = 0;
          }
    }
       

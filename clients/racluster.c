@@ -365,8 +365,10 @@ RaParseComplete (int sig)
                if ((wfile = (void *)ArgusParser->ArgusWfileList->start) != NULL) {
                   fflush (wfile->fd);
                   rename (wfile->filename, file->filename);
-                  fclose (wfile->fd);
-                  wfile->fd = NULL;
+                  if (wfile->fd) {
+                     fclose (wfile->fd);
+                     wfile->fd = NULL;
+                  }
                }
 
                ArgusDeleteList(ArgusParser->ArgusWfileList, ARGUS_WFILE_LIST);
