@@ -68,7 +68,7 @@ int RaHostsPrintTreeDebug = 0;
 
 extern char RaAddrTreeArray[];
 
-char *RaTableCreationString = "CREATE TABLE IF NOT EXISTS %s (region VARCHAR(8), sid VARCHAR(64), inf VARCHAR(4), saddr VARCHAR(64) NOT NULL, sloc TINYINT, count INTEGER, hoststring TEXT, PRIMARY KEY ( region,saddr,sid,inf ))";
+char *RaTableCreationString = "CREATE TABLE IF NOT EXISTS %s (region VARCHAR(8), sid VARCHAR(64), inf VARCHAR(4), saddr VARCHAR(64) NOT NULL, sloc TINYINT, count INTEGER, hoststring MEDIUMTEXT, PRIMARY KEY ( region,saddr,sid,inf ), KEY (saddr))";
 
 
 char *RaDatabase = NULL;
