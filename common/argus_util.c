@@ -7913,6 +7913,7 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
       case ARGUS_AFLOW: 
       case ARGUS_NETFLOW:
       case ARGUS_FAR: {
+         
          if ((agr = (struct ArgusAgrStruct *) argus->dsrs[ARGUS_AGR_INDEX]) != NULL)
             count = agr->count;
 
@@ -7923,7 +7924,11 @@ ArgusPrintTransactions (struct ArgusParserStruct *parser, char *buf, struct Argu
                nsagr = (struct ArgusAgrStruct *) parser->ns->dsrs[ARGUS_AGR_INDEX];
                snprintf(trans, 32, "%3.*f", parser->pflag, (count * 100.0) / (nsagr->count) * 1.0);
             } else {
-               snprintf(trans, 32, "%u", count);
+               if (parser->Hflag) {
+                  ArgusAbbreviateMetric(parser, trans, 32, count);
+               } else {
+                  snprintf(trans, 32, "%u", count);
+               }
             }
          }
          break;
