@@ -17652,6 +17652,34 @@ ArgusSortTcpRtt (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *arg
    return (retn);
 }
 
+int
+ArgusSortSrcPktSize (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
+{
+   struct ArgusPacketSizeStruct *ps1 = (void *)argus1->dsrs[ARGUS_PSIZE_INDEX];
+   struct ArgusPacketSizeStruct *ps2 = (void *)argus2->dsrs[ARGUS_PSIZE_INDEX];
+   unsigned int ps1size = 0, ps2size = 0;
+   int retn = 0;
+
+   if (ps1 && ps2) {
+      char sbuf1[32], *a1pktsz = sbuf1;
+      char sbuf2[32], *a2pktsz = sbuf2;
+
+      ArgusPrintSrcPktSize (ArgusParser, a1pktsz, argus1, 8);
+      ArgusPrintSrcPktSize (ArgusParser, a2pktsz, argus2, 8);
+
+      if (strlen(a1pktsz) > 0) {
+         sscanf(a1pktsz, "%x", &ps1size);
+      }
+      if (strlen(a2pktsz) > 0) {
+         sscanf(a2pktsz, "%x", &ps2size);
+      }
+
+      retn = ArgusReverseSortDir ? ((ps1size < ps2size) ? 1 : ((ps1size == ps2size) ? 0 : -1)) :
+                                   ((ps1size > ps2size) ? 1 : ((ps1size == ps2size) ? 0 : -1)) ;
+   }
+   return (retn);
+}
+
 
 int
 ArgusSortSrcMaxPktSize (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
@@ -17707,6 +17735,34 @@ ArgusSortSrcMeanPktSize (struct ArgusRecordStruct *n1, struct ArgusRecordStruct 
 }
 
 
+
+int
+ArgusSortDstPktSize (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
+{
+   struct ArgusPacketSizeStruct *ps1 = (void *)argus1->dsrs[ARGUS_PSIZE_INDEX];
+   struct ArgusPacketSizeStruct *ps2 = (void *)argus2->dsrs[ARGUS_PSIZE_INDEX];
+   unsigned int ps1size = 0, ps2size = 0;
+   int retn = 0;
+
+   if (ps1 && ps2) {
+      char sbuf1[32], *a1pktsz = sbuf1;
+      char sbuf2[32], *a2pktsz = sbuf2;
+
+      ArgusPrintDstPktSize (ArgusParser, a1pktsz, argus1, 8);
+      ArgusPrintDstPktSize (ArgusParser, a2pktsz, argus2, 8);
+
+      if (strlen(a1pktsz) > 0) {
+         sscanf(a1pktsz, "%x", &ps1size);
+      }
+      if (strlen(a2pktsz) > 0) {
+         sscanf(a2pktsz, "%x", &ps2size);
+      }
+
+      retn = ArgusReverseSortDir ? ((ps1size < ps2size) ? 1 : ((ps1size == ps2size) ? 0 : -1)) :
+                                   ((ps1size > ps2size) ? 1 : ((ps1size == ps2size) ? 0 : -1)) ;
+   }
+   return (retn);
+}
 
 int
 ArgusSortDstMaxPktSize (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
