@@ -2492,6 +2492,9 @@ extern void ArgusPrintSrcOui (struct ArgusParserStruct *, char *, struct ArgusRe
 extern void ArgusPrintDstOui (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
+extern void ArgusPrintSrcPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintDstPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
 extern void ArgusPrintAutoId (struct ArgusParserStruct *, char *, int);
 
 extern char *RaGetUserDataString (struct ArgusRecordStruct *);

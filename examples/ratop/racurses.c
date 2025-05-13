@@ -1244,7 +1244,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(ArgusSortKeyWords[x]))) {
+                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
@@ -4658,7 +4658,7 @@ argus_command_string(void)
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(ArgusSortKeyWords[x]))) {
+                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
