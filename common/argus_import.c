@@ -1161,7 +1161,7 @@ ArgusParseCiscoRecordV9Data (struct ArgusParserStruct *parser, struct ArgusInput
                            break;
                         }
                         case k_CiscoV9OutputSnmp: {
-                           struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;;
+                           struct ArgusMacStruct *mac = (struct ArgusMacStruct *) &canon->mac;
                            uint16_t output = ntohs(value.val16[0]);
 #if defined(ARGUS_SOLARIS)
                            bcopy((char *)&output, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost.ether_addr_octet[4], 2);
@@ -2521,6 +2521,8 @@ ArgusParseFlowToolsRecord (struct ArgusParserStruct *parser, struct ArgusInput *
 
 #include <argus/sflow.h>
 
+struct ArgusRecord *ArgusParseSFlowRecord (struct ArgusParserStruct *, struct ArgusInput *, SFSample *, int *);
+
 static void SFLengthCheck(SFSample *, u_char *, int);
 
 void SFParseFlowSample_header(SFSample *);
@@ -2545,6 +2547,7 @@ void SFParseExtendedVlanTunnel(SFSample *);
 void SFParseExtendedWifiPayload(SFSample *);
 void SFParseExtendedWifiRx(SFSample *);
 void SFParseExtendedWifiTx(SFSample *);
+void SFParseExtendedAggregation(SFSample *);
 void SFParseExtendedSocket4(SFSample *);
 void SFParseExtendedSocket6(SFSample *);
 
@@ -2594,13 +2597,12 @@ ArgusParseSFFlowSample(SFSample *sptr, int state)
    if (sptr->datagramVersion >= 5) {
       int i, len, num;
       u_char *start;
-//    int cnt;
+      unsigned int seq;
   
-      start = (u_char *)sptr->datap;
       len = SFGetData32 (sptr);
-//    cnt = SFGetData32 (sptr);
+      start = (u_char *)sptr->datap;
 
-      SFGetData32 (sptr);
+      seq = SFGetData32 (sptr);
 
       if (state) {
          sptr->ds_class = SFGetData32 (sptr);
@@ -2630,10 +2632,11 @@ ArgusParseSFFlowSample(SFSample *sptr, int state)
       num = SFGetData32 (sptr);
       for (i = 0; i < num; i++) {
          uint32_t stag, slen;
-//       u_char *sdp;
+         u_char *sdp = NULL;
+
          stag = SFGetData32 (sptr);
          slen = SFGetData32 (sptr);
-//       sdp  = (u_char *)sptr->datap;
+         sdp  = (u_char *)sptr->datap;
 
          switch (stag) {
             case SFLFLOW_HEADER:           SFParseFlowSample_header(sptr); break;
@@ -2658,15 +2661,21 @@ ArgusParseSFFlowSample(SFSample *sptr, int state)
             case SFLFLOW_EX_80211_PAYLOAD: SFParseExtendedWifiPayload(sptr); break;
             case SFLFLOW_EX_80211_RX:      SFParseExtendedWifiRx(sptr); break;
             case SFLFLOW_EX_80211_TX:      SFParseExtendedWifiTx(sptr); break;
-         /* case SFLFLOW_EX_AGGREGATION:   SFParseExtendedAggregation(sptr); break; */
+            case SFLFLOW_EX_AGGREGATION:   SFParseExtendedAggregation(sptr); break;
             case SFLFLOW_EX_SOCKET4:       SFParseExtendedSocket4(sptr); break;
             case SFLFLOW_EX_SOCKET6:       SFParseExtendedSocket6(sptr); break;
             default:                       SFSkipBytes(sptr, slen); break;
          }
-         SFLengthCheck(sptr, start, slen);
+         SFLengthCheck(sptr, sdp, slen);
       }
       SFLengthCheck(sptr, start, len);
    }
+
+   struct ArgusRecord *argus = ArgusParseSFlowRecord (ArgusParser, ArgusParser->ArgusCurrentInput, sptr, NULL);
+   if  (argus != NULL)
+      ArgusHandleRecord (ArgusParser, ArgusParser->ArgusCurrentInput, argus, 0, &ArgusParser->ArgusFilterCode);
+
+   ArgusParser->ArgusTotalRecords++;
 }
 
 static void
@@ -2729,6 +2738,215 @@ ArgusParseSFCountersSample(SFSample *sptr, int state)
       SFLengthCheck(sptr, sdp, slen);
    }
 }
+
+
+
+unsigned char ArgusSFlowArgusRecordBuf[4098];
+
+struct ArgusRecord *ArgusSFlowArgusRecord = (struct ArgusRecord *) ArgusSFlowArgusRecordBuf;
+
+struct ArgusRecord *
+ArgusParseSFlowRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, SFSample *sptr, int *count)
+{
+   struct ArgusRecord *retn = NULL, *argus = ArgusSFlowArgusRecord;
+   struct ArgusDSRHeader *dsr = (struct ArgusDSRHeader *) &ArgusSFlowArgusRecordBuf[4];
+   int i;
+
+   bzero ((char *) argus, sizeof(ArgusSFlowArgusRecordBuf));
+   argus->hdr.type    = ARGUS_AFLOW | ARGUS_VERSION;
+   argus->hdr.cause   = ARGUS_STATUS;
+   argus->hdr.len     = 1;
+
+   if (sptr != NULL) {
+      for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
+         switch (i) {
+            case ARGUS_FLOW_INDEX: {
+               struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
+               flow->hdr.type              = ARGUS_FLOW_DSR;
+               flow->hdr.subtype           = ARGUS_FLOW_CLASSIC5TUPLE;
+               flow->hdr.argus_dsrvl8.qual = ARGUS_TYPE_IPV4;
+               flow->hdr.argus_dsrvl8.len  = 5;
+
+               if (sptr->gotIPV4) {
+                  flow->ip_flow.ip_src = ntohl(sptr->ipsrc.address.ip_v4.addr);
+                  flow->ip_flow.ip_dst = ntohl(sptr->ipdst.address.ip_v4.addr);
+
+                  switch (flow->ip_flow.ip_p = sptr->dcd_ipProtocol) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP:
+                        flow->ip_flow.sport  = sptr->dcd_sport;
+                        flow->ip_flow.dport  = sptr->dcd_dport;
+                     break;
+         
+                     case IPPROTO_ICMP:
+                     break;
+                  }
+                  dsr += flow->hdr.argus_dsrvl8.len;
+                  argus->hdr.len += flow->hdr.argus_dsrvl8.len;
+               }
+               break;
+            }
+
+            case ARGUS_TIME_INDEX: {
+               struct ArgusTimeObject *time = (struct ArgusTimeObject *) dsr;
+               int timeval, secs, usecs;
+
+               time->hdr.type               = ARGUS_TIME_DSR;
+               time->hdr.subtype            = ARGUS_TIME_ABSOLUTE_RANGE;
+               time->hdr.argus_dsrvl8.qual  = ARGUS_TYPE_UTC_MICROSECONDS;
+               time->hdr.argus_dsrvl8.len   = 5;               
+
+               secs  = ( sptr->sysUpTime / 1000 );
+               usecs = ( sptr->sysUpTime % 1000 ) * 1000;
+               time->src.start.tv_sec  = secs;
+               time->src.end.tv_sec  = secs;
+
+               if (usecs < 0) {
+                  time->src.start.tv_sec--;
+                  usecs += 1000000;
+               } else
+               if (usecs > 1000000) {
+                  time->src.start.tv_sec++;
+                  usecs -= 1000000;
+               }
+               time->src.start.tv_usec = usecs;
+               time->src.end.tv_usec = usecs;
+
+               dsr += time->hdr.argus_dsrvl8.len;
+               argus->hdr.len += time->hdr.argus_dsrvl8.len;
+               break;
+            }
+
+            case ARGUS_TRANSPORT_INDEX: {
+               if (input->addr.s_addr != 0) {
+                  struct ArgusTransportStruct *trans = (struct ArgusTransportStruct *) dsr;
+                  trans->hdr.type               = ARGUS_TRANSPORT_DSR;
+                  trans->hdr.subtype            = ARGUS_SRC;
+                  trans->hdr.argus_dsrvl8.qual  = ARGUS_TYPE_IPV4;
+                  trans->hdr.argus_dsrvl8.len   = 2;
+                  trans->srcid.a_un.ipv4        = input->addr.s_addr;
+
+                  dsr += trans->hdr.argus_dsrvl8.len;
+                  argus->hdr.len += trans->hdr.argus_dsrvl8.len;
+               }
+               break;
+            }
+
+            case ARGUS_IPATTR_INDEX: {
+               struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *) dsr;
+               attr->hdr.type               = ARGUS_IPATTR_DSR;
+               attr->hdr.subtype            = 0;
+               attr->hdr.argus_dsrvl8.qual  = ARGUS_IPATTR_SRC;
+               attr->hdr.argus_dsrvl8.len   = 2;
+               attr->src.tos                = sptr->dcd_ipTos; 
+               attr->src.ttl                = sptr->dcd_ipTTL;
+               attr->src.ip_id              = 0;
+               dsr += attr->hdr.argus_dsrvl8.len;
+               argus->hdr.len += attr->hdr.argus_dsrvl8.len;
+               break;
+            }
+
+            case ARGUS_ASN_INDEX: {
+               struct ArgusAsnStruct *asn  = (struct ArgusAsnStruct *) dsr;
+               asn->hdr.type               = ARGUS_ASN_DSR;
+               asn->hdr.subtype            = 0;
+               asn->hdr.argus_dsrvl8.qual  = 0;
+               asn->hdr.argus_dsrvl8.len   = 3;
+               asn->src_as                 = sptr->src_as;
+               asn->dst_as                 = sptr->dst_as;
+               dsr += asn->hdr.argus_dsrvl8.len;
+               argus->hdr.len += asn->hdr.argus_dsrvl8.len;
+               break;
+            }
+            case ARGUS_METRIC_INDEX: {
+               struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) dsr;
+               uint32_t val;
+
+               metric->hdr.type              = ARGUS_METER_DSR;
+               metric->hdr.subtype           = ARGUS_METER_PKTS_BYTES;
+               metric->hdr.argus_dsrvl8.qual = ARGUS_SRC_INT;
+               metric->hdr.argus_dsrvl8.len  = 3;
+
+               dsr++;
+               val = 1;
+               *(int *)dsr++ = val;
+               val = sptr->sampledPacketSize;
+               *(int *)dsr++ = val;
+               argus->hdr.len += metric->hdr.argus_dsrvl8.len;
+               break;
+            }
+            case ARGUS_MAC_INDEX: {
+               struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
+               mac->hdr.type              = ARGUS_MAC_DSR;
+               mac->hdr.subtype           = 0;
+               mac->hdr.argus_dsrvl8.qual = 0;
+               mac->hdr.argus_dsrvl8.len  = 5;
+//             entryPtrV5->input = ntohs(entryPtrV5->input);
+//             entryPtrV5->output = ntohs(entryPtrV5->output);
+#if defined(ARGUS_SOLARIS)
+               bcopy((char *)&sptr->eth_src, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost.ether_addr_octet[0], 6);
+               bcopy((char *)&sptr->eth_dst, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost.ether_addr_octet[0], 6);
+#else
+               bcopy((char *)&sptr->eth_src, (char *)&mac->mac.mac_union.ether.ehdr.ether_shost[0], 6);
+               bcopy((char *)&sptr->eth_dst, (char *)&mac->mac.mac_union.ether.ehdr.ether_dhost[0], 6);
+#endif
+
+               dsr += mac->hdr.argus_dsrvl8.len;
+               argus->hdr.len += mac->hdr.argus_dsrvl8.len;
+               break;
+            }
+
+
+            case ARGUS_NETWORK_INDEX: {
+               if (sptr->dcd_ipProtocol == IPPROTO_TCP) {
+                  struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) dsr;
+                  struct ArgusTCPStatus *tcp = (struct ArgusTCPStatus *)&net->net_union.tcpstatus;
+
+                  net->hdr.type              = ARGUS_NETWORK_DSR;
+                  net->hdr.subtype           = ARGUS_TCP_STATUS;
+                  net->hdr.argus_dsrvl8.len  = 3;
+                  net->net_union.tcpstatus.src = sptr->dcd_tcpFlags;
+
+                  if (sptr->dcd_tcpFlags & TH_RST) 
+                     tcp->status |= ARGUS_RESET;
+          
+                  if (sptr->dcd_tcpFlags & TH_FIN)
+                     tcp->status |= ARGUS_FIN;
+          
+                  if ((sptr->dcd_tcpFlags & TH_ACK) || (sptr->dcd_tcpFlags & TH_PUSH) || (sptr->dcd_tcpFlags & TH_URG))
+                     tcp->status |= ARGUS_CON_ESTABLISHED;
+          
+                  switch (sptr->dcd_tcpFlags & (TH_SYN|TH_ACK)) {
+                     case (TH_SYN):  
+                        tcp->status |= ARGUS_SAW_SYN;
+                        break;
+             
+                     case (TH_SYN|TH_ACK): 
+                        tcp->status |= ARGUS_SAW_SYN_SENT;  
+                        break;
+                  }
+
+                  dsr += net->hdr.argus_dsrvl8.len;
+                  argus->hdr.len += net->hdr.argus_dsrvl8.len;
+               }
+            }
+         }
+      }
+      retn = argus;
+   }
+
+   if (retn != NULL)
+#ifdef _LITTLE_ENDIAN
+      ArgusHtoN(retn);
+#endif
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "ArgusParseSFlowRecord (%p,%p,%p) returning %p\n", parser,input,sptr, retn);
+#endif
+
+   return(retn);
+}
+
 
 int
 ArgusProcessSflowDatagram (struct ArgusParserStruct *parser, struct ArgusInput *input, int cnt)
@@ -3717,6 +3935,11 @@ SFParseExtendedWifiTx(SFSample *sptr)
    SFGetData32 (sptr); // "tx_channel"
    SFGetData64 (sptr); // "tx_speed"
    SFGetData32 (sptr); // "tx_power_mW"
+}
+
+void
+SFParseExtendedAggregation(SFSample *sptr)
+{
 }
 
 void

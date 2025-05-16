@@ -843,6 +843,8 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                if ((input->fd >= 0) && FD_ISSET (input->fd, &readmask)) {
                   input->ArgusLastTime = parser->ArgusRealTime;
 
+                  parser->ArgusCurrentInput = input;
+
                   switch (input->type & ARGUS_DATA_TYPE) {
                      case ARGUS_DATA_SOURCE:
                      case ARGUS_DOMAIN_SOURCE:
@@ -880,6 +882,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
                   }
 
                }
+               parser->ArgusCurrentInput = NULL;
                input = (void *)input->qhdr.nxt;
             }
          } else {

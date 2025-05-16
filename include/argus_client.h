@@ -158,7 +158,7 @@ struct ArgusWirelessStruct {
    int mcs, channel;
 };
  
-
+typedef struct ArgusRecord * (*ArgusSFlowHandler)(struct ArgusParserStruct *, struct ArgusInput *, uint8_t **, int *);
 typedef struct ArgusRecord * (*ArgusNetFlowHandler)(struct ArgusParserStruct *, struct ArgusInput *, uint8_t **, int *);
 
 struct ArgusFileInput {
@@ -216,6 +216,7 @@ struct ArgusInput {
    int ArgusReadSocketState, ArgusReadCiscoVersion;
    int ArgusReadSocketNum, ArgusReadSize;
    ArgusNetFlowHandler ArgusCiscoNetFlowParse;
+   ArgusSFlowHandler ArgusSFlowParse;
 
 #ifdef ARGUS_SASL
    sasl_conn_t *sasl_conn;

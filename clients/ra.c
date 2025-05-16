@@ -243,15 +243,26 @@ RaParseComplete (int sig)
 }
 
 
+
 void
 ArgusClientTimeout ()
 {
+   struct timeval tvpbuf, *tvp = &tvpbuf;
+   float dur;
+
+   if (ArgusParser->ArgusStartRealTime.tv_sec == 0) {
+      gettimeofday(&ArgusParser->ArgusStartRealTime, 0L);
+   }
+   gettimeofday(&ArgusParser->ArgusRealTime, 0L);
+
    if ((ArgusParser->ArgusWfileList != NULL) && (!(ArgusListEmpty(ArgusParser->ArgusWfileList)))) {
    } else
       fflush(stdout);
 
+   dur = RaDeltaFloatTime(&ArgusParser->ArgusRealTime, &ArgusParser->ArgusStartRealTime);
+
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusClientTimeout()\n");
+   ArgusDebug (6, "ArgusClientTimeout() ArgusTotalRecords %d, ArgusProcessRate %f\n", ArgusParser->ArgusTotalRecords, (ArgusParser->ArgusTotalRecords * 1.0) / dur);
 #endif
 }
 
