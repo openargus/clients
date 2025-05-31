@@ -433,6 +433,66 @@ struct hnamemem   llcsaptable[HASHNAMESIZE];
 struct evendmem   ethervendor[HASHNAMESIZE];
 
 struct evendmem  ethermask[48];
+
+/*
+#define ARGUS_TRANSPORT_INDEX		0
+#define ARGUS_FLOW_INDEX		1
+#define ARGUS_TIME_INDEX		2
+#define ARGUS_METRIC_INDEX		3
+#define ARGUS_AGR_INDEX			4
+#define ARGUS_FRAG_INDEX		5
+#define ARGUS_NETWORK_INDEX		5 
+#define ARGUS_VLAN_INDEX                6 
+#define ARGUS_MPLS_INDEX                7
+#define ARGUS_JITTER_INDEX              8
+#define ARGUS_IPATTR_INDEX              9
+#define ARGUS_PSIZE_INDEX               10
+#define ARGUS_SRCUSERDATA_INDEX		11
+#define ARGUS_DSTUSERDATA_INDEX		12
+#define ARGUS_MAC_INDEX                 13 
+#define ARGUS_ICMP_INDEX		14
+#define ARGUS_ENCAPS_INDEX              15
+#define ARGUS_TIME_ADJ_INDEX		16
+#define ARGUS_BEHAVIOR_INDEX            17
+#define ARGUS_HISTO_INDEX               18
+#define ARGUS_COR_INDEX			18
+#define ARGUS_COCODE_INDEX		19
+#define ARGUS_LABEL_INDEX               20
+#define ARGUS_ASN_INDEX                 21
+#define ARGUS_GEO_INDEX                 22
+#define ARGUS_LOCAL_INDEX               23
+#define ARGUS_FLOW_HASH_INDEX           24
+#define ARGUS_SCORE_INDEX               25
+*/
+ 
+char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
+   "trans",
+   "flow",
+   "time",
+   "metric",
+   "agr",
+   "net",
+   "vlan",
+   "mpls",
+   "jitter",
+   "ipattr",
+   "psize",
+   "suser",
+   "duser",
+   "mac",
+   "icmp",
+   "encaps",
+   "tadj",
+   "behavior",
+   "cor",
+   "cocode",
+   "label",
+   "asn",
+   "geo",
+   "local",
+   "hash",
+   "score",
+};
    
 void setArguspidflag (struct ArgusParserStruct *, int);
 int getArguspidflag (struct ArgusParserStruct *);
@@ -6502,6 +6562,40 @@ ArgusPrintRecordCloser (struct ArgusParserStruct *parser, char *buf, struct Argu
       }
    }
    return (retn);
+}
+
+
+char ArgusDsrsBuffer[0x200];
+
+void
+ArgusPrintDsrs (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   int i, found = 0, slen = 0, tlen = 0;
+   char *ptr;
+
+   ArgusDsrsBuffer[0] = '\0';
+   ptr = ArgusDsrsBuffer;
+   slen = sizeof(ArgusDsrsBuffer);
+
+   for (i = 0; (i < ARGUSMAXDSRTYPE) && (slen > 0); i++) {
+      if ((argus->dsrs[i]) != NULL) {
+         char *str = ArgusDSRKeyWords[i];
+         if (found) {
+            tlen = snprintf (ptr, slen - 1, ",%s", str);
+         } else {
+            tlen = snprintf (ptr, slen - 1, "%s", str);
+         }
+         ptr += tlen;
+         slen -= tlen;
+         found = 1;
+      }
+   }
+   if ((slen = strlen(ArgusDsrsBuffer)) > 0) {
+      snprintf(buf, len, "%s", ArgusDsrsBuffer);
+      if (slen > len) {
+         buf[len - 1] = '*';
+      }
+   }
 }
 
 void
@@ -20496,6 +20590,12 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
 }
 
 void
+ArgusPrintDsrsLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "Dsrs");
+}
+
+void
 ArgusPrintTypeLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Type");
@@ -33775,66 +33875,6 @@ ArgusProcessGroupOptions(struct ArgusParserStruct *parser, char *group)
 
 #define RA_ADD_OPTION           2
 #define RA_SUB_OPTION           3
-
-/*
-#define ARGUS_TRANSPORT_INDEX		0
-#define ARGUS_FLOW_INDEX		1
-#define ARGUS_TIME_INDEX		2
-#define ARGUS_METRIC_INDEX		3
-#define ARGUS_AGR_INDEX			4
-#define ARGUS_FRAG_INDEX		5
-#define ARGUS_NETWORK_INDEX		5 
-#define ARGUS_VLAN_INDEX                6 
-#define ARGUS_MPLS_INDEX                7
-#define ARGUS_JITTER_INDEX              8
-#define ARGUS_IPATTR_INDEX              9
-#define ARGUS_PSIZE_INDEX               10
-#define ARGUS_SRCUSERDATA_INDEX		11
-#define ARGUS_DSTUSERDATA_INDEX		12
-#define ARGUS_MAC_INDEX                 13 
-#define ARGUS_ICMP_INDEX		14
-#define ARGUS_ENCAPS_INDEX              15
-#define ARGUS_TIME_ADJ_INDEX		16
-#define ARGUS_BEHAVIOR_INDEX            17
-#define ARGUS_HISTO_INDEX               18
-#define ARGUS_COR_INDEX			18
-#define ARGUS_COCODE_INDEX		19
-#define ARGUS_LABEL_INDEX               20
-#define ARGUS_ASN_INDEX                 21
-#define ARGUS_GEO_INDEX                 22
-#define ARGUS_LOCAL_INDEX               23
-#define ARGUS_FLOW_HASH_INDEX           24
-#define ARGUS_SCORE_INDEX               25
-*/
-
-char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
-   "trans",
-   "flow",
-   "time",
-   "metric",
-   "agr",
-   "net",
-   "vlan",
-   "mpls",
-   "jitter",
-   "ipattr",
-   "psize",
-   "suser",
-   "duser",
-   "mac",
-   "icmp",
-   "encaps",
-   "tadj",
-   "behavior",
-   "cor",
-   "cocode",
-   "label",
-   "asn",
-   "geo",
-   "local",
-   "hash",
-   "score",
-};
 
 
 void ArgusProcessStripOptions(struct ArgusParserStruct *, char *);
