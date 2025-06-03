@@ -4653,6 +4653,9 @@ Argusgen_tcode(int name, struct qual q)
       }
 
       case Q_FRAG_ONLY: {
+         struct ArgusNetworkStruct net;
+         int offset = ((char *)&net.hdr.subtype - (char *)&net);
+         b1 = Argusgen_cmp(ARGUS_NETWORK_INDEX, offset, NFF_B, (u_int) ARGUS_NETWORK_SUBTYPE_FRAG, Q_EQUAL, Q_DEFAULT);
          break;
       }
 

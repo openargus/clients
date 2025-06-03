@@ -406,8 +406,17 @@ extern void * ArgusTimeoutProcess (void *);
 #if defined(ARGUS_THREADS)
                      pthread_mutex_lock(&ArgusParser->lock);
 #endif
-                     ArgusParser->ArgusTotalMarRecords++;
-                     ArgusParser->ArgusTotalRecords++;
+                     switch (addr->type & ARGUS_DATA_TYPE) {
+                        case ARGUS_DATA_SOURCE:
+                        case ARGUS_DOMAIN_SOURCE:
+                        case ARGUS_V2_DATA_SOURCE: {
+                           ArgusParser->ArgusTotalMarRecords++;
+                           ArgusParser->ArgusTotalRecords++;
+
+                           ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
+                        }
+                     }
+
 #if defined(ARGUS_THREADS)
                      pthread_mutex_unlock(&ArgusParser->lock);
 #endif
@@ -416,8 +425,6 @@ extern void * ArgusTimeoutProcess (void *);
 
                      if (fcntl(addr->fd, F_SETFL, flags | O_NONBLOCK) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
-
-                     ArgusHandleRecord (ArgusParser, addr, &addr->ArgusInitCon, 0, &ArgusParser->ArgusFilterCode);
 
                      if (ArgusParser->RaPollMode) {
                         ArgusDeleteInput (ArgusParser, addr);

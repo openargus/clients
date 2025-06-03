@@ -476,16 +476,17 @@ RaConvertParseTitleString (char *str)
 // Lets determine the delimiter, if we need to.  This will make this go a bit faster
 
       for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-         len = strlen(RaParseAlgorithmTable[i].title);
-         if (!(strncmp(RaParseAlgorithmTable[i].title, ptr, len))) {
-            ptr += len;
-            if (RaConvertFieldDelimiter[0] == '\0')
-               RaConvertFieldDelimiter[0] = *ptr++;
-            else {
-               if (*ptr && (RaConvertFieldDelimiter[0] != *ptr++))
-                  ArgusLog (LOG_ERR, "RaConvertFrontList: title format error: inconsistent delimiter: %s", str);
+         if (RaParseAlgorithmTable[i].title && ((len = strlen(RaParseAlgorithmTable[i].title)) > 0)) {
+            if (!(strncmp(RaParseAlgorithmTable[i].title, ptr, len))) {
+               ptr += len;
+               if (RaConvertFieldDelimiter[0] == '\0')
+                  RaConvertFieldDelimiter[0] = *ptr++;
+               else {
+                  if (*ptr && (RaConvertFieldDelimiter[0] != *ptr++))
+                     ArgusLog (LOG_ERR, "RaConvertFrontList: title format error: inconsistent delimiter: %s", str);
+               }
+               break;
             }
-            break;
          }
       }
 
@@ -496,7 +497,7 @@ RaConvertParseTitleString (char *str)
          len = strlen(obj);
          if (len > 0) {
             for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-               if (!(strncmp(RaParseAlgorithmTable[i].title, obj, len))) {
+               if (RaParseAlgorithmTable[i].title && !(strncmp(RaParseAlgorithmTable[i].title, obj, len))) {
                   RaParseAlgorithmIndex++;
                   RaParseAlgorithms[items] = &RaParseAlgorithmTable[i];
                   if (strcmp("Dir",obj) == 0)   RaConvertParseDirLabel++;
@@ -680,7 +681,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
       sprintf (delim, "%c", RaConvertFieldDelimiter[0]);
       tptr = ptr;
 
-      if (strchr (ptr, '{')) {
+      if ((strchr (ptr, '{')) || (strchr (ptr, '['))) {
          ArgusJsonValue l1root, *res1 = NULL;
          bzero(&l1root, sizeof(l1root));
 
@@ -907,7 +908,7 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                }
             }
             ArgusProcessTitleString = 0;
-            if (*str == '{')
+            if ((*str == '{') || (*str == '['))
                ArgusProcessTitleString = 1;
          }
 
@@ -4842,9 +4843,11 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
 	          for (x = 0; (x < RaConversionMapIndex) && !found; x++) {
 	             if (strcmp(RaConvertOptionStrings[i], RaConversionMapTable[x].field) == 0) {
                            for (y = 0; y < MAX_PRINT_ALG_TYPES; y++) {
-                              if (!(strcmp(RaParseAlgorithmTable[y].field, RaConversionMapTable[x].value))) {
-                                 RaConversionMapTable[x].func = RaParseAlgorithmTable[y].parse;
-                                 break;
+                              if (RaParseAlgorithmTable[y].field) {
+                                 if (!(strcmp(RaParseAlgorithmTable[y].field, RaConversionMapTable[x].value))) {
+                                    RaConversionMapTable[x].func = RaParseAlgorithmTable[y].parse;
+                                    break;
+                                 }
                               }
                            }
 
@@ -4854,8 +4857,9 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
 	                break;
                         }
                      }
-	          if (!found) 
-                        ArgusLog (LOG_ERR, "ArgusParseConversionFile item %s not found", RaConvertOptionStrings[i]);
+	             if (!found) {
+//                      ArgusLog (LOG_ERR, "ArgusParseConversionFile item %s not found", RaConvertOptionStrings[i]);
+                     }
                   }
                }
 

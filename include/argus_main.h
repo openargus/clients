@@ -84,6 +84,10 @@ extern "C" {
 #define ARGUS_FILE		1
 #define ARGUS_SOCKET		2
 
+
+#ifdef HAVE_BACKTRACE
+void ArgusBacktrace (void);
+#endif
  
 struct naddrmem {
    struct naddrmem *nxt;

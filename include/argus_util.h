@@ -269,7 +269,7 @@ struct h6namemem {
 
 struct hnamemem {
    struct hnamemem *nxt;
-   int sec;
+   int sec, location;
    char *name, *nname;
    u_int addr, status;
 };
@@ -2495,6 +2495,9 @@ extern void ArgusPrintIdleTimeLabel (struct ArgusParserStruct *, char *, int);
 extern void ArgusPrintSrcOui (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintDstOui (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 extern void ArgusPrintProducerConsumerRatio (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+
+extern void ArgusPrintSrcPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+extern void ArgusPrintDstPktSize (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
 extern void ArgusPrintAutoId (struct ArgusParserStruct *, char *, int);
 

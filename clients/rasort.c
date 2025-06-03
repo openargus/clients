@@ -114,7 +114,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          char *ptr;
          while (mode) {
             for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
-               if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
+               if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(mode->mode))) {
                   ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
                   if (ArgusSortAlgorithmTable[x] == ArgusSortSrcAddr) {
                      if ((ptr = strchr(mode->mode, '/')) != NULL) {
