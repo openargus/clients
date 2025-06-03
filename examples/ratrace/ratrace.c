@@ -18,14 +18,12 @@
  */
 
 /*
- * ralabel - add descriptor labels to flows.
- *           this particular labeler adds descriptors based
- *           on addresses.
+ * ratrace - perform traceroute for destination addresses.
  *
  * written by Carter Bullard
  * QoSient, LLC
  *
- * $Id: //depot/gargoyle/clients/examples/ralabel/ralabel.c#17 $
+ * $Id: //depot/gargoyle/clients/examples/ratrace/ratrace.c#17 $
  * $DateTime: 2016/11/30 00:54:11 $
  * $Change: 3245 $
  */
@@ -383,11 +381,10 @@ void
 usage ()
 {
    extern char version[];
-   fprintf (stdout, "RaLabeler Version %s\n", version);
+   fprintf (stdout, "RaTrace Version %s\n", version);
    fprintf (stdout, "usage: %s \n", ArgusParser->ArgusProgramName);
    fprintf (stdout, "usage: %s [ra-options] -S remoteServer  [- filter-expression]\n", ArgusParser->ArgusProgramName);
    fprintf (stdout, "usage: %s [ra-options] -r argusDataFile [- filter-expression]\n\n", ArgusParser->ArgusProgramName);
-   fprintf (stdout, "options: -f <conffile>     read ralabel spec from <conffile>.\n");
    fflush (stdout);
    exit(1);
 }
@@ -422,8 +419,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    }
 
    if ((ns = ArgusCopyRecordStruct(argus)) != NULL) {
-      ArgusLabelRecord(parser, ns);
-
       if (parser->ArgusWfileList != NULL) {
          struct ArgusWfileStruct *wfile = NULL;
          struct ArgusListObjectStruct *lobj = NULL;
@@ -862,7 +857,7 @@ ArgusTraceProcess (void *arg)
                   p->sec  = now->tv_sec;
                }
 
-               sprintf (command, "/usr/sbin/traceroute -w 1 -z 200 -m 32 %s", p->nname);
+               sprintf (command, "/usr/sbin/traceroute -w 1 -z 100 -m %d %s", p->location, p->nname);
 #ifdef ARGUSDEBUG
                ArgusDebug (1, "ArgusTraceProcess() query '%s' pending requests %d", command, ArgusParser->ArgusProcessList->count);
 #endif

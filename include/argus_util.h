@@ -269,7 +269,7 @@ struct h6namemem {
 
 struct hnamemem {
    struct hnamemem *nxt;
-   int sec;
+   int sec, location;
    char *name, *nname;
    u_int addr, status;
 };
