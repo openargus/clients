@@ -94,6 +94,8 @@ char ArgusBuf[0x8000];
 int ArgusThisEflag = 0;
 int ArgusDebugTree = 0;
 
+char *ArgusEventsFilename = NULL;
+
 int ArgusDnsCacheTimeout = 0;
 char *ArgusPendingSearchCommand = NULL;
 
@@ -131,6 +133,11 @@ int RaPruneLevel = 0;
 #define ARGUS_DNS_PTR		0x10
 #define ARGUS_DNS_TLD		0x20
 
+#define ARGUS_DNS_NEW_SERVER	0x01
+#define ARGUS_DNS_NEW_CLIENT	0x02
+#define ARGUS_DNS_NEW_FQDN	0x04
+#define ARGUS_DNS_NO_DNS_CACHE  0x08
+
 struct RaProcessStruct {
    int status, timeout;
    int value, size;
@@ -147,8 +154,10 @@ extern char *ArgusTrimString (char *);
 extern struct tok ns_type2str[];
 
 
-struct nnamemem *ArgusNameEntry (struct ArgusHashTable *, char *, int);
+struct nnamemem *ArgusNameEntry (struct ArgusParserStruct *, struct ArgusHashTable *, char *, int, struct timeval *);
 struct nnamemem *ArgusFindNameEntry (struct ArgusHashTable *, char *);
+
+void ArgusWriteEvent(struct ArgusParserStruct *, int , void *, char *); 
 
 char **ArgusHandleResponseArray = NULL;
 
@@ -1339,6 +1348,17 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             if (!(strncasecmp (mode->mode, "rmon", 4))) {
                parser->RaMonMode++;
             } else
+            if (!(strncasecmp (mode->mode, "events:", 5))) {
+               char *ptr = &mode->mode[7];
+               if (*ptr != '\0') {
+                  char *buf = malloc(0x1000);
+                  if (buf != NULL) {
+                     snprintf (buf, 0x1000, "%s", ptr);
+                     ArgusEventsFilename = buf;
+                  }
+               }
+
+            } else
             if (!(strncasecmp (mode->mode, "prune", 5))) {
                char *ptr, *str;
                parser->RaPruneMode++;
@@ -1348,6 +1368,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                      ArgusLog (LOG_ERR, "ArgusClientInit: prune syntax error");
                }
             }
+
             mode = mode->nxt;
          }
       }
@@ -1577,10 +1598,15 @@ ArgusFindNameEntry (struct ArgusHashTable *table, char *name)
 
 
 struct nnamemem *
-ArgusNameEntry (struct ArgusHashTable *table, char *name, int status)
+ArgusNameEntry (struct ArgusParserStruct *parser, struct ArgusHashTable *table, char *name, int status, struct timeval *tvp)
 {
    struct nnamemem *retn = NULL;
+   char tbuf[64], *tptr;
    char fqdn[MAXSTRLEN];
+
+   bzero (tbuf, 64);
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
+   tptr = ArgusTrimString(tbuf);
 
    if (name && strlen(name)) {
       struct ArgusHashTableHdr *htbl = NULL;
@@ -1675,14 +1701,13 @@ ArgusNameEntry (struct ArgusHashTable *table, char *name, int status)
             retn->d_name = strchr(retn->n_name, '.') + 1;
 
          if (retn->d_name && (strlen(retn->d_name) > 0)) {
-            if (ArgusNameEntry (ArgusDNSNameSpace->table, retn->d_name, 1) != NULL) {
+            if (ArgusNameEntry (parser, ArgusDNSNameSpace->table, retn->d_name, 1, tvp) != NULL) {
             }
          }
 
          ArgusAddHashEntry(table, (void *)retn, &ArgusHash);
-#ifdef ARGUSDEBUG
-         ArgusDebug (2, "ArgusNameEntry() adding DNS name %s[%d] tld %s total %d\n", retn->n_name, (retn->hashval % table->size), retn->d_name, table->count);
-#endif
+         if (status == 0)
+            ArgusWriteEvent(ArgusParser, ARGUS_DNS_NEW_FQDN, (void *) retn->n_name, tptr);
 
       } else {
          retn = (struct nnamemem *) htbl->object;
@@ -1745,7 +1770,7 @@ RaProcessARecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *dn
 // serve.
 
    if ((res != NULL) && (res->ans != NULL)) {
-      struct nnamemem *refer = ArgusNameEntry(ArgusDNSNameTable, res->name, 0);
+      struct nnamemem *refer = ArgusNameEntry(parser, ArgusDNSNameTable, res->name, 0, tvp);
       struct RaAddressStruct *raddr = NULL;
       int i, ttl = 0, count = res->ans->count;
 
@@ -1788,7 +1813,7 @@ RaProcessARecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *dn
             if ((cidr = RaParseCIDRAddr (parser, rr->data)) != NULL) {
                int tttl, ncidr = 0, ndns = 0;
 
-               struct nnamemem *name = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0);
+               struct nnamemem *name = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp);
        
                if (name != NULL) {
                   name->ref++;
@@ -1992,8 +2017,8 @@ RaProcessCRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *dn
          struct ArgusListObjectStruct *list =  (struct ArgusListObjectStruct *)ArgusPopFrontList(res->cname, ARGUS_NOLOCK);
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
-         if ((name = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
-            if ((cname = ArgusNameEntry(ArgusDNSNameTable, rr->data, 0)) != NULL) {
+         if ((name = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp)) != NULL) {
+            if ((cname = ArgusNameEntry(parser, ArgusDNSNameTable, rr->data, 0, tvp)) != NULL) {
                if (name->cnames == NULL)
                   name->cnames = ArgusNewList();
 
@@ -2113,7 +2138,7 @@ RaProcessNSRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *d
          struct ArgusListObjectStruct *list =  (struct ArgusListObjectStruct *)ArgusPopFrontList(res->ns, ARGUS_NOLOCK);
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
-         if ((ptr = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
+         if ((ptr = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp)) != NULL) {
 
             if (dns->server != NULL) {
                if (ptr->servers == NULL)
@@ -2128,7 +2153,7 @@ RaProcessNSRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *d
             }
 
 
-            if ((name = ArgusNameEntry(ArgusDNSNameTable, rr->data, 0)) != NULL) {
+            if ((name = ArgusNameEntry(parser, ArgusDNSNameTable, rr->data, 0, tvp)) != NULL) {
                char *nptr = strdup(rr->name);
                char *tptr;
 
@@ -2180,7 +2205,7 @@ RaProcessSOARecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
          struct ArgusListObjectStruct *list =  (struct ArgusListObjectStruct *)ArgusPopFrontList(res->soa, ARGUS_NOLOCK);
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
-         if ((ptr = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
+         if ((ptr = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp)) != NULL) {
             if (dns->server != NULL) {
                if (ptr->servers == NULL)
                   ptr->servers = ArgusNewList();
@@ -2240,7 +2265,7 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
          struct ArgusListObjectStruct *list =  (struct ArgusListObjectStruct *)ArgusPopFrontList(res->ptr, ARGUS_NOLOCK);
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
-         if ((ptr = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
+         if ((ptr = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp)) != NULL) {
             if ((ptr->stime.tv_sec == 0) || (ptr->stime.tv_sec > dns->stime.tv_sec)) {
                ptr->stime = dns->stime;
             }
@@ -2260,7 +2285,7 @@ RaProcessPTRRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *
               ArgusAddObjectToList(ptr->clients, dns->client, ARGUS_LOCK);
            }
 
-            if ((name = ArgusNameEntry(ArgusDNSNameTable, rr->data, 0)) != NULL) {
+            if ((name = ArgusNameEntry(parser, ArgusDNSNameTable, rr->data, 0, tvp)) != NULL) {
                char *nptr = strdup(rr->name);
                char *sptr, *tptr;
 
@@ -2468,7 +2493,7 @@ RaProcessMXRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *d
          struct ArgusListObjectStruct *list =  (struct ArgusListObjectStruct *)ArgusPopFrontList(res->mx, ARGUS_NOLOCK);
          struct ArgusDomainResourceRecord *rr = list->list_union.obj;
 
-         if ((ptr = ArgusNameEntry(ArgusDNSNameTable, rr->name, 0)) != NULL) {
+         if ((ptr = ArgusNameEntry(parser, ArgusDNSNameTable, rr->name, 0, tvp)) != NULL) {
             char *dptr = strdup(rr->data), *tptr, *sptr, *mxsptr;
             int ind = 0;
 
@@ -2489,7 +2514,7 @@ RaProcessMXRecord (struct ArgusParserStruct *parser, struct ArgusDomainStruct *d
             }
             free(dptr);
 
-            if ((name = ArgusNameEntry(ArgusDNSNameTable, mxsptr, 0)) != NULL) {
+            if ((name = ArgusNameEntry(parser, ArgusDNSNameTable, mxsptr, 0, tvp)) != NULL) {
                if ((name->stime.tv_sec == 0) || (name->stime.tv_sec > dns->stime.tv_sec)) {
                   name->stime = dns->stime;
                }
@@ -2524,7 +2549,94 @@ void RaProcessThisEventRecord (struct ArgusParserStruct *, struct ArgusRecordStr
 void RaProcessManRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
+char ArgusRecordString[MAXSTRLEN];
+char ArgusEventString[MAXSTRLEN];
 #define ARGUS_MAX_DNS_BUFFER	0x4000
+
+void 
+ArgusWriteEvent(struct ArgusParserStruct *parser, int type, void *object, char *tptr) {
+   char *astr = ArgusRecordString;
+   int slen = 0;
+
+   bzero(ArgusEventString, sizeof(ArgusEventString));
+
+   ArgusPrintRecord(parser, ArgusRecordString, parser->ns, MAXSTRLEN);
+
+   if ((slen = strlen(ArgusRecordString)) > 0) {
+      if (*astr == '{') astr++;
+      while (*astr == ' ') astr++;
+      if (ArgusRecordString[slen - 1] == '}')
+         ArgusRecordString[slen - 1] = '\0';
+   }
+
+   switch (type) {
+      case ARGUS_DNS_NEW_SERVER: {
+         struct RaAddressStruct *node = (struct RaAddressStruct *) object;
+         if (node->addr.type == AF_INET) {
+            char *server = intoa(node->addr.addr[0]);
+            sprintf(ArgusEventString, "{\"behavior\":\"DNS.Lookup\",\"n\":1,\"object\":\"NEW_DNS_SERVER\",\"time\":%s,\"search\":\"%s\", %s},\n",tptr, server, astr);
+	 }
+         break;      
+      }      
+      case ARGUS_DNS_NEW_CLIENT:{
+         struct RaAddressStruct *node = (struct RaAddressStruct *) object;
+         if (node->addr.type == AF_INET) {
+            char *client = intoa(node->addr.addr[0]);
+            sprintf(ArgusEventString, "{\"behavior\":\"DNS.Lookup\",\"n\":1,\"object\":\"NEW_DNS_CLIENT\",\"time\":%s,\"search\":\"%s\", %s},\n",tptr, client, astr);
+	 }
+         break;      
+      }      
+      case ARGUS_DNS_NEW_FQDN: {
+         char *target = (char *) object;
+         sprintf(ArgusEventString, "{\"behavior\":\"DNS.Lookup\",\"n\":1,\"object\":\"NEW_DNS_LOOKUP\",\"time\":%s,\"search\":\"%s\", %s},\n",tptr, target, astr);
+         break;      
+      }      
+      case ARGUS_DNS_NO_DNS_CACHE: {
+         struct RaAddressStruct *node = (struct RaAddressStruct *) object;
+         if (node->addr.type == AF_INET) {
+            char *target = intoa(node->addr.addr[0]);
+            sprintf(ArgusEventString, "{\"behavior\":\"A.2.10\",\"n\":1,\"object\":\"NO_DNS_LOOKUP\",\"time\":%s,\"search\":\"%s\", %s},\n",tptr, target, astr);
+	 }
+         break;      
+      }
+   }
+
+   if (strlen(ArgusEventString) > 0) {
+      char filename[0x1000];
+      bzero (filename, sizeof(filename));
+
+      if (ArgusEventsFilename != NULL) {
+         struct timeval tbuf, *tvp = &tbuf;
+         struct tm tmval;
+
+         if (strchr(ArgusEventsFilename, '%') != NULL) {
+            FILE *fd = NULL;
+            gettimeofday(tvp, 0L);
+
+            localtime_r(&tbuf.tv_sec, &tmval);
+
+            if (strftime(filename, 0x1000, ArgusEventsFilename, &tmval) <= 0)
+               ArgusLog (LOG_ERR, "ArgusWriteEvent () strftime %s\n", strerror(errno));
+
+            ArgusDebug(1, "ArgusWriteEvent[%s]: write %s to events file %s\n", tptr, ArgusEventString, filename);
+
+            if ((fd = fopen (filename, "a+")) != NULL) {
+               fprintf (fd, "%s\n", ArgusEventString);
+               fclose(fd);
+            }
+         }
+      }
+   }
+
+// {"behavior":"A.2.15","n":26,"object":"New","value":"4950","std":115128.578411245,"search":"192.168.11.105","time":null,"date":"2025-04-14","avg":160379.923076923,"zscore":null},
+//{"n":26,"object":"Dpkts","behavior":"A.2.10","search":"192.168.11.105","date":"2025-05-12","value":5374527,"avg":219167.653846154,"std":382611.400598665,"zscore":13.4741393959703},
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (6, "ArgusWindowClose () returning\n"); 
+#endif
+}
+
+extern int ArgusTestMulticast( struct ArgusInput *input, unsigned int);
 
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
@@ -2536,6 +2648,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
 
    if ((label = ArgusCalloc(1, ARGUS_MAX_DNS_BUFFER)) == NULL)
       ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCalloc error %s\n", strerror(errno));
+
+   parser->ns = argus;
 
    bzero (tbuf, 64);
    ArgusPrintStartDate(parser, tbuf, argus, 32);
@@ -2598,6 +2712,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               dport = flow->ip_flow.dport;
                               break;
                            }
+                           case IPPROTO_IGMP: {
+                              process = 0;
+                              break;
+                           }
                         }
                         srcAddrType = RaIPv4AddressType(parser, *(unsigned int *)saddr);
                         dstAddrType = RaIPv4AddressType(parser, *(unsigned int *)daddr);
@@ -2616,6 +2734,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            case IPPROTO_UDP: {
                               sport = flow->ipv6_flow.sport;
                               dport = flow->ipv6_flow.dport;
+                              break;
+                           }
+                           case IPPROTO_IGMP: {
+                              process = 0;
                               break;
                            }
                         }
@@ -2650,6 +2772,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                   struct ArgusDomainQueryStruct *req = dns->request;
                   struct ArgusDomainQueryStruct *res = dns->response;
                   unsigned int dnsAddrType = 0;
+                  int found = 1;
 
                   if ((dns->status & ARGUS_ERROR) || (!(req || res))) {
 #if defined(ARGUSDEBUG)
@@ -2674,59 +2797,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      dnsAddrType = srcAddrType;
                   }
 
-                  switch (dnsAddrType) {
-                        case ARGUS_IPV4_UNICAST: 
-                        case ARGUS_IPV4_UNICAST_THIS_NET: 
-                        case ARGUS_IPV4_UNICAST_PRIVATE: 
-                        case ARGUS_IPV4_UNICAST_LINK_LOCAL: 
-                        case ARGUS_IPV4_UNICAST_LOOPBACK: 
-                        case ARGUS_IPV4_UNICAST_TESTNET: 
-                        case ARGUS_IPV4_UNICAST_RESERVED: 
-
-                        case ARGUS_IPV6_UNICAST:
-                        case ARGUS_IPV6_UNICAST_UNSPECIFIED:
-                        case ARGUS_IPV6_UNICAST_LOOPBACK:
-                        case ARGUS_IPV6_UNICAST_V4COMPAT:
-                        case ARGUS_IPV6_UNICAST_V4MAPPED:
-                        case ARGUS_IPV6_UNICAST_LINKLOCAL:
-                        case ARGUS_IPV6_UNICAST_SITELOCAL:
-                           unicast = 1;
-                           break;
-  
-                        case ARGUS_IPV4_MULTICAST:
-                        case ARGUS_IPV4_MULTICAST_LOCAL:
-                        case ARGUS_IPV4_MULTICAST_INTERNETWORK:
-                        case ARGUS_IPV4_MULTICAST_RESERVED:
-                        case ARGUS_IPV4_MULTICAST_SDPSAP:
-                        case ARGUS_IPV4_MULTICAST_NASDAQ:
-                        case ARGUS_IPV4_MULTICAST_DIS:
- 
-                        case ARGUS_IPV4_MULTICAST_SRCSPEC:
-                        case ARGUS_IPV4_MULTICAST_GLOP:
- 
-                        case ARGUS_IPV4_MULTICAST_ADMIN:
-                        case ARGUS_IPV4_MULTICAST_SCOPED:
-                        case ARGUS_IPV4_MULTICAST_SCOPED_ORG_LOCAL:
-                        case ARGUS_IPV4_MULTICAST_SCOPED_SITE_LOCAL:
-                        case ARGUS_IPV4_MULTICAST_SCOPED_REL:
- 
-                        case ARGUS_IPV4_MULTICAST_ADHOC:
-                        case ARGUS_IPV4_MULTICAST_ADHOC_BLK1:
-                        case ARGUS_IPV4_MULTICAST_ADHOC_BLK2:
-                        case ARGUS_IPV4_MULTICAST_ADHOC_BLK3:
-
-                        case ARGUS_IPV6_MULTICAST:
-                        case ARGUS_IPV6_MULTICAST_NODELOCAL:
-                        case ARGUS_IPV6_MULTICAST_LINKLOCAL:
-                        case ARGUS_IPV6_MULTICAST_SITELOCAL:
-                        case ARGUS_IPV6_MULTICAST_ORGLOCAL:
-                        case ARGUS_IPV6_MULTICAST_GLOBAL:
-//                         multicast = 1;
-                           break;
-                  }
+                  if ((!(ArgusTestMulticast(argus->input, *(unsigned int *)saddr)) && 
+                      (!(ArgusTestMulticast(argus->input, *(unsigned int *)saddr)))))
+                     unicast = 1;
 
 // test if there is a regex expression and match against the query/response name.
-/*
+
                   if (parser->estr != NULL) {
                      char *tbuf = (req && req->name) ? req->name : NULL;
                      found = 0;
@@ -2753,8 +2829,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         }
                      }
                   }
-*/
-                  if (unicast) {
+
+                  if (found && unicast) {
                      struct RaAddressStruct *raddr = NULL, node;
   
                      bzero ((char *)&node, sizeof(node));
@@ -2768,9 +2844,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            node.addr.len = 4;
  
                            if ((raddr = RaFindAddress (parser, ArgusDnsServers->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                              ArgusDebug(1, "%s: RaProcessRecord: new DNS server %s\n", tptr, intoa(node.addr.addr[0]));
-#endif
+                              ArgusWriteEvent(parser, ARGUS_DNS_NEW_SERVER, (void *) &node, tptr);
                               if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                  bcopy(&node, raddr, sizeof(node));
                                  if (node.addr.str != NULL)
@@ -2784,10 +2858,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            node.addr.str = NULL;
 
                            if ((raddr = RaFindAddress (parser, ArgusDnsClients->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                              ArgusDebug(1, "%s: RaProcessRecord: new DNS client %s\n", tptr, intoa(node.addr.addr[0]));
-#endif
-
+                              ArgusWriteEvent(parser, ARGUS_DNS_NEW_CLIENT, (void *) &node, tptr);
                               if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                  bcopy(&node, raddr, sizeof(node));
                                  if (node.addr.str != NULL)
@@ -2809,9 +2880,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  if (node.addr.str == NULL)
                                     node.addr.str = (char *)cp;
                                  if ((raddr = RaFindAddress (parser, ArgusDnsServers->ArgusAddrTree[cidr->type], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                                    ArgusDebug(1, "%s: RaProcessRecord: new DNS server %s\n", tptr, cp);
-#endif
+                                    ArgusWriteEvent(parser, ARGUS_DNS_NEW_SERVER, (void *) &node, tptr);
+
                                     if ((raddr = (struct RaAddressStruct *) ArgusMalloc (sizeof(*raddr))) != NULL) {
                                        bcopy(&node, raddr, sizeof(node));
                                        if (node.addr.str != NULL)
@@ -2831,9 +2901,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  if (node.addr.str == NULL)
                                     node.addr.str = (char *)cp;
                                  if ((raddr = RaFindAddress (parser, ArgusDnsClients->ArgusAddrTree[cidr->type], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                                    ArgusDebug(1, "%s: RaProcessRecord: new DNS client %s\n", tptr, cp);
-#endif
+                                    ArgusWriteEvent(parser, ARGUS_DNS_NEW_CLIENT, (void *) &node, tptr);
+
                                     if ((raddr = (struct RaAddressStruct *) ArgusMalloc (sizeof(*raddr))) != NULL) {
                                        bcopy(&node, raddr, sizeof(node));
                                        if (node.addr.str != NULL)
@@ -3026,9 +3095,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               node.addr.len = 4;
 
                               if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                                 ArgusDebug (1, "%s: RaProcessRecord: no DNS cache for dest address %s\n", tptr, intoa(node.addr.addr[0]));
-#endif
+                                 ArgusWriteEvent(parser, ARGUS_DNS_NO_DNS_CACHE, (void *) &node, tptr);
                                  if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                     bcopy(&node, raddr, sizeof(node));
                                     if (node.addr.str != NULL)
@@ -3039,10 +3106,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                               } else {
                                  struct ArgusListStruct *list = raddr->dns;
 #if defined(ARGUSDEBUG)
-                                 if (raddr->dns != NULL)
-                                    ArgusDebug (3, "%s: RaProcessRecord: DNS cache found for dest address %s\n", tptr, intoa(node.addr.addr[0]));
-                                 else
-                                    ArgusDebug (3, "%s: RaProcessRecord: no DNS cache found for dest address %s\n", tptr, intoa(node.addr.addr[0]));
+                                 if (raddr->dns == NULL)
+                                    ArgusWriteEvent(parser, ARGUS_DNS_NO_DNS_CACHE, (void *) &node, tptr);
 
 //                               ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen, AF_INET);
 #endif
@@ -3054,6 +3119,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  if (raddr->rtime.tv_sec < tvp->tv_sec)
                                     raddr->rtime.tv_sec = tvp->tv_sec;
                               }
+                           } else {
                            }
                         }
                      }
@@ -3075,9 +3141,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                  bcopy(cidr, &node.addr, sizeof(node.addr));
 
                                  if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) == NULL) {
-#if defined(ARGUSDEBUG)
-                                    ArgusDebug (1, "%s: RaProcessRecord: no DNS cache for dest address %s\n", tptr, cp);
-#endif
+                                    ArgusWriteEvent(parser, ARGUS_DNS_NO_DNS_CACHE, (void *) &node, tptr);
                                     if ((raddr = (struct RaAddressStruct *) ArgusCalloc (1, sizeof(*raddr))) != NULL) {
                                        bcopy(&node, raddr, sizeof(node));
                                        if (node.addr.str != NULL)
@@ -3086,10 +3150,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                                     }
                                  } else {
 #if defined(ARGUSDEBUG)
-                                    if (raddr->dns != NULL) 
-                                       ArgusDebug (3, "%s: RaProcessRecord: DNS cache found for dest address %s\n", tptr, cp);
-				    else
-                                       ArgusDebug (3, "%s: RaProcessRecord: no DNS cache found for dest address %s\n", tptr, cp);
+                                    if (raddr->dns == NULL) 
+                                       ArgusWriteEvent(parser, ARGUS_DNS_NO_DNS_CACHE, (void *) &node, tptr);
 
 //                                  ArgusPrintAddressResponse(sptr, raddr, &retn, &rind, &reslen, AF_INET);
 #endif
@@ -3499,4 +3561,5 @@ void ArgusWindowClose(void) {
    ArgusDebug (6, "ArgusWindowClose () returning\n"); 
 #endif
 }
+
 

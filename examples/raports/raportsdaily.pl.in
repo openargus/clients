@@ -111,7 +111,7 @@ sub RaPortsDailyProcessParameters {
   }
 
   if (not defined ($archive)) {
-    $archive = "/home/argus/uploads/\$sid/\$inf/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S";
+    $archive = "/usr/local/argus/archive/\$sid/\$inf/%Y/%m/%d/argus.%Y.%m.%d.%H.%M.%S";
   }
   print "DEBUG: raportsdaily: archive: $archive\n" if $debug;
  
