@@ -1328,7 +1328,7 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
    struct RaAddressStruct *retn = NULL;
    int done = 0;
 
-   while (!done) {
+   while ((node != NULL) && !done) {
      unsigned int mask, taddr, naddr;
 
       switch (node->addr.type) {
@@ -1451,6 +1451,11 @@ RaFindAddress (struct ArgusParserStruct *parser, struct RaAddressStruct *tree, s
                   retn = cptr->node;
                }
             }
+            done++;
+            break;
+         }
+
+         default: {
             done++;
             break;
          }
