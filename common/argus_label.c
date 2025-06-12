@@ -4310,8 +4310,9 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    struct ArgusDataStruct *suser, *duser;
    int srcPort = 0, dstPort = 0;
    struct ArgusFlow *flow = NULL;
-#ifdef ARGUSDEBUG
    int srcScore = 0, dstScore = 0;
+
+#ifdef ARGUSDEBUG
    char buf[MAXSTRLEN];
 #endif
    struct RaSrvTreeNode *tree = NULL;
