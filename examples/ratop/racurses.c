@@ -351,7 +351,6 @@ ArgusProcessCursesInputInit(WINDOW *win)
    }
 
    cbreak();
- 
 #if defined(ARGUS_READLINE) || defined(ARGUS_EDITLINE)
    keypad(win, FALSE);
 #else
@@ -360,7 +359,6 @@ ArgusProcessCursesInputInit(WINDOW *win)
    meta(win, TRUE);
    noecho();
    nonl();
- 
    idlok (win, TRUE);
    notimeout(win, TRUE);
    nodelay(win, TRUE);
@@ -409,8 +407,8 @@ ArgusProcessCommand (struct ArgusParserStruct *parser, int status, int ch)
       RaCursorOffset = 0;
       RaWindowCursorY = 0;
       RaWindowCursorX = 0;
-
       retn = RAGOTslash;
+
    } else
       if ((ic = ArgusInputHitTable[ch]) != NULL) {
          retn = ic->process(RaCurrentWindow->window, status, ch);
@@ -1556,6 +1554,11 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
          RaInputString = RANEWCOMMANDSTR;
          RaCommandInputStr[0] = '\0';
       }
+
+      if (ch == '\n')
+         retn = RAGOTnewline;
+      if (ch == '\r')
+         retn = RAGOTreturn;
    }
 
 #ifdef ARGUSDEBUG
@@ -2051,7 +2054,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
             RaIter = 1;
 
 #if defined(ARGUSDEBUG)
-         ArgusDebug (6, "ArgusProcessCommand: calling with %d iterations\n", RaIter);
+         ArgusDebug (6, "ArgusProcessCharacter: calling with %d iterations\n", RaIter);
 #endif
       }
    } else
@@ -2510,7 +2513,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   break;
                }
             }
-            ArgusDrawWindow(RaCurrentWindow);
+            ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
             ArgusAlwaysUpdate = awu;
             break;
          }
@@ -6435,7 +6438,6 @@ ArgusColorFlowFields(struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      case 'R': attr = A_REVERSE; break;    //  Reverse video
                      case 'B': attr = A_BLINK; break;      //  Blinking
                      case 'D': attr = A_DIM; break;        //  Half bright
-//                   case 'B': attr = A_BOLD; break;       //  Extra bright or bold
                      case 'P': attr = A_PROTECT; break;    //  Protected mode
                      case 'I': attr = A_INVIS; break;      //  Invisible or blank mode
                      case 'A': attr = A_ALTCHARSET; break; //  Alternate character set

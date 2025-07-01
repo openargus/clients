@@ -384,6 +384,8 @@ void clearArgusWfile(struct ArgusParserStruct *);
 
 #define RAGOTslash      40
 #define RAGOTcolon      41
+#define RAGOTnewline    42
+#define RAGOTreturn     43
 
 #define RANEWCOMMANDSTR    ""
 #define RAGETTINGaSTR      "Add: "
