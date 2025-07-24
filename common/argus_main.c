@@ -403,9 +403,6 @@ extern void * ArgusTimeoutProcess (void *);
             while ((addr = (void *)ArgusPopQueue(ArgusParser->ArgusRemoteHosts, ARGUS_LOCK)) != NULL) {
                if ((addr->fd = ArgusGetServerSocket (addr, 5)) >= 0) {
                   if ((ArgusReadConnection (ArgusParser, addr, ARGUS_SOCKET)) >= 0) {
-#if defined(ARGUS_THREADS)
-                     pthread_mutex_lock(&ArgusParser->lock);
-#endif
                      switch (addr->type & ARGUS_DATA_TYPE) {
                         case ARGUS_DATA_SOURCE:
                         case ARGUS_DOMAIN_SOURCE:
@@ -417,9 +414,6 @@ extern void * ArgusTimeoutProcess (void *);
                         }
                      }
 
-#if defined(ARGUS_THREADS)
-                     pthread_mutex_unlock(&ArgusParser->lock);
-#endif
                      if ((flags = fcntl(addr->fd, F_GETFL, 0L)) < 0)
                         ArgusLog (LOG_ERR, "ArgusConnectRemote: fcntl error %s", strerror(errno));
 

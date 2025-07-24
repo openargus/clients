@@ -247,7 +247,6 @@ RaParseComplete (int sig)
 void
 ArgusClientTimeout ()
 {
-   struct timeval tvpbuf, *tvp = &tvpbuf;
    float dur;
 
    if (ArgusParser->ArgusStartRealTime.tv_sec == 0) {

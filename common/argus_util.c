@@ -279,21 +279,22 @@ void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct Argus
 #define RA_LOCAL_DIRECTION			64
 #define RA_PORT_DIRECTION			65
 #define RA_SERVICE_SIGNATURES			66
-#define RA_COLOR_SUPPORT			67
-#define RA_COLOR_CONFIG				68
-#define RA_CORRELATE_EVENTS			69
-#define RA_SEPARATE_ADDR_FROM_PORT_WITH_PERIOD	70
-#define RA_GENERATE_BIN_MAR_RECORDS		71
-#define RA_ASN_PRINT_FORMAT			72
-#define RA_FILTER_TIMEOUT  			73
-#define RATOP_CONTROL_PORT  			74
-#define RADIUM_ZEROCONF_REGISTER		75
-#define RA_SRCID_ALIAS				76
-#define RA_RECORD_CORRECTION			77
-#define RA_STATUS_EVENT				78
-#define RA_HASHTABLE_SIZE			79
-#define RA_TMP_PATH				80
-#define RA_LOCAL_CORRECT			81
+#define RA_SERVICE_STATS_SIGNATURES		67
+#define RA_COLOR_SUPPORT			68
+#define RA_COLOR_CONFIG				69
+#define RA_CORRELATE_EVENTS			70
+#define RA_SEPARATE_ADDR_FROM_PORT_WITH_PERIOD	71
+#define RA_GENERATE_BIN_MAR_RECORDS		72
+#define RA_ASN_PRINT_FORMAT			73
+#define RA_FILTER_TIMEOUT  			74
+#define RATOP_CONTROL_PORT  			75
+#define RADIUM_ZEROCONF_REGISTER		76
+#define RA_SRCID_ALIAS				77
+#define RA_RECORD_CORRECTION			78
+#define RA_STATUS_EVENT				79
+#define RA_HASHTABLE_SIZE			80
+#define RA_TMP_PATH				81
+#define RA_LOCAL_CORRECT			82
 
 
 char *ArgusResourceFileStr [] = {
@@ -364,6 +365,7 @@ char *ArgusResourceFileStr [] = {
    "RA_LOCAL_DIRECTION=",
    "RA_PORT_DIRECTION=",
    "RA_SERVICE_SIGNATURES=",
+   "RA_SERVICE_STATS_SIGNATURES=",
    "RA_COLOR_SUPPORT=",
    "RA_COLOR_CONFIG=",
    "RA_CORRELATE_EVENTS=",
@@ -1260,7 +1262,10 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
    if (!(strncmp(parser->ArgusProgramName, "radium", 6)))
       getoptStr = "a:A:bB:c:C:dD:E:e:f:F:g:GhH:iJlL:m:M:nN:o:OpP:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
-   if (!(strncmp(parser->ArgusProgramName, "rahisto", 6)))
+   if (!(strncmp(parser->ArgusProgramName, "rahisto", 7)))
+      getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:Op:P:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
+   else
+   if (!(strncmp(parser->ArgusProgramName, "rasrvmetrics", 12)))
       getoptStr = "a:AbB:c:C:dD:E:e:f:F:g:GhH:iJlLm:M:nN:o:Op:P:qr:R:S:s:t:T:u:U:Vvw:XzZ:";
    else
    if (!(strcmp(parser->ArgusProgramName, "ra")))
@@ -1400,7 +1405,8 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
 	 case 'G': parser->Gflag++; break;
 	 case 'H': {
-            if ((strncmp(parser->ArgusProgramName, "rahisto", 7)))
+            if (((strncmp(parser->ArgusProgramName, "rahisto", 7))) &&
+                ((strncmp(parser->ArgusProgramName, "rasrvmetrics", 12))))
                parser->Hflag = 1;
             else {
                int hopt_done = 0;
@@ -1516,6 +1522,43 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                if ((tzptr = strstr (optarg, "baseline=")) != NULL) {
                   int type = ARGUS_DATA_SOURCE | ARGUS_BASELINE_SOURCE;
                   optarg += 9;
+#if defined(ARGUS_MYSQL)
+                  if (!(strncmp ("mysql:", optarg, 6))) {
+                     char *topt = optarg + 6;
+                     char *dbstr = NULL;
+                     if (parser->readDbstr != NULL)
+                        free(parser->readDbstr);
+                     parser->readDbstr = strdup(topt);
+                     type &= ~ARGUS_DATA_SOURCE;
+                     type |= ARGUS_DBASE_SOURCE;
+
+                     if ((dbstr = strstr(topt, "inventory")) != NULL) {
+                        if (!(ArgusAddMaskList (parser, "sid,inf,smac,saddr")))
+                           ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                        parser->ArgusPerformCorrection = 0;
+                     } else
+                     if ((dbstr = strstr(topt, "services")) != NULL) {
+                        if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr,proto,dport")))
+                           ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                        parser->ArgusPerformCorrection = 0;
+                     } else
+                     if ((dbstr = strstr(topt, "ether")) != NULL) {
+                        if (!(ArgusAddMaskList (parser, "sid,inf,smac,etype")))
+                           ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                        parser->ArgusPerformCorrection = 0;
+                     } else
+                     if ((dbstr = strstr(topt, "ipMatrix")) != NULL) {
+                        if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr")))
+                           ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                        parser->ArgusPerformCorrection = 0;
+                     } else
+                     if ((dbstr = strstr(topt, "etherMatrix")) != NULL) {
+                        if (!(ArgusAddMaskList (parser, "sid,inf,smac,dmac")))
+                           ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                        parser->ArgusPerformCorrection = 0;
+                     }
+                  }
+#endif
                   if (!(ArgusAddBaselineList (parser, optarg, type, -1, -1)))
                      ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
                   stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
@@ -1814,6 +1857,11 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                   optarg += 6;
                   if ((dbstr = strstr(optarg, "inventory")) != NULL) {
                      if (!(ArgusAddMaskList (parser, "sid,inf,smac,saddr")))
+                        ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
+                     parser->ArgusPerformCorrection = 0;
+                  } else
+                  if ((dbstr = strstr(optarg, "services")) != NULL) {
+                     if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr,proto,dport")))
                         ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, optarg);
                      parser->ArgusPerformCorrection = 0;
                   } else
@@ -2809,6 +2857,15 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                   ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
             RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
+            break;
+         }
+
+         case RA_SERVICE_STATS_SIGNATURES: {
+            if (parser->ArgusLabeler == NULL)
+               if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+                  ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+            RaReadSrvStatsSignature (parser, parser->ArgusLabeler, optarg);
             break;
          }
 
@@ -4510,21 +4567,31 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                char dbuf[16];
 
                if (flow != NULL) {
+
                   switch (flow->hdr.subtype & 0x3F) {
                      case ARGUS_FLOW_CLASSIC5TUPLE:
                      case ARGUS_FLOW_LAYER_3_MATRIX: {
                         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                            case ARGUS_TYPE_IPV4: {
+                              if ((IN_MULTICAST(flow->ip_flow.ip_dst) || (INADDR_BROADCAST == flow->ip_flow.ip_dst)))
+                                 proceed = 0;
+
                               switch (flow->ip_flow.ip_p) {
                                  case IPPROTO_TCP: {
                                     bzero(dbuf, 16);
                                     ArgusPrintDirection(parser, dbuf, ns, 8);
                                     if (!(strchr(dbuf, '?'))) {
-                                       proceed = 0;
+//                                     proceed = 0;
                                     }
                                     break;
                                  }
                               }
+                              break;
+                           }
+                           case ARGUS_TYPE_IPV6: {
+                              if (IN6_IS_ADDR_MULTICAST((struct in6_addr *)&flow->ipv6_flow.ip_dst))
+                                 proceed = 0;
+                              break;
                            }
                         }
                      }
@@ -4566,6 +4633,7 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
 /*
          6633, http, https, domain, 22, ssh, imaps, pops
 */
+
                            if (parser->ArgusDirectionFunction & ARGUS_PORT_SERVICES) {
                               extern struct hnamemem  tporttable[HASHNAMESIZE];
                               struct hnamemem *tp;
@@ -4604,8 +4672,10 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                               if ((sport != 0) && (dport != 0)) {
                                  if ((sport < 1024) || (dport < 1024)) {
                                     tested++;
-                                    if (sport < dport) {
-                                       reverse++;
+                                    if (!((sport < 1024) && (dport < 1024))) {
+                                       if (sport < dport) {
+                                          reverse++;
+                                       }
                                     }
                                  }
                               }
@@ -5065,16 +5135,17 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
 
                bzero ((char *)tflow, sizeof(*tflow));
                tflow->hdr = flow->hdr;
-
+/*
                if (flags || (flow->hdr.subtype & ARGUS_REVERSE))
                   flow->hdr.subtype &= ~ARGUS_REVERSE;
                else
-                  flow->hdr.subtype |= ARGUS_REVERSE;
+                  flow->hdr.subtype ^= ARGUS_REVERSE;
 
                if (flow->hdr.argus_dsrvl8.qual & ARGUS_DIRECTION)
                   flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                 else
                   flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
+*/
 
                switch (flow->hdr.subtype & 0x3F) {
                   case ARGUS_FLOW_CLASSIC5TUPLE: {
@@ -14739,14 +14810,33 @@ ArgusPrintLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 }
 
 
+char *locString[] = {
+   "",
+   "wan",
+   "man",
+   "can",
+   "lan",
+   "lan",
+   NULL
+};
+
+
 void
 ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
    struct ArgusLabelerStruct *labeler;
-
+   char *format = NULL;
    char tmpbuf[128], *ptr = tmpbuf;
    int locValue = -1;
+
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    if (argus->hdr.type & ARGUS_MAR) {
       sprintf (ptr, " ");
@@ -14754,7 +14844,10 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       sprintf (ptr, " ");
       if (local != NULL) {
          locValue = local->sloc;
-         sprintf (ptr, "%d", locValue);
+         if (strcmp("%s", format)) 
+            sprintf (ptr, format, locValue);
+         else
+            sprintf (ptr, format, locString[locValue]);
       } else {
 
          struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
@@ -14766,14 +14859,20 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                      case ARGUS_TYPE_IPV4: {
                         if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                            locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           sprintf (ptr, "%d", locValue);
+                           if (strcmp("%s", format)) 
+                              sprintf (ptr, format, locValue);
+                           else
+                              sprintf (ptr, format, locString[locValue]);
                         }
                         break;
                      }
                      case ARGUS_TYPE_IPV6: {
                         if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                            locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
-                           sprintf (ptr, "%d", locValue);
+                           if (strcmp("%s", format)) 
+                              sprintf (ptr, format, locValue);
+                           else
+                              sprintf (ptr, format, locString[locValue]);
                         }
                         break;
                      }
@@ -14810,9 +14909,16 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
    struct ArgusLabelerStruct *labeler;
-
    char tmpbuf[128], *ptr = tmpbuf;
+   char *format = NULL;
    int locValue = -1;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    if (argus->hdr.type & ARGUS_MAR) {
       sprintf (ptr, " ");
@@ -14820,7 +14926,11 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
       sprintf (ptr, " ");
       if (local != NULL) {
          locValue = local->dloc;
-         sprintf (ptr, "%d", locValue);
+         if (strcmp("%s", format))
+            sprintf (ptr, format, locValue);
+         else
+            sprintf (ptr, format, locString[locValue]);
+
       } else {
 
          struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
@@ -14832,14 +14942,21 @@ ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
                      case ARGUS_TYPE_IPV4: {
                         if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                            locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           sprintf (ptr, "%d", locValue);
+                           if (strcmp("%s", format))
+                              sprintf (ptr, format, locValue);
+                           else
+                              sprintf (ptr, format, locString[locValue]);
                            break;
                         }
                      }
                      case ARGUS_TYPE_IPV6: {
                         if ((labeler = parser->ArgusLocalLabeler) != NULL) {
                            locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
-                           sprintf (ptr, "%d", locValue);
+                           if (strcmp("%s", format))
+                              sprintf (ptr, format, locValue);
+                           else
+                              sprintf (ptr, format, locString[locValue]);
+                           break;
                         }
                         break;
                      }
@@ -23222,7 +23339,7 @@ ArgusDeleteList (struct ArgusListStruct *list, int type)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (3, "ArgusDeleteList (%p, %d) returning\n", list, type);
+   ArgusDebug (6, "ArgusDeleteList (%p, %d) returning\n", list, type);
 #endif
 }
 
@@ -25071,7 +25188,6 @@ ArgusInitServarray(struct ArgusParserStruct *parser)
    if (parser->ArgusSrvInit > 0) 
       return;
 
-   pthread_mutex_lock(&parser->lock);
    setservent(1);
    while ((sv = getservent()) != NULL) {
       int port = ntohs(sv->s_port);
@@ -25099,7 +25215,6 @@ ArgusInitServarray(struct ArgusParserStruct *parser)
    }
    endservent();
    parser->ArgusSrvInit = 1;
-   pthread_mutex_unlock(&parser->lock);
 #endif
 }
 
@@ -25834,6 +25949,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
                break;
             }
 
+            case 'Z': 
             case 'z': {
                if (parser->ArgusPrintXml) {
                   char sbuf[16];
@@ -25869,6 +25985,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
             }
          }
       }
+      buf[len] = '\0';
    }
    return (int)len;
 }
@@ -32156,21 +32273,34 @@ int
 ArgusAddMaskList (struct ArgusParserStruct *parser, const char * const ptr)
 {
    int retn = 0;
-   struct ArgusModeStruct *mode, *list;
+   struct ArgusModeStruct *mode = NULL, *modelist = NULL, *list;
+   char *mptr, *tok;
 
-   if (ptr) {
+   mptr = strdup(ptr);
+
+   while ((tok = strtok (mptr, " ,\t")) != NULL) {
       if ((mode = (struct ArgusModeStruct *) ArgusCalloc (1, sizeof(struct ArgusModeStruct))) != NULL) {
-         if ((list = parser->ArgusMaskList) != NULL) {
+         if ((list = modelist) != NULL) {
             while (list->nxt)
                list = list->nxt;
             list->nxt = mode;
          } else
-            parser->ArgusMaskList = mode;
+            modelist = mode;
 
-         mode->mode = strdup(ptr);
-         retn = 1;
+         mode->mode = strdup(tok);
       }
+      mptr = NULL;
    }
+   free(mptr);
+
+   if ((list = parser->ArgusMaskList) != NULL) {
+      while (list->nxt)
+         list = list->nxt;
+      list->nxt = modelist;
+   } else
+      parser->ArgusMaskList = modelist;
+
+   retn = 1;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (8, "ArgusAddMaskList (%s) returning %d\n", ptr, retn);
@@ -34136,6 +34266,10 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                      }
                      if (RaNewFormat) {
                         RaPrintAlgorithmTable[x].format = strdup(RaNewFormat);
+                        if (strcmp(RaNewFormat, "%d") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_INT;
+                        if (strcmp(RaNewFormat, "%u") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_UINT;
+                        if (strcmp(RaNewFormat, "%s") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_STRING;
+                        if (strcmp(RaNewFormat, "%f") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_DOUBLE;
                      }
                      switch (RaOptionOperation) {
                         case RA_ADD_OPTION:

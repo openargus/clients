@@ -2597,12 +2597,13 @@ ArgusParseSFFlowSample(SFSample *sptr, int state)
    if (sptr->datagramVersion >= 5) {
       int i, len, num;
       u_char *start;
-      unsigned int seq;
+//    unsigned int seq;
   
       len = SFGetData32 (sptr);
       start = (u_char *)sptr->datap;
 
-      seq = SFGetData32 (sptr);
+//    seq = SFGetData32 (sptr);
+      SFGetData32 (sptr);
 
       if (state) {
          sptr->ds_class = SFGetData32 (sptr);
@@ -2789,7 +2790,7 @@ ArgusParseSFlowRecord (struct ArgusParserStruct *parser, struct ArgusInput *inpu
 
             case ARGUS_TIME_INDEX: {
                struct ArgusTimeObject *time = (struct ArgusTimeObject *) dsr;
-               int timeval, secs, usecs;
+               int secs, usecs;
 
                time->hdr.type               = ARGUS_TIME_DSR;
                time->hdr.subtype            = ARGUS_TIME_ABSOLUTE_RANGE;

@@ -237,8 +237,8 @@ sub RaDnsDBProcessData {
               my $results_ref = \@results;
               my $found = 0;
 
-              if (grep -d, glob "/home/dns/*/*/$time") {
-                 $Program = "$radns $options -t $time -R /home/dns/*/*/$time";
+              if (grep -d, glob "/usr/local/argus/archive/*/*/$time") {
+                 $Program = "$radns $options -t $time -R /usr/local/argus/archive/*/*/$time";
               } else {
                  $Program = "$rasql -t $time -r mysql://root\@localhost/$flows/dns_%Y_%m_%d -M time 1d -w - | $radns $options";
               }

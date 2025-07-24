@@ -394,8 +394,9 @@ ArgusProcessData (void *arg)
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
-               if ((input = ArgusMalloc(sizeof(*input))) == NULL)
-                  ArgusLog(LOG_ERR, "unable to allocate input structure\n");
+               if (input == NULL) 
+                  if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+                     ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
                switch (file->type) {
 #if defined(ARGUS_MYSQL)
@@ -467,7 +468,12 @@ ArgusProcessData (void *arg)
                      break;
                   }
                }
+
                RaArgusInputComplete(input);
+               if (input->file != NULL) {
+                  fclose(input->file);
+                  input->file = NULL;
+	       }
 
                file = (struct ArgusFileInput *)file->qhdr.nxt;
             }
@@ -640,14 +646,14 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    struct ArgusInput *input = NULL;
    struct ArgusModeStruct *mode;
-   int correct = 1, preserve = 1;
+   int correct = 0, preserve = 1;
    int i = 0, size = 1;
    struct timeval *tvp;
 
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&RaCursesLock, NULL);
 #endif
-   parser->ArgusPerformCorrection = 1;
+   parser->ArgusPerformCorrection = 0;
 
    if (parser != NULL) {
       parser->RaWriteOut = 1;

@@ -107,6 +107,7 @@ int ArgusSortSrvSignatures (struct ArgusRecordStruct *, struct ArgusRecordStruct
 void RaAddToSrvTree (struct RaSrvSignature *, int);
 int RaGenerateBinaryTrees(struct ArgusParserStruct *, struct ArgusLabelerStruct *);
 int RaReadSrvSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
+int RaReadSrvStatsSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
 struct RaSrvSignature *RaFindSrv (struct RaSrvTreeNode *, u_char *ptr, int, int, int);
 
 int ArgusAddToRecordLabel (struct ArgusParserStruct *, struct ArgusRecordStruct *, char *);
@@ -126,7 +127,7 @@ int RaPrintLabelTreeLevel = 1000000;
 
 int RaPrintLabelTreeDebug = 0;
 
-#define RALABEL_RCITEMS                         29
+#define RALABEL_RCITEMS                         30
 
 #define RALABEL_IANA_ADDRESS                    0
 #define RALABEL_IANA_ADDRESS_FILE               1
@@ -156,7 +157,8 @@ int RaPrintLabelTreeDebug = 0;
 #define RALABEL_DNS_NAME_CACHE_TIMEOUT		25
 #define RALABEL_ARGUS_FLOW_SERVICE              26
 #define RALABEL_SERVICE_SIGNATURES              27
-#define RALABEL_FIREHOL_FILES			28
+#define RALABEL_SERVICE_STATS_SIGNATURES        28
+#define RALABEL_FIREHOL_FILES			29
 
 char *RaLabelResourceFileStr [] = {
    "RALABEL_IANA_ADDRESS=",
@@ -187,6 +189,7 @@ char *RaLabelResourceFileStr [] = {
    "RALABEL_DNS_NAME_CACHE_TIMEOUT=",
    "RALABEL_ARGUS_FLOW_SERVICE=",
    "RALABEL_SERVICE_SIGNATURES=",
+   "RALABEL_SERVICE_STATS_SIGNATURES=",
    "RALABEL_FIREHOL_FILES=",
 };
 
@@ -612,6 +615,15 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
 
                         RaReadSrvSignature (parser, parser->ArgusLabeler, optarg);
+                        break;
+                     }
+
+                     case RALABEL_SERVICE_STATS_SIGNATURES: {
+                        if (parser->ArgusLabeler == NULL)
+                           if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+                              ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+
+                        RaReadSrvStatsSignature (parser, parser->ArgusLabeler, optarg);
                         break;
                      }
 
@@ -3605,6 +3617,7 @@ ArgusDeleteLabeler (struct ArgusParserStruct *parser, struct ArgusLabelerStruct 
 
 
 struct RaSrvSignature *RaCreateSrvEntry(struct ArgusLabelerStruct *, int, char *);
+struct RaSrvStatsSignature *RaCreateSrvStatsEntry(struct ArgusLabelerStruct *, int, char *);
 
 struct RaSrvSignature *
 RaCreateSrvEntry(struct ArgusLabelerStruct *labeler, int linenum, char *str)
@@ -3804,6 +3817,82 @@ RaCreateSrvEntry(struct ArgusLabelerStruct *labeler, int linenum, char *str)
 }
 
 
+struct RaSrvStatsSignature *
+RaCreateSrvStatsEntry(struct ArgusLabelerStruct *labeler, int linenum, char *str)
+{
+   struct RaSrvStatsSignature *srv = NULL;
+   struct RaSrvStatsMetrics *mobj = NULL;
+   char *ptr = NULL, *tmp, *dup;
+
+   dup = strdup(str);
+
+   if ((ptr = strstr (dup, "Service: ")) != NULL) {
+      if ((srv = (void *) ArgusCalloc(1, sizeof(*srv))) != NULL) {
+         ptr += strlen("Service: ");
+         tmp = ptr;
+         while (!isspace((int)*ptr)) ptr++;
+         *ptr++ = '\0';
+         srv->name = strdup(tmp);
+         tmp = ptr;
+
+         if ((tmp = strstr(ptr, "tcp port ")) != NULL) {
+            tmp += strlen("tcp port ");
+            srv->proto = IPPROTO_TCP;
+            srv->port  = atoi(tmp);
+         } else {
+            if ((tmp = strstr(ptr, "udp port ")) != NULL) {
+               tmp += strlen("udp port ");
+               srv->proto = IPPROTO_UDP;
+               srv->port  = atoi(tmp);
+            }
+         }
+
+         srv->metrics = ArgusNewList();
+         if ((mobj = (void *) ArgusCalloc(1, sizeof(*mobj))) != NULL) {
+            if ((tmp = strstr(ptr, "metrics =")) != NULL) {
+               ptr = tmp;
+               ptr += strlen("metrics =") + 1;
+               if ((tmp = strsep(&ptr, "\t ,")) != NULL) {
+                  mobj->metrics = strdup(tmp);
+               }
+            }
+
+            if ((tmp = strstr(ptr, "n =")) != NULL) {
+               tmp += strlen("n =") + 1;
+               mobj->count = atoi(tmp);
+            }
+// Service: netbios-ssn     tcp port 139   metrics = bytes  n = 919      mean = 1104.791504    stddev = 292.644958   max = 2258  min = 64
+
+            if ((tmp = strstr(ptr, "mean =")) != NULL) {
+               tmp += strlen("mean =") + 1;
+               mobj->mean = atof(tmp);
+            }
+
+            if ((tmp = strstr(ptr, "stddev =")) != NULL) {
+               tmp += strlen("stddev =") + 1;
+               mobj->stddev = atof(tmp);
+            }
+
+            if ((tmp = strstr(ptr, "max =")) != NULL) {
+               tmp += strlen("max =") + 1;
+               mobj->max = atoi(tmp);
+            }
+
+            if ((tmp = strstr(ptr, "min =")) != NULL) {
+               tmp += strlen("min =") + 1;
+               mobj->min = atoi(tmp);
+            }
+         }
+
+         ArgusAddObjectToList (srv->metrics, mobj, ARGUS_LOCK);
+         ArgusAddToQueue (labeler->queue, &srv->qhdr, ARGUS_LOCK);
+      }
+   }
+
+   free(dup);
+   return(srv);
+}
+
 
 int RaTallySrvTree (struct RaSrvTreeNode *);
 void RaPrintSrvTree (struct ArgusLabelerStruct *, struct RaSrvTreeNode *, int, int);
@@ -3960,7 +4049,10 @@ RaGenerateBinaryTrees(struct ArgusParserStruct *parser, struct ArgusLabelerStruc
 
 struct RaSrvTreeNode *RaTCPSrcArray[0x10000], *RaTCPDstArray[0x10000];
 struct RaSrvTreeNode *RaUDPSrcArray[0x10000], *RaUDPDstArray[0x10000];
+struct RaSrvStatsSignature *RaTCPSrvStatsArray[0x10000], *RaUDPSrvStatsArray[0x10000];
+
 int RaAddToArray(struct RaSrvTreeNode **, struct RaSrvSignature *, int);
+int RaAddToStatsArray(struct RaSrvStatsSignature **, struct RaSrvStatsSignature *, int);
 
 int
 RaAddToArray(struct RaSrvTreeNode *array[], struct RaSrvSignature *srv, int mode)
@@ -3983,6 +4075,25 @@ RaAddToArray(struct RaSrvTreeNode *array[], struct RaSrvSignature *srv, int mode
       }
    }
 
+   return (retn);
+}
+
+int
+RaAddToStatsArray(struct RaSrvStatsSignature *array[], struct RaSrvStatsSignature *stats, int mode)
+{
+   int retn = 1;
+   struct RaSrvStatsSignature *srv;
+
+   if ((srv = array[stats->port]) == NULL) {
+      array[stats->port] = stats;
+   } else {
+      struct ArgusListObjectStruct *lobj = (struct ArgusListObjectStruct *) ArgusPopList(stats->metrics, ARGUS_LOCK);
+      struct RaSrvStatsMetrics *mobj = (struct RaSrvStatsMetrics *) lobj->list_obj;
+      ArgusFree(lobj);
+      ArgusDeleteList(stats->metrics, ARGUS_OBJECT_LIST);
+      stats->metrics = NULL;
+      ArgusAddObjectToList(srv->metrics, mobj, ARGUS_LOCK);
+   }
    return (retn);
 }
 
@@ -4055,6 +4166,67 @@ RaReadSrvSignature(struct ArgusParserStruct *parser, struct ArgusLabelerStruct *
 
    if (RaSigLineNumber > 0)
       retn = RaGenerateBinaryTrees(parser, labeler);
+
+   return (retn);
+}
+
+int
+RaReadSrvStatsSignature(struct ArgusParserStruct *parser, struct ArgusLabelerStruct *labeler, char *file)
+{
+   int retn = 0;
+   struct RaSrvStatsSignature *srv = NULL;
+   char strbuf[MAXSTRLEN], *str = strbuf, **model = NULL;
+   int i = 0, RaSigLineNumber = 0;
+   FILE *fd;
+
+   bzero ((char *) RaTCPSrvStatsArray, sizeof(RaTCPSrvStatsArray));
+   bzero ((char *) RaUDPSrvStatsArray, sizeof(RaUDPSrvStatsArray));
+
+   if (model == NULL) {
+      bzero ((char *) sigbuf, sizeof(sigbuf));
+      if ((fd = fopen (file, "r")) != NULL) {
+         while ((str = fgets (str, MAXSTRLEN, fd)) != NULL)
+            sigbuf[i++] = strdup(str);
+
+         model = sigbuf;
+         fclose(fd);
+
+      } else
+         ArgusLog (LOG_ERR, "%s: %s", file, strerror(errno));
+   }
+
+   while ((str = *model++) != NULL) {
+      RaSigLineNumber++;
+
+      while (isspace((int)*str))
+         str++;
+      if (strlen(str)) {
+         switch (*str) {
+            case '#':
+            case '\n':
+            case '!':
+               break;
+
+            default: {
+               if ((srv = RaCreateSrvStatsEntry(labeler, RaSigLineNumber, str)) != NULL) {
+                  RaSigLineNumber++;
+                  switch (srv->proto) {
+                     case IPPROTO_TCP:
+                           if (RaAddToStatsArray(RaTCPSrvStatsArray, srv, 0) == 0) 
+                              ArgusFree(srv);
+                        break;
+
+                     case IPPROTO_UDP:
+                           if (RaAddToStatsArray(RaUDPSrvStatsArray, srv, 0) == 0)
+                              ArgusFree(srv);
+                        break;
+                  }
+               }
+               break;
+            }
+         }
+      }
+   }
 
    return (retn);
 }
@@ -4294,7 +4466,7 @@ RaTestEncryption(struct RaSrvTreeNode *tree, u_char *ptr, int len)
       retn = (struct RaSrvSignature *) tree;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (2, "RaTestEncryption: entropy is %.3f\n", entropy);
+   ArgusDebug (4, "RaTestEncryption: entropy is %.3f\n", entropy);
 #endif
 
    return (retn);
@@ -4324,6 +4496,9 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    suser = (void *) argus->dsrs[ARGUS_SRCUSERDATA_INDEX];
    duser = (void *) argus->dsrs[ARGUS_DSTUSERDATA_INDEX];
 
+   RaBestGuess = NULL;
+   RaBestGuessScore = 0;
+
    if (!(suser || duser)) {
       struct RaSrvTreeNode **array = NULL;
       struct RaSrvTreeNode *node = NULL;
@@ -4339,7 +4514,7 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                   }
                   if (array != NULL)
                      if ((node = array[flow->ip_flow.dport]) == NULL)
-                           node = array[flow->ip_flow.sport];
+                        node = array[flow->ip_flow.sport];
                   if (node != NULL)
                      RaBestGuess = node->srv;
                   break;
@@ -4373,9 +4548,6 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
       struct RaSrvTreeNode **array = NULL;
       int i, len = suser->count;
 
-      RaBestGuess = NULL;
-      RaBestGuessScore = 0;
-
       switch (flow->ip_flow.ip_p) {
          case IPPROTO_TCP: array = RaTCPSrcArray; break;
          case IPPROTO_UDP: array = RaUDPSrcArray; break;
@@ -4383,15 +4555,18 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
             return (retn);
       }
 
+      if (flow->ip_flow.dport) {
       if ((tree = array[flow->ip_flow.dport]) != NULL) {
          if ((srvSrc = RaFindSrv (tree, ptr, len, RA_SRC_SERVICES, (status & RA_SVC_WILDCARD))) == NULL) {
             if (RaBestGuess && (RaBestGuessScore > 5)) {
                srvSrc = RaBestGuess;
-               srcPort++;
+               dstPort++;
             }
          }
       }
+      }
 
+      if (flow->ip_flow.sport) {
       if ((tree = array[flow->ip_flow.sport]) == NULL) {
          if (srvSrc == NULL) {
             if (status & RA_SVC_WILDCARD) {
@@ -4402,14 +4577,17 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
                      case IPPROTO_UDP: tree = RaSrcUDPServicesTree[i]; break;
                   }
                   if (tree != NULL)
-                     if ((srvSrc = RaFindSrv(tree, ptr, len, RA_SRC_SERVICES, (status & RA_SVC_WILDCARD))) != NULL)
-                            break;
+                     if ((srvSrc = RaFindSrv(tree, ptr, len, RA_SRC_SERVICES, (status & RA_SVC_WILDCARD))) != NULL) {
+                        dstPort++;
+                        break;
+                     }
                }
             }
          }
       }
       srcGuess = RaBestGuess;
       srcScore = RaBestGuessScore;
+      }
    }
 
    if (duser != NULL) {
@@ -4579,6 +4757,55 @@ RaValidateService(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ar
    return (retn);
 }
 
+struct RaSrvStatsSignature *
+RaCheckServiceStats(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, struct RaSrvSignature *sig)
+{
+   struct RaSrvStatsSignature *retn = NULL;
+   struct ArgusFlow *flow = NULL;
+   struct RaSrvStatsSignature *srv = NULL;
+   struct RaSrvStatsSignature **array = NULL;
+
+   if ((flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX]) == NULL)
+      return(retn);
+
+   RaBestGuess = NULL;
+   RaBestGuessScore = 0;
+
+   switch (flow->hdr.subtype & 0x3F) {
+      case ARGUS_FLOW_CLASSIC5TUPLE: {
+         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+            case ARGUS_TYPE_IPV4:
+               switch (flow->ip_flow.ip_p) {
+                  case IPPROTO_TCP: array = RaTCPSrvStatsArray; break;
+                  case IPPROTO_UDP: array = RaUDPSrvStatsArray; break;
+                     break;
+               }
+               if (array != NULL)
+                  if ((srv = array[flow->ip_flow.dport]) == NULL)
+                     srv = array[flow->ip_flow.sport];
+               if (srv != NULL) {
+                  retn = srv;
+	       }
+               break;
+
+            case ARGUS_TYPE_IPV6: {
+               switch (flow->ipv6_flow.ip_p) {
+                  case IPPROTO_TCP: array = RaTCPSrvStatsArray; break;
+                  case IPPROTO_UDP: array = RaUDPSrvStatsArray; break;
+               }
+               if (array != NULL)
+                  if ((srv = array[flow->ipv6_flow.dport]) == NULL)
+                     srv = array[flow->ipv6_flow.sport];
+               if (srv != NULL) {
+                  retn = srv;
+	       }
+               break;
+            }
+         }
+      }
+   }
+   return (retn);
+}
 
 int RaMatchService(struct ArgusRecord *);
 

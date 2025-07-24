@@ -703,12 +703,13 @@ PrintHistograms(struct PerFlowHistoData *data)
          char buf[MAXSTRLEN];
          if ((tagr = (void *)ns->dsrs[ARGUS_AGR_INDEX]) != NULL) {
             if (!_writing_records_to_stdout) {
-               int len, tlen, numModes = 0, pflag = parser->pflag;
+               int len, tlen, numModes = 0, pflag = parser->pflag, nflag;
                double modeValues[1024];
                double median = 0.0, percentile = 0.0;
                char *meanStr = NULL, *medianStr = NULL, *percentStr = NULL;
                char *stdStr = NULL, *maxValStr = NULL, *minValStr = NULL;
-               char *modeStr = NULL, *fptr = NULL;
+               char *modeStr = NULL, *fptr = NULL, *protoStr = NULL;
+               char *dstPort = NULL, *srvStr = NULL;
                char *service = NULL, *metric = NULL;
                long long ind;
                char c;
@@ -727,11 +728,23 @@ PrintHistograms(struct PerFlowHistoData *data)
 
                modelstr[0] = 0;
 
+               nflag = parser->nflag;
+               parser->nflag = 0;
+               ArgusPrintProto(parser, buf, ns, 256);
+               protoStr = strdup(ArgusTrimString(buf));
+
+               ArgusPrintDstPort(parser, buf, ns, 256);
+               srvStr = strdup(ArgusTrimString(buf));
+               parser->nflag = nflag;
+
+               ArgusPrintDstPort(parser, buf, ns, 256);
+               dstPort = strdup(ArgusTrimString(buf));
+
                sprintf (buf, "%-.*f", pflag, tagr->act.stdev);
-               stdStr = strdup(buf);
+               stdStr = strdup(ArgusTrimString(buf));
 
                sprintf (buf, "%-.*f", pflag, tagr->act.meanval);
-               meanStr = strdup(buf);
+               meanStr = strdup(ArgusTrimString(buf));
 
                if (RaValueBuffer != NULL) {
                   qsort (RaValueBuffer, data->RaNumberOfValues[cid],
@@ -751,7 +764,7 @@ PrintHistograms(struct PerFlowHistoData *data)
                   }
 
                   sprintf (buf, "%-.*f", pflag, median);
-                  medianStr = strdup(buf);
+                  medianStr = strdup(ArgusTrimString(buf));
 
                   if (RaValuesAreIntegers[cid])
                      pflag = 0;
@@ -760,7 +773,7 @@ PrintHistograms(struct PerFlowHistoData *data)
                   percentile = RaValueBuffer[ind];
 
                   sprintf (buf, "%-.*f", pflag, percentile);
-                  percentStr = strdup(buf);
+                  percentStr = strdup(ArgusTrimString(buf));
 
                   numModes = RaFindModes(RaValueBuffer,
                                          data->RaNumberOfValues[cid],
@@ -782,14 +795,14 @@ PrintHistograms(struct PerFlowHistoData *data)
                } else if (tagr->act.n > 0) {
                   /* all values were outliers */
                   sprintf (buf, "%-.*f", pflag, 0.);
-                  medianStr = strdup(buf);
-                  percentStr = strdup(buf);
+                  medianStr = strdup(ArgusTrimString(buf));
+                  percentStr = strdup(medianStr);
                }
 
                sprintf (buf, "%-.*f", pflag, tagr->act.maxval);
-               maxValStr = strdup(buf);
+               maxValStr = strdup(ArgusTrimString(buf));
                sprintf (buf, "%-.*f", pflag, tagr->act.minval);
-               minValStr = strdup(buf);
+               minValStr = strdup(ArgusTrimString(buf));
 
                len = strlen(meanStr);
                if (medianStr && (len < (tlen = strlen(medianStr))))   len = tlen;
@@ -815,21 +828,24 @@ PrintHistograms(struct PerFlowHistoData *data)
                      printf ("}\n");
                   } else {
                      if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
-                        printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
+                        printf ("n=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
                                      tagr->act.n, c, meanStr, c, stdStr, c, maxValStr, c, minValStr, c);
                         printf ("median=%s%c95%%=%s", medianStr, c, percentStr);
                         if (ArgusPerFlowHistograms)
                            printf ("%cinstance=%s", c, modelstr);
                      } else {
-                        printf (" N = %-6d  mean = %*s  stddev = %*s  max = %s  min = %s\n",
-                                     tagr->act.n, len, meanStr, len, stdStr, maxValStr, minValStr);
-                        printf ("           median = %*s     95%% = %s\n", len, medianStr, percentStr);
-                        if (RaHistoConfigCount > 1) {
-                           printf ("           metric = %s\n",
-                                   RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field);
+// Service: domain          udp port 53    metrics = bytes  n = 2283252  mean = 225.404480     stddev = 154.020752   max = 1892   min = 64
+
+                        printf ("Service: %-16.16s   %-3s port %-5s   ", srvStr, protoStr, dstPort);
+                        if (RaHistoConfigCount > 1) 
+                           printf ("metrics = %-10.10s", RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field);
+                        printf ("n = %-10d  mean = %-10.10s  stddev = %-10.10s  max = %-10.10s  min = %-10.10s\n",
+                                     tagr->act.n, meanStr, stdStr, maxValStr, minValStr);
+                        if (parser->qflag == 0) {
+                              printf ("           median = %*s     95%% = %s\n", len, medianStr, percentStr);
+                           if (ArgusPerFlowHistograms)
+                              printf ("         instance = \"%s\"\n", modelstr);
                         }
-                        if (ArgusPerFlowHistograms)
-                           printf ("         instance = \"%s\"\n", modelstr);
                      }
                   }
 

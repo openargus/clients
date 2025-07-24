@@ -64,7 +64,7 @@ Service: bootps          udp port 67    n = 18188 src = "01010600        0A00800
 Service: finger          tcp port 79    n =     4 src = "6C696A756E2E74616E670D0A"          dst = "4C6F67696E202020202020204E616D65"
 Service: finger          tcp port 79    n =     3 src = "        61    0D0A000000"          dst = "0D0A5B20466F7277617264696E6720  "
 
-Service: http            tcp port 80   n = 257580 src = "474554202F                      "  dst = "485454502F312E  20              "
+Service: http            tcp port 80    n = 257580 src = "474554202F                      "  dst = "485454502F312E  20              "
 Service: http            tcp port 80    n = 11806 src = "48454144202F                    "  dst = "485454502F312E  20  30  20      "
 Service: http            tcp port 80    n =  3344 src = "4F5054494F4E53202F20485454502F31"  dst = "485454502F312E  20323030204F4B0D"
 Service: http            tcp port 80    n =  5433 src = "504F535420                      "  dst = "485454502F312E  20              "
@@ -77,6 +77,13 @@ Service: http            tcp port 80    n =    34 src = "50524F5046494E44202F737
 Service: kerberos        udp port 88    n = 18105 src = "6A8201423082013EA103020105A20302"  dst = "7E8201  308201  A003020105A10302"
 Service: kerberos        udp port 88    n =     2 src = "040748414E445245572E434D552E4544"  dst = "0404746F680000003B9D1C  013B9D8C"
 Service: kerberos        udp port 88    n =     2 src = "6A81B23081AFA103020105A20302010A"  dst = "6B8202103082020CA003020105A10302"
+
+Service: kerberos        tcp port 88    n = 12610 src = "0000      82    3082    A1030201"  dst = "0000      82    3082    A0030201"  
+Service: kerberos        tcp port 88    n =  6112 src = "000000  6A81  3081  A103020105A2"  dst = "000000  7E81  3081  A003020105A1"  
+Service: kerberos        tcp port 88    n =   675 src = "0000      82    3082    A1030201"  dst = "000000  7E81  3081  A003020105A1"  
+Service: kerberos        tcp port 88    n =    10 src = "000000  6A81  3081  A103020105A2"  dst = "0000005E7E5C305AA003020105A10302"  
+Service: kerberos        tcp port 88    n =     9 src = "000007BC6C8207B8308207B4A1030201"  dst = "000007996D82079530820791A0030201"  
+Service: kerberos        tcp port 88    n =     5 src = "0000    6C82    3082    A1030201"  dst = "000000  7E  30  A003020105A10302"  
 
 Service: pop3            tcp port 110   n = 73424 src = "55534552                        "  dst = "2B4F4B20                        "
 Service: pop3            tcp port 110   n = 52481 src = "55534552                        "  dst = "2B4F4B0D0A                      "
@@ -131,6 +138,8 @@ Service: ntp             udp port 123   n =    14 src = "2302  EF0000    0000   
 Service: outlook         tcp port 0     n = 12672 src = "05000B0310000000              00"  dst = "0500  0310000000            0000"
 
 Service: nfsd-status     tcp port 1110  n =     2 src = "4155544856302E316A7573746A756E6B"  dst = "2B4F4B2051504F50202876657273696F"
+
+Service: epmap           tcp port 135   n =  2366 src = "0500  0310000000  000000  000000"  dst = "0500  0310000000    0000  000000"  
 
 Service: netbios-ns      udp port 137   n =  1925 src = "    0100000100000000000020464245"  dst = "    8583000000000000000020464245"
 Service: netbios-ns      udp port 137   n =   135 src = "      00000100000000000020      "  dst = "        000000  0000000020      "

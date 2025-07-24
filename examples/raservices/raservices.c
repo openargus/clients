@@ -241,8 +241,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
                         if ((metric != NULL) && (metric->dst.pkts)) {
                            ArgusReverseRecord(argus);
-                           sig = RaValidateService (parser, argus);
-                           ArgusReverseRecord(argus);
+                           if ((sig = RaValidateService (parser, argus)) == NULL) {
+                              ArgusReverseRecord(argus);
+                           } else {
+                              argus->status |= ARGUS_RECORD_MODIFIED;
+                              flow->hdr.subtype ^= ARGUS_REVERSE;
+                           }
                         }
                      }
 
