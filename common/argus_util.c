@@ -9967,13 +9967,31 @@ void
 ArgusPrintSrcMacAddress (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
-   char *macstr = NULL;
+   char *macstr = NULL, strbuf[64];
+   char *format = NULL;
+   
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
          default:
          case ARGUS_TYPE_ETHER:
-            macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost);
+            if (strstr(format,"%s") != NULL)
+               macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost);
+            else {
+               unsigned char *sptr = (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost;
+               u_int64_t saddr = 0;
+               int i;
+               for (i = 0; i < 6; i++)
+                  ((unsigned char *)&saddr)[5 - i] = mac->mac.mac_union.ether.ehdr.ether_shost[i];
+               snprintf (strbuf, 64, format, saddr);
+               macstr = strbuf;
+            }
             break;
       }
    }
@@ -10004,13 +10022,31 @@ void
 ArgusPrintDstMacAddress (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
-   char *macstr = NULL;
+   char *macstr = NULL, strbuf[64];
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
          default:
          case ARGUS_TYPE_ETHER:
-            macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost);
+            if (strstr(format,"%s") != NULL)
+               macstr = etheraddr_string (parser, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost);
+            else {
+               unsigned char *sptr = (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost;
+               u_int64_t saddr = 0;
+               int i;
+               for (i = 0; i < 6; i++)
+                  ((unsigned char *)&saddr)[5 - i] = mac->mac.mac_union.ether.ehdr.ether_dhost[i];
+               snprintf (strbuf, 64, format, saddr);
+               macstr = strbuf;
+            }
             break;
       }
    }
