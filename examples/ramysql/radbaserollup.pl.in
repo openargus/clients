@@ -163,9 +163,10 @@ my @db5 = ( "ntpMatrix", "ntp", "sid inf matrix", "stime dur sid inf saddr daddr
 my @db6 = ( "ldapMatrix", "ldap", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db7 = ( "arpMatrix", "arg", "sid inf matrix", "stime dur sid inf saddr daddr spkts dpkts sbytes dbytes pcr trans");
 my @db8 = ( "ether", "ether", "smac etype sid inf", "stime dur sid inf smac smacclass etype spkts dpkts sbytes dbytes pcr trans state");
+my @db1 = ( "services", "ip", "saddr daddr proto dport", "stime dur sid inf saddr daddr proto dport spkts dpkts sbytes dbytes pcr trans state");
 
 #my @databases = \(@db1, @db2);
-my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8);
+my @databases = \(@db1, @db2, @db3, @db4, @db5, @db6, @db7, @db8, @db9);
 
 # Now generate yearly and monthly tables
 
@@ -285,6 +286,7 @@ sub RaDbaseRollupGetTables {
 
    switch ($dbase) {
       case "inventory"         { $tableFormat = "ipAddrs"; }
+      case "services"          { $tableFormat = "ip"; }
       case "ether"             { $tableFormat = "ether"; }
       case "dnsAddrs"          { $tableFormat = "dns"; }
       case "dnsNames"          { $tableFormat = "dns"; }
