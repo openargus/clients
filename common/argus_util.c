@@ -2310,6 +2310,8 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
 
             RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].length = len - parser->pflag;
             RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].length  = len - parser->pflag;
+            RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].format = strdup(optarg);
+            RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].format = strdup(optarg);
             break;
          }
 
@@ -9988,7 +9990,7 @@ ArgusPrintSrcMacAddress (struct ArgusParserStruct *parser, char *buf, struct Arg
                u_int64_t saddr = 0;
                int i;
                for (i = 0; i < 6; i++)
-                  ((unsigned char *)&saddr)[5 - i] = mac->mac.mac_union.ether.ehdr.ether_shost[i];
+                  ((unsigned char *)&saddr)[5 - i] = sptr[i];
                snprintf (strbuf, 64, format, saddr);
                macstr = strbuf;
             }
@@ -10043,7 +10045,7 @@ ArgusPrintDstMacAddress (struct ArgusParserStruct *parser, char *buf, struct Arg
                u_int64_t saddr = 0;
                int i;
                for (i = 0; i < 6; i++)
-                  ((unsigned char *)&saddr)[5 - i] = mac->mac.mac_union.ether.ehdr.ether_dhost[i];
+                  ((unsigned char *)&saddr)[5 - i] = sptr[i];
                snprintf (strbuf, 64, format, saddr);
                macstr = strbuf;
             }
@@ -20517,7 +20519,9 @@ ArgusGenerateLabel(struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
                   ArgusLog(LOG_ERR, "ArgusGenerateLabel: ArgusCalloc: error %s", strerror(errno));
 
                lptr = labelbuf;
-               RaPrintAlgorithmTable[x].label(parser, labelbuf, labelen);
+
+               parser->RaPrintIndex = i;
+               parser->RaPrintAlgorithmList[i]->label(parser, labelbuf, labelen);
 
                if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
                   lptr = ArgusTrimString(labelbuf);
@@ -20658,16 +20662,30 @@ ArgusPrintSsidLabel (struct ArgusParserStruct *parser, char *buf, int len)
 void
 ArgusPrintStartDateLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
-   if (parser->ArgusFractionalDate)
-      len += parser->pflag;
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if (strcmp("%d", format) != 0) {
+      if ((parser->ArgusFractionalDate) || (strstr("%f", format) != NULL))
+         len += parser->pflag;
+   }
    sprintf (buf, "%*.*s ", len, len, "StartTime");
 }
  
 void
 ArgusPrintLastDateLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
-   if (parser->ArgusFractionalDate)
-      len += parser->pflag;
+   char *format = NULL;
+ 
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+ 
+   if (strcmp("%d", format) != 0) {
+      if ((parser->ArgusFractionalDate) || (strstr("%f", format) != NULL))
+         len += parser->pflag;
+   }
    sprintf (buf, "%*.*s ", len, len, "LastTime");
 }
 
@@ -25715,28 +25733,37 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
                struct timeval *tvp)
 {
    char timeFormatBuf[128], *tstr = timeFormatBuf;
-   char *timeFormat = parser->RaTimeFormat;
-   char *ptr;
+   char *format = NULL, *ptr;
    struct tm tmbuf, *tm = &tmbuf;
    time_t tsec = tvp->tv_sec;
    size_t remain = buflen;
+   int c, pflag = parser->pflag;
    size_t len = 0;
-   int c;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+         
+   if ((format == NULL) || (strlen(format) == 0))
+      if ((format = parser->RaTimeFormat) == NULL)
+         format = "%m/%d.%T.%f";
+
+   if (!strcmp("%d", format))
+      pflag = 0;
+
+   if ((!strcmp("%d", format)) || (!strcmp("%u", format)) || (!strcmp("%f", format)))
+      format = NULL;
  
    timeFormatBuf[0] = '\0';
-
-   if (timeFormat == NULL)
-      timeFormat = "%m/%d.%T.%f";
 
    if ((tm = localtime_r (&tsec, &tmbuf)) == NULL)
       return 0;
 
-   if (parser->uflag || timeFormat == NULL) {
+   if (parser->uflag || format == NULL) {
       size_t tlen = 0;
       c = snprintf (tstr, sizeof(timeFormatBuf), "%u", (int) tvp->tv_sec);
       if (c > 0)
          tlen += c;
-      if (parser->pflag) {
+      if (pflag) {
          ptr = &tstr[tlen];
          sprintf (ptr, ".%06u", (int) tvp->tv_usec);
          ptr[parser->pflag + 1] = '\0';
@@ -25745,7 +25772,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
       return (int)len;
    }
 
-   strncpy(timeFormatBuf, timeFormat, sizeof(timeFormatBuf));
+   strncpy(timeFormatBuf, format, sizeof(timeFormatBuf));
 
    for (ptr=tstr; *ptr; ptr++) {
       if (*ptr != '%') {
