@@ -163,7 +163,7 @@ NewPerFlowHistoData(void)
       data->RaHistoRecordsPtrs[cid] =
        ArgusCalloc(RaHistoConfig->RaHistoBins + 2,
        sizeof(struct ArgusRecordStruct *));
-      data->RaValueBufferSize[cid] = 100000;
+      data->RaValueBufferSize[cid] = 100;
    }
 
    return data;
@@ -578,7 +578,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
  
       for (i = 0; i < RaHistoConfigCount; i++) {
           RaValuesAreIntegers[i] = 1;
-          DefaultHistoData.RaValueBufferSize[i] = 100000;
+          DefaultHistoData.RaValueBufferSize[i] = 100;
       }
 
       /* for generating one set of histograms for each flow, according
@@ -1271,7 +1271,7 @@ RaProcessFarRecord (struct ArgusParserStruct *parser,
                            ArgusLog (LOG_ERR, "%s: malloc error %s", __func__, strerror(errno));
                      } else {
                         if (data->RaNumberOfValues[i] >= data->RaValueBufferSize[i]) {
-                           data->RaValueBufferSize[i] += 100000;
+                           data->RaValueBufferSize[i] += 100;
                            if ((data->RaValueBufferMem[i] =
                                 realloc(RaValueBuffer, sizeof(double) * data->RaValueBufferSize[i])) == NULL)
                               ArgusLog (LOG_ERR, "%s: realloc error %s", __func__, strerror(errno));
@@ -1335,7 +1335,7 @@ RaProcessFarRecord (struct ArgusParserStruct *parser,
                               ArgusLog (LOG_ERR, "%s: malloc error %s", __func__, strerror(errno));
                         } else {
                            if (data->RaNumberOfValues[i] >= data->RaValueBufferSize[i]) {
-                              data->RaValueBufferSize[i] += 100000;
+                              data->RaValueBufferSize[i] += 100;
                               if ((data->RaValueBufferMem[i] =
                                    realloc(RaValueBuffer, sizeof(double) * data->RaValueBufferSize[i])) == NULL)
                                  ArgusLog (LOG_ERR, "%s: realloc error %s", __func__, strerror(errno));

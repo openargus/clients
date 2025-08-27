@@ -237,7 +237,7 @@ main (int argc, char **argv)
       struct ArgusFileInput *file;
 
       while (ArgusParser->ArgusPassNum) {
-         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+         if ((input = ArgusCalloc(1, sizeof(*input))) == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
          file = ArgusParser->ArgusInputFileList;
