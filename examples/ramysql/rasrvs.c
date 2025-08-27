@@ -384,7 +384,9 @@ ArgusWriteEvent(struct ArgusParserStruct *parser, int type, struct ArgusRecordSt
             sprintf(filename, "%s", ArgusEventsFilename);
          }
 
+#ifdef ARGUSDEBUG
          ArgusDebug(2, "ArgusWriteEvent[]: write %s to events file %s\n", ArgusEventString, filename);
+#endif
 
          if ((fd = fopen (filename, "a+")) != NULL) {
             fprintf (fd, "%s", ArgusEventString);

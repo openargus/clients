@@ -2639,7 +2639,9 @@ ArgusWriteEvent(struct ArgusParserStruct *parser, int type, void *object, char *
             if (strftime(filename, 0x1000, ArgusEventsFilename, &tmval) <= 0)
                ArgusLog (LOG_ERR, "ArgusWriteEvent () strftime %s\n", strerror(errno));
 
+#ifdef ARGUSDEBUG
             ArgusDebug(1, "ArgusWriteEvent[%s]: write %s to events file %s\n", tptr, ArgusEventString, filename);
+#endif
 
             if ((fd = fopen (filename, "a+")) != NULL) {
                fprintf (fd, "%s", ArgusEventString);
@@ -2824,7 +2826,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                if ((dns = ArgusParseDNSRecord(parser, argus, &dnsbuf, proto)) != NULL) {
                   struct ArgusDomainQueryStruct *req = dns->request;
                   struct ArgusDomainQueryStruct *res = dns->response;
+#if defined(ARGUSDEBUG)
                   unsigned int dnsAddrType = 0;
+#endif
                   int found = 1;
 
                   if ((dns->status & ARGUS_ERROR) || (!(req || res))) {
@@ -2842,6 +2846,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      dnsClient = saddr;
                   }
 
+#if defined(ARGUSDEBUG)
                   if (req && res) {
                      dnsAddrType = dstAddrType;
                   } else
@@ -2851,6 +2856,8 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                      dnsAddrType = srcAddrType;
                   }
 
+                  ArgusDebug (6, "RaProcessRecord: ArgusParseDNSRecord: dnsAddrType '%d'\n", dnsAddrType);
+#endif
                   if ((!(ArgusTestMulticast(argus->input, *(unsigned int *)saddr)) && 
                       (!(ArgusTestMulticast(argus->input, *(unsigned int *)daddr)))))
                      unicast = 1;
