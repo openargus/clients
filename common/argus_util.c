@@ -32490,6 +32490,12 @@ ArgusDeleteBaselineList (struct ArgusParserStruct *parser)
 
 void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi)
 {
+   if (input->ArgusReadBuffer != NULL)
+      ArgusFree(input->ArgusReadBuffer);
+
+   if (input->ArgusConvBuffer != NULL)
+      ArgusFree(input->ArgusConvBuffer);
+
    memset(input, 0, sizeof(*input));
    input->type = afi->type;
    input->filename = strdup(afi->filename);
