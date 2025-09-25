@@ -77,10 +77,11 @@ static struct ArgusHashTable *ClassifierHash; /* per-flow-model histograms */
 static struct PerFlowHistoData DefaultHistoData; /* non-per-address mode */
 static struct ArgusAggregatorStruct *RaHistoAggregators[RAHISTO_MAX_CONFIGS];
 static struct RaHistoConfigStruct *RaHistoConfigMem[RAHISTO_MAX_CONFIGS];
-static int RaHistoConfigCount;
+static int RaHistoConfigCount = 0;
 static int ArgusProcessOutLayers;
 static int ArgusProcessNoZero = 0;
 static int ArgusPrintInterval = 0;
+static int ArgusNoValueCapture = 0;
 static int RaValuesAreIntegers[RAHISTO_MAX_CONFIGS];
 static int ArgusPerFlowHistograms;
 
@@ -157,7 +158,7 @@ NewPerFlowHistoData(void)
    if (data == NULL)
       return NULL;
 
-   /* Allocate an array to will hold argus records for this IP address */
+   /* Allocate an array to hold argus records for this object */
    for (cid = 0; cid < RaHistoConfigCount; cid++) {
       RaHistoConfig = RaHistoConfigMem[cid];
       data->RaHistoRecordsPtrs[cid] =
@@ -549,6 +550,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
  
       if ((mode = parser->ArgusModeList) != NULL) {
          while (mode) {
+            if (!(strncasecmp (mode->mode, "nocapture", 9)))
+               ArgusNoValueCapture = 1;
             if (!(strncasecmp (mode->mode, "interval", 8)))
                ArgusPrintInterval = 1;
             else if (!(strncasecmp (mode->mode, "nozero", 6)))
@@ -1324,7 +1327,8 @@ RaProcessFarRecord (struct ArgusParserStruct *parser,
                value = agg->RaMetricFetchAlgorithm(argus);
                if (agg->AbsoluteValue) value = fabs(value);
 
-               if (RaHistoConfig->RaHistoRangeState & ARGUS_HISTO_CAPTURE_VALUES) {
+               if ((RaHistoConfig->RaHistoRangeState & ARGUS_HISTO_CAPTURE_VALUES) && (ArgusNoValueCapture == 0))
+{
                      if ((value >= RaHistoConfig->RaHistoStart) && (value <= RaHistoConfig->RaHistoEnd)) {
                         if ((frac = modf(value, &inte)) != 0.0)
                             RaValuesAreIntegers[i] = 0;
@@ -1394,8 +1398,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    parser->ArgusAggregator->ArgusMaskDefs = NULL; /* necessary? */
    hstruct = ArgusGenerateHashStruct(parser->ArgusAggregator, argus,
                                      (struct ArgusFlow *)&parser->ArgusAggregator->fstruct);
-   data = (void *)ArgusFindRecord(ClassifierHash, hstruct);
-   if (data == NULL) {
+   if ((data = (void *)ArgusFindRecord(ClassifierHash, hstruct)) == NULL) {
       data = NewPerFlowHistoData();
       if (data == NULL)
          ArgusLog(LOG_ERR, "unable to allocate histogram data");
