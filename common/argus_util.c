@@ -13291,8 +13291,6 @@ ArgusPrintKeyStrokeDstNStroke (struct ArgusParserStruct *parser, char *buf, stru
 }
 
 
-char *ArgusProcessStr = NULL;
-
 void
 ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -19886,21 +19884,25 @@ ArgusPrintState (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          ArgusProcessStr =  "   ";
    }
 
-   if (parser->ArgusPrintXml) {
-      sprintf (buf, " State = \"%s\"", ArgusProcessStr);
+   if (ArgusProcessStr) {
+      if (parser->ArgusPrintXml) {
+         sprintf (buf, " State = \"%s\"", ArgusProcessStr);
       
-   } else {
-      int slen = strlen(ArgusProcessStr);
-      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
-         len = slen;
       } else {
-         if (slen > len) {
-            ArgusProcessStr[len - 2] = '*';
-            ArgusProcessStr[len - 1] = '\0';
+         int slen = strlen(ArgusProcessStr);
+         if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+            len = slen;
+         } else {
+            if (slen > len) {
+               ArgusProcessStr[len - 2] = '*';
+               ArgusProcessStr[len - 1] = '\0';
+            }
          }
+         sprintf (buf, "%*.*s ", len, len, ArgusProcessStr);
       }
-      sprintf (buf, "%*.*s ", len, len, ArgusProcessStr);
-   } 
+   } else {
+      sprintf (buf, "%*.*s ", len, len, " ");
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintState (%p, %p)", buf, argus);
@@ -26791,7 +26793,7 @@ ArgusGetICMPv6Status (struct ArgusParserStruct *parser, struct ArgusRecordStruct
                }
                break;
             case ICMP6_PACKET_TOO_BIG:
-               retn = icmptypestr[45];
+               retn = "PTB";
                break;
             case ICMP6_TIME_EXCEEDED:
                switch (icmp->code) {

@@ -1574,11 +1574,11 @@ char *icmptypestr[ICMP_MAXTYPE + 1] = {
    "ROB", "ROB", "ROB", "ROB", "ROB", "ROB",
    "TRC", "DCE", "MHR", "WAY", "IAH", "MRQ",
    "MRP", "DNQ", "DNP", "SKP", "PHO", "EXM",
-   "EEO", "EER",
+   "EEO", "EER", "   ", "   ", "   ",
 };
 
 char *icmptypelongstr[ICMP_MAXTYPE + 1] = {
-   "echoreply", "unas", "unassigned", "dstunreach", "srcquench",
+   "echoreply", "unassigned", "unassigned", "dstunreach", "srcquench",
    "redirect", "althostaddr", "unassigned", "echo", "rtrad",
    "rtrsel", "timeexceed", "param", "tstamp", "tstreply",
    "inforeq", "inforeply", "maskreq", "maskreply", "security",
@@ -1588,6 +1588,7 @@ char *icmptypelongstr[ICMP_MAXTYPE + 1] = {
    "trace", "datconverr", "mobhostred", "ipv6way", "ipv6iah",
    "mrreq", "mrreply", "dnsreq", "dnsreply", "skip",
    "photuris", "expmobile", "extecho", "extechoreply",
+   "unassigned", "unassigned", "unassigned",
 };
 
 struct ArgusTokenStruct llcsap_db[] = {
