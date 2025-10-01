@@ -340,6 +340,7 @@ darwin*)
 	have_darwin=yes;
 	saved_LDFLAGS=$LDFLAGS
 	LDFLAGS="${saved_LDFLAGS} -Wlinker -rpath /usr/local/mysql/lib"
+        V_CCOPT="-fno-common $V_CCOPT"
 	;;
 
 hpux9*)
