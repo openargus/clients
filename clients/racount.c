@@ -195,6 +195,8 @@ void RaPrintSrcAddressTally(void);
 void RaPrintAddressTally(void);
 void RaPrintProtoTally(void);
 
+extern char *ArgusAbbreviateMetric(struct ArgusParserStruct *, char *, int, double);
+
 void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
@@ -271,8 +273,24 @@ RaParseComplete (int sig)
 
    if (sig >= 0) {
       if (!(ArgusParser->RaParseCompleting++)) {
+         if (ArgusParser->Hflag) {
+            char tRecs[32];
+            char tPkts[32],tsPkts[32],tdPkts[32];
+            char tBytes[32],tsBytes[32],tdBytes[32];
 
-         printf ("racount   records     total_pkts     src_pkts       dst_pkts       total_bytes        src_bytes          dst_bytes\n");
+            ArgusAbbreviateMetric(ArgusParser, tRecs,   32, ArgusTotalFlowRecs +  ArgusParser->ArgusTotalEventRecords);
+            ArgusAbbreviateMetric(ArgusParser, tPkts,   32, ArgusParser->ArgusTotalPkts);
+            ArgusAbbreviateMetric(ArgusParser, tsPkts,  32, ArgusParser->ArgusTotalSrcPkts);
+            ArgusAbbreviateMetric(ArgusParser, tdPkts,  32, ArgusParser->ArgusTotalDstPkts);
+            ArgusAbbreviateMetric(ArgusParser, tBytes,  32, ArgusParser->ArgusTotalBytes);
+            ArgusAbbreviateMetric(ArgusParser, tsBytes, 32, ArgusParser->ArgusTotalSrcBytes);
+            ArgusAbbreviateMetric(ArgusParser, tdBytes, 32, ArgusParser->ArgusTotalDstBytes);
+
+            printf ("racount   records    total_pkts     src_pkts    dst_pkts    total_bytes    src_bytes    dst_bytes\n");
+            printf ("    sum   %7.7s %13.13s %12.12s %11.11s %14.14s %12.12s %12.12s\n", tRecs, tPkts, tsPkts, tdPkts, tBytes, tsBytes, tdBytes);
+         } else {
+            printf ("racount   records     total_pkts     src_pkts       dst_pkts       total_bytes        src_bytes          dst_bytes\n");
+
 #if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__APPLE_CC__) || defined(__APPLE__) || defined(ARGUS_SOLARIS)
          printf ("    sum   %-11lld %-14lld %-14lld %-14lld %-18lld %-18lld %-18lld\n",
 #else
@@ -281,6 +299,7 @@ RaParseComplete (int sig)
                        ArgusTotalFlowRecs +  ArgusParser->ArgusTotalEventRecords,
                        ArgusParser->ArgusTotalPkts, ArgusParser->ArgusTotalSrcPkts, ArgusParser->ArgusTotalDstPkts,
                        ArgusParser->ArgusTotalBytes, ArgusParser->ArgusTotalSrcBytes, ArgusParser->ArgusTotalDstBytes);
+         }
 
          if (RaProtoMode) 
             RaPrintProtoTally();
