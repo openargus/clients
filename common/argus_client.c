@@ -3446,13 +3446,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                      case ARGUS_FLOW_CLASSIC5TUPLE: {
                         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
                            case ARGUS_TYPE_IPV4: {
+
                               if (parser->ArgusPerformCorrection) {
                               switch (canon->flow.ip_flow.ip_p) {
                                  case IPPROTO_TCP: {
                                     struct ArgusTCPStatus *tcp = (struct ArgusTCPStatus *) &canon->net.net_union.tcpstatus;
                                     char TcpShouldReverse = 0;
 
-//                                  if (!(status & ARGUS_DIRECTION)) {
+                                    if (!(status & ARGUS_DIRECTION)) {
                                     if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
                                        if (!(tcp->status & ARGUS_SAW_SYN) && (tcp->status & ARGUS_SAW_SYN_SENT)) {
                                           switch (canon->net.hdr.subtype) {
@@ -3509,10 +3510,10 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                                 break;
                                              }
                                              case ARGUS_TCP_PERF: {
-                                                struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &canon->net.net_union.tcp;
+//                                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *) &canon->net.net_union.tcp;
 
-                                                if ((tcp->src.status & ARGUS_SAW_SYN_SENT) || (tcp->dst.status & ARGUS_SAW_SYN)) 
-                                                   TcpShouldReverse = 1;
+//                                              if ((tcp->src.status & ARGUS_SAW_SYN_SENT) || (tcp->dst.status & ARGUS_SAW_SYN)) 
+//                                                 TcpShouldReverse = 1;
                                                 break;
                                              }
                                           }
@@ -3520,6 +3521,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 #define TCPPORT_FTP_DATA   20
                                     } else {
                                        if ((((flow->ip_flow.sport <= IPPORT_RESERVED) && 
+                                             (flow->ip_flow.sport != 0) && 
                                              (flow->ip_flow.dport  > IPPORT_RESERVED)) && 
                                              (flow->ip_flow.sport != TCPPORT_FTP_DATA)) && !(parser->nflag)) {
                                           u_int sfnd = 0, i;
@@ -3538,7 +3540,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                              TcpShouldReverse = 1;
                                        }
                                     }
-//                                  }
+                                    }
 
                                     if (TcpShouldReverse) {
                                        ArgusReverseRecord (retn);
@@ -3580,18 +3582,21 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                        }
                                     }
 
-//                                  if (!(IN_MULTICAST(flow->ip_flow.ip_dst) || (INADDR_BROADCAST == flow->ip_flow.ip_dst))) {
-//                                     if ((flow->ip_flow.sport <= IPPORT_RESERVED) || (flow->ip_flow.dport <= IPPORT_RESERVED)) {
-//                                        if ((flow->ip_flow.sport <= IPPORT_RESERVED) && (flow->ip_flow.dport <= IPPORT_RESERVED)) {
-//                                           if (flow->ip_flow.sport < flow->ip_flow.dport) {
-//                                              ArgusReverseRecord (retn);
-//                                           }
-//                                        } else {
-//                                           if (flow->ip_flow.sport <= IPPORT_RESERVED)
-//                                              ArgusReverseRecord (retn);
-//                                        }
-//                                     }
-//                                  }
+                                    if (!(IN_MULTICAST(flow->ip_flow.ip_dst) || (INADDR_BROADCAST == flow->ip_flow.ip_dst))) {
+
+                                       if ((flow->ip_flow.sport != 0) && (flow->ip_flow.dport != 0)) {
+                                          if ((flow->ip_flow.sport <= IPPORT_RESERVED) || (flow->ip_flow.dport <= IPPORT_RESERVED)) {
+                                             if ((flow->ip_flow.sport <= IPPORT_RESERVED) && (flow->ip_flow.dport <= IPPORT_RESERVED)) {
+                                                if (flow->ip_flow.sport < flow->ip_flow.dport) {
+                                                   ArgusReverseRecord (retn);
+                                                }
+                                             } else {
+                                                if (flow->ip_flow.sport <= IPPORT_RESERVED)
+                                                   ArgusReverseRecord (retn);
+                                             }
+                                          }
+                                       }
+                                    }
 
                                     break;
                                  }
@@ -14165,10 +14170,10 @@ ArgusFetchSrcTcpMax (struct ArgusRecordStruct *ns)
                            double synack, ackdat;
                            synack = ArgusFetchTcpSynAck(ns);
                            ackdat = ArgusFetchTcpAckDat(ns);
-                           if (ackdat < 0.000100) {
+                           if ((ackdat < 0.000100) && (synack > 0.000100)) {
                               rtt = synack;
                            } else
-                           if (synack < 0.000100) {
+                           if ((synack < 0.000100) && (ackdat > 0.000100)) {
                               rtt = ackdat;
                            }
 
@@ -14191,10 +14196,10 @@ ArgusFetchSrcTcpMax (struct ArgusRecordStruct *ns)
                            double synack, ackdat;
                            synack = ArgusFetchTcpSynAck(ns);
                            ackdat = ArgusFetchTcpAckDat(ns);
-                           if (ackdat < 0.000100) {
+                           if ((ackdat < 0.000100) && (synack > 0.000100)) {
                               rtt = synack;
-                           } else 
-                           if (synack < 0.000100) {
+                           } else
+                           if ((synack < 0.000100) && (ackdat > 0.000100)) {
                               rtt = ackdat;
                            }
                            if ((metric != NULL) && (metric->dst.pkts > 0)) {
@@ -14241,10 +14246,10 @@ ArgusFetchDstTcpMax (struct ArgusRecordStruct *ns)
                            double synack, ackdat;
                            synack = ArgusFetchTcpSynAck(ns);
                            ackdat = ArgusFetchTcpAckDat(ns);
-                           if (ackdat < 0.000100) {
+                           if ((ackdat < 0.000100) && (synack > 0.000100)) {
                               rtt = synack;
                            } else
-                           if (synack < 0.000100) {
+                           if ((synack < 0.000100) && (ackdat > 0.000100)) {
                               rtt = ackdat;
                            }
 
@@ -14267,10 +14272,10 @@ ArgusFetchDstTcpMax (struct ArgusRecordStruct *ns)
                            double synack, ackdat;
                            synack = ArgusFetchTcpSynAck(ns);
                            ackdat = ArgusFetchTcpAckDat(ns);
-                           if (ackdat < 0.000100) {
+                           if ((ackdat < 0.000100) && (synack > 0.000100)) {
                               rtt = synack;
                            } else
-                           if (synack < 0.000100) {
+                           if ((synack < 0.000100) && (ackdat > 0.000100)) {
                               rtt = ackdat;
                            }
 
