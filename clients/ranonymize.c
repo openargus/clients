@@ -58,6 +58,8 @@ char *RaNonHostAnonmyization = NULL;
 int RaHostAnonymize = 1;
 char *RaNonASAnonmyization = NULL;
 int RaASAnonymize = 1;
+char *RaNonNetworkAddrLength = NULL;
+int RaNonNetAddrLen = 24;
 
 unsigned short RaMapIpIdValue = 0;
 unsigned int RaMapOffsetValue  = 0;
@@ -1109,68 +1111,73 @@ RaMapNewNetwork (unsigned int host, unsigned int mask)
    if (IN_CLASSD(host)) hostclass = RAMAP_CLASSM; else
    hostclass = RAMAP_CLASSC;
 
-   do {
-      if (RaMapNetAddrHierarchy > RANON_SUBNET) {
-         switch (hostclass) {
-            case RAMAP_CLASSA:
-               sprintf (buf, "%d.0.0.0", RaClassAAddress[RaClassAIndex]);
-               break;
-            case RAMAP_CLASSB:
-               sprintf (buf, "%d.0.0.0", RaClassBAddress[RaClassBIndex]);
-               break;
-            default:
-            case RAMAP_CLASSC:
-               sprintf (buf, "%d.0.0.0", RaClassCAddress[RaClassCIndex]);
-               break;
-            case RAMAP_CLASSM:
-               sprintf (buf, "%d.0.0.0", RaClassMAddress[RaClassMIndex]);
-               break;
-         }
-      } else
-         sprintf (buf, "%d.0.0.0", RaClassAddress[RaClassIndex]);
-   
-      if ((hp = gethostbyname(buf)) != NULL) {
-         for (p = (unsigned int **)hp->h_addr_list; *p; ++p)
-            **p = ntohl(**p);
-      } else
-         ArgusLog (LOG_ERR, "RaMapNewNetwork: gethostbyname(%s) error %s", optarg, strerror(errno));
-   
-      addr->s_addr = **(unsigned int **)hp->h_addr_list;
+   if (RaNetAnonymize) {
+      do {
+         if (RaMapNetAddrHierarchy > RANON_SUBNET) {
+            switch (hostclass) {
+               case RAMAP_CLASSA:
+                  sprintf (buf, "%d.0.0.0", RaClassAAddress[RaClassAIndex]);
+                  break;
+               case RAMAP_CLASSB:
+                  sprintf (buf, "%d.0.0.0", RaClassBAddress[RaClassBIndex]);
+                  break;
+               default:
+               case RAMAP_CLASSC:
+                  sprintf (buf, "%d.0.0.0", RaClassCAddress[RaClassCIndex]);
+                  break;
+               case RAMAP_CLASSM:
+                  sprintf (buf, "%d.0.0.0", RaClassMAddress[RaClassMIndex]);
+                  break;
+            }
+         } else
+            sprintf (buf, "%d.0.0.0", RaClassAddress[RaClassIndex]);
+      
+         if ((hp = gethostbyname(buf)) != NULL) {
+            for (p = (unsigned int **)hp->h_addr_list; *p; ++p)
+               **p = ntohl(**p);
+         } else
+            ArgusLog (LOG_ERR, "RaMapNewNetwork: gethostbyname(%s) error %s", optarg, strerror(errno));
+      
+         addr->s_addr = **(unsigned int **)hp->h_addr_list;
 
-      if ((retn = RaMapFindHashObject (&RaMapNetTable, &addr->s_addr, RAMAP_IP_ADDR, 4))) {
-         if (retn->net->index >= RA_MAX_CLASS_VALUE) {
-            if (RaMapNetAddrHierarchy > RANON_SUBNET) {
-               switch (hostclass) {
-                  case RAMAP_CLASSA:
-                     if (RaClassAIndex < RA_MAX_CLASS_A) {
-                        RaClassAIndex++;
-                        break;
-                     } else
-                        hostclass = RAMAP_CLASSB;
-                  case RAMAP_CLASSB:
-                     if (RaClassBIndex < RA_MAX_CLASS_B) {
-                        RaClassBIndex++;
-                        break;
-                     } else
-                        hostclass = RAMAP_CLASSC;
-                  case RAMAP_CLASSC:
-                     if (RaClassCIndex < RA_MAX_CLASS_C) {
-                        RaClassCIndex++;
-                        break;
-                     } else
-                        ArgusLog (LOG_ERR, "RaMapNewNetwork: no addresses");
+         if ((retn = RaMapFindHashObject (&RaMapNetTable, &addr->s_addr, RAMAP_IP_ADDR, 4))) {
+            if (retn->net->index >= RA_MAX_CLASS_VALUE) {
+               if (RaMapNetAddrHierarchy > RANON_SUBNET) {
+                  switch (hostclass) {
+                     case RAMAP_CLASSA:
+                        if (RaClassAIndex < RA_MAX_CLASS_A) {
+                           RaClassAIndex++;
+                           break;
+                        } else
+                           hostclass = RAMAP_CLASSB;
+                     case RAMAP_CLASSB:
+                        if (RaClassBIndex < RA_MAX_CLASS_B) {
+                           RaClassBIndex++;
+                           break;
+                        } else
+                           hostclass = RAMAP_CLASSC;
+                     case RAMAP_CLASSC:
+                        if (RaClassCIndex < RA_MAX_CLASS_C) {
+                           RaClassCIndex++;
+                           break;
+                        } else
+                           ArgusLog (LOG_ERR, "RaMapNewNetwork: no addresses");
 
-                  case RAMAP_CLASSM:
-                     if (RaClassMIndex < RA_MAX_CLASS_M) {
-                        RaClassMIndex++;
-                     } else
-                        ArgusLog (LOG_ERR, "RaMapNewNetwork: no multicast addresses");
+                     case RAMAP_CLASSM:
+                        if (RaClassMIndex < RA_MAX_CLASS_M) {
+                           RaClassMIndex++;
+                        } else
+                           ArgusLog (LOG_ERR, "RaMapNewNetwork: no multicast addresses");
+                  }
                }
             }
          }
-      }
+      } while (retn && (retn->net->index >= RA_MAX_CLASS_VALUE));
 
-   } while (retn && (retn->net->index >= RA_MAX_CLASS_VALUE));
+   } else {
+      unsigned int thost = host & mask;
+      addr->s_addr = thost;
+   }
 
    if (!(retn)) {
       if ((retn = RaMapAddHashEntry (&RaMapNetTable, &addr->s_addr, RAMAP_IP_ADDR, 4))) {
@@ -1221,26 +1228,29 @@ RaMapAllocateNet (unsigned int addr, unsigned int mask)
             break;
 
          case IN_CLASSB_NET:
-            if (RaMapNetAddrHierarchy == RANON_CIDR) {
-               return (RaMapAllocateNet (addr & IN_CLASSA_NET, IN_CLASSA_NET));
-               break;
+            if ((RaNetAnonymize) || ((RaNetAnonymize == 0) && (RaNonNetAddrLen < 16))) {
+               if (RaMapNetAddrHierarchy == RANON_CIDR) {
+                  return (RaMapAllocateNet (addr & IN_CLASSA_NET, IN_CLASSA_NET));
+               }
             }
             break;
 
          case IN_CLASSC_NET:
-            if (RaMapNetAddrHierarchy == RANON_CIDR) {
-               return (RaMapAllocateNet (addr & IN_CLASSB_NET, IN_CLASSB_NET));
-               break;
+            if ((RaNetAnonymize) || ((RaNetAnonymize == 0) && (RaNonNetAddrLen < 24))) {
+               if (RaMapNetAddrHierarchy == RANON_CIDR) {
+                  return (RaMapAllocateNet (addr & IN_CLASSB_NET, IN_CLASSB_NET));
+               }
             }
             break;
 
          case IN_CLASSD_NET:
-            return (RaMapAllocateNet (addr & IN_CLASSC_NET, IN_CLASSC_NET));
+            if ((RaNetAnonymize) || ((RaNetAnonymize == 0) && (RaNonNetAddrLen < 32))) {
+               return (RaMapAllocateNet (addr & IN_CLASSC_NET, IN_CLASSC_NET));
+            }
             break;
       }
 
       if (!(RaMapNetAddrHierarchy)) {
-         
       } 
 
       if (!(net) || (net->net->index >= RA_MAX_CLASS_VALUE))
@@ -1303,6 +1313,9 @@ RaMapAllocateIPAddr (unsigned int *addr, int type, int len)
          if (((*addr & 0xff) == 0x00) && RaPreserveBroadcastAddress)
             newaddr = *((unsigned int *)net->sub);
          else {
+            if (RaNetAnonymize) {
+            } else {
+            }
             if (RaHostAnonymize) {
                newaddr = *((unsigned int *)net->sub) + ((struct RaClassNets *)net->net)->index++;
             } else {
@@ -1751,6 +1764,11 @@ RaNonParseResourceFile (char *file)
                               RaNonNetAnonmyization = strdup(optarg);
                               if (!(strncmp(RaNonNetAnonmyization, "no", 2)))
                                  RaNetAnonymize = 0;
+                              break;
+
+                           case RANON_NETWORK_ADDRESS_LENGTH:
+                              RaNonNetworkAddrLength = strdup(optarg);
+                              RaNonNetAddrLen = strtol(optarg, NULL, 10);
                               break;
 
                            case RANON_HOST_ANONYMIZATION:
