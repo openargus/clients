@@ -4181,7 +4181,7 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
 
             /* always try exact match first? */
             if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, ARGUS_EXACT_MATCH)) != NULL)
-               retn = ARGUS_MY_ADDRESS;
+               retn = raddr->locality;
             else if (mode != ARGUS_EXACT_MATCH) {
                if ((raddr = RaFindAddress (parser, labeler->ArgusAddrTree[AF_INET], &node, mode)) != NULL) {
                   if (raddr->locality > 1)
@@ -4587,14 +4587,16 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                               }
 
                               if (ssrv || dsrv) {
-                                 tested++;
-                                 if (ssrv && dsrv) {
-                                    if (ssrv < dsrv) {
-                                       reverse++;
-                                    }
-                                 } else {
-                                    if (ssrv) {
-                                       reverse++;
+                                 if (ssrv != dsrv) {
+                                    tested++;
+                                    if (ssrv && dsrv) {
+                                       if (ssrv < dsrv) {
+                                          reverse++;
+                                       }
+                                    } else {
+                                       if (ssrv) {
+                                          reverse++;
+                                       }
                                     }
                                  }
                               }
@@ -4640,10 +4642,10 @@ ArgusProcessDirection (struct ArgusParserStruct *parser, struct ArgusRecordStruc
                            }
        
                            switch (dirs) {
-                              case ARGUS_SUGGEST_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
-                              case ARGUS_SUGGEST_LOCAL_DST: if ((dst > 0) && (src == 0)) reverse++; break;
-                              case ARGUS_FORCE_LOCAL_SRC: if ((dst > 0) && (src == 0)) reverse++; break;
-                              case ARGUS_FORCE_LOCAL_DST: if ((src > 0) && (dst == 0)) reverse++; break;
+                              case ARGUS_SUGGEST_LOCAL_SRC: if (dst > src) reverse++; break;
+                              case ARGUS_SUGGEST_LOCAL_DST: if (src > dst) reverse++; break;
+                              case ARGUS_FORCE_LOCAL_SRC:   if (dst > src) reverse++; break;
+                              case ARGUS_FORCE_LOCAL_DST:   if (src > dst) reverse++; break;
                            }
                         }
                   }
@@ -18694,11 +18696,22 @@ ArgusPrintSrcVlan (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 {
    struct ArgusVlanStruct *vlan = (struct ArgusVlanStruct *)argus->dsrs[ARGUS_VLAN_INDEX];
    char vstr[16];
+
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
                                                                                                            
    bzero(vstr, sizeof(vstr));
-   if (vlan != NULL)
-      if ((vlan->hdr.argus_dsrvl8.qual & ARGUS_SRC_VLAN) || (vlan->sid > 0))
-         sprintf (vstr, "0x%04x", vlan->sid);
+   if (vlan != NULL) {
+      if ((vlan->hdr.argus_dsrvl8.qual & ARGUS_SRC_VLAN) || (vlan->sid > 0)) {
+         if (format != NULL) {
+            sprintf (vstr, format, vlan->sid);
+         } else {
+            sprintf (vstr, "0x%04x", vlan->sid);
+         }
+      }
+   }
                                                                                                            
    if (parser->ArgusPrintXml) {
    } else {
@@ -18723,11 +18736,21 @@ ArgusPrintDstVlan (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 {
    struct ArgusVlanStruct *vlan = (struct ArgusVlanStruct *)argus->dsrs[ARGUS_VLAN_INDEX];
    char vstr[16];
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    bzero(vstr, sizeof(vstr));
-   if (vlan != NULL)
-      if ((vlan->hdr.argus_dsrvl8.qual & ARGUS_DST_VLAN) || (vlan->did > 0))
-         sprintf (vstr, "0x%04x", vlan->did);
+   if (vlan != NULL) {
+      if ((vlan->hdr.argus_dsrvl8.qual & ARGUS_DST_VLAN) || (vlan->did > 0)) {
+         if (format != NULL) {
+            sprintf (vstr, format, vlan->did);
+         } else {
+            sprintf (vstr, "0x%04x", vlan->did);
+         }
+      }
+   }
 
    if (parser->ArgusPrintXml) {
    } else {
