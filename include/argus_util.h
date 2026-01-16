@@ -1208,17 +1208,17 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTDSTMPLS		94
    { "dmpls", "", 8 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTMPLS, ArgusPrintDstMpls, ArgusPrintDstMplsLabel, "int unsigned", 0},
 #define ARGUSPRINTSRCVLAN		95
-   { "svlan", "", 8 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVLAN, ArgusPrintSrcVlan, ArgusPrintSrcVlanLabel, "smallint unsigned", 0},
+   { "svlan", "0x%04x", 8 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVLAN, ArgusPrintSrcVlan, ArgusPrintSrcVlanLabel, "smallint unsigned", 0},
 #define ARGUSPRINTDSTVLAN		96
-   { "dvlan", "", 8 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVLAN, ArgusPrintDstVlan, ArgusPrintDstVlanLabel, "smallint unsigned", 0},
+   { "dvlan", "0x%04x", 8 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVLAN, ArgusPrintDstVlan, ArgusPrintDstVlanLabel, "smallint unsigned", 0},
 #define ARGUSPRINTSRCVID		97
-   { "svid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVID, ArgusPrintSrcVID, ArgusPrintSrcVIDLabel, "smallint unsigned", 0},
+   { "svid", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVID, ArgusPrintSrcVID, ArgusPrintSrcVIDLabel, "smallint unsigned", 0},
 #define ARGUSPRINTDSTVID		98
-   { "dvid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVID, ArgusPrintDstVID, ArgusPrintDstVIDLabel, "smallint unsigned", 0},
+   { "dvid", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVID, ArgusPrintDstVID, ArgusPrintDstVIDLabel, "smallint unsigned", 0},
 #define ARGUSPRINTSRCVPRI		99
-   { "svpri", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVPRI, ArgusPrintSrcVPRI, ArgusPrintSrcVPRILabel, "smallint unsigned", 0},
+   { "svpri", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCVPRI, ArgusPrintSrcVPRI, ArgusPrintSrcVPRILabel, "smallint unsigned", 0},
 #define ARGUSPRINTDSTVPRI		100
-   { "dvpri", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVPRI, ArgusPrintDstVPRI, ArgusPrintDstVPRILabel, "smallint unsigned", 0},
+   { "dvpri", "%d", 6 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTVPRI, ArgusPrintDstVPRI, ArgusPrintDstVPRILabel, "smallint unsigned", 0},
 #define ARGUSPRINTSRCIPID		101
    { "sipid", "", 7 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCIPID, ArgusPrintSrcIpId, ArgusPrintSrcIpIdLabel, "smallint unsigned", 0},
 #define ARGUSPRINTDSTIPID		102
