@@ -23934,7 +23934,7 @@ ArgusGetName(struct ArgusParserStruct *parser, u_char *ap)
                }
    
                if (p->name) {
-                  if (p->name != (char *) -1)
+                  if (p->name != (char *)-1)
                      return (p->name);
                } else {
                   if (ArgusParser->NonBlockingDNS) {
@@ -25326,8 +25326,8 @@ ArgusFreeHostarray(void)
          start = 1;
          p = &hnametable[i];
          while (p != NULL) {
-            if (p->name  != NULL) free(p->name);
-            if (p->nname != NULL) free(p->nname);
+            if ((p->name  != NULL) && (p->name  != (char *)-1)) free(p->name);
+            if ((p->nname != NULL) && (p->nname != (char *)-1)) free(p->nname);
             np = p->nxt;
             if (start == 0) {
                free (p);
