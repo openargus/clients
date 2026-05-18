@@ -582,7 +582,7 @@ RaParseAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPARSEICMPID		136
    { "icmpid", "", 6 , 1, ARGUS_PTYPE_INT, ARGUSPARSEICMPID, ArgusParseIcmpId, "smallint unsigned", 0, ""},
 #define ARGUSPARSELABEL			137
-   { "label", "", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPARSELABEL, ArgusParseLabel, "varchar(4098)", 0, ""},
+   { "label", "", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPARSELABEL, ArgusParseLabel, "varchar(4098)", 0, "Label"},
 #define ARGUSPARSESRCINTPKTDIST		138
    { "sintdist", "", 8, 1, ARGUS_PTYPE_STRING, ARGUSPARSESRCINTPKTDIST, ArgusParseSrcIntPktDist, "varchar(8)", 0, ""},
 #define ARGUSPARSEDSTINTPKTDIST		139
