@@ -530,6 +530,7 @@ void
 ArgusClientInit (struct ArgusParserStruct *parser)
 {
    struct ArgusModeStruct *mode = NULL;
+   int correct = 0;
    parser->RaWriteOut = 0;
  
    if (!(parser->RaInitialized)) {
@@ -555,11 +556,16 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                ArgusProcessNoZero = 1;
             else if (!(strncasecmp (mode->mode, "outlayer", 8)))
                ArgusProcessOutLayers = 1;
-            else if (!(strncasecmp (mode->mode, "perflow", 8)))
+            else if (!(strncasecmp (mode->mode, "perflow", 7)))
                ArgusPerFlowHistograms = 1;
 
             mode = mode->nxt;
          }
+      }
+
+      if (correct >= 0) {
+         parser->ArgusPerformCorrection = 1; 
+         parser->ArgusReverse = 1;
       }
 
       if (ArgusParser->RaPrintOptionStrings[0] == NULL) {
@@ -584,6 +590,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
       /* for generating one set of histograms for each flow, according
        * to a specified model (-m)
        */
+
       if (ArgusPerFlowHistograms) {
          ClassifierHash = ArgusNewHashTable(RAHISTO_HASH_SIZE);
          if (ClassifierHash == NULL)

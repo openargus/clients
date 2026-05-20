@@ -304,9 +304,9 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
 #define ARGUSMETRICDSTLOSS  49
    {"dloss", ArgusFetchDstLoss},
 #define ARGUSMETRICPERCENTSRCLOSS 50
-   {"psloss", ArgusFetchPercentSrcLoss},
+   {"sploss", ArgusFetchPercentSrcLoss},
 #define ARGUSMETRICPERCENTDSTLOSS 51
-   {"pdloss", ArgusFetchPercentDstLoss},
+   {"dploss", ArgusFetchPercentDstLoss},
 #define ARGUSMETRICSRCINTPKT  52
    {"sintpkt", ArgusFetchSrcIntPkt},
 #define ARGUSMETRICDSTINTPKT  53
