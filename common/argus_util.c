@@ -2753,6 +2753,9 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                parser->ArgusDirectionFunction |= ARGUS_PORT_WELLKNOWN;
             if (strstr(optarg, "registered"))
                parser->ArgusDirectionFunction |= ARGUS_PORT_REGISTERED;
+
+            if (parser->ArgusDirectionFunction != 0)
+               parser->ArgusPerformCorrection = 1;
             break;
          }
 
@@ -5072,12 +5075,12 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                   flow->hdr.subtype &= ~ARGUS_REVERSE;
                else
                   flow->hdr.subtype |= ARGUS_REVERSE;
-
+/*
                if (flow->hdr.argus_dsrvl8.qual & ARGUS_DIRECTION)
                   flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
                 else
                   flow->hdr.argus_dsrvl8.qual |=  ARGUS_DIRECTION;
-
+*/
                switch (flow->hdr.subtype & 0x3F) {
                   case ARGUS_FLOW_CLASSIC5TUPLE: {
                      bcopy((char *)flow, (char *)tflow, tlen);
@@ -34150,9 +34153,11 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                case RA_SUB_OPTION: ArgusSOptionRecord = 0; break;
             }
          } else {
+            int found = 0;
             for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
                if (strlen(RaPrintAlgorithmTable[x].field)) {
                   if (!strcmp (RaPrintAlgorithmTable[x].field, soption)) {
+                     found++;
                      if (RaNewLength) {
                         RaPrintAlgorithmTable[x].length = RaNewLength;
                      }
@@ -34210,6 +34215,8 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                   }
                }
             }
+            if (!found) 
+               ArgusLog(LOG_ERR, "soption field: \"%s\" %s", soption, "not found");
          }
 
       } else
