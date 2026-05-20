@@ -1060,7 +1060,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                switch (ns->hdr.type & 0xF0) {
                   case ARGUS_EVENT:
                   case ARGUS_MAR:
-                     if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
+                     if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) < 0)
 #ifdef ARGUSDEBUG
                         ArgusDebug(2, "%s: failed to insert EVENT or MAR\n")
 #endif
@@ -1073,7 +1073,7 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      struct ArgusMetricStruct *metric = (void *)tns->dsrs[ARGUS_METRIC_INDEX];
 
                      if ((metric != NULL) && ((metric->src.pkts + metric->dst.pkts) > 0)) {
-                        if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) <= 0)
+                        if (ArgusInsertRecord(parser, RaBinProcess, tns, offset, &rec) < 0)
 #ifdef ARGUSDEBUG
                         ArgusDebug(2, "%s: failed to insert FAR\n")
 #endif
