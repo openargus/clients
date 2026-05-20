@@ -34166,6 +34166,7 @@ ArgusProcessStripOptions(struct ArgusParserStruct *parser, char *options)
 
 
 
+int ArgusFailOnSOption = 1;
 void ArgusProcessSOptions(struct ArgusParserStruct *);
 
 void
@@ -34348,7 +34349,7 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                   }
                }
             }
-            if (!found) 
+            if (!found && ArgusFailOnSOption) 
                ArgusLog(LOG_ERR, "soption field: \"%s\" %s", soption, "not found");
          }
 
