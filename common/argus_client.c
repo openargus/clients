@@ -3667,7 +3667,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
                   }
-
                   if (flow->hdr.subtype & ARGUS_REVERSE)
                      flow->hdr.subtype &= ~ARGUS_REVERSE;
                }
@@ -8866,13 +8865,17 @@ ArgusAlignInit(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns, s
    nadp->dtperiod = 0.0;
    nadp->trperiod = 0.0;
 
-   nadp->startuSecs = ArgusFetchStartuSecTime(ns);
-   nadp->enduSecs   = ArgusFetchLastuSecTime(ns);
+   if (parser->startime_t.tv_sec == 0x7FFFFFFF) {
+      nadp->startuSecs = ArgusFetchStartuSecTime(ns);
+      nadp->enduSecs   = ArgusFetchLastuSecTime(ns);
 
-   nadp->sploss = ArgusFetchPercentSrcLoss(ns);
-   nadp->dploss = ArgusFetchPercentDstLoss(ns);
+      startusec = nadp->startuSecs;
+   } else {
+      nadp->startuSecs = (parser->startime_t.tv_sec * 1000000L) + parser->startime_t.tv_usec;
+      nadp->enduSecs   = (parser->lasttime_t.tv_sec * 1000000L) + parser->lasttime_t.tv_usec;
 
-   startusec = nadp->startuSecs;
+      startusec = nadp->startuSecs;
+   }
 
    if (start->tv_sec == 0) {
       if (parser->tflag) {
@@ -9105,7 +9108,7 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
 
    if (nadp->size != 0) {
       startusec = ArgusFetchStartuSecTime(ns);
-        endusec = ArgusFetchLastuSecTime(ns);
+      endusec = ArgusFetchLastuSecTime(ns);
 
       if (nadp->startuSecs == 0) {
          if (nadp->size > 0) {
@@ -9205,7 +9208,6 @@ ArgusAlignRecord(struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns,
                   } else {
                      ns->status |= ARGUS_RECORD_PROCESSED;
                   }
-
                   if (nadp->hard) {
                      ar2->argus_mar.startime  = sSecs;
                      ar2->argus_mar.now       = eSecs;
@@ -9857,6 +9859,13 @@ ArgusInsertRecord (struct ArgusParserStruct *parser, struct RaBinProcessStruct *
          long long tval = 0;
          if (rbps->nadp.qual) {
             switch (rbps->nadp.qual) {
+               case ARGUSSPLITMONTH:
+               case ARGUSSPLITYEAR: {
+                  rbps->start = rbps->nadp.startuSecs;
+                  rbps->end   = rbps->nadp.enduSecs;
+                  break;
+               }
+
                case ARGUSSPLITDAY: {
                   time_t fileSecs = rbps->startpt.tv_sec;
                   struct tm tmval;
