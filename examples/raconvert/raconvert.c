@@ -658,7 +658,7 @@ int
 RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int slen)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
-   int retn = 1, numfields = 1, i;
+   int retn = 1, numfields = 0, i;
    char *argv[ARGUS_MAX_PRINT_FIELDS], **ap = argv;
    char delim[16], *ptr, *tptr, *tok;
 
@@ -681,7 +681,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
       sprintf (delim, "%c", RaConvertFieldDelimiter[0]);
       tptr = ptr;
 
-      if ((strchr (ptr, '{')) || (strchr (ptr, '['))) {
+      if ((ptr[0] == '{') || (ptr[0] == '[')) {
          ArgusJsonValue l1root, *res1 = NULL;
          bzero(&l1root, sizeof(l1root));
 
@@ -690,7 +690,8 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
             numfields = ARGUS_MAX_PRINT_FIELDS;
          }
 
-      } else {
+      }
+      if (numfields == 0) {
          while ((tok = strchr(tptr, RaConvertFieldDelimiter[0])) != NULL) {
             *tok++ = '\0';
             if (strlen(tptr))
@@ -715,7 +716,7 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
                   char *value = NULL;
                   if ((value = (char *)ArgusCalloc(1, ARGUSMAXSTR)) != NULL) {
                      if (RaParseAlgorithms[i]->parse == ArgusParseLabel) {
-                        snprintf (value, ARGUSMAXSTR, "%s=%s", RaConvertOptionStrings[i], argv[i]);
+                        snprintf (value, ARGUSMAXSTR, "%s", argv[i]);
 	             } else {
                         snprintf(value, ARGUSMAXSTR, "%s", argv[i]);
 	             }
@@ -1064,12 +1065,14 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
 }
 
 
-char *RaDateFormat = "%m/%d.%H:%M:%S";
+//char *RaDateFormat = "%m/%d.%H:%M:%S";
+char *RaDateFormat = "%Y-%m-%dT%H:%M:%SZ";
 
-#define RACONVERTTIME	6
+#define RACONVERTTIME	7
 
 char *RaConvertTimeFormats[RACONVERTTIME] = {
    NULL,
+   "%Y/%m/%dT%T",
    "%Y/%m/%d %T",
    "%Y/%m/%d.%T",
    "%Y/%m/%d.%H:%M:%S",
@@ -1131,25 +1134,26 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
 
    if ((frac = strrchr(date, '.')) != NULL) {
       int useconds = 0, precision;
+      char tdate[128], fstr[12];
       int flen;
-      char tdate[128];
 
       flen = (frac - date);
 
       bcopy(date, tdate, flen);
 
       *frac++ = '\0';
+      frac++;
       useconds = strtol(frac, &endptr, 10);
       if (endptr == frac)
          ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) fractonal format error\n", parser, buf);
+      sprintf(fstr, "%d", useconds);
 
       if (*endptr != '\0') {
          while (*endptr != '\0')  
             date[flen++] = *endptr++;
          date[flen] = '\0';
       }
-         
-      if ((precision = strlen(frac)) > 0) {
+      if ((precision = strlen(fstr)) > 0) {
          int n, power = 6 - precision;
 
          for (n = 0; n < power; n++)
@@ -1168,6 +1172,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
       }
 
    } else {
+      RaDateFormat = parser->RaTimeFormat;
       ptr = date;
       len = strlen(ptr);
 
@@ -4792,8 +4797,8 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                                     *ptr++ = '\0'; *ptr++ = '\0'; *ptr++ = '\0';
                                     if (*ptr != '\0') {
                                        strcat(RaDateFormat, ptr);
+			            }
 			         }
-			      }
 
                                  gettimeofday(tvp, 0);
                                  bzero(tbuf, sizeof(tbuf));
