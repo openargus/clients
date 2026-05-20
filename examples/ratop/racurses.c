@@ -43,6 +43,22 @@ void RaResizeAlarmHandler(int);
 #define RA_CURSES_MAIN
 #include <racurses.h>
 
+void ArgusProcessCursesInputInit(WINDOW *);
+int ArgusProcessTerminator (WINDOW *, int, int);
+int ArgusProcessNewPage (WINDOW *, int, int);
+int ArgusProcessDeviceControl (WINDOW *, int, int);
+int ArgusProcessError (WINDOW *, int, int);
+int ArgusProcessEscape (WINDOW *, int, int);
+int ArgusProcessEndofTransmission (WINDOW *, int, int);
+int ArgusProcessKeyUp (WINDOW *, int, int);
+int ArgusProcessKeyDown (WINDOW *, int, int);
+int ArgusProcessKeyLeft (WINDOW *, int, int);
+int ArgusProcessKeyRight (WINDOW *, int, int);
+int ArgusProcessBell (WINDOW *, int, int);
+int ArgusProcessBackspace (WINDOW *, int, int);
+int ArgusProcessDeleteLine (WINDOW *, int, int);
+int ArgusProcessCharacter(WINDOW *, int, int);
+
 int ArgusDisplayColorsInitialized = 0;
 extern struct ArgusWirelessStruct *ArgusWireless;
 
@@ -66,6 +82,7 @@ int ArgusCursesProcessInitialized = 0;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
+extern int ArgusFailOnSOption;
 
 int
 main(int argc, char **argv)
@@ -74,6 +91,7 @@ main(int argc, char **argv)
    pthread_attr_t attr;
    int ArgusExitStatus;
 
+   ArgusFailOnSOption = 0;
    ArgusThreadsInit(&attr);
 
    if ((parser = ArgusNewParser(argv[0])) != NULL) {
@@ -195,6 +213,8 @@ void RaUpdateHeaderWindow(WINDOW *);
 void RaUpdateDebugWindow(WINDOW *);
 void RaUpdateStatusWindow(WINDOW *);
 
+int ArgusScreenNeedsRefreshing = 0;
+
 void *
 ArgusCursesProcess (void *arg)
 {
@@ -246,11 +266,10 @@ ArgusCursesProcess (void *arg)
                      ArgusDrawWindow(ws);
                      ntvp->tv_sec  = tvp->tv_sec  + RaCursesUpdateInterval.tv_sec;
                      ntvp->tv_usec = tvp->tv_usec + RaCursesUpdateInterval.tv_usec;
-                     while (ntvp->tv_usec > 1000000) {
+                     while (ntvp->tv_usec >= 1000000) {
                         ntvp->tv_sec  += 1;
                         ntvp->tv_usec -= 1000000;
                      }
-                     RaWindowImmediate = FALSE;
                      ArgusDisplayNeedsRefreshing = 1;
                   }
 
@@ -259,11 +278,15 @@ ArgusCursesProcess (void *arg)
             }
             ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
          }
-
-         if (ArgusDisplayNeedsRefreshing) {
-            RaRefreshDisplay();
-         }
       }
+
+      if (ArgusDisplayNeedsRefreshing) {
+         ArgusUpdateScreen();
+         RaRefreshDisplay();
+         ArgusDisplayNeedsRefreshing = 0;
+      }
+
+      RaWindowImmediate = FALSE;
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_unlock(&RaCursesLock);
@@ -271,6 +294,11 @@ ArgusCursesProcess (void *arg)
       tsp->tv_sec  = 0;
       tsp->tv_nsec = 250000000;
       nanosleep(tsp, NULL);
+
+      if (ArgusScreenNeedsRefreshing) {
+         ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+         ArgusScreenNeedsRefreshing = 0;
+      }
    }
 
    ArgusCursesProcessClose();
@@ -288,23 +316,6 @@ struct ArgusInputCommand {
 };
 
 
-
-void ArgusProcessCursesInputInit(WINDOW *);
-int ArgusProcessTerminator (WINDOW *, int, int);
-int ArgusProcessNewPage (WINDOW *, int, int);
-int ArgusProcessDeviceControl (WINDOW *, int, int);
-int ArgusProcessError (WINDOW *, int, int);
-int ArgusProcessEscape (WINDOW *, int, int);
-int ArgusProcessEndofTransmission (WINDOW *, int, int);
-int ArgusProcessKeyUp (WINDOW *, int, int);
-int ArgusProcessKeyDown (WINDOW *, int, int);
-int ArgusProcessKeyLeft (WINDOW *, int, int);
-int ArgusProcessKeyRight (WINDOW *, int, int);
-int ArgusProcessBell (WINDOW *, int, int);
-int ArgusProcessBackspace (WINDOW *, int, int);
-int ArgusProcessDeleteLine (WINDOW *, int, int);
-
-int ArgusProcessCharacter(WINDOW *, int, int);
 
 #define MAX_INPUT_OPERATORS	21
 struct ArgusInputCommand ArgusInputCommandTable [MAX_INPUT_OPERATORS] = {
@@ -350,19 +361,18 @@ ArgusProcessCursesInputInit(WINDOW *win)
       }
    }
 
-   cbreak();
 #if defined(ARGUS_READLINE) || defined(ARGUS_EDITLINE)
    keypad(win, FALSE);
 #else
    keypad(win, TRUE);
 #endif
+
    meta(win, TRUE);
-   noecho();
-   nonl();
    idlok (win, TRUE);
    notimeout(win, TRUE);
    nodelay(win, TRUE);
    intrflush(win, FALSE);
+   nonl();
 }
 
 void *
@@ -1496,6 +1506,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
                ArgusTouchScreen();
             }
+            ArgusScreenNeedsRefreshing = 1;
             break;
          }
 
@@ -2067,6 +2078,8 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
          case RAGOTcolon:
          case RAGOTslash: {
             int awu = ArgusAlwaysUpdate;
+            ArgusAlwaysUpdate = 0;
+
             ArgusZeroDebugString();
             switch (ch) {
                case 0x07: {
@@ -2513,7 +2526,8 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   break;
                }
             }
-            ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+            if (ArgusAlwaysUpdate)
+               ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
             ArgusAlwaysUpdate = awu;
             break;
          }
@@ -2924,6 +2938,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
             wclear(RaCurrentWindow->window);
             ArgusTouchScreen();
             RaRefreshDisplay();
+            break;
          }
 
          default: {
@@ -3384,6 +3399,11 @@ RaInitCurses ()
 #endif
 
    initscr();
+   cbreak();
+   noecho();
+   nonl();
+   intrflush(stdscr, FALSE);
+   keypad(stdscr, TRUE);
 
 #if defined(ARGUS_COLOR_SUPPORT)
    if (has_colors() == TRUE) {
@@ -3777,9 +3797,8 @@ argus_getsearch_string(int dir)
       }
    }
 
-   cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
-   ArgusTouchScreen();
+   ArgusScreenNeedsRefreshing = 1;
 }
 
 
@@ -4852,8 +4871,7 @@ argus_command_string(void)
 #ifdef _LITTLE_ENDIAN
                            ArgusHtoN(argusrec);
 #endif
-                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input,
-                                                      wfile, argusrec);
+                           rv = ArgusWriteNewLogfile (ArgusParser, ns->input, wfile, argusrec);
                            if (rv < 0)
                               ArgusLog(LOG_ERR, "%s unable to open file\n",
                                        __func__);
@@ -4960,8 +4978,8 @@ argus_command_string(void)
    bzero(RaCommandInputStr, sizeof(RaCommandInputStr));
    RaCommandIndex = 0;
 
-   cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
+   ArgusScreenNeedsRefreshing = 1;
 
 #if defined(ARGUS_HISTORY)
    argus_enable_history();

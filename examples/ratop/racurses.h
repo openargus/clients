@@ -433,7 +433,7 @@ int ArgusPrintTotals         = 0;
 
 #if defined(ARGUS_CURSES)
 
-WINDOW *RaCommandWindow      = NULL;
+WINDOW *RaCommandWindow    = NULL;
 WINDOW *RaHeaderWindow     = NULL;
 WINDOW *RaDisplayWindow    = NULL;
 WINDOW *RaStatusWindow     = NULL;
