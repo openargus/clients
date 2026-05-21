@@ -5926,7 +5926,7 @@ RaFlowModelOverRides(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
 void
 ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns)
 {
-   struct ArgusFlow tflow, *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
+   struct ArgusSystemFlow tflow, *flow = (struct ArgusSystemFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
    int i = 0, x = 0, len = 0;
 
    bzero ((char *)&tflow, sizeof(tflow));
@@ -5935,6 +5935,10 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
 
    if (na->mask && (flow != NULL)) {
       len = flow->hdr.argus_dsrvl8.len * 4;
+      if (len > sizeof(tflow)) {
+         len = sizeof(tflow);
+         flow->hdr.argus_dsrvl8.len = len / 4;
+      }
 
       if (na->pres == NULL)
          bcopy ((char *)&flow->hdr, (char *)&tflow.hdr, sizeof(flow->hdr));
