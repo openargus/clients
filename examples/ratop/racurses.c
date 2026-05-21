@@ -195,6 +195,9 @@ void RaUpdateHeaderWindow(WINDOW *);
 void RaUpdateDebugWindow(WINDOW *);
 void RaUpdateStatusWindow(WINDOW *);
 
+int ArgusDisplayNeedsRefreshing = 0;
+int ArgusDisplayNeedsClearing = 0;
+
 void *
 ArgusCursesProcess (void *arg)
 {
@@ -214,10 +217,9 @@ ArgusCursesProcess (void *arg)
    if (pthread_mutex_unlock(&parser->sync) != 0)
       ArgusLog(LOG_ERR, "ArgusCursesProcess: pthread_mutex_unlock error %s", strerror(errno));
 #endif
-
+   
    while ((!done) && (!parser->RaShutDown) && (!ArgusParser->RaParseDone)) {
       struct timeval tvbuf, *tvp = &tvbuf;
-      int ArgusDisplayNeedsRefreshing = 0;
       struct timespec tsbuf, *tsp = &tsbuf;
 
 #if defined(ARGUS_THREADS)
@@ -227,6 +229,19 @@ ArgusCursesProcess (void *arg)
 
       if (RaScreenResize == TRUE) 
          RaResizeScreen();
+
+      if (ArgusDisplayNeedsClearing) {
+         wclear(RaCurrentWindow->window);
+         RaWindowStatus = 1;
+         ArgusUpdateScreen();
+         ArgusDisplayNeedsClearing = 0;
+         ArgusDisplayNeedsRefreshing = 1;
+      }
+
+      if (ArgusDisplayNeedsRefreshing) {
+         RaRefreshDisplay();
+         ArgusDisplayNeedsRefreshing = 0;
+      }
 
       if ((cnt = ArgusWindowQueue->count) > 0) {
          int i, retn;
@@ -246,11 +261,10 @@ ArgusCursesProcess (void *arg)
                      ArgusDrawWindow(ws);
                      ntvp->tv_sec  = tvp->tv_sec  + RaCursesUpdateInterval.tv_sec;
                      ntvp->tv_usec = tvp->tv_usec + RaCursesUpdateInterval.tv_usec;
-                     while (ntvp->tv_usec > 1000000) {
+                     while (ntvp->tv_usec >= 1000000) {
                         ntvp->tv_sec  += 1;
                         ntvp->tv_usec -= 1000000;
                      }
-                     RaWindowImmediate = FALSE;
                      ArgusDisplayNeedsRefreshing = 1;
                   }
 
@@ -260,16 +274,15 @@ ArgusCursesProcess (void *arg)
             ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
          }
 
-         if (ArgusDisplayNeedsRefreshing) {
-            RaRefreshDisplay();
-         }
+         RaWindowImmediate = FALSE;
+
       }
 
 #if defined(ARGUS_THREADS)
       pthread_mutex_unlock(&RaCursesLock);
 #endif
       tsp->tv_sec  = 0;
-      tsp->tv_nsec = 250000000;
+      tsp->tv_nsec = 1000000;
       nanosleep(tsp, NULL);
    }
 
@@ -1573,11 +1586,7 @@ ArgusProcessNewPage(WINDOW *win, int status, int ch)
    int retn = status;
 
    bzero(&RaCursesUpdateTime, sizeof(RaCursesUpdateTime));
-   wclear(RaCurrentWindow->window);
-   RaWindowStatus = 1;
-
-   ArgusUpdateScreen();
-   RaRefreshDisplay();
+   ArgusDisplayNeedsClearing = 1;
 
 #ifdef ARGUSDEBUG
    ArgusDebug (5, "ArgusProcessNewPage(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
@@ -2067,7 +2076,10 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
          case RAGOTcolon:
          case RAGOTslash: {
             int awu = ArgusAlwaysUpdate;
+            ArgusAlwaysUpdate = 0;
+
             ArgusZeroDebugString();
+
             switch (ch) {
                case 0x07: {
                   ArgusDisplayStatus = (ArgusDisplayStatus ? 0 : 1);
@@ -2513,7 +2525,10 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   break;
                }
             }
-            ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+
+            if (ArgusAlwaysUpdate)
+               ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
+
             ArgusAlwaysUpdate = awu;
             break;
          }
@@ -3779,7 +3794,7 @@ argus_getsearch_string(int dir)
 
    cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
-   ArgusTouchScreen();
+   ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
 }
 
 
@@ -4962,6 +4977,7 @@ argus_command_string(void)
 
    cbreak();
    RaCursesSetWindowFocus(ArgusParser, RaCurrentWindow->window);
+   ArgusProcessNewPage(RaCurrentWindow->window, 0, 0);
 
 #if defined(ARGUS_HISTORY)
    argus_enable_history();
@@ -5503,6 +5519,7 @@ RaRefreshDisplay (void)
             ArgusAddToQueue (ArgusWindowQueue, &ws->qhdr, ARGUS_LOCK);
          }
       }
+
       doupdate();
 
       RaWindowModified = 0;
