@@ -292,7 +292,7 @@ ArgusCursesProcess (void *arg)
       pthread_mutex_unlock(&RaCursesLock);
 #endif
       tsp->tv_sec  = 0;
-      tsp->tv_nsec = 250000000;
+      tsp->tv_nsec = 100000000;
       nanosleep(tsp, NULL);
 
       if (ArgusScreenNeedsRefreshing) {
@@ -367,12 +367,13 @@ ArgusProcessCursesInputInit(WINDOW *win)
    keypad(win, TRUE);
 #endif
 
+   cbreak();
+   nonl();
    meta(win, TRUE);
    idlok (win, TRUE);
    notimeout(win, TRUE);
    nodelay(win, TRUE);
    intrflush(win, FALSE);
-   nonl();
 }
 
 void *
@@ -384,7 +385,7 @@ ArgusProcessCursesInput(void *arg)
 
    ArgusProcessCursesInputInit(RaStatusWindow);
 
-   tvp->tv_sec = 0; tvp->tv_usec = 100000;
+   tvp->tv_sec = 0; tvp->tv_usec = 10000;
 
    while (!ArgusCloseDown) {
       FD_ZERO(&in); FD_SET(0, &in);
@@ -1473,7 +1474,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
                   ns->status |= ARGUS_RECORD_MODIFIED;
                }
             }
-            ArgusTouchScreen();
+            ArgusScreenNeedsRefreshing = 1;
             break;
          }
 
@@ -1573,7 +1574,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessTerminator(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
+   ArgusDebug (1, "ArgusProcessTerminator(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -3403,7 +3404,7 @@ RaInitCurses ()
    noecho();
    nonl();
    intrflush(stdscr, FALSE);
-   keypad(stdscr, TRUE);
+
 
 #if defined(ARGUS_COLOR_SUPPORT)
    if (has_colors() == TRUE) {
@@ -3614,7 +3615,12 @@ int
 argus_getch_function(FILE *file)
 {
    int retn = wgetch(RaStatusWindow);
+
    if (retn  != ERR) {
+#if defined(HAVE_DECL_RL_DONE) && HAVE_DECL_RL_DONE
+      if ((retn == '\r') || (retn == '\n'))
+         rl_done = 1;
+#endif
       return retn;
    } else
       return -1;
@@ -5629,7 +5635,11 @@ RaUpdateDebugWindow(WINDOW *win)
    ArgusCopyDebugString (strbuf, MAXSTRLEN);
    len = strlen(strbuf);
    len = (len >= RaScreenColumns) ? RaScreenColumns - 1 : len;
-   strbuf[len] = '\0';
+   strbuf[len--] = '\0';
+
+   if ((strbuf[len] = '\n') || (strbuf[len] = '\r'))
+      strbuf[len--] = '\0';
+
    mvwprintw (win, 0, 0, "%s", strbuf);
    wclrtoeol(win);
 
