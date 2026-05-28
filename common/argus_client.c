@@ -4783,7 +4783,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                                                 case IPPROTO_ICMP: {
                                                    if (i == ARGUS_MASK_SPORT) {
                                                       slen = 1;
-                                                      offset = na->ArgusMaskDefs[i].offset;
+                                                      offset = ((void *)&flow->flow_un.icmp.type - (void *)flow);
                                                    } else {
                                                       switch (flow->icmp_flow.type) {
                                                          case ICMP_ECHO:
@@ -4971,9 +4971,31 @@ ArgusGenerateReverseHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusR
                                        }
 
                                        case IPPROTO_ICMP: { 
-                                          slen = 1;
-                                          offset = (i == ARGUS_MASK_SPORT) ? na->ArgusMaskDefs[i].offset :
-                                                                             na->ArgusMaskDefs[i].offset - 1;
+                                          if (i == ARGUS_MASK_SPORT) {
+                                             slen = 1;
+                                             offset = ((void *)&flow->flow_un.icmp.type - (void *)flow);
+                                          } else {
+                                             switch (flow->icmp_flow.type) {
+                                                case ICMP_ECHO:
+                                                case ICMP_ECHOREPLY:
+                                                   slen = -1;
+                                                   break;
+                                 
+                                                case ICMP_MASKREQ:
+                                                case ICMP_TSTAMP:
+                                                case ICMP_IREQ:
+                                                case ICMP_MASKREPLY:
+                                                case ICMP_TSTAMPREPLY:
+                                                case ICMP_IREQREPLY:
+                                                   offset = na->ArgusMaskDefs[i].offset - 1;
+                                                   slen = 5;
+                                                   break;
+
+                                                default:
+                                                   offset = na->ArgusMaskDefs[i].offset - 1;
+                                                   slen = 1;
+                                             }
+                                          }
                                           break;
                                        }
                                     }
@@ -5923,6 +5945,14 @@ RaFlowModelOverRides(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
 }
 
 
+/*
+ * The purpose of ArgusGenerateNewFlow is to take a flow record and generate
+ * the flow structure that you need to find matching flows in the flow cache.
+ * There are 2 fundamental reasons for this function, the use of the '-m mask'
+ * option, and the P1 / P2 flow matching logic within argus.
+ *
+ */
+
 void
 ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns)
 {
@@ -6218,6 +6248,35 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
                            case ARGUS_TYPE_IPV4: 
                               switch (flow->ip_flow.ip_p) {
                                  case IPPROTO_ESP: {
+                                    break;
+                                 }
+                                 case IPPROTO_ICMP: {
+                                    if (ICMP_INFOTYPE(flow->icmp_flow.type)) {
+                                       switch (flow->icmp_flow.type) {
+                                          case ICMP_ECHO:
+                                          case ICMP_TSTAMP:
+                                          case ICMP_IREQ:
+                                          case ICMP_MASKREQ:
+                                             tflow.icmp_flow.type = flow->icmp_flow.type;
+                                             break;
+
+                                          case ICMP_ECHOREPLY:
+                                             tflow.icmp_flow.type = ICMP_ECHO;
+                                             break;
+                                          case ICMP_TSTAMPREPLY:
+                                             tflow.icmp_flow.type = ICMP_TSTAMP;
+                                             break;
+                                          case ICMP_IREQREPLY:
+                                             tflow.icmp_flow.type = ICMP_IREQ;
+                                             break;
+                                          case ICMP_MASKREPLY:
+                                             tflow.icmp_flow.type = ICMP_MASKREPLY;
+                                             break;
+					  default:
+                                             tflow.icmp_flow.type = flow->icmp_flow.type;
+                                             break;
+                                       }
+                                    }
                                     break;
                                  }
                                  default:

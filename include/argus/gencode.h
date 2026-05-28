@@ -300,8 +300,10 @@
 #define Q_UNREACHHOSTPRECEDENCE	174
 #define Q_UNREACHPRECUTOFF	175
 
-#define Q_LAT			176
-#define Q_LON			177
+#define Q_ICMPPAR		176
+
+#define Q_LAT			177
+#define Q_LON			178
 
 #define Q_DEFAULT	0
 #define Q_UNDEF		255

@@ -725,7 +725,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));
 
-
          if ((mode = parser->ArgusModeList) != NULL) {
             int i, x, ind;
 
@@ -1016,7 +1015,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
                         }
                   } else {
                      for (x = 0, i = 0; x < MAX_SORT_ALG_TYPES; x++) {
-                        if (!strncmp (ArgusSortKeyWords[x], mode->mode, strlen(ArgusSortKeyWords[x]))) {
+                        if (!strcmp (ArgusSortKeyWords[x], mode->mode)) {
                            ArgusSorter->ArgusSortAlgorithms[i++] = ArgusSortAlgorithmTable[x];
                            break;
                         }

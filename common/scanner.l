@@ -332,6 +332,7 @@ icmpmap      return ICMPMAP;
 echo         return ICMPECHO;
 redirect     return REDIRECT;
 timexed      return TIMEXED;
+par          return ICMPPAR;
 
 unreach      return UNREACH;
 unr          return UNREACH;

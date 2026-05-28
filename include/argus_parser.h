@@ -586,7 +586,7 @@ struct ArgusParserStruct {
    struct ArgusInput *ArgusCurrentInput;
 
    struct ArgusPrintFieldStruct *RaPrintAlgorithm;
-   struct ArgusPrintFieldStruct *RaPrintAlgorithmList[ARGUS_MAX_PRINT_ALG];
+   struct ArgusPrintFieldStruct *RaPrintAlgorithmList[ARGUS_MAX_PRINT_ALG + 1];
 
 #if defined(HAVE_DNS_SD_H)
    DNSServiceRef dnsSrvRef;

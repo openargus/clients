@@ -5158,6 +5158,8 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                         case ARGUS_TYPE_IPV4:
                            tflow->ip_flow.ip_dst = flow->ip_flow.ip_src;
                            tflow->ip_flow.ip_src = flow->ip_flow.ip_dst;
+                           tflow->ip_flow.smask = flow->ip_flow.dmask;
+                           tflow->ip_flow.dmask = flow->ip_flow.smask;
                            switch ((tflow->ip_flow.ip_p = flow->ip_flow.ip_p)) {
                               case IPPROTO_TCP:
                               case IPPROTO_UDP:
@@ -5172,6 +5174,8 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                               tflow->ipv6_flow.ip_src[x] = flow->ipv6_flow.ip_dst[x];
                               tflow->ipv6_flow.ip_dst[x] = flow->ipv6_flow.ip_src[x];
                            }
+                           tflow->ipv6_flow.smask = flow->ipv6_flow.dmask;
+                           tflow->ipv6_flow.dmask = flow->ipv6_flow.smask;
                            switch ((tflow->ipv6_flow.ip_p = flow->ipv6_flow.ip_p)) {
                               case IPPROTO_TCP:
                               case IPPROTO_UDP:

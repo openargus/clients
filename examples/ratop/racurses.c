@@ -66,6 +66,7 @@ int ArgusCursesProcessInitialized = 0;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
+extern int ArgusFailOnSOption;
 
 int
 main(int argc, char **argv)
@@ -74,6 +75,7 @@ main(int argc, char **argv)
    pthread_attr_t attr;
    int ArgusExitStatus;
 
+   ArgusFailOnSOption = 0;
    ArgusThreadsInit(&attr);
 
    if ((parser = ArgusNewParser(argv[0])) != NULL) {
@@ -1255,7 +1257,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
+                  if (!strcmp (ArgusSortKeyWords[x], tok)) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
@@ -2798,8 +2800,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                         if (ArgusSorter->ArgusSortAlgorithms[x]) {
                            for (y = 0; y < ARGUS_MAX_SORT_ALG; y++) {
                               if (ArgusSorter->ArgusSortAlgorithms[x] == ArgusSortAlgorithmTable[y]) {
-                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", 
-                                       ArgusSortKeyWords[y]);
+                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", ArgusSortKeyWords[y]);
                                  break;
                               }
                            }
@@ -4676,7 +4677,7 @@ argus_command_string(void)
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
+                  if (!strcmp (ArgusSortKeyWords[x], tok)) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
@@ -4880,6 +4881,7 @@ argus_command_string(void)
 #endif
                   fflush(wfile->fd);
                   fclose(wfile->fd);
+		  wfile->fd = NULL;
                   clearArgusWfile(ArgusParser);
                   ArgusParser->ArgusWfileList = wlist;
                }
@@ -5254,8 +5256,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
                 if (ArgusSorter->ArgusSortAlgorithms[x]) {
                    for (y = 0; y < ARGUS_MAX_SORT_ALG; y++) {
                       if (ArgusSorter->ArgusSortAlgorithms[x] == ArgusSortAlgorithmTable[y]) {
-                         sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", 
-                               ArgusSortKeyWords[y]);
+                         sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", ArgusSortKeyWords[y]);
                          break;
                       }
                    }

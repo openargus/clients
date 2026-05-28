@@ -143,6 +143,13 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          }
       }
 
+      if (ArgusParser->ArgusAggregator) {
+         if (ArgusParser->ArgusAggregator->correct != NULL) {
+            free (ArgusParser->ArgusAggregator->correct);
+            ArgusParser->ArgusAggregator->correct = NULL;
+         }
+      }
+
       parser->RaParseCompleting = 0;
       parser->RaInitialized++;
    }
