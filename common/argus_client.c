@@ -5970,6 +5970,11 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
          flow->hdr.argus_dsrvl8.len = len / 4;
       }
 
+      if (len > sizeof(tflow)) {
+         len = sizeof(tflow);
+         flow->hdr.argus_dsrvl8.len = len / 4;
+      }
+
       if (na->pres == NULL)
          bcopy ((char *)&flow->hdr, (char *)&tflow.hdr, sizeof(flow->hdr));
       else
