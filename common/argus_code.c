@@ -1928,8 +1928,8 @@ Argusgen_proto_abbrev(int proto)
       }
 
       case Q_ICMPPAR: {
-         struct ArgusIcmpStruct icmp;
-         int offset = ((char *)&icmp.icmp_type - (char *)&icmp);
+//       struct ArgusIcmpStruct icmp;
+//       int offset = ((char *)&icmp.icmp_type - (char *)&icmp);
       
          b1 = Argusgen_prototype(IPPROTO_ICMP, Q_DEFAULT);
 //       b0 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, (u_int)  0x0C, Q_EQUAL, Q_DEFAULT);
