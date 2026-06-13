@@ -718,6 +718,7 @@ struct ArgusSystemFlow {
 #define     lcp_flow flow_un.lcp
 #define    isis_flow flow_un.isis
 #define    wlan_flow flow_un.wlan
+#define   score_vals score_un.values
 
 
 struct ArgusFlowHashStruct {
@@ -866,7 +867,7 @@ struct ArgusKeyStrokeStruct {
 };
 
 struct ArgusScoreObject {
-   u_char values[8];
+   char values[8];
 };
  
 struct ArgusBehaviorStruct {
@@ -880,11 +881,11 @@ struct ArgusScoreStruct {
    struct ArgusDSRHeader hdr;
    union {
       struct ArgusScoreObject score;
-   } score_union;
+   } score_un;
 };
  
 #define keyStroke behavior_union.keyStroke
-#define behvScore score_union.score
+#define behvScore score_un.score
 
 struct ArgusJitterObject {
    struct ArgusStatObject act, idle;

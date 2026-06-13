@@ -219,6 +219,7 @@ static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_linktype(unsigned int);
 static struct ablock *Argusgen_flowtype(unsigned int);
+static struct ablock *Argusgen_score(int, int, u_int);
 
 #if !defined(CYGWIN)
 static u_int net_mask(u_int *);
@@ -4560,6 +4561,23 @@ Argusgen_nstroke(int v, int dir, u_int op)
 }
 
 
+static struct ablock *
+Argusgen_score(int v, int dir, u_int op)
+{
+   struct ablock *b0 = NULL;
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.score - (char *)&argus);
+         
+   b0 = Argusgen_cmp(-1, offset, NFF_W, (u_int)v, op, Q_DEFAULT);
+      
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_recordtype () returns %p\n", b0);
+#endif
+   
+   return (b0);
+}  
+
+
 /*
  * Left justify 'addr' and return its resulting network mask.
  */
@@ -5737,6 +5755,11 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
       case Q_LOC: {
          float f = v; 
          b = Argusgen_loc(f, dir, op);
+         break;
+      }
+
+      case Q_SCORE: {
+         b = Argusgen_score((int)v, dir, op);
          break;
       }
 

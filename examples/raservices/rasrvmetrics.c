@@ -510,8 +510,11 @@ ArgusHistoTallyMetric (int RaHistoConfigIndex, struct ArgusRecordStruct *ns,
       if ((i = iptr) > RaHistoConfig->RaHistoBins)
          i = RaHistoConfig->RaHistoBins + 1;
 
-      if (value < (end + bsize))
+      if ((value < (end + bsize)))
          i++;
+
+      if (value == end)
+         i = RaHistoConfig->RaHistoBins;
    }
 
    if (RaHistoRecords[i] != NULL) {

@@ -155,10 +155,11 @@ int RaPrintLabelTreeDebug = 0;
 #define RALABEL_PRINT_LOCALONLY			23
 #define RALABEL_BIND_NON_BLOCKING		24
 #define RALABEL_DNS_NAME_CACHE_TIMEOUT		25
-#define RALABEL_ARGUS_FLOW_SERVICE              26
-#define RALABEL_SERVICE_SIGNATURES              27
-#define RALABEL_SERVICE_STATS_SIGNATURES        28
+#define RA_ARGUS_FLOW_SERVICE              26
+#define RA_SERVICE_SIGNATURES              27
+#define RA_SERVICE_STATS_SIGNATURES        28
 #define RALABEL_FIREHOL_FILES			29
+
 
 char *RaLabelResourceFileStr [] = {
    "RALABEL_IANA_ADDRESS=",
@@ -187,9 +188,9 @@ char *RaLabelResourceFileStr [] = {
    "RALABEL_PRINT_LOCALONLY=",
    "RALABEL_BIND_NON_BLOCKING=",
    "RALABEL_DNS_NAME_CACHE_TIMEOUT=",
-   "RALABEL_ARGUS_FLOW_SERVICE=",
-   "RALABEL_SERVICE_SIGNATURES=",
-   "RALABEL_SERVICE_STATS_SIGNATURES=",
+   "RA_ARGUS_FLOW_SERVICE=",
+   "RA_SERVICE_SIGNATURES=",
+   "RA_SERVICE_STATS_SIGNATURES=",
    "RALABEL_FIREHOL_FILES=",
 };
 
@@ -279,7 +280,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
          found = 0;
          for (i = 0; i < RALABEL_RCITEMS; i++) {
             len = strlen(RaLabelResourceFileStr[i]);
-            if (!(strncmp (str, RaLabelResourceFileStr[i], len))) {
+            if (!(strncmp (RaLabelResourceFileStr[i], str, len))) {
 
                optarg = &str[len];
 
@@ -600,7 +601,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         break;
                      }
 #endif
-                     case RALABEL_ARGUS_FLOW_SERVICE: {
+                     case RA_ARGUS_FLOW_SERVICE: {
                         if (!(strncasecmp(optarg, "yes", 3))) {
                            labeler->RaLabelArgusFlowService = 1;
                         } else {
@@ -609,7 +610,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         break;
                      }
 
-                     case RALABEL_SERVICE_SIGNATURES: {
+                     case RA_SERVICE_SIGNATURES: {
                         if (parser->ArgusLabeler == NULL)
                            if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
                               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
@@ -618,7 +619,7 @@ RaLabelParseResourceStr (struct ArgusParserStruct *parser, struct ArgusLabelerSt
                         break;
                      }
 
-                     case RALABEL_SERVICE_STATS_SIGNATURES: {
+                     case RA_SERVICE_STATS_SIGNATURES: {
                         if (parser->ArgusLabeler == NULL)
                            if ((parser->ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
                               ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
@@ -4804,6 +4805,9 @@ RaCheckServiceStats(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          }
       }
    }
+#ifdef ARGUSDEBUG
+   ArgusDebug (3, "RaCheckServiceStats (%p, %p, %p) return %d", parser, argus, sig, retn);
+#endif
    return (retn);
 }
 
@@ -5336,9 +5340,6 @@ RaServiceLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argu
 
                if (process) {
                   int length = 0;
-#ifdef ARGUSDEBUG
-                  ArgusDebug (5, "RaProcessRecord (0x%x) validating service", argus);
-#endif
                   if (!(sig = RaValidateService (parser, argus))) {
                      struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
                      if ((metric != NULL) && (metric->dst.pkts)) {
@@ -5351,6 +5352,9 @@ RaServiceLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argu
                      length = strlen(sig->name) + 5;
                      length = ((length > 32) ? 32 : length);
                      snprintf ((char *)RaServiceLabelBuffer, length, "srv=%s", sig->name);
+#ifdef ARGUSDEBUG
+                     ArgusDebug (3, "RaServiceLabel (0x%x) service validated as %s", argus, RaServiceLabelBuffer);
+#endif
                      found++;
                   }
                }

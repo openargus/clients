@@ -1521,10 +1521,10 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                } else
                if ((tzptr = strstr (optarg, "baseline=")) != NULL) {
                   int type = ARGUS_DATA_SOURCE | ARGUS_BASELINE_SOURCE;
-                  optarg += 9;
+                  char *baseline = optarg + 9;
+                  if (!(strncmp ("mysql:", baseline, 6))) {
 #if defined(ARGUS_MYSQL)
-                  if (!(strncmp ("mysql:", optarg, 6))) {
-                     char *topt = optarg + 6;
+                     char *topt = baseline + 6;
                      char *dbstr = NULL;
                      if (parser->readDbstr != NULL)
                         free(parser->readDbstr);
@@ -1557,11 +1557,19 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
                            ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
                         parser->ArgusPerformCorrection = 0;
                      }
-                  }
+
+                     if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
+                        ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+
+                     parser->ArgusCompareBaseline = 1;
 #endif
-                  if (!(ArgusAddBaselineList (parser, optarg, type, -1, -1)))
-                     ArgusLog(LOG_ERR, "%s: error: file arg %s", *argv, optarg);
-                  stat(optarg, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
+                  } else {
+                     if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
+                        ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+                     stat(baseline, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
+
+                     parser->ArgusCompareBaseline = 1;
+                  }
 
                } else
                if ((tzptr = strstr (optarg, "gen=")) != NULL) {
@@ -9759,7 +9767,7 @@ ArgusPrintScore (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
          if (scr != NULL) {
             if (scr->hdr.subtype == ARGUS_BEHAVIOR_SCORE) {
                int value = scr->behvScore.values[0];
-               if (value > argus->score) {
+               if (value != argus->score) {
                   argus->score = value;
                }
             }
@@ -25601,7 +25609,7 @@ ArgusInitAddrtoname(struct ArgusParserStruct *parser)
    ArgusInitDSCodepointarray();
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusInitAddrtoname (%p)\n", parser);
+   ArgusDebug (6, "ArgusInitAddrtoname (%p)\n", parser);
 #endif
 }
 

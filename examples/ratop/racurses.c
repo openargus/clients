@@ -3507,8 +3507,8 @@ RaInitCurses ()
 
       RaColorAlgorithms[0] = ArgusColorAvailability;
       RaColorAlgorithms[1] = ArgusColorAddresses;
-      RaColorAlgorithms[2] = ArgusColorFlowFields;
-      RaColorAlgorithms[3] = ArgusColorGeoLocation;
+      RaColorAlgorithms[2] = ArgusColorGeoLocation;
+      RaColorAlgorithms[3] = ArgusColorFlowFields;
    }
 
 #endif
@@ -6293,7 +6293,7 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          }
 
          case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             if (flow) {
                int i, done;
@@ -6485,7 +6485,6 @@ ArgusColorFlowFields(struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               cols[offset + x].pair = pair;
                               cols[offset + x].attr = attr;
                            }
-                           done = 1;
                         }
                      } else
                         done = 1;
@@ -6570,8 +6569,10 @@ ArgusGetDisplayLineColor(struct ArgusParserStruct *parser, WINDOW *win, struct A
    }
 
    for (i = 0; i < ARGUS_MAX_COLOR_ALG; i++)
-      if (RaColorAlgorithms[i] != NULL)
+      if (RaColorAlgorithms[i] != NULL) {
          RaColorAlgorithms[i](parser, ns, cols, pair, attr);
+      } else
+         break;
 
    return (retn);
 }

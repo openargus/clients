@@ -223,6 +223,8 @@ pcratio  return PCR;
 abr      return ABR;
 abratio  return ABR;
 
+score    return SCORE;
+
 nstroke  return NSTROKE;
 nstrokes return NSTROKE;
 

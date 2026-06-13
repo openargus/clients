@@ -226,7 +226,7 @@ ArgusProcessData (void *arg)
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
             while (file && parser->eNflag) {
-               if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+               if ((input = ArgusCalloc(1, sizeof(*input))) == NULL)
                   ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
                ArgusInputFromFile(input, file);

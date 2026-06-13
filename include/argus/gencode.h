@@ -67,6 +67,7 @@
 #define Q_INTRANET	186
 #define Q_INTERNET	187
 
+#define Q_SCORE		197
 #define Q_PROTO		6
 #define Q_IPID		7
 #define Q_TTL		8

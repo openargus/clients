@@ -110,7 +110,7 @@ static struct qual qerr = { Q_UNDEF, Q_UNDEF, Q_UNDEF};
 %type	<blk>	and or paren not nuf prog
 %type	<rblk>	other
 
-%token  START STOP STATUS SHUTDOWN ERROR
+%token  START STOP STATUS SHUTDOWN ERROR SCORE
 %token  MAN FAR EVENT INDEX BASELINE MATCH
 %token  REMOTE LOCAL INTERNET INTRANET LOC
 %token  DST SRC HOST CLASS INODE GATEWAY IPID TTL TOS DSB
@@ -336,6 +336,7 @@ iqual:    PORT			{ $$ = Q_PORT; }
 	| NSTROKE		{ $$ = Q_NSTROKE; }
 	| SEQ			{ $$ = Q_SEQ; }
 	| MASKLEN		{ $$ = Q_MASKLEN; }
+	| SCORE			{ $$ = Q_SCORE; }
 	;
 
 /* identifier types */
