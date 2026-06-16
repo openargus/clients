@@ -90,6 +90,8 @@ void RaSQLQueryProbes (void);
 void RaSQLQuerySecondsTable (unsigned int, unsigned int);
 void RaSQLQueryDatabaseTable (char *, unsigned int, unsigned int);
 
+unsigned char *ArgusConvertRecord (struct ArgusInput *, char *);
+
 int RaInitialized = 0;
 int ArgusAutoId = 0;
 int ArgusDropTable = 0;
@@ -3229,7 +3231,7 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
    struct RaSrvStatsSignature *srv = NULL;
    struct RaSrvSignature *sig = NULL;
    struct ArgusRecordStruct *cns = NULL;
-   int retn = 0, pass = 0, found = 0, score = 0;
+   int retn = 0, pass = 0, score = 0;
 
    sig = RaValidateService (parser, argus);
    srv = RaCheckServiceStats (parser, argus, sig);
@@ -3443,7 +3445,6 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
             float tdur = RaGetFloatDuration (tns);
 
             process->ns = tns;
-            found++;
 
             RaGetStartTime(cns,  nstvp);
             RaGetStartTime(tns, tstvp);
