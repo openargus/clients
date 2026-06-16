@@ -3574,7 +3574,6 @@ RaScheduleRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns
    double stime, itime, ftime;
    long long thisUsec = 0;
    long long lastUsec = 0;
-   int startRecord = 0;
    int retn = 0;
 
    switch (ns->hdr.type & 0xF0) {
@@ -3585,30 +3584,28 @@ RaScheduleRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns
                ftime = modf(stime, &itime);
                parser->ArgusThisTime.tv_sec  = itime;
                parser->ArgusThisTime.tv_usec = ftime * 1000000;
-
+/*
                if (parser->ArgusLastTime.tv_sec == 0) {
                   parser->ArgusLastTime    = parser->ArgusThisTime;
                   parser->ArgusCurrentTime = parser->ArgusThisTime;
                }
+*/
             }
-            startRecord = 1;
          }
-         // fall through
+         break;
 
       case ARGUS_NETFLOW:
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          struct timeval dRealTime = {0, 0};
 
-         if (!startRecord) {
-            if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
-               ftime = modf(stime, &itime);
-               parser->ArgusThisTime.tv_sec  = itime;
-               parser->ArgusThisTime.tv_usec = ftime * 1000000;
-            }
+         if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
+            ftime = modf(stime, &itime);
+            parser->ArgusThisTime.tv_sec  = itime;
+            parser->ArgusThisTime.tv_usec = ftime * 1000000;
          }
 
-         if (parser->ArgusLastTime.tv_sec == 0) {
+         if ((parser->ArgusLastTime.tv_sec > parser->ArgusThisTime.tv_sec) || (parser->ArgusLastTime.tv_sec == 0)) {
             parser->ArgusLastTime    = parser->ArgusThisTime;
             parser->ArgusCurrentTime = parser->ArgusThisTime;
          }
@@ -3629,7 +3626,7 @@ RaScheduleRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns
                timeoutValue.tv_usec -= 1000000;
             }
 
-            if (!(parser->Sflag) && (parser->ProcessRealTime != 0)) {
+            if (parser->ProcessRealTime != 0) {
                if ((parser->ArgusThisTime.tv_sec  > parser->ArgusLastTime.tv_sec) ||
                   ((parser->ArgusThisTime.tv_sec == parser->ArgusLastTime.tv_sec) &&
                    (parser->ArgusThisTime.tv_usec > parser->ArgusLastTime.tv_usec))) {

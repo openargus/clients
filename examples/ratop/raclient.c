@@ -61,6 +61,7 @@ int RaCursesDeleteProcess (struct ArgusParserStruct *, struct RaCursesProcessStr
 #include "argus_mysql.h"
 #include <mysqld_error.h>
 
+unsigned char *ArgusConvertRecord (struct ArgusInput *, char *);
 struct RaBinProcessStruct *RaBinProcess = NULL;
 char **RaBaselines = NULL;
 char **RaTables = NULL;
@@ -410,7 +411,7 @@ ArgusProcessData (void *arg)
          /* Process the input files first */
 
          if ((!(parser->status & ARGUS_FILE_LIST_PROCESSED)) && ((file = parser->ArgusInputFileList) != NULL)) {
-            while (file && parser->eNflag) {
+            while ((file && parser->eNflag) && (!ArgusCloseDown && !done)) {
                if (input == NULL) 
                   if ((input = ArgusMalloc(sizeof(*input))) == NULL)
                      ArgusLog(LOG_ERR, "unable to allocate input structure\n");
@@ -3495,7 +3496,7 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
       struct ArgusListObjectStruct *lobj;
       struct RaSrvStatsMetrics *stats = NULL;
       int i, count = metrics->count;
-      int done = 0, scored = 0;
+      int scored = 0;
 
       for (i = 0; i < count; i++) {
          char tmpbuf[256], supbuf[256];
@@ -5166,7 +5167,6 @@ void
 ArgusReadBaselineFile (char *file, struct RaOutputProcessStruct *process)
 {
    struct timeval now;
-   int retn, x;
 
    if ((ArgusInput = (struct ArgusInput *) ArgusCalloc (1, sizeof(struct ArgusInput))) == NULL)
       ArgusLog(LOG_ERR, "ArgusCalloc error %s", strerror(errno));

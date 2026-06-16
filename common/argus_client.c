@@ -632,7 +632,7 @@ ArgusConnectRemotes (void *arg)
 #if defined(ARGUS_THREADS)
    struct ArgusQueueStruct *queue = arg;
    struct ArgusInput *addr = NULL;
-   struct timespec tsbuf = {0, 250000000};
+   struct timespec tsbuf = {0, 25000000};
    struct timespec *ts = &tsbuf;
    int status, retn, done = 0;
    pthread_attr_t attr;
@@ -782,7 +782,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    struct timeval rtime;
 
 #if defined(ARGUS_THREADS)
-   struct timespec tsbuf = {0, 50000000};
+   struct timespec tsbuf = {0, 25000000};
    struct timespec *ts = &tsbuf;
 #endif
 
