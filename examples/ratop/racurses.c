@@ -2748,7 +2748,6 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                            case ARGUS_V2_DATA_SOURCE:
                            case ARGUS_NAMED_PIPE_SOURCE:
                            case ARGUS_DOMAIN_SOURCE:
-                           case ARGUS_BASELINE_SOURCE:
                            case ARGUS_DATAGRAM_SOURCE:
                               break;
                            case ARGUS_SFLOW_DATA_SOURCE:
@@ -5200,7 +5199,6 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
                   case ARGUS_V2_DATA_SOURCE:
                   case ARGUS_NAMED_PIPE_SOURCE:
                   case ARGUS_DOMAIN_SOURCE:
-                  case ARGUS_BASELINE_SOURCE:
                   case ARGUS_DATAGRAM_SOURCE:
                      break;
                   case ARGUS_SFLOW_DATA_SOURCE:
@@ -6175,7 +6173,6 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
                      case ARGUS_V2_DATA_SOURCE:
                      case ARGUS_NAMED_PIPE_SOURCE:
                      case ARGUS_DOMAIN_SOURCE:
-                     case ARGUS_BASELINE_SOURCE:
                      case ARGUS_DATAGRAM_SOURCE:
                         break;
                      case ARGUS_SFLOW_DATA_SOURCE:

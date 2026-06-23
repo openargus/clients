@@ -31,12 +31,12 @@ it is evolving to becoming a flow browser, opening files, remote sockets,
 searching and editing flow data.
 
 Ratop() is moving in the direction of becoming vi.1 for argus flow data. 
-While vi.1 is not the program of choice for all people, ratop() is just an
+While vi.1 is not the program of choice for all people, rabehave() is just an
 example program, so don't be too harse about the decision to look like vi.
 
 Ratop() is a curses program that uses readline() to provide input string
 editing and formating. Without a modern ncurses and readline library,
-ratop() doesn't do as good of a job as it can.
+rabehave() doesn't do as good of a job as it can.
 
 
 Mac OS X

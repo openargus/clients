@@ -22,9 +22,9 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#40 $
- * $DateTime: 2016/12/02 00:09:45 $
- * $Change: 3254 $
+ * $Id: //depot/gargoyle/clients/examples/rabehave/raclient.c#40 $
+ * $DateTime: 2026/06/23 17:05:12 $
+ * $Change: 3723 $
  */
 
 

@@ -607,6 +607,7 @@ AS_IF([test "$with_pythonlib" != no],
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
       ./examples/Makefile
+      ./examples/rabehave/Makefile
       ./examples/raconvert/Makefile
       ./examples/radbase/Makefile
       ./examples/radecode/Makefile

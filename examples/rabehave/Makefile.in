@@ -87,11 +87,11 @@ LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/arg
 
 SRC = racurses.c raclient.c rasql_common.c
 
-PROGS = $(INSTALLBIN)/ratop
+PROGS = $(INSTALLBIN)/rabehave
 
 all: $(PROGS)
 
-$(INSTALLBIN)/ratop: $(OBJ) $(LIB)
+$(INSTALLBIN)/rabehave: $(OBJ) $(LIB)
 	$(CC) $(CFLAGS) -o $@ $(OBJ) @V_PCRE@ $(LDFLAGS) $(LIB) $(COMPATLIB) $(CURSESLIB) $(MYSQLLIB)
 
 CLEANFILES = $(OBJ) $(PROGS)
@@ -99,10 +99,10 @@ CLEANFILES = $(OBJ) $(PROGS)
 install: force all
 	[ -d $(DESTDIR)$(BINDIR) ] || \
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
-	$(INSTALL) $(INSTALLBIN)/ratop $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rabehave $(DESTDIR)$(BINDIR)
 
 uninstall: force all
-	rm -f $(DESTDIR)$(BINDIR)/ratop
+	rm -f $(DESTDIR)$(BINDIR)/rabehave
 
 clean:
 	rm -f $(CLEANFILES)

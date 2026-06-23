@@ -22,7 +22,7 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.h#11 $
+ * $Id: //depot/gargoyle/clients/examples/rabehave/racurses.h#11 $
  * $DateTime: 2016/11/09 23:17:55 $
  * $Change: 3242 $
  */

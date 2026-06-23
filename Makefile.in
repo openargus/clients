@@ -53,7 +53,7 @@ SHELL = /bin/sh
 
 DIRS = @DIRS@
 INSTDIRS = @DIRS@ ./include
-OSXPACKAGE_INSTDIRS = ./clients ./examples/ratop ./examples/ratrace
+OSXPACKAGE_INSTDIRS = ./clients ./examples/rabehave ./examples/ratop ./examples/ratrace
 CLEANDIRS = @DIRS@ ./pkg
 
 
@@ -98,6 +98,8 @@ install: install-perl force installdirs
 		(mkdir -p $(DESTDIR)@mandir@/man1; chmod 755 $(DESTDIR)@mandir@/man1)
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/ra.1 \
 		$(DESTDIR)@mandir@/man1/ra.1
+	$(INSTALL) -m 0644 $(srcdir)/man/man1/rabehave.1 \
+		$(DESTDIR)@mandir@/man1/rabehave.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/rabins.1 \
 		$(DESTDIR)@mandir@/man1/rabins.1
 	$(INSTALL) -m 0644 $(srcdir)/man/man1/racluster.1 \
@@ -192,6 +194,7 @@ uninstall: uninstall-perl
 	done
 	rm -f $(DESTDIR)@bindir@/argusclientbug
 	rm -f $(DESTDIR)@mandir@/man1/ra.1
+	rm -f $(DESTDIR)@mandir@/man1/rabehave.1
 	rm -f $(DESTDIR)@mandir@/man1/rabins.1
 	rm -f $(DESTDIR)@mandir@/man1/racluster.1
 	rm -f $(DESTDIR)@mandir@/man1/raconvert.1

@@ -17,10 +17,14 @@
  * THIS SOFTWARE.
  *
  *  
- *  racurses - curses / readline based terminal based GUI
+ *  rabehave - curses / readline based terminal based GUI for visualizing
+ *             behavioral anomalies.
  *  
  *  Author: Carter Bullard carter@qosient.com
  */
+
+Tue Jun 23 05:04:11 PM EDT 2026
+Copy ratop and add behavioral comparisons and colors here ...
 
 Wed Dec  5 10:14:57 EST 2012
 Final tweaks for pcre library.  On Mac OS X, searching was broken,

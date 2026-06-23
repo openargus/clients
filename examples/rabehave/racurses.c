@@ -23,7 +23,7 @@
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/racurses.c#21 $
+ * $Id: //depot/gargoyle/clients/examples/rabehave/racurses.c#21 $
  * $DateTime: 2016/11/30 12:38:04 $
  * $Change: 3249 $
  */
@@ -5434,32 +5434,32 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
 
 #if defined(ARGUS_HISTORY)
 
-char ratop_historybuf[MAXSTRLEN];
-char *ratop_history = NULL;
+char rabehave_historybuf[MAXSTRLEN];
+char *rabehave_history = NULL;
 
 int argus_history_enabled = 1;
 
 void
 argus_recall_history(void)
 {
-   if (ratop_history != NULL)
-      read_history(ratop_history);
+   if (rabehave_history != NULL)
+      read_history(rabehave_history);
 }
 
 void
 argus_save_history(void)
 {
-   if (ratop_history == NULL) {
+   if (rabehave_history == NULL) {
       char *home;
 
       if ((home = getenv("HOME")) != NULL) {
-         sprintf (ratop_historybuf, "%s/.ratop_history", home);
-         ratop_history = ratop_historybuf;
+         sprintf (rabehave_historybuf, "%s/.rabehave_history", home);
+         rabehave_history = rabehave_historybuf;
       }
    }
 
-   if (ratop_history != NULL)
-      write_history(ratop_history);
+   if (rabehave_history != NULL)
+      write_history(rabehave_history);
 }
 
 void

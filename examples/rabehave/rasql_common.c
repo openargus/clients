@@ -16,13 +16,13 @@
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
  * THIS SOFTWARE.
  *
- *  raclient.c - this routine handles the argus data processing.
+ *  rasql_common.c - this routine provides mysql table processing.
  *
  *  Author: Carter Bullard carter@qosient.com
  */
 
 /*
- * $Id: //depot/gargoyle/clients/examples/ratop/raclient.c#40 $
+ * $Id: //depot/gargoyle/clients/examples/rabehave/raclient.c#40 $
  * $DateTime: 2016/12/02 00:09:45 $
  * $Change: 3254 $
  */
