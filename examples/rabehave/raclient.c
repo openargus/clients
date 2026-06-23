@@ -1046,14 +1046,19 @@ ArgusClientInit (struct ArgusParserStruct *parser)
             }
          }
 
-         if (parser->ArgusFlowModelFile)
-            parser->ArgusAggregator = ArgusParseAggregator(parser, parser->ArgusFlowModelFile, NULL);
-         else {
-            if (parser->ArgusMaskList != NULL)
-               parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
-            else
-               parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
-         }
+         if ((ArgusLabeler = ArgusNewLabeler(parser, 0L)) == NULL)
+            ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewLabeler error");
+         parser->ArgusLabeler = ArgusLabeler;
+
+         if (parser->ArgusFlowModelFile) {
+            RaLabelParseResourceFile (parser, parser->ArgusLabeler, parser->ArgusFlowModelFile);
+            parser->ArgusFlowModelFile = NULL;
+         } 
+
+         if (parser->ArgusMaskList != NULL)
+            parser->ArgusAggregator = ArgusNewAggregator(parser, NULL, ARGUS_RECORD_AGGREGATOR);
+         else
+            parser->ArgusAggregator = ArgusNewAggregator(parser, "sid saddr daddr proto sport dport", ARGUS_RECORD_AGGREGATOR);
 
          if (parser->ArgusAggregator != NULL) {
             if (correct >= 0) {

@@ -17506,8 +17506,8 @@ ArgusSortDstAppByteCount (struct ArgusRecordStruct *n1, struct ArgusRecordStruct
 int
 ArgusSortSrvSignatures (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
 {
-   struct RaSrvSignature *data1 = *(struct RaSrvSignature **)argus1;
-   struct RaSrvSignature *data2 = *(struct RaSrvSignature **)argus2;
+   struct RaSrvSignature *data1 = (struct RaSrvSignature *)argus1;
+   struct RaSrvSignature *data2 = (struct RaSrvSignature *)argus2;
    int cnt1 = data1->count;
    int cnt2 = data2->count;
    int retn = 0;
