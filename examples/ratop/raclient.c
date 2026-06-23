@@ -3231,7 +3231,7 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
    struct RaSrvStatsSignature *srv = NULL;
    struct RaSrvSignature *sig = NULL;
    struct ArgusRecordStruct *cns = NULL;
-   int retn = 0, pass = 0, score = 0;
+   int retn = 0, pass = 0, score = 0, found = 0;
 
    sig = RaValidateService (parser, argus);
    srv = RaCheckServiceStats (parser, argus, sig);
@@ -3444,6 +3444,7 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
             struct timeval nstvbuf, tstvbuf, *nstvp = &nstvbuf, *tstvp = &tstvbuf;
             float tdur = RaGetFloatDuration (tns);
 
+            found++;
             process->ns = tns;
 
             RaGetStartTime(cns,  nstvp);
@@ -3487,10 +3488,12 @@ ArgusCompareBaseline (struct ArgusParserStruct *parser, struct ArgusRecordStruct
                ArgusAddToQueue (process->queue, &tns->qhdr, ARGUS_LOCK);
                process->status |= ARGUS_AGGREGATOR_DIRTY;
             }
-            cns->score = ARGUS_BASELINE_MISSING;
          }
       }
    }
+
+   if (!found)
+      cns->score = ARGUS_BASELINE_MISSING;
 
    if (srv != NULL) {
       struct ArgusListStruct *metrics = srv->metrics;
