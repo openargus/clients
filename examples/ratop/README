@@ -1,0 +1,53 @@
+/*
+ * Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+ * Copyright (c) 2000-2024 QoSient, LLC
+ * All rights reserved.
+ *
+ * THE ACCOMPANYING PROGRAM IS PROPRIETARY SOFTWARE OF QoSIENT, LLC,
+ * AND CANNOT BE USED, DISTRIBUTED, COPIED OR MODIFIED WITHOUT
+ * EXPRESS PERMISSION OF QoSIENT, LLC.
+ *
+ * QOSIENT, LLC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+ * SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS, IN NO EVENT SHALL QOSIENT, LLC BE LIABLE FOR ANY
+ * SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER
+ * IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+ * THIS SOFTWARE.
+ *
+ */
+
+
+Argus-5.0 Clients Ratop Readme
+QoSient, LLC
+argus@qosient.com
+http:/qosient.com
+
+
+Ratop() is a complex program that is trying to be the program of choice
+for browsing argus data.  While it started as a 'top' program for flows,
+it is evolving to becoming a flow browser, opening files, remote sockets,
+searching and editing flow data.
+
+Ratop() is moving in the direction of becoming vi.1 for argus flow data. 
+While vi.1 is not the program of choice for all people, ratop() is just an
+example program, so don't be too harse about the decision to look like vi.
+
+Ratop() is a curses program that uses readline() to provide input string
+editing and formating. Without a modern ncurses and readline library,
+ratop() doesn't do as good of a job as it can.
+
+
+Mac OS X
+Snow Leopard is an excellent OS, but ...., the distribution doesn't provide
+a completely functional readine library.
+
+Use the MacPorts implementation of readline, and things work fine on Snow Leopard.
+After installing the MacPorts distribution, as root, I run this command:
+
+   # port install readline
+
+The argus-clients distribution configure script knows how to find libraries
+that have been installed in /opt/local whatever.
+
