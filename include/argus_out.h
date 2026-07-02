@@ -1002,6 +1002,7 @@ struct ArgusNetspatialStruct {
    struct ArgusDSRHeader hdr;
    unsigned short status;
    signed char sloc, dloc; 
+   unsigned short sorg, dorg; 
 };
 
 struct ArgusLabelStruct {

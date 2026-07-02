@@ -1314,7 +1314,7 @@ Argusgen_hostop(unsigned int *addr, unsigned int *mask, int type, int dir, unsig
    switch (dir) {
       case Q_LOCAL: {
          struct ArgusNetspatialStruct local;
-         offset = ((char *)&local.status - (char *)&local);;
+         offset = ((char *)&local.status - (char *)&local);
          b0 = Argusgen_mcmp(ARGUS_LOCAL_INDEX, offset, NFF_H, ARGUS_SRC_LOCAL, ARGUS_LOCAL_MASK, Q_EQUAL, Q_DEFAULT);
  
          b1 = Argusgen_hostop(addr, mask, type, Q_SRC, proto);

@@ -128,6 +128,7 @@ match    return MATCH;
 dst      return DST;
 src      return SRC;
 
+rem      return REMOTE;
 rmt      return REMOTE;
 lcl      return LOCAL;
 
