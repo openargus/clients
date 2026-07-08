@@ -10247,6 +10247,8 @@ ArgusPrintSrcOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
    char *oui = NULL;
 
+   ArgusInitEtherarray();
+
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
          default:
