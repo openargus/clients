@@ -8636,6 +8636,14 @@ ArgusPrintStdDeviation (struct ArgusParserStruct *parser, char *buf, struct Argu
 {
    struct ArgusAgrStruct *agr = NULL;
    char stddev[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
  
    bzero (stddev, 32);
 
@@ -8683,6 +8691,14 @@ ArgusPrintIdleStdDeviation (struct ArgusParserStruct *parser, char *buf, struct 
 {
    struct ArgusAgrStruct *agr = NULL;
    char stddev[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
 
    bzero (stddev, 32);
 
@@ -8730,6 +8746,14 @@ void
 ArgusPrintIdleTime (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char idle[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
 
    bzero (idle, 32);
 
@@ -8774,6 +8798,14 @@ ArgusPrintStartRange (struct ArgusParserStruct *parser, char *buf, struct ArgusR
 {
    char ebuf[32];
    bzero (ebuf, sizeof(ebuf));
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
@@ -8809,6 +8841,14 @@ ArgusPrintEndRange (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 {
    char ebuf[32];
    bzero (ebuf, sizeof(ebuf));
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
@@ -8843,6 +8883,14 @@ ArgusPrintDuration (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 {
    float fdur = RaGetFloatDuration (argus);
    char durbuf[128];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
 
    bzero(durbuf, sizeof(durbuf));
    sprintf (durbuf, "%0.*f", parser->pflag, fdur);
@@ -8871,6 +8919,14 @@ ArgusPrintSrcDuration (struct ArgusParserStruct *parser, char *buf, struct Argus
 {
    float fdur = RaGetFloatSrcDuration (argus);
    char dur[128];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
 
    bzero(dur, sizeof(dur));
    sprintf (dur, "%0.*f", parser->pflag, fdur);
@@ -8899,6 +8955,14 @@ ArgusPrintDstDuration (struct ArgusParserStruct *parser, char *buf, struct Argus
 {
    float fdur = RaGetFloatDstDuration (argus);
    char dur[128];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
 
    bzero(dur, sizeof(dur));
    sprintf (dur, "%0.*f", parser->pflag, fdur);
@@ -8930,6 +8994,14 @@ ArgusGetIndicatorString (struct ArgusParserStruct *parser, struct ArgusRecordStr
 {
    int type = 0;
    bzero (buf, 16);
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    bcopy ("          ", buf, 9);
 
@@ -9311,6 +9383,14 @@ void
 ArgusPrintSourceID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char strbuf[64], *value = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -9425,6 +9505,14 @@ void
 ArgusPrintSID (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char strbuf[64], *value = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -9518,6 +9606,14 @@ void
 ArgusPrintNode (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char strbuf[64], *value = NULL, *alias;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -9617,6 +9713,14 @@ void
 ArgusPrintInf (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char *value = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -9684,6 +9788,14 @@ void
 ArgusPrintStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char status[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(status, sizeof(status));
    switch (argus->hdr.type & 0xF0) {
@@ -9802,6 +9914,14 @@ void
 ArgusPrintRank (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus , int len)
 {
    char rank[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (rank, sizeof(rank));
    sprintf (rank, "%d", argus->rank);
@@ -9825,6 +9945,14 @@ void
 ArgusPrintBinNumber (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus , int len)
 {
    char binbuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (binbuf, sizeof(binbuf));
 
@@ -9847,6 +9975,14 @@ void
 ArgusPrintBins (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char binbuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (binbuf, sizeof(binbuf));
 
@@ -9969,6 +10105,14 @@ void
 ArgusPrintSequenceNumber (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char value[128];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%u";
+   }
 
    bzero(value, sizeof(value));
 
@@ -10164,6 +10308,14 @@ ArgusPrintSrcMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct 
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
    char *macstr = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
@@ -10205,6 +10357,14 @@ ArgusPrintDstMacOuiAddress (struct ArgusParserStruct *parser, char *buf, struct 
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
    char *macstr = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
@@ -10246,6 +10406,14 @@ ArgusPrintSrcOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
    char *oui = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    ArgusInitEtherarray();
 
@@ -10290,6 +10458,14 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {
    struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
    char *oui = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    if (mac != NULL) {
       switch (mac->hdr.subtype & 0x3F) {
@@ -10330,9 +10506,12 @@ ArgusPrintDstOui (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 void
 ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   char *format = NULL;
    char classbuf[32];
    int macclass = -1;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((format == NULL) || (strlen(format) == 0)) {
       format = "%s";
@@ -10409,9 +10588,12 @@ ArgusPrintSrcMacClass (struct ArgusParserStruct *parser, char *buf, struct Argus
 void
 ArgusPrintDstMacClass (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   char *format = NULL;
    char classbuf[32];
    int macclass = -1;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((format == NULL) || (strlen(format) == 0)) {
       format = "%s";
@@ -10619,6 +10801,14 @@ ArgusPrintProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
    char protoStrBuf[16], *protoStr = NULL;
    u_short eproto;
    u_char proto; 
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
  
    bzero (protoStrBuf, sizeof(protoStrBuf));
    protoStr = protoStrBuf;
@@ -10802,6 +10992,14 @@ ArgusPrintSrcNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    void *addr = NULL;
    int objlen = 0, type = 0;
    char masklen = 32;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -10921,6 +11119,14 @@ ArgusPrintSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
    void *addr = NULL;
    int objlen = 0, type = 0;
    unsigned char masklen = 0;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -11157,6 +11363,14 @@ ArgusPrintLocalAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
 void
 ArgusPrintLocalNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
    sprintf (buf, "%*.*s ", len, len, " ");
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintLocalNet (%p, %p)", buf, argus);
@@ -11171,6 +11385,15 @@ ArgusPrintDstNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
    void *addr = NULL;
    int objlen = 0, type = 0;
    char masklen = 0;
+
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
@@ -11277,6 +11500,14 @@ ArgusPrintDstNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 void
 ArgusPrintGreSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_NETFLOW:
@@ -11411,6 +11642,14 @@ ArgusPrintGreSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusR
 void
 ArgusPrintGreDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_NETFLOW:
@@ -11533,6 +11772,14 @@ ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 {
    char protoStrBuf[16], *protoStr = NULL;
    u_char proto; 
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
  
    bzero (protoStrBuf, sizeof(protoStrBuf));
    protoStr = protoStrBuf;
@@ -11588,6 +11835,15 @@ ArgusPrintGreProto (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 void
 ArgusPrintGeneveSrcAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
+
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_NETFLOW:
@@ -11722,6 +11978,15 @@ ArgusPrintGeneveSrcAddr (struct ArgusParserStruct *parser, char *buf, struct Arg
 void
 ArgusPrintGeneveDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
+
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
       case ARGUS_NETFLOW:
@@ -11844,6 +12109,14 @@ ArgusPrintGeneveProto (struct ArgusParserStruct *parser, char *buf, struct Argus
 {
    char protoStrBuf[16], *protoStr = NULL;
    u_char proto; 
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
  
    bzero (protoStrBuf, sizeof(protoStrBuf));
    protoStr = protoStrBuf;
@@ -11894,6 +12167,7 @@ ArgusPrintGeneveProto (struct ArgusParserStruct *parser, char *buf, struct Argus
    ArgusDebug (10, "ArgusPrintGeneveProto (%p, %p)", buf, argus);
 #endif
 }
+
 void
 ArgusPrintDstAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
@@ -12040,6 +12314,14 @@ void
 ArgusPrintDstName (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    int nflag =  parser->nflag;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    parser->nflag = 0;
    ArgusPrintDstAddr (parser, buf, argus, len);
@@ -12054,6 +12336,14 @@ void
 ArgusPrintRemoteAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    if ((local == NULL) || (local->sloc >= local->dloc))
       ArgusPrintDstAddr (parser, buf, argus, len);
@@ -12068,6 +12358,15 @@ ArgusPrintRemoteAddr (struct ArgusParserStruct *parser, char *buf, struct ArgusR
 void
 ArgusPrintRemoteNet (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
+
    sprintf (buf, "%*.*s ", len, len, " ");
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintRemoteNet (%p, %p)", buf, argus);
@@ -12108,6 +12407,14 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
 {
    char addrbuf[256], abuf[128], *addrstr = NULL;
    char *dirstr, *dptr = NULL;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
 
    switch (dir) {
       case ARGUS_SRC:   dirstr = "Src"; break;
@@ -12249,6 +12556,14 @@ ArgusPrintAddr (struct ArgusParserStruct *parser, char *buf, int type, void *add
 void
 ArgusPrintSrcPort (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
@@ -12373,6 +12688,14 @@ ArgusPrintSrcPort (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 void
 ArgusPrintDstPort (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
          struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
@@ -12682,6 +13005,15 @@ ArgusPrintPort (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordS
 void
 ArgusPrintEspSpi (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int type, u_int spi, int len)
 {
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
+
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
          break;
@@ -12743,6 +13075,14 @@ ArgusPrintSrcIpId (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 {                          
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char ipidbuf[8];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (ipidbuf, sizeof(ipidbuf));
 
@@ -12775,6 +13115,14 @@ ArgusPrintDstIpId (struct ArgusParserStruct *parser, char *buf, struct ArgusReco
 {
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char ipidbuf[8];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (ipidbuf, sizeof(ipidbuf));
 
@@ -12811,6 +13159,14 @@ ArgusPrintSrcDSByte (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
    int tos;
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
    switch (argus->hdr.type & 0xF0) {
@@ -12858,6 +13214,14 @@ ArgusPrintDstDSByte (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
    int tos;
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero (obuf, sizeof(obuf));
    switch (argus->hdr.type & 0xF0) {
@@ -12904,6 +13268,14 @@ ArgusPrintSrcTos (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {                          
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -12944,6 +13316,14 @@ ArgusPrintDstTos (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32]; 
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -12998,6 +13378,14 @@ ArgusPrintSrcTtl (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -13038,6 +13426,14 @@ ArgusPrintDstTtl (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
 {
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -13080,6 +13476,14 @@ ArgusPrintSrcHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
    int esthops = 1;
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -13128,6 +13532,14 @@ ArgusPrintDstHopCount (struct ArgusParserStruct *parser, char *buf, struct Argus
    int esthops = 1;
    struct ArgusIPAttrStruct *attr = (struct ArgusIPAttrStruct *)argus->dsrs[ARGUS_IPATTR_INDEX];
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
  
    bzero(obuf, sizeof(obuf));
 
@@ -13176,6 +13588,14 @@ ArgusPrintInode (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 {
    unsigned char masklen = 0, obuf[32];
    int objlen = 0;
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
  
    bzero(obuf, sizeof(obuf));
 
@@ -13243,6 +13663,14 @@ void
 ArgusPrintKeyStrokeNStroke (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
  
    bzero(obuf, sizeof(obuf));
 
@@ -13288,6 +13716,14 @@ void
 ArgusPrintKeyStrokeSrcNStroke (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -13334,6 +13770,14 @@ void
 ArgusPrintKeyStrokeDstNStroke (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
    char obuf[32];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+         
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%d";
+   }
 
    bzero(obuf, sizeof(obuf));
 
@@ -13380,6 +13824,15 @@ ArgusPrintKeyStrokeDstNStroke (struct ArgusParserStruct *parser, char *buf, stru
 void
 ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
+   char *format = NULL;
+            
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+            
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%s";
+   }
+
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR:
          if (parser->ArgusPrintXml) {
