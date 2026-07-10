@@ -544,7 +544,7 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
 {
    char valbuf[32], *val = valbuf;
    char *value = NULL, *buf = NULL;
-   int retn = 1, i;
+   int retn = 1, i, converted = 0;
 
    switch (item->type) {
       case ARGUS_JSON_BOOL:
@@ -578,20 +578,24 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
    }
 
    for (i = 0; i < MAX_PRINT_ALG_TYPES; i++) {
-      int len = strlen(RaParseAlgorithmTable[i].field);
-      if (!(strncmp(RaParseAlgorithmTable[i].field, key, len))) {
-         if (RaParseAlgorithmTable[i].parse == ArgusParseLabel) {
-            if ((value = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
-               snprintf (value, ARGUSMAXSTR, "%s=%s", key, val);
-               val = value;
+      if (RaConversionMapTable[i].field != NULL) {
+         int len = strlen(RaConversionMapTable[i].field);
+
+         if (!(strncmp(RaConversionMapTable[i].field, key, len))) {
+            if (RaConversionMapTable[i].func == ArgusParseLabel) {
+               if ((value = ArgusCalloc (1, MAXSTRLEN)) != NULL) {
+                  snprintf (value, ARGUSMAXSTR, "%s=%s", key, val);
+                  val = value;
+               }
             }
-         }
-         RaParseAlgorithmTable[i].parse(parser, val);
-         if (i == ARGUSPARSEDIR)
-            RaConvertParseDirLabel = 1;
-         if (i == ARGUSPARSESTATE)
-            RaConvertParseStateLabel = 1;
-      } 
+            RaConversionMapTable[i].func(parser, val);
+            if (i == ARGUSPARSEDIR)
+               RaConvertParseDirLabel = 1;
+            if (i == ARGUSPARSESTATE)
+               RaConvertParseStateLabel = 1;
+            converted = 1;
+         } 
+      }
    }
 
    if (buf != NULL)
@@ -600,7 +604,8 @@ ArgusProcessJsonItem(struct ArgusParserStruct *parser, char *key, ArgusJsonValue
       ArgusFree(value);
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "ArgusProcessJsonItem(%p, '%s', '%s') returning %d", parser, key, val, retn);
+   if (converted)
+      ArgusDebug (1, "ArgusProcessJsonItem(%p, '%s', '%s') returning %d", parser, key, val, retn);
 #endif
    return retn;
 }
@@ -681,7 +686,10 @@ RaConvertParseRecordString (struct ArgusParserStruct *parser, char *str, int sle
       sprintf (delim, "%c", RaConvertFieldDelimiter[0]);
       tptr = ptr;
 
-      if ((ptr[0] == '{') || (ptr[0] == '[')) {
+      if (strchr (ptr, '{') || strchr (ptr, '[')) 
+         parser->ArgusReadJson++;
+
+      if (parser->ArgusReadJson) {
          ArgusJsonValue l1root, *res1 = NULL;
          bzero(&l1root, sizeof(l1root));
 
@@ -918,6 +926,11 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
                struct ArgusRecordStruct *argus = &parser->argus;
 
                if (RaConvertParseRecordString(parser, str, slen)) {
+                  if (ArgusInputType == ARGUS_NETFLOW) {
+                     argus->hdr.type |= ARGUS_NETFLOW;
+                     argus->hdr.cause = ARGUS_STATUS;
+                  }
+
                   if (parser->ArgusWfileList != NULL) {
                      struct ArgusWfileStruct *wfile = NULL;
                      struct ArgusListObjectStruct *lobj = NULL;
@@ -1247,19 +1260,49 @@ void
 ArgusParseType (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char type[64], *ptr = type, *eptr = NULL;
    int found = 0;
+         
+   strncpy(type, buf, 64);
+               
+   if ((strstr (type, "[\"")) != NULL) { 
+      ptr = ptr + 2;
+   }  
+   if ((eptr = strstr (ptr, "\"]")) != NULL) {
+      *eptr = '\0';
+   }
 
-   if (strcmp("man", buf) == 0)  { argus->hdr.type |= ARGUS_MAR; found++; }
-   if (strcmp("flow", buf) == 0) { argus->hdr.type |= ARGUS_FAR; found++; }
-   if (strcmp("aflow", buf) == 0) { argus->hdr.type |= ARGUS_AFLOW; found++; }
-   if (strcmp("nflow", buf) == 0) { argus->hdr.type |= ARGUS_NETFLOW; found++; }
-   if (strcmp("index", buf) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
-   if (strcmp("supp", buf) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
-   if (strcmp("archive", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
-   if (strcmp("arch", buf) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
-   if (strcmp("event", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
-   if (strcmp("evnt", buf) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
-   if (strcmp("unknown", buf) == 0) { found++; }
+   if (strcmp("man", ptr) == 0)  { argus->hdr.type |= ARGUS_MAR; found++; }
+   if (strcmp("flow", ptr) == 0) { argus->hdr.type |= ARGUS_FAR; found++; }
+   if (strcmp("aflow", ptr) == 0) { argus->hdr.type |= ARGUS_AFLOW; found++; }
+   if (strcmp("nflow", ptr) == 0) { argus->hdr.type |= ARGUS_NETFLOW; found++; }
+   if (strcmp("index", ptr) == 0) { argus->hdr.type |= ARGUS_INDEX; found++; }
+   if (strcmp("supp", ptr) == 0) { argus->hdr.type |= ARGUS_DATASUP; found++; }
+   if (strcmp("archive", ptr) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("arch", ptr) == 0) { argus->hdr.type |= ARGUS_ARCHIVAL; found++; }
+   if (strcmp("event", ptr) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("evnt", ptr) == 0) { argus->hdr.type |= ARGUS_EVENT; found++; }
+   if (strcmp("unknown", ptr) == 0) { found++; }
+
+   if (strcmp("ipv4", ptr) == 0) { 
+      if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
+         argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
+      }
+      argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
+      parser->canon.flow.hdr.subtype  = ARGUS_FLOW_CLASSIC5TUPLE;
+      parser->canon.flow.hdr.argus_dsrvl8.qual &= ARGUS_TYPE_IPV4;
+      found++;
+   }
+
+   if (strcmp("ipv6", ptr) == 0) { 
+      if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
+         argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
+      }
+      argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
+      parser->canon.flow.hdr.subtype  = ARGUS_FLOW_CLASSIC5TUPLE;
+      parser->canon.flow.hdr.argus_dsrvl8.qual &= ARGUS_TYPE_IPV6;
+      found++;
+   }  
 
    if (!found)
       ArgusLog (LOG_ERR, "ArgusParseType(0x%xs, %s) type not found\n", parser, buf);
@@ -1566,31 +1609,47 @@ void
 ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char proto[64], *ptr = proto, *eptr = NULL;
 
-   if (isdigit((int)*buf)) {
-      ArgusThisProto = atoi(buf);
+   strncpy(proto, buf, 64); 
+      
+   if ((strstr (proto, "[\"")) != NULL) {
+      ptr = ptr + 2;
+      if ((eptr = strstr (ptr, "\"]")) != NULL) {
+         *eptr = '\0';
+      }
+   } else
+   if ((strstr (proto, "[")) != NULL) {
+      ptr = ptr + 1;
+      if ((eptr = strstr (ptr, "]")) != NULL) {
+         *eptr = '\0';
+      }
+   }
+
+   if (isdigit((int)*ptr)) {
+      ArgusThisProto = atoi(ptr);
 
    } else {
-      if (*buf == '*') {
+      if (*ptr == '*') {
          ArgusThisProto = 0xFF;
       } else {
-         struct protoent *proto;
+         struct protoent *prot;
 
-         if (!(strncmp(buf, "man", 3))) {
+         if (!(strncmp(ptr, "man", 3))) {
             argus->hdr.type = ARGUS_MAR;
             return;
          } else
-         if (!(strncmp(buf, "evt", 3))) {
+         if (!(strncmp(ptr, "evt", 3))) {
             argus->hdr.type = ARGUS_EVENT;
             return;
          } else
             argus->hdr.type = ARGUS_FAR | ArgusInputType;
 
-         if ((proto = getprotobyname(buf)) != NULL) {
-            ArgusThisProto = proto->p_proto;
+         if ((prot = getprotobyname(ptr)) != NULL) {
+            ArgusThisProto = prot->p_proto;
 
          } else {
-            int retn = argus_nametoeproto(buf);
+            int retn = argus_nametoeproto(ptr);
             if (retn == PROTO_UNDEF)
                ArgusLog (LOG_ERR, "ArgusParseProto(0x%xs, %s) proto not found\n", parser, buf);
 	    else
@@ -1702,9 +1761,19 @@ ArgusParseSrcAddr (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusCIDRAddr *taddr = NULL;
+   char addr[64], *ptr = addr, *eptr = NULL;
 
-   if (RaParseEtherAddr (parser,buf)) {
-      unsigned char *eaddr = argus_ether_aton(buf);
+   strncpy(addr, buf, 64);
+   
+   if ((strstr (addr, "[\"")) != NULL) {
+      ptr = ptr + 2;  
+   }
+   if ((eptr = strstr (ptr, "\"]")) != NULL) {
+      *eptr = '\0';
+   }
+
+   if (RaParseEtherAddr (parser,addr)) {
+      unsigned char *eaddr = argus_ether_aton(addr);
 
       parser->canon.flow.hdr.type               = ARGUS_FLOW_DSR;
       parser->canon.flow.hdr.subtype            = ARGUS_FLOW_CLASSIC5TUPLE;
@@ -1715,7 +1784,7 @@ ArgusParseSrcAddr (struct ArgusParserStruct *parser, char *buf)
 
    } else
 
-   if ((taddr = RaParseCIDRAddr (parser, buf)) != NULL) {
+   if ((taddr = RaParseCIDRAddr (parser, ptr)) != NULL) {
       if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
          argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
          argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
@@ -1781,9 +1850,19 @@ ArgusParseDstAddr (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
    struct ArgusCIDRAddr *taddr = NULL;
+   char addr[64], *ptr = addr, *eptr = NULL;
+         
+   strncpy(addr, buf, 64);
+               
+   if ((strstr (addr, "[\"")) != NULL) {
+      ptr = ptr + 2;  
+   }              
+   if ((eptr = strstr (ptr, "\"]")) != NULL) {
+      *eptr = '\0';
+   }
 
-   if (RaParseEtherAddr (parser,buf)) {
-      unsigned char *eaddr = argus_ether_aton(buf);
+   if (RaParseEtherAddr (parser,ptr)) {
+      unsigned char *eaddr = argus_ether_aton(ptr);
 
       parser->canon.flow.hdr.type               = ARGUS_FLOW_DSR;
       parser->canon.flow.hdr.subtype            = ARGUS_FLOW_CLASSIC5TUPLE;
@@ -1794,7 +1873,7 @@ ArgusParseDstAddr (struct ArgusParserStruct *parser, char *buf)
 
    } else
 
-   if ((taddr = RaParseCIDRAddr (parser, buf)) != NULL) {
+   if ((taddr = RaParseCIDRAddr (parser, ptr)) != NULL) {
       if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
          argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
          argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
@@ -1850,20 +1929,36 @@ void
 ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char port[64], *ptr = port, *eptr = NULL;
    int value = -1;
    char *endptr;
+
+   strncpy(port, buf, 64); 
+      
+   if ((strstr (port, "[\"")) != NULL) {
+      ptr = ptr + 2;
+      if ((eptr = strstr (ptr, "\"]")) != NULL) {
+         *eptr = '\0';
+      }
+   } else 
+   if ((strstr (port, "[")) != NULL) {
+      ptr = ptr + 1;
+      if ((eptr = strstr (ptr, "]")) != NULL) {
+         *eptr = '\0';
+      }
+   }
 
    if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
       argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
       argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
    }
 
-   if (isdigit((int)*buf)) {
-      value = strtol(buf, &endptr, 0);
-      if (endptr == buf)
+   if (isdigit((int)*ptr)) {
+      value = strtol(ptr, &endptr, 0);
+      if (endptr == ptr)
          ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
    } else {
-      if (*buf == '*')
+      if (*ptr == '*')
          value = 0x00;
    }
 
@@ -1873,7 +1968,7 @@ ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
             if (parser->canon.flow.flow_un.mac.mac_union.ether.ehdr.ether_type == 0) { /* llc */
                int i = 0;
                while (llcsap_db[i].s != NULL) {
-                  if (!(strncmp(buf, llcsap_db[i].s, strlen(llcsap_db[i].s)))) {
+                  if (!(strncmp(ptr, llcsap_db[i].s, strlen(llcsap_db[i].s)))) {
                      value = llcsap_db[i].v;
                      break;
                   }
@@ -1894,7 +1989,7 @@ ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
                if (value < 0) {
                   int proto, port;
                   proto = ArgusThisProto;
-                  if (argus_nametoport(buf, &port, &proto))
+                  if (argus_nametoport(ptr, &port, &proto))
                      value = port;
                }
                parser->canon.flow.flow_un.ip.sport = value;
@@ -1914,7 +2009,7 @@ ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
                if (value < 0) {
                   int proto, port;
                   proto = ArgusThisProto;
-                  if (argus_nametoport(buf, &port, &proto))
+                  if (argus_nametoport(ptr, &port, &proto))
                      value = port;
                }
                parser->canon.flow.flow_un.ipv6.sport = value;
@@ -1933,20 +2028,36 @@ void
 ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char port[64], *ptr = port, *eptr = NULL;
    int value = -1;
    char *endptr;
+
+   strncpy(port, buf, 64);
+
+   if ((strstr (port, "[\"")) != NULL) {
+      ptr = ptr + 2;
+      if ((eptr = strstr (ptr, "\"]")) != NULL) {
+         *eptr = '\0';
+      }
+   } else
+   if ((strstr (port, "[")) != NULL) {
+      ptr = ptr + 1;
+      if ((eptr = strstr (ptr, "]")) != NULL) {
+         *eptr = '\0';
+      }
+   }
 
    if (argus->dsrs[ARGUS_FLOW_INDEX] == NULL) {
       argus->dsrs[ARGUS_FLOW_INDEX] = &parser->canon.flow.hdr;
       argus->dsrindex |= 0x1 << ARGUS_FLOW_INDEX;
    }
 
-   if (isdigit((int)*buf)) {
-      value = strtol(buf, &endptr, 0);
-      if (endptr == buf)
+   if (isdigit((int)*ptr)) {
+      value = strtol(ptr, &endptr, 0);
+      if (endptr == ptr)
          ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
    } else {
-      if (*buf == '*')
+      if (*ptr == '*')
          value = 0x00;
    }
 
@@ -1956,7 +2067,7 @@ ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
             if (parser->canon.flow.flow_un.mac.mac_union.ether.ehdr.ether_type == 0) { /* llc */
                int i = 0;
                while (llcsap_db[i].s != NULL) {
-                  if (!(strncmp(buf, llcsap_db[i].s, strlen(llcsap_db[i].s)))) {
+                  if (!(strncmp(ptr, llcsap_db[i].s, strlen(llcsap_db[i].s)))) {
                      value = llcsap_db[i].v;
                      break;
                   }
@@ -1980,7 +2091,7 @@ ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
                      proto = IPPROTO_TCP;
 		  else
                      proto = ArgusThisProto;
-                  if (argus_nametoport(buf, &port, &proto))
+                  if (argus_nametoport(ptr, &port, &proto))
                      value = port;
                }
                parser->canon.flow.flow_un.ip.dport = value;
@@ -2001,7 +2112,7 @@ ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
                if (value < 0) {
                   int proto, port;
                   proto = ArgusThisProto;
-                  if (argus_nametoport(buf, &port, &proto))
+                  if (argus_nametoport(ptr, &port, &proto))
                      value = port;
                } 
                parser->canon.flow.flow_un.ipv6.dport = value;
@@ -2173,7 +2284,17 @@ void
 ArgusParseSrcPackets (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char count[64], *ptr = count, *eptr = NULL;
    char *endptr;
+
+   strncpy(count, buf, 64);
+   
+   if ((strstr (count, "[")) != NULL) {
+      ptr = ptr + 1;  
+   }
+   if ((eptr = strstr (count, "]")) != NULL) {
+      *eptr = '\0';
+   } 
 
    if (argus->dsrs[ARGUS_METRIC_INDEX] == NULL) {
       argus->dsrs[ARGUS_METRIC_INDEX] = &parser->canon.metric.hdr;
@@ -2183,17 +2304,27 @@ ArgusParseSrcPackets (struct ArgusParserStruct *parser, char *buf)
       parser->canon.metric.hdr.argus_dsrvl8.len  = 2;
    }
 
-   parser->canon.metric.src.pkts = strtoll(buf, &endptr, 10);
+   parser->canon.metric.src.pkts = strtoll(ptr, &endptr, 10);
 
-   if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+   if (endptr == ptr)
+      ArgusLog (LOG_ERR, "ArgusParseSrcPackets(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 void
 ArgusParseDstPackets (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char count[64], *ptr = count, *eptr = NULL;
    char *endptr;
+
+   strncpy(count, buf, 64);
+
+   if ((strstr (count, "[")) != NULL) {
+      ptr = ptr + 1; 
+   }
+   if ((eptr = strstr (count, "]")) != NULL) {
+      *eptr = '\0';
+   }
 
    if (argus->dsrs[ARGUS_METRIC_INDEX] == NULL) {
       argus->dsrs[ARGUS_METRIC_INDEX] = &parser->canon.metric.hdr;
@@ -2203,10 +2334,10 @@ ArgusParseDstPackets (struct ArgusParserStruct *parser, char *buf)
       parser->canon.metric.hdr.argus_dsrvl8.len  = 2;
    }
 
-   parser->canon.metric.dst.pkts = strtoll(buf, &endptr, 10);
+   parser->canon.metric.dst.pkts = strtoll(ptr, &endptr, 10);
 
-   if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+   if (endptr == ptr)
+      ArgusLog (LOG_ERR, "ArgusParseDstPackets(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 
@@ -2234,7 +2365,17 @@ void
 ArgusParseSrcBytes (struct ArgusParserStruct *parser, char *buf)
 {
    struct ArgusRecordStruct *argus = &parser->argus;
+   char count[64], *ptr = count, *eptr = NULL;
    char *endptr;
+         
+   strncpy(count, buf, 64);
+               
+   if ((strstr (count, "[")) != NULL) {
+      ptr = ptr + 2;  
+   }              
+   if ((eptr = strstr (ptr, "]")) != NULL) {
+      *eptr = '\0';
+   }
 
    if (argus->dsrs[ARGUS_METRIC_INDEX] == NULL) {
       argus->dsrs[ARGUS_METRIC_INDEX] = &parser->canon.metric.hdr;
@@ -2244,10 +2385,10 @@ ArgusParseSrcBytes (struct ArgusParserStruct *parser, char *buf)
       parser->canon.metric.hdr.argus_dsrvl8.len  = 2;
    }
 
-   parser->canon.metric.src.bytes = strtoll(buf, &endptr, 10);
+   parser->canon.metric.src.bytes = strtoll(ptr, &endptr, 10);
 
-   if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcBytesLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+   if (endptr == ptr)
+      ArgusLog (LOG_ERR, "ArgusParseSrcBytes(%p, 0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 void
@@ -4652,7 +4793,7 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
                   found = 0;
                   len = 0;
-	       if (RaParsingConversionMap) {
+	          if (RaParsingConversionMap) {
                      if ((strchr(str, '=')) != NULL) {
                         char *tok = NULL;
                         int ind = 0;
@@ -4668,11 +4809,11 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                            found = 1;
                         }
                         RaConversionMapIndex++;
-		  }
+		     }
 
-	          if (!found)
+	             if (!found)
                         RaParsingConversionMap = 0;
-	       }
+	          }
 
                   if (!(RaParsingConversionMap))
                   for (i = 0; i < RACONVERT_RCITEMS; i++) {
@@ -4827,7 +4968,7 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
                               }
 
                               case RACONVERT_CONVERSION_MAP: {
-	                      RaParsingConversionMap = 1;
+	                         RaParsingConversionMap = 1;
                                  break;
                               }
                            }
@@ -4844,22 +4985,23 @@ ArgusParseConversionFile(struct ArgusParserStruct *parser, char *file) {
             if (RaConvertOptionIndex > 0) {
                for (i = 0; i < RaConvertOptionIndex; i++) {
                   if (RaConvertOptionStrings[i] != NULL) {
-	          int x, y, found = 0;
-	          for (x = 0; (x < RaConversionMapIndex) && !found; x++) {
-	             if (strcmp(RaConvertOptionStrings[i], RaConversionMapTable[x].field) == 0) {
+	             int x, y, found = 0;
+	             for (x = 0; (x < RaConversionMapIndex) && !found; x++) {
+	                if (strcmp(RaConvertOptionStrings[i], RaConversionMapTable[x].field) == 0) {
                            for (y = 0; y < MAX_PRINT_ALG_TYPES; y++) {
-                              if (RaParseAlgorithmTable[y].field) {
-                                 if (!(strcmp(RaParseAlgorithmTable[y].field, RaConversionMapTable[x].value))) {
+                              if ((RaParseAlgorithmTable[y].field != NULL) && (RaConversionMapTable[x].value != NULL)) {
+                                 if (!(strcmp(RaParseAlgorithmTable[y].title, RaConversionMapTable[x].value))) {
                                     RaConversionMapTable[x].func = RaParseAlgorithmTable[y].parse;
+                                    found++;
                                     break;
                                  }
                               }
                            }
 
-	                parser->RaPrintOptionStrings[i] = RaConversionMapTable[x].value;
-	                sprintf(&ArgusConvertTitleString[strlen(ArgusConvertTitleString)], "%s%c", RaConversionMapTable[x].value, RaConvertFieldDelimiter[0]);
-	                found = 1;
-	                break;
+	                   parser->RaPrintOptionStrings[i] = RaConversionMapTable[x].value;
+	                   sprintf(&ArgusConvertTitleString[strlen(ArgusConvertTitleString)], "%s%c", RaConversionMapTable[x].value, RaConvertFieldDelimiter[0]);
+	                   found = 1;
+	                   break;
                         }
                      }
 	             if (!found) {

@@ -421,6 +421,7 @@ struct ArgusParserStruct {
    char ArgusConnectTime;
    char ArgusReverse;
    char ArgusGenerateManRecords;
+   char ArgusReadJson;
    char ArgusPrintMan, ArgusPrintEvent;
    char ArgusPrintXml, ArgusAsnFormat;
    char ArgusPrintJson, ArgusPrintNewick;
