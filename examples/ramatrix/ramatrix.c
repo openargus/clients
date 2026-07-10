@@ -340,7 +340,7 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
          if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
             struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
             if (mac != NULL) {
-               char addr[64], ouiaddr[64], oui[64], class[5], pcr[64];
+               char addr[64], ouiaddr[64], oui[64], class[16], pcr[64];
                char *color = NULL, *category;
                struct enamemem *tp = NULL;
                argus->rank = rank++;
@@ -350,11 +350,20 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                bzero(pcr, sizeof(pcr));
 
 	       parser->ArgusPrintEthernetVendors = 0;
+	       parser->RaPrintIndex = ARGUSPRINTSRCMACADDRESS;
                ArgusPrintSrcMacAddress(parser, addr, argus, 20);
+
 	       parser->ArgusPrintEthernetVendors = 1;
+	       parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
                ArgusPrintSrcMacAddress(parser, ouiaddr, argus, 20);
+
+	       parser->RaPrintIndex = ARGUSPRINTSRCOUI;
                ArgusPrintSrcOui(parser, oui, argus, 20);
+
+	       parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
                ArgusPrintSrcMacClass(parser, class, argus, 5);
+
+	       parser->RaPrintIndex = ARGUSPRINTPRODUCERCONSUMERRATIO;
                ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
 
                if (strstr(oui, "IPv6-Neighbor-Di") != NULL) {
@@ -366,7 +375,6 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
                      }
                   }
                }
-
                if (strstr(oui, "mcas") != NULL) {
                   category = categorySchemes[2].id;
                   x = 2;
