@@ -210,7 +210,7 @@ static int RaParseResourceLine(struct ArgusParserStruct *, int, char *, int, int
 void setArgusEventDataRecord (struct ArgusParserStruct *, char *);
 void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 
-#define ARGUS_RCITEMS                           82
+#define ARGUS_RCITEMS                           85
 
 #define RA_ARGUS_SERVER                         0
 #define RA_SOURCE_PORT				1
@@ -295,9 +295,11 @@ void ArgusPrintManagementRecord(struct ArgusParserStruct *, char *, struct Argus
 #define RA_HASHTABLE_SIZE			80
 #define RA_TMP_PATH				81
 #define RA_LOCAL_CORRECT			82
+#define RA_MODEL_MASK                           83
+#define RA_BASELINE                             84
 
 
-char *ArgusResourceFileStr [] = {
+char *ArgusResourceFileStr [ARGUS_RCITEMS] = {
    "RA_ARGUS_SERVER=",
    "RA_SOURCE_PORT=",
    "RA_CISCONETFLOW_PORT=",
@@ -381,6 +383,8 @@ char *ArgusResourceFileStr [] = {
    "RA_HASHTABLE_SIZE=",
    "RA_TMP_PATH=",
    "RA_LOCAL_CORRECT=",
+   "RA_MODEL_MASK=",
+   "RA_BASELINE=",
 };
 
 #include <ctype.h>
@@ -2451,9 +2455,72 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                parser->ArgusAsnFormat = ARGUS_ASN_ASDOT;
             break;
 
+         case RA_BASELINE: {
+            int type = ARGUS_DATA_SOURCE | ARGUS_BASELINE_SOURCE;
+            char *baseline = optarg;
+            char *argv = "ra_baseline";
+
+            if (!(strncmp ("mysql:", baseline, 6))) {
+#if defined(ARGUS_MYSQL)
+               char *topt = baseline + 6;
+               char *dbstr = NULL;
+
+               if (parser->readDbstr != NULL)
+                  free(parser->readDbstr);
+               parser->readDbstr = strdup(topt);
+               type &= ~ARGUS_DATA_SOURCE;
+               type |= ARGUS_DBASE_SOURCE;
+
+               if ((dbstr = strstr(topt, "inventory")) != NULL) {
+                  if (!(ArgusAddMaskList (parser, "sid,inf,smac,saddr")))
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                  parser->ArgusPerformCorrection = 0;
+               } else
+               if ((dbstr = strstr(topt, "services")) != NULL) {
+                  if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr,proto,dport")))
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                  parser->ArgusPerformCorrection = 0;
+               } else
+               if ((dbstr = strstr(topt, "ether")) != NULL) {
+                  if (!(ArgusAddMaskList (parser, "sid,inf,smac,etype")))
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                  parser->ArgusPerformCorrection = 0;
+               } else
+               if ((dbstr = strstr(topt, "ipMatrix")) != NULL) {
+                  if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr")))
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                  parser->ArgusPerformCorrection = 0;
+               } else
+               if ((dbstr = strstr(topt, "etherMatrix")) != NULL) {
+                  if (!(ArgusAddMaskList (parser, "sid,inf,smac,dmac")))
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                  parser->ArgusPerformCorrection = 0;
+               }
+
+               if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
+                  ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+
+               parser->ArgusCompareBaseline = 1;
+#endif
+            } else {
+               if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
+                  ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+               stat(baseline, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
+
+               parser->ArgusCompareBaseline = 1;
+            }
+            break;
+         }
+
+         case RA_MODEL_MASK:
+	    if (!(ArgusAddMaskList (parser, optarg)))
+               ArgusLog(LOG_ERR, "RaParseResources: error: mask arg %s", optarg);
+            break;
+
          case RA_FLOW_MODEL:
             parser->ArgusFlowModelFile = strdup(optarg);
             break;
+
 
          case RA_GENERATE_BIN_MAR_RECORDS:
             if (!(strncasecmp(optarg, "yes", 3)))
@@ -2582,19 +2649,19 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
             break;
 
          case RA_FILTER: {
-            char *ptr;
+            char *ptr, *sptr = str;
 
             if (parser->ArgusRemoteFilter != NULL)
                free(parser->ArgusRemoteFilter);
 
             if ((parser->ArgusRemoteFilter = calloc (1, MAXSTRLEN)) != NULL) {
                ptr = parser->ArgusRemoteFilter;
-               str = optarg;
-               while (*str) {
-                  if ((*str != '\n') && (*str != '"'))
-                     *ptr++ = *str++;
+               strcpy(str, optarg);
+               while (*sptr) {
+                  if ((*sptr != '\n') && (*sptr != '"'))
+                     *ptr++ = *sptr++;
                   else
-                     str++;
+                     sptr++;
                }
             }
 #ifdef ARGUSDEBUG
@@ -2767,6 +2834,11 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
 
          case RA_SORT_ALGORITHMS: {
             char *tok = NULL;
+	    parser->RaSortOptionIndex = 0;
+            if (parser->RaSortOptionStrings[parser->RaSortOptionIndex] != NULL)
+               free(parser->RaSortOptionStrings[parser->RaSortOptionIndex++]);
+
+	    parser->RaSortOptionIndex = 0;
             while ((tok = strtok(optarg, " ,")) != NULL) {
                parser->RaSortOptionStrings[parser->RaSortOptionIndex++] = strdup(tok);
                if (parser->RaSortOptionIndex > ARGUS_MAX_S_OPTIONS)

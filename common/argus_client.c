@@ -15633,7 +15633,7 @@ ArgusNewSorter (struct ArgusParserStruct *parser)
       for (i = 0; i < parser->RaSortOptionIndex; i++) {
          char *ptr, *str = parser->RaSortOptionStrings[i];
          for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
-            if (!strncmp (ArgusSortKeyWords[x], str, strlen(ArgusSortKeyWords[x]))) {
+            if (!strcmp (str, ArgusSortKeyWords[x])) {
                retn->ArgusSortAlgorithms[s++] = ArgusSortAlgorithmTable[x];
                if (ArgusSortAlgorithmTable[x] == ArgusSortSrcAddr) {
                   if ((ptr = strchr(str, '/')) != NULL) {
@@ -15950,7 +15950,7 @@ ArgusSortScore (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
    int retn = 0;
 
    if (n1 && n2) {
-      retn = (n2->score > n1->score) ? 1 : 0;
+      retn = (n1->score > n2->score) ? 1 : (n1->score == n2->score) ? 0 : -1;
    }
 
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);

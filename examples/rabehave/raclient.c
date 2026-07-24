@@ -673,7 +673,6 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 #if defined(ARGUS_THREADS)
    pthread_mutex_init(&RaCursesLock, NULL);
 #endif
-   parser->ArgusPerformCorrection = 0;
 
    if (parser != NULL) {
       parser->RaWriteOut = 1;
@@ -740,7 +739,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          if ((ArgusSorter = ArgusNewSorter(parser)) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusNewSorter error %s", strerror(errno));
 
-         ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
+         if (ArgusSorter->ArgusSortAlgorithms[0] == NULL)
+            ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTPKTSCOUNT];
 
          if ((parser->RaBinProcess = (struct RaBinProcessStruct *)ArgusCalloc(1, sizeof(*parser->RaBinProcess))) == NULL)
             ArgusLog (LOG_ERR, "ArgusClientInit: ArgusCalloc error %s", strerror(errno));

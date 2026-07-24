@@ -2792,6 +2792,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   }
 
                   case 's': {
+				    /*
                      int x, y;
                      retn = RAGETTINGs;
                      RaInputString = RAGETTINGsSTR;
@@ -2806,6 +2807,26 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                         }
                      }
                      RaCommandIndex = strlen(RaCommandInputStr); 
+                     break;
+				    */
+                     int x, y;
+                  
+                     RaInputString = RAGETTINGFSTR;
+                     retn = RAGETTINGF;
+                  
+                     for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
+                        if (parser->RaPrintAlgorithmList[x] != NULL) {
+                           for (y = 0; y < MAX_PRINT_ALG_TYPES; y++) {
+                              if ((void *) parser->RaPrintAlgorithmList[x]->print == (void *) RaPrintAlgorithmTable[y].print) {
+                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s:%d ",
+                                    RaPrintAlgorithmTable[y].field, RaPrintAlgorithmTable[y].length);
+                                 break;
+                              }
+                           }
+                        } else
+                           break;
+                     }
+                     RaCommandIndex = strlen(RaCommandInputStr);
                      break;
                   }
 
