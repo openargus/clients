@@ -16586,46 +16586,59 @@ int ArgusSortSrcPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
    int retn = 0;
 
    if (f1 && f2) {
-      unsigned short p1 = 0, p2 = 0;
+      int p1 = 0, p2 = 0;
     
       switch (f1->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f1->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f1->ip_flow.ip_p == IPPROTO_TCP) || (f1->ip_flow.ip_p == IPPROTO_UDP))
-                     p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ip_flow.dport : f1->ip_flow.sport;
-                  break;
-               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_IPV4: {
+                  switch (f1->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p1 = f1->ip_flow.sport;
+                        break;
+                     }
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ipv6_flow.dport : f1->ipv6_flow.sport;
+                        p1 = f1->ipv6_flow.sport;
                         break;
                      }
                   }
                   break;
+               }
             }
             break;
          }
-    
          default:
             break;
       }
       switch (f2->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f2->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f2->ip_flow.ip_p == IPPROTO_TCP) || (f2->ip_flow.ip_p == IPPROTO_UDP))
-                     p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ip_flow.dport : f2->ip_flow.sport;
-                  break;
-               case ARGUS_TYPE_IPV6:
-                  switch (f2->ipv6_flow.ip_p) {
+               case ARGUS_TYPE_IPV4: {
+                  switch (f2->ip_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ipv6_flow.dport : f2->ipv6_flow.sport;
+                        p2 = f2->ip_flow.sport;
                         break;
                      }
                   }
+                  break;
+               }
+               case ARGUS_TYPE_IPV6: {
+                  switch (f2->ipv6_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p2 = f2->ip_flow.sport;
+                        break;
+                     }
+                  }
+                  break;
+               }
             }
             break;
          }
@@ -16645,25 +16658,31 @@ int ArgusSortDstPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
    int retn = 0;
 
    if (f1 && f2) {
-      unsigned short p1 = 0, p2 = 0;
-    
+      int p1 = 0, p2 = 0;
+
       switch (f1->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f1->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f1->ip_flow.ip_p == IPPROTO_TCP) || (f1->ip_flow.ip_p == IPPROTO_UDP))
-                     p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ip_flow.sport : f1->ip_flow.dport;
+               case ARGUS_TYPE_IPV4: {
+                  switch (f1->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p1 = f1->ip_flow.dport;
+                        break;
+                     }
                   break;
-               case ARGUS_TYPE_IPV6:
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ipv6_flow.sport : f1->ipv6_flow.dport;
+                        p1 = f1->ipv6_flow.dport;
                         break;
                      }
                   }
-
                   break;
+               }
             }
             break;
          }
@@ -16674,19 +16693,26 @@ int ArgusSortDstPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
       switch (f2->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f2->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f2->ip_flow.ip_p == IPPROTO_TCP) || (f2->ip_flow.ip_p == IPPROTO_UDP))
-                     p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ip_flow.sport : f2->ip_flow.dport;
-                  break;
-               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_IPV4: {
+                  switch (f2->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p2 = f2->ip_flow.dport;
+                        break;
+                     }
+                     break;
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ipv6_flow.sport : f2->ipv6_flow.dport;
+                        p2 = f2->ipv6_flow.dport;
                         break;
                      }
                   }
                   break;
+               }
             }
             break;
          }

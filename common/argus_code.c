@@ -5180,27 +5180,15 @@ Argusgen_scode(char *name, struct qual q)
 
       case Q_PORT: {
          char *ptr = NULL;
+         int sport = -1, eport = -1;
 
          if ((proto != Q_DEFAULT) && (proto != Q_UDP) && (proto != Q_TCP) && (proto != Q_UDT)
                                   && (proto != Q_RTP) && (proto != Q_RTCP))
             ArgusLog(LOG_ERR, "illegal qualifier of 'port'");
 
-         if ((ptr = strchr(name, '-')) != NULL) {
-            char *endptr;
-            int port;
-            *ptr++ = '\0';
-            
-            port = strtol(name, (char **)&endptr, 10);
-            if (endptr == name)
-               break;
-
-            b = Argusgen_ncode (ptr, port, q, Q_GEQ);
-
-            port = strtol(ptr, (char **)&endptr, 10);
-            if (endptr == ptr)
-               break;
-
-            tmp = Argusgen_ncode (ptr, port, q, Q_LEQ);
+         if (sscanf((const char *) name, "%d-%d", &sport, &eport) == 2) {
+            b = Argusgen_ncode (ptr, sport, q, Q_GEQ);
+            tmp = Argusgen_ncode (ptr, eport, q, Q_LEQ);
             Argusgen_and(tmp, b);
 
          } else {
