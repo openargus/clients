@@ -81,6 +81,8 @@
 void ArgusIdleClientTimeout (void);
 
 #define ARGUS_ETHER_STUDY	0
+#define ARGUS_IP_STUDY		1
+
 int ArgusStudy     = 0;
 int ArgusNormalize = 0;
 int ArgusSelfIndex = -1;
@@ -141,6 +143,8 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          while (mode) {
             if (!(strncasecmp (mode->mode, "ether", 5)))
                ArgusStudy = ARGUS_ETHER_STUDY;
+            if (!(strncasecmp (mode->mode, "ip", 2)))
+               ArgusStudy = ARGUS_IP_STUDY;
             if (!(strncasecmp (mode->mode, "normal", 6)))
                parser->ArgusNormalize++;
             if (!(strncasecmp (mode->mode, "oui", 3)))
@@ -162,6 +166,11 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          case ARGUS_ETHER_STUDY:
             RaMatrixAggregationConfig = RaEtherMatrixAggregationConfig;
             RaEntityAggregationConfig = RaEtherEntityAggregationConfig;
+            break;
+
+         case ARGUS_IP_STUDY:
+            RaMatrixAggregationConfig = RaIPMatrixAggregationConfig;
+            RaEntityAggregationConfig = RaIPEntityAggregationConfig;
             break;
       }
 
@@ -316,11 +325,35 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
    if ((n = agg->queue->count) > 1) {
       for (i = 0; i < n; i++) {
          if ((argus = (void *) ArgusPopQueue(agg->queue, ARGUS_NOLOCK)) != NULL) {
-            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
-            if (mac != NULL) {
-               ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_NOLOCK);         // use the agg queue as an idle timeout queue
-            } else {
-               ArgusDeleteRecordStruct (parser, argus);
+            switch (ArgusStudy) {
+               default:
+               case ARGUS_ETHER_STUDY: {
+                  struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+                  if (mac != NULL) {
+                     ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_NOLOCK);   // use the agg queue as an idle timeout queue
+                  } else {
+                     ArgusDeleteRecordStruct (parser, argus);
+                  }
+                  break;
+               }
+               case ARGUS_IP_STUDY: {
+                  struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+
+                  if (flow != NULL) {
+                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                        case ARGUS_TYPE_IPV4:
+                        case ARGUS_TYPE_IPV6: {
+                           ArgusAddToQueue (agg->queue, &argus->qhdr, ARGUS_NOLOCK); // use the agg queue as an idle queue
+                           break;
+                        }
+                        default:
+                           ArgusDeleteRecordStruct (parser, argus);
+                           break;
+                     }
+                  } else
+                     ArgusDeleteRecordStruct (parser, argus);
+                  break;
+               }
             }
          }
       }
@@ -338,74 +371,112 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
 
       for (i = 0; i < n; i++) {
          if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
-            struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
-            if (mac != NULL) {
-               char addr[64], ouiaddr[64], oui[64], class[16], pcr[64];
-               char *color = NULL, *category;
-               struct enamemem *tp = NULL;
-               argus->rank = rank++;
+            switch (ArgusStudy) {
+               default:
+               case ARGUS_ETHER_STUDY: {
+                  struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+                  if (mac != NULL) {
+                     char addr[64], ouiaddr[64], oui[64], class[16], pcr[64];
+                     char *color = NULL, *category;
+                     struct enamemem *tp = NULL;
+                     argus->rank = rank++;
 
-               bzero(addr, sizeof(addr));
-               bzero(oui, sizeof(oui));
-               bzero(pcr, sizeof(pcr));
+                     bzero(addr, sizeof(addr));
+                     bzero(oui, sizeof(oui));
+                     bzero(pcr, sizeof(pcr));
 
-	       parser->ArgusPrintEthernetVendors = 0;
-	       parser->RaPrintIndex = ARGUSPRINTSRCMACADDRESS;
-               ArgusPrintSrcMacAddress(parser, addr, argus, 20);
+                     parser->ArgusPrintEthernetVendors = 0;
+                     parser->RaPrintIndex = ARGUSPRINTSRCMACADDRESS;
+                     ArgusPrintSrcMacAddress(parser, addr, argus, 20);
 
-	       parser->ArgusPrintEthernetVendors = 1;
-	       parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
-               ArgusPrintSrcMacAddress(parser, ouiaddr, argus, 20);
+                     parser->ArgusPrintEthernetVendors = 1;
+                     parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
+                     ArgusPrintSrcMacAddress(parser, ouiaddr, argus, 20);
 
-	       parser->RaPrintIndex = ARGUSPRINTSRCOUI;
-               ArgusPrintSrcOui(parser, oui, argus, 20);
+                parser->RaPrintIndex = ARGUSPRINTSRCOUI;
+                     ArgusPrintSrcOui(parser, oui, argus, 20);
 
-	       parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
-               ArgusPrintSrcMacClass(parser, class, argus, 5);
+                parser->RaPrintIndex = ARGUSPRINTSRCMACCLASS;
+                     ArgusPrintSrcMacClass(parser, class, argus, 5);
 
-	       parser->RaPrintIndex = ARGUSPRINTPRODUCERCONSUMERRATIO;
-               ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
+                parser->RaPrintIndex = ARGUSPRINTPRODUCERCONSUMERRATIO;
+                     ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
 
-               if (strstr(oui, "IPv6-Neighbor-Di") != NULL) {
-                  if (parser->ArgusNormalize) {
-                     char *optr = NULL;
-                     strcpy(oui, "IPv6mcast");
-                     if ((optr = strstr(addr, "IPv6-Nei")) != NULL) {
-                        bcopy("IPv6mcas", optr, 8);
+                     if (strstr(oui, "IPv6-Neighbor-Di") != NULL) {
+                        if (parser->ArgusNormalize) {
+                           char *optr = NULL;
+                           strcpy(oui, "IPv6mcast");
+                           if ((optr = strstr(addr, "IPv6-Nei")) != NULL) {
+                              bcopy("IPv6mcas", optr, 8);
+                           }
+                        }
+                     }
+                     if (strstr(oui, "mcas") != NULL) {
+                        category = categorySchemes[2].id;
+                        x = 2;
+                     } else 
+                     if (strstr(oui, "dcas") != NULL) {
+                        category = categorySchemes[2].id;
+                        x = 2;
+                     } else {
+                        x = (random() % 6);
+                        category =  categorySchemes[x].id;
+                        color = categorySchemes[x].color;
+                     }
+
+                     if (color == NULL) color = "#AAAAAA";
+                     if (argus->rank > 0) printf (",");
+
+                     printf ("{name:\"%s\", addr:\"%s\", oui:\"%s\", class:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+                               ArgusTrimString(ouiaddr), 
+                               ArgusTrimString(addr), 
+                               ArgusTrimString(oui),
+                               ArgusTrimString(class),
+                               ArgusTrimString(pcr),
+                               category, color);
+
+                     if ((tp = lookup_emem (entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
+                        tp->rank = argus->rank;
+                        tp->category = (x > 0) ? x : 1;
+                     }
+
+                     if ((tp = check_emem(elabeltable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
+                        ArgusSelfIndex = argus->rank;
                      }
                   }
+                  break;
                }
-               if (strstr(oui, "mcas") != NULL) {
-                  category = categorySchemes[2].id;
-                  x = 2;
-               } else 
-               if (strstr(oui, "dcas") != NULL) {
-                  category = categorySchemes[2].id;
-                  x = 2;
-               } else {
-                  x = (random() % 6);
-                  category =  categorySchemes[x].id;
-                  color = categorySchemes[x].color;
-               }
+               case ARGUS_IP_STUDY: {
+                  struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+                  if (flow != NULL) {
+                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                        case ARGUS_TYPE_IPV4:
+                        case ARGUS_TYPE_IPV6: {
+                           char addr[64], pcr[64];
+                           char *color = NULL, *category;
+                           argus->rank = rank++;
 
-               if (color == NULL) color = "#AAAAAA";
-               if (argus->rank > 0) printf (",");
+                           parser->RaPrintIndex = ARGUSPRINTSRCADDR;
+                           ArgusPrintSrcAddr(parser, addr, argus, 32);
 
-               printf ("{name:\"%s\", addr:\"%s\", oui:\"%s\", class:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
-                         ArgusTrimString(ouiaddr), 
-                         ArgusTrimString(addr), 
-                         ArgusTrimString(oui),
-                         ArgusTrimString(class),
-                         ArgusTrimString(pcr),
-                         category, color);
+                           parser->RaPrintIndex = ARGUSPRINTPRODUCERCONSUMERRATIO;
+                           ArgusPrintProducerConsumerRatio(parser, pcr, argus, 20);
 
-               if ((tp = lookup_emem (entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
-                  tp->rank = argus->rank;
-                  tp->category = (x > 0) ? x : 1;
-               }
+                           x = (random() % 9);
+                           category =  categorySchemes[x].id;
+                           color = categorySchemes[x].color;
 
-               if ((tp = check_emem(elabeltable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) {
-                  ArgusSelfIndex = argus->rank;
+                           if (color == NULL) color = "#AAAAAA";
+                           if (argus->rank > 0) printf (",");
+
+                           printf ("{addr:\"%s\", pcr:\"%s\", category:\"%s\", color:\"%s\"}", 
+                               ArgusTrimString(addr), 
+                               ArgusTrimString(pcr),
+                               category, color);
+                           break;
+                        }
+                     }
+                  }
                }
             }
          }
@@ -446,55 +517,63 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
 
          for (i = 0; i < parser->eNflag; i++) {
             if ((argus = (struct ArgusRecordStruct *) agg->queue->array[i]) != NULL) {
-               struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
+               switch (ArgusStudy) {
+                  default:
+                  case ARGUS_ETHER_STUDY: {
+                     struct ArgusMacStruct *mac = (struct ArgusMacStruct *) argus->dsrs[ARGUS_MAC_INDEX];
 
-               if (mac != NULL) {
-                  struct enamemem *stp = NULL, *dtp = NULL;
-                  int x = -1, y = -1;
+                     if (mac != NULL) {
+                        struct enamemem *stp = NULL, *dtp = NULL;
+                        int x = -1, y = -1;
 
-                  switch (mac->hdr.subtype & 0x3F) {
-                     default:
-                     case ARGUS_TYPE_ETHER:
-                        if ((stp = check_emem(entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) 
-                           x = stp->rank;
-                        if ((dtp = check_emem(entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost)) != NULL) 
-                           y = dtp->rank;
-                        break;
-                  }
-
-                  if ((x >= 0) && (y >= 0)) {
-                     struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
-                     double weight = ARGUS_DEFAULT_WEIGHT;
-                     double cvalue = 0;
-
-                     if ((stp->category == 2) || (dtp->category == 2)) {
-                        weight = 3.0 / n;
-                        weight = (weight < ARGUS_MIN_WEIGHT) ? ARGUS_MIN_WEIGHT : weight;
-                        cvalue = 2;
-                     } else {
-                        if ((x == ArgusSelfIndex) || (y == ArgusSelfIndex))
-                           weight = ARGUS_SELF_WEIGHT;
-                        else
-                           if ((x == ArgusRouterIndex) || (y == ArgusRouterIndex))
-                              weight = ARGUS_ROUTER_WEIGHT;
-
-                        cvalue = dtp->category;
-                     }
-                     if (metric != NULL) {
-                        if (metric->src.pkts > 0) {
-                           matrix[x][y] = weight;
-			} else {
-                           matrix[x][y] = ARGUS_MIN_WEIGHT;
-			}
-                        category[x][y] = cvalue;
-
-                        if (metric->dst.pkts > 0) {
-                           matrix[y][x] = weight;
-                        } else {
-                           matrix[y][x] = ARGUS_MIN_WEIGHT;
+                        switch (mac->hdr.subtype & 0x3F) {
+                           default:
+                           case ARGUS_TYPE_ETHER:
+                              if ((stp = check_emem(entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_shost)) != NULL) 
+                                 x = stp->rank;
+                              if ((dtp = check_emem(entitytable, (unsigned char *)&mac->mac.mac_union.ether.ehdr.ether_dhost)) != NULL) 
+                                 y = dtp->rank;
+                              break;
                         }
-                        category[y][x] = cvalue;
+
+                        if ((x >= 0) && (y >= 0)) {
+                           struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
+                           double weight = ARGUS_DEFAULT_WEIGHT;
+                           double cvalue = 0;
+
+                           if ((stp->category == 2) || (dtp->category == 2)) {
+                              weight = 3.0 / n;
+                              weight = (weight < ARGUS_MIN_WEIGHT) ? ARGUS_MIN_WEIGHT : weight;
+                              cvalue = 2;
+                           } else {
+                              if ((x == ArgusSelfIndex) || (y == ArgusSelfIndex))
+                                 weight = ARGUS_SELF_WEIGHT;
+                              else {
+                                 if ((x == ArgusRouterIndex) || (y == ArgusRouterIndex))
+                                    weight = ARGUS_ROUTER_WEIGHT;
+                              }
+                              cvalue = dtp->category;
+                           }
+                           if (metric != NULL) {
+                              if (metric->src.pkts > 0) {
+                                 matrix[x][y] = weight;
+                              } else {
+                                 matrix[x][y] = ARGUS_MIN_WEIGHT;
+                              }
+                              category[x][y] = cvalue;
+
+                              if (metric->dst.pkts > 0) {
+                                 matrix[y][x] = weight;
+                              } else {
+                                 matrix[y][x] = ARGUS_MIN_WEIGHT;
+                              }
+                              category[y][x] = cvalue;
+                           }
+                        }
                      }
+                     break;
+                  }
+                  case ARGUS_IP_STUDY: {
                   }
                }
             }
@@ -577,7 +656,7 @@ RaParseComplete (int sig)
             ArgusSorter->ArgusSortAlgorithms[0] = ArgusSortAlgorithmTable[ARGUSSORTSRCMACCLASS];
             ArgusSorter->ArgusSortAlgorithms[1] = ArgusSortAlgorithmTable[ARGUSSORTSRCMAC];
             ArgusSorter->ArgusSortAlgorithms[2] = ArgusSortAlgorithmTable[ARGUSSORTSRCPKTSCOUNT];
-	 }
+         }
 
          if ((mode = ArgusParser->ArgusMaskList) != NULL) {
             while (mode) {
@@ -827,15 +906,11 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
          if (flow != NULL) {
             struct ArgusAggregatorStruct *agg = parser->ArgusPathAggregator;
             struct ArgusRecordStruct *tns = ArgusCopyRecordStruct(ns);
-            struct ArgusFlow *flow;
             int rev = parser->ArgusReverse;
 
             parser->ArgusReverse = 0;
-
-            if ((flow = (void *)ns->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
-               flow->hdr.subtype &= ~ARGUS_REVERSE;
-               flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
-            }
+            flow->hdr.subtype &= ~ARGUS_REVERSE;
+            flow->hdr.argus_dsrvl8.qual &= ~ARGUS_DIRECTION;
 
             RaProcessThisRecord(parser, parser->ArgusPathAggregator, ns);
 
