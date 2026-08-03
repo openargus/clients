@@ -15457,6 +15457,7 @@ ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns)
    return (retn);
 }
 
+double ArgusLastStartTime = 0.0;
 double
 ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns)
 {
@@ -15466,8 +15467,17 @@ ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns)
    
    } else {
       struct ArgusCorrelateStruct *cor = (void *)ns->dsrs[ARGUS_COR_INDEX];
-      if (cor != NULL) 
+      if (cor != NULL) {
          retn = cor->metrics.deltaStart / 1000000.0;
+      } else {
+         double stime;
+         if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
+            if (ArgusLastStartTime != 0.0) {
+               retn = stime - ArgusLastStartTime;
+            }
+            ArgusLastStartTime = stime;
+         }
+      }
    }
    return (retn);
 }

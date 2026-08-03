@@ -1134,8 +1134,9 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
 
    bzero (date, sizeof(date));
    bzero (tvp, sizeof(*tvp));
-
    bcopy (buf, date, strlen(buf));
+
+
 
    if (RaConvertTmPtr == NULL) {
       gettimeofday(tvp, 0);
@@ -1183,8 +1184,9 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
             tvp->tv_sec = mktime(RaConvertTmPtr);
          }
       }
+   }
 
-   } else {
+   if (!done) {
       RaDateFormat = parser->RaTimeFormat;
       ptr = date;
       len = strlen(ptr);
@@ -1667,6 +1669,7 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
    }
 
    switch (ArgusThisProto) {
+         case IPPROTO_IP:
          case IPPROTO_IGMP:
          case IPPROTO_ICMP:
          case IPPROTO_ICMPV6:
