@@ -4885,6 +4885,7 @@ ArgusZeroRecordWithFlag (struct ArgusRecordStruct *argus, int flag)
          mar->pktsRcvd = 0;
          mar->bytesRcvd = 0;
          mar->drift = 0;
+         mar->fallow = 0;
          mar->records = 0;
          mar->flows = 0;
          mar->dropped = 0;
@@ -20943,7 +20944,8 @@ ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             l += sprintf(buf + l, " \"argusMrInterval\":%hu,", mar.argusMrInterval);
             l += sprintf(buf + l, " \"pktsRcvd\":%llu,", mar.pktsRcvd);
             l += sprintf(buf + l, " \"bytesRcvd\":%llu,", mar.bytesRcvd);
-            l += sprintf(buf + l, " \"drift\":%lli,", mar.drift);
+            l += sprintf(buf + l, " \"drift\":%d,", mar.drift);
+            l += sprintf(buf + l, " \"fallow\":%u,", mar.drift);
             l += sprintf(buf + l, " \"records\":%u,", mar.records);
             l += sprintf(buf + l, " \"flows\":%u,", mar.flows);
             l += sprintf(buf + l, " \"dropped\":%u,", mar.dropped);

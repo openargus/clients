@@ -221,8 +221,9 @@ struct ArgusMarStruct {
 
    unsigned short reportInterval, argusMrInterval;
    unsigned long long pktsRcvd, bytesRcvd;
-   long long drift;
+   int drift;
 
+   unsigned int fallow;
    unsigned int records, flows, dropped;
    unsigned int queue, output, clients;
    unsigned int bufs, bytes;
