@@ -4884,7 +4884,7 @@ ArgusZeroRecordWithFlag (struct ArgusRecordStruct *argus, int flag)
          bzero(&mar->now, sizeof(mar->now));
          mar->pktsRcvd = 0;
          mar->bytesRcvd = 0;
-         mar->drift = 0;
+         mar->interfaces = 0;
          mar->fallow = 0;
          mar->records = 0;
          mar->flows = 0;
@@ -20944,8 +20944,8 @@ ArgusPrintManStatus (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             l += sprintf(buf + l, " \"argusMrInterval\":%hu,", mar.argusMrInterval);
             l += sprintf(buf + l, " \"pktsRcvd\":%llu,", mar.pktsRcvd);
             l += sprintf(buf + l, " \"bytesRcvd\":%llu,", mar.bytesRcvd);
-            l += sprintf(buf + l, " \"drift\":%d,", mar.drift);
-            l += sprintf(buf + l, " \"fallow\":%u,", mar.drift);
+            l += sprintf(buf + l, " \"interfaces\":%u,", mar.interfaces);
+            l += sprintf(buf + l, " \"fallow\":%u,", mar.fallow);
             l += sprintf(buf + l, " \"records\":%u,", mar.records);
             l += sprintf(buf + l, " \"flows\":%u,", mar.flows);
             l += sprintf(buf + l, " \"dropped\":%u,", mar.dropped);
@@ -28043,7 +28043,9 @@ ArgusNtoH (struct ArgusRecord *argus)
 
             argus->argus_mar.pktsRcvd          = ntohll(argus->argus_mar.pktsRcvd);
             argus->argus_mar.bytesRcvd         = ntohll(argus->argus_mar.bytesRcvd);
-            argus->argus_mar.drift             = ntohll(argus->argus_mar.drift);
+
+            argus->argus_mar.interfaces        = ntohl(argus->argus_mar.interfaces);
+            argus->argus_mar.fallow            = ntohl(argus->argus_mar.fallow);
 
             argus->argus_mar.records           = ntohl(argus->argus_mar.records);
             argus->argus_mar.flows             = ntohl(argus->argus_mar.flows);
@@ -28771,7 +28773,9 @@ ArgusHtoN (struct ArgusRecord *argus)
 
             argus->argus_mar.pktsRcvd          = htonll(argus->argus_mar.pktsRcvd);
             argus->argus_mar.bytesRcvd         = htonll(argus->argus_mar.bytesRcvd);
-            argus->argus_mar.drift             = htonll(argus->argus_mar.drift);
+
+            argus->argus_mar.interfaces        = htonl(argus->argus_mar.interfaces);
+            argus->argus_mar.fallow            = htonl(argus->argus_mar.fallow);
 
             argus->argus_mar.records           = htonl(argus->argus_mar.records);
             argus->argus_mar.flows             = htonl(argus->argus_mar.flows);

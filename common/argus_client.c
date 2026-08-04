@@ -6477,7 +6477,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                      man1->startime          = man2->startime;
                      man1->nextMrSequenceNum = man2->nextMrSequenceNum;
                      man1->interfaceStatus   = man2->interfaceStatus;
-                     man1->drift             = man2->drift;
+                     man1->interfaces        = man2->interfaces;
                      man1->clients           = man2->clients;
                   }
 
@@ -6486,7 +6486,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
 
                   man1->pktsRcvd  += man2->pktsRcvd;
                   man1->bytesRcvd += man2->bytesRcvd;
-                  man1->drift      = man2->drift;
+                  man1->fallow     = man2->fallow;
                   man1->records   += man2->records;
                   man1->queue      = man2->queue;
                   man1->output    += man2->output;
