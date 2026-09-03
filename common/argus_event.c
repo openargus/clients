@@ -514,7 +514,7 @@ ArgusProcessSQLEvent (struct ArgusParserStruct *parser, struct ArgusEventObject 
    char *sptr, *hptr; 
    struct ArgusRecord *argus = NULL;
    char stim[128], etim[128];
-   struct timeval stvp, etvp;
+   struct timeval stvp = {0, 0}, etvp = {0, 0};
    extern char version[];
    int retn = 0, i, x, len;
    MYSQL_RES *mysqlRes;
