@@ -3475,7 +3475,7 @@ RaReadPortConfig (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
 
                                     if (!found) {
                                        snprintf (tbuf, MAXSTRLEN, "%s", tlabel);
-                                       sprintf(&tbuf[strlen(tbuf)], ":%s", plabel);
+                                       snprintf (&tbuf[strlen(tbuf)], MAXSTRLEN - strlen(tbuf), ":%s", plabel);
                                        port->label = strdup(tbuf);
                                     } else
                                        port->label = strdup(tlabel);

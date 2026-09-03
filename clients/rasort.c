@@ -248,16 +248,24 @@ RaParseComplete (int sig)
          if (ArgusParser->ArgusReplaceMode & ARGUS_REPLACE_COMPRESSED_GZ) {
             char cmdbuf[MAXSTRLEN], *cmd = cmdbuf;
 
-            sprintf(cmd, "gzip -q %s\n", file->filename);
-            if (system(cmd) < 0)
-               ArgusLog (LOG_ERR, "compressing file %s failed");
+            if (strchr(file->filename, '\'') != NULL) {
+               ArgusLog (LOG_ERR, "compressing file %s failed: filename contains a single quote", file->filename);
+            } else {
+               snprintf(cmd, MAXSTRLEN, "gzip -q '%s'\n", file->filename);
+               if (system(cmd) < 0)
+                  ArgusLog (LOG_ERR, "compressing file %s failed");
+            }
          } else
          if (ArgusParser->ArgusReplaceMode & ARGUS_REPLACE_COMPRESSED_BZ) {
             char cmdbuf[MAXSTRLEN], *cmd = cmdbuf;
 
-            sprintf(cmd, "bzip2 -f -q %s\n", file->filename);
-            if (system(cmd) < 0)
-               ArgusLog (LOG_ERR, "compressing file %s failed");
+            if (strchr(file->filename, '\'') != NULL) {
+               ArgusLog (LOG_ERR, "compressing file %s failed: filename contains a single quote", file->filename);
+            } else {
+               snprintf(cmd, MAXSTRLEN, "bzip2 -f -q '%s'\n", file->filename);
+               if (system(cmd) < 0)
+                  ArgusLog (LOG_ERR, "compressing file %s failed");
+            }
          }
       }
 

@@ -377,7 +377,7 @@ RaSimple(void *context __attribute__((unused)), int id, const char **result, uns
             if ((ptr = strchr(ArgusParser->ustr, '/')) != NULL)
                 *ptr = '\0';
           
-            sprintf (RaSimpleBuf, "%s", ArgusParser->ustr);
+            snprintf (RaSimpleBuf, sizeof(RaSimpleBuf), "%s", ArgusParser->ustr);
             if (ptr)
                *ptr = '/';
 #ifdef ARGUSDEBUG
@@ -399,7 +399,7 @@ RaSimple(void *context __attribute__((unused)), int id, const char **result, uns
             printf("Authname: ");
             ptr = fgets(RaSimpleBuf, sizeof RaSimpleBuf, stdin);
          } else 
-            sprintf (RaSimpleBuf, "%s", ptr);
+            snprintf (RaSimpleBuf, sizeof(RaSimpleBuf), "%s", ptr);
 #ifdef ARGUSDEBUG
          ArgusDebug (4, "RaSimple SASL_CB_AUTHNAME is %s", RaSimpleBuf);
 #endif
@@ -506,8 +506,10 @@ RaSaslNegotiate(struct ArgusInput *input)
 
    len = 0; data = "";
 
-   if (RaSaslMech)
-      strcpy(mechs, RaSaslMech);
+   if (RaSaslMech) {
+      strncpy(mechs, RaSaslMech, sizeof(mechs) - 1);
+      mechs[sizeof(mechs) - 1] = '\0';
+   }
 
    retn = sasl_client_start(conn, mechs, NULL, &data, &len, &chosenmech);
 
