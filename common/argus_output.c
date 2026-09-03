@@ -5645,7 +5645,7 @@ int
 ArgusSendSaslString(FILE *f, const char *s, int l, int mode)
 {
    char *buf = NULL, *ptr = NULL, error[128];
-   unsigned int al, len;
+   unsigned int al, len = 0;
    int result, size, tsize;
 
    switch (mode) {
