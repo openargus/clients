@@ -455,7 +455,7 @@ RaMySQLInit (int ncons)
             RaHost = strdup(rhost);
          }
          free(RaDatabase);
-         RaDatabase = strdup(dbptr);
+         RaDatabase = (dbptr != NULL) ? strdup(dbptr) : strdup("argus");
       }
    }
  
@@ -1635,12 +1635,14 @@ ArgusInitEvents (struct ArgusEventsStruct *events)
                            if (RaHost != NULL) free(RaHost);
                            RaHost = strdup(rhost);
                         }
-                        if ((ptr = strchr (dbptr, '/')) != NULL) {
-                           *ptr++ = '\0';
-                           evt->table = strdup(ptr);
+                        if (dbptr != NULL) {
+                           if ((ptr = strchr (dbptr, '/')) != NULL) {
+                              *ptr++ = '\0';
+                              evt->table = strdup(ptr);
+                           }
+                           free(evt->db);
+                           evt->db = strdup(dbptr);
                         }
-                        free(evt->db);
-                        evt->db = strdup(dbptr);
                      }
                   }
 
