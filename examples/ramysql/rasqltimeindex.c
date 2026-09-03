@@ -641,7 +641,7 @@ RaMySQLInit ()
                RaPort = atoi(ptr);
             }
          } else
-            RaDatabase = NULL;
+            RaDatabase = "argus";
 
       } else {
          RaDatabase = &RaDatabase[3];

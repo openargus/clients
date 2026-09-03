@@ -696,13 +696,13 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
 
                if ((mode = modelist) != NULL) {
                   while (mode) {
-                     char *ptr = NULL, **endptr = NULL;
+                     char *ptr = NULL, *endptr = NULL;
                      int value = 0;
 
                      if ((ptr = strchr(mode->mode, '/')) != NULL) {
                         ptr++;
-                        if ((value = strtol(ptr, endptr, 10)) == 0)
-                           if (*endptr == ptr)
+                        if ((value = strtol(ptr, &endptr, 10)) == 0)
+                           if (endptr == ptr)
                               usage();
                      }
                      if (!(strncasecmp (mode->mode, "none", 4))) {
@@ -4130,13 +4130,13 @@ argus_command_string(void)
 
                if ((mode = modelist) != NULL) {
                   while (mode) {
-                     char *ptr = NULL, **endptr = NULL;
+                     char *ptr = NULL, *endptr = NULL;
                      int value = 0;
 
                      if ((ptr = strchr(mode->mode, '/')) != NULL) {
                         ptr++;
-                        if ((value = strtol(ptr, endptr, 10)) == 0)
-                           if (*endptr == ptr)
+                        if ((value = strtol(ptr, &endptr, 10)) == 0)
+                           if (endptr == ptr)
                               usage();
                      }
                      if (!(strncasecmp (mode->mode, "none", 4))) {
