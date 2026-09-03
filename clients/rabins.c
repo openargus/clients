@@ -1121,7 +1121,7 @@ ArgusPrintFormat(struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
             double ltime = ArgusFetchLastuSecTime(argus)/1000;
             long long sdate = stime, ldate = ltime;
             char *rank, *node, *proto, *saddr, *daddr, *dport, *synack;
-            char buf[1024], str[256];
+            char buf[2048], str[256];
 
             ArgusPrintRank(parser, str, argus, 32);
             rank = strdup(ArgusTrimString(str));
@@ -1144,7 +1144,7 @@ ArgusPrintFormat(struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
             ArgusPrintSourceID(parser, str, argus, 256);
             node = strdup(ArgusTrimString(str));
 
-            sprintf(buf, "{\"rank\":\"%s\",\"node\":\"%s\",\"stime\":new Date(%lld),\"ltime\":new Date(%lld),\"proto\":\"%s\",\"saddr\":\"%s\",\"daddr\":\"%s\",\"dport\":\"%s\",\"synack\":\"%s\"},", rank, node, sdate, ldate, proto, saddr, daddr, dport, synack);
+            snprintf(buf, sizeof(buf), "{\"rank\":\"%s\",\"node\":\"%s\",\"stime\":new Date(%lld),\"ltime\":new Date(%lld),\"proto\":\"%s\",\"saddr\":\"%s\",\"daddr\":\"%s\",\"dport\":\"%s\",\"synack\":\"%s\"},", rank, node, sdate, ldate, proto, saddr, daddr, dport, synack);
             fprintf(stdout, "%s", buf);
             fflush(stdout);
             break;
