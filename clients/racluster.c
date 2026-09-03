@@ -291,7 +291,7 @@ RaParseComplete (int sig)
             int cnt;
 
             if ((cnt = agg->queue->count) > 0) {
-               struct ArgusRecordStruct *argus;
+               struct ArgusRecordStruct *argus = NULL;
 
                if (!(ArgusSorter))
                   if ((ArgusSorter = ArgusNewSorter(ArgusParser)) == NULL)

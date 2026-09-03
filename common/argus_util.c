@@ -3211,14 +3211,15 @@ ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str)
          switch (state) {
                         case RA_READING_ETHER_PART: {
                            char *sptr, *tptr = optarg;
-                           int result, cnt = 0;
+                           unsigned int result;
+                           int cnt = 0;
 
                            addr = 0;
                            bzero(eaddr, sizeof(eaddr));
 
                            if ((sptr = strchr(optarg, '/')) != NULL) {  // if masklen, then terminate and store
                               *sptr++ = '\0';
-                              if (sscanf (sptr, "%d", &result) == 1) {
+                              if (sscanf (sptr, "%u", &result) == 1) {
                                  masklen = result;
                               }
                            }
@@ -25872,7 +25873,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
                   if (strstr(sbuf, "0000")) {
                      sprintf (sbuf, "Z");
                   } else {
-                     if ((slen = strlen(sbuf)) > 0) {
+                     if ((slen = strlen(sbuf)) > 2) {
                         for (i = 0; i < 2; i++)
                            sbuf[slen - i] = sbuf[slen - (i + 1)];
                         sbuf[slen - 2] = ':';
