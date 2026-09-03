@@ -204,7 +204,6 @@ RastreamProcessFileRetryList(void)
    FILE *pipe;
    struct RastreamFileMap *file = RastreamRetryListHead;
    char *cmd, path[PATH_MAX];
-   static const char * const fmt = "ra -X -Mlock -r %s -w %s";
    int rv = 1;
 
    cmd = ArgusMalloc(2*PATH_MAX);
@@ -218,7 +217,17 @@ RastreamProcessFileRetryList(void)
       if (file->filename == NULL)
          goto next;
 
-      slen = snprintf(cmd, 2*PATH_MAX, fmt, file->filename, file->filename_orig);
+      if ((strchr(file->filename, '\'') != NULL) ||
+          (strchr(file->filename_orig, '\'') != NULL)) {
+         ArgusLog(LOG_WARNING,
+                  "%s: filename contains a single quote, skipping: %s\n",
+                  __func__, file->filename);
+         file->nodelete = 1;
+         goto next;
+      }
+
+      slen = snprintf(cmd, 2*PATH_MAX, "ra -X -Mlock -r '%s' -w '%s'",
+                       file->filename, file->filename_orig);
       if (slen >= 2*PATH_MAX) {
          ArgusLog(LOG_WARNING, "%s command too long: skipping %s\n",
                   file->filename);
@@ -1767,7 +1776,17 @@ ArgusRunFileScript (struct ArgusParserStruct *parser, struct ArgusWfileStruct *f
       for (i = 0; i < 4; i++) {
          if (script->args[i] != NULL) {
             int slen = strlen(sbuf);
-            snprintf (&sbuf[slen], 1024 - slen, " %s", script->args[i]);
+            if (strchr(script->args[i], '\'') != NULL) {
+               ArgusLog(LOG_WARNING,
+                        "ArgusRunFileScript: argument contains a single "
+                        "quote, refusing to run script for file %s\n",
+                        file->filename);
+               free(script->filename);
+               free(script->script);
+               ArgusFree(script);
+               return (retn);
+            }
+            snprintf (&sbuf[slen], 1024 - slen, " '%s'", script->args[i]);
          }
       }
 
