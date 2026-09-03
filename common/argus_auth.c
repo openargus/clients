@@ -488,7 +488,8 @@ RaSaslNegotiate(struct ArgusInput *input)
    if ((len = RaGetSaslString(in, buf, sizeof(buf))) == 0)
       ArgusLog (LOG_ERR, "RaSaslNegotiate: RaGetSaslString(0x%x, 0x%x, %d) error %s\n", in, buf, sizeof(buf), strerror(errno));
 
-   strcpy(mechs, buf);
+   strncpy(mechs, buf, sizeof(mechs) - 1);
+   mechs[sizeof(mechs) - 1] = '\0';
 
    if (RaSaslMech) {
    /* make sure that 'RaSaslMech' appears in 'buf' */

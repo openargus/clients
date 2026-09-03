@@ -821,8 +821,8 @@ Argusgen_dns(int v, int value, int dir)
    struct ArgusDnsQueryStruct *sdns = (struct ArgusDnsQueryStruct *) &argus.srate;
    struct ArgusDnsQueryStruct *ddns = (struct ArgusDnsQueryStruct *) &argus.drate;
 
-   int soffset = ((char *)&sdns - (char *)&argus);
-   int doffset = ((char *)&ddns - (char *)&argus);
+   int soffset = ((char *)sdns - (char *)&argus);
+   int doffset = ((char *)ddns - (char *)&argus);
 
    switch (dir) {
       case Q_SRC: {

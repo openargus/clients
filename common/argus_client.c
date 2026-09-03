@@ -1431,10 +1431,10 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
          if ((s = socket (AF_UNIX, SOCK_STREAM, 0)) >= 0) {
             server.sun_family = AF_UNIX;
            
-            if (input->filename != NULL) 
-               strcpy(server.sun_path, input->filename);
+            if (input->filename != NULL)
+               strncpy(server.sun_path, input->filename, sizeof(server.sun_path) - 1);
             else
-               strcpy(server.sun_path, ARGUS_SOCKET_PATH);
+               strncpy(server.sun_path, ARGUS_SOCKET_PATH, sizeof(server.sun_path) - 1);
 
             if ((retn = connect (s, (struct sockaddr *)&server, sizeof(struct sockaddr_un))) < 0) {
                close(s);
