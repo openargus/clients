@@ -125,7 +125,7 @@ syslog_print(register const u_char *pptr, register u_int len)
             msg_off++;
         }
     } else {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|syslog]");
+        ARGUSBUF_APPEND("[|syslog]");
         return ArgusBuf;
     }
 
@@ -134,14 +134,14 @@ syslog_print(register const u_char *pptr, register u_int len)
 
     
     if (ArgusParser->vflag < 1 ) {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"SYSLOG %s.%s, length: %u",
+        ARGUSBUF_APPEND("SYSLOG %s.%s, length: %u",
                tok2str(syslog_facility_values, "unknown (%u)", facility),
                tok2str(syslog_severity_values, "unknown (%u)", severity),
                len);
         return ArgusBuf;
     }
        
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"SYSLOG, length: %u\n\tFacility %s (%u), Severity %s (%u)\n\tMsg: ",
+    ARGUSBUF_APPEND("SYSLOG, length: %u\n\tFacility %s (%u), Severity %s (%u)\n\tMsg: ",
            len,
            tok2str(syslog_facility_values, "unknown (%u)", facility),
            facility,
@@ -152,7 +152,7 @@ syslog_print(register const u_char *pptr, register u_int len)
     for (; msg_off < len; msg_off++) {
         if (!TTEST2(*(pptr+msg_off), 1))
             goto trunc;
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", *(pptr+msg_off));
+        ARGUSBUF_APPEND("%c", *(pptr+msg_off));
     }
 
    if (ArgusParser->vflag > 1) {
@@ -163,6 +163,6 @@ syslog_print(register const u_char *pptr, register u_int len)
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|syslog]");
+   ARGUSBUF_APPEND("[|syslog]");
    return ArgusBuf;
 }

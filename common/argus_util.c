@@ -21749,9 +21749,17 @@ ArgusPrintSrcUserDataLabel (struct ArgusParserStruct *parser, char *buf, int len
       }
  
       if (len > 10) slen++;
-      sprintf (buf, "%*ssrcUdata%*s ", (slen)/2, " ", (slen)/2, " ");
+
+      /* buf is a MAXSTRLEN-sized buffer (see ArgusGenerateLabel()); clamp
+       * slen so that the padding plus "srcUdata"/trailer text below cannot
+       * exceed that buffer, and use snprintf/bounds checks throughout.
+       */
+      if (slen > (MAXSTRLEN - 16))
+         slen = MAXSTRLEN - 16;
+
+      snprintf (buf, MAXSTRLEN, "%*ssrcUdata%*s ", (slen)/2, " ", (slen)/2, " ");
       if (slen & 0x01)
-         sprintf (&buf[strlen(buf)], " ");
+         snprintf (&buf[strlen(buf)], MAXSTRLEN - strlen(buf), " ");
    }
 }
 
@@ -21775,9 +21783,17 @@ ArgusPrintDstUserDataLabel (struct ArgusParserStruct *parser, char *buf, int len
       }
 
       if (len > 10) slen++;
-      sprintf (buf, "%*sdstUdata%*s ", (slen)/2, " ", (slen)/2, " ");
+
+      /* buf is a MAXSTRLEN-sized buffer (see ArgusGenerateLabel()); clamp
+       * slen so that the padding plus "dstUdata"/trailer text below cannot
+       * exceed that buffer, and use snprintf/bounds checks throughout.
+       */
+      if (slen > (MAXSTRLEN - 16))
+         slen = MAXSTRLEN - 16;
+
+      snprintf (buf, MAXSTRLEN, "%*sdstUdata%*s ", (slen)/2, " ", (slen)/2, " ");
       if (slen & 0x01)
-         sprintf (&buf[strlen(buf)], " ");
+         snprintf (&buf[strlen(buf)], MAXSTRLEN - strlen(buf), " ");
    }
 }
 
@@ -34158,6 +34174,15 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
 
                if (RaNewLength < 1)
                   ArgusLog (LOG_ERR, "-s %s:%d length must be greater than 0\n", soption, RaNewLength);
+
+               /* Field-print routines (e.g. ArgusPrintSrcUserData()) use
+                * this length directly against fixed-size internal buffers
+                * (MAXSTRLEN-sized).  Clamp it here, at the single point
+                * where it comes in from user/CLI input, so it can never
+                * drive an out-of-bounds write downstream.
+                */
+               if (RaNewLength > MAXSTRLEN)
+                  RaNewLength = MAXSTRLEN;
             }
 
             if ((sptr = strchr(ptr, ':')) != NULL) {

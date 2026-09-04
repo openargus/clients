@@ -264,7 +264,7 @@ ldp_tlv_print(register const u_char *tptr) {
     tlv_type=LDP_MASK_TLV_TYPE(EXTRACT_16BITS(ldp_tlv_header->type));
 
     /* FIXME vendor private / experimental check */
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    %s TLV (0x%04x), length: %u, Flags: [%s and %s forward if unknown]",
+    ARGUSBUF_APPEND("\n\t    %s TLV (0x%04x), length: %u, Flags: [%s and %s forward if unknown]",
            tok2str(ldp_tlv_values,
                    "Unknown",
                    tlv_type),
@@ -278,40 +278,40 @@ ldp_tlv_print(register const u_char *tptr) {
     switch(tlv_type) {
 
     case LDP_TLV_COMMON_HELLO:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Hold Time: %us, Flags: [%s Hello%s]",
+        ARGUSBUF_APPEND("\n\t      Hold Time: %us, Flags: [%s Hello%s]",
                EXTRACT_16BITS(tptr),
                (EXTRACT_16BITS(tptr+2)&0x8000) ? "Targeted" : "Link",
                (EXTRACT_16BITS(tptr+2)&0x4000) ? ", Request for targeted Hellos" : "");
         break;
 
     case LDP_TLV_IPV4_TRANSPORT_ADDR:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv4 Transport Address: %s", ipaddr_string(tptr));
+        ARGUSBUF_APPEND("\n\t      IPv4 Transport Address: %s", ipaddr_string(tptr));
         break;
 #ifdef INET6
     case LDP_TLV_IPV6_TRANSPORT_ADDR:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv6 Transport Address: %s", ip6addr_string(tptr));
+        ARGUSBUF_APPEND("\n\t      IPv6 Transport Address: %s", ip6addr_string(tptr));
         break;
 #endif
     case LDP_TLV_CONFIG_SEQ_NUMBER:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Sequence Number: %u", EXTRACT_32BITS(tptr));
+        ARGUSBUF_APPEND("\n\t      Sequence Number: %u", EXTRACT_32BITS(tptr));
         break;
 
     case LDP_TLV_ADDRESS_LIST:
    af = EXTRACT_16BITS(tptr);
    tptr+=2;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Adress Family: ");
+   ARGUSBUF_APPEND("\n\t      Adress Family: ");
    if (af == AFNUM_INET) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"IPv4, addresses:");
+       ARGUSBUF_APPEND("IPv4, addresses:");
        for (i=0; i<(tlv_tlen-2)/4; i++) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s",ipaddr_string(tptr));
+      ARGUSBUF_APPEND(" %s",ipaddr_string(tptr));
       tptr+=sizeof(struct in_addr);
        }
    }
 #ifdef INET6
    else if (af == AFNUM_INET6) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"IPv6, addresses:");
+       ARGUSBUF_APPEND("IPv6, addresses:");
        for (i=0; i<(tlv_tlen-2)/16; i++) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s",ip6addr_string(tptr));
+      ARGUSBUF_APPEND(" %s",ip6addr_string(tptr));
       tptr+=sizeof(struct in6_addr);
        }
    }
@@ -319,7 +319,7 @@ ldp_tlv_print(register const u_char *tptr) {
    break;
 
     case LDP_TLV_COMMON_SESSION:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Version: %u, Keepalive: %us, Flags: [Downstream %s, Loop Detection %s]",
+   ARGUSBUF_APPEND("\n\t      Version: %u, Keepalive: %us, Flags: [Downstream %s, Loop Detection %s]",
           EXTRACT_16BITS(tptr), EXTRACT_16BITS(tptr+2),
           (EXTRACT_16BITS(tptr+6)&0x8000) ? "On Demand" : "Unsolicited",
           (EXTRACT_16BITS(tptr+6)&0x4000) ? "Enabled" : "Disabled"
@@ -328,7 +328,7 @@ ldp_tlv_print(register const u_char *tptr) {
 
     case LDP_TLV_FEC:
         fec_type = *tptr;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      %s FEC (0x%02x)",
+   ARGUSBUF_APPEND("\n\t      %s FEC (0x%02x)",
           tok2str(ldp_fec_values, "Unknown", fec_type),
           fec_type);
 
@@ -342,12 +342,12 @@ ldp_tlv_print(register const u_char *tptr) {
        tptr+=2;
        if (af == AFNUM_INET) {
       i=decode_prefix4(tptr,buf,sizeof(buf));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],": IPv4 prefix %s",buf);
+      ARGUSBUF_APPEND(": IPv4 prefix %s",buf);
        }
 #ifdef INET6
        else if (af == AFNUM_INET6) {
       i=decode_prefix6(tptr,buf,sizeof(buf));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],": IPv6 prefix %s",buf);
+      ARGUSBUF_APPEND(": IPv6 prefix %s",buf);
        }
 #endif
        break;
@@ -358,7 +358,7 @@ ldp_tlv_print(register const u_char *tptr) {
                 goto trunc;
             vc_info_len = *(tptr+2);
 
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],": %s, %scontrol word, group-ID %u, VC-ID %u, VC-info-length: %u",
+       ARGUSBUF_APPEND(": %s, %scontrol word, group-ID %u, VC-ID %u, VC-info-length: %u",
          tok2str(l2vpn_encaps_values, "Unknown", EXTRACT_16BITS(tptr)&0x7fff),
          EXTRACT_16BITS(tptr)&0x8000 ? "" : "no ",
                    EXTRACT_32BITS(tptr+3),
@@ -380,27 +380,27 @@ ldp_tlv_print(register const u_char *tptr) {
                 if (vc_info_len < vc_info_tlv_len)
                     break;
 
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\tInterface Parameter: %s (0x%02x), len %u",
+                ARGUSBUF_APPEND("\n\t\tInterface Parameter: %s (0x%02x), len %u",
                        tok2str(ldp_fec_martini_ifparm_values,"Unknown",vc_info_tlv_type),
                        vc_info_tlv_type,
                        vc_info_tlv_len);
 
                 switch(vc_info_tlv_type) {
                 case LDP_FEC_MARTINI_IFPARM_MTU:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],": %u",EXTRACT_16BITS(tptr+2));
+                    ARGUSBUF_APPEND(": %u",EXTRACT_16BITS(tptr+2));
                     break;
 
                 case LDP_FEC_MARTINI_IFPARM_DESC:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],": ");
+                    ARGUSBUF_APPEND(": ");
                     for (idx = 2; idx < vc_info_tlv_len; idx++)
-                       sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", *(tptr+idx));
+                       ARGUSBUF_APPEND("%c", *(tptr+idx));
                     break;
 
                 case LDP_FEC_MARTINI_IFPARM_VCCV:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t  Control Channels (0x%02x) = [%s]",
+                    ARGUSBUF_APPEND("\n\t\t  Control Channels (0x%02x) = [%s]",
                            *(tptr+2),
                            bittok2str(ldp_fec_martini_ifparm_vccv_cc_values,"none",*(tptr+2)));
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t  CV Types (0x%02x) = [%s]",
+                    ARGUSBUF_APPEND("\n\t\t  CV Types (0x%02x) = [%s]",
                            *(tptr+3),
                            bittok2str(ldp_fec_martini_ifparm_vccv_cv_values,"none",*(tptr+3)));
                     break;
@@ -419,25 +419,25 @@ ldp_tlv_print(register const u_char *tptr) {
    break;
 
     case LDP_TLV_GENERIC_LABEL:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Label: %u", EXTRACT_32BITS(tptr) & 0xfffff);
+   ARGUSBUF_APPEND("\n\t      Label: %u", EXTRACT_32BITS(tptr) & 0xfffff);
    break;
 
     case LDP_TLV_STATUS:
    ui = EXTRACT_32BITS(tptr);
    tptr+=4;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Status: 0x%02x, Flags: [%s and %s forward]",
+   ARGUSBUF_APPEND("\n\t      Status: 0x%02x, Flags: [%s and %s forward]",
           ui&0x3fffffff,
           ui&0x80000000 ? "Fatal error" : "Advisory Notification",
           ui&0x40000000 ? "do" : "don't");
    ui = EXTRACT_32BITS(tptr);
    tptr+=4;
    if (ui)
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],", causing Message ID: 0x%08x", ui);
+       ARGUSBUF_APPEND(", causing Message ID: 0x%08x", ui);
    break;
 
     case LDP_TLV_FT_SESSION:
    ft_flags = EXTRACT_16BITS(tptr);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Flags: [%sReconnect, %sSave State, %sAll-Label Protection, %s Checkpoint, %sRe-Learn State]",
+   ARGUSBUF_APPEND("\n\t      Flags: [%sReconnect, %sSave State, %sAll-Label Protection, %s Checkpoint, %sRe-Learn State]",
           ft_flags&0x8000 ? "" : "No ",
           ft_flags&0x8 ? "" : "Don't ",
           ft_flags&0x4 ? "" : "No ",
@@ -446,11 +446,11 @@ ldp_tlv_print(register const u_char *tptr) {
    tptr+=4;
    ui = EXTRACT_32BITS(tptr);
    if (ui)
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],", Reconnect Timeout: %ums", ui);
+       ARGUSBUF_APPEND(", Reconnect Timeout: %ums", ui);
    tptr+=4;
    ui = EXTRACT_32BITS(tptr);
    if (ui)
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],", Recovery Time: %ums", ui);
+       ARGUSBUF_APPEND(", Recovery Time: %ums", ui);
    break;
 
 
@@ -478,7 +478,7 @@ ldp_tlv_print(register const u_char *tptr) {
     return(tlv_len+4); /* Type & Length fields not included */
  
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t packet exceeded snapshot");
+    ARGUSBUF_APPEND("\n\t\t packet exceeded snapshot");
     return 0;
 }
 
@@ -516,7 +516,7 @@ ldp_msg_print(register const u_char *pptr) {
      * Sanity checking of the header.
      */
     if (EXTRACT_16BITS(&ldp_com_header->version) != LDP_VERSION) {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sLDP version %u packet not supported",
+   ARGUSBUF_APPEND("%sLDP version %u packet not supported",
                (ArgusParser->vflag < 1) ? "" : "\n\t",
                EXTRACT_16BITS(&ldp_com_header->version));
    return 0;
@@ -524,7 +524,7 @@ ldp_msg_print(register const u_char *pptr) {
 
     /* print the LSR-ID, label-space & length */
     pdu_len = EXTRACT_16BITS(&ldp_com_header->pdu_length);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sLDP, Label-Space-ID: %s:%u, pdu-length: %u",
+    ARGUSBUF_APPEND("%sLDP, Label-Space-ID: %s:%u, pdu-length: %u",
            (ArgusParser->vflag < 1) ? "" : "\n\t",
            ipaddr_string(&ldp_com_header->lsr_id),
            EXTRACT_16BITS(&ldp_com_header->label_space),
@@ -550,7 +550,7 @@ ldp_msg_print(register const u_char *pptr) {
         msg_type=LDP_MASK_MSG_TYPE(EXTRACT_16BITS(ldp_msg_header->type));
 
         /* FIXME vendor private / experimental check */
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Message (0x%04x), length: %u, Message ID: 0x%08x, Flags: [%s if unknown]",
+        ARGUSBUF_APPEND("\n\t  %s Message (0x%04x), length: %u, Message ID: 0x%08x, Flags: [%s if unknown]",
                tok2str(ldp_msg_values,
                        "Unknown",
                        msg_type),
@@ -613,7 +613,7 @@ ldp_msg_print(register const u_char *pptr) {
     }
     return pdu_len+4;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t packet exceeded snapshot");
+    ARGUSBUF_APPEND("\n\t\t packet exceeded snapshot");
     return 0;
 }
 

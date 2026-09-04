@@ -98,7 +98,7 @@ dvmrp_print(register const u_char *bp, register u_int len)
 	switch (type) {
 
 	case DVMRP_PROBE:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Probe");
+		ARGUSBUF_APPEND(" Probe");
 		if (ArgusParser->vflag) {
 			if (print_probe(bp, ep, len) < 0)
 				goto trunc;
@@ -106,7 +106,7 @@ dvmrp_print(register const u_char *bp, register u_int len)
 		break;
 
 	case DVMRP_REPORT:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Report");
+		ARGUSBUF_APPEND(" Report");
 		if (ArgusParser->vflag > 1) {
 			if (print_report(bp, ep, len) < 0)
 				goto trunc;
@@ -114,21 +114,21 @@ dvmrp_print(register const u_char *bp, register u_int len)
 		break;
 
 	case DVMRP_ASK_NEIGHBORS:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Ask-neighbors(old)");
+		ARGUSBUF_APPEND(" Ask-neighbors(old)");
 		break;
 
 	case DVMRP_NEIGHBORS:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Neighbors(old)");
+		ARGUSBUF_APPEND(" Neighbors(old)");
 		if (print_neighbors(bp, ep, len) < 0)
 			goto trunc;
 		break;
 
 	case DVMRP_ASK_NEIGHBORS2:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Ask-neighbors2");
+		ARGUSBUF_APPEND(" Ask-neighbors2");
 		break;
 
 	case DVMRP_NEIGHBORS2:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Neighbors2");
+		ARGUSBUF_APPEND(" Neighbors2");
 		/*
 		 * extract version and capabilities from IGMP group
 		 * address field
@@ -143,31 +143,31 @@ dvmrp_print(register const u_char *bp, register u_int len)
 		break;
 
 	case DVMRP_PRUNE:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Prune");
+		ARGUSBUF_APPEND(" Prune");
 		if (print_prune(bp) < 0)
 			goto trunc;
 		break;
 
 	case DVMRP_GRAFT:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Graft");
+		ARGUSBUF_APPEND(" Graft");
 		if (print_graft(bp) < 0)
 			goto trunc;
 		break;
 
 	case DVMRP_GRAFT_ACK:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Graft-ACK");
+		ARGUSBUF_APPEND(" Graft-ACK");
 		if (print_graft_ack(bp) < 0)
 			goto trunc;
 		break;
 
 	default:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," [type %d]", type);
+		ARGUSBUF_APPEND(" [type %d]", type);
 		break;
 	}
 	return ArgusBuf;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|dvmrp]");
+	ARGUSBUF_APPEND("[|dvmrp]");
 	return ArgusBuf;
 }
 
@@ -181,7 +181,7 @@ print_report(register const u_char *bp, register const u_char *ep,
 
 	while (len > 0) {
 		if (len < 3) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|]");
+			ARGUSBUF_APPEND(" [|]");
 			return (0);
 		}
 		TCHECK2(bp[0], 3);
@@ -194,16 +194,16 @@ print_report(register const u_char *bp, register const u_char *ep,
 		if (bp[2])
 			width = 4;
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tMask %s", intoa(htonl(mask)));
+		ARGUSBUF_APPEND("\n\tMask %s", intoa(htonl(mask)));
 		bp += 3;
 		len -= 3;
 		do {
 			if (bp + width + 1 > ep) {
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|]");
+				ARGUSBUF_APPEND(" [|]");
 				return (0);
 			}
 			if (len < width + 1) {
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  [Truncated Report]");
+				ARGUSBUF_APPEND("\n\t  [Truncated Report]");
 				return (0);
 			}
 			origin = 0;
@@ -218,7 +218,7 @@ print_report(register const u_char *bp, register const u_char *ep,
 			metric = *bp++;
 			done = metric & 0x80;
 			metric &= 0x7f;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s metric %d", intoa(htonl(origin)),
+			ARGUSBUF_APPEND("\n\t  %s metric %d", intoa(htonl(origin)),
 				metric);
 			len -= width + 1;
 		} while (!done);
@@ -237,23 +237,23 @@ print_probe(register const u_char *bp, register const u_char *ep,
 	TCHECK2(bp[0], 4);
 	if ((len < 4) || ((bp + 4) > ep)) {
 		/* { (ctags) */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|}");
+		ARGUSBUF_APPEND(" [|}");
 		return (0);
 	}
 	genid = (bp[0] << 24) | (bp[1] << 16) | (bp[2] << 8) | bp[3];
 	bp += 4;
 	len -= 4;
 	if (ArgusParser->vflag > 1)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t");
+		ARGUSBUF_APPEND("\n\t");
 	else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"genid %u", genid);
+		ARGUSBUF_APPEND(" ");
+	ARGUSBUF_APPEND("genid %u", genid);
 	if (ArgusParser->vflag < 2)
 		return (0);
 
 	while ((len > 0) && (bp < ep)) {
 		TCHECK2(bp[0], 4);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tneighbor %s", ipaddr_string(bp));
+		ARGUSBUF_APPEND("\n\tneighbor %s", ipaddr_string(bp));
 		bp += 4; len -= 4;
 	}
 	return (0);
@@ -280,8 +280,8 @@ print_neighbors(register const u_char *bp, register const u_char *ep,
 		len -= 7;
 		while (--ncount >= 0) {
 			TCHECK2(bp[0], 4);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [%s ->", ipaddr_string(laddr));
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s, (%d/%d)]",
+			ARGUSBUF_APPEND(" [%s ->", ipaddr_string(laddr));
+			ARGUSBUF_APPEND(" %s, (%d/%d)]",
 				   ipaddr_string(bp), metric, thresh);
 			bp += 4;
 			len -= 4;
@@ -300,7 +300,7 @@ print_neighbors2(register const u_char *bp, register const u_char *ep,
 	register u_char metric, thresh, flags;
 	register int ncount;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," (v %d.%d):",
+	ARGUSBUF_APPEND(" (v %d.%d):",
 	       (int)target_level & 0xff,
 	       (int)(target_level >> 8) & 0xff);
 
@@ -314,25 +314,25 @@ print_neighbors2(register const u_char *bp, register const u_char *ep,
 		ncount = *bp++;
 		len -= 8;
 		while (--ncount >= 0 && (len >= 4) && (bp + 4) <= ep) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [%s -> ", ipaddr_string(laddr));
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s (%d/%d", ipaddr_string(bp),
+			ARGUSBUF_APPEND(" [%s -> ", ipaddr_string(laddr));
+			ARGUSBUF_APPEND("%s (%d/%d", ipaddr_string(bp),
 				     metric, thresh);
 			if (flags & DVMRP_NF_TUNNEL)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"/tunnel");
+				ARGUSBUF_APPEND("/tunnel");
 			if (flags & DVMRP_NF_SRCRT)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"/srcrt");
+				ARGUSBUF_APPEND("/srcrt");
 			if (flags & DVMRP_NF_QUERIER)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"/querier");
+				ARGUSBUF_APPEND("/querier");
 			if (flags & DVMRP_NF_DISABLED)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"/disabled");
+				ARGUSBUF_APPEND("/disabled");
 			if (flags & DVMRP_NF_DOWN)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"/down");
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],")]");
+				ARGUSBUF_APPEND("/down");
+			ARGUSBUF_APPEND(")]");
 			bp += 4;
 			len -= 4;
 		}
 		if (ncount != -1) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|]");
+			ARGUSBUF_APPEND(" [|]");
 			return (0);
 		}
 	}
@@ -345,9 +345,9 @@ static int
 print_prune(register const u_char *bp)
 {
 	TCHECK2(bp[0], 12);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
+	ARGUSBUF_APPEND(" src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
 	bp += 8;
-	(void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," timer ");
+	ARGUSBUF_APPEND(" timer ");
 	relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_32BITS(bp));
 	return (0);
 trunc:
@@ -358,7 +358,7 @@ static int
 print_graft(register const u_char *bp)
 {
 	TCHECK2(bp[0], 8);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
+	ARGUSBUF_APPEND(" src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
 	return (0);
 trunc:
 	return (-1);
@@ -368,7 +368,7 @@ static int
 print_graft_ack(register const u_char *bp)
 {
 	TCHECK2(bp[0], 8);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
+	ARGUSBUF_APPEND(" src %s grp %s", ipaddr_string(bp), ipaddr_string(bp + 4));
 	return (0);
 trunc:
 	return (-1);

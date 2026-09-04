@@ -967,7 +967,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
          struct ArgusFileInput *nxtfile;
          struct ArgusFileInput *file;
 
-         input = ArgusMalloc(sizeof(*input));
+         input = ArgusCalloc(1, sizeof(*input));
          if (input == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 

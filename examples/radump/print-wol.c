@@ -58,7 +58,7 @@ wol_print(const u_char *dat, u_int length)
    const u_char *ptr = dat;
    int i, match = 0;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," wol:");
+   ARGUSBUF_APPEND(" wol:");
 
    for (i = 0; i < length; i++) {
       if (ptr[i] != 0xff)
@@ -71,8 +71,8 @@ wol_print(const u_char *dat, u_int length)
    }
 
    if (match == 6) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," tagged: ");
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," wake-on-lan eaddr %s", etheraddr_string(ArgusParser, (u_char *)&dat[i]));
+      ARGUSBUF_APPEND(" tagged: ");
+      ARGUSBUF_APPEND(" wake-on-lan eaddr %s", etheraddr_string(ArgusParser, (u_char *)&dat[i]));
    }
 
    return ArgusBuf;

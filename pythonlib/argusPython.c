@@ -1257,7 +1257,7 @@ ArgusLoadDataFiles (struct ArgusParserStruct *parser, int type)
 #ifdef ARGUSDEBUG
       ArgusDebug (1, "ArgusLoadDataFiles (%p, %d) allocating input struct", parser, type);
 #endif
-      input = ArgusMalloc(sizeof(*input));
+      input = ArgusCalloc(1, sizeof(*input));
       if (input == NULL)
          ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 

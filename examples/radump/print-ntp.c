@@ -91,110 +91,110 @@ ntp_print(register const u_char *cp, u_int length)
    TCHECK(bp->status);
 
    version = (int)(bp->status & VERSIONMASK) >> 3;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"NTPv%d", version);
+   ARGUSBUF_APPEND("NTPv%d", version);
 
    mode = bp->status & MODEMASK;
    if (ArgusParser->vflag == 0) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s, length %u",
+      ARGUSBUF_APPEND(", %s, length %u",
          tok2str(ntp_mode_values, "Unknown mode", mode), length);
       return ArgusBuf;
    }
         
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],", length %u %s", length, tok2str(ntp_mode_values, "Unknown mode", mode));
+   ARGUSBUF_APPEND(", length %u %s", length, tok2str(ntp_mode_values, "Unknown mode", mode));
 
    if ((leapind = bp->status & LEAPMASK) || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", Leap indicator: %s (%u)",
+      ARGUSBUF_APPEND(", Leap indicator: %s (%u)",
          tok2str(ntp_leapind_values, "Unknown", leapind), leapind);
    }
    TCHECK(bp->stratum);
    if (bp->stratum || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", Stratum %u", bp->stratum);
+      ARGUSBUF_APPEND(", Stratum %u", bp->stratum);
    }
    TCHECK(bp->ppoll);
    if (bp->ppoll || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", poll %us", bp->ppoll);
+      ARGUSBUF_APPEND(", poll %us", bp->ppoll);
    }
    /* Can't TCHECK bp->precision bitfield so bp->distance + 0 instead */
    if (bp->precision || (ArgusParser->vflag > 1)) {
       TCHECK2(bp->root_delay, 0);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", precision %d", bp->precision);
+      ARGUSBUF_APPEND(", precision %d", bp->precision);
    }
    TCHECK(bp->root_delay);
    if (bp->root_delay.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Root Delay: ");
+      ARGUSBUF_APPEND(" Root Delay: ");
       p_sfix(&bp->root_delay);
    }
    TCHECK(bp->root_dispersion);
    if (bp->root_dispersion.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", Root dispersion: ");
+      ARGUSBUF_APPEND(", Root dispersion: ");
       p_sfix(&bp->root_dispersion);
    }
    TCHECK(bp->refid);
    if (bp->refid || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", Reference-ID: ");
+      ARGUSBUF_APPEND(", Reference-ID: ");
 
       /* Interpretation depends on stratum */
       switch (bp->stratum) {
          case UNSPECIFIED:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"(unspec)");
+            ARGUSBUF_APPEND("(unspec)");
             break;
 
          case PRIM_REF:
-            if (fn_printn((u_char *)&(bp->refid), 4, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
+            if (fn_printn((u_char *)&(bp->refid), 4, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL)
                goto trunc;
             break;
 
          case INFO_QUERY:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s INFO_QUERY", ipaddr_string(&(bp->refid)));
+            ARGUSBUF_APPEND("%s INFO_QUERY", ipaddr_string(&(bp->refid)));
             /* this doesn't have more content */
             return ArgusBuf;
 
          case INFO_REPLY:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s INFO_REPLY", ipaddr_string(&(bp->refid)));
+            ARGUSBUF_APPEND("%s INFO_REPLY", ipaddr_string(&(bp->refid)));
             /* this is too complex to be worth printing */
             return ArgusBuf;
 
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&(bp->refid)));
+            ARGUSBUF_APPEND("%s", ipaddr_string(&(bp->refid)));
             break;
       }
    }
    TCHECK(bp->ref_timestamp);
    if (bp->ref_timestamp.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Reference Timestamp: ");
+      ARGUSBUF_APPEND(" Reference Timestamp: ");
       p_ntp_time(&(bp->ref_timestamp));
    }
 
    TCHECK(bp->org_timestamp);
    if (bp->org_timestamp.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Originator Timestamp: ");
+      ARGUSBUF_APPEND(" Originator Timestamp: ");
       p_ntp_time(&(bp->org_timestamp));
    }
 
    TCHECK(bp->rec_timestamp);
    if (bp->rec_timestamp.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Receive Timestamp: ");
+      ARGUSBUF_APPEND(" Receive Timestamp: ");
       p_ntp_time(&(bp->rec_timestamp));
    }
 
    TCHECK(bp->xmt_timestamp);
    if (bp->xmt_timestamp.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Transmit Timestamp: ");
+      ARGUSBUF_APPEND(" Transmit Timestamp: ");
       p_ntp_time(&(bp->xmt_timestamp));
    }
 
    if (bp->org_timestamp.int_part || (ArgusParser->vflag > 1)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Delta Receive Timestamp:  ");
+      ARGUSBUF_APPEND(" Delta Receive Timestamp:  ");
       p_ntp_delta(&(bp->org_timestamp), &(bp->rec_timestamp));
 
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Delta Transmit Timestamp: ");
+      ARGUSBUF_APPEND(" Delta Transmit Timestamp: ");
       p_ntp_delta(&(bp->org_timestamp), &(bp->xmt_timestamp));
    }
 
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|ntp]");
+   ARGUSBUF_APPEND(" [|ntp]");
    return ArgusBuf;
 }
 
@@ -209,7 +209,7 @@ p_sfix(register const struct s_fixedpt *sfp)
    f = EXTRACT_16BITS(&sfp->fraction);
    ff = f / 65536.0;   /* shift radix point by 16 bits */
    f = ff * 1000000.0;   /* Treat fraction as parts per million */
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d.%06d", i, f);
+   ARGUSBUF_APPEND("%d.%06d", i, f);
 }
 
 #define   FMAXINT   (4294967296.0)   /* floating point rep. of MAXINT */
@@ -229,7 +229,7 @@ p_ntp_time(register const struct l_fixedpt *lfp)
       ff += FMAXINT;
    ff = ff / FMAXINT;   /* shift radix point by 32 bits */
    f = ff * 1000000000.0;   /* treat fraction as parts per billion */
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u.%09d", i, f);
+   ARGUSBUF_APPEND("%u.%09d", i, f);
 
 #ifdef HAVE_STRFTIME
    /*
@@ -242,7 +242,7 @@ p_ntp_time(register const struct l_fixedpt *lfp)
 
        tm = localtime(&seconds);
        strftime(time_buf, sizeof (time_buf), "%Y/%m/%d %H:%M:%S", tm);
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%s)", time_buf);
+       ARGUSBUF_APPEND(" (%s)", time_buf);
    }
 #endif
 }
@@ -297,9 +297,9 @@ p_ntp_delta(register const struct l_fixedpt *olfp,
    ff = ff / FMAXINT;   /* shift radix point by 32 bits */
    f = ff * 1000000000.0;   /* treat fraction as parts per billion */
    if (signbit)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"-");
+      ARGUSBUF_APPEND("-");
    else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"+");
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d.%09d", i, f);
+      ARGUSBUF_APPEND("+");
+   ARGUSBUF_APPEND("%d.%09d", i, f);
 }
 

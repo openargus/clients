@@ -259,7 +259,7 @@ print_asc(const unsigned char *buf, int len)
     extern char ArgusBuf[];
     int i;
     for (i = 0; i < len; i++)
-        sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", buf[i]);
+        ARGUSBUF_APPEND("%c", buf[i]);
 }
 
 static const char *
@@ -286,38 +286,38 @@ print_data(const unsigned char *buf, int len)
 
     if (len <= 0)
 	return;
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%03X] ", i);
+    ARGUSBUF_APPEND("[%03X] ", i);
     for (i = 0; i < len; /*nothing*/) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02X ", buf[i] & 0xff);
+	ARGUSBUF_APPEND("%02X ", buf[i] & 0xff);
 	i++;
 	if (i%8 == 0)
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	    ARGUSBUF_APPEND(" ");
 	if (i % 16 == 0) {
 	    print_asc(&buf[i - 16], 8);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	    ARGUSBUF_APPEND(" ");
 	    print_asc(&buf[i - 8], 8);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+	    ARGUSBUF_APPEND("\n");
 	    if (i < len)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%03X] ", i);
+		ARGUSBUF_APPEND("[%03X] ", i);
 	}
     }
     if (i % 16) {
 	int n;
 
 	n = 16 - (i % 16);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	ARGUSBUF_APPEND(" ");
 	if (n>8)
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	    ARGUSBUF_APPEND(" ");
 	while (n--)
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"   ");
+	    ARGUSBUF_APPEND("   ");
 
 	n = SMBMIN(8, i % 16);
 	print_asc(&buf[i - (i % 16)], n);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	ARGUSBUF_APPEND(" ");
 	n = (i % 16) - n;
 	if (n > 0)
 	    print_asc(&buf[i - n], n);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+	ARGUSBUF_APPEND("\n");
     }
 }
 
@@ -331,7 +331,7 @@ write_bits(unsigned int val, const char *fmt)
     while ((p = strchr(fmt, '|'))) {
 	size_t l = PTR_DIFF(p, fmt);
 	if (l && (val & (1 << i)))
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%.*s ", (int)l, fmt);
+	    ARGUSBUF_APPEND("%.*s ", (int)l, fmt);
 	fmt = p + 1;
 	i++;
     }
@@ -494,7 +494,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    unsigned int x;
 	    TCHECK(buf[0]);
 	    x = buf[0];
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u (0x%x)", x, x);
+	    ARGUSBUF_APPEND("%u (0x%x)", x, x);
 	    buf += 1;
 	    fmt++;
 	    break;
@@ -505,7 +505,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    TCHECK2(buf[0], 2);
 	    x = reverse ? EXTRACT_16BITS(buf) :
 			  EXTRACT_LE_16BITS(buf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d (0x%x)", x, x);
+	    ARGUSBUF_APPEND("%d (0x%x)", x, x);
 	    buf += 2;
 	    fmt++;
 	    break;
@@ -516,7 +516,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    TCHECK2(buf[0], 4);
 	    x = reverse ? EXTRACT_32BITS(buf) :
 			  EXTRACT_LE_32BITS(buf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d (0x%x)", x, x);
+	    ARGUSBUF_APPEND("%d (0x%x)", x, x);
 	    buf += 4;
 	    fmt++;
 	    break;
@@ -527,7 +527,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    TCHECK2(buf[0], 8);
 	    x = reverse ? EXTRACT_64BITS(buf) :
 			  EXTRACT_LE_64BITS(buf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%" PRIu64 " (0x%" PRIx64 ")", x, x);
+	    ARGUSBUF_APPEND("%" PRIu64 " (0x%" PRIx64 ")", x, x);
 	    buf += 8;
 	    fmt++;
 	    break;
@@ -543,7 +543,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    x2 = reverse ? EXTRACT_32BITS(buf + 4) :
 			   EXTRACT_LE_32BITS(buf + 4);
 	    x = (((u_int64_t)x1) << 32) | x2;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%" PRIu64 " (0x%" PRIx64 ")", x, x);
+	    ARGUSBUF_APPEND("%" PRIu64 " (0x%" PRIx64 ")", x, x);
 	    buf += 8;
 	    fmt++;
 	    break;
@@ -553,7 +553,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    unsigned int x;
 	    TCHECK(buf[0]);
 	    x = buf[0];
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%X", x);
+	    ARGUSBUF_APPEND("0x%X", x);
 	    buf += 1;
 	    fmt++;
 	    break;
@@ -564,7 +564,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    TCHECK2(buf[0], 2);
 	    x = reverse ? EXTRACT_16BITS(buf) :
 			  EXTRACT_LE_16BITS(buf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%X", x);
+	    ARGUSBUF_APPEND("0x%X", x);
 	    buf += 2;
 	    fmt++;
 	    break;
@@ -575,7 +575,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    TCHECK2(buf[0], 4);
 	    x = reverse ? EXTRACT_32BITS(buf) :
 			  EXTRACT_LE_32BITS(buf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%X", x);
+	    ARGUSBUF_APPEND("0x%X", x);
 	    buf += 4;
 	    fmt++;
 	    break;
@@ -588,7 +588,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    case 'b':
 		TCHECK(buf[0]);
 		stringlen = buf[0];
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", stringlen);
+		ARGUSBUF_APPEND("%u", stringlen);
 		buf += 1;
 		break;
 
@@ -596,7 +596,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 		TCHECK2(buf[0], 2);
 		stringlen = reverse ? EXTRACT_16BITS(buf) :
 				      EXTRACT_LE_16BITS(buf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", stringlen);
+		ARGUSBUF_APPEND("%u", stringlen);
 		buf += 2;
 		break;
 
@@ -604,7 +604,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 		TCHECK2(buf[0], 4);
 		stringlen = reverse ? EXTRACT_32BITS(buf) :
 				      EXTRACT_LE_32BITS(buf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", stringlen);
+		ARGUSBUF_APPEND("%u", stringlen);
 		buf += 4;
 		break;
 	    }
@@ -622,7 +622,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    s = unistr(buf, &len, (*fmt == 'R') ? 0 : unicodestr);
 	    if (s == NULL)
 		goto trunc;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", s);
+	    ARGUSBUF_APPEND("%s", s);
 	    buf += len;
 	    fmt++;
 	    break;
@@ -635,14 +635,14 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 
 	    TCHECK(*buf);
 	    if (*buf != 4 && *buf != 2) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Error! ASCIIZ buffer of type %u", *buf);
+		ARGUSBUF_APPEND("Error! ASCIIZ buffer of type %u", *buf);
 		return maxbuf;	/* give up */
 	    }
 	    len = 0;
 	    s = unistr(buf + 1, &len, (*fmt == 'Y') ? 0 : unicodestr);
 	    if (s == NULL)
 		goto trunc;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", s);
+	    ARGUSBUF_APPEND("%s", s);
 	    buf += len + 1;
 	    fmt++;
 	    break;
@@ -651,7 +651,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	  {
 	    int l = atoi(fmt + 1);
 	    TCHECK2(*buf, l);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%-*.*s", l, l, buf);
+	    ARGUSBUF_APPEND("%-*.*s", l, l, buf);
 	    buf += l;
 	    fmt++;
 	    while (isdigit((unsigned char)*fmt))
@@ -661,7 +661,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	case 'c':
 	  {
 	    TCHECK2(*buf, stringlen);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%-*.*s", (int)stringlen, (int)stringlen, buf);
+	    ARGUSBUF_APPEND("%-*.*s", (int)stringlen, (int)stringlen, buf);
 	    buf += stringlen;
 	    fmt++;
 	    while (isdigit((unsigned char)*fmt))
@@ -674,7 +674,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    s = unistr(buf, &stringlen, unicodestr);
 	    if (s == NULL)
 		goto trunc;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", s);
+	    ARGUSBUF_APPEND("%s", s);
 	    buf += stringlen;
 	    fmt++;
 	    break;
@@ -684,7 +684,7 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    int l = atoi(fmt + 1);
 	    TCHECK2(*buf, l);
 	    while (l--)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", *buf++);
+		ARGUSBUF_APPEND("%02x", *buf++);
 	    fmt++;
 	    while (isdigit((unsigned char)*fmt))
 		fmt++;
@@ -707,13 +707,13 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 		if (len < 0)
 		    goto trunc;
 		buf += len;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%-15.15s NameType=0x%02X (%s)", nbuf, name_type,
+		ARGUSBUF_APPEND("%-15.15s NameType=0x%02X (%s)", nbuf, name_type,
 		    name_type_str(name_type));
 		break;
 	    case 2:
 		TCHECK(buf[15]);
 		name_type = buf[15];
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%-15.15s NameType=0x%02X (%s)", buf, name_type,
+		ARGUSBUF_APPEND("%-15.15s NameType=0x%02X (%s)", buf, name_type,
 		    name_type_str(name_type));
 		buf += 16;
 		break;
@@ -763,27 +763,27 @@ smb_fdata1(const u_char *buf, const char *fmt, const u_char *maxbuf,
 		    tstring = "(Can't convert time)\n";
 	    } else
 		tstring = "NULL\n";
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstring);
+	    ARGUSBUF_APPEND("%s", tstring);
 	    fmt++;
 	    while (isdigit((unsigned char)*fmt))
 		fmt++;
 	    break;
 	  }
 	default:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", *fmt);
+	    ARGUSBUF_APPEND("%c", *fmt);
 	    fmt++;
 	    break;
 	}
     }
 
     if (buf >= maxbuf && *fmt)
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"END OF BUFFER\n");
+	ARGUSBUF_APPEND("END OF BUFFER\n");
 
     return(buf);
 
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Short packet. Try increasing the snap length\n");
+    ARGUSBUF_APPEND("\n");
+    ARGUSBUF_APPEND("WARNING: Short packet. Try increasing the snap length\n");
     return(NULL);
 }
 
@@ -847,14 +847,14 @@ smb_fdata(const u_char *buf, const char *fmt, const u_char *maxbuf,
 	    break;
 
 	default:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", *fmt);
+	    ARGUSBUF_APPEND("%c", *fmt);
 	    fmt++;
 	    break;
 	}
     }
     if (!depth && buf < maxbuf) {
 	size_t len = PTR_DIFF(maxbuf, buf);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"Data: (%lu bytes)\n", (unsigned long)len);
+	ARGUSBUF_APPEND("Data: (%lu bytes)\n", (unsigned long)len);
 	print_data(buf, len);
 	return(buf + len);
     }

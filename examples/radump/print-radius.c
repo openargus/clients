@@ -73,7 +73,7 @@ extern char ArgusBuf[];
 #define PRINT_HEX(bytes_len, ptr_data)                               \
            while(bytes_len)                                          \
            {                                                         \
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02X", *ptr_data );                            \
+              ARGUSBUF_APPEND("%02X", *ptr_data );                            \
               ptr_data++;                                            \
               bytes_len--;                                           \
            }
@@ -462,14 +462,14 @@ print_attr_string(register u_char *data, u_int length, u_short attr_code )
       case TUNNEL_PASS:
            if (length < 3)
            {
-              sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+              ARGUSBUF_APPEND(" [|radius]");
               return;
            }
            if (*data && (*data <=0x1F) )
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag %u, ",*data);
+              ARGUSBUF_APPEND("Tag %u, ",*data);
            data++;
            length--;
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"Salt %u ",EXTRACT_16BITS(data) );
+           ARGUSBUF_APPEND("Salt %u ",EXTRACT_16BITS(data) );
            data+=2;
            length-=2;
         break;
@@ -483,10 +483,10 @@ print_attr_string(register u_char *data, u_int length, u_short attr_code )
            {
               if (length < 1)
               {
-                 sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+                 ARGUSBUF_APPEND(" [|radius]");
                  return;
               }
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag %u",*data);
+              ARGUSBUF_APPEND("Tag %u",*data);
               data++;
               length--;
            }
@@ -494,12 +494,12 @@ print_attr_string(register u_char *data, u_int length, u_short attr_code )
    }
 
    for (i=0; *data && i < length ; i++, data++)
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c",(*data < 32 || *data > 128) ? '.' : *data );
+       ARGUSBUF_APPEND("%c",(*data < 32 || *data > 128) ? '.' : *data );
 
    return;
 
    trunc:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+      ARGUSBUF_APPEND(" [|radius]");
 }
 
 /*
@@ -521,7 +521,7 @@ print_vendor_attr(register u_char *data, u_int length, u_short attr_code)
     data+=4;
     length-=4;
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Vendor: %s (%u)",
+    ARGUSBUF_APPEND("Vendor: %s (%u)",
            tok2str(smi_values,"Unknown",vendor_id),
            vendor_id);
 
@@ -533,14 +533,14 @@ print_vendor_attr(register u_char *data, u_int length, u_short attr_code)
 
         if (vendor_length < 2)
         {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Vendor Attribute: %u, Length: %u (bogus, must be >= 2)",
+            ARGUSBUF_APPEND("\n\t    Vendor Attribute: %u, Length: %u (bogus, must be >= 2)",
                    vendor_type,
                    vendor_length);
             return;
         }
         if (vendor_length > length)
         {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Vendor Attribute: %u, Length: %u (bogus, goes past end of vendor-specific attribute)",
+            ARGUSBUF_APPEND("\n\t    Vendor Attribute: %u, Length: %u (bogus, goes past end of vendor-specific attribute)",
                    vendor_type,
                    vendor_length);
             return;
@@ -550,17 +550,17 @@ print_vendor_attr(register u_char *data, u_int length, u_short attr_code)
         length-=2;
 	TCHECK2(*data, vendor_length);
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Vendor Attribute: %u, Length: %u, Value: ",
+        ARGUSBUF_APPEND("\n\t    Vendor Attribute: %u, Length: %u, Value: ",
                vendor_type,
                vendor_length);
         for (idx = 0; idx < vendor_length ; idx++, data++)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c",(*data < 32 || *data > 128) ? '.' : *data );
+            ARGUSBUF_APPEND("%c",(*data < 32 || *data > 128) ? '.' : *data );
         length-=vendor_length;
     }
     return;
 
    trunc:
-     sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+     ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -580,7 +580,7 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
 
    if (length != 4)
    {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 4", length);
+       ARGUSBUF_APPEND("ERROR: length %u != 4", length);
        return;
    }
 
@@ -595,9 +595,9 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
       if ( (attr_code == TUNNEL_TYPE) || (attr_code == TUNNEL_MEDIUM) )
       {
          if (!*data)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag[Unused]");
+            ARGUSBUF_APPEND("Tag[Unused]");
          else
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag[%d]", *data);
+            ARGUSBUF_APPEND("Tag[%d]", *data);
          data++;
          data_value = EXTRACT_24BITS(data);
       }
@@ -608,9 +608,9 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
       if ( data_value <= (u_int32_t)(attr_type[attr_code].siz_subtypes - 1 +
             attr_type[attr_code].first_subtype) &&
 	   data_value >= attr_type[attr_code].first_subtype )
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",table[data_value]);
+         ARGUSBUF_APPEND("%s",table[data_value]);
       else
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"#%u",data_value);
+         ARGUSBUF_APPEND("#%u",data_value);
    }
    else
    {
@@ -618,9 +618,9 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
       {
         case FRM_IPX:
              if (EXTRACT_32BITS( data) == 0xFFFFFFFE )
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"NAS Select");
+                ARGUSBUF_APPEND("NAS Select");
              else
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d",EXTRACT_32BITS( data) );
+                ARGUSBUF_APPEND("%d",EXTRACT_32BITS( data) );
           break;
 
         case SESSION_TIMEOUT:
@@ -630,14 +630,14 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
         case ACCT_INT_INTERVAL:
              timeout = EXTRACT_32BITS( data);
              if ( timeout < 60 )
-                sprintf(&ArgusBuf[strlen(ArgusBuf)], "%02d secs", timeout);
+                ARGUSBUF_APPEND("%02d secs", timeout);
              else
              {
                 if ( timeout < 3600 )
-                   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%02d:%02d min",
+                   ARGUSBUF_APPEND("%02d:%02d min",
                           timeout / 60, timeout % 60);
                 else
-                   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%02d:%02d:%02d hours",
+                   ARGUSBUF_APPEND("%02d:%02d:%02d hours",
                           timeout / 3600, (timeout % 3600) / 60,
                           timeout % 60);
              }
@@ -645,29 +645,29 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
 
         case FRM_ATALK_LINK:
              if (EXTRACT_32BITS(data) )
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d",EXTRACT_32BITS(data) );
+                ARGUSBUF_APPEND("%d",EXTRACT_32BITS(data) );
              else
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"Unnumbered" );
+                ARGUSBUF_APPEND("Unnumbered" );
           break;
 
         case FRM_ATALK_NETWORK:
              if (EXTRACT_32BITS(data) )
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d",EXTRACT_32BITS(data) );
+                ARGUSBUF_APPEND("%d",EXTRACT_32BITS(data) );
              else
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"NAS assigned" );
+                ARGUSBUF_APPEND("NAS assigned" );
           break;
 
         case TUNNEL_PREFERENCE:
             tag = *data;
             data++;
             if (tag == 0)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag (Unused) %d",EXTRACT_24BITS(data) );
+               ARGUSBUF_APPEND("Tag (Unused) %d",EXTRACT_24BITS(data) );
             else
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"Tag (%d) %d", tag, EXTRACT_24BITS(data) );
+               ARGUSBUF_APPEND("Tag (%d) %d", tag, EXTRACT_24BITS(data) );
           break;
 
         default:
-             sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d",EXTRACT_32BITS( data) );
+             ARGUSBUF_APPEND("%d",EXTRACT_32BITS( data) );
           break;
 
       } /* switch */
@@ -677,7 +677,7 @@ print_attr_num(register u_char *data, u_int length, u_short attr_code )
    return;
 
    trunc:
-     sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+     ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -693,7 +693,7 @@ print_attr_address(register u_char *data, u_int length, u_short attr_code )
 {
    if (length != 4)
    {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 4", length);
+       ARGUSBUF_APPEND("ERROR: length %u != 4", length);
        return;
    }
 
@@ -704,23 +704,23 @@ print_attr_address(register u_char *data, u_int length, u_short attr_code )
       case FRM_IPADDR:
       case LOG_IPHOST:
            if (EXTRACT_32BITS(data) == 0xFFFFFFFF )
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"User Selected");
+              ARGUSBUF_APPEND("User Selected");
            else
               if (EXTRACT_32BITS(data) == 0xFFFFFFFE )
-                 sprintf(&ArgusBuf[strlen(ArgusBuf)],"NAS Select");
+                 ARGUSBUF_APPEND("NAS Select");
               else
-                 sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",ipaddr_string(data));
+                 ARGUSBUF_APPEND("%s",ipaddr_string(data));
       break;
 
       default:
-          sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",ipaddr_string(data) );
+          ARGUSBUF_APPEND("%s",ipaddr_string(data) );
       break;
    }
 
    return;
 
    trunc:
-     sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+     ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -739,7 +739,7 @@ static void print_attr_time(register u_char *data, u_int length, u_short attr_co
 
    if (length != 4)
    {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 4", length);
+       ARGUSBUF_APPEND("ERROR: length %u != 4", length);
        return;
    }
 
@@ -749,11 +749,11 @@ static void print_attr_time(register u_char *data, u_int length, u_short attr_co
    strncpy(string, ctime(&attr_time), sizeof(string));
    /* Get rid of the newline */
    string[24] = '\0';
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%.24s", string);
+   ARGUSBUF_APPEND("%.24s", string);
    return;
 
    trunc:
-     sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+     ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -773,44 +773,44 @@ static void print_attr_strange(register u_char *data, u_int length, u_short attr
       case ARAP_PASS:
            if (length != 16)
            {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 16", length);
+               ARGUSBUF_APPEND("ERROR: length %u != 16", length);
                return;
            }
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"User_challenge (");
+           ARGUSBUF_APPEND("User_challenge (");
            TCHECK2(data[0],8);
            len_data = 8;
            PRINT_HEX(len_data, data);
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],") User_resp(");
+           ARGUSBUF_APPEND(") User_resp(");
            TCHECK2(data[0],8);
            len_data = 8;
            PRINT_HEX(len_data, data);
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+           ARGUSBUF_APPEND(")");
         break;
 
       case ARAP_FEATURES:
            if (length != 14)
            {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 14", length);
+               ARGUSBUF_APPEND("ERROR: length %u != 14", length);
                return;
            }
            TCHECK2(data[0],1);
            if (*data)
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"User can change password");
+              ARGUSBUF_APPEND("User can change password");
            else
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"User cannot change password");
+              ARGUSBUF_APPEND("User cannot change password");
            data++;
            TCHECK2(data[0],1);
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],", Min password length: %d",*data);
+           ARGUSBUF_APPEND(", Min password length: %d",*data);
            data++;
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],", created at: ");
+           ARGUSBUF_APPEND(", created at: ");
            TCHECK2(data[0],4);
            len_data = 4;
            PRINT_HEX(len_data, data);
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],", expires in: ");
+           ARGUSBUF_APPEND(", expires in: ");
            TCHECK2(data[0],4);
            len_data = 4;
            PRINT_HEX(len_data, data);
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],", Current Time: ");
+           ARGUSBUF_APPEND(", Current Time: ");
            TCHECK2(data[0],4);
            len_data = 4;
            PRINT_HEX(len_data, data);
@@ -819,7 +819,7 @@ static void print_attr_strange(register u_char *data, u_int length, u_short attr
       case ARAP_CHALLENGE_RESP:
            if (length < 8)
            {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: length %u != 8", length);
+               ARGUSBUF_APPEND("ERROR: length %u != 8", length);
                return;
            }
            TCHECK2(data[0],8);
@@ -830,7 +830,7 @@ static void print_attr_strange(register u_char *data, u_int length, u_short attr
    return;
 
    trunc:
-     sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+     ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -853,7 +853,7 @@ radius_attrs_print(register const u_char *attr, u_int length)
 	attr_string = "Unknown";
      if (rad_attr->len < 2)
      {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Attribute (%u), length: %u (bogus, must be >= 2)",
+	ARGUSBUF_APPEND("\n\t  %s Attribute (%u), length: %u (bogus, must be >= 2)",
                attr_string,
                rad_attr->type,
                rad_attr->len);
@@ -861,13 +861,13 @@ radius_attrs_print(register const u_char *attr, u_int length)
      }
      if (rad_attr->len > length)
      {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Attribute (%u), length: %u (bogus, goes past end of packet)",
+	ARGUSBUF_APPEND("\n\t  %s Attribute (%u), length: %u (bogus, goes past end of packet)",
                attr_string,
                rad_attr->type,
                rad_attr->len);
         return;
      }
-     sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Attribute (%u), length: %u, Value: ",
+     ARGUSBUF_APPEND("\n\t  %s Attribute (%u), length: %u, Value: ",
             attr_string,
             rad_attr->type,
             rad_attr->len);
@@ -892,7 +892,7 @@ radius_attrs_print(register const u_char *attr, u_int length)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+   ARGUSBUF_APPEND(" [|radius]");
 }
 
 
@@ -908,7 +908,7 @@ radius_print(const u_char *dat, u_int length)
 
    if (len < MIN_RADIUS_LEN)
    {
-	  sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+	  ARGUSBUF_APPEND(" [|radius]");
 	  return ArgusBuf;
    }
 
@@ -916,7 +916,7 @@ radius_print(const u_char *dat, u_int length)
 	  len = length;
 
    if (ArgusParser->vflag < 1) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"RADIUS, %s (%u), id: 0x%02x length: %u",
+       ARGUSBUF_APPEND("RADIUS, %s (%u), id: 0x%02x length: %u",
               tok2str(radius_command_values,"Unknown Command",rad->code),
               rad->code,
               rad->id,
@@ -924,14 +924,14 @@ radius_print(const u_char *dat, u_int length)
        return ArgusBuf;
    }
    else {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"RADIUS, length: %u\n\t%s (%u), id: 0x%02x, Authenticator: ",
+       ARGUSBUF_APPEND("RADIUS, length: %u\n\t%s (%u), id: 0x%02x, Authenticator: ",
               len,
               tok2str(radius_command_values,"Unknown Command",rad->code),
               rad->code,
               rad->id);
 
        for(auth_idx=0; auth_idx < 16; auth_idx++)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", rad->auth[auth_idx] );
+            ARGUSBUF_APPEND("%02x", rad->auth[auth_idx] );
    }
 
    if (len > MIN_RADIUS_LEN)
@@ -939,6 +939,6 @@ radius_print(const u_char *dat, u_int length)
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|radius]");
+   ARGUSBUF_APPEND(" [|radius]");
    return ArgusBuf;
 }

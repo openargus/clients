@@ -292,176 +292,176 @@ struct pptp_msg_sli {
 static void
 pptp_bearer_cap_print(const u_int32_t *bearer_cap)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEARER_CAP(");
+   ARGUSBUF_APPEND(" BEARER_CAP(");
    if (EXTRACT_32BITS(bearer_cap) & PPTP_BEARER_CAP_DIGITAL_MASK) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"D");
+                ARGUSBUF_APPEND("D");
         }
         if (EXTRACT_32BITS(bearer_cap) & PPTP_BEARER_CAP_ANALOG_MASK) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");
+                ARGUSBUF_APPEND("A");
         }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_bearer_type_print(const u_int32_t *bearer_type)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEARER_TYPE(");
+   ARGUSBUF_APPEND(" BEARER_TYPE(");
    switch (EXTRACT_32BITS(bearer_type)) {
    case 1:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");   /* Analog */
+      ARGUSBUF_APPEND("A");   /* Analog */
       break;
    case 2:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"D");   /* Digital */
+      ARGUSBUF_APPEND("D");   /* Digital */
       break;
    case 3:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"Any");
+      ARGUSBUF_APPEND("Any");
       break;
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"?");
+      ARGUSBUF_APPEND("?");
       break;
         }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_call_id_print(const u_int16_t *call_id)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CALL_ID(%u)", EXTRACT_16BITS(call_id));
+   ARGUSBUF_APPEND(" CALL_ID(%u)", EXTRACT_16BITS(call_id));
 }
 
 static void
 pptp_call_ser_print(const u_int16_t *call_ser)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CALL_SER_NUM(%u)", EXTRACT_16BITS(call_ser));
+   ARGUSBUF_APPEND(" CALL_SER_NUM(%u)", EXTRACT_16BITS(call_ser));
 }
 
 static void
 pptp_cause_code_print(const u_int16_t *cause_code)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CAUSE_CODE(%u)", EXTRACT_16BITS(cause_code));
+   ARGUSBUF_APPEND(" CAUSE_CODE(%u)", EXTRACT_16BITS(cause_code));
 }
 
 static void
 pptp_conn_speed_print(const u_int32_t *conn_speed)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CONN_SPEED(%u)", EXTRACT_32BITS(conn_speed));
+   ARGUSBUF_APPEND(" CONN_SPEED(%u)", EXTRACT_32BITS(conn_speed));
 }
 
 static void
 pptp_err_code_print(const u_int8_t *err_code)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ERR_CODE(%u", *err_code);
+   ARGUSBUF_APPEND(" ERR_CODE(%u", *err_code);
    if (ArgusParser->vflag) {
       switch (*err_code) {
       case 0:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":None");
+         ARGUSBUF_APPEND(":None");
          break;
       case 1:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Not-Connected");
+         ARGUSBUF_APPEND(":Not-Connected");
          break;
       case 2:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Bad-Format");
+         ARGUSBUF_APPEND(":Bad-Format");
          break;
       case 3:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Bad-Valude");
+         ARGUSBUF_APPEND(":Bad-Valude");
          break;
       case 4:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":No-Resource");
+         ARGUSBUF_APPEND(":No-Resource");
          break;
       case 5:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Bad-Call-ID");
+         ARGUSBUF_APPEND(":Bad-Call-ID");
          break;
       case 6:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":PAC-Error");
+         ARGUSBUF_APPEND(":PAC-Error");
          break;
       default:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+         ARGUSBUF_APPEND(":?");
          break;
       }
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_firm_rev_print(const u_int16_t *firm_rev)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," FIRM_REV(%u)", EXTRACT_16BITS(firm_rev));
+   ARGUSBUF_APPEND(" FIRM_REV(%u)", EXTRACT_16BITS(firm_rev));
 }
 
 static void
 pptp_framing_cap_print(const u_int32_t *framing_cap)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," FRAME_CAP(");
+   ARGUSBUF_APPEND(" FRAME_CAP(");
    if (EXTRACT_32BITS(framing_cap) & PPTP_FRAMING_CAP_ASYNC_MASK) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");      /* Async */
+                ARGUSBUF_APPEND("A");      /* Async */
         }
         if (EXTRACT_32BITS(framing_cap) & PPTP_FRAMING_CAP_SYNC_MASK) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"S");      /* Sync */
+                ARGUSBUF_APPEND("S");      /* Sync */
         }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_framing_type_print(const u_int32_t *framing_type)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," FRAME_TYPE(");
+   ARGUSBUF_APPEND(" FRAME_TYPE(");
    switch (EXTRACT_32BITS(framing_type)) {
    case 1:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");      /* Async */
+      ARGUSBUF_APPEND("A");      /* Async */
       break;
    case 2:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"S");      /* Sync */
+      ARGUSBUF_APPEND("S");      /* Sync */
       break;
    case 3:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"E");      /* Either */
+      ARGUSBUF_APPEND("E");      /* Either */
       break;
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"?");
+      ARGUSBUF_APPEND("?");
       break;
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_hostname_print(const u_char *hostname)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," HOSTNAME(%.64s)", hostname);
+   ARGUSBUF_APPEND(" HOSTNAME(%.64s)", hostname);
 }
 
 static void
 pptp_id_print(const u_int32_t *id)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ID(%u)", EXTRACT_32BITS(id));
+   ARGUSBUF_APPEND(" ID(%u)", EXTRACT_32BITS(id));
 }
 
 static void
 pptp_max_channel_print(const u_int16_t *max_channel)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," MAX_CHAN(%u)", EXTRACT_16BITS(max_channel));
+   ARGUSBUF_APPEND(" MAX_CHAN(%u)", EXTRACT_16BITS(max_channel));
 }
 
 static void
 pptp_peer_call_id_print(const u_int16_t *peer_call_id)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PEER_CALL_ID(%u)", EXTRACT_16BITS(peer_call_id));
+   ARGUSBUF_APPEND(" PEER_CALL_ID(%u)", EXTRACT_16BITS(peer_call_id));
 }
 
 static void
 pptp_phy_chan_id_print(const u_int32_t *phy_chan_id)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PHY_CHAN_ID(%u)", EXTRACT_32BITS(phy_chan_id));
+   ARGUSBUF_APPEND(" PHY_CHAN_ID(%u)", EXTRACT_32BITS(phy_chan_id));
 }
 
 static void
 pptp_pkt_proc_delay_print(const u_int16_t *pkt_proc_delay)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PROC_DELAY(%u)", EXTRACT_16BITS(pkt_proc_delay));
+   ARGUSBUF_APPEND(" PROC_DELAY(%u)", EXTRACT_16BITS(pkt_proc_delay));
 }
 
 static void
 pptp_proto_ver_print(const u_int16_t *proto_ver)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PROTO_VER(%u.%u)",   /* Version.Revision */
+   ARGUSBUF_APPEND(" PROTO_VER(%u.%u)",   /* Version.Revision */
           EXTRACT_16BITS(proto_ver) >> 8,
           EXTRACT_16BITS(proto_ver) & 0xff);
 }
@@ -469,34 +469,34 @@ pptp_proto_ver_print(const u_int16_t *proto_ver)
 static void
 pptp_recv_winsiz_print(const u_int16_t *recv_winsiz)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," RECV_WIN(%u)", EXTRACT_16BITS(recv_winsiz));
+   ARGUSBUF_APPEND(" RECV_WIN(%u)", EXTRACT_16BITS(recv_winsiz));
 }
 
 static void
 pptp_result_code_print(const u_int8_t *result_code, int ctrl_msg_type)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," RESULT_CODE(%u", *result_code);
+   ARGUSBUF_APPEND(" RESULT_CODE(%u", *result_code);
    if (ArgusParser->vflag) {
       switch (ctrl_msg_type) {
       case PPTP_CTRL_MSG_TYPE_SCCRP:
          switch (*result_code) {
          case 1:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Successful channel establishment");
+            ARGUSBUF_APPEND(":Successful channel establishment");
             break;
          case 2:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":General error");
+            ARGUSBUF_APPEND(":General error");
             break;
          case 3:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Command channel already exists");
+            ARGUSBUF_APPEND(":Command channel already exists");
             break;
          case 4:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Requester is not authorized to establish a command channel");
+            ARGUSBUF_APPEND(":Requester is not authorized to establish a command channel");
             break;
          case 5:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":The protocol version of the requester is not supported");
+            ARGUSBUF_APPEND(":The protocol version of the requester is not supported");
             break;
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+            ARGUSBUF_APPEND(":?");
             break;
          }
          break;
@@ -504,75 +504,75 @@ pptp_result_code_print(const u_int8_t *result_code, int ctrl_msg_type)
       case PPTP_CTRL_MSG_TYPE_ECHORP:
          switch (*result_code) {
          case 1:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":OK");
+            ARGUSBUF_APPEND(":OK");
             break;
          case 2:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":General Error");
+            ARGUSBUF_APPEND(":General Error");
             break;
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+            ARGUSBUF_APPEND(":?");
             break;
          }
          break;
       case PPTP_CTRL_MSG_TYPE_OCRP:
          switch (*result_code) {
          case 1:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Connected");
+            ARGUSBUF_APPEND(":Connected");
             break;
          case 2:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":General Error");
+            ARGUSBUF_APPEND(":General Error");
             break;
          case 3:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":No Carrier");
+            ARGUSBUF_APPEND(":No Carrier");
             break;
          case 4:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Busy");
+            ARGUSBUF_APPEND(":Busy");
             break;
          case 5:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":No Dial Tone");
+            ARGUSBUF_APPEND(":No Dial Tone");
             break;
          case 6:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Time-out");
+            ARGUSBUF_APPEND(":Time-out");
             break;
          case 7:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Do Not Accept");
+            ARGUSBUF_APPEND(":Do Not Accept");
             break;
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+            ARGUSBUF_APPEND(":?");
             break;
          }
          break;
       case PPTP_CTRL_MSG_TYPE_ICRP:
          switch (*result_code) {
          case 1:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Connect");
+            ARGUSBUF_APPEND(":Connect");
             break;
          case 2:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":General Error");
+            ARGUSBUF_APPEND(":General Error");
             break;
          case 3:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Do Not Accept");
+            ARGUSBUF_APPEND(":Do Not Accept");
             break;
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+            ARGUSBUF_APPEND(":?");
             break;
          }
          break;
       case PPTP_CTRL_MSG_TYPE_CDN:
          switch (*result_code) {
          case 1:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Lost Carrier");
+            ARGUSBUF_APPEND(":Lost Carrier");
             break;
          case 2:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":General Error");
+            ARGUSBUF_APPEND(":General Error");
             break;
          case 3:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Admin Shutdown");
+            ARGUSBUF_APPEND(":Admin Shutdown");
             break;
          case 4:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":Request");
+            ARGUSBUF_APPEND(":Request");
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+            ARGUSBUF_APPEND(":?");
             break;
          break;
          }
@@ -581,19 +581,19 @@ pptp_result_code_print(const u_int8_t *result_code, int ctrl_msg_type)
          break;
       }
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
 }
 
 static void
 pptp_subaddr_print(const u_char *subaddr)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," SUB_ADDR(%.64s)", subaddr);
+   ARGUSBUF_APPEND(" SUB_ADDR(%.64s)", subaddr);
 }
 
 static void
 pptp_vendor_print(const u_char *vendor)
 {
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," VENDOR(%.64s)", vendor);
+   ARGUSBUF_APPEND(" VENDOR(%.64s)", vendor);
 }
 
 /************************************/
@@ -623,7 +623,7 @@ pptp_sccrq_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -653,7 +653,7 @@ pptp_sccrp_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -662,31 +662,31 @@ pptp_stopccrq_print(const u_char *dat)
    struct pptp_msg_stopccrq *ptr = (struct pptp_msg_stopccrq *)dat;
 
    TCHECK(ptr->reason);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," REASON(%u", ptr->reason);
+   ARGUSBUF_APPEND(" REASON(%u", ptr->reason);
    if (ArgusParser->vflag) {
       switch (ptr->reason) {
       case 1:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":None");
+         ARGUSBUF_APPEND(":None");
          break;
       case 2:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Stop-Protocol");
+         ARGUSBUF_APPEND(":Stop-Protocol");
          break;
       case 3:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":Stop-Local-Shutdown");
+         ARGUSBUF_APPEND(":Stop-Local-Shutdown");
          break;
       default:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],":?");
+         ARGUSBUF_APPEND(":?");
          break;
       }
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+   ARGUSBUF_APPEND(")");
    TCHECK(ptr->reserved1);
    TCHECK(ptr->reserved2);
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -703,7 +703,7 @@ pptp_stopccrp_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -717,7 +717,7 @@ pptp_echorq_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -736,7 +736,7 @@ pptp_echorp_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -749,9 +749,9 @@ pptp_ocrq_print(const u_char *dat)
    TCHECK(ptr->call_ser);
    pptp_call_ser_print(&ptr->call_ser);
    TCHECK(ptr->min_bps);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," MIN_BPS(%u)", EXTRACT_32BITS(&ptr->min_bps));
+   ARGUSBUF_APPEND(" MIN_BPS(%u)", EXTRACT_32BITS(&ptr->min_bps));
    TCHECK(ptr->max_bps);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," MAX_BPS(%u)", EXTRACT_32BITS(&ptr->max_bps));
+   ARGUSBUF_APPEND(" MAX_BPS(%u)", EXTRACT_32BITS(&ptr->max_bps));
    TCHECK(ptr->bearer_type);
    pptp_bearer_type_print(&ptr->bearer_type);
    TCHECK(ptr->framing_type);
@@ -761,17 +761,17 @@ pptp_ocrq_print(const u_char *dat)
    TCHECK(ptr->pkt_proc_delay);
    pptp_pkt_proc_delay_print(&ptr->pkt_proc_delay);
    TCHECK(ptr->phone_no_len);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PHONE_NO_LEN(%u)", EXTRACT_16BITS(&ptr->phone_no_len));
+   ARGUSBUF_APPEND(" PHONE_NO_LEN(%u)", EXTRACT_16BITS(&ptr->phone_no_len));
    TCHECK(ptr->reserved1);
    TCHECK(ptr->phone_no);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PHONE_NO(%.64s)", ptr->phone_no);
+   ARGUSBUF_APPEND(" PHONE_NO(%.64s)", ptr->phone_no);
    TCHECK(ptr->subaddr);
    pptp_subaddr_print(&ptr->subaddr[0]);
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -801,7 +801,7 @@ pptp_ocrp_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -818,20 +818,20 @@ pptp_icrq_print(const u_char *dat)
    TCHECK(ptr->phy_chan_id);
    pptp_phy_chan_id_print(&ptr->phy_chan_id);
    TCHECK(ptr->dialed_no_len);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," DIALED_NO_LEN(%u)", EXTRACT_16BITS(&ptr->dialed_no_len));
+   ARGUSBUF_APPEND(" DIALED_NO_LEN(%u)", EXTRACT_16BITS(&ptr->dialed_no_len));
    TCHECK(ptr->dialing_no_len);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," DIALING_NO_LEN(%u)", EXTRACT_16BITS(&ptr->dialing_no_len));
+   ARGUSBUF_APPEND(" DIALING_NO_LEN(%u)", EXTRACT_16BITS(&ptr->dialing_no_len));
    TCHECK(ptr->dialed_no);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," DIALED_NO(%.64s)", ptr->dialed_no);
+   ARGUSBUF_APPEND(" DIALED_NO(%.64s)", ptr->dialed_no);
    TCHECK(ptr->dialing_no);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," DIALING_NO(%.64s)", ptr->dialing_no);
+   ARGUSBUF_APPEND(" DIALING_NO(%.64s)", ptr->dialing_no);
    TCHECK(ptr->subaddr);
    pptp_subaddr_print(&ptr->subaddr[0]);
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -856,7 +856,7 @@ pptp_icrp_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -879,7 +879,7 @@ pptp_iccn_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -894,7 +894,7 @@ pptp_ccrq_print(const u_char *dat)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -912,12 +912,12 @@ pptp_cdn_print(const u_char *dat)
    pptp_cause_code_print(&ptr->cause_code);
    TCHECK(ptr->reserved1);
    TCHECK(ptr->call_stats);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CALL_STATS(%.128s)", ptr->call_stats);
+   ARGUSBUF_APPEND(" CALL_STATS(%.128s)", ptr->call_stats);
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -929,22 +929,22 @@ pptp_wen_print(const u_char *dat)
    pptp_peer_call_id_print(&ptr->peer_call_id);
    TCHECK(ptr->reserved1);
    TCHECK(ptr->crc_err);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," CRC_ERR(%u)", EXTRACT_32BITS(&ptr->crc_err));
+   ARGUSBUF_APPEND(" CRC_ERR(%u)", EXTRACT_32BITS(&ptr->crc_err));
    TCHECK(ptr->framing_err);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," FRAMING_ERR(%u)", EXTRACT_32BITS(&ptr->framing_err));
+   ARGUSBUF_APPEND(" FRAMING_ERR(%u)", EXTRACT_32BITS(&ptr->framing_err));
    TCHECK(ptr->hardware_overrun);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," HARDWARE_OVERRUN(%u)", EXTRACT_32BITS(&ptr->hardware_overrun));
+   ARGUSBUF_APPEND(" HARDWARE_OVERRUN(%u)", EXTRACT_32BITS(&ptr->hardware_overrun));
    TCHECK(ptr->buffer_overrun);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," BUFFER_OVERRUN(%u)", EXTRACT_32BITS(&ptr->buffer_overrun));
+   ARGUSBUF_APPEND(" BUFFER_OVERRUN(%u)", EXTRACT_32BITS(&ptr->buffer_overrun));
    TCHECK(ptr->timeout_err);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," TIMEOUT_ERR(%u)", EXTRACT_32BITS(&ptr->timeout_err));
+   ARGUSBUF_APPEND(" TIMEOUT_ERR(%u)", EXTRACT_32BITS(&ptr->timeout_err));
    TCHECK(ptr->align_err);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ALIGN_ERR(%u)", EXTRACT_32BITS(&ptr->align_err));
+   ARGUSBUF_APPEND(" ALIGN_ERR(%u)", EXTRACT_32BITS(&ptr->align_err));
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 static void
@@ -956,14 +956,14 @@ pptp_sli_print(const u_char *dat)
    pptp_peer_call_id_print(&ptr->peer_call_id);
    TCHECK(ptr->reserved1);
    TCHECK(ptr->send_accm);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," SEND_ACCM(0x%08x)", EXTRACT_32BITS(&ptr->send_accm));
+   ARGUSBUF_APPEND(" SEND_ACCM(0x%08x)", EXTRACT_32BITS(&ptr->send_accm));
    TCHECK(ptr->recv_accm);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," RECV_ACCM(0x%08x)", EXTRACT_32BITS(&ptr->recv_accm));
+   ARGUSBUF_APPEND(" RECV_ACCM(0x%08x)", EXTRACT_32BITS(&ptr->recv_accm));
 
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 char *
@@ -973,25 +973,25 @@ pptp_print(const u_char *dat, u_int len)
    u_int32_t mc;
    u_int16_t ctrl_msg_type;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],": pptp");
+   ARGUSBUF_APPEND(": pptp");
 
    hdr = (struct pptp_hdr *)dat;
 
    TCHECK(hdr->length);
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Length=%u", EXTRACT_16BITS(&hdr->length));
+      ARGUSBUF_APPEND(" Length=%u", EXTRACT_16BITS(&hdr->length));
    }
    TCHECK(hdr->msg_type);
    if (ArgusParser->vflag) {
       switch(EXTRACT_16BITS(&hdr->msg_type)) {
       case PPTP_MSG_TYPE_CTRL:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," CTRL-MSG");
+         ARGUSBUF_APPEND(" CTRL-MSG");
          break;
       case PPTP_MSG_TYPE_MGMT:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," MGMT-MSG");
+         ARGUSBUF_APPEND(" MGMT-MSG");
          break;
       default:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," UNKNOWN-MSG-TYPE");
+         ARGUSBUF_APPEND(" UNKNOWN-MSG-TYPE");
          break;
       }
    }
@@ -999,18 +999,18 @@ pptp_print(const u_char *dat, u_int len)
    TCHECK(hdr->magic_cookie);
    mc = EXTRACT_32BITS(&hdr->magic_cookie);
    if (mc != PPTP_MAGIC_COOKIE) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," UNEXPECTED Magic-Cookie!!(%08x)", mc);
+      ARGUSBUF_APPEND(" UNEXPECTED Magic-Cookie!!(%08x)", mc);
    }
    if (ArgusParser->vflag || mc != PPTP_MAGIC_COOKIE) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Magic-Cookie=%08x", mc);
+      ARGUSBUF_APPEND(" Magic-Cookie=%08x", mc);
    }
    TCHECK(hdr->ctrl_msg_type);
    ctrl_msg_type = EXTRACT_16BITS(&hdr->ctrl_msg_type);
    if (ctrl_msg_type < PPTP_MAX_MSGTYPE_INDEX) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," CTRL_MSGTYPE=%s",
+      ARGUSBUF_APPEND(" CTRL_MSGTYPE=%s",
              pptp_message_type_string[ctrl_msg_type]);
    } else {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," UNKNOWN_CTRL_MSGTYPE(%u)", ctrl_msg_type);
+      ARGUSBUF_APPEND(" UNKNOWN_CTRL_MSGTYPE(%u)", ctrl_msg_type);
    }
    TCHECK(hdr->reserved0);
 
@@ -1070,6 +1070,6 @@ pptp_print(const u_char *dat, u_int len)
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
    return ArgusBuf;
 }
