@@ -105,8 +105,8 @@ extern char timestamp_fmt[];
 extern long timestamp_scale;
 extern void timestampinit(void);
 
-extern int fn_print(const u_char *, const u_char *, char *);
-extern char *fn_printn(const u_char *, u_int, const u_char *, char *);
+extern int fn_print(const u_char *, const u_char *, char *, size_t);
+extern char *fn_printn(const u_char *, u_int, const u_char *, char *, size_t);
 extern char *dnaddr_string(u_short);
 extern char *savestr(const char *);
 

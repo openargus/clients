@@ -87,13 +87,13 @@ tftp_print(register const u_char *bp, u_int length)
 	tp = (const struct tftphdr *)bp;
 
 	/* Print length */
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d", length);
+	ARGUSBUF_APPEND(" %d", length);
 
 	/* Print tftp request type */
 	TCHECK(tp->th_opcode);
 	opcode = EXTRACT_16BITS(&tp->th_opcode);
 	cp = tok2str(op2str, "tftp-#%d", opcode);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", cp);
+	ARGUSBUF_APPEND(" %s", cp);
 	/* Bail if bogus opcode */
 	if (*cp == 't')
 		return ArgusBuf;
@@ -111,9 +111,9 @@ tftp_print(register const u_char *bp, u_int length)
 #else
 		p = (u_char *)&tp->th_block;
 #endif
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," \"");
-		i = fn_print(p, snapend, ArgusBuf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\"");
+		ARGUSBUF_APPEND(" \"");
+		i = fn_print(p, snapend, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf));
+		ARGUSBUF_APPEND("\"");
 
 		/* Print the mode and any options */
 		while ((p = (const u_char *)strchr((const char *)p, '\0')) != NULL) {
@@ -121,8 +121,8 @@ tftp_print(register const u_char *bp, u_int length)
 				break;
 			p++;
 			if (*p != '\0') {
-		           sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
-				fn_print(p, snapend, ArgusBuf);
+		           ARGUSBUF_APPEND(" ");
+				fn_print(p, snapend, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf));
 			}
 		}
 		
@@ -133,28 +133,28 @@ tftp_print(register const u_char *bp, u_int length)
 	case ACK:
 	case DATA:
 		TCHECK(tp->th_block);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," block %d", EXTRACT_16BITS(&tp->th_block));
+		ARGUSBUF_APPEND(" block %d", EXTRACT_16BITS(&tp->th_block));
 		break;
 
 	case ERROR:
 		/* Print error code string */
 		TCHECK(tp->th_code);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s ", tok2str(err2str, "tftp-err-#%d \"",
+		ARGUSBUF_APPEND(" %s ", tok2str(err2str, "tftp-err-#%d \"",
 				       EXTRACT_16BITS(&tp->th_code)));
 		/* Print error message string */
-		i = fn_print((const u_char *)tp->th_data, snapend, ArgusBuf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\"");
+		i = fn_print((const u_char *)tp->th_data, snapend, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf));
+		ARGUSBUF_APPEND("\"");
 		if (i)
 			goto trunc;
 		break;
 
 	default:
 		/* We shouldn't get here */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"(unknown #%d)", opcode);
+		ARGUSBUF_APPEND("(unknown #%d)", opcode);
 		break;
 	}
 	return ArgusBuf;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+	ARGUSBUF_APPEND("%s", tstr);
 	return ArgusBuf;
 }

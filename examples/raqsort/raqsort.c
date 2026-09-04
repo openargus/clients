@@ -321,7 +321,7 @@ RaParseComplete (int sig)
       file = ArgusParser->ArgusInputFileList;
 
       if (file) {
-         input = ArgusMalloc(sizeof(*input));
+         input = ArgusCalloc(1, sizeof(*input));
          if (input == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 

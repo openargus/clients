@@ -58,38 +58,38 @@ timed_print(register const u_char *bp, u_int len)
    const u_char *end;
 
    if (endof(tsp->tsp_type) > snapend) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|timed]");
+      ARGUSBUF_APPEND("[|timed]");
       return ArgusBuf;
    }
    if (tsp->tsp_type < TSPTYPENUMBER)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"TSP_%s", tsptype[tsp->tsp_type]);
+      ARGUSBUF_APPEND("TSP_%s", tsptype[tsp->tsp_type]);
    else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"(tsp_type %#x)", tsp->tsp_type);
+      ARGUSBUF_APPEND("(tsp_type %#x)", tsp->tsp_type);
 
    if (endof(tsp->tsp_vers) > snapend) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|timed]");
+      ARGUSBUF_APPEND(" [|timed]");
       return ArgusBuf;
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," vers %d", tsp->tsp_vers);
+   ARGUSBUF_APPEND(" vers %d", tsp->tsp_vers);
 
    if (endof(tsp->tsp_seq) > snapend) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|timed]");
+      ARGUSBUF_APPEND(" [|timed]");
       return ArgusBuf;
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," seq %d", tsp->tsp_seq);
+   ARGUSBUF_APPEND(" seq %d", tsp->tsp_seq);
 
    if (tsp->tsp_type == TSP_LOOP) {
       if (endof(tsp->tsp_hopcnt) > snapend) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|timed]");
+         ARGUSBUF_APPEND(" [|timed]");
          return ArgusBuf;
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," hopcnt %d", tsp->tsp_hopcnt);
+      ARGUSBUF_APPEND(" hopcnt %d", tsp->tsp_hopcnt);
    } else if (tsp->tsp_type == TSP_SETTIME ||
      tsp->tsp_type == TSP_ADJTIME ||
      tsp->tsp_type == TSP_SETDATE ||
      tsp->tsp_type == TSP_SETDATEREQ) {
       if (endof(tsp->tsp_time) > snapend) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|timed]");
+         ARGUSBUF_APPEND(" [|timed]");
          return ArgusBuf;
       }
       sec = EXTRACT_32BITS(&tsp->tsp_time.tv_sec);
@@ -97,21 +97,21 @@ timed_print(register const u_char *bp, u_int len)
       if (usec < 0)
          /* corrupt, skip the rest of the packet */
          return ArgusBuf;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," time ");
+      ARGUSBUF_APPEND(" time ");
       if (sec < 0 && usec != 0) {
          sec++;
          if (sec == 0)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"-");
+            ARGUSBUF_APPEND("-");
          usec = 1000000 - usec;
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%ld.%06ld", sec, usec);
+      ARGUSBUF_APPEND("%ld.%06ld", sec, usec);
    }
 
    end = memchr(tsp->tsp_name, '\0', snapend - (u_char *)tsp->tsp_name);
    if (end == NULL)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], " [|timed]");
+      ARGUSBUF_APPEND(" [|timed]");
    else {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], " name");
+      ARGUSBUF_APPEND(" name");
       snprintf(&ArgusBuf[strlen(ArgusBuf)], end - (u_char *)tsp->tsp_name, "%s", tsp->tsp_name);
    }
 

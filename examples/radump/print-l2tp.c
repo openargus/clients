@@ -253,7 +253,7 @@ print_string(const u_char *dat, u_int length)
 {
 	u_int i;
 	for (i=0; i<length; i++) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", *dat++);
+		ARGUSBUF_APPEND("%c", *dat++);
 	}
 }
 
@@ -262,20 +262,20 @@ print_octets(const u_char *dat, u_int length)
 {
 	u_int i;
 	for (i=0; i<length; i++) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", *dat++);
+		ARGUSBUF_APPEND("%02x", *dat++);
 	}
 }
 
 static void
 print_16bits_val(const u_int16_t *dat)
 {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", EXTRACT_16BITS(dat));
+	ARGUSBUF_APPEND("%u", EXTRACT_16BITS(dat));
 }
 
 static void
 print_32bits_val(const u_int32_t *dat)
 {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%lu", (u_long)EXTRACT_32BITS(dat));
+	ARGUSBUF_APPEND("%lu", (u_long)EXTRACT_32BITS(dat));
 }
 
 /***********************************/
@@ -286,7 +286,7 @@ l2tp_msgtype_print(const u_char *dat)
 {
 	u_int16_t *ptr = (u_int16_t*)dat;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2str(l2tp_msgtype2str, "MSGTYPE-#%u",
+	ARGUSBUF_APPEND("%s", tok2str(l2tp_msgtype2str, "MSGTYPE-#%u",
 	    EXTRACT_16BITS(ptr)));
 }
 
@@ -295,12 +295,12 @@ l2tp_result_code_print(const u_char *dat, u_int length)
 {
 	u_int16_t *ptr = (u_int16_t *)dat;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", EXTRACT_16BITS(ptr)); ptr++;	/* Result Code */
+	ARGUSBUF_APPEND("%u", EXTRACT_16BITS(ptr)); ptr++;	/* Result Code */
 	if (length > 2) {				/* Error Code (opt) */
-	        sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%u", EXTRACT_16BITS(ptr)); ptr++;
+	        ARGUSBUF_APPEND("/%u", EXTRACT_16BITS(ptr)); ptr++;
 	}
 	if (length > 4) {				/* Error Message (opt) */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		print_string((u_char *)ptr, length - 4);
 	}
 }
@@ -308,7 +308,7 @@ l2tp_result_code_print(const u_char *dat, u_int length)
 static void
 l2tp_proto_ver_print(const u_int16_t *dat)
 {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u.%u", (EXTRACT_16BITS(dat) >> 8),
+	ARGUSBUF_APPEND("%u.%u", (EXTRACT_16BITS(dat) >> 8),
 	    (EXTRACT_16BITS(dat) & 0xff));
 }
 
@@ -318,10 +318,10 @@ l2tp_framing_cap_print(const u_char *dat)
 	u_int32_t *ptr = (u_int32_t *)dat;
 
 	if (EXTRACT_32BITS(ptr) &  L2TP_FRAMING_CAP_ASYNC_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");
+		ARGUSBUF_APPEND("A");
 	}
 	if (EXTRACT_32BITS(ptr) &  L2TP_FRAMING_CAP_SYNC_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"S");
+		ARGUSBUF_APPEND("S");
 	}
 }
 
@@ -331,10 +331,10 @@ l2tp_bearer_cap_print(const u_char *dat)
 	u_int32_t *ptr = (u_int32_t *)dat;
 
 	if (EXTRACT_32BITS(ptr) &  L2TP_BEARER_CAP_ANALOG_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");
+		ARGUSBUF_APPEND("A");
 	}
 	if (EXTRACT_32BITS(ptr) &  L2TP_BEARER_CAP_DIGITAL_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"D");
+		ARGUSBUF_APPEND("D");
 	}
 }
 
@@ -342,9 +342,9 @@ static void
 l2tp_q931_cc_print(const u_char *dat, u_int length)
 {
 	print_16bits_val((u_int16_t *)dat);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],", %02x", dat[2]);
+	ARGUSBUF_APPEND(", %02x", dat[2]);
 	if (length > 3) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		print_string(dat+3, length-3);
 	}
 }
@@ -355,10 +355,10 @@ l2tp_bearer_type_print(const u_char *dat)
 	u_int32_t *ptr = (u_int32_t *)dat;
 
 	if (EXTRACT_32BITS(ptr) &  L2TP_BEARER_TYPE_ANALOG_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");
+		ARGUSBUF_APPEND("A");
 	}
 	if (EXTRACT_32BITS(ptr) &  L2TP_BEARER_TYPE_DIGITAL_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"D");
+		ARGUSBUF_APPEND("D");
 	}
 }
 
@@ -368,17 +368,17 @@ l2tp_framing_type_print(const u_char *dat)
 	u_int32_t *ptr = (u_int32_t *)dat;
 
 	if (EXTRACT_32BITS(ptr) &  L2TP_FRAMING_TYPE_ASYNC_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"A");
+		ARGUSBUF_APPEND("A");
 	}
 	if (EXTRACT_32BITS(ptr) &  L2TP_FRAMING_TYPE_SYNC_MASK) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"S");
+		ARGUSBUF_APPEND("S");
 	}
 }
 
 static void
 l2tp_packet_proc_delay_print(void)
 {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"obsolete");
+	ARGUSBUF_APPEND("obsolete");
 }
 
 static void
@@ -386,7 +386,7 @@ l2tp_proxy_auth_type_print(const u_char *dat)
 {
 	u_int16_t *ptr = (u_int16_t *)dat;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2str(l2tp_authentype2str,
+	ARGUSBUF_APPEND("%s", tok2str(l2tp_authentype2str,
 			     "AuthType-#%u", EXTRACT_16BITS(ptr)));
 }
 
@@ -395,7 +395,7 @@ l2tp_proxy_auth_id_print(const u_char *dat)
 {
 	u_int16_t *ptr = (u_int16_t *)dat;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", EXTRACT_16BITS(ptr) & L2TP_PROXY_AUTH_ID_MASK);
+	ARGUSBUF_APPEND("%u", EXTRACT_16BITS(ptr) & L2TP_PROXY_AUTH_ID_MASK);
 }
 
 static void
@@ -408,27 +408,27 @@ l2tp_call_errors_print(const u_char *dat)
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"CRCErr=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("CRCErr=%u ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"FrameErr=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("FrameErr=%u ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"HardOver=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("HardOver=%u ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"BufOver=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("BufOver=%u ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"Timeout=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("Timeout=%u ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"AlignErr=%u ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("AlignErr=%u ", (val_h<<16) + val_l);
 }
 
 static void
@@ -441,11 +441,11 @@ l2tp_accm_print(const u_char *dat)
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"send=%08x ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("send=%08x ", (val_h<<16) + val_l);
 
 	val_h = EXTRACT_16BITS(ptr); ptr++;
 	val_l = EXTRACT_16BITS(ptr); ptr++;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"recv=%08x ", (val_h<<16) + val_l);
+	ARGUSBUF_APPEND("recv=%08x ", (val_h<<16) + val_l);
 }
 
 static void
@@ -453,13 +453,13 @@ l2tp_ppp_discon_cc_print(const u_char *dat, u_int length)
 {
 	u_int16_t *ptr = (u_int16_t *)dat;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%04x, ", EXTRACT_16BITS(ptr)); ptr++;	/* Disconnect Code */
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%04x ",  EXTRACT_16BITS(ptr)); ptr++;	/* Control Protocol Number */
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2str(l2tp_cc_direction2str,
+	ARGUSBUF_APPEND("%04x, ", EXTRACT_16BITS(ptr)); ptr++;	/* Disconnect Code */
+	ARGUSBUF_APPEND("%04x ",  EXTRACT_16BITS(ptr)); ptr++;	/* Control Protocol Number */
+	ARGUSBUF_APPEND("%s", tok2str(l2tp_cc_direction2str,
 			     "Direction-#%u", *((u_char *)ptr++)));
 
 	if (length > 5) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		print_string((const u_char *)ptr, length-5);
 	}
 }
@@ -476,7 +476,7 @@ l2tp_avp_print(const u_char *dat, int length)
 		return;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+	ARGUSBUF_APPEND(" ");
 
 	TCHECK(*ptr);	/* Flags & Length */
 	len = EXTRACT_16BITS(ptr) & L2TP_AVP_HDR_LEN_MASK;
@@ -496,29 +496,29 @@ l2tp_avp_print(const u_char *dat, int length)
 	/* After this point, no need to worry about truncation */
 
 	if (EXTRACT_16BITS(ptr) & L2TP_AVP_HDR_FLAG_MANDATORY) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"*");
+		ARGUSBUF_APPEND("*");
 	}
 	if (EXTRACT_16BITS(ptr) & L2TP_AVP_HDR_FLAG_HIDDEN) {
 		hidden = TRUE;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"?");
+		ARGUSBUF_APPEND("?");
 	}
 	ptr++;
 
 	if (EXTRACT_16BITS(ptr)) {
 		/* Vendor Specific Attribute */
-	        sprintf(&ArgusBuf[strlen(ArgusBuf)],"VENDOR%04x:", EXTRACT_16BITS(ptr)); ptr++;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"ATTR%04x", EXTRACT_16BITS(ptr)); ptr++;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"(");
+	        ARGUSBUF_APPEND("VENDOR%04x:", EXTRACT_16BITS(ptr)); ptr++;
+		ARGUSBUF_APPEND("ATTR%04x", EXTRACT_16BITS(ptr)); ptr++;
+		ARGUSBUF_APPEND("(");
 		print_octets((u_char *)ptr, len-6);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+		ARGUSBUF_APPEND(")");
 	} else {
 		/* IETF-defined Attributes */
 		ptr++;
 		attr_type = EXTRACT_16BITS(ptr); ptr++;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2str(l2tp_avp2str, "AVP-#%u", attr_type));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"(");
+		ARGUSBUF_APPEND("%s", tok2str(l2tp_avp2str, "AVP-#%u", attr_type));
+		ARGUSBUF_APPEND("(");
 		if (hidden) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"???");
+			ARGUSBUF_APPEND("???");
 		} else {
 			switch (attr_type) {
 			case L2TP_AVP_MSGTYPE:
@@ -607,14 +607,14 @@ l2tp_avp_print(const u_char *dat, int length)
 				break;
 			}
 		}
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+		ARGUSBUF_APPEND(")");
 	}
 
 	l2tp_avp_print(dat+len, length-len);
 	return;
 
  trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"|...");
+	ARGUSBUF_APPEND("|...");
 }
 
 
@@ -631,35 +631,35 @@ l2tp_print(const u_char *dat, u_int length)
 
 	TCHECK(*ptr);	/* Flags & Version */
 	if ((EXTRACT_16BITS(ptr) & L2TP_VERSION_MASK) == L2TP_VERSION_L2TP) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," l2tp:");
+		ARGUSBUF_APPEND(" l2tp:");
 	} else if ((EXTRACT_16BITS(ptr) & L2TP_VERSION_MASK) == L2TP_VERSION_L2F) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," l2f:");
+		ARGUSBUF_APPEND(" l2f:");
 		return ArgusBuf;		/* nothing to do */
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Unknown Version, neither L2F(1) nor L2TP(2)");
+		ARGUSBUF_APPEND(" Unknown Version, neither L2F(1) nor L2TP(2)");
 		return ArgusBuf;		/* nothing we can do */
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"[");
+	ARGUSBUF_APPEND("[");
 	if (EXTRACT_16BITS(ptr) & L2TP_FLAG_TYPE) {
 		flag_t = TRUE;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"T");
+		ARGUSBUF_APPEND("T");
 	}
 	if (EXTRACT_16BITS(ptr) & L2TP_FLAG_LENGTH) {
 		flag_l = TRUE;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"L");
+		ARGUSBUF_APPEND("L");
 	}
 	if (EXTRACT_16BITS(ptr) & L2TP_FLAG_SEQUENCE) {
 		flag_s = TRUE;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"S");
+		ARGUSBUF_APPEND("S");
 	}
 	if (EXTRACT_16BITS(ptr) & L2TP_FLAG_OFFSET) {
 		flag_o = TRUE;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"O");
+		ARGUSBUF_APPEND("O");
 	}
 	if (EXTRACT_16BITS(ptr) & L2TP_FLAG_PRIORITY)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"P");
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"]");
+		ARGUSBUF_APPEND("P");
+	ARGUSBUF_APPEND("]");
 
 	ptr++;
 	cnt += 2;
@@ -673,18 +673,18 @@ l2tp_print(const u_char *dat, u_int length)
 	}
 
 	TCHECK(*ptr);		/* Tunnel ID */
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%u/", EXTRACT_16BITS(ptr)); ptr++;
+	ARGUSBUF_APPEND("(%u/", EXTRACT_16BITS(ptr)); ptr++;
 	cnt += 2;
 	TCHECK(*ptr);		/* Session ID */
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u)",  EXTRACT_16BITS(ptr)); ptr++;
+	ARGUSBUF_APPEND("%u)",  EXTRACT_16BITS(ptr)); ptr++;
 	cnt += 2;
 
 	if (flag_s) {
 		TCHECK(*ptr);	/* Ns */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Ns=%u,", EXTRACT_16BITS(ptr)); ptr++;
+		ARGUSBUF_APPEND("Ns=%u,", EXTRACT_16BITS(ptr)); ptr++;
 		cnt += 2;
 		TCHECK(*ptr);	/* Nr */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Nr=%u",  EXTRACT_16BITS(ptr)); ptr++;
+		ARGUSBUF_APPEND("Nr=%u",  EXTRACT_16BITS(ptr)); ptr++;
 		cnt += 2;
 	}
 
@@ -697,37 +697,37 @@ l2tp_print(const u_char *dat, u_int length)
 
 	if (flag_l) {
 		if (length < l2tp_len) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," Length %u larger than packet", l2tp_len);
+			ARGUSBUF_APPEND(" Length %u larger than packet", l2tp_len);
 			return ArgusBuf;
 		}
 		length = l2tp_len;
 	}
 	if (length < cnt) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," Length %u smaller than header length", length);
+		ARGUSBUF_APPEND(" Length %u smaller than header length", length);
 		return ArgusBuf;
 	}
 	if (flag_t) {
 		if (!flag_l) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," No length");
+			ARGUSBUF_APPEND(" No length");
 			return ArgusBuf;
 		}
 		if (length - cnt == 0) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ZLB");
+			ARGUSBUF_APPEND(" ZLB");
 		} else {
 			l2tp_avp_print((u_char *)ptr, length - cnt);
 		}
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," {");
+		ARGUSBUF_APPEND(" {");
 /*
 		ppp_print((u_char *)ptr, length - cnt);
 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"}");
+		ARGUSBUF_APPEND("}");
 	}
 
 	return ArgusBuf;
 
  trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tstr);
+	ARGUSBUF_APPEND("%s", tstr);
 
    return ArgusBuf;
 }

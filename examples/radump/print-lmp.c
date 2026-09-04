@@ -390,14 +390,14 @@ lmp_print(register const u_char *pptr, register u_int len) {
      * Sanity checking of the header.
      */
     if (LMP_EXTRACT_VERSION(lmp_com_header->version_res[0]) != LMP_VERSION) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"LMP version %u packet not supported",
+	ARGUSBUF_APPEND("LMP version %u packet not supported",
                LMP_EXTRACT_VERSION(lmp_com_header->version_res[0]));
 	return ArgusBuf;
     }
 
     /* in non-verbose mode just lets print the basic Message Type*/
     if (ArgusParser->vflag < 1) {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"LMPv%u %s Message, length: %u",
+        ARGUSBUF_APPEND("LMPv%u %s Message, length: %u",
                LMP_EXTRACT_VERSION(lmp_com_header->version_res[0]),
                tok2str(lmp_msg_type_values, "unknown (%u)",lmp_com_header->msg_type),
                len);
@@ -408,7 +408,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 
     tlen=EXTRACT_16BITS(lmp_com_header->length);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tLMPv%u, msg-type: %s, Flags: [%s], length: %u",
+    ARGUSBUF_APPEND("\n\tLMPv%u, msg-type: %s, Flags: [%s], length: %u",
            LMP_EXTRACT_VERSION(lmp_com_header->version_res[0]),
            tok2str(lmp_msg_type_values, "unknown, type: %u",lmp_com_header->msg_type),
            bittok2str(lmp_header_flag_values,"none",lmp_com_header->flags),
@@ -429,7 +429,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
         if(lmp_obj_len % 4 || lmp_obj_len < 4)
             return ArgusBuf;
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Object (%u), Class-Type: %s (%u) Flags: [%snegotiable], length: %u",
+        ARGUSBUF_APPEND("\n\t  %s Object (%u), Class-Type: %s (%u) Flags: [%snegotiable], length: %u",
                tok2str(lmp_obj_values,
                        "Unknown",
                        lmp_obj_header->class_num),
@@ -455,7 +455,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
             switch(lmp_obj_ctype) {
             case LMP_CTYPE_LOC:
             case LMP_CTYPE_RMT:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Control Channel ID: %u (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    Control Channel ID: %u (0x%08x)",
                        EXTRACT_32BITS(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
@@ -470,21 +470,21 @@ lmp_print(register const u_char *pptr, register u_int len) {
             switch(lmp_obj_ctype) {
             case LMP_CTYPE_IPV4_LOC:
             case LMP_CTYPE_IPV4_RMT:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    IPv4 Link ID: %s (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    IPv4 Link ID: %s (0x%08x)",
                        ipaddr_string(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
 #ifdef INET6
             case LMP_CTYPE_IPV6_LOC:
             case LMP_CTYPE_IPV6_RMT:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    IPv6 Link ID: %s (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    IPv6 Link ID: %s (0x%08x)",
                        ip6addr_string(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
 #endif
             case LMP_CTYPE_UNMD_LOC:
             case LMP_CTYPE_UNMD_RMT:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Link ID: %u (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    Link ID: %u (0x%08x)",
                        EXTRACT_32BITS(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
@@ -496,12 +496,12 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_MESSAGE_ID:
             switch(lmp_obj_ctype) {
             case LMP_CTYPE_1:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Message ID: %u (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    Message ID: %u (0x%08x)",
                        EXTRACT_32BITS(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
             case LMP_CTYPE_2:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Message ID Ack: %u (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    Message ID Ack: %u (0x%08x)",
                        EXTRACT_32BITS(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
@@ -514,7 +514,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
             switch(lmp_obj_ctype) {
             case LMP_CTYPE_LOC:
             case LMP_CTYPE_RMT:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Node ID: %s (0x%08x)",
+                ARGUSBUF_APPEND("\n\t    Node ID: %s (0x%08x)",
                        ipaddr_string(obj_tptr),
                        EXTRACT_32BITS(obj_tptr));
                 break;
@@ -527,7 +527,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_CONFIG:
             switch(lmp_obj_ctype) {
             case LMP_CTYPE_HELLO_CONFIG:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Hello Interval: %u\n\t    Hello Dead Interval: %u",
+                ARGUSBUF_APPEND("\n\t    Hello Interval: %u\n\t    Hello Dead Interval: %u",
                        EXTRACT_16BITS(obj_tptr),
                        EXTRACT_16BITS(obj_tptr+2));
                 break;
@@ -540,7 +540,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_HELLO:
             switch(lmp_obj_ctype) {
 	    case LMP_CTYPE_HELLO:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    TxSeqNum: %u\n\t    RcvSeqNum: %u",
+                ARGUSBUF_APPEND("\n\t    TxSeqNum: %u\n\t    RcvSeqNum: %u",
                        EXTRACT_32BITS(obj_tptr),
                        EXTRACT_32BITS(obj_tptr+4));
                 break;
@@ -551,14 +551,14 @@ lmp_print(register const u_char *pptr, register u_int len) {
             break;      
 	    
         case LMP_OBJ_TE_LINK:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Flags: [%s]",
+		ARGUSBUF_APPEND("\n\t    Flags: [%s]",
 		bittok2str(lmp_obj_te_link_flag_values,
 			"none",
 			EXTRACT_16BITS(obj_tptr)>>8));
             
 	    switch(lmp_obj_ctype) {
 	    case LMP_CTYPE_IPV4:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Local Link-ID: %s (0x%08x) \
+		ARGUSBUF_APPEND("\n\t    Local Link-ID: %s (0x%08x) \
 			\n\t    Remote Link-ID: %s (0x%08x)",
                        ipaddr_string(obj_tptr+4),
                        EXTRACT_32BITS(obj_tptr+4),
@@ -576,7 +576,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
             break;
 	
         case LMP_OBJ_DATA_LINK:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Flags: [%s]",
+		ARGUSBUF_APPEND("\n\t    Flags: [%s]",
 		bittok2str(lmp_obj_data_link_flag_values,
 			"none",
 			EXTRACT_16BITS(obj_tptr)>>8));
@@ -584,7 +584,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 	    switch(lmp_obj_ctype) {
 	    case LMP_CTYPE_IPV4:
 	    case LMP_CTYPE_UNMD:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Local Interface ID: %s (0x%08x) \
+                ARGUSBUF_APPEND("\n\t    Local Interface ID: %s (0x%08x) \
 			\n\t    Remote Interface ID: %s (0x%08x)",
                        ipaddr_string(obj_tptr+4),
                        EXTRACT_32BITS(obj_tptr+4),
@@ -596,7 +596,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		while (total_subobj_len > 0 && hexdump == FALSE ) {
 			subobj_type = EXTRACT_16BITS(obj_tptr+offset)>>8;
 			subobj_len  = EXTRACT_16BITS(obj_tptr+offset)&0x00FF;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Subobject, Type: %s (%u), Length: %u",
+			ARGUSBUF_APPEND("\n\t    Subobject, Type: %s (%u), Length: %u",
 				tok2str(lmp_data_link_subobj,
 					"Unknown",
 					subobj_type),
@@ -604,25 +604,25 @@ lmp_print(register const u_char *pptr, register u_int len) {
 					subobj_len);
 			switch(subobj_type) {
 			case INT_SWITCHING_TYPE_SUBOBJ:
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Switching Type: %s (%u)",
+				ARGUSBUF_APPEND("\n\t\t    Switching Type: %s (%u)",
 					tok2str(gmpls_switch_cap_values, 
 						"Unknown", 
 						EXTRACT_16BITS(obj_tptr+offset+2)>>8),
 					EXTRACT_16BITS(obj_tptr+offset+2)>>8);
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Encoding Type: %s (%u)",
+				ARGUSBUF_APPEND("\n\t\t    Encoding Type: %s (%u)",
 					tok2str(gmpls_encoding_values, 
 						"Unknown", 
 						EXTRACT_16BITS(obj_tptr+offset+2)&0x00FF),
 					EXTRACT_16BITS(obj_tptr+offset+2)&0x00FF);
 				bw.i = EXTRACT_32BITS(obj_tptr+offset+4);
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Min Reservable Bandwidth: %.3f Mbps",
+				ARGUSBUF_APPEND("\n\t\t    Min Reservable Bandwidth: %.3f Mbps",
 					bw.f);
 				bw.i = EXTRACT_32BITS(obj_tptr+offset+8);
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Max Reservable Bandwidth: %.3f Mbps",
+				ARGUSBUF_APPEND("\n\t\t    Max Reservable Bandwidth: %.3f Mbps",
 					bw.f);
 				break;	
 			case WAVELENGTH_SUBOBJ:
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Wavelength: %u",
+				ARGUSBUF_APPEND("\n\t\t    Wavelength: %u",
 					EXTRACT_32BITS(obj_tptr+offset+4));
 				break;
 			default:
@@ -646,23 +646,23 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_VERIFY_BEGIN:
 	    switch(lmp_obj_ctype) {
             case LMP_CTYPE_1:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Flags: %s",
+		ARGUSBUF_APPEND("\n\t    Flags: %s",
 		bittok2str(lmp_obj_begin_verify_flag_values,
 			"none",
 			EXTRACT_16BITS(obj_tptr)));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Verify Interval: %u",
+		ARGUSBUF_APPEND("\n\t    Verify Interval: %u",
 			EXTRACT_16BITS(obj_tptr+2));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Data links: %u",
+		ARGUSBUF_APPEND("\n\t    Data links: %u",
 			EXTRACT_32BITS(obj_tptr+4));
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Encoding type: %s",
+                ARGUSBUF_APPEND("\n\t    Encoding type: %s",
 			tok2str(gmpls_encoding_values, "Unknown", *(obj_tptr+8)));
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Verify Tranport Mechanism: %u (0x%x) %s",
+                ARGUSBUF_APPEND("\n\t    Verify Tranport Mechanism: %u (0x%x) %s",
 			EXTRACT_16BITS(obj_tptr+10),
 			EXTRACT_16BITS(obj_tptr+10),
 			EXTRACT_16BITS(obj_tptr+10)&8000 ? "(Payload test messages capable)" : "");
                 bw.i = EXTRACT_32BITS(obj_tptr+12);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Transmission Rate: %.3f Mbps",bw.f);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Wavelength: %u",
+		ARGUSBUF_APPEND("\n\t    Transmission Rate: %.3f Mbps",bw.f);
+		ARGUSBUF_APPEND("\n\t    Wavelength: %u",
 			EXTRACT_32BITS(obj_tptr+16));
 		break;
 		
@@ -674,7 +674,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_VERIFY_BEGIN_ACK:
 	    switch(lmp_obj_ctype) {
             case LMP_CTYPE_1:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Verify Dead Interval: %u 	\
+                ARGUSBUF_APPEND("\n\t    Verify Dead Interval: %u 	\
 			\n\t    Verify Transport Response: %u",
                        EXTRACT_16BITS(obj_tptr),
                        EXTRACT_16BITS(obj_tptr+2));
@@ -688,7 +688,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 	case LMP_OBJ_VERIFY_ID:
 	    switch(lmp_obj_ctype) {
             case LMP_CTYPE_1:
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Verify ID: %u",
+                ARGUSBUF_APPEND("\n\t    Verify ID: %u",
                        EXTRACT_32BITS(obj_tptr));
                 break;
 		
@@ -704,19 +704,19 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		offset = 0;
 		/* Decode pairs: <Interface_ID (4 bytes), Channel_status (4 bytes)> */
 		while (offset < (lmp_obj_len-(int)sizeof(struct lmp_object_header)) ) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Interface ID: %s (0x%08x)",
+			ARGUSBUF_APPEND("\n\t    Interface ID: %s (0x%08x)",
 			ipaddr_string(obj_tptr+offset),
 			EXTRACT_32BITS(obj_tptr+offset));
 			
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Active: %s (%u)", 		(EXTRACT_32BITS(obj_tptr+offset+4)>>31) ? 
+			ARGUSBUF_APPEND("\n\t\t    Active: %s (%u)", 		(EXTRACT_32BITS(obj_tptr+offset+4)>>31) ? 
 						"Allocated" : "Non-allocated",
 				(EXTRACT_32BITS(obj_tptr+offset+4)>>31));
 			
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Direction: %s (%u)", (EXTRACT_32BITS(obj_tptr+offset+4)>>30)&0x1 ? 
+			ARGUSBUF_APPEND("\n\t\t    Direction: %s (%u)", (EXTRACT_32BITS(obj_tptr+offset+4)>>30)&0x1 ? 
 						"Transmit" : "Receive",
 				(EXTRACT_32BITS(obj_tptr+offset+4)>>30)&0x1);	
 						
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t    Channel Status: %s (%u)",
+			ARGUSBUF_APPEND("\n\t\t    Channel Status: %s (%u)",
 					tok2str(lmp_obj_channel_status_values,
 			 		"Unknown",
 					EXTRACT_32BITS(obj_tptr+offset+4)&0x3FFFFFF),
@@ -738,7 +738,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 	    case LMP_CTYPE_UNMD:
 		offset = 0;
 		while (offset < (lmp_obj_len-(int)sizeof(struct lmp_object_header)) ) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Interface ID: %s (0x%08x)",
+			ARGUSBUF_APPEND("\n\t    Interface ID: %s (0x%08x)",
 			ipaddr_string(obj_tptr+offset),
 			EXTRACT_32BITS(obj_tptr+offset));
 			offset+=4;
@@ -755,14 +755,14 @@ lmp_print(register const u_char *pptr, register u_int len) {
         case LMP_OBJ_ERROR_CODE:
 	    switch(lmp_obj_ctype) {
             case LMP_CTYPE_BEGIN_VERIFY_ERROR:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Error Code: %s",
+		ARGUSBUF_APPEND("\n\t    Error Code: %s",
 		bittok2str(lmp_obj_begin_verify_error_values,
 			"none",
 			EXTRACT_32BITS(obj_tptr)));
                 break;
 		
             case LMP_CTYPE_LINK_SUMMARY_ERROR:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Error Code: %s",
+		ARGUSBUF_APPEND("\n\t    Error Code: %s",
 		bittok2str(lmp_obj_link_summary_error_values,
 			"none",
 			EXTRACT_32BITS(obj_tptr)));
@@ -776,12 +776,12 @@ lmp_print(register const u_char *pptr, register u_int len) {
 	    switch (lmp_obj_ctype) {
 	    case LMP_CTYPE_SERVICE_CONFIG_SP:
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Flags: %s",
+		ARGUSBUF_APPEND("\n\t Flags: %s",
 		       bittok2str(lmp_obj_service_config_sp_flag_values,
 				  "none", 
 				  EXTRACT_16BITS(obj_tptr)>>8));
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  UNI Version: %u",
+		ARGUSBUF_APPEND("\n\t  UNI Version: %u",
 		       EXTRACT_16BITS(obj_tptr) & 0x00FF);
 
 		break;
@@ -790,13 +790,13 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		
 		link_type = EXTRACT_16BITS(obj_tptr)>>8;
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Link Type: %s (%u)",
+		ARGUSBUF_APPEND("\n\t Link Type: %s (%u)",
 		       tok2str(lmp_sd_service_config_cpsa_link_type_values,
 			       "Unknown", link_type),
 		       link_type);
 		
 		if (link_type == LMP_SD_SERVICE_CONFIG_CPSA_LINK_TYPE_SDH) {
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Signal Type: %s (%u)",
+		    ARGUSBUF_APPEND("\n\t Signal Type: %s (%u)",
 			   tok2str(lmp_sd_service_config_cpsa_signal_type_sdh_values,
 				   "Unknown",
 				   EXTRACT_16BITS(obj_tptr) & 0x00FF),
@@ -804,36 +804,36 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		}
 		
 		if (link_type == LMP_SD_SERVICE_CONFIG_CPSA_LINK_TYPE_SONET) {
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Signal Type: %s (%u)",
+		    ARGUSBUF_APPEND("\n\t Signal Type: %s (%u)",
 			   tok2str(lmp_sd_service_config_cpsa_signal_type_sonet_values,
 				   "Unknown",
 				   EXTRACT_16BITS(obj_tptr) & 0x00FF),
 			   EXTRACT_16BITS(obj_tptr) & 0x00FF);
 		}
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Transparency: %s",
+		ARGUSBUF_APPEND("\n\t Transparency: %s",
 		       bittok2str(lmp_obj_service_config_cpsa_tp_flag_values,
 				  "none",
 				  EXTRACT_16BITS(obj_tptr+2)>>8));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Contiguous Concatenation Types: %s",
+		ARGUSBUF_APPEND("\n\t Contiguous Concatenation Types: %s",
 		       bittok2str(lmp_obj_service_config_cpsa_cct_flag_values,
 				  "none",
 				  EXTRACT_16BITS(obj_tptr+2)>>8 & 0x00FF));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Minimum NCC: %u",
+		ARGUSBUF_APPEND("\n\t Minimum NCC: %u",
 		       EXTRACT_16BITS(obj_tptr+4));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Maximum NCC: %u",
+		ARGUSBUF_APPEND("\n\t Maximum NCC: %u",
 		       EXTRACT_16BITS(obj_tptr+6));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Minimum NVC:%u",
+		ARGUSBUF_APPEND("\n\t Minimum NVC:%u",
 		       EXTRACT_16BITS(obj_tptr+8));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Maximum NVC:%u",
+		ARGUSBUF_APPEND("\n\t Maximum NVC:%u",
 		       EXTRACT_16BITS(obj_tptr+10));
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Local Interface ID: %s (0x%08x)",
+		ARGUSBUF_APPEND("\n\t    Local Interface ID: %s (0x%08x)",
 		       ipaddr_string(obj_tptr+12),
 		       EXTRACT_32BITS(obj_tptr+12));
 		
@@ -841,13 +841,13 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		
 	    case LMP_CTYPE_SERVICE_CONFIG_TRANSPARENCY_TCM:
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Transparency Flags: %s",
+		ARGUSBUF_APPEND("\n\t Transparency Flags: %s",
 		       bittok2str(
 			   lmp_obj_service_config_nsa_transparency_flag_values,
 			   "none",
 			   EXTRACT_32BITS(obj_tptr)));
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t TCM Monitoring Flags: %s",
+		ARGUSBUF_APPEND("\n\t TCM Monitoring Flags: %s",
 		       bittok2str(
 			   lmp_obj_service_config_nsa_tcm_flag_values,
 			   "none",
@@ -857,7 +857,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
 		
 	    case LMP_CTYPE_SERVICE_CONFIG_NETWORK_DIVERSITY:
 		
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t Diversity: Flags: %s",
+		ARGUSBUF_APPEND("\n\t Diversity: Flags: %s",
 		       bittok2str(
 			   lmp_obj_service_config_nsa_network_diversity_flag_values,
 			   "none",
@@ -885,7 +885,7 @@ lmp_print(register const u_char *pptr, register u_int len) {
     }
     return ArgusBuf;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t packet exceeded snapshot");
+    ARGUSBUF_APPEND("\n\t\t packet exceeded snapshot");
 
    return ArgusBuf;
 }

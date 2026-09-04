@@ -596,7 +596,7 @@ lldp_private_8021_print(const u_char *tptr, u_int tlv_len)
     }
     subtype = *(tptr+3);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Subtype (%u)",
+    ARGUSBUF_APPEND("\n\t  %s Subtype (%u)",
            tok2str(lldp_8021_subtype_values, "unknown", subtype),
            subtype);
 
@@ -605,14 +605,14 @@ lldp_private_8021_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 6) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    port vlan id (PVID): %u",
+        ARGUSBUF_APPEND("\n\t    port vlan id (PVID): %u",
                EXTRACT_16BITS(tptr+4));
         break;
     case LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_VLAN_ID:
         if (tlv_len < 7) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    port and protocol vlan id (PPVID): %u, flags [%s] (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    port and protocol vlan id (PPVID): %u, flags [%s] (0x%02x)",
                EXTRACT_16BITS(tptr+5),
 	       bittok2str(lldp_8021_port_protocol_id_values, "none", *(tptr+4)),
 	       *(tptr+4));
@@ -621,7 +621,7 @@ lldp_private_8021_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 6) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    vlan id (VID): %u",
+        ARGUSBUF_APPEND("\n\t    vlan id (VID): %u",
                EXTRACT_16BITS(tptr+4));
         if (tlv_len < 7) {
             return hexdump;
@@ -630,7 +630,7 @@ lldp_private_8021_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 7+sublen) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    vlan name: ");
+        ARGUSBUF_APPEND("\n\t    vlan name: ");
         safeputs((const char *)tptr+7, sublen);
         break;
     case LLDP_PRIVATE_8021_SUBTYPE_PROTOCOL_IDENTITY:
@@ -641,7 +641,7 @@ lldp_private_8021_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 5+sublen) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    protocol identity: ");
+        ARGUSBUF_APPEND("\n\t    protocol identity: ");
         safeputs((const char *)tptr+5, sublen);
         break;
 
@@ -666,7 +666,7 @@ lldp_private_8023_print(const u_char *tptr, u_int tlv_len)
     }
     subtype = *(tptr+3);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Subtype (%u)",
+    ARGUSBUF_APPEND("\n\t  %s Subtype (%u)",
            tok2str(lldp_8023_subtype_values, "unknown", subtype),
            subtype);
 
@@ -675,13 +675,13 @@ lldp_private_8023_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 9) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    autonegotiation [%s] (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    autonegotiation [%s] (0x%02x)",
                bittok2str(lldp_8023_autonegotiation_values, "none", *(tptr+4)),
                *(tptr+4));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    PMD autoneg capability [%s] (0x%04x)",
+        ARGUSBUF_APPEND("\n\t    PMD autoneg capability [%s] (0x%04x)",
                bittok2str(lldp_pmd_capability_values,"unknown", EXTRACT_16BITS(tptr+5)),
                EXTRACT_16BITS(tptr+5));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    MAU type %s (0x%04x)",
+        ARGUSBUF_APPEND("\n\t    MAU type %s (0x%04x)",
                tok2str(lldp_mau_types_values, "unknown", EXTRACT_16BITS(tptr+7)),
                EXTRACT_16BITS(tptr+7));
         break;
@@ -690,7 +690,7 @@ lldp_private_8023_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 7) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    MDI power support [%s], power pair %s, power class %s",
+        ARGUSBUF_APPEND("\n\t    MDI power support [%s], power pair %s, power class %s",
                bittok2str(lldp_mdi_values, "none", *(tptr+4)),
                tok2str(lldp_mdi_power_pairs_values, "unknown", *(tptr+5)),
                tok2str(lldp_mdi_power_class_values, "unknown", *(tptr+6)));
@@ -700,13 +700,13 @@ lldp_private_8023_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 9) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    aggregation status [%s], aggregation port ID %u",
+        ARGUSBUF_APPEND("\n\t    aggregation status [%s], aggregation port ID %u",
                bittok2str(lldp_aggregation_values, "none", *(tptr+4)),
                EXTRACT_32BITS(tptr+5));
         break;
 
     case LLDP_PRIVATE_8023_SUBTYPE_MTU:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    MTU size %u", EXTRACT_16BITS(tptr+4));
+        ARGUSBUF_APPEND("\n\t    MTU size %u", EXTRACT_16BITS(tptr+4));
         break;
 
     default:
@@ -748,7 +748,7 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
     }
     subtype = *(tptr+3);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Subtype (%u)",
+    ARGUSBUF_APPEND("\n\t  %s Subtype (%u)",
            tok2str(lldp_tia_subtype_values, "unknown", subtype),
            subtype);
 
@@ -757,10 +757,10 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 7) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Media capabilities [%s] (0x%04x)",
+        ARGUSBUF_APPEND("\n\t    Media capabilities [%s] (0x%04x)",
                bittok2str(lldp_tia_capabilities_values, "none",
                           EXTRACT_16BITS(tptr+4)), EXTRACT_16BITS(tptr+4));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Device type [%s] (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    Device type [%s] (0x%02x)",
                tok2str(lldp_tia_device_type_values, "unknown", *(tptr+6)),
                *(tptr+6));
         break;
@@ -769,16 +769,16 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 8) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Application type [%s] (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    Application type [%s] (0x%02x)",
                tok2str(lldp_tia_application_type_values, "none", *(tptr+4)),
                *(tptr+4));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", Flags [%s]", bittok2str(
+        ARGUSBUF_APPEND(", Flags [%s]", bittok2str(
                    lldp_tia_network_policy_bits_values, "none", *(tptr+5)));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Vlan id %u",
+        ARGUSBUF_APPEND("\n\t    Vlan id %u",
                LLDP_EXTRACT_NETWORK_POLICY_VLAN(EXTRACT_16BITS(tptr+5)));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", L2 priority %u",
+        ARGUSBUF_APPEND(", L2 priority %u",
                LLDP_EXTRACT_NETWORK_POLICY_L2_PRIORITY(EXTRACT_16BITS(tptr+6)));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", DSCP value %u",
+        ARGUSBUF_APPEND(", DSCP value %u",
                LLDP_EXTRACT_NETWORK_POLICY_DSCP(EXTRACT_16BITS(tptr+6)));
         break;
 
@@ -787,7 +787,7 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
             return hexdump;
         }
         location_format = *(tptr+4);
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Location data format %s (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    Location data format %s (0x%02x)",
                tok2str(lldp_tia_location_data_format_values, "unknown", location_format),
                location_format);
 
@@ -796,17 +796,17 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
             if (tlv_len < 21) {
                 return hexdump;
             }
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Latitude resolution %u, latitude value %" PRIu64,
+            ARGUSBUF_APPEND("\n\t    Latitude resolution %u, latitude value %" PRIu64,
                    (*(tptr+5)>>2), lldp_extract_latlon(tptr+5));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Longitude resolution %u, longitude value %" PRIu64,
+            ARGUSBUF_APPEND("\n\t    Longitude resolution %u, longitude value %" PRIu64,
                    (*(tptr+10)>>2), lldp_extract_latlon(tptr+10));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Altitude type %s (%u)",
+            ARGUSBUF_APPEND("\n\t    Altitude type %s (%u)",
                    tok2str(lldp_tia_location_altitude_type_values, "unknown",(*(tptr+15)>>4)),
                    (*(tptr+15)>>4));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Altitude resolution %u, altitude value 0x%x",
+            ARGUSBUF_APPEND("\n\t    Altitude resolution %u, altitude value 0x%x",
                    (EXTRACT_16BITS(tptr+15)>>6)&0x3f,
                    ((EXTRACT_32BITS(tptr+16)&0x3fffffff)));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Datum %s (0x%02x)",
+            ARGUSBUF_APPEND("\n\t    Datum %s (0x%02x)",
                    tok2str(lldp_tia_location_datum_type_values, "unknown", *(tptr+20)),
                    *(tptr+20));
             break;
@@ -822,7 +822,7 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
             if (tlv_len < 7+lci_len) {
                 return hexdump;
             }
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    LCI length %u, LCI what %s (0x%02x), Country-code ",
+            ARGUSBUF_APPEND("\n\t    LCI length %u, LCI what %s (0x%02x), Country-code ",
                    lci_len,
                    tok2str(lldp_tia_location_lci_what_values, "unknown", *(tptr+6)),
                    *(tptr+6));
@@ -844,7 +844,7 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
 		tptr += 2;
                 lci_len -= 2; 
 
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      CA type \'%s\' (%u), length %u: ",
+                ARGUSBUF_APPEND("\n\t      CA type \'%s\' (%u), length %u: ",
                        tok2str(lldp_tia_location_lci_catype_values, "unknown", ca_type),
                        ca_type, ca_len);
 
@@ -863,12 +863,12 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
             break;
 
         case LLDP_TIA_LOCATION_DATA_FORMAT_ECS_ELIN:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    ECS ELIN id ");
+            ARGUSBUF_APPEND("\n\t    ECS ELIN id ");
             safeputs((const char *)tptr+5, tlv_len-5);       
             break;
 
         default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Location ID ");
+            ARGUSBUF_APPEND("\n\t    Location ID ");
             print_unknown_data(tptr+5, "\n\t      ", tlv_len-5);
         }
         break;
@@ -877,18 +877,18 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
         if (tlv_len < 7) {
             return hexdump;
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Power type [%s]",
+        ARGUSBUF_APPEND("\n\t    Power type [%s]",
                (*(tptr+4)&0xC0>>6) ? "PD device" : "PSE device");
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", Power source [%s]",
+        ARGUSBUF_APPEND(", Power source [%s]",
                tok2str(lldp_tia_power_source_values, "none", (*(tptr+4)&0x30)>>4));
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Power priority [%s] (0x%02x)",
+        ARGUSBUF_APPEND("\n\t    Power priority [%s] (0x%02x)",
                tok2str(lldp_tia_power_priority_values, "none", *(tptr+4)&0x0f),
                *(tptr+4)&0x0f);
         power_val = EXTRACT_16BITS(tptr+5);
         if (power_val < LLDP_TIA_POWER_VAL_MAX) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", Power %.1f Watts", ((float)power_val)/10);
+            ARGUSBUF_APPEND(", Power %.1f Watts", ((float)power_val)/10);
         } else {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", Power %u (Reserved)", power_val);
+            ARGUSBUF_APPEND(", Power %u (Reserved)", power_val);
         }
         break;
 
@@ -899,7 +899,7 @@ lldp_private_tia_print(const u_char *tptr, u_int tlv_len)
     case LLDP_PRIVATE_TIA_SUBTYPE_INVENTORY_MANUFACTURER_NAME:
     case LLDP_PRIVATE_TIA_SUBTYPE_INVENTORY_MODEL_NAME:
     case LLDP_PRIVATE_TIA_SUBTYPE_INVENTORY_ASSET_ID:
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s ",
+        ARGUSBUF_APPEND("\n\t  %s ",
                tok2str(lldp_tia_inventory_values, "unknown", subtype));
         safeputs((const char *)tptr+4, tlv_len-4);
         break;
@@ -930,7 +930,7 @@ lldp_private_dcbx_print(const u_char *pptr, u_int len)
     }
     subtype = *(pptr+3);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Subtype (%u)",
+    ARGUSBUF_APPEND("\n\t  %s Subtype (%u)",
            tok2str(lldp_dcbx_subtype_values, "unknown", subtype),
            subtype);
 
@@ -970,89 +970,89 @@ lldp_private_dcbx_print(const u_char *pptr, u_int len)
             if (tlv_len < 10) {
                 goto trunc;
             }
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Control - Protocol Control (type 0x%x, length %d)",
+	    ARGUSBUF_APPEND("\n\t    Control - Protocol Control (type 0x%x, length %d)",
 		LLDP_DCBX_CONTROL_TLV, tlv_len);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Oper_Version: %d", *tptr);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Max_Version: %d", *(tptr+1));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Sequence Number: %d", EXTRACT_32BITS(tptr+2));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Acknowledgement Number: %d",
+	    ARGUSBUF_APPEND("\n\t      Oper_Version: %d", *tptr);
+	    ARGUSBUF_APPEND("\n\t      Max_Version: %d", *(tptr+1));
+	    ARGUSBUF_APPEND("\n\t      Sequence Number: %d", EXTRACT_32BITS(tptr+2));
+	    ARGUSBUF_APPEND("\n\t      Acknowledgement Number: %d",
 					EXTRACT_32BITS(tptr+6));
 	    break;
         case LLDP_DCBX_PRIORITY_GROUPS_TLV:
             if (tlv_len < 17) {
                 goto trunc;
             }
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Feature - Priority Group (type 0x%x, length %d)",
+	    ARGUSBUF_APPEND("\n\t    Feature - Priority Group (type 0x%x, length %d)",
 		LLDP_DCBX_PRIORITY_GROUPS_TLV, tlv_len);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Oper_Version: %d", *tptr);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Max_Version: %d", *(tptr+1));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Info block(0x%02X): ", *(tptr+2));
+	    ARGUSBUF_APPEND("\n\t      Oper_Version: %d", *tptr);
+	    ARGUSBUF_APPEND("\n\t      Max_Version: %d", *(tptr+1));
+	    ARGUSBUF_APPEND("\n\t      Info block(0x%02X): ", *(tptr+2));
 	    tval = *(tptr+2);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Enable bit: %d, Willing bit: %d, Error Bit: %d",
+	    ARGUSBUF_APPEND("Enable bit: %d, Willing bit: %d, Error Bit: %d",
 		(tval &  0x80) ? 1 : 0, (tval &  0x40) ? 1 : 0,
 		(tval &  0x20) ? 1 : 0);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      SubType: %d", *(tptr+3));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Priority Allocation");
+	    ARGUSBUF_APPEND("\n\t      SubType: %d", *(tptr+3));
+	    ARGUSBUF_APPEND("\n\t      Priority Allocation");
 
 	    pgval = EXTRACT_32BITS(tptr+4);
 	    for (i = 0; i <= 7; i++) {
 		tval = *(tptr+4+(i/2));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          PgId_%d: %d",
+		ARGUSBUF_APPEND("\n\t          PgId_%d: %d",
 			i, (pgval >> (28-4*i)) & 0xF);
 	    }
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Priority Group Allocation");
+	    ARGUSBUF_APPEND("\n\t      Priority Group Allocation");
 	    for (i = 0; i <= 7; i++)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          Pg percentage[%d]: %d", i, *(tptr+8+i));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      NumTCsSupported: %d", *(tptr+8+8));
+		ARGUSBUF_APPEND("\n\t          Pg percentage[%d]: %d", i, *(tptr+8+i));
+	    ARGUSBUF_APPEND("\n\t      NumTCsSupported: %d", *(tptr+8+8));
 	    break;
         case LLDP_DCBX_PRIORITY_FLOW_CONTROL_TLV:
             if (tlv_len < 6) {
                 goto trunc;
             }
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Feature - Priority Flow Control");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)]," (type 0x%x, length %d)",
+	    ARGUSBUF_APPEND("\n\t    Feature - Priority Flow Control");
+	    ARGUSBUF_APPEND(" (type 0x%x, length %d)",
 		LLDP_DCBX_PRIORITY_FLOW_CONTROL_TLV, tlv_len);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Oper_Version: %d", *tptr);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Max_Version: %d", *(tptr+1));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Info block(0x%02X): ", *(tptr+2));
+	    ARGUSBUF_APPEND("\n\t      Oper_Version: %d", *tptr);
+	    ARGUSBUF_APPEND("\n\t      Max_Version: %d", *(tptr+1));
+	    ARGUSBUF_APPEND("\n\t      Info block(0x%02X): ", *(tptr+2));
 	    tval = *(tptr+2);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Enable bit: %d, Willing bit: %d, Error Bit: %d",
+	    ARGUSBUF_APPEND("Enable bit: %d, Willing bit: %d, Error Bit: %d",
 		(tval &  0x80) ? 1 : 0, (tval &  0x40) ? 1 : 0,
 		(tval &  0x20) ? 1 : 0);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      SubType: %d", *(tptr+3));
+	    ARGUSBUF_APPEND("\n\t      SubType: %d", *(tptr+3));
 	    tval = *(tptr+4);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      PFC Config (0x%02X)", *(tptr+4));
+	    ARGUSBUF_APPEND("\n\t      PFC Config (0x%02X)", *(tptr+4));
 	    for (i = 0; i <= 7; i++)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          Priority Bit %d: %s",
+		ARGUSBUF_APPEND("\n\t          Priority Bit %d: %s",
 		    i, (tval & (1 << i)) ? "Enabled" : "Disabled");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      NumTCPFCSupported: %d", *(tptr+5));
+	    ARGUSBUF_APPEND("\n\t      NumTCPFCSupported: %d", *(tptr+5));
 	    break;
         case LLDP_DCBX_APPLICATION_TLV:
             if (tlv_len < 4) {
                 goto trunc;
             }
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Feature - Application (type 0x%x, length %d)",
+	    ARGUSBUF_APPEND("\n\t    Feature - Application (type 0x%x, length %d)",
 		LLDP_DCBX_APPLICATION_TLV, tlv_len);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Oper_Version: %d", *tptr);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Max_Version: %d", *(tptr+1));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Info block(0x%02X): ", *(tptr+2));
+	    ARGUSBUF_APPEND("\n\t      Oper_Version: %d", *tptr);
+	    ARGUSBUF_APPEND("\n\t      Max_Version: %d", *(tptr+1));
+	    ARGUSBUF_APPEND("\n\t      Info block(0x%02X): ", *(tptr+2));
 	    tval = *(tptr+2);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Enable bit: %d, Willing bit: %d, Error Bit: %d",
+	    ARGUSBUF_APPEND("Enable bit: %d, Willing bit: %d, Error Bit: %d",
 		(tval &  0x80) ? 1 : 0, (tval &  0x40) ? 1 : 0,
 		(tval &  0x20) ? 1 : 0);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      SubType: %d", *(tptr+3));
+	    ARGUSBUF_APPEND("\n\t      SubType: %d", *(tptr+3));
 	    tval = tlv_len - 4;
 	    mptr = tptr + 4;
 	    while (tval >= 6) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Application Value");
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          Application Protocol ID: 0x%04x",
+		ARGUSBUF_APPEND("\n\t      Application Value");
+		ARGUSBUF_APPEND("\n\t          Application Protocol ID: 0x%04x",
 			EXTRACT_16BITS(mptr));
 		uval = EXTRACT_24BITS(mptr+2);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          SF (0x%x) Application Protocol ID is %s",
+		ARGUSBUF_APPEND("\n\t          SF (0x%x) Application Protocol ID is %s",
 			(uval >> 22),
 			(uval >> 22) ? "Socket Number" : "L2 EtherType");
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          OUI: 0x%06x", uval & 0x3fffff);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t          User Priority Map: 0x%02x", *(mptr+5));
+		ARGUSBUF_APPEND("\n\t          OUI: 0x%06x", uval & 0x3fffff);
+		ARGUSBUF_APPEND("\n\t          User Priority Map: 0x%02x", *(mptr+5));
 		tval = tval - 6;
 		mptr = mptr + 6;
 	    }
@@ -1112,10 +1112,10 @@ lldp_network_addr_print(const u_char *tptr, u_int len) {
     }
 
     if (!pfunc) {
-        snsprintf(&ArgusBuf[strlen(ArgusBuf)],buf, sizeof(buf), "AFI %s (%u), no AF printer !",
+        snARGUSBUF_APPEND(buf, sizeof(buf), "AFI %s (%u), no AF printer !",
                  tok2str(af_values, "Unknown", af), af);
     } else {
-        snsprintf(&ArgusBuf[strlen(ArgusBuf)],buf, sizeof(buf), "AFI %s (%u): %s",
+        snARGUSBUF_APPEND(buf, sizeof(buf), "AFI %s (%u): %s",
                  tok2str(af_values, "Unknown", af), af, (*pfunc)(tptr+1));
     }
 
@@ -1147,7 +1147,7 @@ lldp_mgmt_addr_tlv_print(const u_char *pptr, u_int len) {
     if (mgmt_addr == NULL) {
         return 0;
     }
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  Management Address length %u, %s",
+    ARGUSBUF_APPEND("\n\t  Management Address length %u, %s",
            mgmt_addr_len, mgmt_addr);
     tptr += mgmt_addr_len;
     tlen -= mgmt_addr_len;
@@ -1157,7 +1157,7 @@ lldp_mgmt_addr_tlv_print(const u_char *pptr, u_int len) {
     }
 
     intf_num_subtype = *tptr;
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Interface Numbering (%u): %u",
+    ARGUSBUF_APPEND("\n\t  %s Interface Numbering (%u): %u",
            tok2str(lldp_intf_numb_subtype_values, "Unknown", intf_num_subtype),
            intf_num_subtype,
            EXTRACT_32BITS(tptr+1));
@@ -1175,7 +1175,7 @@ lldp_mgmt_addr_tlv_print(const u_char *pptr, u_int len) {
             return 0;
         }
         if (oid_len) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  OID length %u", oid_len);
+            ARGUSBUF_APPEND("\n\t  OID length %u", oid_len);
             safeputs((const char *)tptr+1, oid_len);
         }
     }
@@ -1196,7 +1196,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
     tlen = len;
 
     if (ArgusParser->vflag) {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"LLDP, length %u", len);
+        ARGUSBUF_APPEND("LLDP, length %u", len);
     }
 
     while (tlen >= sizeof(tlv)) {
@@ -1213,7 +1213,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
         tptr += sizeof(tlv);
 
         if (ArgusParser->vflag) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t%s TLV (%u), length %u",
+            ARGUSBUF_APPEND("\n\t%s TLV (%u), length %u",
                    tok2str(lldp_tlv_values, "Unknown", tlv_type),
                    tlv_type, tlv_len);
         }
@@ -1236,7 +1236,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     goto trunc;
                 }
                 subtype = *tptr;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  Subtype %s (%u): ",
+                ARGUSBUF_APPEND("\n\t  Subtype %s (%u): ",
                        tok2str(lldp_chassis_subtype_values, "Unknown", subtype),
                        subtype);
 
@@ -1245,7 +1245,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     if (tlv_len < 1+6) {
                         goto trunc;
                     }
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", etheraddr_string(tptr+1));
+                    ARGUSBUF_APPEND("%s", etheraddr_string(tptr+1));
                     break;
 
                 case LLDP_CHASSIS_INTF_NAME_SUBTYPE: /* fall through */
@@ -1261,7 +1261,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     if (network_addr == NULL) {
                         goto trunc;
                     }
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", network_addr);
+                    ARGUSBUF_APPEND("%s", network_addr);
                     break;
 
                 default:
@@ -1277,7 +1277,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     goto trunc;
                 }
                 subtype = *tptr;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  Subtype %s (%u): ",
+                ARGUSBUF_APPEND("\n\t  Subtype %s (%u): ",
                        tok2str(lldp_port_subtype_values, "Unknown", subtype),
                        subtype);
 
@@ -1286,7 +1286,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     if (tlv_len < 1+6) {
                         goto trunc;
                     }
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", etheraddr_string(tptr+1));
+                    ARGUSBUF_APPEND("%s", etheraddr_string(tptr+1));
                     break;
 
                 case LLDP_PORT_INTF_NAME_SUBTYPE: /* fall through */
@@ -1302,7 +1302,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     if (network_addr == NULL) {
                         goto trunc;
                     }
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", network_addr);
+                    ARGUSBUF_APPEND("%s", network_addr);
                     break;
 
                 default:
@@ -1317,13 +1317,13 @@ lldp_print(register const u_char *pptr, register u_int len) {
                 if (tlv_len < 2) {
                     goto trunc;
                 }
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],": TTL %us", EXTRACT_16BITS(tptr));
+                ARGUSBUF_APPEND(": TTL %us", EXTRACT_16BITS(tptr));
             }
             break;
 
         case LLDP_PORT_DESCR_TLV:
             if (ArgusParser->vflag) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],": ");
+                ARGUSBUF_APPEND(": ");
                 safeputs((const char *)tptr, tlv_len);
             }
             break;
@@ -1334,18 +1334,18 @@ lldp_print(register const u_char *pptr, register u_int len) {
              * similar to the CDP printer.
              */
             if (ArgusParser->vflag) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],": ");
+                ARGUSBUF_APPEND(": ");
                 safeputs((const char *)tptr, tlv_len);
             } else {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"LLDP, name ");
+                ARGUSBUF_APPEND("LLDP, name ");
                 safeputs((const char *)tptr, tlv_len);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", length %u", len);
+                ARGUSBUF_APPEND(", length %u", len);
             }
             break;
 
         case LLDP_SYSTEM_DESCR_TLV:
             if (ArgusParser->vflag) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  ");
+                ARGUSBUF_APPEND("\n\t  ");
                 safeputs((const char *)tptr, tlv_len);
             }
             break;
@@ -1363,9 +1363,9 @@ lldp_print(register const u_char *pptr, register u_int len) {
                 }
                 cap = EXTRACT_16BITS(tptr);
                 ena_cap = EXTRACT_16BITS(tptr+2);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  System  Capabilities [%s] (0x%04x)",
+                ARGUSBUF_APPEND("\n\t  System  Capabilities [%s] (0x%04x)",
                        bittok2str(lldp_cap_values, "none", cap), cap);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  Enabled Capabilities [%s] (0x%04x)",
+                ARGUSBUF_APPEND("\n\t  Enabled Capabilities [%s] (0x%04x)",
                        bittok2str(lldp_cap_values, "none", ena_cap), ena_cap);
             }
             break;
@@ -1384,7 +1384,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
                     goto trunc;
                 }
                 oui = EXTRACT_24BITS(tptr);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],": OUI %s (0x%06x)", tok2str(oui_values, "Unknown", oui), oui);
+                ARGUSBUF_APPEND(": OUI %s (0x%06x)", tok2str(oui_values, "Unknown", oui), oui);
                 
                 switch (oui) {
                 case OUI_IEEE_8021_PRIVATE:
@@ -1421,7 +1421,7 @@ lldp_print(register const u_char *pptr, register u_int len) {
     }
     return;
  trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t[|LLDP]");
+    ARGUSBUF_APPEND("\n\t[|LLDP]");
 }
 
 /*

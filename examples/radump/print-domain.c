@@ -104,24 +104,24 @@ blabel_print(const u_char *cp)
    lim = cp + 1 + slen;
 
    /* print the bit string as a hex string */
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"\\[x");
+   ARGUSBUF_APPEND("\\[x");
    for (bitp = cp + 1, b = bitlen; bitp < lim && b > 7; b -= 8, bitp++) {
       TCHECK(*bitp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", *bitp);
+      ARGUSBUF_APPEND("%02x", *bitp);
    }
    if (b > 4) {
       TCHECK(*bitp);
       tc = *bitp++;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", tc & (0xff << (8 - b)));
+      ARGUSBUF_APPEND("%02x", tc & (0xff << (8 - b)));
    } else if (b > 0) {
       TCHECK(*bitp);
       tc = *bitp++;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%1x", ((tc >> 4) & 0x0f) & (0x0f << (4 - b)));
+      ARGUSBUF_APPEND("%1x", ((tc >> 4) & 0x0f) & (0x0f << (4 - b)));
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%d]", bitlen);
+   ARGUSBUF_APPEND("/%d]", bitlen);
    return lim;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],".../%d]", bitlen);
+   ARGUSBUF_APPEND(".../%d]", bitlen);
    return NULL;
 }
 
@@ -136,7 +136,7 @@ labellen(const u_char *cp)
    if ((i & INDIR_MASK) == EDNS0_MASK) {
       int bitlen, elt;
       if ((elt = (i & ~INDIR_MASK)) != EDNS0_ELT_BITLABEL) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"<ELT %d>", elt);
+         ARGUSBUF_APPEND("<ELT %d>", elt);
          return(-1);
       }
       if (!TTEST2(*(cp + 1), 1))
@@ -192,7 +192,7 @@ ns_nprint(register const u_char *cp, register const u_char *bp)
              * which means we're looping.
              */
             if (chars_processed >= data_size) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"<LOOP>");
+               ARGUSBUF_APPEND("<LOOP>");
                return (NULL);
             }
             continue;
@@ -206,17 +206,17 @@ ns_nprint(register const u_char *cp, register const u_char *bp)
                break;
             default:
                /* unknown ELT */
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"<ELT %d>", elt);
+               ARGUSBUF_APPEND("<ELT %d>", elt);
                return(NULL);
             }
          } else {
-            if (fn_printn(cp, l, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
+            if (fn_printn(cp, l, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL)
                return(NULL);
          }
 
          cp += l;
          chars_processed += l;
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '.');
+         ARGUSBUF_APPEND("%c", '.');
          if ((l = labellen(cp)) == (u_int)-1)
             return(NULL);
          if (!TTEST2(*cp, 1))
@@ -227,7 +227,7 @@ ns_nprint(register const u_char *cp, register const u_char *bp)
             rp += l + 1;
       }
    else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '.');
+      ARGUSBUF_APPEND("%c", '.');
    return (rp);
 }
 
@@ -240,7 +240,7 @@ ns_cprint(register const u_char *cp)
    if (!TTEST2(*cp, 1))
       return (NULL);
    i = *cp++;
-   if (fn_printn(cp, i, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
+   if (fn_printn(cp, i, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL)
       return (NULL);
    return (cp + i);
 }
@@ -323,15 +323,15 @@ ns_qprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    /* print the qtype and qclass (if it's not IN) */
    i = EXTRACT_16BITS(cp);
    cp += 2;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tok2str(ns_type2str, "Type%d", i));
+   ARGUSBUF_APPEND(" %s", tok2str(ns_type2str, "Type%d", i));
    i = EXTRACT_16BITS(cp);
    cp += 2;
    if (is_mdns && i == (C_IN|C_CACHE_FLUSH))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," (Cache flush)");
+      ARGUSBUF_APPEND(" (Cache flush)");
    else if (i != C_IN)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tok2str(ns_class2str, "(Class %d)", i));
+      ARGUSBUF_APPEND(" %s", tok2str(ns_class2str, "(Class %d)", i));
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"? ");
+   ARGUSBUF_APPEND("? ");
    cp = ns_nprint(np, bp);
    return(cp ? cp + 4 : NULL);
 }
@@ -345,7 +345,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    register const u_char *rp;
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if ((cp = ns_nprint(cp, bp)) == NULL)
          return NULL;
    } else
@@ -360,9 +360,9 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    class = EXTRACT_16BITS(cp);
    cp += 2;
    if (is_mdns && class == (C_IN|C_CACHE_FLUSH))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," (Cache flush)");
+      ARGUSBUF_APPEND(" (Cache flush)");
    else if (class != C_IN && typ != T_OPT)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tok2str(ns_class2str, "(Class %d)", class));
+      ARGUSBUF_APPEND(" %s", tok2str(ns_class2str, "(Class %d)", class));
 
    /* ignore ttl */
    cp += 4;
@@ -372,7 +372,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
 
    rp = cp + len;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tok2str(ns_type2str, "Type%d", typ));
+   ARGUSBUF_APPEND(" %s", tok2str(ns_type2str, "Type%d", typ));
    if (rp > snapend)
       return(NULL);
 
@@ -381,7 +381,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
       unsigned int addr = htonl(*(unsigned int *)cp);
       if (!TTEST2(*cp, sizeof(struct in_addr)))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ipaddr_string(&addr));
+      ARGUSBUF_APPEND(" %s", ipaddr_string(&addr));
       break;
    }
 
@@ -391,7 +391,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
 #ifdef T_DNAME
    case T_DNAME:
 #endif
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if (ns_nprint(cp, bp) == NULL)
          return(NULL);
       break;
@@ -399,51 +399,51 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    case T_SOA:
       if (!ArgusParser->vflag)
          break;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if ((cp = ns_nprint(cp, bp)) == NULL)
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if ((cp = ns_nprint(cp, bp)) == NULL)
          return(NULL);
       if (!TTEST2(*cp, 5 * 4))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+      ARGUSBUF_APPEND(" %u", EXTRACT_32BITS(cp));
       cp += 4;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+      ARGUSBUF_APPEND(" %u", EXTRACT_32BITS(cp));
       cp += 4;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+      ARGUSBUF_APPEND(" %u", EXTRACT_32BITS(cp));
       cp += 4;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+      ARGUSBUF_APPEND(" %u", EXTRACT_32BITS(cp));
       cp += 4;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u", EXTRACT_32BITS(cp));
+      ARGUSBUF_APPEND(" %u", EXTRACT_32BITS(cp));
       cp += 4;
       break;
    case T_MX:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if (!TTEST2(*cp, 2))
          return(NULL);
       if (ns_nprint(cp + 2, bp) == NULL)
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" %d", EXTRACT_16BITS(cp));
       break;
 
    case T_TXT:
       while (cp < rp) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," \"");
+         ARGUSBUF_APPEND(" \"");
          cp = ns_cprint(cp);
          if (cp == NULL)
             return(NULL);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         ARGUSBUF_APPEND("%c", '"');
       }
       break;
 
    case T_SRV:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if (!TTEST2(*cp, 6))
          return(NULL);
       if (ns_nprint(cp + 6, bp) == NULL)
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],":%d %d %d", EXTRACT_16BITS(cp + 4),
+      ARGUSBUF_APPEND(":%d %d %d", EXTRACT_16BITS(cp + 4),
          EXTRACT_16BITS(cp), EXTRACT_16BITS(cp + 2));
       break;
 
@@ -451,7 +451,7 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
    case T_AAAA:
       if (!TTEST2(*cp, sizeof(struct in6_addr)))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ip6addr_string(cp));
+      ARGUSBUF_APPEND(" %s", ip6addr_string(cp));
       break;
 
    case T_A6:
@@ -464,17 +464,17 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
       pbit = *cp;
       pbyte = (pbit & ~7) / 8;
       if (pbit > 128) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u(bad plen)", pbit);
+         ARGUSBUF_APPEND(" %u(bad plen)", pbit);
          break;
       } else if (pbit < 128) {
          if (!TTEST2(*(cp + 1), sizeof(a) - pbyte))
             return(NULL);
          memset(&a, 0, sizeof(a));
          memcpy(&a.s6_addr[pbyte], cp + 1, sizeof(a) - pbyte);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %s", pbit, ip6addr_string(&a));
+         ARGUSBUF_APPEND(" %u %s", pbit, ip6addr_string(&a));
       }
       if (pbit > 0) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+         ARGUSBUF_APPEND("%c", ' ');
          if (ns_nprint(cp + 1 + sizeof(a) - pbyte, bp) == NULL)
             return(NULL);
       }
@@ -483,13 +483,13 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
 #endif /*INET6*/
 
    case T_OPT:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," UDPsize=%u", class);
+      ARGUSBUF_APPEND(" UDPsize=%u", class);
       break;
 
    case T_UNSPECA:      /* One long string */
       if (!TTEST2(*cp, len))
          return(NULL);
-      if (fn_printn(cp, len, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL)
+      if (fn_printn(cp, len, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL)
          return(NULL);
       break;
 
@@ -499,29 +499,29 @@ ns_rprint(register const u_char *cp, register const u_char *bp, int is_mdns)
          return(NULL);
       if (!ArgusParser->vflag)
          break;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+      ARGUSBUF_APPEND("%c", ' ');
       if ((cp = ns_nprint(cp, bp)) == NULL)
          return(NULL);
       cp += 6;
       if (!TTEST2(*cp, 2))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," fudge=%u", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" fudge=%u", EXTRACT_16BITS(cp));
       cp += 2;
       if (!TTEST2(*cp, 2))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," maclen=%u", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" maclen=%u", EXTRACT_16BITS(cp));
       cp += 2 + EXTRACT_16BITS(cp);
       if (!TTEST2(*cp, 2))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," origid=%u", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" origid=%u", EXTRACT_16BITS(cp));
       cp += 2;
       if (!TTEST2(*cp, 2))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," error=%u", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" error=%u", EXTRACT_16BITS(cp));
       cp += 2;
       if (!TTEST2(*cp, 2))
          return(NULL);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," otherlen=%u", EXTRACT_16BITS(cp));
+      ARGUSBUF_APPEND(" otherlen=%u", EXTRACT_16BITS(cp));
       cp += 2;
        }
    }
@@ -546,7 +546,7 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
 
    if (DNS_QR(np)) {
       /* this is a response */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d%s%s%s%s%s%s",
+      ARGUSBUF_APPEND("%d%s%s%s%s%s%s",
          EXTRACT_16BITS(&np->id),
          ns_ops[DNS_OPCODE(np)],
          ns_resp[DNS_RCODE(np)],
@@ -556,15 +556,15 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
          DNS_AD(np)? "$" : "");
 
       if (qdcount != 1)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [%dq]", qdcount);
+         ARGUSBUF_APPEND(" [%dq]", qdcount);
 
       /* Print QUESTION section on -vv */
       cp = (const u_char *)(np + 1);
       while (qdcount--) {
          if (qdcount < EXTRACT_16BITS(&np->qdcount) - 1)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+            ARGUSBUF_APPEND("%c", ',');
          if (ArgusParser->vflag > 1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," q:");
+            ARGUSBUF_APPEND(" q:");
             if ((cp = ns_qprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
          } else {
@@ -573,12 +573,12 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
             cp += 4;   /* skip QTYPE and QCLASS */
          }
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d/%d/%d", ancount, nscount, arcount);
+      ARGUSBUF_APPEND(" %d/%d/%d", ancount, nscount, arcount);
       if (ancount--) {
          if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
             goto trunc;
          while (cp < snapend && ancount--) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+            ARGUSBUF_APPEND("%c", ',');
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
          }
@@ -588,11 +588,11 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
       /* Print NS and AR sections on -vv */
       if (ArgusParser->vflag > 1) {
          if (cp < snapend && nscount--) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," ns:");
+            ARGUSBUF_APPEND(" ns:");
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
             while (cp < snapend && nscount--) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
                if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                   goto trunc;
             }
@@ -600,11 +600,11 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
          if (nscount > 0)
             goto trunc;
          if (cp < snapend && arcount--) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," ar:");
+            ARGUSBUF_APPEND(" ar:");
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
             while (cp < snapend && arcount--) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
                if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                   goto trunc;
             }
@@ -618,7 +618,7 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
       bzero(tbuf, sizeof(tbuf));
 
       /* this is a request */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d%s%s%s", EXTRACT_16BITS(&np->id), ns_ops[DNS_OPCODE(np)],
+      ARGUSBUF_APPEND("%d%s%s%s", EXTRACT_16BITS(&np->id), ns_ops[DNS_OPCODE(np)],
           DNS_RD(np) ? "+" : "",
           DNS_CD(np) ? "%" : "");
 
@@ -645,9 +645,9 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
          sprintf(&tbuf[strlen(tbuf)]," [%dau]", arcount);
 
       if (strlen(tbuf) > 0) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", tbuf);
+         ARGUSBUF_APPEND(" %s", tbuf);
       } else {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [_]");
+         ARGUSBUF_APPEND(" [_]");
       }
 
       cp = (const u_char *)(np + 1);
@@ -672,7 +672,7 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
             while (cp < snapend && ancount--) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
                if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                   goto trunc;
             }
@@ -680,11 +680,11 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
          if (ancount > 0)
             goto trunc;
          if (cp < snapend && nscount--) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," ns:");
+            ARGUSBUF_APPEND(" ns:");
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
             while (nscount-- && cp < snapend) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
                if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                   goto trunc;
             }
@@ -692,11 +692,11 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
          if (nscount > 0)
             goto trunc;
          if (cp < snapend && arcount--) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," ar:");
+            ARGUSBUF_APPEND(" ar:");
             if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                goto trunc;
             while (cp < snapend && arcount--) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
                if ((cp = ns_rprint(cp, bp, is_mdns)) == NULL)
                   goto trunc;
             }
@@ -705,10 +705,10 @@ ns_print(register const u_char *bp, u_int length, int is_mdns)
             goto trunc;
       }
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%d)", length);
+   ARGUSBUF_APPEND(" (%d)", length);
    return ArgusBuf;
 
   trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|domain]");
+   ARGUSBUF_APPEND("[|domain]");
    return ArgusBuf;
 }

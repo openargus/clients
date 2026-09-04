@@ -334,7 +334,7 @@ rawprint(caddr_t loc, size_t len)
 	
 	p = (u_char *)loc;
 	for (i = 0; i < len; i++)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", p[i] & 0xff);
+		ARGUSBUF_APPEND("%02x", p[i] & 0xff);
 	return 1;
 trunc:
 	return 0;
@@ -360,28 +360,28 @@ isakmp_attrmap_print(const u_char *p, const u_char *ep,
 	else
 		totlen = 4 + EXTRACT_16BITS(&q[1]);
 	if (ep < p + totlen) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|attr]");
+		ARGUSBUF_APPEND("[|attr]");
 		return ep + 1;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"(");
+	ARGUSBUF_APPEND("(");
 	t = EXTRACT_16BITS(&q[0]) & 0x7fff;
 	if (map && t < nmap && map[t].type)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"type=%s ", map[t].type);
+		ARGUSBUF_APPEND("type=%s ", map[t].type);
 	else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"type=#%d ", t);
+		ARGUSBUF_APPEND("type=#%d ", t);
 	if (p[0] & 0x80) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"value=");
+		ARGUSBUF_APPEND("value=");
 		v = EXTRACT_16BITS(&q[1]);
 		if (map && t < nmap && v < map[t].nvalue && map[t].value[v])
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", map[t].value[v]);
+			ARGUSBUF_APPEND("%s", map[t].value[v]);
 		else
 			rawprint((caddr_t)&q[1], 2);
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"len=%d value=", EXTRACT_16BITS(&q[1]));
+		ARGUSBUF_APPEND("len=%d value=", EXTRACT_16BITS(&q[1]));
 		rawprint((caddr_t)&p[4], EXTRACT_16BITS(&q[1]));
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+	ARGUSBUF_APPEND(")");
 	return p + totlen;
 }
 
@@ -398,22 +398,22 @@ isakmp_attr_print(const u_char *p, const u_char *ep)
 	else
 		totlen = 4 + EXTRACT_16BITS(&q[1]);
 	if (ep < p + totlen) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|attr]");
+		ARGUSBUF_APPEND("[|attr]");
 		return ep + 1;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"(");
+	ARGUSBUF_APPEND("(");
 	t = EXTRACT_16BITS(&q[0]) & 0x7fff;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"type=#%d ", t);
+	ARGUSBUF_APPEND("type=#%d ", t);
 	if (p[0] & 0x80) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"value=");
+		ARGUSBUF_APPEND("value=");
 		t = q[1];
 		rawprint((caddr_t)&q[1], 2);
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"len=%d value=", EXTRACT_16BITS(&q[1]));
+		ARGUSBUF_APPEND("len=%d value=", EXTRACT_16BITS(&q[1]));
 		rawprint((caddr_t)&p[2], EXTRACT_16BITS(&q[1]));
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+	ARGUSBUF_APPEND(")");
 	return p + totlen;
 }
 
@@ -430,7 +430,7 @@ isakmp_sa_print(const struct isakmp_gen *ext,
 	const u_char *cp, *np;
 	int t;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_SA));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_SA));
 
 	p = (struct isakmp_pl_sa *)ext;
 	TCHECK(*p);
@@ -438,31 +438,31 @@ isakmp_sa_print(const struct isakmp_gen *ext,
 	doi = ntohl(sa.doi);
 	sit = ntohl(sa.sit);
 	if (doi != 1) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=%d", doi);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," situation=%u", (u_int32_t)ntohl(sa.sit));
+		ARGUSBUF_APPEND(" doi=%d", doi);
+		ARGUSBUF_APPEND(" situation=%u", (u_int32_t)ntohl(sa.sit));
 		return (u_char *)(p + 1);
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=ipsec");
+	ARGUSBUF_APPEND(" doi=ipsec");
 //	q = (u_int32_t *)&sa.sit;
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," situation=");
+	ARGUSBUF_APPEND(" situation=");
 	t = 0;
 	if (sit & 0x01) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"identity");
+		ARGUSBUF_APPEND("identity");
 		t++;
 	}
 	if (sit & 0x02) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%ssecrecy", t ? "+" : "");
+		ARGUSBUF_APPEND("%ssecrecy", t ? "+" : "");
 		t++;
 	}
 	if (sit & 0x04)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sintegrity", t ? "+" : "");
+		ARGUSBUF_APPEND("%sintegrity", t ? "+" : "");
 
 	np = (u_char *)ext + sizeof(sa);
 	if (sit != 0x01) {
 		TCHECK2(*(ext + 1), sizeof(ident));
 		safememcpy(&ident, ext + 1, sizeof(ident));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ident=%u", (u_int32_t)ntohl(ident));
+		ARGUSBUF_APPEND(" ident=%u", (u_int32_t)ntohl(ident));
 		np += sizeof(ident);
 	}
 
@@ -474,7 +474,7 @@ isakmp_sa_print(const struct isakmp_gen *ext,
 
 	return cp;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_SA));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_SA));
 	return NULL;
 }
 
@@ -487,15 +487,15 @@ isakmp_p_print(const struct isakmp_gen *ext, u_int item_len,
 	struct isakmp_pl_p prop;
 	const u_char *cp;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_P));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_P));
 
 	p = (struct isakmp_pl_p *)ext;
 	TCHECK(*p);
 	safememcpy(&prop, ext, sizeof(prop));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," #%d protoid=%s transform=%d",
+	ARGUSBUF_APPEND(" #%d protoid=%s transform=%d",
 		prop.p_no, PROTOIDSTR(prop.prot_id), prop.num_t);
 	if (prop.spi_size) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," spi=");
+		ARGUSBUF_APPEND(" spi=");
 		if (!rawprint((caddr_t)(p + 1), prop.spi_size))
 			goto trunc;
 	}
@@ -508,7 +508,7 @@ isakmp_p_print(const struct isakmp_gen *ext, u_int item_len,
 
 	return cp;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_P));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_P));
 	return NULL;
 }
 
@@ -581,7 +581,7 @@ isakmp_t_print(const struct isakmp_gen *ext, u_int item_len,
 	size_t nmap;
 	const u_char *ep2;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_T));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_T));
 
 	p = (struct isakmp_pl_t *)ext;
 	TCHECK(*p);
@@ -616,9 +616,9 @@ isakmp_t_print(const struct isakmp_gen *ext, u_int item_len,
 	}
 
 	if (idstr)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," #%d id=%s ", t.t_no, idstr);
+		ARGUSBUF_APPEND(" #%d id=%s ", t.t_no, idstr);
 	else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," #%d id=%d ", t.t_no, t.t_id);
+		ARGUSBUF_APPEND(" #%d id=%d ", t.t_no, t.t_id);
 	cp = (u_char *)(p + 1);
 	ep2 = (u_char *)p + item_len;
 	while (cp < ep && cp < ep2) {
@@ -629,10 +629,10 @@ isakmp_t_print(const struct isakmp_gen *ext, u_int item_len,
 			cp = isakmp_attr_print(cp, (ep < ep2) ? ep : ep2);
 	}
 	if (ep < ep2)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+		ARGUSBUF_APPEND("...");
 	return cp;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_T));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_T));
 	return NULL;
 }
 
@@ -643,19 +643,19 @@ isakmp_ke_print(const struct isakmp_gen *ext, u_int item_len,
 {
 	struct isakmp_gen e;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_KE));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_KE));
 
 	TCHECK(*ext);
 	safememcpy(&e, ext, sizeof(e));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," key len=%d", ntohs(e.len) - 4);
+	ARGUSBUF_APPEND(" key len=%d", ntohs(e.len) - 4);
 	if (2 < ArgusParser->vflag && 4 < ntohs(e.len)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), ntohs(e.len) - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + ntohs(e.len);
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_KE));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_KE));
 	return NULL;
 }
 
@@ -678,7 +678,7 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 	int len;
 	const u_char *data;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_ID));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_ID));
 
 	p = (struct isakmp_pl_id *)ext;
 	TCHECK(*p);
@@ -692,15 +692,15 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 	}
 
 #if 0 /*debug*/
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [phase=%d doi=%d proto=%d]", phase, doi, proto);
+	ARGUSBUF_APPEND(" [phase=%d doi=%d proto=%d]", phase, doi, proto);
 #endif
 	switch (phase) {
 #ifndef USE_IPSECDOI_IN_PHASE1
 	case 1:
 #endif
 	default:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," idtype=%s", STR_OR_ID(id.d.id_type, idtypestr));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi_data=%u",
+		ARGUSBUF_APPEND(" idtype=%s", STR_OR_ID(id.d.id_type, idtypestr));
+		ARGUSBUF_APPEND(" doi_data=%u",
 			(u_int32_t)(ntohl(id.d.doi_data) & 0xffffff));
 		break;
 
@@ -716,22 +716,22 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 		p = (struct ipsecdoi_id *)ext;
 		TCHECK(*p);
 		safememcpy(&id, ext, sizeof(id));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," idtype=%s", STR_OR_ID(id.type, ipsecidtypestr));
+		ARGUSBUF_APPEND(" idtype=%s", STR_OR_ID(id.type, ipsecidtypestr));
 		if (id.proto_id) {
 #ifndef WIN32
 			setprotoent(1);
 #endif /* WIN32 */
 			pe = getprotobynumber(id.proto_id);
 			if (pe)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," protoid=%s", pe->p_name);
+				ARGUSBUF_APPEND(" protoid=%s", pe->p_name);
 #ifndef WIN32
 			endprotoent();
 #endif /* WIN32 */
 		} else {
 			/* it DOES NOT mean IPPROTO_IP! */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," protoid=%s", "0");
+			ARGUSBUF_APPEND(" protoid=%s", "0");
 		}
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," port=%d", ntohs(id.port));
+		ARGUSBUF_APPEND(" port=%d", ntohs(id.port));
 		if (!len)
 			break;
 		if (data == NULL)
@@ -740,18 +740,18 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 		switch (id.type) {
 		case IPSECDOI_ID_IPV4_ADDR:
 			if (len < 4)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 4]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 4]", len);
 			else
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s", len, ipaddr_string(data));
+				ARGUSBUF_APPEND(" len=%d %s", len, ipaddr_string(data));
 			len = 0;
 			break;
 		case IPSECDOI_ID_FQDN:
 		case IPSECDOI_ID_USER_FQDN:
 		    {
 			int i;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d ", len);
+			ARGUSBUF_APPEND(" len=%d ", len);
 			for (i = 0; i < len; i++)
-			   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c", data[i]);
+			   ARGUSBUF_APPEND("%c", data[i]);
 			len = 0;
 			break;
 		    }
@@ -759,10 +759,10 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 		    {
 			const u_char *mask;
 			if (len < 8)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 8]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 8]", len);
 			else {
 				mask = data + sizeof(struct in_addr);
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s/%u.%u.%u.%u", len,
+				ARGUSBUF_APPEND(" len=%d %s/%u.%u.%u.%u", len,
 					ipaddr_string(data),
 					mask[0], mask[1], mask[2], mask[3]);
 			}
@@ -772,20 +772,20 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 #ifdef INET6
 		case IPSECDOI_ID_IPV6_ADDR:
 			if (len < 16)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 16]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 16]", len);
 			else
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s", len, ip6addr_string(data));
+				ARGUSBUF_APPEND(" len=%d %s", len, ip6addr_string(data));
 			len = 0;
 			break;
 		case IPSECDOI_ID_IPV6_ADDR_SUBNET:
 		    {
 			const u_int32_t *mask;
 			if (len < 20)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 20]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 20]", len);
 			else {
 				mask = (u_int32_t *)(data + sizeof(struct in6_addr));
 				/*XXX*/
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s/0x%08x%08x%08x%08x", len,
+				ARGUSBUF_APPEND(" len=%d %s/0x%08x%08x%08x%08x", len,
 					ip6addr_string(data),
 					mask[0], mask[1], mask[2], mask[3]);
 			}
@@ -795,9 +795,9 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 #endif /*INET6*/
 		case IPSECDOI_ID_IPV4_ADDR_RANGE:
 			if (len < 8)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 8]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 8]", len);
 			else {
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s-%s", len,
+				ARGUSBUF_APPEND(" len=%d %s-%s", len,
 					ipaddr_string(data),
 					ipaddr_string(data + sizeof(struct in_addr)));
 			}
@@ -806,9 +806,9 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 #ifdef INET6
 		case IPSECDOI_ID_IPV6_ADDR_RANGE:
 			if (len < 32)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d [bad: < 32]", len);
+				ARGUSBUF_APPEND(" len=%d [bad: < 32]", len);
 			else {
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d %s-%s", len,
+				ARGUSBUF_APPEND(" len=%d %s-%s", len,
 					ip6addr_string(data),
 					ip6addr_string(data + sizeof(struct in6_addr)));
 			}
@@ -824,16 +824,16 @@ isakmp_id_print(const struct isakmp_gen *ext, u_int item_len,
 	    }
 	}
 	if (data && len) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", len);
+		ARGUSBUF_APPEND(" len=%d", len);
 		if (2 < ArgusParser->vflag) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+			ARGUSBUF_APPEND(" ");
 			if (!rawprint((caddr_t)data, len))
 				goto trunc;
 		}
 	}
 	return (u_char *)ext + item_len;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_ID));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_ID));
 	return NULL;
 }
 
@@ -851,21 +851,21 @@ isakmp_cert_print(const struct isakmp_gen *ext, u_int item_len,
 		"arl", "spki", "x509attr",
 	};
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_CERT));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_CERT));
 
 	p = (struct isakmp_pl_cert *)ext;
 	TCHECK(*p);
 	safememcpy(&cert, ext, sizeof(cert));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", item_len - 4);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", STR_OR_ID((cert.encode), certstr));
+	ARGUSBUF_APPEND(" len=%d", item_len - 4);
+	ARGUSBUF_APPEND(" type=%s", STR_OR_ID((cert.encode), certstr));
 	if (2 < ArgusParser->vflag && 4 < item_len) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), item_len - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + item_len;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_CERT));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_CERT));
 	return NULL;
 }
 
@@ -882,21 +882,21 @@ isakmp_cr_print(const struct isakmp_gen *ext, u_int item_len,
 		"arl", "spki", "x509attr",
 	};
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_CR));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_CR));
 
 	p = (struct isakmp_pl_cert *)ext;
 	TCHECK(*p);
 	safememcpy(&cert, ext, sizeof(cert));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", item_len - 4);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", STR_OR_ID((cert.encode), certstr));
+	ARGUSBUF_APPEND(" len=%d", item_len - 4);
+	ARGUSBUF_APPEND(" type=%s", STR_OR_ID((cert.encode), certstr));
 	if (2 < ArgusParser->vflag && 4 < item_len) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), item_len - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + item_len;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_CR));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_CR));
 	return NULL;
 }
 
@@ -907,19 +907,19 @@ isakmp_hash_print(const struct isakmp_gen *ext, u_int item_len,
 {
 	struct isakmp_gen e;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_HASH));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_HASH));
 
 	TCHECK(*ext);
 	safememcpy(&e, ext, sizeof(e));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", ntohs(e.len) - 4);
+	ARGUSBUF_APPEND(" len=%d", ntohs(e.len) - 4);
 	if (2 < ArgusParser->vflag && 4 < ntohs(e.len)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), ntohs(e.len) - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + ntohs(e.len);
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_HASH));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_HASH));
 	return NULL;
 }
 
@@ -930,19 +930,19 @@ isakmp_sig_print(const struct isakmp_gen *ext, u_int item_len,
 {
 	struct isakmp_gen e;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_SIG));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_SIG));
 
 	TCHECK(*ext);
 	safememcpy(&e, ext, sizeof(e));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", ntohs(e.len) - 4);
+	ARGUSBUF_APPEND(" len=%d", ntohs(e.len) - 4);
 	if (2 < ArgusParser->vflag && 4 < ntohs(e.len)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), ntohs(e.len) - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + ntohs(e.len);
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_SIG));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_SIG));
 	return NULL;
 }
 
@@ -955,19 +955,19 @@ isakmp_nonce_print(const struct isakmp_gen *ext,
 {
 	struct isakmp_gen e;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_NONCE));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_NONCE));
 
 	TCHECK(*ext);
 	safememcpy(&e, ext, sizeof(e));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," n len=%d", ntohs(e.len) - 4);
+	ARGUSBUF_APPEND(" n len=%d", ntohs(e.len) - 4);
 	if (2 < ArgusParser->vflag && 4 < ntohs(e.len)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), ntohs(e.len) - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + ntohs(e.len);
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_NONCE));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_NONCE));
 	return NULL;
 }
 
@@ -1027,7 +1027,7 @@ isakmp_n_print(const struct isakmp_gen *ext, u_int item_len,
 #define IPSEC_NOTIFY_STATUS_STR(x) \
 	STR_OR_ID((u_int)((x) - 24576), ipsec_notify_status_str)
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_N));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_N));
 
 	p = (struct isakmp_pl_n *)ext;
 	TCHECK(*p);
@@ -1035,38 +1035,38 @@ isakmp_n_print(const struct isakmp_gen *ext, u_int item_len,
 	doi = ntohl(n.doi);
 	proto = n.prot_id;
 	if (doi != 1) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=%d", doi);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," proto=%d", proto);
+		ARGUSBUF_APPEND(" doi=%d", doi);
+		ARGUSBUF_APPEND(" proto=%d", proto);
 		if (ntohs(n.type) < 8192)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", NOTIFY_ERROR_STR(ntohs(n.type)));
+			ARGUSBUF_APPEND(" type=%s", NOTIFY_ERROR_STR(ntohs(n.type)));
 		else if (ntohs(n.type) < 16384)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", numstr(ntohs(n.type)));
+			ARGUSBUF_APPEND(" type=%s", numstr(ntohs(n.type)));
 		else if (ntohs(n.type) < 24576)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", NOTIFY_STATUS_STR(ntohs(n.type)));
+			ARGUSBUF_APPEND(" type=%s", NOTIFY_STATUS_STR(ntohs(n.type)));
 		else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", numstr(ntohs(n.type)));
+			ARGUSBUF_APPEND(" type=%s", numstr(ntohs(n.type)));
 		if (n.spi_size) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," spi=");
+			ARGUSBUF_APPEND(" spi=");
 			if (!rawprint((caddr_t)(p + 1), n.spi_size))
 				goto trunc;
 		}
 		return (u_char *)(p + 1) + n.spi_size;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=ipsec");
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," proto=%s", PROTOIDSTR(proto));
+	ARGUSBUF_APPEND(" doi=ipsec");
+	ARGUSBUF_APPEND(" proto=%s", PROTOIDSTR(proto));
 	if (ntohs(n.type) < 8192)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", NOTIFY_ERROR_STR(ntohs(n.type)));
+		ARGUSBUF_APPEND(" type=%s", NOTIFY_ERROR_STR(ntohs(n.type)));
 	else if (ntohs(n.type) < 16384)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", IPSEC_NOTIFY_ERROR_STR(ntohs(n.type)));
+		ARGUSBUF_APPEND(" type=%s", IPSEC_NOTIFY_ERROR_STR(ntohs(n.type)));
 	else if (ntohs(n.type) < 24576)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", NOTIFY_STATUS_STR(ntohs(n.type)));
+		ARGUSBUF_APPEND(" type=%s", NOTIFY_STATUS_STR(ntohs(n.type)));
 	else if (ntohs(n.type) < 32768)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", IPSEC_NOTIFY_STATUS_STR(ntohs(n.type)));
+		ARGUSBUF_APPEND(" type=%s", IPSEC_NOTIFY_STATUS_STR(ntohs(n.type)));
 	else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," type=%s", numstr(ntohs(n.type)));
+		ARGUSBUF_APPEND(" type=%s", numstr(ntohs(n.type)));
 	if (n.spi_size) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," spi=");
+		ARGUSBUF_APPEND(" spi=");
 		if (!rawprint((caddr_t)(p + 1), n.spi_size))
 			goto trunc;
 	}
@@ -1075,7 +1075,7 @@ isakmp_n_print(const struct isakmp_gen *ext, u_int item_len,
 	ep2 = (u_char *)p + item_len;
 
 	if (cp < ep) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," orig=(");
+		ARGUSBUF_APPEND(" orig=(");
 		switch (ntohs(n.type)) {
 		case IPSECDOI_NTYPE_RESPONDER_LIFETIME:
 		    {
@@ -1088,7 +1088,7 @@ isakmp_n_print(const struct isakmp_gen *ext, u_int item_len,
 			break;
 		    }
 		case IPSECDOI_NTYPE_REPLAY_STATUS:
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"replay detection %sabled",
+			ARGUSBUF_APPEND("replay detection %sabled",
 				(*(u_int32_t *)cp) ? "en" : "dis");
 			break;
 		case ISAKMP_NTYPE_NO_PROPOSAL_CHOSEN:
@@ -1101,11 +1101,11 @@ isakmp_n_print(const struct isakmp_gen *ext, u_int item_len,
 			/* NULL is dummy */
 			isakmp_print(cp, item_len - sizeof(*p) - n.spi_size);
 		}
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+		ARGUSBUF_APPEND(")");
 	}
 	return (u_char *)ext + item_len;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_N));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_N));
 	return NULL;
 }
 
@@ -1121,7 +1121,7 @@ isakmp_d_print(const struct isakmp_gen *ext, u_int item_len,
 	u_int32_t proto;
 	int i;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_D));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_D));
 
 	p = (struct isakmp_pl_d *)ext;
 	TCHECK(*p);
@@ -1129,26 +1129,26 @@ isakmp_d_print(const struct isakmp_gen *ext, u_int item_len,
 	doi = ntohl(d.doi);
 	proto = d.prot_id;
 	if (doi != 1) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=%u", doi);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," proto=%u", proto);
+		ARGUSBUF_APPEND(" doi=%u", doi);
+		ARGUSBUF_APPEND(" proto=%u", proto);
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," doi=ipsec");
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," proto=%s", PROTOIDSTR(proto));
+		ARGUSBUF_APPEND(" doi=ipsec");
+		ARGUSBUF_APPEND(" proto=%s", PROTOIDSTR(proto));
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," spilen=%u", d.spi_size);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," nspi=%u", ntohs(d.num_spi));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," spi=");
+	ARGUSBUF_APPEND(" spilen=%u", d.spi_size);
+	ARGUSBUF_APPEND(" nspi=%u", ntohs(d.num_spi));
+	ARGUSBUF_APPEND(" spi=");
 	q = (u_int8_t *)(p + 1);
 	for (i = 0; i < ntohs(d.num_spi); i++) {
 		if (i != 0)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],",");
+			ARGUSBUF_APPEND(",");
 		if (!rawprint((caddr_t)q, d.spi_size))
 			goto trunc;
 		q += d.spi_size;
 	}
 	return q;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_D));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_D));
 	return NULL;
 }
 
@@ -1160,19 +1160,19 @@ isakmp_vid_print(const struct isakmp_gen *ext,
 {
 	struct isakmp_gen e;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:", NPSTR(ISAKMP_NPTYPE_VID));
+	ARGUSBUF_APPEND("%s:", NPSTR(ISAKMP_NPTYPE_VID));
 
 	TCHECK(*ext);
 	safememcpy(&e, ext, sizeof(e));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," len=%d", ntohs(e.len) - 4);
+	ARGUSBUF_APPEND(" len=%d", ntohs(e.len) - 4);
 	if (2 < ArgusParser->vflag && 4 < ntohs(e.len)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" ");
 		if (!rawprint((caddr_t)(ext + 1), ntohs(e.len) - 4))
 			goto trunc;
 	}
 	return (u_char *)ext + ntohs(e.len);
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(ISAKMP_NPTYPE_VID));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(ISAKMP_NPTYPE_VID));
 	return NULL;
 }
 
@@ -1205,13 +1205,13 @@ isakmp_sub0_print(u_char np, const struct isakmp_gen *ext, const u_char *ep,
 		 */
 		cp = (*npfunc[np])(ext, item_len, ep, phase, doi, proto, depth);
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", NPSTR(np));
+		ARGUSBUF_APPEND("%s", NPSTR(np));
 		cp += item_len;
 	}
 
 	return cp;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|isakmp]");
+	ARGUSBUF_APPEND(" [|isakmp]");
 	return NULL;
 }
 
@@ -1233,12 +1233,12 @@ isakmp_sub_print(u_char np, const struct isakmp_gen *ext, const u_char *ep,
 		TCHECK2(*ext, ntohs(e.len));
 
 		depth++;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+		ARGUSBUF_APPEND("\n");
 		for (i = 0; i < depth; i++)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"    ");
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"(");
+			ARGUSBUF_APPEND("    ");
+		ARGUSBUF_APPEND("(");
 		cp = isakmp_sub0_print(np, ext, ep, phase, doi, proto, depth);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+		ARGUSBUF_APPEND(")");
 		depth--;
 
 		if (cp == NULL) {
@@ -1251,7 +1251,7 @@ isakmp_sub_print(u_char np, const struct isakmp_gen *ext, const u_char *ep,
 	}
 	return cp;
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(np));
+	ARGUSBUF_APPEND(" [|%s]", NPSTR(np));
 	return NULL;
 }
 
@@ -1289,65 +1289,65 @@ isakmp_print(const u_char *bp, u_int length)
 	ep = snapend;
 
 	if ((struct isakmp *)ep < p + 1) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|isakmp]");
+		ARGUSBUF_APPEND("[|isakmp]");
 		return ArgusBuf;
 	}
 
 	safememcpy(&base, p, sizeof(base));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"isakmp");
+	ARGUSBUF_APPEND("isakmp");
 	if (ArgusParser->vflag) {
 		major = (base.vers & ISAKMP_VERS_MAJOR)
 				>> ISAKMP_VERS_MAJOR_SHIFT;
 		minor = (base.vers & ISAKMP_VERS_MINOR)
 				>> ISAKMP_VERS_MINOR_SHIFT;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d.%d", major, minor);
+		ARGUSBUF_APPEND(" %d.%d", major, minor);
 	}
 
 	if (ArgusParser->vflag) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," msgid ");
+		ARGUSBUF_APPEND(" msgid ");
 		rawprint((caddr_t)&base.msgid, sizeof(base.msgid));
 	}
 
 	if (1 < ArgusParser->vflag) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," cookie ");
+		ARGUSBUF_APPEND(" cookie ");
 		rawprint((caddr_t)&base.i_ck, sizeof(base.i_ck));
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"->");
+		ARGUSBUF_APPEND("->");
 		rawprint((caddr_t)&base.r_ck, sizeof(base.r_ck));
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],":");
+	ARGUSBUF_APPEND(":");
 
 	phase = (EXTRACT_32BITS(base.msgid) == 0) ? 1 : 2;
 	if (phase == 1)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," phase %d", phase);
+		ARGUSBUF_APPEND(" phase %d", phase);
 	else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," phase %d/others", phase);
+		ARGUSBUF_APPEND(" phase %d/others", phase);
 
 	i = cookie_find(&base.i_ck);
 	if (i < 0) {
 		if (iszero((u_char *)&base.r_ck, sizeof(base.r_ck))) {
 			/* the first packet */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," I");
+			ARGUSBUF_APPEND(" I");
 /*
 			if (bp2)
 				cookie_record(&base.i_ck, bp2);
 */
 		} else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ?");
+			ARGUSBUF_APPEND(" ?");
 	} else {
 /*
 		if (bp2 && cookie_isinitiator(i, bp2))
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," I");
+			ARGUSBUF_APPEND(" I");
 		else if (bp2 && cookie_isresponder(i, bp2))
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," R");
+			ARGUSBUF_APPEND(" R");
 		else
 */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ?");
+			ARGUSBUF_APPEND(" ?");
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", ETYPESTR(base.etype));
+	ARGUSBUF_APPEND(" %s", ETYPESTR(base.etype));
 	if (base.flags) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%s%s]", base.flags & ISAKMP_FLAG_E ? "E" : "",
+		ARGUSBUF_APPEND("[%s%s]", base.flags & ISAKMP_FLAG_E ? "E" : "",
 			base.flags & ISAKMP_FLAG_C ? "C" : "");
 	}
 
@@ -1357,11 +1357,11 @@ isakmp_print(const u_char *bp, u_int length)
 
 #define CHECKLEN(p, np) \
 		if (ep < (u_char *)(p)) {				\
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|%s]", NPSTR(np));			\
+			ARGUSBUF_APPEND(" [|%s]", NPSTR(np));			\
 			goto done;					\
 		}
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],":");
+		ARGUSBUF_APPEND(":");
 
 		/* regardless of phase... */
 		if (base.flags & ISAKMP_FLAG_E) {
@@ -1369,7 +1369,7 @@ isakmp_print(const u_char *bp, u_int length)
 			 * encrypted, nothing we can do right now.
 			 * we hope to decrypt the packet in the future...
 			 */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," [encrypted %s]", NPSTR(base.np));
+			ARGUSBUF_APPEND(" [encrypted %s]", NPSTR(base.np));
 			goto done;
 		}
 
@@ -1384,7 +1384,7 @@ isakmp_print(const u_char *bp, u_int length)
 done:
 	if (ArgusParser->vflag) {
 		if (ntohl(base.len) != length) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," (len mismatch: isakmp %u/ip %u)",
+			ARGUSBUF_APPEND(" (len mismatch: isakmp %u/ip %u)",
 				(u_int32_t)ntohl(base.len), length);
 		}
 	}
@@ -1399,7 +1399,7 @@ isakmp_rfc3948_print(const u_char *bp, u_int length)
 	ep = snapend;
 */
 	if(length == 1 && bp[0]==0xff) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"isakmp-nat-keep-alive");
+		ARGUSBUF_APPEND("isakmp-nat-keep-alive");
 		return ArgusBuf;
 	}
 
@@ -1411,7 +1411,7 @@ isakmp_rfc3948_print(const u_char *bp, u_int length)
 	 * see if this is an IKE packet
 	 */
 	if(bp[0]==0 && bp[1]==0 && bp[2]==0 && bp[3]==0) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"NONESP-encap: ");
+		ARGUSBUF_APPEND("NONESP-encap: ");
 		isakmp_print(bp+4, length-4);
 		return ArgusBuf;
 	}
@@ -1422,7 +1422,7 @@ isakmp_rfc3948_print(const u_char *bp, u_int length)
   		int nh = 0, enh = 0, padlen = 0;
 		int advance = 0;
 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"UDP-encap: ");
+		ARGUSBUF_APPEND("UDP-encap: ");
 /*
 		advance = esp_print(ndo, bp, length, bp2, &enh, &padlen);
 
@@ -1440,7 +1440,7 @@ isakmp_rfc3948_print(const u_char *bp, u_int length)
 	}
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|isakmp]");
+	ARGUSBUF_APPEND("[|isakmp]");
 	return ArgusBuf;
 }
 

@@ -134,7 +134,7 @@ telnet_parse(const u_char *sp, u_int length, int print)
    FETCH(c, sp, length);
    if (c == IAC) {      /* <IAC><IAC>! */
       if (print)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"IAC IAC");
+         ARGUSBUF_APPEND("IAC IAC");
       goto done;
    }
 
@@ -152,10 +152,10 @@ telnet_parse(const u_char *sp, u_int length, int print)
       FETCH(x, sp, length);
       if (x >= 0 && x < NTELOPTS) {
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s %s", telcmds[i], telopts[x]);
+            ARGUSBUF_APPEND("%s %s", telcmds[i], telopts[x]);
       } else {
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s %#x", telcmds[i], x);
+            ARGUSBUF_APPEND("%s %#x", telcmds[i], x);
       }
       if (c != SB)
          break;
@@ -175,47 +175,47 @@ telnet_parse(const u_char *sp, u_int length, int print)
             break;
          FETCH(c, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", STR_OR_ID(c, authcmd));
+            ARGUSBUF_APPEND(" %s", STR_OR_ID(c, authcmd));
          if (p <= sp)
             break;
          FETCH(c, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", STR_OR_ID(c, authtype));
+            ARGUSBUF_APPEND(" %s", STR_OR_ID(c, authtype));
          break;
       case TELOPT_ENCRYPT:
          if (p <= sp)
             break;
          FETCH(c, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", STR_OR_ID(c, enccmd));
+            ARGUSBUF_APPEND(" %s", STR_OR_ID(c, enccmd));
          if (p <= sp)
             break;
          FETCH(c, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", STR_OR_ID(c, enctype));
+            ARGUSBUF_APPEND(" %s", STR_OR_ID(c, enctype));
          break;
       default:
          if (p <= sp)
             break;
          FETCH(c, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", STR_OR_ID(c, cmds));
+            ARGUSBUF_APPEND(" %s", STR_OR_ID(c, cmds));
          break;
       }
       while (p > sp) {
          FETCH(x, sp, length);
          if (print)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %#x", x);
+            ARGUSBUF_APPEND(" %#x", x);
       }
       /* terminating IAC SE */
       if (print)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," SE");
+         ARGUSBUF_APPEND(" SE");
       sp += 2;
       length -= 2;
       break;
    default:
       if (print)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", telcmds[i]);
+         ARGUSBUF_APPEND("%s", telcmds[i]);
       goto done;
    }
 
@@ -223,7 +223,7 @@ done:
    return sp - osp;
 
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|telnet]");
+   ARGUSBUF_APPEND("[|telnet]");
 pktend:
    return -1;
 #undef FETCH
@@ -248,14 +248,14 @@ telnet_print(const u_char *sp, u_int length)
        */
       if (ArgusParser->Xflag && 2 < ArgusParser->vflag) {
          if (first)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"Telnet:");
+            ARGUSBUF_APPEND("Telnet:");
          hex_print_with_offset(" ", sp, l, sp - osp);
          if (l > 8)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t\t\t");
+            ARGUSBUF_APPEND("\n\t\t\t\t");
          else
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%*s\t", (8 - l) * 3, "");
+            ARGUSBUF_APPEND("%*s\t", (8 - l) * 3, "");
       } else
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", (first) ? " [telnet " : ", ");
+         ARGUSBUF_APPEND("%s", (first) ? " [telnet " : ", ");
 
       (void)telnet_parse(sp, length, 1);
       first = 0;
@@ -265,9 +265,9 @@ telnet_print(const u_char *sp, u_int length)
    }
    if (!first) {
       if (ArgusParser->Xflag && 2 < ArgusParser->vflag)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+         ARGUSBUF_APPEND("\n");
       else
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"]");
+         ARGUSBUF_APPEND("]");
    }
 
    return ArgusBuf;

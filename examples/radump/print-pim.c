@@ -127,18 +127,18 @@ pimv1_join_prune_print(register const u_char *bp, register u_int len)
       int hold;
 
       haddr = EXTRACT_32BITS(bp);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RPF %s ", ipaddr_string(&haddr));
+      ARGUSBUF_APPEND(" RPF %s ", ipaddr_string(&haddr));
       hold = EXTRACT_16BITS(&bp[6]);
       if (hold != 180) {
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"Hold ");
+         ARGUSBUF_APPEND("Hold ");
          relts_print(&ArgusBuf[strlen(ArgusBuf)],hold);
       }
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s (%s/%d, %s", njoin ? "Join" : "Prune",
+      ARGUSBUF_APPEND("%s (%s/%d, %s", njoin ? "Join" : "Prune",
       ipaddr_string(&bp[26]), bp[25] & 0x3f,
       ipaddr_string(&bp[12]));
       if ((haddr = EXTRACT_32BITS(&bp[16])) != 0xffffffff)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%s", ipaddr_string(&haddr));
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],") %s%s %s",
+         ARGUSBUF_APPEND("/%s", ipaddr_string(&haddr));
+      ARGUSBUF_APPEND(") %s%s %s",
           (bp[24] & 0x01) ? "Sparse" : "Dense",
           (bp[25] & 0x80) ? " WC" : "",
           (bp[25] & 0x40) ? "RP" : "SPT");
@@ -147,9 +147,9 @@ pimv1_join_prune_print(register const u_char *bp, register u_int len)
 
    TCHECK2(bp[0], sizeof(struct in_addr));
    haddr = EXTRACT_32BITS(bp);
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Upstream Nbr: %s", ipaddr_string(&haddr));
+   ARGUSBUF_APPEND(" Upstream Nbr: %s", ipaddr_string(&haddr));
    TCHECK2(bp[6], 2);
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Hold time: ");
+   ARGUSBUF_APPEND(" Hold time: ");
    relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(&bp[6]));
    if (ArgusParser->vflag < 2)
       return;
@@ -169,14 +169,14 @@ pimv1_join_prune_print(register const u_char *bp, register u_int len)
        */
       TCHECK2(bp[0], sizeof(struct in_addr));
       haddr = EXTRACT_32BITS(bp);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Group: %s", ipaddr_string(&haddr));
+      ARGUSBUF_APPEND(" Group: %s", ipaddr_string(&haddr));
       TCHECK2(bp[4], sizeof(struct in_addr));
       if ((haddr = EXTRACT_32BITS(&bp[4])) != 0xffffffff)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%s", ipaddr_string(&haddr));
+         ARGUSBUF_APPEND("/%s", ipaddr_string(&haddr));
       TCHECK2(bp[8], 4);
       njoin = EXTRACT_16BITS(&bp[8]);
       nprune = EXTRACT_16BITS(&bp[10]);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," joined: %d pruned: %d", njoin, nprune);
+      ARGUSBUF_APPEND(" joined: %d pruned: %d", njoin, nprune);
       bp += 12;
       len -= 12;
       for (njp = 0; njp < (njoin + nprune); njp++) {
@@ -188,7 +188,7 @@ pimv1_join_prune_print(register const u_char *bp, register u_int len)
             type = "Prune";
          TCHECK2(bp[0], 6);
          haddr = EXTRACT_32BITS(&bp[2]);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s %s%s%s%s/%d", type,
+         ARGUSBUF_APPEND(" %s %s%s%s%s/%d", type,
              (bp[0] & 0x01) ? "Sparse " : "Dense ",
              (bp[1] & 0x80) ? "WC " : "",
              (bp[1] & 0x40) ? "RP " : "SPT ",
@@ -199,7 +199,7 @@ pimv1_join_prune_print(register const u_char *bp, register u_int len)
    }
    return;
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|pim]");
+   ARGUSBUF_APPEND("[|pim]");
    return;
 }
 
@@ -220,101 +220,101 @@ pimv1_print(register const u_char *bp, register u_int len)
 
    switch (type) {
    case 0:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Query");
+      ARGUSBUF_APPEND(" Query");
       if (TTEST(bp[8])) {
          switch (bp[8] >> 4) {
          case 0:
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Dense-mode");
+            ARGUSBUF_APPEND(" Dense-mode");
             break;
          case 1:
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Sparse-mode");
+            ARGUSBUF_APPEND(" Sparse-mode");
             break;
          case 2:
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Sparse-Dense-mode");
+            ARGUSBUF_APPEND(" Sparse-Dense-mode");
             break;
          default:
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," mode-%d", bp[8] >> 4);
+            ARGUSBUF_APPEND(" mode-%d", bp[8] >> 4);
             break;
          }
       }
       if (ArgusParser->vflag) {
          TCHECK2(bp[10],2);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," (Hold-time ");
+         ARGUSBUF_APPEND(" (Hold-time ");
          relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(&bp[10]));
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+         ARGUSBUF_APPEND(")");
       }
       break;
 
    case 1:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Register");
+      ARGUSBUF_APPEND(" Register");
       TCHECK2(bp[8], 20);         /* ip header */
       haddr = EXTRACT_32BITS(&bp[20]);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," for %s > %s", ipaddr_string(&haddr),
+      ARGUSBUF_APPEND(" for %s > %s", ipaddr_string(&haddr),
           ipaddr_string(&bp[24]));
       break;
    case 2:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Register-Stop");
+      ARGUSBUF_APPEND(" Register-Stop");
       TCHECK2(bp[12], sizeof(struct in_addr));
       saddr = EXTRACT_32BITS(&bp[8]);
       daddr = EXTRACT_32BITS(&bp[12]);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," for %s > %s", ipaddr_string(&saddr),
+      ARGUSBUF_APPEND(" for %s > %s", ipaddr_string(&saddr),
           ipaddr_string(&daddr));
       break;
    case 3:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Join/Prune");
+      ARGUSBUF_APPEND(" Join/Prune");
       if (ArgusParser->vflag)
          pimv1_join_prune_print(&bp[8], len - 8);
       break;
    case 4:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RP-reachable");
+      ARGUSBUF_APPEND(" RP-reachable");
       if (ArgusParser->vflag) {
          TCHECK2(bp[22], 2);
          haddr = EXTRACT_32BITS(&bp[8]);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," group %s", ipaddr_string(&haddr));
+         ARGUSBUF_APPEND(" group %s", ipaddr_string(&haddr));
          if ((haddr = EXTRACT_32BITS(&bp[12])) != 0xffffffff)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%s", ipaddr_string(&haddr));
+            ARGUSBUF_APPEND("/%s", ipaddr_string(&haddr));
          haddr = EXTRACT_32BITS(&bp[16]);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RP %s hold ", ipaddr_string(&haddr));
+         ARGUSBUF_APPEND(" RP %s hold ", ipaddr_string(&haddr));
          relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(&bp[22]));
       }
       break;
    case 5:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Assert");
+      ARGUSBUF_APPEND(" Assert");
       TCHECK2(bp[16], sizeof(struct in_addr));
       saddr = EXTRACT_32BITS(&bp[16]);
       daddr = EXTRACT_32BITS(&bp[8]);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," for %s > %s", ipaddr_string(&saddr), ipaddr_string(&daddr));
+      ARGUSBUF_APPEND(" for %s > %s", ipaddr_string(&saddr), ipaddr_string(&daddr));
       if ((haddr = EXTRACT_32BITS(&bp[12])) != 0xffffffff)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%s", ipaddr_string(&haddr));
+         ARGUSBUF_APPEND("/%s", ipaddr_string(&haddr));
       TCHECK2(bp[24], 4);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s pref %d metric %d",
+      ARGUSBUF_APPEND(" %s pref %d metric %d",
           (bp[20] & 0x80) ? "RP-tree" : "SPT",
       EXTRACT_32BITS(&bp[20]) & 0x7fffffff,
       EXTRACT_32BITS(&bp[24]));
       break;
    case 6:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Graft");
+      ARGUSBUF_APPEND(" Graft");
       if (ArgusParser->vflag)
          pimv1_join_prune_print(&bp[8], len - 8);
       break;
    case 7:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Graft-ACK");
+      ARGUSBUF_APPEND(" Graft-ACK");
       if (ArgusParser->vflag)
          pimv1_join_prune_print(&bp[8], len - 8);
       break;
    case 8:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Mode");
+      ARGUSBUF_APPEND(" Mode");
       break;
    default:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [type %d]", type);
+      ARGUSBUF_APPEND(" [type %d]", type);
       break;
    }
    if ((bp[4] >> 4) != 1)
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [v%d]", bp[4] >> 4);
+      ARGUSBUF_APPEND(" [v%d]", bp[4] >> 4);
    return ArgusBuf;
 
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|pim]");
+   ARGUSBUF_APPEND("[|pim]");
    return ArgusBuf;
 }
 
@@ -335,17 +335,17 @@ cisco_autorp_print(register const u_char *bp, register u_int len)
    int hold;
 
    TCHECK(bp[0]);
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," auto-rp ");
+   ARGUSBUF_APPEND(" auto-rp ");
    type = bp[0];
    switch (type) {
    case 0x11:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"candidate-advert");
+      ARGUSBUF_APPEND("candidate-advert");
       break;
    case 0x12:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"mapping");
+      ARGUSBUF_APPEND("mapping");
       break;
    default:
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"type-0x%02x", type);
+      ARGUSBUF_APPEND("type-0x%02x", type);
       break;
    }
 
@@ -353,12 +353,12 @@ cisco_autorp_print(register const u_char *bp, register u_int len)
    numrps = bp[1];
 
    TCHECK2(bp[2], 2);
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Hold ");
+   ARGUSBUF_APPEND(" Hold ");
    hold = EXTRACT_16BITS(&bp[2]);
    if (hold)
       relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(&bp[2]));
    else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"FOREVER");
+      ARGUSBUF_APPEND("FOREVER");
 
    /* Next 4 bytes are reserved. */
 
@@ -384,20 +384,20 @@ cisco_autorp_print(register const u_char *bp, register u_int len)
 
       TCHECK2(bp[0], 4);
       haddr = EXTRACT_32BITS(bp);
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RP %s", ipaddr_string(&haddr));
+      ARGUSBUF_APPEND(" RP %s", ipaddr_string(&haddr));
       TCHECK(bp[4]);
       switch (bp[4] & 0x3) {
-      case 0: sprintf(&ArgusBuf[strlen(ArgusBuf)]," PIMv?");
+      case 0: ARGUSBUF_APPEND(" PIMv?");
          break;
-      case 1:   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PIMv1");
+      case 1:   ARGUSBUF_APPEND(" PIMv1");
          break;
-      case 2:   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PIMv2");
+      case 2:   ARGUSBUF_APPEND(" PIMv2");
          break;
-      case 3:   sprintf(&ArgusBuf[strlen(ArgusBuf)]," PIMv1+2");
+      case 3:   ARGUSBUF_APPEND(" PIMv1+2");
          break;
       }
       if (bp[4] & 0xfc)
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [rsvd=0x%02x]", bp[4] & 0xfc);
+         ARGUSBUF_APPEND(" [rsvd=0x%02x]", bp[4] & 0xfc);
       TCHECK(bp[5]);
       nentries = bp[5];
       bp += 6; len -= 6;
@@ -405,10 +405,10 @@ cisco_autorp_print(register const u_char *bp, register u_int len)
       for (; nentries; nentries--) {
          TCHECK2(bp[0], 6);
          haddr = EXTRACT_32BITS(bp);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c%s%s/%d", s, bp[0] & 1 ? "!" : "",
+         ARGUSBUF_APPEND("%c%s%s/%d", s, bp[0] & 1 ? "!" : "",
              ipaddr_string(&haddr), bp[1]);
          if (bp[0] & 0xfe)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[rsvd=0x%02x]", bp[0] & 0xfe);
+            ARGUSBUF_APPEND("[rsvd=0x%02x]", bp[0] & 0xfe);
          s = ',';
          bp += 6; len -= 6;
       }
@@ -416,7 +416,7 @@ cisco_autorp_print(register const u_char *bp, register u_int len)
    return;
 
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|autorp]");
+   ARGUSBUF_APPEND("[|autorp]");
    return;
 }
 
@@ -436,18 +436,18 @@ pim_print(register const u_char *bp, register u_int len)
    switch (PIM_VER(pim->pim_typever)) {
       case 2:
          if (!ArgusParser->vflag) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"PIMv%u, %s, length: %u", PIM_VER(pim->pim_typever),
+            ARGUSBUF_APPEND("PIMv%u, %s, length: %u", PIM_VER(pim->pim_typever),
                tok2str(pimv2_type_values,"Unknown Type",PIM_TYPE(pim->pim_typever)),
                len);
             return ArgusBuf;
          } else {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"PIMv%u, length: %u %s", PIM_VER(pim->pim_typever), len,
+            ARGUSBUF_APPEND("PIMv%u, length: %u %s", PIM_VER(pim->pim_typever), len,
                tok2str(pimv2_type_values,"Unknown Type",PIM_TYPE(pim->pim_typever)));
             pimv2_print(bp, len);
          }
             break;
       default:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"PIMv%u, length: %u", PIM_VER(pim->pim_typever), len);
+         ARGUSBUF_APPEND("PIMv%u, length: %u", PIM_VER(pim->pim_typever), len);
          break;
    }
    return ArgusBuf;
@@ -572,12 +572,12 @@ pimv2_addr_print(const u_char *bp, enum pimv2_addrtype at, int silent)
       haddr = EXTRACT_32BITS(bp);
       if (af == AF_INET) {
          if (!silent)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&haddr));
+            ARGUSBUF_APPEND("%s", ipaddr_string(&haddr));
       }
 #ifdef INET6
       else if (af == AF_INET6) {
          if (!silent)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ip6addr_string(bp));
+            ARGUSBUF_APPEND("%s", ip6addr_string(bp));
       }
 #endif
       return hdrlen + len;
@@ -587,32 +587,32 @@ pimv2_addr_print(const u_char *bp, enum pimv2_addrtype at, int silent)
       haddr = EXTRACT_32BITS(bp + 2);
       if (af == AF_INET) {
          if (!silent) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&haddr));
+            ARGUSBUF_APPEND("%s", ipaddr_string(&haddr));
             if (bp[1] != 32)
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%u", bp[1]);
+               ARGUSBUF_APPEND("/%u", bp[1]);
          }
       }
 #ifdef INET6
       else if (af == AF_INET6) {
          if (!silent) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ip6addr_string(bp + 2));
+            ARGUSBUF_APPEND("%s", ip6addr_string(bp + 2));
             if (bp[1] != 128)
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"/%u", bp[1]);
+               ARGUSBUF_APPEND("/%u", bp[1]);
          }
       }
 #endif
       if (bp[0] && !silent) {
          if (at == pimv2_group) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"(0x%02x)", bp[0]);
+            ARGUSBUF_APPEND("(0x%02x)", bp[0]);
          } else {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%s%s%s",
+            ARGUSBUF_APPEND("(%s%s%s",
                bp[0] & 0x04 ? "S" : "",
                bp[0] & 0x02 ? "W" : "",
                bp[0] & 0x01 ? "R" : "");
             if (bp[0] & 0xf8) {
-               (void) sprintf(&ArgusBuf[strlen(ArgusBuf)],"+0x%02x", bp[0] & 0xf8);
+               ARGUSBUF_APPEND("+0x%02x", bp[0] & 0xf8);
             }
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+            ARGUSBUF_APPEND(")");
          }
       }
       return hdrlen + 2 + len;
@@ -638,7 +638,7 @@ pimv2_print(register const u_char *bp, register u_int len)
    TCHECK(pim->pim_rsv);
    pimv2_addr_len = pim->pim_rsv;
    if (pimv2_addr_len != 0)
-      (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", RFC2117-encoding");
+      ARGUSBUF_APPEND(", RFC2117-encoding");
 
    switch (PIM_TYPE(pim->pim_typever)) {
       case PIMV2_TYPE_HELLO: {
@@ -650,7 +650,7 @@ pimv2_print(register const u_char *bp, register u_int len)
             olen = EXTRACT_16BITS(&bp[2]);
             TCHECK2(bp[0], 4 + olen);
 
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s Option (%u), length: %u, Value: ",
+            ARGUSBUF_APPEND(" %s Option (%u), length: %u, Value: ",
                  tok2str( pimv2_hello_option_values,"Unknown",otype),
                  otype, olen);
             bp += 4;
@@ -662,7 +662,7 @@ pimv2_print(register const u_char *bp, register u_int len)
 
                case PIMV2_HELLO_OPTION_LANPRUNEDELAY:
                   if (olen != 4) {
-                     (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: Option Lenght != 4 Bytes (%u)", olen);
+                     ARGUSBUF_APPEND("ERROR: Option Lenght != 4 Bytes (%u)", olen);
                   } else {
                      char t_bit;
                      u_int16_t lan_delay, override_interval;
@@ -670,7 +670,7 @@ pimv2_print(register const u_char *bp, register u_int len)
                      override_interval = EXTRACT_16BITS(bp+2);
                      t_bit = (lan_delay & 0x8000)? 1 : 0;
                      lan_delay &= ~0x8000;
-                     (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," T-bit=%d, LAN delay %dms, Override interval %dms",
+                     ARGUSBUF_APPEND(" T-bit=%d, LAN delay %dms, Override interval %dms",
                      t_bit, lan_delay, override_interval);
                   }
                   break;
@@ -679,29 +679,29 @@ pimv2_print(register const u_char *bp, register u_int len)
                case PIMV2_HELLO_OPTION_DR_PRIORITY:
                   switch (olen) {
                      case 0:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"Bi-Directional Capability (Old)");
+                        ARGUSBUF_APPEND("Bi-Directional Capability (Old)");
                         break;
                      case 4:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", EXTRACT_32BITS(bp));
+                        ARGUSBUF_APPEND("%u", EXTRACT_32BITS(bp));
                         break;
                      default:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: Option Lenght != 4 Bytes (%u)", olen);
+                        ARGUSBUF_APPEND("ERROR: Option Lenght != 4 Bytes (%u)", olen);
                         break;
                   }
                   break;
 
                case PIMV2_HELLO_OPTION_GENID:
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%08x", EXTRACT_32BITS(bp));
+                  ARGUSBUF_APPEND("0x%08x", EXTRACT_32BITS(bp));
                   break;
 
                case PIMV2_HELLO_OPTION_REFRESH_CAP:
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"v%d", *bp);
+                  ARGUSBUF_APPEND("v%d", *bp);
                   if (*(bp+1) != 0) {
-                     (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", interval ");
+                     ARGUSBUF_APPEND(", interval ");
                      relts_print(&ArgusBuf[strlen(ArgusBuf)],*(bp+1));
                   }
                   if (EXTRACT_16BITS(bp+2) != 0) {
-                     (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," ?0x%04x?", EXTRACT_16BITS(bp+2));
+                     ARGUSBUF_APPEND(" ?0x%04x?", EXTRACT_16BITS(bp+2));
                   }
                   break;
 
@@ -714,10 +714,10 @@ pimv2_print(register const u_char *bp, register u_int len)
                      const u_char *ptr = bp;
                      while (ptr < (bp+olen)) {
                         int advance;
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+                        ARGUSBUF_APPEND(" ");
                         advance = pimv2_addr_print(ptr, pimv2_unicast, 0);
                         if (advance < 0) {
-                           sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+                           ARGUSBUF_APPEND("...");
                            break;
                         }
                         ptr += advance;
@@ -743,7 +743,7 @@ pimv2_print(register const u_char *bp, register u_int len)
          struct ip *ip;
 */
          if (ArgusParser->vflag && bp + 8 <= ep) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s%s", bp[4] & 0x80 ? "B" : "",
+            ARGUSBUF_APPEND(" %s%s", bp[4] & 0x80 ? "B" : "",
                bp[4] & 0x40 ? "N" : "");
          }
          bp += 8; len -= 8;
@@ -755,17 +755,17 @@ pimv2_print(register const u_char *bp, register u_int len)
          ip = (struct ip *)bp;
          switch (IP_V(ip)) {
             case 4:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+               ARGUSBUF_APPEND(" ");
                ip_print(bp, len);
                break;
 #ifdef INET6
             case 6:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+               ARGUSBUF_APPEND(" ");
                ip6_print(bp, len);
                break;
 #endif
             default:
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," IP ver %d", IP_V(ip));
+               ARGUSBUF_APPEND(" IP ver %d", IP_V(ip));
                break;
          }
 */
@@ -776,17 +776,17 @@ pimv2_print(register const u_char *bp, register u_int len)
          bp += 4; len -= 4;
          if (bp >= ep)
             break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," group=");
+         ARGUSBUF_APPEND(" group=");
          if ((advance = pimv2_addr_print(bp, pimv2_group, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance; len -= advance;
          if (bp >= ep)
             break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," source=");
+         ARGUSBUF_APPEND(" source=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance; len -= advance;
@@ -842,9 +842,9 @@ pimv2_print(register const u_char *bp, register u_int len)
          if (PIM_TYPE(pim->pim_typever) != 7) {   /*not for Graft-ACK*/
             if (bp >= ep)
                break;
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", upstream-neighbor: ");
+            ARGUSBUF_APPEND(", upstream-neighbor: ");
             if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+               ARGUSBUF_APPEND("...");
                break;
             }
             bp += advance; len -= advance;
@@ -853,11 +853,11 @@ pimv2_print(register const u_char *bp, register u_int len)
             break;
          ngroup = bp[1];
          holdtime = EXTRACT_16BITS(&bp[2]);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u group(s)", ngroup);
+         ARGUSBUF_APPEND(" %u group(s)", ngroup);
          if (PIM_TYPE(pim->pim_typever) != 7) {   /*not for Graft-ACK*/
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", holdtime: ");
+            ARGUSBUF_APPEND(", holdtime: ");
             if (holdtime == 0xffff)
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"infinite");
+               ARGUSBUF_APPEND("infinite");
             else
                relts_print(&ArgusBuf[strlen(ArgusBuf)],holdtime);
          }
@@ -865,32 +865,32 @@ pimv2_print(register const u_char *bp, register u_int len)
          for (i = 0; i < ngroup; i++) {
             if (bp >= ep)
                goto jp_done;
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," group #%u: ", i+1);
+            ARGUSBUF_APPEND(" group #%u: ", i+1);
             if ((advance = pimv2_addr_print(bp, pimv2_group, 0)) < 0) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+               ARGUSBUF_APPEND("...)");
                goto jp_done;
             }
             bp += advance; len -= advance;
             if (bp + 4 > ep) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+               ARGUSBUF_APPEND("...)");
                goto jp_done;
             }
             njoin = EXTRACT_16BITS(&bp[0]);
             nprune = EXTRACT_16BITS(&bp[2]);
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", joined sources: %u, pruned sources: %u", njoin,nprune);
+            ARGUSBUF_APPEND(", joined sources: %u, pruned sources: %u", njoin,nprune);
             bp += 4; len -= 4;
             for (j = 0; j < njoin; j++) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," joined source #%u: ",j+1);
+               ARGUSBUF_APPEND(" joined source #%u: ",j+1);
                if ((advance = pimv2_addr_print(bp, pimv2_source, 0)) < 0) {
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+                  ARGUSBUF_APPEND("...)");
                   goto jp_done;
                }
                bp += advance; len -= advance;
             }
             for (j = 0; j < nprune; j++) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," pruned source #%u: ",j+1);
+               ARGUSBUF_APPEND(" pruned source #%u: ",j+1);
                if ((advance = pimv2_addr_print(bp, pimv2_source, 0)) < 0) {
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+                  ARGUSBUF_APPEND("...)");
                   goto jp_done;
                }
                bp += advance; len -= advance;
@@ -906,71 +906,71 @@ pimv2_print(register const u_char *bp, register u_int len)
 
          /* Fragment Tag, Hash Mask len, and BSR-priority */
          if (bp + sizeof(u_int16_t) >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," tag=%x", EXTRACT_16BITS(bp));
+         ARGUSBUF_APPEND(" tag=%x", EXTRACT_16BITS(bp));
          bp += sizeof(u_int16_t);
          if (bp >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," hashmlen=%d", bp[0]);
+         ARGUSBUF_APPEND(" hashmlen=%d", bp[0]);
          if (bp + 1 >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," BSRprio=%d", bp[1]);
+         ARGUSBUF_APPEND(" BSRprio=%d", bp[1]);
          bp += 2;
 
          /* Encoded-Unicast-BSR-Address */
          if (bp >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," BSR=");
+         ARGUSBUF_APPEND(" BSR=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance;
 
          for (i = 0; bp < ep; i++) {
             /* Encoded-Group Address */
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," (group%d: ", i);
+            ARGUSBUF_APPEND(" (group%d: ", i);
             if ((advance = pimv2_addr_print(bp, pimv2_group, 0))
                 < 0) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+               ARGUSBUF_APPEND("...)");
                goto bs_done;
             }
             bp += advance;
 
             /* RP-Count, Frag RP-Cnt, and rsvd */
             if (bp >= ep) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+               ARGUSBUF_APPEND("...)");
                goto bs_done;
             }
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RPcnt=%d", bp[0]);
+            ARGUSBUF_APPEND(" RPcnt=%d", bp[0]);
             if (bp + 1 >= ep) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+               ARGUSBUF_APPEND("...)");
                goto bs_done;
             }
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," FRPcnt=%d", frpcnt = bp[1]);
+            ARGUSBUF_APPEND(" FRPcnt=%d", frpcnt = bp[1]);
             bp += 4;
 
             for (j = 0; j < frpcnt && bp < ep; j++) {
                /* each RP info */
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RP%d=", j);
+               ARGUSBUF_APPEND(" RP%d=", j);
                if ((advance = pimv2_addr_print(bp,
                            pimv2_unicast,
                            0)) < 0) {
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+                  ARGUSBUF_APPEND("...)");
                   goto bs_done;
                }
                bp += advance;
 
                if (bp + 1 >= ep) {
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+                  ARGUSBUF_APPEND("...)");
                   goto bs_done;
                }
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],",holdtime=");
+               ARGUSBUF_APPEND(",holdtime=");
                relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(bp));
                if (bp + 2 >= ep) {
-                  (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...)");
+                  ARGUSBUF_APPEND("...)");
                   goto bs_done;
                }
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],",prio=%d", bp[2]);
+               ARGUSBUF_APPEND(",prio=%d", bp[2]);
                bp += 4;
             }
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+            ARGUSBUF_APPEND(")");
          }
          bs_done:
          break;
@@ -980,26 +980,26 @@ pimv2_print(register const u_char *bp, register u_int len)
          bp += 4; len -= 4;
          if (bp >= ep)
             break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," group=");
+         ARGUSBUF_APPEND(" group=");
          if ((advance = pimv2_addr_print(bp, pimv2_group, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance; len -= advance;
          if (bp >= ep)
             break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," src=");
+         ARGUSBUF_APPEND(" src=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance; len -= advance;
          if (bp + 8 > ep)
             break;
          if (bp[0] & 0x80)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RPT");
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," pref=%u", EXTRACT_32BITS(&bp[0]) & 0x7fffffff);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," metric=%u", EXTRACT_32BITS(&bp[4]));
+            ARGUSBUF_APPEND(" RPT");
+         ARGUSBUF_APPEND(" pref=%u", EXTRACT_32BITS(&bp[0]) & 0x7fffffff);
+         ARGUSBUF_APPEND(" metric=%u", EXTRACT_32BITS(&bp[4]));
          break;
 
       case PIMV2_TYPE_CANDIDATE_RP: {
@@ -1008,30 +1008,30 @@ pimv2_print(register const u_char *bp, register u_int len)
 
          /* Prefix-Cnt, Priority, and Holdtime */
          if (bp >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," prefix-cnt=%d", bp[0]);
+         ARGUSBUF_APPEND(" prefix-cnt=%d", bp[0]);
          pfxcnt = bp[0];
          if (bp + 1 >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," prio=%d", bp[1]);
+         ARGUSBUF_APPEND(" prio=%d", bp[1]);
          if (bp + 3 >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," holdtime=");
+         ARGUSBUF_APPEND(" holdtime=");
          relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(&bp[2]));
          bp += 4;
 
          /* Encoded-Unicast-RP-Address */
          if (bp >= ep) break;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," RP=");
+         ARGUSBUF_APPEND(" RP=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance;
 
          /* Encoded-Group Addresses */
          for (i = 0; i < pfxcnt && bp < ep; i++) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Group%d=", i);
+            ARGUSBUF_APPEND(" Group%d=", i);
             if ((advance = pimv2_addr_print(bp, pimv2_group, 0))
                 < 0) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+               ARGUSBUF_APPEND("...");
                break;
             }
             bp += advance;
@@ -1040,37 +1040,37 @@ pimv2_print(register const u_char *bp, register u_int len)
       }
 
       case PIMV2_TYPE_PRUNE_REFRESH:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," src=");
+         ARGUSBUF_APPEND(" src=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," grp=");
+         ARGUSBUF_APPEND(" grp=");
          if ((advance = pimv2_addr_print(bp, pimv2_group, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance;
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," forwarder=");
+         ARGUSBUF_APPEND(" forwarder=");
          if ((advance = pimv2_addr_print(bp, pimv2_unicast, 0)) < 0) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"...");
+            ARGUSBUF_APPEND("...");
             break;
          }
          bp += advance;
          TCHECK2(bp[0], 2);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," TUNR ");
+         ARGUSBUF_APPEND(" TUNR ");
          relts_print(&ArgusBuf[strlen(ArgusBuf)],EXTRACT_16BITS(bp));
          break;
 
       default:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [type %d]", PIM_TYPE(pim->pim_typever));
+         ARGUSBUF_APPEND(" [type %d]", PIM_TYPE(pim->pim_typever));
          break;
    }
    return;
 
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|pim]");
+   ARGUSBUF_APPEND("[|pim]");
 }
 
 /*

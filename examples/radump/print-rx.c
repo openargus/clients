@@ -419,28 +419,28 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 	int i;
 
 	if (snapend - bp < (int)sizeof (struct rx_header)) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rx] (%d)", length);
+		ARGUSBUF_APPEND(" [|rx] (%d)", length);
 		return ArgusBuf;
 	}
 
 	rxh = (struct rx_header *) bp;
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"rx %s", tok2str(rx_types, "type %d", rxh->type));
+	ARGUSBUF_APPEND("rx %s", tok2str(rx_types, "type %d", rxh->type));
 
 	if (ArgusParser->vflag) {
 		int firstflag = 0;
 
 		if (ArgusParser->vflag > 1)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," cid %08x call# %d",
+			ARGUSBUF_APPEND(" cid %08x call# %d",
 			       (int) EXTRACT_32BITS(&rxh->cid),
 			       (int) EXTRACT_32BITS(&rxh->callNumber));
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," seq %d ser %d",
+		ARGUSBUF_APPEND(" seq %d ser %d",
 		       (int) EXTRACT_32BITS(&rxh->seq),
 		       (int) EXTRACT_32BITS(&rxh->serial));
 
 		if (ArgusParser->vflag > 2)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," secindex %d serviceid %hu",
+			ARGUSBUF_APPEND(" secindex %d serviceid %hu",
 				(int) rxh->securityIndex,
 				EXTRACT_16BITS(&rxh->serviceId));
 
@@ -451,11 +451,11 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 				     rxh->type == rx_flags[i].packetType)) {
 					if (!firstflag) {
 						firstflag = 1;
-						sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+						ARGUSBUF_APPEND(" ");
 					} else {
-						sprintf(&ArgusBuf[strlen(ArgusBuf)],",");
+						ARGUSBUF_APPEND(",");
 					}
-					sprintf(&ArgusBuf[strlen(ArgusBuf)],"<%s>", rx_flags[i].s);
+					ARGUSBUF_APPEND("<%s>", rx_flags[i].s);
 				}
 			}
 	}
@@ -551,7 +551,7 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 		rx_ack_print(bp, length);
 
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%d)", length);
+	ARGUSBUF_APPEND(" (%d)", length);
    return ArgusBuf;
 }
 
@@ -567,7 +567,7 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 			bp += sizeof(int32_t); \
 			n3 = EXTRACT_32BITS(bp); \
 			bp += sizeof(int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," fid %d/%d/%d", (int) n1, (int) n2, (int) n3); \
+			ARGUSBUF_APPEND(" fid %d/%d/%d", (int) n1, (int) n2, (int) n3); \
 		}
 
 #define STROUT(MAX) { unsigned int i; \
@@ -576,10 +576,10 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 			if (i > (MAX)) \
 				goto trunc; \
 			bp += sizeof(int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," \""); \
-			if (fn_printn(bp, i, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) \
+			ARGUSBUF_APPEND(" \""); \
+			if (fn_printn(bp, i, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL) \
 				goto trunc; \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\""); \
+			ARGUSBUF_APPEND("\""); \
 			bp += ((i + sizeof(int32_t) - 1) / sizeof(int32_t)) * sizeof(int32_t); \
 		}
 
@@ -587,14 +587,14 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 			TCHECK2(bp[0], sizeof(int32_t)); \
 			i = (int) EXTRACT_32BITS(bp); \
 			bp += sizeof(int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d", i); \
+			ARGUSBUF_APPEND(" %d", i); \
 		}
 
 #define UINTOUT() { unsigned long i; \
 			TCHECK2(bp[0], sizeof(int32_t)); \
 			i = EXTRACT_32BITS(bp); \
 			bp += sizeof(int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", i); \
+			ARGUSBUF_APPEND(" %lu", i); \
 		}
 
 #define DATEOUT() { time_t t; struct tm *tm; char str[256]; \
@@ -603,25 +603,25 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 			bp += sizeof(int32_t); \
 			tm = localtime(&t); \
 			strftime(str, 256, "%Y/%m/%d %T", tm); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", str); \
+			ARGUSBUF_APPEND(" %s", str); \
 		}
 
 #define STOREATTROUT() { unsigned long mask, i; \
 			TCHECK2(bp[0], (sizeof(int32_t)*6)); \
 			mask = EXTRACT_32BITS(bp); bp += sizeof(int32_t); \
-			if (mask) sprintf(&ArgusBuf[strlen(ArgusBuf)]," StoreStatus"); \
-		        if (mask & 1) { sprintf(&ArgusBuf[strlen(ArgusBuf)]," date"); DATEOUT(); } \
+			if (mask) ARGUSBUF_APPEND(" StoreStatus"); \
+		        if (mask & 1) { ARGUSBUF_APPEND(" date"); DATEOUT(); } \
 			else bp += sizeof(int32_t); \
 			i = EXTRACT_32BITS(bp); bp += sizeof(int32_t); \
-		        if (mask & 2) sprintf(&ArgusBuf[strlen(ArgusBuf)]," owner %lu", i);  \
+		        if (mask & 2) ARGUSBUF_APPEND(" owner %lu", i);  \
 			i = EXTRACT_32BITS(bp); bp += sizeof(int32_t); \
-		        if (mask & 4) sprintf(&ArgusBuf[strlen(ArgusBuf)]," group %lu", i); \
+		        if (mask & 4) ARGUSBUF_APPEND(" group %lu", i); \
 			i = EXTRACT_32BITS(bp); bp += sizeof(int32_t); \
-		        if (mask & 8) sprintf(&ArgusBuf[strlen(ArgusBuf)]," mode %lo", i & 07777); \
+		        if (mask & 8) ARGUSBUF_APPEND(" mode %lo", i & 07777); \
 			i = EXTRACT_32BITS(bp); bp += sizeof(int32_t); \
-		        if (mask & 16) sprintf(&ArgusBuf[strlen(ArgusBuf)]," segsize %lu", i); \
+		        if (mask & 16) ARGUSBUF_APPEND(" segsize %lu", i); \
 			/* undocumented in 3.3 docu */ \
-		        if (mask & 1024) sprintf(&ArgusBuf[strlen(ArgusBuf)]," fsync");  \
+		        if (mask & 1024) ARGUSBUF_APPEND(" fsync");  \
 		}
 
 #define UBIK_VERSIONOUT() {int32_t epoch; int32_t counter; \
@@ -630,24 +630,24 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 			bp += sizeof(int32_t); \
 			counter = EXTRACT_32BITS(bp); \
 			bp += sizeof(int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d.%d", epoch, counter); \
+			ARGUSBUF_APPEND(" %d.%d", epoch, counter); \
 		}
 
 #define AFSUUIDOUT() {u_int32_t temp; int i; \
 			TCHECK2(bp[0], 11*sizeof(u_int32_t)); \
 			temp = EXTRACT_32BITS(bp); \
 			bp += sizeof(u_int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %08x", temp); \
+			ARGUSBUF_APPEND(" %08x", temp); \
 			temp = EXTRACT_32BITS(bp); \
 			bp += sizeof(u_int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%04x", temp); \
+			ARGUSBUF_APPEND("%04x", temp); \
 			temp = EXTRACT_32BITS(bp); \
 			bp += sizeof(u_int32_t); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%04x", temp); \
+			ARGUSBUF_APPEND("%04x", temp); \
 			for (i = 0; i < 8; i++) { \
 				temp = EXTRACT_32BITS(bp); \
 				bp += sizeof(u_int32_t); \
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", (unsigned char) temp); \
+				ARGUSBUF_APPEND("%02x", (unsigned char) temp); \
 			} \
 		}
 
@@ -667,9 +667,9 @@ rx_print(register const u_char *bp, int length, int sport, int dport)
 				bp += sizeof(int32_t); \
 			} \
 			s[(MAX)] = '\0'; \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," \""); \
-			fn_print(s, NULL, ArgusBuf); \
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\""); \
+			ARGUSBUF_APPEND(" \""); \
+			fn_print(s, NULL, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf)); \
+			ARGUSBUF_APPEND("\""); \
 		}
 
 /*
@@ -696,7 +696,7 @@ fs_print(register const u_char *bp, int length)
 
 	fs_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," fs call %s", tok2str(fs_req, "op#%d", fs_op));
+	ARGUSBUF_APPEND(" fs call %s", tok2str(fs_req, "op#%d", fs_op));
 
 	/*
 	 * Print out arguments to some of the AFS calls.  This stuff is
@@ -712,9 +712,9 @@ fs_print(register const u_char *bp, int length)
 	switch (fs_op) {
 		case 130:	/* Fetch data */
 			FIDOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," offset");
+			ARGUSBUF_APPEND(" offset");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," length");
+			ARGUSBUF_APPEND(" length");
 			UINTOUT();
 			break;
 		case 131:	/* Fetch ACL */
@@ -734,11 +734,11 @@ fs_print(register const u_char *bp, int length)
 		case 133:	/* Store data */
 			FIDOUT();
 			STOREATTROUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," offset");
+			ARGUSBUF_APPEND(" offset");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," length");
+			ARGUSBUF_APPEND(" length");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," flen");
+			ARGUSBUF_APPEND(" flen");
 			UINTOUT();
 			break;
 		case 134:	/* Store ACL */
@@ -767,23 +767,23 @@ fs_print(register const u_char *bp, int length)
 			STROUT(AFSNAMEMAX);
 			break;
 		case 138:	/* Rename file */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," old");
+			ARGUSBUF_APPEND(" old");
 			FIDOUT();
 			STROUT(AFSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," new");
+			ARGUSBUF_APPEND(" new");
 			FIDOUT();
 			STROUT(AFSNAMEMAX);
 			break;
 		case 139:	/* Symlink */
 			FIDOUT();
 			STROUT(AFSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," link to");
+			ARGUSBUF_APPEND(" link to");
 			STROUT(AFSNAMEMAX);
 			break;
 		case 140:	/* Link */
 			FIDOUT();
 			STROUT(AFSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," link to");
+			ARGUSBUF_APPEND(" link to");
 			FIDOUT();
 			break;
 		case 148:	/* Get volume info */
@@ -791,11 +791,11 @@ fs_print(register const u_char *bp, int length)
 			break;
 		case 149:	/* Get volume stats */
 		case 150:	/* Set volume stats */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," volid");
+			ARGUSBUF_APPEND(" volid");
 			UINTOUT();
 			break;
 		case 154:	/* New get volume info */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," volname");
+			ARGUSBUF_APPEND(" volname");
 			STROUT(AFSNAMEMAX);
 			break;
 		case 155:	/* Bulk stat */
@@ -808,10 +808,10 @@ fs_print(register const u_char *bp, int length)
 			for (i = 0; i < j; i++) {
 				FIDOUT();
 				if (i != j - 1)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)],",");
+					ARGUSBUF_APPEND(",");
 			}
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 		default:
 			;
@@ -820,7 +820,7 @@ fs_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|fs]");
+	ARGUSBUF_APPEND(" [|fs]");
 }
 
 /*
@@ -843,7 +843,7 @@ fs_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * gleaned from fsint/afsint.xg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," fs reply %s", tok2str(fs_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" fs reply %s", tok2str(fs_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -868,11 +868,11 @@ fs_reply_print(register const u_char *bp, int length, int32_t opcode)
 		}
 		case 137:	/* Create file */
 		case 141:	/* MakeDir */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," new");
+			ARGUSBUF_APPEND(" new");
 			FIDOUT();
 			break;
 		case 151:	/* Get root volume */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," root volume");
+			ARGUSBUF_APPEND(" root volume");
 			STROUT(AFSNAMEMAX);
 			break;
 		case 153:	/* Get time */
@@ -891,15 +891,15 @@ fs_reply_print(register const u_char *bp, int length, int32_t opcode)
 		i = (int) EXTRACT_32BITS(bp);
 		bp += sizeof(int32_t);
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," error %s", tok2str(afs_fs_errors, "#%d", i));
+		ARGUSBUF_APPEND(" error %s", tok2str(afs_fs_errors, "#%d", i));
 	} else {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," strange fs reply of type %d", rxh->type);
+		ARGUSBUF_APPEND(" strange fs reply of type %d", rxh->type);
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|fs]");
+	ARGUSBUF_APPEND(" [|fs]");
 }
 
 /*
@@ -940,29 +940,29 @@ acl_print(u_char *s, int maxsize, u_char *end)
 
 #define ACLOUT(acl) \
 	if (acl & PRSFS_READ) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"r"); \
+		ARGUSBUF_APPEND("r"); \
 	if (acl & PRSFS_LOOKUP) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"l"); \
+		ARGUSBUF_APPEND("l"); \
 	if (acl & PRSFS_INSERT) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"i"); \
+		ARGUSBUF_APPEND("i"); \
 	if (acl & PRSFS_DELETE) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"d"); \
+		ARGUSBUF_APPEND("d"); \
 	if (acl & PRSFS_WRITE) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"w"); \
+		ARGUSBUF_APPEND("w"); \
 	if (acl & PRSFS_LOCK) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"k"); \
+		ARGUSBUF_APPEND("k"); \
 	if (acl & PRSFS_ADMINISTER) \
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"a");
+		ARGUSBUF_APPEND("a");
 
 	for (i = 0; i < pos; i++) {
 		if (sscanf((char *) s, "%s %d\n%n", user, &acl, &n) != 2)
 			goto finish;
 		s += n;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," +{");
-		fn_print((u_char *)user, NULL, ArgusBuf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" +{");
+		fn_print((u_char *)user, NULL, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf));
+		ARGUSBUF_APPEND(" ");
 		ACLOUT(acl);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"}");
+		ARGUSBUF_APPEND("}");
 		if (s > end)
 			goto finish;
 	}
@@ -971,11 +971,11 @@ acl_print(u_char *s, int maxsize, u_char *end)
 		if (sscanf((char *) s, "%s %d\n%n", user, &acl, &n) != 2)
 			goto finish;
 		s += n;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," -{");
-		fn_print((u_char *)user, NULL, ArgusBuf);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+		ARGUSBUF_APPEND(" -{");
+		fn_print((u_char *)user, NULL, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf));
+		ARGUSBUF_APPEND(" ");
 		ACLOUT(acl);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"}");
+		ARGUSBUF_APPEND("}");
 		if (s > end)
 			goto finish;
 	}
@@ -1011,7 +1011,7 @@ cb_print(register const u_char *bp, int length)
 
 	cb_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," cb call %s", tok2str(cb_req, "op#%d", cb_op));
+	ARGUSBUF_APPEND(" cb call %s", tok2str(cb_req, "op#%d", cb_op));
 
 	bp += sizeof(struct rx_header) + 4;
 
@@ -1031,22 +1031,22 @@ cb_print(register const u_char *bp, int length)
 			for (i = 0; i < j; i++) {
 				FIDOUT();
 				if (i != j - 1)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)],",");
+					ARGUSBUF_APPEND(",");
 			}
 
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 
 			j = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 
 			if (j != 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],";");
+				ARGUSBUF_APPEND(";");
 
 			for (i = 0; i < j; i++) {
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," ver");
+				ARGUSBUF_APPEND(" ver");
 				INTOUT();
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," expires");
+				ARGUSBUF_APPEND(" expires");
 				DATEOUT();
 				TCHECK2(bp[0], 4);
 				t = EXTRACT_32BITS(bp);
@@ -1055,7 +1055,7 @@ cb_print(register const u_char *bp, int length)
 			}
 		}
 		case 214: {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," afsuuid");
+			ARGUSBUF_APPEND(" afsuuid");
 			AFSUUIDOUT();
 			break;
 		}
@@ -1066,7 +1066,7 @@ cb_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|cb]");
+	ARGUSBUF_APPEND(" [|cb]");
 }
 
 /*
@@ -1088,7 +1088,7 @@ cb_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * gleaned from fsint/afscbint.xg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," cb reply %s", tok2str(cb_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" cb reply %s", tok2str(cb_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -1108,14 +1108,14 @@ cb_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|cb]");
+	ARGUSBUF_APPEND(" [|cb]");
 }
 
 /*
@@ -1142,14 +1142,14 @@ prot_print(register const u_char *bp, int length)
 
 	pt_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," pt");
+	ARGUSBUF_APPEND(" pt");
 
 	if (is_ubik(pt_op)) {
 		ubik_print(bp);
 		return;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," call %s", tok2str(pt_req, "op#%d", pt_op));
+	ARGUSBUF_APPEND(" call %s", tok2str(pt_req, "op#%d", pt_op));
 
 	/*
 	 * Decode some of the arguments to the PT calls
@@ -1160,9 +1160,9 @@ prot_print(register const u_char *bp, int length)
 	switch (pt_op) {
 		case 500:	/* I New User */
 			STROUT(PRNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," id");
+			ARGUSBUF_APPEND(" id");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," oldid");
+			ARGUSBUF_APPEND(" oldid");
 			INTOUT();
 			break;
 		case 501:	/* Where is it */
@@ -1173,19 +1173,19 @@ prot_print(register const u_char *bp, int length)
 		case 517:	/* List owned */
 		case 518:	/* Get CPS2 */
 		case 519:	/* Get host CPS */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," id");
+			ARGUSBUF_APPEND(" id");
 			INTOUT();
 			break;
 		case 502:	/* Dump entry */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," pos");
+			ARGUSBUF_APPEND(" pos");
 			INTOUT();
 			break;
 		case 503:	/* Add to group */
 		case 507:	/* Remove from group */
 		case 515:	/* Is a member of? */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," uid");
+			ARGUSBUF_APPEND(" uid");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," gid");
+			ARGUSBUF_APPEND(" gid");
 			INTOUT();
 			break;
 		case 504:	/* Name to ID */
@@ -1206,46 +1206,46 @@ prot_print(register const u_char *bp, int length)
 				VECOUT(PRNAMEMAX);
 			}
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 			break;
 		case 505:	/* Id to name */
 		{
 			unsigned long j;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ids:");
+			ARGUSBUF_APPEND(" ids:");
 			TCHECK2(bp[0], 4);
 			i = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			for (j = 0; j < i; j++)
 				INTOUT();
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 			break;
 		case 509:	/* New entry */
 			STROUT(PRNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," flag");
+			ARGUSBUF_APPEND(" flag");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," oid");
+			ARGUSBUF_APPEND(" oid");
 			INTOUT();
 			break;
 		case 511:	/* Set max */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," id");
+			ARGUSBUF_APPEND(" id");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," gflag");
+			ARGUSBUF_APPEND(" gflag");
 			INTOUT();
 			break;
 		case 513:	/* Change entry */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," id");
+			ARGUSBUF_APPEND(" id");
 			INTOUT();
 			STROUT(PRNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," oldid");
+			ARGUSBUF_APPEND(" oldid");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," newid");
+			ARGUSBUF_APPEND(" newid");
 			INTOUT();
 			break;
 		case 520:	/* Update entry */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," id");
+			ARGUSBUF_APPEND(" id");
 			INTOUT();
 			STROUT(PRNAMEMAX);
 			break;
@@ -1257,7 +1257,7 @@ prot_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|pt]");
+	ARGUSBUF_APPEND(" [|pt]");
 }
 
 /*
@@ -1281,14 +1281,14 @@ prot_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * Ubik call, however.
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," pt");
+	ARGUSBUF_APPEND(" pt");
 
 	if (is_ubik(opcode)) {
 		ubik_reply_print(bp, length, opcode);
 		return;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," reply %s", tok2str(pt_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" reply %s", tok2str(pt_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -1301,14 +1301,14 @@ prot_reply_print(register const u_char *bp, int length, int32_t opcode)
 		case 504:		/* Name to ID */
 		{
 			unsigned long j;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," ids:");
+			ARGUSBUF_APPEND(" ids:");
 			TCHECK2(bp[0], 4);
 			i = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			for (j = 0; j < i; j++)
 				INTOUT();
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 			break;
 		case 505:		/* ID to name */
@@ -1329,7 +1329,7 @@ prot_reply_print(register const u_char *bp, int length, int32_t opcode)
 				VECOUT(PRNAMEMAX);
 			}
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 			break;
 		case 508:		/* Get CPS */
@@ -1346,13 +1346,13 @@ prot_reply_print(register const u_char *bp, int length, int32_t opcode)
 				INTOUT();
 			}
 			if (j == 0)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," <none!>");
+				ARGUSBUF_APPEND(" <none!>");
 		}
 			break;
 		case 510:		/* List max */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," maxuid");
+			ARGUSBUF_APPEND(" maxuid");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," maxgid");
+			ARGUSBUF_APPEND(" maxgid");
 			INTOUT();
 			break;
 		default:
@@ -1362,14 +1362,14 @@ prot_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|pt]");
+	ARGUSBUF_APPEND(" [|pt]");
 }
 
 /*
@@ -1396,13 +1396,13 @@ vldb_print(register const u_char *bp, int length)
 
 	vldb_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," vldb");
+	ARGUSBUF_APPEND(" vldb");
 
 	if (is_ubik(vldb_op)) {
 		ubik_print(bp);
 		return;
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," call %s", tok2str(vldb_req, "op#%d", vldb_op));
+	ARGUSBUF_APPEND(" call %s", tok2str(vldb_req, "op#%d", vldb_op));
 
 	/*
 	 * Decode some of the arguments to the VLDB calls
@@ -1421,13 +1421,13 @@ vldb_print(register const u_char *bp, int length)
 		case 508:	/* Set lock */
 		case 509:	/* Release lock */
 		case 518:	/* Get entry by ID N */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," volid");
+			ARGUSBUF_APPEND(" volid");
 			INTOUT();
 			TCHECK2(bp[0], sizeof(int32_t));
 			i = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			if (i <= 2)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," type %s", voltype[i]);
+				ARGUSBUF_APPEND(" type %s", voltype[i]);
 			break;
 		case 504:	/* Get entry by name */
 		case 519:	/* Get entry by name N */
@@ -1436,23 +1436,23 @@ vldb_print(register const u_char *bp, int length)
 			STROUT(VLNAMEMAX);
 			break;
 		case 505:	/* Get new vol id */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," bump");
+			ARGUSBUF_APPEND(" bump");
 			INTOUT();
 			break;
 		case 506:	/* Replace entry */
 		case 520:	/* Replace entry N */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," volid");
+			ARGUSBUF_APPEND(" volid");
 			INTOUT();
 			TCHECK2(bp[0], sizeof(int32_t));
 			i = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			if (i <= 2)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)]," type %s", voltype[i]);
+				ARGUSBUF_APPEND(" type %s", voltype[i]);
 			VECOUT(VLNAMEMAX);
 			break;
 		case 510:	/* List entry */
 		case 521:	/* List entry N */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," index");
+			ARGUSBUF_APPEND(" index");
 			INTOUT();
 			break;
 		default:
@@ -1462,7 +1462,7 @@ vldb_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|vldb]");
+	ARGUSBUF_APPEND(" [|vldb]");
 }
 
 /*
@@ -1486,14 +1486,14 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * Ubik call, however.
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," vldb");
+	ARGUSBUF_APPEND(" vldb");
 
 	if (is_ubik(opcode)) {
 		ubik_reply_print(bp, length, opcode);
 		return;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," reply %s", tok2str(vldb_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" reply %s", tok2str(vldb_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -1504,9 +1504,9 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 	if (rxh->type == RX_PACKET_TYPE_DATA)
 		switch (opcode) {
 		case 510:	/* List entry */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," count");
+			ARGUSBUF_APPEND(" count");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," nextindex");
+			ARGUSBUF_APPEND(" nextindex");
 			INTOUT();
 		case 503:	/* Get entry by id */
 		case 504:	/* Get entry by name */
@@ -1514,83 +1514,83 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 			VECOUT(VLNAMEMAX);
 			TCHECK2(bp[0], sizeof(int32_t));
 			bp += sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," numservers");
+			ARGUSBUF_APPEND(" numservers");
 			TCHECK2(bp[0], sizeof(int32_t));
 			nservers = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", nservers);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," servers");
+			ARGUSBUF_APPEND(" %lu", nservers);
+			ARGUSBUF_APPEND(" servers");
 			for (i = 0; i < 8; i++) {
 				TCHECK2(bp[0], sizeof(int32_t));
 				if (i < nservers)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s",
+					ARGUSBUF_APPEND(" %s",
 					   intoa(((struct in_addr *) bp)->s_addr));
 				bp += sizeof(int32_t);
 			}
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," partitions");
+			ARGUSBUF_APPEND(" partitions");
 			for (i = 0; i < 8; i++) {
 				TCHECK2(bp[0], sizeof(int32_t));
 				j = EXTRACT_32BITS(bp);
 				if (i < nservers && j <= 26)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %c", 'a' + (int)j);
+					ARGUSBUF_APPEND(" %c", 'a' + (int)j);
 				else if (i < nservers)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", j);
+					ARGUSBUF_APPEND(" %lu", j);
 				bp += sizeof(int32_t);
 			}
 			TCHECK2(bp[0], 8 * sizeof(int32_t));
 			bp += 8 * sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rwvol");
+			ARGUSBUF_APPEND(" rwvol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rovol");
+			ARGUSBUF_APPEND(" rovol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," backup");
+			ARGUSBUF_APPEND(" backup");
 			UINTOUT();
 		}
 			break;
 		case 505:	/* Get new volume ID */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," newvol");
+			ARGUSBUF_APPEND(" newvol");
 			UINTOUT();
 			break;
 		case 521:	/* List entry */
 		case 529:	/* List entry U */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," count");
+			ARGUSBUF_APPEND(" count");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," nextindex");
+			ARGUSBUF_APPEND(" nextindex");
 			INTOUT();
 		case 518:	/* Get entry by ID N */
 		case 519:	/* Get entry by name N */
 		{	unsigned long nservers, j;
 			VECOUT(VLNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," numservers");
+			ARGUSBUF_APPEND(" numservers");
 			TCHECK2(bp[0], sizeof(int32_t));
 			nservers = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", nservers);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," servers");
+			ARGUSBUF_APPEND(" %lu", nservers);
+			ARGUSBUF_APPEND(" servers");
 			for (i = 0; i < 13; i++) {
 				TCHECK2(bp[0], sizeof(int32_t));
 				if (i < nservers)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s",
+					ARGUSBUF_APPEND(" %s",
 					   intoa(((struct in_addr *) bp)->s_addr));
 				bp += sizeof(int32_t);
 			}
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," partitions");
+			ARGUSBUF_APPEND(" partitions");
 			for (i = 0; i < 13; i++) {
 				TCHECK2(bp[0], sizeof(int32_t));
 				j = EXTRACT_32BITS(bp);
 				if (i < nservers && j <= 26)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %c", 'a' + (int)j);
+					ARGUSBUF_APPEND(" %c", 'a' + (int)j);
 				else if (i < nservers)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", j);
+					ARGUSBUF_APPEND(" %lu", j);
 				bp += sizeof(int32_t);
 			}
 			TCHECK2(bp[0], 13 * sizeof(int32_t));
 			bp += 13 * sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rwvol");
+			ARGUSBUF_APPEND(" rwvol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rovol");
+			ARGUSBUF_APPEND(" rovol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," backup");
+			ARGUSBUF_APPEND(" backup");
 			UINTOUT();
 		}
 			break;
@@ -1598,15 +1598,15 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 		case 527:	/* Get entry by name U */
 		{	unsigned long nservers, j;
 			VECOUT(VLNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," numservers");
+			ARGUSBUF_APPEND(" numservers");
 			TCHECK2(bp[0], sizeof(int32_t));
 			nservers = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", nservers);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," servers");
+			ARGUSBUF_APPEND(" %lu", nservers);
+			ARGUSBUF_APPEND(" servers");
 			for (i = 0; i < 13; i++) {
 				if (i < nservers) {
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," afsuuid");
+					ARGUSBUF_APPEND(" afsuuid");
 					AFSUUIDOUT();
 				} else {
 					TCHECK2(bp[0], 44);
@@ -1615,23 +1615,23 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 			}
 			TCHECK2(bp[0], 4 * 13);
 			bp += 4 * 13;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," partitions");
+			ARGUSBUF_APPEND(" partitions");
 			for (i = 0; i < 13; i++) {
 				TCHECK2(bp[0], sizeof(int32_t));
 				j = EXTRACT_32BITS(bp);
 				if (i < nservers && j <= 26)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %c", 'a' + (int)j);
+					ARGUSBUF_APPEND(" %c", 'a' + (int)j);
 				else if (i < nservers)
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," %lu", j);
+					ARGUSBUF_APPEND(" %lu", j);
 				bp += sizeof(int32_t);
 			}
 			TCHECK2(bp[0], 13 * sizeof(int32_t));
 			bp += 13 * sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rwvol");
+			ARGUSBUF_APPEND(" rwvol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," rovol");
+			ARGUSBUF_APPEND(" rovol");
 			UINTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," backup");
+			ARGUSBUF_APPEND(" backup");
 			UINTOUT();
 		}
 		default:
@@ -1642,14 +1642,14 @@ vldb_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|vldb]");
+	ARGUSBUF_APPEND(" [|vldb]");
 }
 
 /*
@@ -1675,7 +1675,7 @@ kauth_print(register const u_char *bp, int length)
 
 	kauth_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," kauth");
+	ARGUSBUF_APPEND(" kauth");
 
 	if (is_ubik(kauth_op)) {
 		ubik_print(bp);
@@ -1683,7 +1683,7 @@ kauth_print(register const u_char *bp, int length)
 	}
 
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," call %s", tok2str(kauth_req, "op#%d", kauth_op));
+	ARGUSBUF_APPEND(" call %s", tok2str(kauth_req, "op#%d", kauth_op));
 
 	/*
 	 * Decode some of the arguments to the KA calls
@@ -1702,7 +1702,7 @@ kauth_print(register const u_char *bp, int length)
 		case 8:		/* Get entry */
 		case 14:	/* Unlock */
 		case 15:	/* Lock status */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," principal");
+			ARGUSBUF_APPEND(" principal");
 			STROUT(KANAMEMAX);
 			STROUT(KANAMEMAX);
 			break;
@@ -1710,29 +1710,29 @@ kauth_print(register const u_char *bp, int length)
 		case 23:	/* GetTicket */
 		{
 			int i;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," kvno");
+			ARGUSBUF_APPEND(" kvno");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," domain");
+			ARGUSBUF_APPEND(" domain");
 			STROUT(KANAMEMAX);
 			TCHECK2(bp[0], sizeof(int32_t));
 			i = (int) EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			TCHECK2(bp[0], i);
 			bp += i;
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," principal");
+			ARGUSBUF_APPEND(" principal");
 			STROUT(KANAMEMAX);
 			STROUT(KANAMEMAX);
 			break;
 		}
 		case 4:		/* Set Password */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," principal");
+			ARGUSBUF_APPEND(" principal");
 			STROUT(KANAMEMAX);
 			STROUT(KANAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," kvno");
+			ARGUSBUF_APPEND(" kvno");
 			INTOUT();
 			break;
 		case 12:	/* Get password */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," name");
+			ARGUSBUF_APPEND(" name");
 			STROUT(KANAMEMAX);
 			break;
 		default:
@@ -1742,7 +1742,7 @@ kauth_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|kauth]");
+	ARGUSBUF_APPEND(" [|kauth]");
 }
 
 /*
@@ -1764,14 +1764,14 @@ kauth_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * gleaned from kauth/kauth.rg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," kauth");
+	ARGUSBUF_APPEND(" kauth");
 
 	if (is_ubik(opcode)) {
 		ubik_reply_print(bp, length, opcode);
 		return;
 	}
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," reply %s", tok2str(kauth_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" reply %s", tok2str(kauth_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -1786,14 +1786,14 @@ kauth_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|kauth]");
+	ARGUSBUF_APPEND(" [|kauth]");
 }
 
 /*
@@ -1819,7 +1819,7 @@ vol_print(register const u_char *bp, int length)
 
 	vol_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," vol call %s", tok2str(vol_req, "op#%d", vol_op));
+	ARGUSBUF_APPEND(" vol call %s", tok2str(vol_req, "op#%d", vol_op));
 
 	/*
 	 * Normally there would be a switch statement here to decode the
@@ -1831,7 +1831,7 @@ vol_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|vol]");
+	ARGUSBUF_APPEND(" [|vol]");
 }
 
 /*
@@ -1853,7 +1853,7 @@ vol_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * gleaned from volser/volint.xg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," vol reply %s", tok2str(vol_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" vol reply %s", tok2str(vol_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -1868,14 +1868,14 @@ vol_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|vol]");
+	ARGUSBUF_APPEND(" [|vol]");
 }
 
 /*
@@ -1901,7 +1901,7 @@ bos_print(register const u_char *bp, int length)
 
 	bos_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," bos call %s", tok2str(bos_req, "op#%d", bos_op));
+	ARGUSBUF_APPEND(" bos call %s", tok2str(bos_req, "op#%d", bos_op));
 
 	/*
 	 * Decode some of the arguments to the BOS calls
@@ -1911,9 +1911,9 @@ bos_print(register const u_char *bp, int length)
 
 	switch (bos_op) {
 		case 80:	/* Create B node */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," type");
+			ARGUSBUF_APPEND(" type");
 			STROUT(BOSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," instance");
+			ARGUSBUF_APPEND(" instance");
 			STROUT(BOSNAMEMAX);
 			break;
 		case 81:	/* Delete B node */
@@ -1934,12 +1934,12 @@ bos_print(register const u_char *bp, int length)
 		case 82:	/* Set status */
 		case 98:	/* Set T status */
 			STROUT(BOSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," status");
+			ARGUSBUF_APPEND(" status");
 			INTOUT();
 			break;
 		case 86:	/* Get instance parm */
 			STROUT(BOSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," num");
+			ARGUSBUF_APPEND(" num");
 			INTOUT();
 			break;
 		case 84:	/* Enumerate instance */
@@ -1952,11 +1952,11 @@ bos_print(register const u_char *bp, int length)
 			break;
 		case 105:	/* Install */
 			STROUT(BOSNAMEMAX);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," size");
+			ARGUSBUF_APPEND(" size");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," flags");
+			ARGUSBUF_APPEND(" flags");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," date");
+			ARGUSBUF_APPEND(" date");
 			INTOUT();
 			break;
 		default:
@@ -1966,7 +1966,7 @@ bos_print(register const u_char *bp, int length)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|bos]");
+	ARGUSBUF_APPEND(" [|bos]");
 }
 
 /*
@@ -1988,7 +1988,7 @@ bos_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * gleaned from volser/volint.xg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," bos reply %s", tok2str(bos_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" bos reply %s", tok2str(bos_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -2003,14 +2003,14 @@ bos_reply_print(register const u_char *bp, int length, int32_t opcode)
 		/*
 		 * Otherwise, just print out the return code
 		 */
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+		ARGUSBUF_APPEND(" errcode");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|bos]");
+	ARGUSBUF_APPEND(" [|bos]");
 }
 
 /*
@@ -2044,7 +2044,7 @@ ubik_print(register const u_char *bp)
 
 	ubik_op = EXTRACT_32BITS(bp + sizeof(struct rx_header));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," ubik call %s", tok2str(ubik_req, "op#%d", ubik_op));
+	ARGUSBUF_APPEND(" ubik call %s", tok2str(ubik_req, "op#%d", ubik_op));
 
 	/*
 	 * Decode some of the arguments to the Ubik calls
@@ -2057,16 +2057,16 @@ ubik_print(register const u_char *bp)
 			TCHECK2(bp[0], 4);
 			temp = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," syncsite %s", temp ? "yes" : "no");
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," votestart");
+			ARGUSBUF_APPEND(" syncsite %s", temp ? "yes" : "no");
+			ARGUSBUF_APPEND(" votestart");
 			DATEOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," dbversion");
+			ARGUSBUF_APPEND(" dbversion");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
 			break;
 		case 10003:		/* Get sync site */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," site");
+			ARGUSBUF_APPEND(" site");
 			UINTOUT();
 			break;
 		case 20000:		/* Begin */
@@ -2074,56 +2074,56 @@ ubik_print(register const u_char *bp)
 		case 20007:		/* Abort */
 		case 20008:		/* Release locks */
 		case 20010:		/* Writev */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
 			break;
 		case 20002:		/* Lock */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," file");
+			ARGUSBUF_APPEND(" file");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," pos");
+			ARGUSBUF_APPEND(" pos");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," length");
+			ARGUSBUF_APPEND(" length");
 			INTOUT();
 			temp = EXTRACT_32BITS(bp);
 			bp += sizeof(int32_t);
 			tok2str(ubik_lock_types, "type %d", temp);
 			break;
 		case 20003:		/* Write */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," file");
+			ARGUSBUF_APPEND(" file");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," pos");
+			ARGUSBUF_APPEND(" pos");
 			INTOUT();
 			break;
 		case 20005:		/* Get file */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," file");
+			ARGUSBUF_APPEND(" file");
 			INTOUT();
 			break;
 		case 20006:		/* Send file */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," file");
+			ARGUSBUF_APPEND(" file");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," length");
+			ARGUSBUF_APPEND(" length");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," dbversion");
+			ARGUSBUF_APPEND(" dbversion");
 			UBIK_VERSIONOUT();
 			break;
 		case 20009:		/* Truncate */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," file");
+			ARGUSBUF_APPEND(" file");
 			INTOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," length");
+			ARGUSBUF_APPEND(" length");
 			INTOUT();
 			break;
 		case 20012:		/* Set version */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," tid");
+			ARGUSBUF_APPEND(" tid");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," oldversion");
+			ARGUSBUF_APPEND(" oldversion");
 			UBIK_VERSIONOUT();
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," newversion");
+			ARGUSBUF_APPEND(" newversion");
 			UBIK_VERSIONOUT();
 			break;
 		default:
@@ -2133,7 +2133,7 @@ ubik_print(register const u_char *bp)
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|ubik]");
+	ARGUSBUF_APPEND(" [|ubik]");
 }
 
 /*
@@ -2155,7 +2155,7 @@ ubik_reply_print(register const u_char *bp, int length, int32_t opcode)
 	 * from ubik/ubik_int.xg
 	 */
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," ubik reply %s", tok2str(ubik_req, "op#%d", opcode));
+	ARGUSBUF_APPEND(" ubik reply %s", tok2str(ubik_req, "op#%d", opcode));
 
 	bp += sizeof(struct rx_header);
 
@@ -2166,10 +2166,10 @@ ubik_reply_print(register const u_char *bp, int length, int32_t opcode)
 	if (rxh->type == RX_PACKET_TYPE_DATA)
 		switch (opcode) {
 		case 10000:		/* Beacon */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," vote no");
+			ARGUSBUF_APPEND(" vote no");
 			break;
 		case 20004:		/* Get version */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," dbversion");
+			ARGUSBUF_APPEND(" dbversion");
 			UBIK_VERSIONOUT();
 			break;
 		default:
@@ -2185,18 +2185,18 @@ ubik_reply_print(register const u_char *bp, int length, int32_t opcode)
 	else
 		switch (opcode) {
 		case 10000:		/* Beacon */
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," vote yes until");
+			ARGUSBUF_APPEND(" vote yes until");
 			DATEOUT();
 			break;
 		default:
-			sprintf(&ArgusBuf[strlen(ArgusBuf)]," errcode");
+			ARGUSBUF_APPEND(" errcode");
 			INTOUT();
 		}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|ubik]");
+	ARGUSBUF_APPEND(" [|ubik]");
 }
 
 /*
@@ -2233,12 +2233,12 @@ rx_ack_print(register const u_char *bp, int length)
 	 */
 
 	if (ArgusParser->vflag > 2)
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," bufspace %d maxskew %d",
+		ARGUSBUF_APPEND(" bufspace %d maxskew %d",
 		       (int) EXTRACT_16BITS(&rxa->bufferSpace),
 		       (int) EXTRACT_16BITS(&rxa->maxSkew));
 
 	firstPacket = EXTRACT_32BITS(&rxa->firstPacket);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," first %d serial %d reason %s",
+	ARGUSBUF_APPEND(" first %d serial %d reason %s",
 	       firstPacket, EXTRACT_32BITS(&rxa->serial),
 	       tok2str(rx_ack_reasons, "#%d", (int) rxa->reason));
 
@@ -2281,7 +2281,7 @@ rx_ack_print(register const u_char *bp, int length)
 				 */
 
 				if (last == -2) {
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," acked %d",
+					ARGUSBUF_APPEND(" acked %d",
 					       firstPacket + i);
 					start = i;
 				}
@@ -2296,7 +2296,7 @@ rx_ack_print(register const u_char *bp, int length)
 				 */
 
 				else if (last != i - 1) {
-					sprintf(&ArgusBuf[strlen(ArgusBuf)],",%d", firstPacket + i);
+					ARGUSBUF_APPEND(",%d", firstPacket + i);
 					start = i;
 				}
 
@@ -2322,7 +2322,7 @@ rx_ack_print(register const u_char *bp, int length)
 				 * range.
 				 */
 			} else if (last == i - 1 && start != last)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"-%d", firstPacket + i - 1);
+				ARGUSBUF_APPEND("-%d", firstPacket + i - 1);
 
 		/*
 		 * So, what's going on here?  We ran off the end of the
@@ -2336,7 +2336,7 @@ rx_ack_print(register const u_char *bp, int length)
 		 */
 
 		if (last == i - 1 && start != last)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"-%d", firstPacket + i - 1);
+			ARGUSBUF_APPEND("-%d", firstPacket + i - 1);
 
 		/*
 		 * Same as above, just without comments
@@ -2345,19 +2345,19 @@ rx_ack_print(register const u_char *bp, int length)
 		for (i = 0, start = last = -2; i < rxa->nAcks; i++)
 			if (rxa->acks[i] == RX_ACK_TYPE_NACK) {
 				if (last == -2) {
-					sprintf(&ArgusBuf[strlen(ArgusBuf)]," nacked %d",
+					ARGUSBUF_APPEND(" nacked %d",
 					       firstPacket + i);
 					start = i;
 				} else if (last != i - 1) {
-					sprintf(&ArgusBuf[strlen(ArgusBuf)],",%d", firstPacket + i);
+					ARGUSBUF_APPEND(",%d", firstPacket + i);
 					start = i;
 				}
 				last = i;
 			} else if (last == i - 1 && start != last)
-				sprintf(&ArgusBuf[strlen(ArgusBuf)],"-%d", firstPacket + i - 1);
+				ARGUSBUF_APPEND("-%d", firstPacket + i - 1);
 
 		if (last == i - 1 && start != last)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"-%d", firstPacket + i - 1);
+			ARGUSBUF_APPEND("-%d", firstPacket + i - 1);
 
 		bp += rxa->nAcks;
 	}
@@ -2372,25 +2372,25 @@ rx_ack_print(register const u_char *bp, int length)
 
 	if (ArgusParser->vflag > 1) {
 		TRUNCRET(4);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," ifmtu");
+		ARGUSBUF_APPEND(" ifmtu");
 		INTOUT();
 
 		TRUNCRET(4);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," maxmtu");
+		ARGUSBUF_APPEND(" maxmtu");
 		INTOUT();
 
 		TRUNCRET(4);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," rwind");
+		ARGUSBUF_APPEND(" rwind");
 		INTOUT();
 
 		TRUNCRET(4);
-		sprintf(&ArgusBuf[strlen(ArgusBuf)]," maxpackets");
+		ARGUSBUF_APPEND(" maxpackets");
 		INTOUT();
 	}
 
 	return;
 
 trunc:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|ack]");
+	ARGUSBUF_APPEND(" [|ack]");
 }
 #undef TRUNCRET

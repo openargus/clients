@@ -121,6 +121,34 @@
 /* Bail if "var" was not captured */
 #define TCHECK(var) TCHECK2(var, sizeof(var))
 
+/*
+ * Size of the global ArgusBuf[] protocol-decode text buffer (declared in
+ * radns.c). Kept as a named constant so ARGUSBUF_APPEND() below can bound
+ * its writes without requiring a complete array type in every file that
+ * references the buffer via "extern char ArgusBuf[];".
+ */
+#define ARGUSBUF_SIZE 0x8000
+
+/*
+ * Bounded-append helper for the global ArgusBuf[ARGUSBUF_SIZE] protocol-
+ * decode text buffer. Protocol printers build up their output by
+ * repeatedly appending formatted text to ArgusBuf; several of those append
+ * calls sit inside loops whose iteration count comes directly from a field
+ * carried in the record being decoded, so the total number of appends made
+ * while decoding a single record is not bounded by the code itself.
+ * ARGUSBUF_APPEND() closes that gap: it always appends via snprintf() with
+ * the buffer's *actual remaining* capacity, so a decode pass can never
+ * write past the end of ArgusBuf no matter how many times it is called or
+ * how large the appended values are. Once ArgusBuf is full, remaining
+ * appends become silent (safe) no-ops rather than writes past the buffer.
+ */
+#define ARGUSBUF_APPEND(...) \
+   do { \
+      size_t __argusbuf_len = strlen(ArgusBuf); \
+      if (__argusbuf_len < ARGUSBUF_SIZE) \
+         snprintf(&ArgusBuf[__argusbuf_len], ARGUSBUF_SIZE - __argusbuf_len, __VA_ARGS__); \
+   } while (0)
+
 void safeputchar(int);
 
 extern const char *tok2strbuf(const struct tok *, const char *, int, char *, size_t);

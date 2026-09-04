@@ -184,7 +184,7 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
        /* BFDv0 */
    case (BFD_CONTROL_PORT << 8):
        if (ArgusParser->vflag < 1 ) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"BFDv%u, %s, Flags: [%s], length: %u",
+           ARGUSBUF_APPEND("BFDv%u, %s, Flags: [%s], length: %u",
                   version,
                   tok2str(bfd_port_values, "unknown (%u)", port),
                   bittok2str(bfd_v0_flag_values, "none", bfd_header->flags),
@@ -192,7 +192,7 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
            return ArgusBuf;
        }
        
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"BFDv%u, length: %u %s, Flags: [%s], Diagnostic: %s (0x%02x)",
+       ARGUSBUF_APPEND("BFDv%u, length: %u %s, Flags: [%s], Diagnostic: %s (0x%02x)",
               version,
               len,
               tok2str(bfd_port_values, "unknown (%u)", port),
@@ -200,23 +200,23 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
               tok2str(bfd_diag_values,"unknown",BFD_EXTRACT_DIAG(bfd_header->version_diag)),
               BFD_EXTRACT_DIAG(bfd_header->version_diag));
        
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Detection Timer Multiplier: %u (%u ms Detection time), BFD Length: %u",
+       ARGUSBUF_APPEND(" Detection Timer Multiplier: %u (%u ms Detection time), BFD Length: %u",
               bfd_header->detect_time_multiplier,
               bfd_header->detect_time_multiplier * EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000,
               bfd_header->length);
 
 
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," My Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->my_discriminator));
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],", Your Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->your_discriminator));
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Desired min Tx Interval:    %4u ms", EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000);
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Required min Rx Interval:   %4u ms", EXTRACT_32BITS(bfd_header->required_min_rx_interval)/1000);
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Required min Echo Interval: %4u ms", EXTRACT_32BITS(bfd_header->required_min_echo_interval)/1000);
+       ARGUSBUF_APPEND(" My Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->my_discriminator));
+       ARGUSBUF_APPEND(", Your Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->your_discriminator));
+       ARGUSBUF_APPEND(" Desired min Tx Interval:    %4u ms", EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000);
+       ARGUSBUF_APPEND(" Required min Rx Interval:   %4u ms", EXTRACT_32BITS(bfd_header->required_min_rx_interval)/1000);
+       ARGUSBUF_APPEND(" Required min Echo Interval: %4u ms", EXTRACT_32BITS(bfd_header->required_min_echo_interval)/1000);
        break;
 
        /* BFDv1 */
    case (BFD_CONTROL_PORT << 8 | 1):
        if (ArgusParser->vflag < 1 ) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"BFDv%u, %s, State %s, Flags: [%s], length: %u",
+           ARGUSBUF_APPEND("BFDv%u, %s, State %s, Flags: [%s], length: %u",
                   version,
                   tok2str(bfd_port_values, "unknown (%u)", port),
                   tok2str(bfd_v1_state_values, "unknown (%u)", bfd_header->flags & 0xc0),
@@ -225,7 +225,7 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
            return ArgusBuf;
        }
        
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"BFDv%u, length: %u %s, State %s, Flags: [%s], Diagnostic: %s (0x%02x)",
+       ARGUSBUF_APPEND("BFDv%u, length: %u %s, State %s, Flags: [%s], Diagnostic: %s (0x%02x)",
               version,
               len,
               tok2str(bfd_port_values, "unknown (%u)", port),
@@ -234,23 +234,23 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
               tok2str(bfd_diag_values,"unknown",BFD_EXTRACT_DIAG(bfd_header->version_diag)),
               BFD_EXTRACT_DIAG(bfd_header->version_diag));
        
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Detection Timer Multiplier: %u (%u ms Detection time), BFD Length: %u",
+       ARGUSBUF_APPEND(" Detection Timer Multiplier: %u (%u ms Detection time), BFD Length: %u",
               bfd_header->detect_time_multiplier,
               bfd_header->detect_time_multiplier * EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000,
               bfd_header->length);
 
 
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," My Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->my_discriminator));
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],", Your Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->your_discriminator));
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Desired min Tx Interval:    %4u ms", EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000);
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Required min Rx Interval:   %4u ms", EXTRACT_32BITS(bfd_header->required_min_rx_interval)/1000);
-       sprintf(&ArgusBuf[strlen(ArgusBuf)]," Required min Echo Interval: %4u ms", EXTRACT_32BITS(bfd_header->required_min_echo_interval)/1000);
+       ARGUSBUF_APPEND(" My Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->my_discriminator));
+       ARGUSBUF_APPEND(", Your Discriminator: 0x%08x", EXTRACT_32BITS(bfd_header->your_discriminator));
+       ARGUSBUF_APPEND(" Desired min Tx Interval:    %4u ms", EXTRACT_32BITS(bfd_header->desired_min_tx_interval)/1000);
+       ARGUSBUF_APPEND(" Required min Rx Interval:   %4u ms", EXTRACT_32BITS(bfd_header->required_min_rx_interval)/1000);
+       ARGUSBUF_APPEND(" Required min Echo Interval: %4u ms", EXTRACT_32BITS(bfd_header->required_min_echo_interval)/1000);
 
        if (bfd_header->flags & BFD_FLAG_AUTH) {
            pptr += sizeof (const struct bfd_header_t);
            bfd_auth_header = (const struct bfd_auth_header_t *)pptr;
            TCHECK2(*bfd_auth_header, sizeof(const struct bfd_auth_header_t));
-           sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s (%u) Authentication, length %u present",
+           ARGUSBUF_APPEND(" %s (%u) Authentication, length %u present",
                   tok2str(bfd_v1_authentication_values,"Unknown",bfd_auth_header->auth_type),
                   bfd_auth_header->auth_type,
                   bfd_auth_header->auth_len);
@@ -263,7 +263,7 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
    case (BFD_ECHO_PORT << 8 | 1):
 
    default:
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"BFD, %s, length: %u",
+       ARGUSBUF_APPEND("BFD, %s, length: %u",
               tok2str(bfd_port_values, "unknown (%u)", port),
               len);
        if (ArgusParser->vflag >= 1) {
@@ -275,7 +275,7 @@ bfd_print(register const u_char *pptr, register u_int len, register u_int port)
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BFD]");
+   ARGUSBUF_APPEND("[|BFD]");
 
    return ArgusBuf;
 }

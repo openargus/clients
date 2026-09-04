@@ -52,13 +52,13 @@ msdp_print(const unsigned char *sp, u_int length)
    len = EXTRACT_16BITS(sp + 1);
    if (len > 1500 || len < 3 || type == 0 || type > MSDP_TYPE_MAX)
       goto trunc;   /* not really truncated, but still not decodable */
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," msdp:");
+   ARGUSBUF_APPEND(" msdp:");
    while (length > 0) {
       TCHECK2(*sp, 3);
       type = *sp;
       len = EXTRACT_16BITS(sp + 1);
       if (len > 1400 || ArgusParser->vflag)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [len %u]", len);
+         ARGUSBUF_APPEND(" [len %u]", len);
       if (len < 3)
          goto trunc;
       sp += 3;
@@ -67,15 +67,15 @@ msdp_print(const unsigned char *sp, u_int length)
       case 1:   /* IPv4 Source-Active */
       case 3: /* IPv4 Source-Active Response */
          if (type == 1)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," SA");
+            ARGUSBUF_APPEND(" SA");
          else
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," SA-Response");
+            ARGUSBUF_APPEND(" SA-Response");
          TCHECK(*sp);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u entries", *sp);
+         ARGUSBUF_APPEND(" %u entries", *sp);
          if ((u_int)((*sp * 12) + 8) < len) {
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [w/data]");
+            ARGUSBUF_APPEND(" [w/data]");
             if (ArgusParser->vflag > 1) {
-               (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+               ARGUSBUF_APPEND(" ");
 /*
                ip_print(gndo, sp + *sp * 12 + 8 - 3,
                         len - (*sp * 12 + 8));
@@ -84,20 +84,20 @@ msdp_print(const unsigned char *sp, u_int length)
          }
          break;
       case 2:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," SA-Request");
+         ARGUSBUF_APPEND(" SA-Request");
          TCHECK2(*sp, 5);
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," for %s", ipaddr_string(sp + 1));
+         ARGUSBUF_APPEND(" for %s", ipaddr_string(sp + 1));
          break;
       case 4:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Keepalive");
+         ARGUSBUF_APPEND(" Keepalive");
          if (len != 3)
-            (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"[len=%d] ", len);
+            ARGUSBUF_APPEND("[len=%d] ", len);
          break;
       case 5:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," Notification");
+         ARGUSBUF_APPEND(" Notification");
          break;
       default:
-         (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [type=%d len=%d]", type, len);
+         ARGUSBUF_APPEND(" [type=%d len=%d]", type, len);
          break;
       }
       sp += (len - 3);
@@ -105,7 +105,7 @@ msdp_print(const unsigned char *sp, u_int length)
    }
    return ArgusBuf;
 trunc:
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|msdp]");
+   ARGUSBUF_APPEND(" [|msdp]");
 
    return ArgusBuf;
 }

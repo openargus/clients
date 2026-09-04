@@ -106,7 +106,7 @@ rip_entry_print_v1(register const struct rip_netinfo *ni)
    /* RFC 1058 */
    family = EXTRACT_16BITS(&ni->rip_family);
    if (family != AF_INET) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI: %u:", family);
+      ARGUSBUF_APPEND(" AFI: %u:", family);
                 print_unknown_data((u_int8_t *)&ni->rip_family,"  ",RIP_ROUTELEN);
       return;
    }
@@ -117,7 +117,7 @@ rip_entry_print_v1(register const struct rip_netinfo *ni)
                 print_unknown_data((u_int8_t *)&ni->rip_family,"  ",RIP_ROUTELEN);
       return;
    } /* AF_INET */
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"  %s, metric: %u",
+   ARGUSBUF_APPEND("  %s, metric: %u",
                ipaddr_string(&ni->rip_dest),
           EXTRACT_32BITS(&ni->rip_metric));
 }
@@ -138,26 +138,26 @@ rip_entry_print_v2(register const struct rip_netinfo *ni)
             if (!isprint(*p))
                break;
          }
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"  Simple Text Authentication data: %s", buf);
+         ARGUSBUF_APPEND("  Simple Text Authentication data: %s", buf);
       } else {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"  Unknown (%u) Authentication data:",
+         ARGUSBUF_APPEND("  Unknown (%u) Authentication data:",
                 EXTRACT_16BITS(&ni->rip_tag));
          print_unknown_data((u_int8_t *)&ni->rip_dest,"  ",RIP_AUTHLEN);
       }
    } else if (family != AF_INET) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"  AFI: %u", family);
+      ARGUSBUF_APPEND("  AFI: %u", family);
                 print_unknown_data((u_int8_t *)&ni->rip_tag,"  ",RIP_ROUTELEN-2);
       return;
    } else { /* AF_INET */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"  AFI: IPv4: %15s/%-2d, tag 0x%04x, metric: %u, next-hop: ",
+      ARGUSBUF_APPEND("  AFI: IPv4: %15s/%-2d, tag 0x%04x, metric: %u, next-hop: ",
                         ipaddr_string(&ni->rip_dest),
              mask2plen(EXTRACT_32BITS(&ni->rip_dest_mask)),
                        EXTRACT_16BITS(&ni->rip_tag),
                        EXTRACT_32BITS(&ni->rip_metric));
       if (EXTRACT_32BITS(&ni->rip_router))
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&ni->rip_router));
+         ARGUSBUF_APPEND("%s", ipaddr_string(&ni->rip_router));
       else
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"self");
+         ARGUSBUF_APPEND("self");
    }
 }
 
@@ -170,21 +170,21 @@ rip_print(const u_char *dat, u_int length)
    register int trunc;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rip]");
+      ARGUSBUF_APPEND(" [|rip]");
       return ArgusBuf;
    }
    i = snapend - dat;
    if (i > length)
       i = length;
    if (i < sizeof(*rp)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rip]");
+      ARGUSBUF_APPEND(" [|rip]");
       return ArgusBuf;
    }
    i -= sizeof(*rp);
 
    rp = (struct rip *)dat;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sRIPv%u", (ArgusParser->vflag >= 1) ? "" : "", rp->rip_vers);
+   ARGUSBUF_APPEND("%sRIPv%u", (ArgusParser->vflag >= 1) ? "" : "", rp->rip_vers);
 
    switch (rp->rip_vers) {
       case 0:
@@ -205,7 +205,7 @@ rip_print(const u_char *dat, u_int length)
 
       default:
          /* dump version and lets see if we know the commands name*/
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s, length: %u", tok2str(rip_cmd_values,
+         ARGUSBUF_APPEND(", %s, length: %u", tok2str(rip_cmd_values,
                       "unknown command (%u)", rp->rip_cmd), length);
 
          if (ArgusParser->vflag < 1)
@@ -214,7 +214,7 @@ rip_print(const u_char *dat, u_int length)
          switch (rp->rip_cmd) {
             case RIPCMD_RESPONSE:
                j = length / sizeof(*ni);
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],", routes: %u",j);
+               ARGUSBUF_APPEND(", routes: %u",j);
                trunc = (i / sizeof(*ni)) != j;
                ni = (struct rip_netinfo *)(rp + 1);
                for (; i >= sizeof(*ni); ++ni) {
@@ -227,7 +227,7 @@ rip_print(const u_char *dat, u_int length)
                   i -= sizeof(*ni);
                }
                if (trunc)
-                  sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|rip]");
+                  ARGUSBUF_APPEND("[|rip]");
                break;
 
             case RIPCMD_REQUEST:
