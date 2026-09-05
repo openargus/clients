@@ -303,7 +303,8 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
                         if (labeler->RaLabelGeoIPCity & ARGUS_SRC_ADDR)
                            if ((gir = GeoIP_record_by_ipnum (labeler->RaGeoIPv4CityObject, flow->ip_flow.ip_src)) != NULL) {
                               if ((geo = (struct ArgusGeoLocationStruct *)argus->dsrs[ARGUS_GEO_INDEX]) == NULL) {
-                                 geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo));
+                                 if ((geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo))) == NULL)
+                                    ArgusLog (LOG_ERR, "%s: ArgusCalloc error %s", __func__, strerror(errno));
                                  geo->hdr.type = ARGUS_GEO_DSR;
                                  geo->hdr.argus_dsrvl8.len = (sizeof(*geo) + 3) / 4;
 
@@ -322,7 +323,8 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
                         if (labeler->RaLabelGeoIPCity & ARGUS_DST_ADDR)
                            if ((gir = GeoIP_record_by_ipnum (labeler->RaGeoIPv4CityObject, flow->ip_flow.ip_dst)) != NULL) {
                               if ((geo = (struct ArgusGeoLocationStruct *)argus->dsrs[ARGUS_GEO_INDEX]) == NULL) {
-                                 geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo));
+                                 if ((geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo))) == NULL)
+                                    ArgusLog (LOG_ERR, "%s: ArgusCalloc error %s", __func__, strerror(errno));
                                  geo->hdr.type = ARGUS_GEO_DSR;
                                  geo->hdr.argus_dsrvl8.len = (sizeof(*geo) + 3) / 4;
                                  argus->dsrs[ARGUS_GEO_INDEX] = &geo->hdr;
@@ -352,7 +354,8 @@ ArgusLabelRecordGeoIP(struct ArgusParserStruct *parser,
                                              case ARGUS_TYPE_IPV4:
                                                 if ((gir = GeoIP_record_by_ipnum (labeler->RaGeoIPv4CityObject, icmp->osrcaddr)) != NULL) {
                                                    if ((geo = (struct ArgusGeoLocationStruct *)argus->dsrs[ARGUS_GEO_INDEX]) == NULL) {
-                                                      geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo));
+                                                      if ((geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo))) == NULL)
+                                                         ArgusLog (LOG_ERR, "%s: ArgusCalloc error %s", __func__, strerror(errno));
                                                       geo->hdr.type = ARGUS_GEO_DSR;
                                                       geo->hdr.argus_dsrvl8.len = (sizeof(*geo) + 3) / 4;
                                                       argus->dsrs[ARGUS_GEO_INDEX] = &geo->hdr;
@@ -441,14 +444,20 @@ ArgusFormatDSR_GEO(struct ArgusParserStruct *parser,
 
    geo = (struct ArgusGeoLocationStruct *)argus->dsrs[ARGUS_GEO_INDEX];
    if (geo == NULL) {
-      geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo));
+      if ((geo = (struct ArgusGeoLocationStruct *) ArgusCalloc(1, sizeof(*geo))) == NULL)
+         ArgusLog (LOG_ERR, "%s: ArgusCalloc error %s", __func__, strerror(errno));
       geo->hdr.type = ARGUS_GEO_DSR;
       geo->hdr.argus_dsrvl8.len = (sizeof(*geo) + 3) / 4;
       argus->dsrs[ARGUS_GEO_INDEX] = &geo->hdr;
       argus->dsrindex |= (0x1 << ARGUS_GEO_INDEX);
    }
 
-   geo->hdr.argus_dsrvl8.qual |= ARGUS_DST_GEO;
+   if (dir & ARGUS_SRC_ADDR)
+      geo->hdr.argus_dsrvl8.qual |= ARGUS_SRC_GEO;
+   else if (dir & ARGUS_DST_ADDR)
+      geo->hdr.argus_dsrvl8.qual |= ARGUS_DST_GEO;
+   else if (dir & ARGUS_INODE_ADDR)
+      geo->hdr.argus_dsrvl8.qual |= ARGUS_INODE_GEO;
    if (!strcmp(user, "latitude")) {
       if (dir & ARGUS_DST_ADDR)
          geo->dst.lat = (float)value->entry_data.double_value;
@@ -699,7 +708,7 @@ dump_entry_data_list(
    /* Check if Argus knows anything about the current datum */
    gkey.geoip2_path = strdup(path);
    if (gkey.geoip2_path == NULL)
-      ArgusLog(LOG_ERR, "%s: unable to duplicate path string");
+      ArgusLog(LOG_ERR, "%s: unable to duplicate path string", __func__);
 
 #ifdef ARGUSDEBUG
    ArgusDebug(4, "looking for \"%s\"\n", path);
@@ -1014,7 +1023,7 @@ ArgusLabelRecordGeoIP2(struct ArgusParserStruct *parser,
                         label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
 
          }
-         if (labeler->RaLabelGeoIPAsn & ARGUS_DST_ADDR) {
+         if (labeler->RaLabelGeoIPAsn & ARGUS_SRC_ADDR) {
             addr.sin_addr.s_addr = htonl(flow->ip_flow.ip_src);
             lookup_asn(parser, argus, "", (struct sockaddr *)&addr,
                        label, &str_offset, &str_remain, ARGUS_SRC_ADDR);
