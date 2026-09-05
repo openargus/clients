@@ -219,6 +219,7 @@ static struct slist *xfer_to_a(struct arth *);
 static struct ablock *Argusgen_len(int, int);
 static struct ablock *Argusgen_linktype(unsigned int);
 static struct ablock *Argusgen_flowtype(unsigned int);
+static struct ablock *Argusgen_score(int, int, u_int);
 
 #if !defined(CYGWIN)
 static u_int net_mask(u_int *);
@@ -1924,6 +1925,16 @@ Argusgen_proto_abbrev(int proto)
          offset = ((char *)&icmp.icmp_code - (char *)&icmp);
          b1 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, code, Q_EQUAL, Q_DEFAULT);
          Argusgen_and(b0, b1);
+         break;
+      }
+
+      case Q_ICMPPAR: {
+//       struct ArgusIcmpStruct icmp;
+//       int offset = ((char *)&icmp.icmp_type - (char *)&icmp);
+      
+         b1 = Argusgen_prototype(IPPROTO_ICMP, Q_DEFAULT);
+//       b0 = Argusgen_cmp(ARGUS_ICMP_INDEX, offset, NFF_B, (u_int)  0x0C, Q_EQUAL, Q_DEFAULT);
+//       Argusgen_and(b0, b1);
          break;
       }
 
@@ -4550,6 +4561,23 @@ Argusgen_nstroke(int v, int dir, u_int op)
 }
 
 
+static struct ablock *
+Argusgen_score(int v, int dir, u_int op)
+{
+   struct ablock *b0 = NULL;
+   struct ArgusRecordStruct argus;
+   int offset = ((char *)&argus.score - (char *)&argus);
+         
+   b0 = Argusgen_cmp(-1, offset, NFF_W, (u_int)v, op, Q_DEFAULT);
+      
+#if defined(ARGUSDEBUG)
+   ArgusDebug (4, "Argusgen_recordtype () returns %p\n", b0);
+#endif
+   
+   return (b0);
+}  
+
+
 /*
  * Left justify 'addr' and return its resulting network mask.
  */
@@ -5152,27 +5180,15 @@ Argusgen_scode(char *name, struct qual q)
 
       case Q_PORT: {
          char *ptr = NULL;
+         int sport = -1, eport = -1;
 
          if ((proto != Q_DEFAULT) && (proto != Q_UDP) && (proto != Q_TCP) && (proto != Q_UDT)
                                   && (proto != Q_RTP) && (proto != Q_RTCP))
             ArgusLog(LOG_ERR, "illegal qualifier of 'port'");
 
-         if ((ptr = strchr(name, '-')) != NULL) {
-            char *endptr;
-            int port;
-            *ptr++ = '\0';
-            
-            port = strtol(name, (char **)&endptr, 10);
-            if (endptr == name)
-               break;
-
-            b = Argusgen_ncode (ptr, port, q, Q_GEQ);
-
-            port = strtol(ptr, (char **)&endptr, 10);
-            if (endptr == ptr)
-               break;
-
-            tmp = Argusgen_ncode (ptr, port, q, Q_LEQ);
+         if (sscanf((const char *) name, "%d-%d", &sport, &eport) == 2) {
+            b = Argusgen_ncode (ptr, sport, q, Q_GEQ);
+            tmp = Argusgen_ncode (ptr, eport, q, Q_LEQ);
             Argusgen_and(tmp, b);
 
          } else {
@@ -5727,6 +5743,11 @@ Argusgen_ncode(char *s, int v, struct qual q, u_int op)
       case Q_LOC: {
          float f = v; 
          b = Argusgen_loc(f, dir, op);
+         break;
+      }
+
+      case Q_SCORE: {
+         b = Argusgen_score((int)v, dir, op);
          break;
       }
 

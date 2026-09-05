@@ -224,6 +224,8 @@ pcratio  return PCR;
 abr      return ABR;
 abratio  return ABR;
 
+score    return SCORE;
+
 nstroke  return NSTROKE;
 nstrokes return NSTROKE;
 
@@ -333,6 +335,7 @@ icmpmap      return ICMPMAP;
 echo         return ICMPECHO;
 redirect     return REDIRECT;
 timexed      return TIMEXED;
+par          return ICMPPAR;
 
 unreach      return UNREACH;
 unr          return UNREACH;

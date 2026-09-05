@@ -340,6 +340,7 @@ darwin*)
 	have_darwin=yes;
 	saved_LDFLAGS=$LDFLAGS
 	LDFLAGS="${saved_LDFLAGS} -Wlinker -rpath /usr/local/mysql/lib"
+        V_CCOPT="-fno-common $V_CCOPT"
 	;;
 
 hpux9*)
@@ -606,6 +607,7 @@ AS_IF([test "$with_pythonlib" != no],
 AS_IF([test "$with_examples" != no],
    [AC_CONFIG_FILES([
       ./examples/Makefile
+      ./examples/rabehave/Makefile
       ./examples/raconvert/Makefile
       ./examples/radbase/Makefile
       ./examples/radecode/Makefile

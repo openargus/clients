@@ -83,9 +83,9 @@ YACC = @V_YACC@
 
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
-SRC = raservices.c rauserdata.c
+SRC = raservices.c rauserdata.c rasrvmetrics.c
 
-PROGS = $(INSTALLBIN)/raservices $(INSTALLBIN)/rauserdata
+PROGS = $(INSTALLBIN)/raservices $(INSTALLBIN)/rauserdata $(INSTALLBIN)/rasrvmetrics
 
 all: $(PROGS)
 
@@ -94,6 +94,9 @@ $(INSTALLBIN)/raservices: raservices.o $(LIB)
 
 $(INSTALLBIN)/rauserdata: rauserdata.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rauserdata.o $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rasrvmetrics: rasrvmetrics.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rasrvmetrics.o $(LIB) $(COMPATLIB)
 
 # We would like to say "OBJ = $(SRC:.c=.o)" but Ultrix's make cannot
 # hack the extra indirection
@@ -107,10 +110,12 @@ install: force all
 		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/raservices $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rauserdata $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rasrvmetrics $(DESTDIR)$(BINDIR)
 
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/raservices
 	rm -f $(DESTDIR)$(BINDIR)/rauserdata
+	rm -f $(DESTDIR)$(BINDIR)/rasrvmetrics
 
 clean:
 	rm -f $(CLEANFILES)

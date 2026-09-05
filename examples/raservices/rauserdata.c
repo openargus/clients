@@ -826,10 +826,28 @@ RaPrintOutQueue (struct RaBinStruct *bin, struct ArgusQueueStruct *queue, int le
 
             bzero (pbuf, 64);
             ArgusPrintDstPort (ArgusParser, pbuf, obj, 16);
+
             if (flow != NULL) {
-               switch (flow->flow_un.ip.ip_p) {
-                  case IPPROTO_TCP: sprintf(buf, "Service: %s tcp port %-5d", pbuf, flow->flow_un.ip.dport); break;
-                  case IPPROTO_UDP: sprintf(buf, "Service: %s udp port %-5d", pbuf, flow->flow_un.ip.dport); break;
+               switch (flow->hdr.subtype & 0x3F) {
+                  case ARGUS_FLOW_CLASSIC5TUPLE: {
+                     switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+                        case ARGUS_TYPE_IPV4: {
+                           switch (flow->flow_un.ip.ip_p) {
+                              case IPPROTO_TCP: sprintf(buf, "Service: %s tcp port %-5d", pbuf, flow->flow_un.ip.dport); break;
+                              case IPPROTO_UDP: sprintf(buf, "Service: %s udp port %-5d", pbuf, flow->flow_un.ip.dport); break;
+                           }
+                           break;
+                        }
+               
+                        case ARGUS_TYPE_IPV6:
+                           switch (flow->flow_un.ipv6.ip_p) {
+                              case IPPROTO_TCP: sprintf(buf, "Service: %s tcp port %-5d", pbuf, flow->flow_un.ipv6.dport); break;
+                              case IPPROTO_UDP: sprintf(buf, "Service: %s udp port %-5d", pbuf, flow->flow_un.ipv6.dport); break;
+                           }
+                           break;
+                     }
+                  }
+                  break;
                }
             }
 

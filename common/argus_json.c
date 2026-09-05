@@ -234,7 +234,7 @@ json_parse_object(const char** cursor, ArgusJsonValue *parent) {
       retn = json_parse_value(cursor, &value);
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (3, "json_parse_object: pushing (%s)", key.value.string);
+      ArgusDebug (7, "json_parse_object: pushing (%s)", key.value.string);
 #endif
 
       if (retn) {

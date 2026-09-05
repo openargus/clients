@@ -91,7 +91,7 @@ YACC = @V_YACC@
 LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
 
 
-SRC =	rasql.c rascore.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c \
+SRC =	rasql.c rascore.c rasrvs.c rasqlinsert.c raclient.c rasqltimeindex.c rasqlcheckconf.c \
 	rastatus.c rasql_common.c
 
 PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
@@ -99,7 +99,7 @@ PROGS = $(INSTALLBIN)/rasql $(INSTALLBIN)/rascore $(INSTALLBIN)/rasqlinsert \
 	$(INSTALLBIN)/rastatus $(INSTALLBIN)/rastatus-cpustats \
 	$(INSTALLBIN)/rastatus-diskstats $(INSTALLBIN)/rastatus-loadavg \
 	$(INSTALLBIN)/rastatus-memstats $(INSTALLBIN)/rastatus-dailylogs \
-	$(INSTALLBIN)/radbaserollup
+	$(INSTALLBIN)/rasrvs $(INSTALLBIN)/radbaserollup
 
 SCRIPTS = radbaserollup.pl rastatus-cpustats.pl rastatus-dailylogs.pl \
 	rastatus-diskstats.pl rastatus-loadavg.pl rastatus-memstats.pl
@@ -111,6 +111,9 @@ all: $(PROGS)
 
 $(INSTALLBIN)/rascore: rascore.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rascore.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
+
+$(INSTALLBIN)/rasrvs: rasrvs.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ rasrvs.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
 
 $(INSTALLBIN)/rasql: rasql.o rasql_common.o $(LIB)
 	$(CC) $(CFLAGS) -o $@ rasql.o rasql_common.o $(LDFLAGS) $(MYSQLLIB) $(LIB) $(COMPATLIB)
@@ -167,6 +170,7 @@ install: force all
 		(mkdir -p $(BINDIR); chmod 755 $(BINDIR))
 	$(INSTALL) $(INSTALLBIN)/rasql $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rascore $(DESTDIR)$(BINDIR)
+	$(INSTALL) $(INSTALLBIN)/rasrvs $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqlinsert $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rastatus $(DESTDIR)$(BINDIR)
 	$(INSTALL) $(INSTALLBIN)/rasqltimeindex $(DESTDIR)$(BINDIR)
@@ -181,6 +185,7 @@ install: force all
 uninstall: force all
 	rm -f $(DESTDIR)$(BINDIR)/rasql
 	rm -f $(DESTDIR)$(BINDIR)/rascore
+	rm -f $(DESTDIR)$(BINDIR)/rasrvs
 	rm -f $(DESTDIR)$(BINDIR)/rasqlinsert
 	rm -f $(DESTDIR)$(BINDIR)/rastatus
 	rm -f $(DESTDIR)$(BINDIR)/rasqltimeindex

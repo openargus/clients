@@ -189,7 +189,6 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                switch (flow->hdr.subtype & 0x3F) {
                   case ARGUS_FLOW_CLASSIC5TUPLE: {
                      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *) argus->dsrs[ARGUS_NETWORK_INDEX];
-          
                      switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
                         case ARGUS_TYPE_IPV4:
                            switch (flow->ip_flow.ip_p) {
@@ -217,6 +216,10 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                            }
                            break; 
                         }
+                        case ARGUS_TYPE_ARP:
+                        case ARGUS_TYPE_RARP: {
+                           break; 
+                        }
                      }
                      if (net && (net->hdr.subtype == ARGUS_RTP_FLOW)) {
                         snprintf (name, 128, "%s", "rtp");
@@ -227,6 +230,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         found++;
                      }
                      break; 
+                  }
+                  case ARGUS_FLOW_ARP: {
+                     break;
                   }
                }
 
@@ -241,8 +247,12 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                         struct ArgusMetricStruct *metric =  (void *)argus->dsrs[ARGUS_METRIC_INDEX];
                         if ((metric != NULL) && (metric->dst.pkts)) {
                            ArgusReverseRecord(argus);
-                           sig = RaValidateService (parser, argus);
-                           ArgusReverseRecord(argus);
+                           if ((sig = RaValidateService (parser, argus)) == NULL) {
+                              ArgusReverseRecord(argus);
+                           } else {
+                              argus->status |= ARGUS_RECORD_MODIFIED;
+                              flow->hdr.subtype ^= ARGUS_REVERSE;
+                           }
                         }
                      }
 

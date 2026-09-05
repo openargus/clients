@@ -134,7 +134,7 @@ extern "C" {
 
 
 #define TSEQ_HASHSIZE		0x10000
-#define HASHNAMESIZE		1024
+#define HASHNAMESIZE		65536
 
 #define RASIGLENGTH		32
    
@@ -261,6 +261,7 @@ struct ArgusServiceRecord {
    u_int status;
    struct ArgusRecordStruct *argus;
    struct RaSrvSignature *sig;
+   struct RaSrvStatsSignature *stats;
 };
 
 
@@ -274,9 +275,25 @@ struct RaSrvSignature {
    unsigned char src[RASIGLENGTH], dst[RASIGLENGTH];
 };
 
+struct RaSrvStatsMetrics {
+   char *metrics;
+   int count;
+   float mean, stddev;
+   int max, min;
+};
+
+struct RaSrvStatsSignature {
+   struct ArgusQueueHeader qhdr;
+   char *name;
+   unsigned short proto;
+   unsigned short port;
+   struct ArgusListStruct *metrics;
+};
+
 struct RaSrvTreeNode {
    struct RaSrvTreeNode *l, *r;
    struct RaSrvSignature *srv;
+   struct RaSrvStatsSignature *stats;
 };
 
 
@@ -1236,7 +1253,9 @@ int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStruct *);
 void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 int RaReadSrvSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
+int RaReadSrvStatsSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
 struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, struct ArgusRecordStruct *);
+struct RaSrvStatsSignature *RaCheckServiceStats(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct RaSrvSignature *);
 
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 
@@ -1402,7 +1421,9 @@ extern int RaDeleteBinProcess(struct ArgusParserStruct *, struct RaBinProcessStr
 extern void RaPrintOutQueue (struct RaBinStruct *, struct ArgusQueueStruct *, int);
 
 extern int RaReadSrvSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
+extern int RaReadSrvStatsSignature(struct ArgusParserStruct *, struct ArgusLabelerStruct *, char *);
 extern struct RaSrvSignature *RaValidateService(struct ArgusParserStruct *, struct ArgusRecordStruct *);
+extern struct RaSrvStatsSignature *RaCheckServiceStats(struct ArgusParserStruct *, struct ArgusRecordStruct *, struct RaSrvSignature *);
 
 extern struct ArgusLabelerStruct *ArgusNewLabeler (struct ArgusParserStruct *, int);
 

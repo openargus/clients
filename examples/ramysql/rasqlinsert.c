@@ -2186,7 +2186,7 @@ ArgusCreateSQLSaveTable(char *db, char *table)
                }
 
                if (mask || ArgusAutoId) {
-                  int saddr = 0, smac = 0;
+                  int saddr = 0, daddr = 0, smac = 0, dmac = 0;
                   ind = 0;
                   sprintf (kbuf, "primary key (");
 
@@ -2206,8 +2206,12 @@ ArgusCreateSQLSaveTable(char *db, char *table)
                                     found = 1;
                                     if (!strcmp(ArgusMaskDefs[i].name, "saddr")) 
                                        saddr = 1;
+                                    if (!strcmp(ArgusMaskDefs[i].name, "daddr")) 
+                                       daddr = 1;
                                     if (!strcmp(ArgusMaskDefs[i].name, "smac")) 
                                        smac = 1;
+                                    if (!strcmp(ArgusMaskDefs[i].name, "dmac")) 
+                                       dmac = 1;
                                     break;
                                  }
                               }
@@ -2232,8 +2236,14 @@ ArgusCreateSQLSaveTable(char *db, char *table)
                   if (saddr > 0) {
                      sprintf (&kbuf[strlen(kbuf)], ",key(saddr)");
                   }
+                  if (daddr > 0) {
+                     sprintf (&kbuf[strlen(kbuf)], ",key(daddr)");
+                  }
                   if (smac > 0) {
                      sprintf (&kbuf[strlen(kbuf)], ",key(smac)");
+                  }
+                  if (dmac > 0) {
+                     sprintf (&kbuf[strlen(kbuf)], ",key(dmac)");
                   }
                }
             }
