@@ -2681,7 +2681,7 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                parser->RaFilterTimeout  = value;
 
             } else
-               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)\n", optarg);
 
             break;
          }
@@ -2776,7 +2776,7 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                parser->ArgusUpdateInterval.tv_usec = (int) (fvalue * 1000000.0);
 
             } else
-               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)");
+               ArgusLog (LOG_ERR, "%s: format error for update interval in client configuration (use float)\n", optarg);
             break;
          }
 
@@ -2793,7 +2793,7 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
                parser->timeout.tv_usec = (int) (fvalue * 1000000.0);
 
             } else
-               ArgusLog (LOG_ERR, "%s: format error for timeout interval in client configuration (use float)");
+               ArgusLog (LOG_ERR, "%s: format error for timeout interval in client configuration (use float)\n", optarg);
             break;
          }
 
@@ -4191,7 +4191,7 @@ RaProcessAddress (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d, %d) returning %p\n", parser, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddress (0x%x, 0x%x, 0x%x, %d, %d) returning %p\n", parser, labeler, addr, type, mode, retn);
 #endif
    }
 
@@ -4270,7 +4270,7 @@ RaProcessAddressLabel (struct ArgusParserStruct *parser, struct ArgusLabelerStru
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLabel (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddressLabel (%p, %p, %p, %p, %d, %d) returning %d\n", parser, labeler, argus, addr, type, mode, retn);
 #endif
    }
 
@@ -4371,7 +4371,7 @@ RaProcessAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerS
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaProcessAddressLocality (%p, %p, %p, %p, %d, %d) returning %d\n", parser, argus, addr, type, mode, retn);
+      ArgusDebug (5, "RaProcessAddressLocality (%p, %p, %p, %p, %d, %d) returning %d\n", parser, labeler, argus, addr, type, mode, retn);
 #endif
    }
 
@@ -4444,7 +4444,7 @@ RaFetchAddressLocality (struct ArgusParserStruct *parser, struct ArgusLabelerStr
       }
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (5, "RaFetchAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, addr, type, mode, retn);
+      ArgusDebug (5, "RaFetchAddressLocality (0x%x, 0x%x, 0x%x, %d, %d) returning %d\n", parser, labeler, addr, type, mode, retn);
 #endif
    }
 
@@ -23970,7 +23970,7 @@ ArgusAddObjectToList(struct ArgusListStruct *list, void *obj, int type)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusAddToList (%p, %p, %d) returning 0x%x\n", list, obj, type);
+   ArgusDebug (6, "ArgusAddObjectToList (%p, %p, %d) returning %d\n", list, obj, type, retn);
 #endif
 
    return (retn);
@@ -24021,7 +24021,7 @@ ArgusRemoveObjectFromList(struct ArgusListStruct *list, void *obj, int type)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusAddToList (%p, %p, %d) returning 0x%x\n", list, obj, type);
+   ArgusDebug (6, "ArgusRemoveObjectFromList (%p, %p, %d) returning %d\n", list, obj, type, retn);
 #endif
 
    return (retn);
@@ -24054,7 +24054,7 @@ ArgusPushFrontList(struct ArgusListStruct *list, struct ArgusListRecord *rec, in
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "ArgusPushFrontList (%p, %p, %d) returning 0x%x\n", list, rec, type);
+   ArgusDebug (6, "ArgusPushFrontList (%p, %p, %d) returning %d\n", list, rec, type, retn);
 #endif
 
    return (retn);
@@ -26201,7 +26201,7 @@ argus_nametoport(char *name, int *port, int *proto)
       *port = ntohs(sp->s_port);
 
 #ifdef ARGUSDEBUG
-      ArgusDebug (8, "argus_nametoport (%s, .., ..) calling argus_nametoproto(%s)\n", sp->s_proto);
+      ArgusDebug (8, "argus_nametoport (%s, .., ..) calling argus_nametoproto(%s)\n", name, sp->s_proto);
 #endif
 
       *proto = argus_nametoproto(sp->s_proto);
@@ -31914,7 +31914,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                               found++;
 
                            } else
-                              ArgusLog (LOG_ERR, "%s: not supported Cisco data stream.\n");
+                              ArgusLog (LOG_ERR, "ArgusReadConnection: not supported Cisco data stream.\n");
                         }
 
                      } else {
@@ -32257,7 +32257,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 
                               len = strlen((char *) buf);
                               if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                                 ArgusLog (LOG_ALERT, "%s: write remote generator string error %s.", strerror(errno));
+                                 ArgusLog (LOG_ALERT, "ArgusReadConnection: write remote generator string error %s.", strerror(errno));
                                  close(input->fd);
                                  input->fd = -1;
                                  goto out;
@@ -32287,7 +32287,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 
                               len = strlen((char *) buf);
                               if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                                 ArgusLog (LOG_ALERT, "%s: write remote filter error %s.", strerror(errno));
+                                 ArgusLog (LOG_ALERT, "ArgusReadConnection: write remote filter error %s.", strerror(errno));
                                  close(input->fd);
                                  input->fd = -1;
                                  goto out;
@@ -32319,7 +32319,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                               snprintf ((char *) buf, MAXSTRLEN-1, "FILE: %s", input->filename);
                               len = strlen((char *) buf);
                               if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                                 ArgusLog (LOG_ALERT, "%s: write FILE indication error %s.", strerror(errno));
+                                 ArgusLog (LOG_ALERT, "ArgusReadConnection: write FILE indication error %s.", strerror(errno));
                                  close(input->fd);
                                  input->fd = -1;
                                  goto out;
@@ -32363,7 +32363,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 
                                  len = strlen((char *) buf);
                                  if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                                    ArgusLog (LOG_ALERT, "%s: write remote START msg error %s.", strerror(errno));
+                                    ArgusLog (LOG_ALERT, "ArgusReadConnection: write remote START msg error %s.", strerror(errno));
                                     close(input->fd);
                                     input->fd = -1;
                                     goto out;
@@ -32579,7 +32579,7 @@ setArgusRemoteFilter(struct ArgusParserStruct *parser, char *str)
                                           (char *) parser->ArgusRemoteFilter);
                      len = strlen((char *) buf);
                      if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
-                        ArgusLog (LOG_ALERT, "%s: write remote filter error %s.", strerror(errno));
+                        ArgusLog (LOG_ALERT, "ArgusReadConnection: write remote filter error %s.", strerror(errno));
                      }
                   }
                   input = (struct ArgusInput *)input->qhdr.nxt;
@@ -33358,7 +33358,7 @@ ArgusAddServerList (struct ArgusParserStruct *parser, char *host, int type, int 
                *tptr++ = '\0';
                portnum = strtol(tptr, &endptr, 10);
                if (endptr != &tptr[strlen(tptr)]) {
-                  ArgusLog (LOG_ALERT, "ArgusAddServerList(%s) format error %s is not a port number", tptr);
+                  ArgusLog (LOG_ALERT, "ArgusAddServerList(%s) format error %s is not a port number", host, tptr);
                } else
                   servname = tptr;
             }
@@ -34073,7 +34073,7 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (6, "setArgusID(%p, %p, %p, 0x%x) done", srcid, ptr, type);
+   ArgusDebug (6, "setArgusID(%p, %p, %p, 0x%x) done", srcid, ptr, len, type);
 #endif
 }
 
@@ -34107,7 +34107,7 @@ setTransportArgusID(struct ArgusTransportStruct *trans, void *ptr, int len, unsi
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "setTransportArgusID(%p, %p, %p, 0x%x) done", trans, ptr, type);
+   ArgusDebug (5, "setTransportArgusID(%p, %p, %p, 0x%x) done", trans, ptr, len, type);
 #endif
 }
 
@@ -34144,7 +34144,7 @@ setParserArgusID(struct ArgusParserStruct *parser, void *ptr, int len, unsigned 
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "setParserArgusID(%p, %p, %p, 0x%x) done", parser, ptr, type);
+   ArgusDebug (1, "setParserArgusID(%p, %p, %p, 0x%x) done", parser, ptr, len, type);
 #endif
 }
 
@@ -35509,7 +35509,7 @@ RaProcessArchiveSplitOptions(struct ArgusParserStruct *parser, char *str, int le
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RaProcessArchiveSplitOptions(%s, %d, 0x%x): returns %d", str, len, retn);
+   ArgusDebug (1, "RaProcessArchiveSplitOptions(%s, %d, 0x%x): returns %d", str, len, parser, retn);
 #endif
 
    return (retn);

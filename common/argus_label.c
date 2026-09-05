@@ -3052,7 +3052,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "RaInsertLocalityTree (%p, %p, %s, %s) returning %d\n", parser, labeler, str, retn);
+   ArgusDebug (10, "RaInsertLocalityTree (%p, %p, %s) returning %d\n", parser, labeler, str, retn);
 #endif
 
    return (retn);

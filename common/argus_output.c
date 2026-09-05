@@ -269,7 +269,7 @@ void
 RadiumDNSServiceCallback (DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context)
 {
 #ifdef ARGUSDEBUG
-   ArgusDebug (1, "RadiumDNSServiceCallback(%s, %c, %s, %p) returned %d\n", name, regtype, domain, errorCode);
+   ArgusDebug (1, "RadiumDNSServiceCallback(%p, %d, %d, %s, %s, %s, %p)\n", sdRef, flags, errorCode, name, regtype, domain, context);
 #endif
 }
 #endif
@@ -5277,7 +5277,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               if (client->hostname)
                                  ArgusDebug (6, "ArgusWriteOutSocket: client %s count %d write error %s\n", client->hostname, count, strerror(errno));
                               else
-                                 ArgusDebug (6, "ArgusWriteOutSocket: client %s count %d write error %s\n", count, strerror(errno));
+                                 ArgusDebug (6, "ArgusWriteOutSocket: client %s count %d write error %s\n", "(unknown)", count, strerror(errno));
 #endif
                               count = 0;
 

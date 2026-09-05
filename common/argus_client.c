@@ -1385,6 +1385,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
 
 #ifdef ARGUSDEBUG
                      ArgusDebug (1, "Binding TCP to source INADDR_ANY:%d Expecting %s records",
+                          ArgusParser->ArgusSourcePort,
                           ArgusGetName(ArgusParser, ArgusParser->ArgusSourcePort, ArgusRecordType));
 #endif
                      if ((bind (s, (struct sockaddr *)&server, sizeof(server))) < 0)
@@ -15597,7 +15598,7 @@ ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+   ArgusDebug (10, "ArgusFetchSrcLocality (%p) returning %f", ns, retn);
 #endif
    return (retn);
 }
@@ -15637,7 +15638,7 @@ ArgusFetchDstLocality (struct ArgusRecordStruct *ns)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+   ArgusDebug (10, "ArgusFetchDstLocality (%p) returning %f", ns, retn);
 #endif
    return (retn);
 }

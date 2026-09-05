@@ -666,7 +666,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteServerList(parser);
 
          if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
-            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", __func__, optarg);
          break;
 
       case RADIUM_CISCONETFLOW_PORT: {
@@ -675,7 +675,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteServerList(parser);
 
          if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
-            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", __func__, optarg);
 
          break;
       }
@@ -694,7 +694,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteFileList(parser);
 
          if (!(ArgusAddFileList (parser, optarg, (parser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), -1, -1))) {
-            ArgusLog (LOG_ERR, "%s: error: file arg %s\n", optarg);
+            ArgusLog (LOG_ERR, "%s: error: file arg %s\n", __func__, optarg);
          }
          break;
 

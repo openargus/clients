@@ -282,10 +282,10 @@ ArgusAuthenticate (struct ArgusInput *input)
       int fd = input->fd;
 
       if ((input->in = fd) < 0)
-         ArgusLog (LOG_ERR, "ArgusAuthenticate(0x%x) in fd not set");
+         ArgusLog (LOG_ERR, "ArgusAuthenticate(0x%x) in fd not set", input);
 
       if ((input->out = fd) < 0)
-         ArgusLog (LOG_ERR, "ArgusAuthenticate(0x%x) out fd not set");
+         ArgusLog (LOG_ERR, "ArgusAuthenticate(0x%x) out fd not set", input);
 
       if ((retn = RaSaslNegotiate(input)) == SASL_OK)
          retn = 1;
@@ -450,7 +450,7 @@ RaGetSecret(sasl_conn_t *conn, void *context __attribute__((unused)),
    len = strlen(password);
 
    if ((x = (sasl_secret_t *) malloc(sizeof(sasl_secret_t) + len)) == NULL)
-      ArgusLog (LOG_ERR, "RaGetSecret: malloc(%d) error %s\n",  (sizeof(sasl_secret_t) + len));
+      ArgusLog (LOG_ERR, "RaGetSecret: malloc(%d) error %s\n",  (sizeof(sasl_secret_t) + len), strerror(errno));
   
    if (!x) {
       memset(password, 0, len);

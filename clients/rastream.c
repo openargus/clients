@@ -230,7 +230,7 @@ RastreamProcessFileRetryList(void)
                        file->filename, file->filename_orig);
       if (slen >= 2*PATH_MAX) {
          ArgusLog(LOG_WARNING, "%s command too long: skipping %s\n",
-                  file->filename);
+                  __func__, file->filename);
          file->nodelete = 1;
       }
 
