@@ -90,6 +90,7 @@
 
 #include <string.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include <math.h>
 
@@ -3161,83 +3162,81 @@ int
 ArgusParseAliasFile(char *file)
 {
    int retn = 0;
-   struct stat statbuf;
    FILE *fd = NULL;
 
    if (file != NULL) {
-      if (stat(file, &statbuf) >= 0) {
-         if ((fd = fopen(file, "r")) != NULL) {
-            char *strbuf = NULL,  *str = NULL, *optarg = NULL;
-            char *srcid = NULL, *alias = NULL;
+      if ((fd = fopen(file, "r")) != NULL) {
+         char *strbuf = NULL,  *str = NULL, *optarg = NULL;
+         char *srcid = NULL, *alias = NULL;
 
-            if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
-               ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
+         if ((strbuf = (char *) ArgusCalloc (1, MAXSTRLEN)) == NULL)
+            ArgusLog(LOG_ERR, "ArgusCalloc: error %s", strerror(errno));
 
-            retn = 1;
+         retn = 1;
 
-            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               str = strbuf;
-               while (*str && isspace((int)*str))
-                   str++;
+         while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
+            str = strbuf;
+            while (*str && isspace((int)*str))
+                str++;
 
 #define RA_READING_SRCID                0
 #define RA_READING_ALIAS                1
 
-               if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-                  int state = RA_READING_SRCID;
-                  struct anamemem  *ap;
-                  int done = 0;
-                  u_int hash;
+            if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+               int state = RA_READING_SRCID;
+               struct anamemem  *ap;
+               int done = 0;
+               u_int hash;
 
-                  while ((optarg = strtok(str, " \t\n")) != NULL) {
-                     switch (state) {
-                        case RA_READING_SRCID: {
-                           int i, len = strlen(optarg);
-                           for (i = 0; i < len; i++)
-                              optarg[i] = tolower(optarg[i]);
-                           srcid = optarg;
-                           state = RA_READING_ALIAS;
-                           break;
-                        }
-
-                        case RA_READING_ALIAS: {
-                           alias = optarg;
-                           done = 1;
-                           break;
-                        }
-                     }
-                     str = NULL;
-                    
-                     if (done)
+               while ((optarg = strtok(str, " \t\n")) != NULL) {
+                  switch (state) {
+                     case RA_READING_SRCID: {
+                        int i, len = strlen(optarg);
+                        for (i = 0; i < len; i++)
+                           optarg[i] = tolower(optarg[i]);
+                        srcid = optarg;
+                        state = RA_READING_ALIAS;
                         break;
-                  }
+                     }
 
-                  if (strlen(srcid)) {
-                     hash = getnamehash((const u_char *)srcid);
-                     ap = &aliastable[hash % (HASHNAMESIZE-1)];
-                     while (ap->n_nxt)
-                        ap = ap->n_nxt;
-    
-                     ap->hashval = hash;
-                     ap->name = strdup((char *) srcid);
-                     ap->alias = strdup((char *) alias);
-                     ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
+                     case RA_READING_ALIAS: {
+                        alias = optarg;
+                        done = 1;
+                        break;
+                     }
                   }
-                  if (strlen(alias)) {
-                     hash = getnamehash((const u_char *)alias);
-                     ap = &aliastable[hash % (HASHNAMESIZE-1)];
-                     while (ap->n_nxt)
-                        ap = ap->n_nxt;
-                     ap->hashval = hash;
-                     ap->name = strdup((char *) srcid);
-                     ap->alias = strdup((char *) alias);
-                     ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
-                  }
+                  str = NULL;
+                 
+                  if (done)
+                     break;
+               }
+
+               if (strlen(srcid)) {
+                  hash = getnamehash((const u_char *)srcid);
+                  ap = &aliastable[hash % (HASHNAMESIZE-1)];
+                  while (ap->n_nxt)
+                     ap = ap->n_nxt;
+
+                  ap->hashval = hash;
+                  ap->name = strdup((char *) srcid);
+                  ap->alias = strdup((char *) alias);
+                  ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
+               }
+               if (strlen(alias)) {
+                  hash = getnamehash((const u_char *)alias);
+                  ap = &aliastable[hash % (HASHNAMESIZE-1)];
+                  while (ap->n_nxt)
+                     ap = ap->n_nxt;
+                  ap->hashval = hash;
+                  ap->name = strdup((char *) srcid);
+                  ap->alias = strdup((char *) alias);
+                  ap->n_nxt = (struct anamemem *)calloc(1, sizeof(*ap));
                }
             }
-            if (str != NULL)
-               ArgusFree(str);
          }
+         if (str != NULL)
+            ArgusFree(str);
+         fclose(fd);
       }
    }
 
@@ -3280,30 +3279,27 @@ char *ArgusAdditionalWiresharkManufEntries[ARGUS_MAX_ETHER_ENTRIES] = {
 int 
 ArgusParserWiresharkManufFile (struct ArgusParserStruct *parser, char *file)
 {
-   struct stat statbuf;
    FILE *fd = NULL;
    int i, retn = 0;
 
    if (ArgusParserWiresharkManufFileRead == 0) {
-      if (stat(file, &statbuf) >= 0) {
-         if ((fd = fopen(file, "r")) != NULL) {
-            char *str;
-            ArgusWellKnownTag = 0;
+      if ((fd = fopen(file, "r")) != NULL) {
+         char *str;
+         ArgusWellKnownTag = 0;
 
-            if ((str = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
-               ArgusLog(LOG_ERR, "ArgusParserWiresharkManufFile: ArgusCalloc: error %s", strerror(errno));
+         if ((str = ArgusCalloc (1, MAXSTRLEN)) == NULL) 
+            ArgusLog(LOG_ERR, "ArgusParserWiresharkManufFile: ArgusCalloc: error %s", strerror(errno));
 
-            while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
-               ArgusParseWiresharkManufEntry (parser, str);
-            }
-
-            if (str != NULL)
-               ArgusFree(str);
-
-            retn = 1;
-            ArgusParserWiresharkManufFileRead = 1;
-            fclose(fd);
+         while ((fgets(str, MAXSTRLEN, fd)) != NULL)  {
+            ArgusParseWiresharkManufEntry (parser, str);
          }
+
+         if (str != NULL)
+            ArgusFree(str);
+
+         retn = 1;
+         ArgusParserWiresharkManufFileRead = 1;
+         fclose(fd);
       }
 
       for (i = 0; i < ARGUS_MAX_ETHER_ENTRIES; i++) { 
@@ -33972,16 +33968,20 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
             if ((stat(file, &statbuf)) < 0) {
                switch (errno) {
                   case ENOENT: {
-                     if ((fd = fopen (file, "a+")) == NULL) {
-                        if ((errno == ENOENT) || (errno == ENOTDIR)) {
-                           if (strncmp(parser->ArgusProgramName, "radium", 6))
-                              ArgusMkdirPath(file);
+                     int rawfd;
 
-                           if ((fd = fopen (file, "a+")) == NULL)
-                              ArgusLog (LOG_ERR, "setArgusWfile open %s %s", file, strerror(errno));
-                        } else
-                           ArgusLog (LOG_ERR, "setArgusWfile open %s %s", file, strerror(errno));
+                     rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
+                     if ((rawfd < 0) && ((errno == ENOENT) || (errno == ENOTDIR))) {
+                        if (strncmp(parser->ArgusProgramName, "radium", 6))
+                           ArgusMkdirPath(file);
+
+                        rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
                      }
+
+                     if (rawfd < 0)
+                        ArgusLog (LOG_ERR, "setArgusWfile open %s %s", file, strerror(errno));
+                     else
+                        fd = fdopen(rawfd, "a+");
 
                      if (fd != NULL) {
                         fclose (fd);
