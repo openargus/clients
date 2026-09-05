@@ -100,6 +100,25 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <limits.h>
+
+/* ArgusFetchSrcLoss()/ArgusFetchDstLoss() return a double whose value is derived directly
+ * from wire-supplied metric counters (e.g. TCP retransmission counts) with no upper bound
+ * enforced. struct ArgusRecordStruct's sloss/dloss fields are plain 'int', so a corrupted or
+ * adversarial record carrying a very large counter can produce a double outside INT_MIN..
+ * INT_MAX; converting that out-of-range double to int is undefined behavior in C (and aborts
+ * under -fsanitize=undefined, discovered via the ArgusHandleRecord fuzz harness --
+ * security-review/fuzz/). Clamp before the narrowing conversion. */
+static int
+ArgusClampDoubleToInt(double val)
+{
+   if (val >= (double) INT_MAX)
+      return INT_MAX;
+   if (val <= (double) INT_MIN)
+      return INT_MIN;
+   return (int) val;
+}
+
 #ifndef ETH_ALEN
 #define ETH_ALEN  6
 #endif
@@ -3760,8 +3779,8 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   }
                }
 
-               retn->sloss   = ArgusFetchSrcLoss(retn);
-               retn->dloss   = ArgusFetchDstLoss(retn);
+               retn->sloss   = ArgusClampDoubleToInt(ArgusFetchSrcLoss(retn));
+               retn->dloss   = ArgusClampDoubleToInt(ArgusFetchDstLoss(retn));
                retn->sploss  = ArgusFetchPercentSrcLoss(retn);
                retn->dploss  = ArgusFetchPercentDstLoss(retn);
             }
@@ -4007,8 +4026,8 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                retn->drate   = rec->drate;
                retn->sload   = rec->sload;
                retn->dload   = rec->dload;
-               retn->sloss   = ArgusFetchSrcLoss(retn);
-               retn->dloss   = ArgusFetchDstLoss(retn);
+               retn->sloss   = ArgusClampDoubleToInt(ArgusFetchSrcLoss(retn));
+               retn->dloss   = ArgusClampDoubleToInt(ArgusFetchDstLoss(retn));
                retn->sploss  = ArgusFetchPercentSrcLoss(retn);
                retn->dploss  = ArgusFetchPercentDstLoss(retn);
                retn->pcr     = ArgusFetchAppByteRatio(retn);

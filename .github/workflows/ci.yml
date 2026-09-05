@@ -1,7 +1,8 @@
 name: CI
 
 # Runs on GitHub-hosted runners (not the local machine) on every push and
-# pull request against main.
+# pull request against main. See security-review/fuzz/README.md for
+# background on the corpus used by the fuzz-regression job below.
 on:
   push:
     branches: [main]
@@ -50,3 +51,39 @@ jobs:
 
       - name: Build
         run: make -j4
+
+  fuzz-regression:
+    name: Fuzz corpus regression
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: brew install zlib readline libmaxminddb mysql-client bison flex
+
+      - name: Configure
+        run: ./configure
+
+      - name: Build ASan/UBSan instrumented client library + harness
+        run: sh security-review/fuzz/build.sh plain
+
+      - name: Replay corpus and crash regression set
+        run: |
+          set -e
+          fail=0
+          total=0
+          for f in security-review/fuzz/corpus/* \
+                   security-review/fuzz/crashes/*; do
+            total=$((total + 1))
+            if ! ./security-review/fuzz/fuzz_handle_record "$f" > /tmp/harness_out.log 2>&1; then
+              echo "::error::Crash/sanitizer failure replaying $f"
+              cat /tmp/harness_out.log
+              fail=1
+            fi
+          done
+          echo "Replayed $total inputs."
+          if [ "$fail" -ne 0 ]; then
+            echo "One or more inputs triggered a crash or sanitizer error."
+            exit 1
+          fi
+          echo "All inputs replayed cleanly."
