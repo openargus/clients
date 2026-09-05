@@ -7542,7 +7542,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  if (a1->act.minval > value)
                                     a1->act.minval = value;
 
-                              sum1  = a1->act.meanval * a1->act.n;
+                              sum1  = (double)a1->act.meanval * a1->act.n;
                               sum1 += value;
 
                               if (a1->act.stdev != 0) {
@@ -7708,7 +7708,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
 
                               if (j1->dst.act.n) {
-                                 double sum  =  j1->dst.act.meanval * j1->dst.act.n;
+                                 double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
                                  sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
                                             (sum * sum)/j1->dst.act.n;
                               }
@@ -8594,7 +8594,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                                  ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
 
                      if (j1->dst.act.n) {
-                        double sum  =  j1->dst.act.meanval * j1->dst.act.n;
+                        double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
                         sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
                                    (sum * sum)/j1->dst.act.n;
                      }

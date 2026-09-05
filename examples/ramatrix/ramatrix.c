@@ -360,8 +360,8 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
    }
 
    if ((n = agg->queue->count) > 1) {
-      double (*matrix)[n] = (double(*)[n])calloc(sizeof(double), n * n);
-      double (*category)[n] = (double(*)[n])calloc(sizeof(double), n * n);
+      double (*matrix)[n] = (double(*)[n])calloc(sizeof(double), (size_t)n * n);
+      double (*category)[n] = (double(*)[n])calloc(sizeof(double), (size_t)n * n);
       int rank = 0;
 
       ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);

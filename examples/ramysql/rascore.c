@@ -1526,7 +1526,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                               bcopy (RaFormat, fbuf, strlen(RaFormat));
                            }
 
-                           secs = (fstruct->second/RaPeriod) * RaPeriod;
+                           secs = ((time_t)fstruct->second/RaPeriod) * RaPeriod;
                            strftime (directorypath, MAXSTRLEN, fbuf, localtime(&secs));
                         }
 
