@@ -1,0 +1,55 @@
+name: CodeQL
+
+# CodeQL "Advanced Setup" workflow (a committed workflow file, as opposed to GitHub's
+# Default Setup which is toggled purely through repo Settings and isn't visible/reproducible
+# from the repo itself). Runs static analysis for C/C++ on every push/PR against main, plus a
+# weekly scheduled scan to catch newly-published CodeQL query pack updates even when the code
+# hasn't changed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 0'   # weekly, Sunday 03:17 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [c-cpp]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bison flex zlib1g-dev libreadline-dev libncurses-dev \
+            libmaxminddb-dev libsasl2-dev uuid-dev default-libmysqlclient-dev
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Configure and build
+        run: |
+          ./configure
+          make -j4
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

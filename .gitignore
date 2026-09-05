@@ -79,3 +79,7 @@ include/argus_config.h
 /pythonlib/argusPython.py
 /pythonlib/argusPython_wrap.c
 
+# security-review fuzz harness build artifacts (rebuilt by build.sh / CI, not committed)
+/security-review/fuzz/build/
+/security-review/fuzz/fuzz_handle_record
+
