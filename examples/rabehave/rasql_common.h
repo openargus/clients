@@ -15,6 +15,8 @@
 
 #define ARGUSSQLMAXCOLUMNS	256
 
+#ifndef __RAOUTPUTPROCESSSTRUCT_DEFINED
+# define __RAOUTPUTPROCESSSTRUCT_DEFINED
 struct RaOutputProcessStruct {
    int status, timeout;
    int value, size;
@@ -23,6 +25,7 @@ struct RaOutputProcessStruct {
    struct ArgusHashTable *htable;
    struct nff_program filter;
 };
+#endif
 
 char **
 ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
