@@ -33970,12 +33970,12 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
                   case ENOENT: {
                      int rawfd;
 
-                     rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
+                     rawfd = open(file, O_CREAT|O_EXCL|O_RDWR, 0644);
                      if ((rawfd < 0) && ((errno == ENOENT) || (errno == ENOTDIR))) {
                         if (strncmp(parser->ArgusProgramName, "radium", 6))
                            ArgusMkdirPath(file);
 
-                        rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
+                        rawfd = open(file, O_CREAT|O_EXCL|O_RDWR, 0644);
                      }
 
                      if (rawfd < 0)
