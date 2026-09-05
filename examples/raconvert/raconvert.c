@@ -2313,7 +2313,7 @@ ArgusParseSrcPackets (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.pkts = strtoll(ptr, &endptr, 10);
 
    if (endptr == ptr)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPackets(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPackets(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
