@@ -53,6 +53,44 @@
 
 int RaCursesDeleteProcess (struct ArgusParserStruct *, struct RaCursesProcessStruct *);
 
+//
+// struct RaOutputProcessStruct and the "score a record against a baseline"
+// functions below (RaScoreNewProcess/ArgusScoreHandleRecord/
+// ArgusReadBaselineFile/ArgusReadBaselineStream/RaProcessBaselineData) support
+// baselines loaded from a local file as well as from a MySQL table -- none of
+// them touch the MySQL API directly -- so they, and the struct they share,
+// are declared unconditionally here rather than inside the #if
+// defined(ARGUS_MYSQL) block below (which is reserved for code that actually
+// needs libmysqlclient, e.g. RaSQLReadTable/RaMySQLInit).
+//
+#ifndef __RAOUTPUTPROCESSSTRUCT_DEFINED
+# define __RAOUTPUTPROCESSSTRUCT_DEFINED
+struct RaOutputProcessStruct {
+   int status, timeout;
+   int value, size;
+   struct ArgusRecordStruct *ns;
+   struct ArgusQueueStruct *queue, *delqueue;
+   struct ArgusHashTable *htable;
+   struct nff_program filter;
+};
+#endif
+
+char **RaBaselines = NULL;
+
+struct ArgusInput *ArgusInput = NULL;
+extern int ArgusTimeRangeStrategy;
+unsigned char *ArgusConvertRecord (struct ArgusInput *, char *);
+
+int ArgusReadBaselineStream (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *);
+void ArgusReadBaselineFile (char *, struct RaOutputProcessStruct *);
+int ArgusScoreHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
+void RaProcessBaselineData (struct ArgusParserStruct *, struct ArgusRecordStruct *, struct RaOutputProcessStruct *, struct nff_program *filter);
+
+struct RaOutputProcessStruct *RaScoreNewProcess(struct ArgusParserStruct *);
+struct RaOutputProcessStruct *RaAnnualProcess = NULL;
+struct RaOutputProcessStruct *RaMonthlyProcess = NULL;
+struct RaOutputProcessStruct *RaDailyProcess = NULL;
+
 #if defined(ARGUS_MYSQL)
 #include <rasplit.h>
 
@@ -63,25 +101,15 @@ int RaCursesDeleteProcess (struct ArgusParserStruct *, struct RaCursesProcessStr
 
 unsigned char *ArgusConvertRecord (struct ArgusInput *, char *);
 struct RaBinProcessStruct *RaBinProcess = NULL;
-char **RaBaselines = NULL;
 char **RaTables = NULL;
 char ArgusSQLStatement[MAXSTRLEN];
 
-int ArgusReadBaselineStream (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *);
 int ArgusReadSQLTables (struct ArgusParserStruct *);
 int ArgusCreateSQLSaveTable(char *);
 char *ArgusScheduleSQLQuery (struct ArgusParserStruct *, struct ArgusAggregatorStruct *, struct ArgusRecordStruct *, char *, int);
 void RaMySQLDeleteRecords(struct ArgusParserStruct *, struct ArgusRecordStruct *);
 
-void ArgusReadBaselineFile (char *, struct RaOutputProcessStruct *);
 void RaSQLReadTable (char *, struct RaOutputProcessStruct *);
-
-int ArgusScoreHandleRecord (struct ArgusParserStruct *, struct ArgusInput *, struct RaOutputProcessStruct *, struct ArgusRecord *, struct nff_program *);
-
-struct RaOutputProcessStruct *RaScoreNewProcess(struct ArgusParserStruct *);
-struct RaOutputProcessStruct *RaAnnualProcess = NULL;
-struct RaOutputProcessStruct *RaMonthlyProcess = NULL;
-struct RaOutputProcessStruct *RaDailyProcess = NULL;
 
 void RaSQLProcessQueue (struct ArgusQueueStruct *);
 
@@ -188,7 +216,6 @@ extern char RaFilterSQLStatement[];
   
 char *RaHost = NULL, *RaUser = NULL, *RaPass = NULL;
 int RaPort = 0;
-struct ArgusInput *ArgusInput = NULL;
 void RaMySQLInit (void);
 
 /* Do not try to create a database.  Allows read-only operations
@@ -5034,6 +5061,11 @@ ArgusReadSQLTables (struct ArgusParserStruct *parser)
    return (retn);
 }
 
+#endif /* ARGUS_MYSQL -- end of mysql-only ArgusReadSQLTables() etc. above;
+          RaScoreNewProcess() and friends below work from either a local
+          baseline file or (if ARGUS_MYSQL) a mysql table, so they're
+          declared unconditionally, see the top of this file. */
+
 
 struct RaOutputProcessStruct *
 RaScoreNewProcess(struct ArgusParserStruct *parser)
@@ -5496,6 +5528,7 @@ ArgusReadBaselineStream (struct ArgusParserStruct *parser, struct ArgusInput *in
 }
 
 
+#if defined(ARGUS_MYSQL)
 void
 RaSQLReadTable (char *table, struct RaOutputProcessStruct *process)
 {
