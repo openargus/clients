@@ -174,11 +174,11 @@ static void
 atmarp_addr_print(const u_char *ha, u_int ha_len, const u_char *srca, u_int srca_len)
 {
    if (ha_len == 0)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"<No address>");
+      ARGUSBUF_APPEND("<No address>");
    else {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", linkaddr_string(ArgusParser, ha, ha_len));
+      ARGUSBUF_APPEND("%s", linkaddr_string(ArgusParser, ha, ha_len));
       if (srca_len != 0) 
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],",%s", linkaddr_string(ArgusParser, srca, srca_len));
+         ARGUSBUF_APPEND(",%s", linkaddr_string(ArgusParser, srca, srca_len));
    }
 }
 
@@ -196,60 +196,60 @@ atmarp_print(const u_char *bp, u_int length, u_int caplen)
    op = ATMOP(ap);
 
    if (!TTEST2(*aar_tpa(ap), ATMTPLN(ap))) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"truncated-atmarp");
+      ARGUSBUF_APPEND("truncated-atmarp");
       return;
    }
 
    if ((pro != ETHERTYPE_IP && pro != ETHERTYPE_TRAIL) ||
        ATMSPLN(ap) != 4 || ATMTPLN(ap) != 4) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"atmarp-#%d for proto #%d (%d/%d) hardware #%d",
+      ARGUSBUF_APPEND("atmarp-#%d for proto #%d (%d/%d) hardware #%d",
            op, pro, ATMSPLN(ap), ATMTPLN(ap), hrd);
       return;
    }
    if (pro == ETHERTYPE_TRAIL)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"trailer-");
+      ARGUSBUF_APPEND("trailer-");
    switch (op) {
 
    case ARPOP_REQUEST:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"arp who-has %s", ipaddr_string(ATMTPA(ap)));
+      ARGUSBUF_APPEND("arp who-has %s", ipaddr_string(ATMTPA(ap)));
       if (ATMTHLN(ap) != 0) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," (");
+         ARGUSBUF_APPEND(" (");
          atmarp_addr_print(ATMTHA(ap), ATMTHLN(ap), ATMTSA(ap), ATMTSLN(ap));
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],")");
+         ARGUSBUF_APPEND(")");
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," tell %s", ipaddr_string(ATMSPA(ap)));
+      ARGUSBUF_APPEND(" tell %s", ipaddr_string(ATMSPA(ap)));
       break;
 
    case ARPOP_REPLY:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"arp reply %s", ipaddr_string(ATMSPA(ap)));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," is-at ");
+      ARGUSBUF_APPEND("arp reply %s", ipaddr_string(ATMSPA(ap)));
+      ARGUSBUF_APPEND(" is-at ");
       atmarp_addr_print(ATMSHA(ap), ATMSHLN(ap), ATMSSA(ap), ATMSSLN(ap));
       break;
 
    case ARPOP_INVREQUEST:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"invarp who-is ");
+      ARGUSBUF_APPEND("invarp who-is ");
       atmarp_addr_print(ATMTHA(ap), ATMTHLN(ap), ATMTSA(ap), ATMTSLN(ap));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," tell ");
+      ARGUSBUF_APPEND(" tell ");
       atmarp_addr_print(ATMSHA(ap), ATMSHLN(ap), ATMSSA(ap), ATMSSLN(ap));
       break;
 
    case ARPOP_INVREPLY:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"invarp reply ");
+      ARGUSBUF_APPEND("invarp reply ");
       atmarp_addr_print(ATMSHA(ap), ATMSHLN(ap), ATMSSA(ap), ATMSSLN(ap));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," at %s", ipaddr_string(ATMSPA(ap)));
+      ARGUSBUF_APPEND(" at %s", ipaddr_string(ATMSPA(ap)));
       break;
 
    case ATMARPOP_NAK:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"nak reply for %s", ipaddr_string(ATMSPA(ap)));
+      ARGUSBUF_APPEND("nak reply for %s", ipaddr_string(ATMSPA(ap)));
       break;
 
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"atmarp-#%d", op);
+      ARGUSBUF_APPEND("atmarp-#%d", op);
       return;
    }
    return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|atmarp]");
+   ARGUSBUF_APPEND("[|atmarp]");
 }
 */
 
@@ -266,7 +266,7 @@ arp_src_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
    if ((metric != NULL) && metric->src.pkts) {
       switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
          case ARGUS_TYPE_ARP:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"who-has %s tell %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa),
+            ARGUSBUF_APPEND("who-has %s tell %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa),
                                          ArgusGetName(parser, (unsigned char *)&arp->arp_spa));
             break;
       }
@@ -295,7 +295,7 @@ arp_dst_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
       if (net != NULL) {
          switch (net->hdr.subtype & 0x1F) {
             case ARGUS_NETWORK_SUBTYPE_ARP:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s is-at %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa), 
+               ARGUSBUF_APPEND("%s is-at %s", ArgusGetName(parser, (unsigned char *)&arp->arp_tpa), 
                            etheraddr_string(parser, (unsigned char *)&net->net_union.arp.respaddr));
                break;
          }

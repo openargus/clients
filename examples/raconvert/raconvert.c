@@ -86,6 +86,7 @@
 
 #include <ctype.h>
 #include <strings.h>
+#include <limits.h>
 
 #if defined(ARGUS_SOLARIS)
 #include <string.h>
@@ -297,7 +298,7 @@ main (int argc, char **argv) {
       struct ArgusFileInput *file;
 
       while (ArgusParser->ArgusPassNum) {
-         if ((input = ArgusMalloc(sizeof(*input))) == NULL)
+         if ((input = ArgusCalloc(1, sizeof(*input))) == NULL)
             ArgusLog(LOG_ERR, "unable to allocate input structure\n");
 
          file = ArgusParser->ArgusInputFileList;
@@ -848,12 +849,13 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
           (!(strncmp("-z",  &file[strlen(file) - 2], 2))) ||
           (!(strncmp("_z",  &file[strlen(file) - 2], 2))) ||
           (!(strncmp(".Z",  &file[strlen(file) - 2], 2)))) {
-         char cmd[256];
-         bzero(cmd, 256); 
-         strncpy(cmd, "gzip -dc ", 10);
+         char cmd[2 * PATH_MAX];
 
-         strncat(cmd, input->filename, (256 - strlen(cmd)));
-         strncat(cmd, " 2>/dev/null", (256 - strlen(cmd)));
+         if (strchr(input->filename, '\'') != NULL) {
+            ArgusLog (LOG_ERR, "ArgusReadConnection: filename contains a single quote: %s", input->filename);
+         }
+
+         snprintf(cmd, sizeof(cmd), "gzip -dc '%s' 2>/dev/null", input->filename);
 
          if ((input->pipe = popen(cmd, "r")) == NULL)
             ArgusLog (LOG_ERR, "ArgusReadConnection: popen(%s) failed. %s", cmd, strerror(errno));
@@ -865,12 +867,13 @@ RaConvertReadFile (struct ArgusParserStruct *parser, struct ArgusInput *input)
       } else       
       if ((!(strncmp(".bz2", &file[strlen(file) - 4], 4))) ||
           (!(strncmp(".bz",  &file[strlen(file) - 3], 3)))) {
-         char cmd[256];
-         bzero(cmd, 256);
-         strncpy(cmd, "bzip2 -dc ", 11);
+         char cmd[2 * PATH_MAX];
 
-         strncat(cmd, input->filename, (256 - strlen(cmd)));
-         strncat(cmd, " 2>/dev/null", (256 - strlen(cmd)));
+         if (strchr(input->filename, '\'') != NULL) {
+            ArgusLog (LOG_ERR, "ArgusReadConnection: filename contains a single quote: %s", input->filename);
+         }
+
+         snprintf(cmd, sizeof(cmd), "bzip2 -dc '%s' 2>/dev/null", input->filename);
 
          if ((input->pipe = popen(cmd, "r")) == NULL)
             ArgusLog (LOG_ERR, "ArgusReadConnection: popen(%s) failed. %s", cmd, strerror(errno));

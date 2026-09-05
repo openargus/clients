@@ -865,10 +865,10 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
    switch (attr->bgpa_type) {
    case BGPTYPE_ORIGIN:
       if (len != 1)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
       else {
          TCHECK(*tptr);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2strbuf(bgp_origin_values,
+         ARGUSBUF_APPEND("%s", tok2strbuf(bgp_origin_values,
                   "Unknown Origin Typecode",
                   tptr[0],
                   tokbuf, sizeof(tokbuf)));
@@ -877,25 +877,25 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
 
    case BGPTYPE_AS_PATH:
       if (len % 2) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
                 if (!len) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"empty");
+         ARGUSBUF_APPEND("empty");
          break;
                 }
 
       while (tptr < pptr + len) {
          TCHECK(tptr[0]);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2strbuf(bgp_as_path_segment_open_values,
+                        ARGUSBUF_APPEND("%s", tok2strbuf(bgp_as_path_segment_open_values,
                   "?", tptr[0],
                   tokbuf, sizeof(tokbuf)));
                         for (i = 0; i < tptr[1] * 2; i += 2) {
                             TCHECK2(tptr[2 + i], 2);
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u ", EXTRACT_16BITS(&tptr[2 + i]));
+                            ARGUSBUF_APPEND("%u ", EXTRACT_16BITS(&tptr[2 + i]));
                         }
          TCHECK(tptr[0]);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", tok2strbuf(bgp_as_path_segment_close_values,
+                        ARGUSBUF_APPEND("%s", tok2strbuf(bgp_as_path_segment_close_values,
                   "?", tptr[0],
                   tokbuf, sizeof(tokbuf)));
                         TCHECK(tptr[1]);
@@ -904,37 +904,37 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       break;
    case BGPTYPE_NEXT_HOP:
       if (len != 4)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
       else {
          TCHECK2(tptr[0], 4);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ArgusGetName(ArgusParser, (u_char *)tptr));
+         ARGUSBUF_APPEND("%s", ArgusGetName(ArgusParser, (u_char *)tptr));
       }
       break;
    case BGPTYPE_MULTI_EXIT_DISC:
    case BGPTYPE_LOCAL_PREF:
       if (len != 4)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
       else {
          TCHECK2(tptr[0], 4);
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", EXTRACT_32BITS(tptr));
+         ARGUSBUF_APPEND("%u", EXTRACT_32BITS(tptr));
       }
       break;
    case BGPTYPE_ATOMIC_AGGREGATE:
       if (len != 0)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
       break;
    case BGPTYPE_AGGREGATOR:
       if (len != 6) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
       TCHECK2(tptr[0], 6);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," AS #%u, origin %s", EXTRACT_16BITS(tptr),
+      ARGUSBUF_APPEND(" AS #%u, origin %s", EXTRACT_16BITS(tptr),
          ArgusGetName(ArgusParser, (u_char *)tptr + 2));
       break;
    case BGPTYPE_COMMUNITIES:
       if (len % 4) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
       while (tlen>0) {
@@ -943,16 +943,16 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
          comm = EXTRACT_32BITS(tptr);
          switch (comm) {
          case BGP_COMMUNITY_NO_EXPORT:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," NO_EXPORT");
+            ARGUSBUF_APPEND(" NO_EXPORT");
             break;
          case BGP_COMMUNITY_NO_ADVERT:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," NO_ADVERTISE");
+            ARGUSBUF_APPEND(" NO_ADVERTISE");
             break;
          case BGP_COMMUNITY_NO_EXPORT_SUBCONFED:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," NO_EXPORT_SUBCONFED");
+            ARGUSBUF_APPEND(" NO_EXPORT_SUBCONFED");
             break;
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u:%u%s",
+            ARGUSBUF_APPEND("%u:%u%s",
                                        (comm >> 16) & 0xffff,
                                        comm & 0xffff,
                                        (tlen>4) ? ", " : "");
@@ -964,20 +964,20 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       break;
         case BGPTYPE_ORIGINATOR_ID:
       if (len != 4) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
       TCHECK2(tptr[0], 4);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",ArgusGetName(ArgusParser, (u_char *)tptr));
+                ARGUSBUF_APPEND("%s",ArgusGetName(ArgusParser, (u_char *)tptr));
                 break;
         case BGPTYPE_CLUSTER_LIST:
       if (len % 4) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
                 while (tlen>0) {
          TCHECK2(tptr[0], 4);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s",
+                        ARGUSBUF_APPEND("%s%s",
                                ArgusGetName(ArgusParser, (u_char *)tptr),
                                 (tlen>4) ? ", " : "");
                         tlen -=4;
@@ -989,7 +989,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       af = EXTRACT_16BITS(tptr);
       safi = tptr[2];
    
-                sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI: %s (%u), %sSAFI: %s (%u)",
+                ARGUSBUF_APPEND(" AFI: %s (%u), %sSAFI: %s (%u)",
                        tok2strbuf(bgp_afi_values, "Unknown AFI", af,
               tokbuf, sizeof(tokbuf)),
                        af,
@@ -1029,7 +1029,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     break;
                 default:
                     TCHECK2(tptr[0], tlen);
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," no AFI %u / SAFI %u decoder",af,safi);
+                    ARGUSBUF_APPEND(" no AFI %u / SAFI %u decoder",af,safi);
                     if (ArgusParser->vflag <= 1)
                         print_unknown_data(tptr," ",tlen);
                     goto done;
@@ -1044,7 +1044,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                 tptr++;
 
       if (tlen) {
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," nexthop: ");
+                    ARGUSBUF_APPEND(" nexthop: ");
                     while (tlen > 0) {
                         switch(af<<8 | safi) {
                         case (AFNUM_INET<<8 | SAFNUM_UNICAST):
@@ -1053,11 +1053,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_INET<<8 | SAFNUM_LABUNICAST):
                         case (AFNUM_INET<<8 | SAFNUM_RT_ROUTING_INFO):
                             if (tlen < (int)sizeof(struct in_addr)) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], sizeof(struct in_addr));
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",ArgusGetName(ArgusParser, (u_char *)tptr));
+                                ARGUSBUF_APPEND("%s",ArgusGetName(ArgusParser, (u_char *)tptr));
                                 tlen -= sizeof(struct in_addr);
                                 tptr += sizeof(struct in_addr);
                             }
@@ -1066,11 +1066,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_INET<<8 | SAFNUM_VPNMULTICAST):
                         case (AFNUM_INET<<8 | SAFNUM_VPNUNIMULTICAST):
                             if (tlen < (int)(sizeof(struct in_addr)+BGP_VPN_RD_LEN)) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], sizeof(struct in_addr)+BGP_VPN_RD_LEN);
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"RD: %s, %s",
+                                ARGUSBUF_APPEND("RD: %s, %s",
                                        bgp_vpn_rd_print(tptr),
                                        ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN));
                                 tlen -= (sizeof(struct in_addr)+BGP_VPN_RD_LEN);
@@ -1084,11 +1084,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_INET6<<8 | SAFNUM_LABUNICAST):
                         case (AFNUM_INET6<<8 | SAFNUM_RT_ROUTING_INFO):
                             if (tlen < (int)sizeof(struct in6_addr)) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], sizeof(struct in6_addr));
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ArgusGetName(ArgusParser, (u_char *)tptr));
+                                ARGUSBUF_APPEND("%s", ArgusGetName(ArgusParser, (u_char *)tptr));
                                 tlen -= sizeof(struct in6_addr);
                                 tptr += sizeof(struct in6_addr);
                             }
@@ -1097,11 +1097,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_INET6<<8 | SAFNUM_VPNMULTICAST):
                         case (AFNUM_INET6<<8 | SAFNUM_VPNUNIMULTICAST):
                             if (tlen < (int)(sizeof(struct in6_addr)+BGP_VPN_RD_LEN)) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], sizeof(struct in6_addr)+BGP_VPN_RD_LEN);
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"RD: %s, %s",
+                                ARGUSBUF_APPEND("RD: %s, %s",
                                        bgp_vpn_rd_print(tptr),
                                        ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN));
                                 tlen -= (sizeof(struct in6_addr)+BGP_VPN_RD_LEN);
@@ -1113,11 +1113,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_L2VPN<<8 | SAFNUM_VPNMULTICAST):
                         case (AFNUM_L2VPN<<8 | SAFNUM_VPNUNIMULTICAST):
                             if (tlen < (int)sizeof(struct in_addr)) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], sizeof(struct in_addr));
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ArgusGetName(ArgusParser, (u_char *)tptr));
+                                ARGUSBUF_APPEND("%s", ArgusGetName(ArgusParser, (u_char *)tptr));
                                 tlen -= (sizeof(struct in_addr));
                                 tptr += (sizeof(struct in_addr));
                             }
@@ -1126,7 +1126,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_NSAP<<8 | SAFNUM_MULTICAST):
                         case (AFNUM_NSAP<<8 | SAFNUM_UNIMULTICAST):
                             TCHECK2(tptr[0], tlen);
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s",isonsap_string(tptr,tlen));
+                            ARGUSBUF_APPEND("%s",isonsap_string(tptr,tlen));
                             tptr += tlen;
                             tlen = 0;
                             break;
@@ -1135,20 +1135,20 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         case (AFNUM_NSAP<<8 | SAFNUM_VPNMULTICAST):
                         case (AFNUM_NSAP<<8 | SAFNUM_VPNUNIMULTICAST):
                             if (tlen < BGP_VPN_RD_LEN+1) {
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+                                ARGUSBUF_APPEND("invalid len");
                                 tlen = 0;
                             } else {
                                 TCHECK2(tptr[0], tlen);
-                                sprintf(&ArgusBuf[strlen(ArgusBuf)],"RD: %s, %s",
+                                ARGUSBUF_APPEND("RD: %s, %s",
                                        bgp_vpn_rd_print(tptr),
                                        isonsap_string(tptr+BGP_VPN_RD_LEN,tlen-BGP_VPN_RD_LEN));
                                 /* rfc986 mapped IPv4 address ? */
                                 if (EXTRACT_32BITS(tptr+BGP_VPN_RD_LEN) ==  0x47000601)
-                                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," = %s", ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN+4));
+                                    ARGUSBUF_APPEND(" = %s", ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN+4));
 #ifdef INET6
                                 /* rfc1888 mapped IPv6 address ? */
                                 else if (EXTRACT_24BITS(tptr+BGP_VPN_RD_LEN) ==  0x350000)
-                                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," = %s", ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN+3));
+                                    ARGUSBUF_APPEND(" = %s", ArgusGetName(ArgusParser, (u_char *)tptr+BGP_VPN_RD_LEN+3));
 #endif
                                 tptr += tlen;
                                 tlen = 0;
@@ -1156,7 +1156,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                             break;
                         default:
                             TCHECK2(tptr[0], tlen);
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)],"no AFI %u/SAFI %u decoder",af,safi);
+                            ARGUSBUF_APPEND("no AFI %u/SAFI %u decoder",af,safi);
                             if (ArgusParser->vflag <= 1)
                                 print_unknown_data(tptr," ",tlen);
                             tptr += tlen;
@@ -1166,7 +1166,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                         }
                     }
       }
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", nh-length: %u", nhlen);
+                ARGUSBUF_APPEND(", nh-length: %u", nhlen);
       tptr += tlen;
 
       TCHECK(tptr[0]);
@@ -1174,14 +1174,14 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       tptr++;
 
       if (snpa) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u SNPA", snpa);
+         ARGUSBUF_APPEND(" %u SNPA", snpa);
          for (/*nothing*/; snpa > 0; snpa--) {
             TCHECK(tptr[0]);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %d bytes", tptr[0]);
+            ARGUSBUF_APPEND(" %d bytes", tptr[0]);
             tptr += tptr[0] + 1;
          }
       } else {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],", no SNPA");
+         ARGUSBUF_APPEND(", no SNPA");
                 }
 
       while (len - (tptr - pptr) > 0) {
@@ -1191,40 +1191,40 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_INET<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET<<8 | SAFNUM_LABUNICAST):
                         advance = decode_labeled_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_INET<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_INET<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET<<8 | SAFNUM_RT_ROUTING_INFO):
                         advance = decode_rt_routing_info(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
 #ifdef INET6
                     case (AFNUM_INET6<<8 | SAFNUM_UNICAST):
@@ -1232,40 +1232,40 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_INET6<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET6<<8 | SAFNUM_LABUNICAST):
                         advance = decode_labeled_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET6<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_INET6<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_INET6<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET6<<8 | SAFNUM_RT_ROUTING_INFO):
                         advance = decode_rt_routing_info(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
 #endif
                     case (AFNUM_L2VPN<<8 | SAFNUM_VPNUNICAST):
@@ -1273,37 +1273,37 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_L2VPN<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_l2(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal length)");
+                            ARGUSBUF_APPEND(" (illegal length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);         
+                            ARGUSBUF_APPEND(" %s", buf);         
                         break;
                     case (AFNUM_NSAP<<8 | SAFNUM_UNICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_MULTICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_clnp_prefix(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_clnp_prefix(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;                                   
                     default:
                         TCHECK2(*tptr,tlen);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," no AFI %u / SAFI %u decoder",af,safi);
+                        ARGUSBUF_APPEND(" no AFI %u / SAFI %u decoder",af,safi);
                         if (ArgusParser->vflag <= 1)
                             print_unknown_data(tptr," ",tlen);
                         advance = 0;
@@ -1322,7 +1322,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       af = EXTRACT_16BITS(tptr);
       safi = tptr[2];
 
-                sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI: %s (%u), %sSAFI: %s (%u)",
+                ARGUSBUF_APPEND(" AFI: %s (%u), %sSAFI: %s (%u)",
                        tok2strbuf(bgp_afi_values, "Unknown AFI", af,
               tokbuf, sizeof(tokbuf)),
                        af,
@@ -1332,7 +1332,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                        safi);
 
                 if (len == BGP_MP_NLRI_MINSIZE)
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," End-of-Rib Marker (empty NLRI)");
+                    ARGUSBUF_APPEND(" End-of-Rib Marker (empty NLRI)");
 
       tptr += 3;
                 
@@ -1343,31 +1343,31 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_INET<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET<<8 | SAFNUM_LABUNICAST):
                         advance = decode_labeled_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_INET<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_INET<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_prefix4(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
 #ifdef INET6
                     case (AFNUM_INET6<<8 | SAFNUM_UNICAST):
@@ -1375,31 +1375,31 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_INET6<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET6<<8 | SAFNUM_LABUNICAST):
                         advance = decode_labeled_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_INET6<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_INET6<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_INET6<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_prefix6(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
 #endif
                     case (AFNUM_L2VPN<<8 | SAFNUM_VPNUNICAST):
@@ -1407,37 +1407,37 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case (AFNUM_L2VPN<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_l2(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal length)");
+                            ARGUSBUF_APPEND(" (illegal length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);         
+                            ARGUSBUF_APPEND(" %s", buf);         
                         break;
                     case (AFNUM_NSAP<<8 | SAFNUM_UNICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_MULTICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_UNIMULTICAST):
                         advance = decode_clnp_prefix(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNUNICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNMULTICAST):
                     case (AFNUM_NSAP<<8 | SAFNUM_VPNUNIMULTICAST):
                         advance = decode_labeled_vpn_clnp_prefix(tptr, buf, sizeof(buf));
                         if (advance == -1)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+                            ARGUSBUF_APPEND(" (illegal prefix length)");
                         else if (advance == -2)
                             goto trunc;
                         else
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+                            ARGUSBUF_APPEND(" %s", buf);
                         break;                                   
                     default:
                         TCHECK2(*(tptr-3),tlen);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"no AFI %u / SAFI %u decoder",af,safi);
+                        ARGUSBUF_APPEND("no AFI %u / SAFI %u decoder",af,safi);
                         if (ArgusParser->vflag <= 1)
                             print_unknown_data(tptr-3," ",tlen);                                        
                         advance = 0;
@@ -1451,7 +1451,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
       break;
         case BGPTYPE_EXTD_COMMUNITIES:
       if (len % 8) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"invalid len");
+         ARGUSBUF_APPEND("invalid len");
          break;
       }
                 while (tlen>0) {
@@ -1460,7 +1460,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     TCHECK2(tptr[0], 2);
                     extd_comm=EXTRACT_16BITS(tptr);
 
-          sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s (0x%04x), Flags [%s]",
+          ARGUSBUF_APPEND(" %s (0x%04x), Flags [%s]",
             tok2strbuf(bgp_extd_comm_subtype_values,
                   "unknown extd community typecode",
                   extd_comm, tokbuf, sizeof(tokbuf)),
@@ -1471,29 +1471,29 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     switch(extd_comm) {
                     case BGP_EXT_COM_RT_0:
                     case BGP_EXT_COM_RO_0:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": %u:%s",
+                        ARGUSBUF_APPEND(": %u:%s",
                                EXTRACT_16BITS(tptr+2),
                                ArgusGetName(ArgusParser, (u_char *)tptr+4));
                         break;
                     case BGP_EXT_COM_RT_1:
                     case BGP_EXT_COM_RO_1:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": %s:%u",
+                        ARGUSBUF_APPEND(": %s:%u",
                                ArgusGetName(ArgusParser, (u_char *)tptr+2),
                                EXTRACT_16BITS(tptr+6));
                         break;
                     case BGP_EXT_COM_RT_2:
                     case BGP_EXT_COM_RO_2:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": %u:%u",
+                        ARGUSBUF_APPEND(": %u:%u",
                                EXTRACT_32BITS(tptr+2),
                                EXTRACT_16BITS(tptr+6));
                         break;
                     case BGP_EXT_COM_LINKBAND:
               bw.i = EXTRACT_32BITS(tptr+2);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": bandwidth: %.3f Mbps",
+                        ARGUSBUF_APPEND(": bandwidth: %.3f Mbps",
                                bw.f*8/1000000);
                         break;
                     case BGP_EXT_COM_CISCO_MCAST:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": AS %u, group %s",
+                        ARGUSBUF_APPEND(": AS %u, group %s",
                                EXTRACT_16BITS(tptr+2),
                                ArgusGetName(ArgusParser, (u_char *)tptr+4));
                         break;
@@ -1503,11 +1503,11 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     case BGP_EXT_COM_VPN_ORIGIN4:
                     case BGP_EXT_COM_OSPF_RID:
                     case BGP_EXT_COM_OSPF_RID2:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ArgusGetName(ArgusParser, (u_char *)tptr+2));
+                        ARGUSBUF_APPEND("%s", ArgusGetName(ArgusParser, (u_char *)tptr+2));
                         break;
                     case BGP_EXT_COM_OSPF_RTYPE:
                     case BGP_EXT_COM_OSPF_RTYPE2: 
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": area:%s, router-type:%s, metric-type:%s%s",
+                        ARGUSBUF_APPEND(": area:%s, router-type:%s, metric-type:%s%s",
                                ArgusGetName(ArgusParser, (u_char *)tptr+2),
                                tok2strbuf(bgp_extd_comm_ospf_rtype_values,
                  "unknown (0x%02x)",
@@ -1517,7 +1517,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                                (*(tptr+6) == (BGP_OSPF_RTYPE_EXT ||BGP_OSPF_RTYPE_NSSA )) ? "E1" : "");
                         break;
                     case BGP_EXT_COM_L2INFO:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],": %s Control Flags [0x%02x]:MTU %u",
+                        ARGUSBUF_APPEND(": %s Control Flags [0x%02x]:MTU %u",
                                tok2strbuf(l2vpn_encaps_values,
                  "unknown encaps",
                  *(tptr+2),
@@ -1537,7 +1537,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
 
         case BGPTYPE_ATTR_SET:
                 TCHECK2(tptr[0], 4);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)]," Origin AS: %u", EXTRACT_32BITS(tptr));
+                ARGUSBUF_APPEND(" Origin AS: %u", EXTRACT_32BITS(tptr));
                 tptr+=4;
                 len -=4;
 
@@ -1551,7 +1551,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                     tptr += bgp_attr_off(&bgpa);
                     len -= bgp_attr_off(&bgpa);
                     
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s (%u), length: %u",
+                    ARGUSBUF_APPEND(" %s (%u), length: %u",
                            tok2strbuf(bgp_attr_values,
                   "Unknown Attribute", bgpa.bgpa_type,
                   tokbuf, sizeof(tokbuf)),
@@ -1559,14 +1559,14 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
                            alen);
                     
                     if (bgpa.bgpa_flags) {
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],", Flags [%s%s%s%s",
+                        ARGUSBUF_APPEND(", Flags [%s%s%s%s",
                                bgpa.bgpa_flags & 0x80 ? "O" : "",
                                bgpa.bgpa_flags & 0x40 ? "T" : "",
                                bgpa.bgpa_flags & 0x20 ? "P" : "",
                                bgpa.bgpa_flags & 0x10 ? "E" : "");
                         if (bgpa.bgpa_flags & 0xf)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)],"+%x", bgpa.bgpa_flags & 0xf);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"]: ");
+                            ARGUSBUF_APPEND("+%x", bgpa.bgpa_flags & 0xf);
+                        ARGUSBUF_APPEND("]: ");
                     }
                     /* FIXME check for recursion */
                     if (!bgp_attr_print(&bgpa, tptr, alen))
@@ -1579,7 +1579,7 @@ bgp_attr_print(const struct bgp_attr *attr, const u_char *pptr, int len)
 
    default:
        TCHECK2(*pptr,len);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," no Attribute %u decoder",attr->bgpa_type); /* we have no decoder for the attribute */
+            ARGUSBUF_APPEND(" no Attribute %u decoder",attr->bgpa_type); /* we have no decoder for the attribute */
             if (ArgusParser->vflag <= 1)
                 print_unknown_data(pptr," ",len);
             break;
@@ -1607,11 +1607,11 @@ bgp_open_print(const u_char *dat, int length)
    TCHECK2(dat[0], BGP_OPEN_SIZE);
    memcpy(&bgpo, dat, BGP_OPEN_SIZE);
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," Version %d, ", bgpo.bgpo_version);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"my AS %u, ", ntohs(bgpo.bgpo_myas));
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"Holdtime %us, ", ntohs(bgpo.bgpo_holdtime));
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"ID %s", ArgusGetName(ArgusParser, (u_char *)&bgpo.bgpo_id));
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," Optional parameters, length: %u", bgpo.bgpo_optlen);
+   ARGUSBUF_APPEND(" Version %d, ", bgpo.bgpo_version);
+   ARGUSBUF_APPEND("my AS %u, ", ntohs(bgpo.bgpo_myas));
+   ARGUSBUF_APPEND("Holdtime %us, ", ntohs(bgpo.bgpo_holdtime));
+   ARGUSBUF_APPEND("ID %s", ArgusGetName(ArgusParser, (u_char *)&bgpo.bgpo_id));
+   ARGUSBUF_APPEND(" Optional parameters, length: %u", bgpo.bgpo_optlen);
 
         /* some little sanity checking */
         if (length < bgpo.bgpo_optlen+BGP_OPEN_SIZE) 
@@ -1626,11 +1626,11 @@ bgp_open_print(const u_char *dat, int length)
       TCHECK2(opt[i], BGP_OPT_SIZE);
       memcpy(&bgpopt, &opt[i], BGP_OPT_SIZE);
       if (i + 2 + bgpopt.bgpopt_len > bgpo.bgpo_optlen) {
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," Option %d, length: %u", bgpopt.bgpopt_type, bgpopt.bgpopt_len);
+                        ARGUSBUF_APPEND(" Option %d, length: %u", bgpopt.bgpopt_type, bgpopt.bgpopt_len);
          break;
       }
 
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Option %s (%u), length: %u",
+      ARGUSBUF_APPEND(" Option %s (%u), length: %u",
                        tok2strbuf(bgp_opt_values,"Unknown",
               bgpopt.bgpopt_type,
               tokbuf, sizeof(tokbuf)),
@@ -1643,14 +1643,14 @@ bgp_open_print(const u_char *dat, int length)
                     cap_type=opt[i+BGP_OPT_SIZE];
                     cap_len=opt[i+BGP_OPT_SIZE+1];
                     tcap_len=cap_len;
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s (%u), length: %u",
+                    ARGUSBUF_APPEND(" %s (%u), length: %u",
                            tok2strbuf(bgp_capcode_values, "Unknown",
                   cap_type, tokbuf, sizeof(tokbuf)),
                            cap_type,
                            cap_len);
                     switch(cap_type) {
                     case BGP_CAPCODE_MP:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI %s (%u), SAFI %s (%u)",
+                        ARGUSBUF_APPEND(" AFI %s (%u), SAFI %s (%u)",
                                tok2strbuf(bgp_afi_values, "Unknown",
                  EXTRACT_16BITS(opt+i+BGP_OPT_SIZE+2),
                  tokbuf, sizeof(tokbuf)),
@@ -1661,13 +1661,13 @@ bgp_open_print(const u_char *dat, int length)
                                opt[i+BGP_OPT_SIZE+5]);
                         break;
                     case BGP_CAPCODE_RESTART:
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," Restart Flags: [%s], Restart Time %us",
+                        ARGUSBUF_APPEND(" Restart Flags: [%s], Restart Time %us",
                                ((opt[i+BGP_OPT_SIZE+2])&0x80) ? "R" : "none",
                                EXTRACT_16BITS(opt+i+BGP_OPT_SIZE+2)&0xfff);
                         tcap_len-=2;
                         cap_offset=4;
                         while(tcap_len>=4) {
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI %s (%u), SAFI %s (%u), Forwarding state preserved: %s",
+                            ARGUSBUF_APPEND(" AFI %s (%u), SAFI %s (%u), Forwarding state preserved: %s",
                                    tok2strbuf(bgp_afi_values,"Unknown",
                      EXTRACT_16BITS(opt+i+BGP_OPT_SIZE+cap_offset),
                      tokbuf, sizeof(tokbuf)),
@@ -1686,7 +1686,7 @@ bgp_open_print(const u_char *dat, int length)
                         break;
                     default:
                         TCHECK2(opt[i+BGP_OPT_SIZE+2],cap_len);
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)]," no decoder for Capability %u",
+                        ARGUSBUF_APPEND(" no decoder for Capability %u",
                                cap_type);
                         if (ArgusParser->vflag <= 1)
                             print_unknown_data(&opt[i+BGP_OPT_SIZE+2]," ",cap_len);
@@ -1699,7 +1699,7 @@ bgp_open_print(const u_char *dat, int length)
                     break;
                 case BGP_OPT_AUTH:
                 default:
-                       sprintf(&ArgusBuf[strlen(ArgusBuf)]," no decoder for option %u",
+                       ARGUSBUF_APPEND(" no decoder for option %u",
                            bgpopt.bgpopt_type);
                        break;
                 }
@@ -1708,7 +1708,7 @@ bgp_open_print(const u_char *dat, int length)
    }
    return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BGP]");
+   ARGUSBUF_APPEND("[|BGP]");
 }
 
 static void
@@ -1734,7 +1734,7 @@ bgp_update_print(const u_char *dat, int length)
        * so only try to decode it if we're not v6 enabled.
             */
 #ifdef INET6
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Withdrawn routes: %d bytes", len);
+      ARGUSBUF_APPEND(" Withdrawn routes: %d bytes", len);
 #else
       char buf[MAXHOSTNAMELEN + 100];
       int wpfx;
@@ -1742,18 +1742,18 @@ bgp_update_print(const u_char *dat, int length)
       TCHECK2(p[2], len);
       i = 2;
 
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Withdrawn routes:");
+      ARGUSBUF_APPEND(" Withdrawn routes:");
 
       while(i < 2 + len) {
          wpfx = decode_prefix4(&p[i], buf, sizeof(buf));
          if (wpfx == -1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+            ARGUSBUF_APPEND(" (illegal prefix length)");
             break;
          } else if (wpfx == -2)
             goto trunc;
          else {
             i += wpfx;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+            ARGUSBUF_APPEND(" %s", buf);
          }
       }
 #endif
@@ -1764,7 +1764,7 @@ bgp_update_print(const u_char *dat, int length)
    len = EXTRACT_16BITS(p);
 
         if (len == 0 && length == BGP_UPDATE_MINSIZE) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," End-of-Rib Marker (empty NLRI)");
+            ARGUSBUF_APPEND(" End-of-Rib Marker (empty NLRI)");
             return;
         }
 
@@ -1779,7 +1779,7 @@ bgp_update_print(const u_char *dat, int length)
          alen = bgp_attr_len(&bgpa);
          aoff = bgp_attr_off(&bgpa);
 
-             sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s (%u), length: %u",
+             ARGUSBUF_APPEND(" %s (%u), length: %u",
                               tok2strbuf(bgp_attr_values, "Unknown Attribute",
                 bgpa.bgpa_type,
                 tokbuf, sizeof(tokbuf)),
@@ -1787,14 +1787,14 @@ bgp_update_print(const u_char *dat, int length)
                               alen);
 
          if (bgpa.bgpa_flags) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", Flags [%s%s%s%s",
+            ARGUSBUF_APPEND(", Flags [%s%s%s%s",
                bgpa.bgpa_flags & 0x80 ? "O" : "",
                bgpa.bgpa_flags & 0x40 ? "T" : "",
                bgpa.bgpa_flags & 0x20 ? "P" : "",
                bgpa.bgpa_flags & 0x10 ? "E" : "");
             if (bgpa.bgpa_flags & 0xf)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"+%x", bgpa.bgpa_flags & 0xf);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"]: ");
+               ARGUSBUF_APPEND("+%x", bgpa.bgpa_flags & 0xf);
+            ARGUSBUF_APPEND("]: ");
          }
          if (!bgp_attr_print(&bgpa, &p[i + aoff], alen))
             goto trunc;
@@ -1804,24 +1804,24 @@ bgp_update_print(const u_char *dat, int length)
    p += 2 + len;
 
    if (dat + length > p) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Updated routes:");
+      ARGUSBUF_APPEND(" Updated routes:");
       while (dat + length > p) {
          char buf[MAXHOSTNAMELEN + 100];
          i = decode_prefix4(p, buf, sizeof(buf));
          if (i == -1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (illegal prefix length)");
+            ARGUSBUF_APPEND(" (illegal prefix length)");
             break;
          } else if (i == -2)
             goto trunc;
          else {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", buf);
+            ARGUSBUF_APPEND(" %s", buf);
             p += i;
          }
       }
    }
    return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BGP]");
+   ARGUSBUF_APPEND("[|BGP]");
 }
 
 static void
@@ -1839,7 +1839,7 @@ bgp_notification_print(const u_char *dat, int length)
         if (length<BGP_NOTIFICATION_SIZE)
             return;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s (%u)",
+   ARGUSBUF_APPEND(", %s (%u)",
           tok2strbuf(bgp_notify_major_values, "Unknown Error",
            bgpn.bgpn_major, tokbuf, sizeof(tokbuf)),
           bgpn.bgpn_major);
@@ -1847,30 +1847,30 @@ bgp_notification_print(const u_char *dat, int length)
         switch (bgpn.bgpn_major) {
 
         case BGP_NOTIFY_MAJOR_MSG:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", subcode %s (%u)",
+            ARGUSBUF_APPEND(", subcode %s (%u)",
          tok2strbuf(bgp_notify_minor_msg_values, "Unknown",
                bgpn.bgpn_minor, tokbuf, sizeof(tokbuf)),
          bgpn.bgpn_minor);
             break;
         case BGP_NOTIFY_MAJOR_OPEN:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", subcode %s (%u)",
+            ARGUSBUF_APPEND(", subcode %s (%u)",
          tok2strbuf(bgp_notify_minor_open_values, "Unknown",
                bgpn.bgpn_minor, tokbuf, sizeof(tokbuf)),
          bgpn.bgpn_minor);
             break;
         case BGP_NOTIFY_MAJOR_UPDATE:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", subcode %s (%u)",
+            ARGUSBUF_APPEND(", subcode %s (%u)",
          tok2strbuf(bgp_notify_minor_update_values, "Unknown",
                bgpn.bgpn_minor, tokbuf, sizeof(tokbuf)),
          bgpn.bgpn_minor);
             break;
         case BGP_NOTIFY_MAJOR_CAP:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," subcode %s (%u)",
+            ARGUSBUF_APPEND(" subcode %s (%u)",
          tok2strbuf(bgp_notify_minor_cap_values, "Unknown",
                bgpn.bgpn_minor, tokbuf, sizeof(tokbuf)),
          bgpn.bgpn_minor);
         case BGP_NOTIFY_MAJOR_CEASE:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", subcode %s (%u)",
+            ARGUSBUF_APPEND(", subcode %s (%u)",
          tok2strbuf(bgp_notify_minor_cease_values, "Unknown",
                bgpn.bgpn_minor, tokbuf, sizeof(tokbuf)),
          bgpn.bgpn_minor);
@@ -1881,7 +1881,7 @@ bgp_notification_print(const u_char *dat, int length)
        if(bgpn.bgpn_minor == BGP_NOTIFY_MINOR_CEASE_MAXPRFX && length >= BGP_NOTIFICATION_SIZE + 7) {
       tptr = dat + BGP_NOTIFICATION_SIZE;
       TCHECK2(*tptr, 7);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", AFI %s (%u), SAFI %s (%u), Max Prefixes: %u",
+      ARGUSBUF_APPEND(", AFI %s (%u), SAFI %s (%u), Max Prefixes: %u",
              tok2strbuf(bgp_afi_values, "Unknown",
               EXTRACT_16BITS(tptr), tokbuf, sizeof(tokbuf)),
              EXTRACT_16BITS(tptr),
@@ -1897,7 +1897,7 @@ bgp_notification_print(const u_char *dat, int length)
 
    return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BGP]");
+   ARGUSBUF_APPEND("[|BGP]");
 }
 
 static void
@@ -1915,7 +1915,7 @@ bgp_route_refresh_print(const u_char *pptr, int len) {
 
         bgp_route_refresh_header = (const struct bgp_route_refresh *)pptr;
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)]," AFI %s (%u), SAFI %s (%u)",
+        ARGUSBUF_APPEND(" AFI %s (%u), SAFI %s (%u)",
                tok2strbuf(bgp_afi_values,"Unknown",
            /* this stinks but the compiler pads the structure
             * weird */
@@ -1934,7 +1934,7 @@ bgp_route_refresh_print(const u_char *pptr, int len) {
         
         return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BGP]");
+   ARGUSBUF_APPEND("[|BGP]");
 }
 
 static int
@@ -1945,7 +1945,7 @@ bgp_header_print(const u_char *dat, int length)
 
    TCHECK2(dat[0], BGP_SIZE);
    memcpy(&bgp, dat, BGP_SIZE);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s Message (%u), length: %u",
+   ARGUSBUF_APPEND(" %s Message (%u), length: %u",
                tok2strbuf(bgp_msg_values, "Unknown", bgp.bgp_type,
            tokbuf, sizeof(tokbuf)),
                bgp.bgp_type,
@@ -1969,13 +1969,13 @@ bgp_header_print(const u_char *dat, int length)
         default:
                 /* we have no decoder for the BGP message */
                 TCHECK2(*dat, length);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)]," no Message %u decoder",bgp.bgp_type);
+                ARGUSBUF_APPEND(" no Message %u decoder",bgp.bgp_type);
                 print_unknown_data(dat," ",length);
                 break;
    }
    return 1;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|BGP]");
+   ARGUSBUF_APPEND("[|BGP]");
    return 0;
 }
 
@@ -1997,7 +1997,7 @@ bgp_print(const u_char *dat, int length)
    if (snapend < dat + length)
       ep = snapend;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],": BGP, length: %u",length);
+   ARGUSBUF_APPEND(": BGP, length: %u",length);
 
         if (ArgusParser->vflag < 1) /* lets be less chatty */
                 return ArgusBuf;
@@ -2024,11 +2024,11 @@ bgp_print(const u_char *dat, int length)
       memcpy(&bgp, p, BGP_SIZE);
 
       if (start != p)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|BGP]");
+         ARGUSBUF_APPEND(" [|BGP]");
 
       hlen = ntohs(bgp.bgp_len);
       if (hlen < BGP_SIZE) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|BGP Bogus header length %u < %u]", hlen, BGP_SIZE);
+         ARGUSBUF_APPEND(" [|BGP Bogus header length %u < %u]", hlen, BGP_SIZE);
          break;
       }
 
@@ -2038,7 +2038,7 @@ bgp_print(const u_char *dat, int length)
          p += hlen;
          start = p;
       } else {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|BGP %s]", tok2strbuf(bgp_msg_values,
+         ARGUSBUF_APPEND(" [|BGP %s]", tok2strbuf(bgp_msg_values,
                  "Unknown Message Type", bgp.bgp_type,
                  tokbuf, sizeof(tokbuf)));
          break;
@@ -2048,7 +2048,7 @@ bgp_print(const u_char *dat, int length)
    return ArgusBuf;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|BGP]");
+   ARGUSBUF_APPEND(" [|BGP]");
 
    return ArgusBuf;
 }

@@ -55,21 +55,21 @@ beep_print(const u_char *bp, u_int length)
 {
 
    if (l_strnstart("MSG", 4, (const char *)bp, length)) /* A REQuest */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP MSG");
+      ARGUSBUF_APPEND(" BEEP MSG");
    else if (l_strnstart("RPY ", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP RPY");
+      ARGUSBUF_APPEND(" BEEP RPY");
    else if (l_strnstart("ERR ", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP ERR");
+      ARGUSBUF_APPEND(" BEEP ERR");
    else if (l_strnstart("ANS ", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP ANS");
+      ARGUSBUF_APPEND(" BEEP ANS");
    else if (l_strnstart("NUL ", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP NUL");
+      ARGUSBUF_APPEND(" BEEP NUL");
    else if (l_strnstart("SEQ ", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP SEQ");
+      ARGUSBUF_APPEND(" BEEP SEQ");
    else if (l_strnstart("END", 4, (const char *)bp, length))
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP END");
+      ARGUSBUF_APPEND(" BEEP END");
    else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," BEEP (payload or undecoded)");
+      ARGUSBUF_APPEND(" BEEP (payload or undecoded)");
 
    return(ArgusBuf);
 }

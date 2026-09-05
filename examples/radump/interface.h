@@ -122,6 +122,27 @@
 /* Bail if "var" was not captured */
 #define TCHECK(var) TCHECK2(var, sizeof(var))
 
+/*
+ * Bounded-append helper for the global ArgusBuf[MAXSTRLEN] protocol-decode
+ * text buffer. Every protocol printer in this directory builds up its
+ * output by repeatedly appending formatted text to ArgusBuf; several of
+ * those append calls sit inside loops whose iteration count comes directly
+ * from a field carried in the record being decoded, so the total number of
+ * appends made while decoding a single record is not bounded by the code
+ * itself. ARGUSBUF_APPEND() closes that gap: it always appends via
+ * snprintf() with the buffer's *actual remaining* capacity, so a decode
+ * pass can never write past the end of ArgusBuf no matter how many times
+ * it is called or how large the appended values are. Once ArgusBuf is
+ * full, remaining appends become silent (safe) no-ops rather than writes
+ * past the buffer.
+ */
+#define ARGUSBUF_APPEND(...) \
+   do { \
+      size_t __argusbuf_len = strlen(ArgusBuf); \
+      if (__argusbuf_len < MAXSTRLEN) \
+         snprintf(&ArgusBuf[__argusbuf_len], MAXSTRLEN - __argusbuf_len, __VA_ARGS__); \
+   } while (0)
+
 void safeputchar(int);
 
 extern const char *tok2strbuf(const struct tok *, const char *, int, char *, size_t);

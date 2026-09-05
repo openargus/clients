@@ -42,6 +42,7 @@
 #include <utime.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #ifdef HAVE_ZLIB_H
 #include <zlib.h>
@@ -652,6 +653,56 @@ __shell_escape(const char * const str)
 
    return newstr;
 }
+
+/* Escape characters that retain special meaning inside a double-quoted
+ * bourne shell string: backslash, double-quote, backtick (command
+ * substitution), and dollar sign (variable/command substitution). This is
+ * distinct from __shell_escape(), which is meant for use in an *unquoted*
+ * shell word and does not neutralize these characters when the resulting
+ * string is subsequently placed inside double quotes (e.g. "-T \"%s\"").
+ * Caller is responsible for freeing memory (with free(), not ArgusFree()).
+ */
+static int
+__is_dquote_metacharacter(char c)
+{
+   return (c == '\\' || c == '"' || c == '`' || c == '$');
+}
+
+static char *
+__shell_escape_dquote(const char * const str)
+{
+   size_t metacount = 0;
+   size_t orig_strlen = strlen(str);
+   size_t i = 0;
+   char *newstr;
+   char *tmp;
+
+   while (*(str+i) != 0) {
+      if (__is_dquote_metacharacter(*(str+i)))
+         metacount++;
+      i++;
+   }
+
+   if (metacount == 0) {
+      newstr = strdup(str);
+      if (newstr == NULL)
+         ArgusLog(LOG_ERR, "%s: failed to duplicate string\n", __func__);
+      return newstr;
+   }
+
+   newstr = malloc(orig_strlen + metacount + 1);
+   if (newstr == NULL)
+      ArgusLog(LOG_ERR, "%s: failed to allocate new string\n", __func__);
+
+   for (i = 0, tmp = newstr; i < orig_strlen; i++) {
+      if (__is_dquote_metacharacter(*(str+i)))
+         *tmp++ = '\\';
+      *tmp++ = *(str+i);
+   }
+   *tmp = 0;
+
+   return newstr;
+}
 #endif /* ARGUS_CURLEXE */
 
 static inline int
@@ -768,10 +819,19 @@ __parse_network_address(const char * const src, struct sockaddr_storage *dst)
 }
 
 #ifdef HAVE_ZLIB_H
-/* __gzip() returns 0 on success, -1 otherwise. */
+/* __gzip() returns 0 on success, -1 otherwise.
+ *
+ * The destination file is created here (rather than by the caller) using
+ * O_CREAT|O_EXCL|O_NOFOLLOW, and its ownership/permissions are set via
+ * fchown()/fchmod() on the open file descriptor before gzclose(), so that
+ * there is no window between file creation and permission/ownership
+ * assignment during which a symlink-swap or file-swap race could redirect
+ * later by-path chmod()/chown() calls to an attacker-controlled target.
+ */
 static int
 __gzip(const char * const filename, const char * const gzfilename,
-       off_t filesz, unsigned char *buf, size_t buflen)
+       off_t filesz, unsigned char *buf, size_t buflen,
+       mode_t mode, uid_t uid, gid_t gid)
 {
    gzFile gzfp;
    FILE *fp;
@@ -780,6 +840,7 @@ __gzip(const char * const filename, const char * const gzfilename,
    int gzerr;
    unsigned char hdr[3];
    int magicbytes;
+   int gzfd;
 
    fp = fopen(filename, "rb");
    if (fp == NULL) {
@@ -798,9 +859,24 @@ __gzip(const char * const filename, const char * const gzfilename,
    }
    rewind(fp);
 
-   gzfp = gzopen(gzfilename,"wb");
+   gzfd = open(gzfilename, O_CREAT|O_EXCL|O_NOFOLLOW|O_WRONLY, 0600);
+   if (gzfd < 0) {
+      ArgusLog(LOG_WARNING, "unable to open file %s\n", gzfilename);
+      fclose(fp);
+      return -1;
+   }
+
+   if (fchown(gzfd, uid, gid) < 0)
+      ArgusLog(LOG_WARNING, "failed to update ownership of file %s\n",
+               gzfilename);
+   if (fchmod(gzfd, mode) < 0)
+      ArgusLog(LOG_WARNING, "failed to update permissions on file %s\n",
+               gzfilename);
+
+   gzfp = gzdopen(gzfd, "wb");
    if (gzfp == NULL) {
       ArgusLog(LOG_WARNING, "unable to open file %s\n", gzfilename);
+      close(gzfd);
       fclose(fp);
       return -1;
    }
@@ -1198,7 +1274,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
    char *winpath = ArgusCygwinConvPath2Win(filename);
 # else
 #ifdef ARGUS_CURLEXE
-   char *escaped = __shell_escape(filename);
+   char *escaped = __shell_escape_dquote(filename);
 # else
    char *escaped = NULL;
 #endif
@@ -1525,7 +1601,8 @@ RamanageCompress(const struct ArgusParserStruct * const parser,
          DEBUGLOG(4, "compress file %s -> %s\n", file->filename, gzfilename);
 
          gzerr = __gzip(file->filename, gzfilename, file->statbuf.st_size,
-                        buf, buflen);
+                        buf, buflen, file->statbuf.st_mode,
+                        file->statbuf.st_uid, file->statbuf.st_gid);
 
          if (gzerr) {
             i++;
@@ -1535,8 +1612,10 @@ RamanageCompress(const struct ArgusParserStruct * const parser,
          compress_kb += file->statbuf.st_size / 1024;
 
          /* Make the new gzip file's attributes look like those of the
-          * original file.  Copy timestamps, ownerhip and permissions
-          * to the new file.  Then remove the original, uncompressed,
+          * original file.  Ownership and permissions were already applied,
+          * on the open file descriptor, inside __gzip() to avoid a
+          * TOCTOU race between file creation and attribute assignment.
+          * Copy timestamps here, then remove the original, uncompressed,
           * file and update the filename and attributes in the linked
           * list so that subsequent ramanage commands operate on the
           * gzip file.
@@ -1546,12 +1625,6 @@ RamanageCompress(const struct ArgusParserStruct * const parser,
          ut.modtime = file->statbuf.st_mtime;
          if (utime(gzfilename, &ut) < 0)
             ArgusLog(LOG_WARNING, "failed to update timestamp on file %s\n",
-                     gzfilename);
-         if (chmod(gzfilename, file->statbuf.st_mode) < 0)
-            ArgusLog(LOG_WARNING,
-                     "failed to update permissions on file %s\n", gzfilename);
-         if (chown(gzfilename, file->statbuf.st_uid, file->statbuf.st_gid) < 0)
-            ArgusLog(LOG_WARNING, "failed to update ownership of file %s\n",
                      gzfilename);
          origfilename = file->filename;
          file->filename = strdup(gzfilename);

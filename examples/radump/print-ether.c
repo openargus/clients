@@ -52,24 +52,24 @@ ether_hdr_print(register const u_char *bp, u_int length)
    register const struct ether_header *ep;
    ep = (const struct ether_header *)bp;
 
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s > %s", etheraddr_string(ArgusParser, (u_char *)&ESRC(ep)),
+   ARGUSBUF_APPEND("%s > %s", etheraddr_string(ArgusParser, (u_char *)&ESRC(ep)),
                                                         etheraddr_string(ArgusParser, (u_char *)&EDST(ep)));
 
    if (!ArgusParser->qflag) {
            if (ntohs(ep->ether_type) <= ETHERMTU)
-                (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", 802.3");
+                ARGUSBUF_APPEND(", 802.3");
                 else 
-                (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", ethertype %s (0x%04x)",
+                ARGUSBUF_APPEND(", ethertype %s (0x%04x)",
                    tok2str(ethertype_values,"Unknown", ntohs(ep->ether_type)),
                                        ntohs(ep->ether_type));         
         } else {
                 if (ntohs(ep->ether_type) <= ETHERMTU)
-                          (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", 802.3");
+                          ARGUSBUF_APPEND(", 802.3");
                 else 
-                          (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s", tok2str(ethertype_values,"Unknown Ethertype (0x%04x)", ntohs(ep->ether_type)));  
+                          ARGUSBUF_APPEND(", %s", tok2str(ethertype_values,"Unknown Ethertype (0x%04x)", ntohs(ep->ether_type)));  
         }
 
-   (void)sprintf(&ArgusBuf[strlen(ArgusBuf)],", length %u: ", length);
+   ARGUSBUF_APPEND(", length %u: ", length);
 }
 
 int ether_encap_print(u_short, const u_char *, u_int, u_int, u_short *);
@@ -87,7 +87,7 @@ ether_print(struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, c
       u_short extracted_ether_type;
 
       if (caplen < ETHER_HDRLEN) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|ether]");
+         ARGUSBUF_APPEND("[|ether]");
          return ArgusBuf;
       }
 
@@ -159,7 +159,7 @@ ether_encap_print(u_short ether_type, const u_char *p,
 
    case ETHERTYPE_ATALK:
       if (ArgusParser->vflag)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"et1 ");
+         ARGUSBUF_APPEND("et1 ");
       atalk_print(p, length);
       return (1);
 
@@ -168,13 +168,13 @@ ether_encap_print(u_short ether_type, const u_char *p,
       return (1);
 
    case ETHERTYPE_IPX:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"(NOV-ETHII) ");
+      ARGUSBUF_APPEND("(NOV-ETHII) ");
       ipx_print(p, length);
       return (1);
 
    case ETHERTYPE_8021Q:
            if (ArgusParser->eflag)
-          sprintf(&ArgusBuf[strlen(ArgusBuf)],"vlan %u, p %u%s, ",
+          ARGUSBUF_APPEND("vlan %u, p %u%s, ",
             ntohs(*(u_int16_t *)p) & 0xfff,
             ntohs(*(u_int16_t *)p) >> 13,
             (ntohs(*(u_int16_t *)p) & 0x1000) ? ", CFI" : "");
@@ -186,7 +186,7 @@ ether_encap_print(u_short ether_type, const u_char *p,
 
       if (ether_type > ETHERMTU) {
               if (ArgusParser->eflag)
-                 sprintf(&ArgusBuf[strlen(ArgusBuf)],"ethertype %s, ",
+                 ARGUSBUF_APPEND("ethertype %s, ",
                    tok2str(ethertype_values,"0x%04x", ether_type));
          goto recurse;
       }
@@ -210,7 +210,7 @@ ether_encap_print(u_short ether_type, const u_char *p,
 
                 if (ether_type > ETHERMTU) {
                     if (ArgusParser->eflag)
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"ethertype %s, ",
+                        ARGUSBUF_APPEND("ethertype %s, ",
                                tok2str(ethertype_values,"0x%04x", ether_type));
                     goto recurse;
                 }
@@ -242,7 +242,7 @@ ether_encap_print(u_short ether_type, const u_char *p,
 
    case ETHERTYPE_PPP:
       if (length) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],": ");
+         ARGUSBUF_APPEND(": ");
          ppp_print(p, length);
       }
       return (1);

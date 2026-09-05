@@ -107,7 +107,7 @@ trans2_findfirst(const u_char *param, const u_char *data, int pcnt, int dcnt)
 
     smb_fdata(param, fmt, param + pcnt, unicodestr);
     if (dcnt) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"data:\n");
+	ARGUSBUF_APPEND("data:\n");
 	print_data(data, dcnt);
     }
 }
@@ -141,12 +141,12 @@ trans2_qfsinfo(const u_char *param, const u_char *data, int pcnt, int dcnt)
 	smb_fdata(data, fmt, data + dcnt, unicodestr);
     }
     if (dcnt) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"data:\n");
+	ARGUSBUF_APPEND("data:\n");
 	print_data(data, dcnt);
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -195,8 +195,8 @@ print_trans2(const u_char *words, const u_char *dat, const u_char *buf, const u_
 	fn = smbfindint(EXTRACT_LE_16BITS(w + 14 * 2), trans2_fns);
     } else {
 	if (words[0] == 0) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s\n", fn->name);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Trans2Interim\n");
+	    ARGUSBUF_APPEND("%s\n", fn->name);
+	    ARGUSBUF_APPEND("Trans2Interim\n");
 	    return;
 	}
 	TCHECK2(w[7 * 2], 2);
@@ -206,7 +206,7 @@ print_trans2(const u_char *words, const u_char *dat, const u_char *buf, const u_
 	data = buf + EXTRACT_LE_16BITS(w + 7 * 2);
     }
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s param_length=%d data_length=%d\n", fn->name, pcnt, dcnt);
+    ARGUSBUF_APPEND("%s param_length=%d data_length=%d\n", fn->name, pcnt, dcnt);
 
     if (request) {
 	if (words[0] == 8) {
@@ -231,7 +231,7 @@ print_trans2(const u_char *words, const u_char *dat, const u_char *buf, const u_
 
     TCHECK2(*dat, 2);
     bcc = EXTRACT_LE_16BITS(dat);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
     if (fn->descript.fn)
 	(*fn->descript.fn)(param, data, pcnt, dcnt);
     else {
@@ -240,7 +240,7 @@ print_trans2(const u_char *words, const u_char *dat, const u_char *buf, const u_
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -322,7 +322,7 @@ print_browse(const u_char *param, int paramlen, const u_char *data, int datalen)
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -374,7 +374,7 @@ print_trans(const u_char *words, const u_char *data1, const u_char *buf, const u
 
     TCHECK2(*data1, 2);
     bcc = EXTRACT_LE_16BITS(data1);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
     if (bcc > 0) {
 	smb_fdata(data1 + 2, f2, maxbuf - (paramlen + datalen), unicodestr);
 
@@ -395,7 +395,7 @@ print_trans(const u_char *words, const u_char *data1, const u_char *buf, const u
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -427,7 +427,7 @@ print_negprot(const u_char *words, const u_char *data, const u_char *buf, const 
 
     TCHECK2(*data, 2);
     bcc = EXTRACT_LE_16BITS(data);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
     if (bcc > 0) {
 	if (f2)
 	    smb_fdata(data + 2, f2, SMBMIN(data + 2 + EXTRACT_LE_16BITS(data),
@@ -437,7 +437,7 @@ print_negprot(const u_char *words, const u_char *data, const u_char *buf, const 
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -471,7 +471,7 @@ print_sesssetup(const u_char *words, const u_char *data, const u_char *buf, cons
 
     TCHECK2(*data, 2);
     bcc = EXTRACT_LE_16BITS(data);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
     if (bcc > 0) {
 	if (f2)
 	    smb_fdata(data + 2, f2, SMBMIN(data + 2 + EXTRACT_LE_16BITS(data),
@@ -481,7 +481,7 @@ print_sesssetup(const u_char *words, const u_char *data, const u_char *buf, cons
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -511,7 +511,7 @@ print_lockingandx(const u_char *words, const u_char *data, const u_char *buf, co
 
     TCHECK2(*data, 2);
     bcc = EXTRACT_LE_16BITS(data);
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
     if (bcc > 0) {
 	if (f2)
 	    smb_fdata(data + 2, f2, SMBMIN(data + 2 + EXTRACT_LE_16BITS(data),
@@ -521,7 +521,7 @@ print_lockingandx(const u_char *words, const u_char *data, const u_char *buf, co
     }
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -822,9 +822,9 @@ print_smb(const u_char *buf, const u_char *maxbuf)
     fn = smbfind(command, smb_fns);
 
     if (ArgusParser->vflag > 1)
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+	ARGUSBUF_APPEND("\n");
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"SMB PACKET: %s (%s)\n", fn->name, request ? "REQUEST" : "REPLY");
+    ARGUSBUF_APPEND("SMB PACKET: %s (%s)\n", fn->name, request ? "REQUEST" : "REPLY");
 
     if (ArgusParser->vflag < 2)
         return;
@@ -835,10 +835,10 @@ print_smb(const u_char *buf, const u_char *maxbuf)
     if (nterrcodes) {
     	nterror = EXTRACT_LE_32BITS(&buf[5]);
 	if (nterror)
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"NTError = %s\n", nt_errstr(nterror));
+	    ARGUSBUF_APPEND("NTError = %s\n", nt_errstr(nterror));
     } else {
 	if (buf[5])
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"SMBError = %s\n", smb_errstr(buf[5], EXTRACT_LE_16BITS(&buf[7])));
+	    ARGUSBUF_APPEND("SMBError = %s\n", smb_errstr(buf[5], EXTRACT_LE_16BITS(&buf[7])));
     }
 
     smboffset = 32;
@@ -876,20 +876,20 @@ print_smb(const u_char *buf, const u_char *maxbuf)
 		    for (i = 0; &words[1 + 2 * i] < maxwords; i++) {
 			TCHECK2(words[1 + 2 * i], 2);
 			v = EXTRACT_LE_16BITS(words + 1 + 2 * i);
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_vwv[%d]=%d (0x%X)\n", i, v, v);
+			ARGUSBUF_APPEND("smb_vwv[%d]=%d (0x%X)\n", i, v, v);
 		    }
 		}
 	    }
 
 	    TCHECK2(*data, 2);
 	    bcc = EXTRACT_LE_16BITS(data);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_bcc=%u\n", bcc);
+	    ARGUSBUF_APPEND("smb_bcc=%u\n", bcc);
 	    if (f2) {
 		if (bcc > 0)
 		    smb_fdata(data + 2, f2, data + 2 + bcc, unicodestr);
 	    } else {
 		if (bcc > 0) {
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"smb_buf[]=\n");
+		    ARGUSBUF_APPEND("smb_buf[]=\n");
 		    print_data(data + 2, SMBMIN(bcc, PTR_DIFF(maxbuf, data + 2)));
 		}
 	    }
@@ -908,19 +908,19 @@ print_smb(const u_char *buf, const u_char *maxbuf)
 
 	fn = smbfind(command, smb_fns);
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\nSMB PACKET: %s (%s) (CHAINED)\n",
+	ARGUSBUF_APPEND("\nSMB PACKET: %s (%s) (CHAINED)\n",
 	    fn->name, request ? "REQUEST" : "REPLY");
 	if (newsmboffset < smboffset) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Bad andX offset: %u < %u\n", newsmboffset, smboffset);
+	    ARGUSBUF_APPEND("Bad andX offset: %u < %u\n", newsmboffset, smboffset);
 	    break;
 	}
 	smboffset = newsmboffset;
     }
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+    ARGUSBUF_APPEND("\n");
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -952,20 +952,20 @@ smb_tcp_print(const u_char *data, int length)
     if (smb_len >= 4 && caplen >= 4 && (memcmp(data,"\377SMB",4) || (memcmp(data,"\376SMB",4) == 0))) {
 	if ((int)smb_len > caplen) {
 	    if ((int)smb_len > length)
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Packet is continued in later TCP segments\n");
+                ARGUSBUF_APPEND("WARNING: Packet is continued in later TCP segments\n");
 	    else
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Short packet. Try increasing the snap length by %d\n",
+                ARGUSBUF_APPEND("WARNING: Short packet. Try increasing the snap length by %d\n",
 		    smb_len - caplen);
 	} else
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)], " ");
+	    ARGUSBUF_APPEND(" ");
 
 	print_smb(data, maxbuf > data + smb_len ? data + smb_len : maxbuf);
     } else
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"SMB-over-TCP packet:(raw data or continuation?)\n");
+       ARGUSBUF_APPEND("SMB-over-TCP packet:(raw data or continuation?)\n");
 
     return ArgusBuf;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return ArgusBuf;
 }
 
@@ -997,18 +997,18 @@ nbt_tcp_print(const u_char *data, int length)
     startbuf = data;
 
     if (ArgusParser->vflag < 2) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)]," NBT Session Packet: ");
+	ARGUSBUF_APPEND(" NBT Session Packet: ");
 	switch (type) {
 	case 0x00:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session Message");
+	    ARGUSBUF_APPEND("Session Message");
 	    break;
 
 	case 0x81:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session Request");
+	    ARGUSBUF_APPEND("Session Request");
 	    break;
 
 	case 0x82:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session Granted");
+	    ARGUSBUF_APPEND("Session Granted");
 	    break;
 
 	case 0x83:
@@ -1023,29 +1023,29 @@ nbt_tcp_print(const u_char *data, int length)
 		goto trunc;
 	    ecode = data[4];
 
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session Reject, ");
+	    ARGUSBUF_APPEND("Session Reject, ");
 	    switch (ecode) {
 	    case 0x80:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Not listening on called name");
+		ARGUSBUF_APPEND("Not listening on called name");
 		break;
 	    case 0x81:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Not listening for calling name");
+		ARGUSBUF_APPEND("Not listening for calling name");
 		break;
 	    case 0x82:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Called name not present");
+		ARGUSBUF_APPEND("Called name not present");
 		break;
 	    case 0x83:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Called name present, but insufficient resources");
+		ARGUSBUF_APPEND("Called name present, but insufficient resources");
 		break;
 	    default:
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Unspecified error 0x%X", ecode);
+		ARGUSBUF_APPEND("Unspecified error 0x%X", ecode);
 		break;
 	    }
 	  }
 	    break;
 
 	case 0x85:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session Keepalive");
+	    ARGUSBUF_APPEND("Session Keepalive");
 	    break;
 
 	default:
@@ -1063,14 +1063,14 @@ nbt_tcp_print(const u_char *data, int length)
 	    if (nbt_len >= 4 && caplen >= 4 && memcmp(data,"\377SMB",4) == 0) {
 		if ((int)nbt_len > caplen) {
 		    if ((int)nbt_len > length)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Packet is continued in later TCP segments\n");
+			ARGUSBUF_APPEND("WARNING: Packet is continued in later TCP segments\n");
 		    else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"WARNING: Short packet. Try increasing the snap length by %d\n",
+			ARGUSBUF_APPEND("WARNING: Short packet. Try increasing the snap length by %d\n",
 			    nbt_len - caplen);
 		}
 		print_smb(data, maxbuf > data + nbt_len ? data + nbt_len : maxbuf);
 	    } else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"Session packet:(raw data or continuation?)\n");
+		ARGUSBUF_APPEND("Session packet:(raw data or continuation?)\n");
 	    break;
 
 	case 0x81:
@@ -1097,19 +1097,19 @@ nbt_tcp_print(const u_char *data, int length)
 		ecode = origdata[4];
 		switch (ecode) {
 		case 0x80:
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Not listening on called name\n");
+		    ARGUSBUF_APPEND("Not listening on called name\n");
 		    break;
 		case 0x81:
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Not listening for calling name\n");
+		    ARGUSBUF_APPEND("Not listening for calling name\n");
 		    break;
 		case 0x82:
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Called name not present\n");
+		    ARGUSBUF_APPEND("Called name not present\n");
 		    break;
 		case 0x83:
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Called name present, but insufficient resources\n");
+		    ARGUSBUF_APPEND("Called name present, but insufficient resources\n");
 		    break;
 		default:
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"Unspecified error 0x%X\n", ecode);
+		    ARGUSBUF_APPEND("Unspecified error 0x%X\n", ecode);
 		    break;
 		}
 	    }
@@ -1124,11 +1124,11 @@ nbt_tcp_print(const u_char *data, int length)
 	    data = smb_fdata(data, "NBT - Unknown packet type\nType=[B]\n", maxbuf, 0);
 	    break;
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+	ARGUSBUF_APPEND("\n");
     }
     return ArgusBuf;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return ArgusBuf;
 }
 
@@ -1162,9 +1162,9 @@ nbt_udp137_print(const u_char *data, int length)
         return ArgusBuf;
 
     if (ArgusParser->vflag > 1)
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n>>> ");
+	ARGUSBUF_APPEND("\n>>> ");
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"NBT UDP PACKET(137): ");
+    ARGUSBUF_APPEND("NBT UDP PACKET(137): ");
 
     switch (opcode) {
     case 0: opcodestr = "QUERY"; break;
@@ -1176,28 +1176,28 @@ nbt_udp137_print(const u_char *data, int length)
     case 15: opcodestr = "MULTIHOMED REGISTRATION"; break;
     default: opcodestr = "OPUNKNOWN"; break;
     }
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", opcodestr);
+    ARGUSBUF_APPEND("%s", opcodestr);
     if (response) {
 	if (rcode)
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"; NEGATIVE");
+	    ARGUSBUF_APPEND("; NEGATIVE");
 	else
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"; POSITIVE");
+	    ARGUSBUF_APPEND("; POSITIVE");
     }
 
     if (response)
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"; RESPONSE");
+	ARGUSBUF_APPEND("; RESPONSE");
     else
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"; REQUEST");
+	ARGUSBUF_APPEND("; REQUEST");
 
     if (nm_flags & 1)
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"; BROADCAST");
+	ARGUSBUF_APPEND("; BROADCAST");
     else
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"; UNICAST");
+	ARGUSBUF_APPEND("; UNICAST");
 
     if (ArgusParser->vflag < 2)
         return ArgusBuf;
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\nTrnID=0x%X\nOpCode=%d\nNmFlags=0x%X\nRcode=%d\nQueryCount=%d\nAnswerCount=%d\nAuthorityCount=%d\nAddressRecCount=%d\n",
+    ARGUSBUF_APPEND("\nTrnID=0x%X\nOpCode=%d\nNmFlags=0x%X\nRcode=%d\nQueryCount=%d\nAnswerCount=%d\nAuthorityCount=%d\nAddressRecCount=%d\n",
 	name_trn_id, opcode, nm_flags, rcode, qdcount, ancount, nscount,
 	arcount);
 
@@ -1206,12 +1206,12 @@ nbt_udp137_print(const u_char *data, int length)
     total = ancount + nscount + arcount;
 
     if (qdcount > 100 || total > 100) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"Corrupt packet??\n");
+	ARGUSBUF_APPEND("Corrupt packet??\n");
         return ArgusBuf;
     }
 
     if (qdcount) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"QuestionRecords:\n");
+	ARGUSBUF_APPEND("QuestionRecords:\n");
 	for (i = 0; i < qdcount; i++) {
 	    p = smb_fdata(p,
 		"|Name=[n1]\nQuestionType=[rw]\nQuestionClass=[rw]\n#",
@@ -1222,7 +1222,7 @@ nbt_udp137_print(const u_char *data, int length)
     }
 
     if (total) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\nResourceRecords:\n");
+	ARGUSBUF_APPEND("\nResourceRecords:\n");
 	for (i = 0; i < total; i++) {
 	    int rdlen;
 	    int restype;
@@ -1235,7 +1235,7 @@ nbt_udp137_print(const u_char *data, int length)
 	    if (p == NULL)
 		goto out;
 	    rdlen = EXTRACT_16BITS(p);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"ResourceLength=%d\nResourceData=\n", rdlen);
+	    ARGUSBUF_APPEND("ResourceLength=%d\nResourceData=\n", rdlen);
 	    p += 2;
 	    if (rdlen == 6) {
 		p = smb_fdata(p, "AddrType=[rw]\nAddress=[b.b.b.b]\n", p + rdlen, 0);
@@ -1256,22 +1256,22 @@ nbt_udp137_print(const u_char *data, int length)
 			    goto out;
 			TCHECK(*p);
 			if (p[0] & 0x80)
-			    sprintf(&ArgusBuf[strlen(ArgusBuf)],"<GROUP> ");
+			    ARGUSBUF_APPEND("<GROUP> ");
 			switch (p[0] & 0x60) {
-			case 0x00: sprintf(&ArgusBuf[strlen(ArgusBuf)],"B "); break;
-			case 0x20: sprintf(&ArgusBuf[strlen(ArgusBuf)],"P "); break;
-			case 0x40: sprintf(&ArgusBuf[strlen(ArgusBuf)],"M "); break;
-			case 0x60: sprintf(&ArgusBuf[strlen(ArgusBuf)],"_ "); break;
+			case 0x00: ARGUSBUF_APPEND("B "); break;
+			case 0x20: ARGUSBUF_APPEND("P "); break;
+			case 0x40: ARGUSBUF_APPEND("M "); break;
+			case 0x60: ARGUSBUF_APPEND("_ "); break;
 			}
 			if (p[0] & 0x10)
-			    sprintf(&ArgusBuf[strlen(ArgusBuf)],"<DEREGISTERING> ");
+			    ARGUSBUF_APPEND("<DEREGISTERING> ");
 			if (p[0] & 0x08)
-			    sprintf(&ArgusBuf[strlen(ArgusBuf)],"<CONFLICT> ");
+			    ARGUSBUF_APPEND("<CONFLICT> ");
 			if (p[0] & 0x04)
-			    sprintf(&ArgusBuf[strlen(ArgusBuf)],"<ACTIVE> ");
+			    ARGUSBUF_APPEND("<ACTIVE> ");
 			if (p[0] & 0x02)
-			    sprintf(&ArgusBuf[strlen(ArgusBuf)],"<PERMANENT> ");
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+			    ARGUSBUF_APPEND("<PERMANENT> ");
+			ARGUSBUF_APPEND("\n");
 			p += 2;
 		    }
 		} else {
@@ -1286,10 +1286,10 @@ nbt_udp137_print(const u_char *data, int length)
 	smb_fdata(p, "AdditionalData:\n", maxbuf, 0);
 
 out:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+    ARGUSBUF_APPEND("\n");
     return ArgusBuf;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return ArgusBuf;
 }
 
@@ -1310,7 +1310,7 @@ nbt_udp138_print(const u_char *data, int length)
     startbuf = data;
 
     if (ArgusParser->vflag < 2) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"NBT UDP PACKET(138)");
+	ARGUSBUF_APPEND("NBT UDP PACKET(138)");
         return ArgusBuf;
     }
 
@@ -1327,7 +1327,7 @@ nbt_udp138_print(const u_char *data, int length)
 	    print_smb(data, maxbuf);
     }
 out:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+    ARGUSBUF_APPEND("\n");
    return ArgusBuf;
 }
 
@@ -1413,10 +1413,10 @@ netbeui_print(u_short control, const u_char *data, int length)
     startbuf = data;
 
     if (ArgusParser->vflag < 2) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"NBF Packet: ");
+	ARGUSBUF_APPEND("NBF Packet: ");
 	data = smb_fdata(data, "[P5]#", maxbuf, 0);
     } else {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n>>> NBF Packet\nType=0x%X ", control);
+	ARGUSBUF_APPEND("\n>>> NBF Packet\nType=0x%X ", control);
 	data = smb_fdata(data, "Length=[d] Signature=[w] Command=[B]\n#", maxbuf, 0);
     }
     if (data == NULL)
@@ -1429,15 +1429,15 @@ netbeui_print(u_short control, const u_char *data, int length)
 	    data = smb_fdata(data, "Unknown NBF Command\n", data2, 0);
     } else {
 	if (ArgusParser->vflag < 2) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", nbf_strings[command].name);
+	    ARGUSBUF_APPEND("%s", nbf_strings[command].name);
 	    if (nbf_strings[command].nonverbose != NULL)
 		data = smb_fdata(data, nbf_strings[command].nonverbose, data2, 0);
 	} else {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s:\n", nbf_strings[command].name);
+	    ARGUSBUF_APPEND("%s:\n", nbf_strings[command].name);
 	    if (nbf_strings[command].verbose != NULL)
 		data = smb_fdata(data, nbf_strings[command].verbose, data2, 0);
 	    else
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+		ARGUSBUF_APPEND("\n");
 	}
     }
 
@@ -1469,7 +1469,7 @@ netbeui_print(u_short control, const u_char *data, int length)
 	    if (&data2[i + 3] >= maxbuf)
 		break;
 	    if (memcmp(&data2[i], "\377SMB", 4) == 0) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"found SMB packet at %d\n", i);
+		ARGUSBUF_APPEND("found SMB packet at %d\n", i);
 		print_smb(&data2[i], maxbuf);
 		break;
 	    }
@@ -1477,10 +1477,10 @@ netbeui_print(u_short control, const u_char *data, int length)
     }
 
 out:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+    ARGUSBUF_APPEND("\n");
     return;
 trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|SMB]");
+    ARGUSBUF_APPEND("[|SMB]");
     return;
 }
 
@@ -1510,7 +1510,7 @@ ipx_netbios_print(const u_char *data, u_int length)
 	    smb_fdata(data, "\n>>> IPX transport ", &data[i], 0);
 	    if (data != NULL)
 		print_smb(&data[i], maxbuf);
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n");
+	    ARGUSBUF_APPEND("\n");
 	    break;
 	}
     }

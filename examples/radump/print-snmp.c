@@ -316,10 +316,10 @@ struct obj_abrev {
       } while ((objp = objp->next) != NULL); \
    } \
    if (objp) { \
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],suppressdot?"%s":".%s", objp->desc); \
+      ARGUSBUF_APPEND(suppressdot?"%s":".%s", objp->desc); \
       objp = objp->child; \
    } else \
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],suppressdot?"%u":".%u", (o)); \
+      ARGUSBUF_APPEND(suppressdot?"%u":".%u", (o)); \
 }
 
 /*
@@ -412,7 +412,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
    elem->asnlen = 0;
    elem->type = BE_ANY;
    if (len < 1) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "[nothing to parse]");
+      ARGUSBUF_APPEND("[nothing to parse]");
       return -1;
    }
    TCHECK(*p);
@@ -451,14 +451,14 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
        */
       for (id = 0; *p & ASN_BIT8; len--, hdr++, p++) {
          if (len < 1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "[Xtagfield?]");
+            ARGUSBUF_APPEND("[Xtagfield?]");
             return -1;
          }
          TCHECK(*p);
          id = (id << 7) | (*p & ~ASN_BIT8);
       }
       if (len < 1) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "[Xtagfield?]");
+         ARGUSBUF_APPEND("[Xtagfield?]");
          return -1;
       }
       TCHECK(*p);
@@ -468,7 +468,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
       ++p;
    }
    if (len < 1) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "[no asnlen]");
+      ARGUSBUF_APPEND("[no asnlen]");
       return -1;
    }
    TCHECK(*p);
@@ -478,7 +478,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
       u_int32_t noct = elem->asnlen % ASN_BIT8;
       elem->asnlen = 0;
       if (len < noct) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[asnlen? %d<%d]", len, noct);
+         ARGUSBUF_APPEND("[asnlen? %d<%d]", len, noct);
          return -1;
       }
       TCHECK2(*p, noct);
@@ -486,19 +486,19 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
          elem->asnlen = (elem->asnlen << ASN_SHIFT8) | *p++;
    }
    if (len < elem->asnlen) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[len%d<asnlen%u]", len, elem->asnlen);
+      ARGUSBUF_APPEND("[len%d<asnlen%u]", len, elem->asnlen);
       return -1;
    }
    if (form >= sizeof(Form)/sizeof(Form[0])) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[form?%d]", form);
+      ARGUSBUF_APPEND("[form?%d]", form);
       return -1;
    }
    if (class >= sizeof(Class)/sizeof(Class[0])) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[class?%c/%d]", *Form[form], class);
+      ARGUSBUF_APPEND("[class?%c/%d]", *Form[form], class);
       return -1;
    }
    if ((int)id >= Class[class].numIDs) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[id?%c/%s/%d]", *Form[form], Class[class].name, id);
+      ARGUSBUF_APPEND("[id?%c/%s/%d]", *Form[form], Class[class].name, id);
       return -1;
    }
 
@@ -539,7 +539,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
          default:
             elem->type = BE_OCTET;
             elem->data.raw = (caddr_t)p;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"[P/U/%s]",
+            ARGUSBUF_APPEND("[P/U/%s]",
                Class[class].Id[id]);
             break;
          }
@@ -583,7 +583,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
          default:
             elem->type = BE_OCTET;
             elem->data.raw = (caddr_t)p;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"[P/A/%s]",
+            ARGUSBUF_APPEND("[P/A/%s]",
                Class[class].Id[id]);
             break;
          }
@@ -609,7 +609,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
          break;
 
       default:
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[P/%s/%s]",
+         ARGUSBUF_APPEND("[P/%s/%s]",
             Class[class].name, Class[class].Id[id]);
          TCHECK2(*p, elem->asnlen);
          elem->type = BE_OCTET;
@@ -630,7 +630,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
          default:
             elem->type = BE_OCTET;
             elem->data.raw = (caddr_t)p;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"C/U/%s", Class[class].Id[id]);
+            ARGUSBUF_APPEND("C/U/%s", Class[class].Id[id]);
             break;
          }
          break;
@@ -643,7 +643,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
       default:
          elem->type = BE_OCTET;
          elem->data.raw = (caddr_t)p;
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"C/%s/%s",
+         ARGUSBUF_APPEND("C/%s/%s",
             Class[class].name, Class[class].Id[id]);
          break;
       }
@@ -654,7 +654,7 @@ asn1_parse(register const u_char *p, u_int len, struct be *elem)
    return elem->asnlen + hdr;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "[|snmp]");
+   ARGUSBUF_APPEND("[|snmp]");
    return -1;
 }
 
@@ -675,7 +675,7 @@ asn1_print(struct be *elem)
    case BE_OCTET:
       TCHECK2(*p, asnlen);
       for (i = asnlen; i-- > 0; p++)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"_%.2x", *p);
+         ARGUSBUF_APPEND("_%.2x", *p);
       break;
 
    case BE_NULL:
@@ -693,7 +693,7 @@ asn1_print(struct be *elem)
                objp = a->node->child;
                i -= strlen(a->oid);
                p += strlen(a->oid);
-               sprintf("%s", &ArgusBuf[strlen(ArgusBuf)],a->prefix);
+                ARGUSBUF_APPEND("%s", a->prefix);
                first = 1;
                break;
             }
@@ -729,11 +729,11 @@ asn1_print(struct be *elem)
    }
 
    case BE_INT:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d", elem->data.integer);
+      ARGUSBUF_APPEND("%d", elem->data.integer);
       break;
 
    case BE_UNS:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", elem->data.uns);
+      ARGUSBUF_APPEND("%u", elem->data.uns);
       break;
 
    case BE_UNS64: {   /* idea borrowed from by Marshall Rose */
@@ -741,16 +741,16 @@ asn1_print(struct be *elem)
       int j, carry;
       char *cpf, *cpl, last[6], first[30];
       if (elem->data.uns64.high == 0) {
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", elem->data.uns64.low);
+              ARGUSBUF_APPEND("%u", elem->data.uns64.low);
               break;
       }
       d = elem->data.uns64.high * 4294967296.0;   /* 2^32 */
       if (elem->data.uns64.high <= 0x1fffff) {
               d += elem->data.uns64.low;
 #if 0 /*is looks illegal, but what is the intention?*/
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%.f", d);
+         ARGUSBUF_APPEND("%.f", d);
 #else
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"%f", d);
+         ARGUSBUF_APPEND("%f", d);
 #endif
          break;
       }
@@ -774,7 +774,7 @@ asn1_print(struct be *elem)
               }
          *cpf = j + '0';
       }
-      sprintf("%s", &ArgusBuf[strlen(ArgusBuf)],first);
+      ARGUSBUF_APPEND("%s", first);
       break;
    }
 
@@ -786,56 +786,56 @@ asn1_print(struct be *elem)
          printable = isprint(*p) || isspace(*p);
       p = elem->data.str;
       if (printable) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(p, asnlen, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         ARGUSBUF_APPEND("%c", '"');
+         if (fn_printn(p, asnlen, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL) {
+            ARGUSBUF_APPEND("%c", '"');
             goto trunc;
          }
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         ARGUSBUF_APPEND("%c", '"');
       } else
          for (i = asnlen; i-- > 0; p++) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],first ? "%.2x" : "_%.2x", *p);
+            ARGUSBUF_APPEND(first ? "%.2x" : "_%.2x", *p);
             first = 0;
          }
       break;
    }
 
    case BE_SEQ:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"Seq(%u)", elem->asnlen);
+      ARGUSBUF_APPEND("Seq(%u)", elem->asnlen);
       break;
 
    case BE_INETADDR:
       if (asnlen != ASNLEN_INETADDR)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[inetaddr len!=%d]", ASNLEN_INETADDR);
+         ARGUSBUF_APPEND("[inetaddr len!=%d]", ASNLEN_INETADDR);
       TCHECK2(*p, asnlen);
       for (i = asnlen; i-- != 0; p++) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],(i == asnlen-1) ? "%u" : ".%u", *p);
+         ARGUSBUF_APPEND((i == asnlen-1) ? "%u" : ".%u", *p);
       }
       break;
 
    case BE_NOSUCHOBJECT:
    case BE_NOSUCHINST:
    case BE_ENDOFMIBVIEW:
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%s]", Class[EXCEPTIONS].Id[elem->id]);
+           ARGUSBUF_APPEND("[%s]", Class[EXCEPTIONS].Id[elem->id]);
       break;
 
    case BE_PDU:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s(%u)",
+      ARGUSBUF_APPEND("%s(%u)",
          Class[CONTEXT].Id[elem->id], elem->asnlen);
       break;
 
    case BE_ANY:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[BE_ANY!?]");
+      ARGUSBUF_APPEND("[BE_ANY!?]");
       break;
 
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[be!?]");
+      ARGUSBUF_APPEND("[be!?]");
       break;
    }
    return 0;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|snmp]");
+   ARGUSBUF_APPEND("[|snmp]");
    return -1;
 }
 
@@ -858,13 +858,13 @@ asn1_decode(u_char *p, u_int length)
    while (i >= 0 && length > 0) {
       i = asn1_parse(p, length, &elem);
       if (i >= 0) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+         ARGUSBUF_APPEND(" ");
          if (asn1_print(&elem) < 0)
             return;
          if (elem.type == BE_SEQ || elem.type == BE_PDU) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," {");
+            ARGUSBUF_APPEND(" {");
             asn1_decode(elem.data.raw, elem.asnlen);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," }");
+            ARGUSBUF_APPEND(" }");
          }
          length -= i;
          p += i;
@@ -931,7 +931,7 @@ smi_decode_oid(struct be *elem, unsigned int *oid,
    return 0;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|snmp]");
+   ARGUSBUF_APPEND("[|snmp]");
    return -1;
 }
 
@@ -1041,13 +1041,13 @@ static SmiNode *smi_print_variable(struct be *elem, int *status)
       return NULL;
    }
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],smiGetNodeModule(smiNode)->name);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"::");
+      ARGUSBUF_APPEND(smiGetNodeModule(smiNode)->name);
+      ARGUSBUF_APPEND("::");
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],smiNode->name);
+   ARGUSBUF_APPEND(smiNode->name);
    if (smiNode->oidlen < oidlen) {
            for (i = smiNode->oidlen; i < oidlen; i++) {
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],".%u", oid[i]);
+              ARGUSBUF_APPEND(".%u", oid[i]);
       }
    }
    *status = 0;
@@ -1074,20 +1074,20 @@ smi_print_value(SmiNode *smiNode, u_char pduid, struct be *elem)
    }
 
    if (NOTIFY_CLASS(pduid) && smiNode->access < SMI_ACCESS_NOTIFY) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[notNotifyable]");
+       ARGUSBUF_APPEND("[notNotifyable]");
    }
 
    if (READ_CLASS(pduid) && smiNode->access < SMI_ACCESS_READ_ONLY) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[notReadable]");
+       ARGUSBUF_APPEND("[notReadable]");
    }
 
    if (WRITE_CLASS(pduid) && smiNode->access < SMI_ACCESS_READ_WRITE) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[notWritable]");
+       ARGUSBUF_APPEND("[notWritable]");
    }
 
    if (RESPONSE_CLASS(pduid)
        && smiNode->access == SMI_ACCESS_NOT_ACCESSIBLE) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[noAccess]");
+       ARGUSBUF_APPEND("[noAccess]");
    }
 
    smiType = smiGetNodeType(smiNode);
@@ -1096,11 +1096,11 @@ smi_print_value(SmiNode *smiNode, u_char pduid, struct be *elem)
    }
 
    if (! smi_check_type(smiType->basetype, elem->type)) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[wrongType]");
+       ARGUSBUF_APPEND("[wrongType]");
    }
 
    if (! smi_check_range(smiType, elem)) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[outOfRange]");
+       ARGUSBUF_APPEND("[outOfRange]");
    }
 
    /* resolve bits to named bits */
@@ -1122,14 +1122,14 @@ smi_print_value(SmiNode *smiNode, u_char pduid, struct be *elem)
          smiNode = smiGetNodeByOID(oidlen, oid);
          if (smiNode) {
                  if (ArgusParser->vflag) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],smiGetNodeModule(smiNode)->name);
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"::");
+               ARGUSBUF_APPEND(smiGetNodeModule(smiNode)->name);
+               ARGUSBUF_APPEND("::");
             }
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],smiNode->name);
+            ARGUSBUF_APPEND(smiNode->name);
             if (smiNode->oidlen < oidlen) {
                     for (i = smiNode->oidlen;
                     i < oidlen; i++) {
-                       sprintf(&ArgusBuf[strlen(ArgusBuf)],".%u", oid[i]);
+                       ARGUSBUF_APPEND(".%u", oid[i]);
                }
             }
             done++;
@@ -1144,8 +1144,8 @@ smi_print_value(SmiNode *smiNode, u_char pduid, struct be *elem)
               nn = smiGetNextNamedNumber(nn)) {
                   if (nn->value.value.integer32
                  == elem->data.integer) {
-                     sprintf(&ArgusBuf[strlen(ArgusBuf)],nn->name);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%d)", elem->data.integer);
+                     ARGUSBUF_APPEND(nn->name);
+                ARGUSBUF_APPEND("(%d)", elem->data.integer);
                 done++;
                 break;
             }
@@ -1211,12 +1211,12 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_SEQ) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!SEQ of varbind]");
+      ARGUSBUF_APPEND("[!SEQ of varbind]");
       asn1_print(&elem);
       return;
    }
    if ((u_int)count < length)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%d extra after SEQ of varbind]", length - count);
+      ARGUSBUF_APPEND("[%d extra after SEQ of varbind]", length - count);
    /* descend */
    length = elem.asnlen;
    np = (u_char *)elem.data.raw;
@@ -1225,13 +1225,13 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
       const u_char *vbend;
       u_int vblength;
 
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+      ARGUSBUF_APPEND(" ");
 
       /* Sequence */
       if ((count = asn1_parse(np, length, &elem)) < 0)
          return;
       if (elem.type != BE_SEQ) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!varbind]");
+         ARGUSBUF_APPEND("[!varbind]");
          asn1_print(&elem);
          return;
       }
@@ -1245,7 +1245,7 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
       if ((count = asn1_parse(np, length, &elem)) < 0)
          return;
       if (elem.type != BE_OID) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[objName!=OID]");
+         ARGUSBUF_APPEND("[objName!=OID]");
          asn1_print(&elem);
          return;
       }
@@ -1261,7 +1261,7 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
 
       if (pduid != GETREQ && pduid != GETNEXTREQ
           && pduid != GETBULKREQ)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"=");
+         ARGUSBUF_APPEND("=");
 
       /* objVal (ANY) */
       if ((count = asn1_parse(np, length, &elem)) < 0)
@@ -1269,7 +1269,7 @@ varbind_print(u_char pduid, const u_char *np, u_int length)
       if (pduid == GETREQ || pduid == GETNEXTREQ
           || pduid == GETBULKREQ) {
          if (elem.type != BE_NULL) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"[objVal!=NULL]");
+            ARGUSBUF_APPEND("[objVal!=NULL]");
             if (asn1_print(&elem) < 0)
                return;
          }
@@ -1303,12 +1303,12 @@ snmppdu_print(u_short pduid, const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[reqId!=INT]");
+      ARGUSBUF_APPEND("[reqId!=INT]");
       asn1_print(&elem);
       return;
    }
    if (ArgusParser->vflag)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"R=%d ", elem.data.integer);
+      ARGUSBUF_APPEND("R=%d ", elem.data.integer);
    length -= count;
    np += count;
 
@@ -1316,7 +1316,7 @@ snmppdu_print(u_short pduid, const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorStatus!=INT]");
+      ARGUSBUF_APPEND("[errorStatus!=INT]");
       asn1_print(&elem);
       return;
    }
@@ -1325,13 +1325,13 @@ snmppdu_print(u_short pduid, const u_char *np, u_int length)
        || pduid == INFORMREQ || pduid == V2TRAP || pduid == REPORT)
        && elem.data.integer != 0) {
       char errbuf[20];
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorStatus(%s)!=0]",
+      ARGUSBUF_APPEND("[errorStatus(%s)!=0]",
          DECODE_ErrorStatus(elem.data.integer));
    } else if (pduid == GETBULKREQ) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)]," N=%d", elem.data.integer);
+           ARGUSBUF_APPEND(" N=%d", elem.data.integer);
    } else if (elem.data.integer != 0) {
       char errbuf[20];
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", DECODE_ErrorStatus(elem.data.integer));
+      ARGUSBUF_APPEND(" %s", DECODE_ErrorStatus(elem.data.integer));
       error = elem.data.integer;
    }
    length -= count;
@@ -1341,26 +1341,26 @@ snmppdu_print(u_short pduid, const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorIndex!=INT]");
+      ARGUSBUF_APPEND("[errorIndex!=INT]");
       asn1_print(&elem);
       return;
    }
    if ((pduid == GETREQ || pduid == GETNEXTREQ || pduid == SETREQ
        || pduid == INFORMREQ || pduid == V2TRAP || pduid == REPORT)
        && elem.data.integer != 0)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorIndex(%d)!=0]", elem.data.integer);
+      ARGUSBUF_APPEND("[errorIndex(%d)!=0]", elem.data.integer);
    else if (pduid == GETBULKREQ)
-           sprintf(&ArgusBuf[strlen(ArgusBuf)]," M=%d", elem.data.integer);
+           ARGUSBUF_APPEND(" M=%d", elem.data.integer);
    else if (elem.data.integer != 0) {
       if (!error)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorIndex(%d) w/o errorStatus]",
+         ARGUSBUF_APPEND("[errorIndex(%d) w/o errorStatus]",
             elem.data.integer);
       else {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"@%d", elem.data.integer);
+         ARGUSBUF_APPEND("@%d", elem.data.integer);
          error = elem.data.integer;
       }
    } else if (error) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[errorIndex==0]");
+      ARGUSBUF_APPEND("[errorIndex==0]");
       error = 0;
    }
    length -= count;
@@ -1379,13 +1379,13 @@ trappdu_print(const u_char *np, u_int length)
    struct be elem;
    int count = 0, generic;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+   ARGUSBUF_APPEND("%c", ' ');
 
    /* enterprise (oid) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_OID) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[enterprise!=OID]");
+      ARGUSBUF_APPEND("[enterprise!=OID]");
       asn1_print(&elem);
       return;
    }
@@ -1394,13 +1394,13 @@ trappdu_print(const u_char *np, u_int length)
    length -= count;
    np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+   ARGUSBUF_APPEND("%c", ' ');
 
    /* agent-addr (inetaddr) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INETADDR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[agent-addr!=INETADDR]");
+      ARGUSBUF_APPEND("[agent-addr!=INETADDR]");
       asn1_print(&elem);
       return;
    }
@@ -1413,14 +1413,14 @@ trappdu_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[generic-trap!=INT]");
+      ARGUSBUF_APPEND("[generic-trap!=INT]");
       asn1_print(&elem);
       return;
    }
    generic = elem.data.integer;
    {
       char buf[20];
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s", DECODE_GenericTrap(generic));
+      ARGUSBUF_APPEND(" %s", DECODE_GenericTrap(generic));
    }
    length -= count;
    np += count;
@@ -1429,25 +1429,25 @@ trappdu_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[specific-trap!=INT]");
+      ARGUSBUF_APPEND("[specific-trap!=INT]");
       asn1_print(&elem);
       return;
    }
    if (generic != GT_ENTERPRISE) {
       if (elem.data.integer != 0)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[specific-trap(%d)!=0]", elem.data.integer);
+         ARGUSBUF_APPEND("[specific-trap(%d)!=0]", elem.data.integer);
    } else
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," s=%d", elem.data.integer);
+      ARGUSBUF_APPEND(" s=%d", elem.data.integer);
    length -= count;
    np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+   ARGUSBUF_APPEND("%c", ' ');
 
    /* time-stamp (TimeTicks) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_UNS) {         /* XXX */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[time-stamp!=TIMETICKS]");
+      ARGUSBUF_APPEND("[time-stamp!=TIMETICKS]");
       asn1_print(&elem);
       return;
    }
@@ -1473,17 +1473,17 @@ pdu_print(const u_char *np, u_int length, int version)
    if ((count = asn1_parse(np, length, &pdu)) < 0)
       return;
    if (pdu.type != BE_PDU) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[no PDU]");
+      ARGUSBUF_APPEND("[no PDU]");
       return;
    }
    if ((u_int)count < length)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%d extra after PDU]", length - count);
+      ARGUSBUF_APPEND("[%d extra after PDU]", length - count);
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"{ ");
+      ARGUSBUF_APPEND("{ ");
    }
    if (asn1_print(&pdu) < 0)
       return;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+   ARGUSBUF_APPEND(" ");
    /* descend into PDU */
    length = pdu.asnlen;
    np = (u_char *)pdu.data.raw;
@@ -1491,12 +1491,12 @@ pdu_print(const u_char *np, u_int length, int version)
    if (version == SNMP_VERSION_1 &&
        (pdu.id == GETBULKREQ || pdu.id == INFORMREQ ||
         pdu.id == V2TRAP || pdu.id == REPORT)) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"[v2 PDU in v1 message]");
+           ARGUSBUF_APPEND("[v2 PDU in v1 message]");
       return;
    }
 
    if (version == SNMP_VERSION_2 && pdu.id == TRAP) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"[v1 PDU in v2 message]");
+           ARGUSBUF_APPEND("[v1 PDU in v2 message]");
       return;
    }
 
@@ -1517,7 +1517,7 @@ pdu_print(const u_char *np, u_int length, int version)
    }
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," } ");
+      ARGUSBUF_APPEND(" } ");
    }
 }
 
@@ -1534,7 +1534,7 @@ scopedpdu_print(const u_char *np, u_int length, int version)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_SEQ) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!scoped PDU]");
+      ARGUSBUF_APPEND("[!scoped PDU]");
       asn1_print(&elem);
       return;
    }
@@ -1545,31 +1545,31 @@ scopedpdu_print(const u_char *np, u_int length, int version)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[contextEngineID!=STR]");
+      ARGUSBUF_APPEND("[contextEngineID!=STR]");
       asn1_print(&elem);
       return;
    }
    length -= count;
    np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"E= ");
+   ARGUSBUF_APPEND("E= ");
    for (i = 0; i < (int)elem.asnlen; i++) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%02X", elem.data.str[i]);
+            ARGUSBUF_APPEND("0x%02X", elem.data.str[i]);
         }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+   ARGUSBUF_APPEND(" ");
 
    /* contextName (OCTET STRING) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[contextName!=STR]");
+      ARGUSBUF_APPEND("[contextName!=STR]");
       asn1_print(&elem);
       return;
    }
    length -= count;
    np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"C=%.*s ", (int)elem.asnlen, elem.data.str);
+   ARGUSBUF_APPEND("C=%.*s ", (int)elem.asnlen, elem.data.str);
 
    pdu_print(np, length, version);
 }
@@ -1587,7 +1587,7 @@ community_print(const u_char *np, u_int length, int version)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[comm!=STR]");
+      ARGUSBUF_APPEND("[comm!=STR]");
       asn1_print(&elem);
       return;
    }
@@ -1596,7 +1596,7 @@ community_print(const u_char *np, u_int length, int version)
        strncmp((char *)elem.data.str, DEF_COMMUNITY,
                sizeof(DEF_COMMUNITY) - 1) == 0))
       /* ! "public" */
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"C=%.*s ", (int)elem.asnlen, elem.data.str);
+      ARGUSBUF_APPEND("C=%.*s ", (int)elem.asnlen, elem.data.str);
    length -= count;
    np += count;
 
@@ -1616,7 +1616,7 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_SEQ) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!usm]");
+      ARGUSBUF_APPEND("[!usm]");
       asn1_print(&elem);
       return;
    }
@@ -1627,7 +1627,7 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgAuthoritativeEngineID!=STR]");
+      ARGUSBUF_APPEND("[msgAuthoritativeEngineID!=STR]");
       asn1_print(&elem);
       return;
    }
@@ -1638,12 +1638,12 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgAuthoritativeEngineBoots!=INT]");
+      ARGUSBUF_APPEND("[msgAuthoritativeEngineBoots!=INT]");
       asn1_print(&elem);
       return;
    }
    if (ArgusParser->vflag)
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"B=%d ", elem.data.integer);
+           ARGUSBUF_APPEND("B=%d ", elem.data.integer);
    length -= count;
    np += count;
 
@@ -1651,12 +1651,12 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgAuthoritativeEngineTime!=INT]");
+      ARGUSBUF_APPEND("[msgAuthoritativeEngineTime!=INT]");
       asn1_print(&elem);
       return;
    }
    if (ArgusParser->vflag)
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"T=%d ", elem.data.integer);
+           ARGUSBUF_APPEND("T=%d ", elem.data.integer);
    length -= count;
    np += count;
 
@@ -1664,20 +1664,20 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgUserName!=STR]");
+      ARGUSBUF_APPEND("[msgUserName!=STR]");
       asn1_print(&elem);
       return;
    }
    length -= count;
         np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"U=%.*s ", (int)elem.asnlen, elem.data.str);
+   ARGUSBUF_APPEND("U=%.*s ", (int)elem.asnlen, elem.data.str);
 
    /* msgAuthenticationParameters (OCTET STRING) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgAuthenticationParameters!=STR]");
+      ARGUSBUF_APPEND("[msgAuthenticationParameters!=STR]");
       asn1_print(&elem);
       return;
    }
@@ -1688,7 +1688,7 @@ usm_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgPrivacyParameters!=STR]");
+      ARGUSBUF_APPEND("[msgPrivacyParameters!=STR]");
       asn1_print(&elem);
       return;
    }
@@ -1696,7 +1696,7 @@ usm_print(const u_char *np, u_int length)
         np += count;
 
    if ((u_int)count < length)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%d extra after usm SEQ]", length - count);
+      ARGUSBUF_APPEND("[%d extra after usm SEQ]", length - count);
 }
 
 /*
@@ -1716,7 +1716,7 @@ v3msg_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_SEQ) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!message]");
+      ARGUSBUF_APPEND("[!message]");
       asn1_print(&elem);
       return;
    }
@@ -1724,14 +1724,14 @@ v3msg_print(const u_char *np, u_int length)
    np = (u_char *)elem.data.raw;
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"{ ");
+      ARGUSBUF_APPEND("{ ");
    }
 
    /* msgID (INTEGER) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgID!=INT]");
+      ARGUSBUF_APPEND("[msgID!=INT]");
       asn1_print(&elem);
       return;
    }
@@ -1742,7 +1742,7 @@ v3msg_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgMaxSize!=INT]");
+      ARGUSBUF_APPEND("[msgMaxSize!=INT]");
       asn1_print(&elem);
       return;
    }
@@ -1753,34 +1753,34 @@ v3msg_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgFlags!=STR]");
+      ARGUSBUF_APPEND("[msgFlags!=STR]");
       asn1_print(&elem);
       return;
    }
    if (elem.asnlen != 1) {
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgFlags size %d]", elem.asnlen);
+           ARGUSBUF_APPEND("[msgFlags size %d]", elem.asnlen);
       return;
    }
    flags = elem.data.str[0];
    if (flags != 0x00 && flags != 0x01 && flags != 0x03
        && flags != 0x04 && flags != 0x05 && flags != 0x07) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgFlags=0x%02X]", flags);
+      ARGUSBUF_APPEND("[msgFlags=0x%02X]", flags);
       return;
    }
    length -= count;
    np += count;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"F=");
-   if (flags & 0x01) sprintf(&ArgusBuf[strlen(ArgusBuf)],"a");
-   if (flags & 0x02) sprintf(&ArgusBuf[strlen(ArgusBuf)],"p");
-   if (flags & 0x04) sprintf(&ArgusBuf[strlen(ArgusBuf)],"r");
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," ");
+   ARGUSBUF_APPEND("F=");
+   if (flags & 0x01) ARGUSBUF_APPEND("a");
+   if (flags & 0x02) ARGUSBUF_APPEND("p");
+   if (flags & 0x04) ARGUSBUF_APPEND("r");
+   ARGUSBUF_APPEND(" ");
 
    /* msgSecurityModel (INTEGER) */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgSecurityModel!=INT]");
+      ARGUSBUF_APPEND("[msgSecurityModel!=INT]");
       asn1_print(&elem);
       return;
    }
@@ -1789,18 +1789,18 @@ v3msg_print(const u_char *np, u_int length)
    np += count;
 
    if ((u_int)count < length)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%d extra after message SEQ]", length - count);
+      ARGUSBUF_APPEND("[%d extra after message SEQ]", length - count);
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"} ");
+      ARGUSBUF_APPEND("} ");
    }
 
    if (model == 3) {
        if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"{ USM ");
+      ARGUSBUF_APPEND("{ USM ");
        }
    } else {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"[security model %d]", model);
+       ARGUSBUF_APPEND("[security model %d]", model);
             return;
    }
 
@@ -1811,7 +1811,7 @@ v3msg_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return;
    if (elem.type != BE_STR) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[msgSecurityParameters!=STR]");
+      ARGUSBUF_APPEND("[msgSecurityParameters!=STR]");
       asn1_print(&elem);
       return;
    }
@@ -1821,18 +1821,18 @@ v3msg_print(const u_char *np, u_int length)
    if (model == 3) {
        usm_print(elem.data.str, elem.asnlen);
        if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"} ");
+      ARGUSBUF_APPEND("} ");
        }
    }
 
    if (ArgusParser->vflag) {
-       sprintf(&ArgusBuf[strlen(ArgusBuf)],"{ ScopedPDU ");
+       ARGUSBUF_APPEND("{ ScopedPDU ");
    }
 
    scopedpdu_print(np, length, 3);
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"} ");
+      ARGUSBUF_APPEND("} ");
    }
 }
 
@@ -1846,18 +1846,18 @@ snmp_print(const u_char *np, u_int length)
    int count = 0;
    int version = 0;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ' ');
+   ARGUSBUF_APPEND("%c", ' ');
 
    /* initial Sequence */
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return ArgusBuf;
    if (elem.type != BE_SEQ) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[!init SEQ]");
+      ARGUSBUF_APPEND("[!init SEQ]");
       asn1_print(&elem);
       return ArgusBuf;
    }
    if ((u_int)count < length)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%d extra after iSEQ]", length - count);
+      ARGUSBUF_APPEND("[%d extra after iSEQ]", length - count);
    /* descend */
    length = elem.asnlen;
    np = (u_char *)elem.data.raw;
@@ -1866,7 +1866,7 @@ snmp_print(const u_char *np, u_int length)
    if ((count = asn1_parse(np, length, &elem)) < 0)
       return ArgusBuf;
    if (elem.type != BE_INT) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[version!=INT]");
+      ARGUSBUF_APPEND("[version!=INT]");
       asn1_print(&elem);
       return ArgusBuf;
    }
@@ -1876,10 +1876,10 @@ snmp_print(const u_char *np, u_int length)
    case SNMP_VERSION_2:
    case SNMP_VERSION_3:
            if (ArgusParser->vflag)
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"{ %s ", SnmpVersion[elem.data.integer]);
+              ARGUSBUF_APPEND("{ %s ", SnmpVersion[elem.data.integer]);
       break;
    default:
-           sprintf(&ArgusBuf[strlen(ArgusBuf)],"[version = %d]", elem.data.integer);
+           ARGUSBUF_APPEND("[version = %d]", elem.data.integer);
       return ArgusBuf;
    }
    version = elem.data.integer;
@@ -1895,12 +1895,12 @@ snmp_print(const u_char *np, u_int length)
       v3msg_print(np, length);
       break;
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[version = %d]", elem.data.integer);
+      ARGUSBUF_APPEND("[version = %d]", elem.data.integer);
       break;
    }
 
    if (ArgusParser->vflag) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"} ");
+      ARGUSBUF_APPEND("} ");
    }
 
    return ArgusBuf;

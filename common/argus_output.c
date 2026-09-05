@@ -2159,6 +2159,43 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            len = 0;
                         break;
                      }
+
+
+                     case ARGUS_ENCAPS_INDEX: {
+                        struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        int slen = 0, dlen = 0;
+
+                        *dsrptr++ = *(unsigned int *)&encaps->hdr;
+                        *dsrptr++ = encaps->src;
+                        *dsrptr++ = encaps->dst;
+                        len = 3;
+
+                        if ((encaps->slen > 0) || (encaps->dlen > 0)) {
+                           slen = (encaps->slen + 3) / 4;
+                           dlen = (encaps->dlen + 3) / 4;
+
+                           *dsrptr++ = ((unsigned int *)&encaps->slen)[0];
+                           len++;
+
+                           if (slen > 0) {
+                              if (encaps->sbuf != NULL)
+                                 bcopy((char *)encaps->sbuf, (char *)dsrptr, encaps->slen);
+                              if ((slen * 4) > encaps->slen)
+                                 bzero(&((char *)dsrptr)[encaps->slen], (slen * 4) - encaps->slen);
+                              dsrptr += slen;
+                              len += slen;
+                           }
+                           if (dlen > 0) {
+                              if (encaps->dbuf != NULL)
+                                 bcopy((char *)encaps->dbuf, (char *)dsrptr, encaps->dlen);
+                              if ((dlen * 4) > encaps->dlen)
+                                 bzero(&((char *)dsrptr)[encaps->dlen], (dlen * 4) - encaps->dlen);
+                              dsrptr += dlen;
+                              len += dlen;
+                           }
+                        }
+                        break;
+                     }
                   }
 
                   dsrlen += len;
@@ -3043,6 +3080,43 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            len = 1 + ((labelen + 3)/4);
                         } else
                            len = 0;
+                        break;
+                     }
+
+
+                     case ARGUS_ENCAPS_INDEX: {
+                        struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        int slen = 0, dlen = 0;
+
+                        *dsrptr++ = *(unsigned int *)&encaps->hdr;
+                        *dsrptr++ = encaps->src;
+                        *dsrptr++ = encaps->dst;
+                        len = 3;
+
+                        if ((encaps->slen > 0) || (encaps->dlen > 0)) {
+                           slen = (encaps->slen + 3) / 4;
+                           dlen = (encaps->dlen + 3) / 4;
+
+                           *dsrptr++ = ((unsigned int *)&encaps->slen)[0];
+                           len++;
+
+                           if (slen > 0) {
+                              if (encaps->sbuf != NULL)
+                                 bcopy((char *)encaps->sbuf, (char *)dsrptr, encaps->slen);
+                              if ((slen * 4) > encaps->slen)
+                                 bzero(&((char *)dsrptr)[encaps->slen], (slen * 4) - encaps->slen);
+                              dsrptr += slen;
+                              len += slen;
+                           }
+                           if (dlen > 0) {
+                              if (encaps->dbuf != NULL)
+                                 bcopy((char *)encaps->dbuf, (char *)dsrptr, encaps->dlen);
+                              if ((dlen * 4) > encaps->dlen)
+                                 bzero(&((char *)dsrptr)[encaps->dlen], (dlen * 4) - encaps->dlen);
+                              dsrptr += dlen;
+                              len += dlen;
+                           }
+                        }
                         break;
                      }
 
@@ -5645,7 +5719,7 @@ int
 ArgusSendSaslString(FILE *f, const char *s, int l, int mode)
 {
    char *buf = NULL, *ptr = NULL, error[128];
-   unsigned int al, len;
+   unsigned int al, len = 0;
    int result, size, tsize;
 
    switch (mode) {

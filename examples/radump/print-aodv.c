@@ -65,22 +65,22 @@ aodv_extension(const struct aodv_ext *ep, u_int length)
    switch (ep->type) {
    case AODV_EXT_HELLO:
       if (snapend < (u_char *) ep) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|hello]");
+         ARGUSBUF_APPEND(" [|hello]");
          return;
       }
       i = min(length, (u_int)(snapend - (u_char *)ep));
       if (i < sizeof(struct aodv_hello)) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|hello]");
+         ARGUSBUF_APPEND(" [|hello]");
          return;
       }
       i -= sizeof(struct aodv_hello);
       ah = (void *)ep;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\text HELLO %ld ms",
+      ARGUSBUF_APPEND("\n\text HELLO %ld ms",
           (unsigned long)EXTRACT_32BITS(&ah->interval));
       break;
 
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\text %u %u", ep->type, ep->length);
+      ARGUSBUF_APPEND("\n\text %u %u", ep->type, ep->length);
       break;
    }
 }
@@ -91,16 +91,16 @@ aodv_rreq(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rreq)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rreq]");
+      ARGUSBUF_APPEND(" [|rreq]");
       return;
    }
    i -= sizeof(ap->rreq);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
+   ARGUSBUF_APPEND(" rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
        "\tdst %s seq %lu src %s seq %lu", length,
        ap->rreq.rreq_type & RREQ_JOIN ? "[J]" : "",
        ap->rreq.rreq_type & RREQ_REPAIR ? "[R]" : "",
@@ -123,16 +123,16 @@ aodv_rrep(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rrep)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rrep]");
+      ARGUSBUF_APPEND(" [|rrep]");
       return;
    }
    i -= sizeof(ap->rrep);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep %u %s%sprefix %u hops %u\n"
+   ARGUSBUF_APPEND(" rrep %u %s%sprefix %u hops %u\n"
        "\tdst %s dseq %lu src %s %lu ms", length,
        ap->rrep.rrep_type & RREP_REPAIR ? "[R]" : "",
        ap->rrep.rrep_type & RREP_ACK ? "[A] " : " ",
@@ -154,28 +154,28 @@ aodv_rerr(const union aodv *ap, const u_char *dat, u_int length)
    int n, trunc;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < offsetof(struct aodv_rerr, r)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rerr]");
+      ARGUSBUF_APPEND(" [|rerr]");
       return;
    }
    i -= offsetof(struct aodv_rerr, r);
    dp = &ap->rerr.r.dest[0];
    n = ap->rerr.rerr_dc * sizeof(ap->rerr.r.dest[0]);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rerr %s [items %u] [%u]:",
+   ARGUSBUF_APPEND(" rerr %s [items %u] [%u]:",
        ap->rerr.rerr_flags & RERR_NODELETE ? "[D]" : "",
        ap->rerr.rerr_dc, length);
    trunc = n - (i/sizeof(ap->rerr.r.dest[0]));
    for (; i >= sizeof(ap->rerr.r.dest[0]);
        ++dp, i -= sizeof(ap->rerr.r.dest[0])) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," {%s}(%ld)", ipaddr_string(&dp->u_da),
+      ARGUSBUF_APPEND(" {%s}(%ld)", ipaddr_string(&dp->u_da),
           (unsigned long)EXTRACT_32BITS(&dp->u_ds));
    }
    if (trunc)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|rerr]");
+      ARGUSBUF_APPEND("[|rerr]");
 }
 
 static void
@@ -189,16 +189,16 @@ aodv_v6_rreq(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rreq6)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rreq6]");
+      ARGUSBUF_APPEND(" [|rreq6]");
       return;
    }
    i -= sizeof(ap->rreq6);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," v6 rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
+   ARGUSBUF_APPEND(" v6 rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
        "\tdst %s seq %lu src %s seq %lu", length,
        ap->rreq6.rreq_type & RREQ_JOIN ? "[J]" : "",
        ap->rreq6.rreq_type & RREQ_REPAIR ? "[R]" : "",
@@ -214,7 +214,7 @@ aodv_v6_rreq(const union aodv *ap, const u_char *dat, u_int length)
    if (i >= sizeof(struct aodv_ext))
       aodv_extension((void *)(&ap->rreq6 + 1), i);
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," v6 rreq %u", length);
+   ARGUSBUF_APPEND(" v6 rreq %u", length);
 #endif
 }
 
@@ -229,16 +229,16 @@ aodv_v6_rrep(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rrep6)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rrep6]");
+      ARGUSBUF_APPEND(" [|rrep6]");
       return;
    }
    i -= sizeof(ap->rrep6);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep %u %s%sprefix %u hops %u\n"
+   ARGUSBUF_APPEND(" rrep %u %s%sprefix %u hops %u\n"
       "\tdst %s dseq %lu src %s %lu ms", length,
        ap->rrep6.rrep_type & RREP_REPAIR ? "[R]" : "",
        ap->rrep6.rrep_type & RREP_ACK ? "[A] " : " ",
@@ -251,7 +251,7 @@ aodv_v6_rrep(const union aodv *ap, const u_char *dat, u_int length)
    if (i >= sizeof(struct aodv_ext))
       aodv_extension((void *)(&ap->rrep6 + 1), i);
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep %u", length);
+   ARGUSBUF_APPEND(" rrep %u", length);
 #endif
 }
 
@@ -270,18 +270,18 @@ aodv_v6_rerr(const union aodv *ap, u_int length)
    j = sizeof(ap->rerr.r.dest6[0]);
    dp6 = &ap->rerr.r.dest6[0];
    n = ap->rerr.rerr_dc * j;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rerr %s [items %u] [%u]:",
+   ARGUSBUF_APPEND(" rerr %s [items %u] [%u]:",
        ap->rerr.rerr_flags & RERR_NODELETE ? "[D]" : "",
        ap->rerr.rerr_dc, length);
    trunc = n - (i/j);
    for (; i -= j >= 0; ++dp6) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," {%s}(%ld)", ip6addr_string(&dp6->u_da),
+      ARGUSBUF_APPEND(" {%s}(%ld)", ip6addr_string(&dp6->u_da),
           (unsigned long)EXTRACT_32BITS(&dp6->u_ds));
    }
    if (trunc)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|rerr]");
+      ARGUSBUF_APPEND("[|rerr]");
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rerr %u", length);
+   ARGUSBUF_APPEND(" rerr %u", length);
 #endif
 }
 
@@ -296,16 +296,16 @@ aodv_v6_draft_01_rreq(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rreq6_draft_01)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rreq6]");
+      ARGUSBUF_APPEND(" [|rreq6]");
       return;
    }
    i -= sizeof(ap->rreq6_draft_01);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
+   ARGUSBUF_APPEND(" rreq %u %s%s%s%s%shops %u id 0x%08lx\n"
        "\tdst %s seq %lu src %s seq %lu", length,
        ap->rreq6_draft_01.rreq_type & RREQ_JOIN ? "[J]" : "",
        ap->rreq6_draft_01.rreq_type & RREQ_REPAIR ? "[R]" : "",
@@ -321,7 +321,7 @@ aodv_v6_draft_01_rreq(const union aodv *ap, const u_char *dat, u_int length)
    if (i >= sizeof(struct aodv_ext))
       aodv_extension((void *)(&ap->rreq6_draft_01 + 1), i);
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rreq %u", length);
+   ARGUSBUF_APPEND(" rreq %u", length);
 #endif
 }
 
@@ -336,16 +336,16 @@ aodv_v6_draft_01_rrep(const union aodv *ap, const u_char *dat, u_int length)
    u_int i;
 
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return;
    }
    i = min(length, (u_int)(snapend - dat));
    if (i < sizeof(ap->rrep6_draft_01)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|rrep6]");
+      ARGUSBUF_APPEND(" [|rrep6]");
       return;
    }
    i -= sizeof(ap->rrep6_draft_01);
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep %u %s%sprefix %u hops %u\n"
+   ARGUSBUF_APPEND(" rrep %u %s%sprefix %u hops %u\n"
       "\tdst %s dseq %lu src %s %lu ms", length,
        ap->rrep6_draft_01.rrep_type & RREP_REPAIR ? "[R]" : "",
        ap->rrep6_draft_01.rrep_type & RREP_ACK ? "[A] " : " ",
@@ -358,7 +358,7 @@ aodv_v6_draft_01_rrep(const union aodv *ap, const u_char *dat, u_int length)
    if (i >= sizeof(struct aodv_ext))
       aodv_extension((void *)(&ap->rrep6_draft_01 + 1), i);
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep %u", length);
+   ARGUSBUF_APPEND(" rrep %u", length);
 #endif
 }
 
@@ -377,18 +377,18 @@ aodv_v6_draft_01_rerr(const union aodv *ap, u_int length)
    j = sizeof(ap->rerr.r.dest6_draft_01[0]);
    dp6 = &ap->rerr.r.dest6_draft_01[0];
    n = ap->rerr.rerr_dc * j;
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rerr %s [items %u] [%u]:",
+   ARGUSBUF_APPEND(" rerr %s [items %u] [%u]:",
        ap->rerr.rerr_flags & RERR_NODELETE ? "[D]" : "",
        ap->rerr.rerr_dc, length);
    trunc = n - (i/j);
    for (; i -= j >= 0; ++dp6) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," {%s}(%ld)", ip6addr_string(&dp6->u_da),
+      ARGUSBUF_APPEND(" {%s}(%ld)", ip6addr_string(&dp6->u_da),
           (unsigned long)EXTRACT_32BITS(&dp6->u_ds));
    }
    if (trunc)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|rerr]");
+      ARGUSBUF_APPEND("[|rerr]");
 #else
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," rerr %u", length);
+   ARGUSBUF_APPEND(" rerr %u", length);
 #endif
 }
 
@@ -399,14 +399,14 @@ aodv_print(const u_char *dat, u_int length, int is_ip6)
 
    ap = (union aodv *)dat;
    if (snapend < dat) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return ArgusBuf;
    }
    if (min(length, (u_int)(snapend - dat)) < sizeof(ap->rrep_ack)) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," [|aodv]");
+      ARGUSBUF_APPEND(" [|aodv]");
       return ArgusBuf;
    }
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," aodv");
+   ARGUSBUF_APPEND(" aodv");
 
    switch (ap->rerr.rerr_type) {
 
@@ -432,7 +432,7 @@ aodv_print(const u_char *dat, u_int length, int is_ip6)
       break;
 
    case AODV_RREP_ACK:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep-ack %u", length);
+      ARGUSBUF_APPEND(" rrep-ack %u", length);
       break;
 
    case AODV_V6_DRAFT_01_RREQ:
@@ -448,11 +448,11 @@ aodv_print(const u_char *dat, u_int length, int is_ip6)
       break;
 
    case AODV_V6_DRAFT_01_RREP_ACK:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," rrep-ack %u", length);
+      ARGUSBUF_APPEND(" rrep-ack %u", length);
       break;
 
    default:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %u %u", ap->rreq.rreq_type, length);
+      ARGUSBUF_APPEND(" %u %u", ap->rreq.rreq_type, length);
    }
 
    return ArgusBuf;

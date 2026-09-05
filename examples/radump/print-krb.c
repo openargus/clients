@@ -120,13 +120,13 @@ c_print(register const u_char *s, register const u_char *ep)
       }
       if (!isascii(c)) {
          c = toascii(c);
-         sprintf (&ArgusBuf[strlen(ArgusBuf)], "M-");
+         ARGUSBUF_APPEND("M-");
       }
       if (!isprint(c)) {
          c ^= 0x40;   /* DEL to ?, others to alpha */
-         sprintf (&ArgusBuf[strlen(ArgusBuf)], "^");
+         ARGUSBUF_APPEND("^");
       }
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], "%c", c);
+      ARGUSBUF_APPEND("%c", c);
    }
    if (flag)
       return NULL;
@@ -141,14 +141,14 @@ krb4_print_hdr(const u_char *cp)
 #define PRINT      if ((cp = c_print(cp, snapend)) == NULL) goto trunc
 
    PRINT;
-   sprintf (&ArgusBuf[strlen(ArgusBuf)], ".");
+   ARGUSBUF_APPEND(".");
    PRINT;
-   sprintf (&ArgusBuf[strlen(ArgusBuf)], "@");
+   ARGUSBUF_APPEND("@");
    PRINT;
    return (cp);
 
 trunc:
-   sprintf (&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
    return (NULL);
 
 #undef PRINT
@@ -169,13 +169,13 @@ krb4_print(const u_char *cp)
    kp = (struct krb *)cp;
 
    if ((&kp->type) >= snapend) {
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+      ARGUSBUF_APPEND("%s", tstr);
       return;
    }
 
    type = kp->type & (0xFF << 1);
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s %s: ",
+   ARGUSBUF_APPEND(" %s %s: ",
        IS_LENDIAN(kp) ? "le" : "be", tok2str(type2str, NULL, type));
 
    switch (type) {
@@ -185,21 +185,21 @@ krb4_print(const u_char *cp)
          return;
       cp += 4;   /* ctime */
       TCHECK(*cp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %dmin ", *cp++ * 5);
+      ARGUSBUF_APPEND(" %dmin ", *cp++ * 5);
       PRINT;
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], ".");
+      ARGUSBUF_APPEND(".");
       PRINT;
       break;
 
    case AUTH_MSG_APPL_REQUEST:
       cp += 2;
       TCHECK(*cp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],"v%d ", *cp++);
+      ARGUSBUF_APPEND("v%d ", *cp++);
       PRINT;
       TCHECK(*cp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%d)", *cp++);
+      ARGUSBUF_APPEND(" (%d)", *cp++);
       TCHECK(*cp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%d)", *cp);
+      ARGUSBUF_APPEND(" (%d)", *cp);
       break;
 
    case AUTH_MSG_KDC_REPLY:
@@ -208,7 +208,7 @@ krb4_print(const u_char *cp)
       cp += 10;   /* timestamp + n + exp + kvno */
       TCHECK2(*cp, sizeof(short));
       len = KTOHSP(kp, cp);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%d)", len);
+      ARGUSBUF_APPEND(" (%d)", len);
       break;
 
    case AUTH_MSG_ERR_REPLY:
@@ -216,20 +216,20 @@ krb4_print(const u_char *cp)
          return;
       cp += 4;      /* timestamp */
       TCHECK2(*cp, sizeof(short));
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s ", tok2str(kerr2str, NULL, KTOHSP(kp, cp)));
+      ARGUSBUF_APPEND(" %s ", tok2str(kerr2str, NULL, KTOHSP(kp, cp)));
       cp += 4;
       PRINT;
       break;
 
    default:
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], "(unknown)");
+      ARGUSBUF_APPEND("(unknown)");
       break;
    }
 
    return;
 
 trunc:
-   sprintf (&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 }
 
 char *
@@ -240,7 +240,7 @@ krb_print(const u_char *dat, u_int len)
    kp = (struct krb *)dat;
 
    if (dat >= snapend) {
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+      ARGUSBUF_APPEND("%s", tstr);
       return ArgusBuf;
    }
 
@@ -249,17 +249,17 @@ krb_print(const u_char *dat, u_int len)
    case 1:
    case 2:
    case 3:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," v%d", kp->pvno);
+      ARGUSBUF_APPEND(" v%d", kp->pvno);
       break;
 
    case 4:
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," v%d", kp->pvno);
+      ARGUSBUF_APPEND(" v%d", kp->pvno);
       krb4_print((const u_char *)kp);
       break;
 
    case 106:
    case 107:
-      sprintf (&ArgusBuf[strlen(ArgusBuf)], " v5");
+      ARGUSBUF_APPEND(" v5");
       /* Decode ASN.1 here "someday" */
       break;
    }

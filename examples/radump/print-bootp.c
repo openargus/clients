@@ -76,15 +76,15 @@ bootp_print(register const u_char *cp, u_int length)
    bp = (struct bootp *)cp;
    TCHECK(bp->bp_op);
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"BOOTP/DHCP, %s",
+        ARGUSBUF_APPEND("BOOTP/DHCP, %s",
           tok2str(bootp_op_values, "unknown (0x%02x)", bp->bp_op));
 
    if (bp->bp_htype == 1 && bp->bp_hlen == 6 && bp->bp_op == BOOTPREQUEST) {
       TCHECK2(bp->bp_chaddr[0], 6);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," from %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
+      ARGUSBUF_APPEND(" from %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
    }
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],", length: %u", length);
+   ARGUSBUF_APPEND(", length: %u", length);
 
    if (!ArgusParser->vflag)
       return ArgusBuf;
@@ -93,78 +93,78 @@ bootp_print(register const u_char *cp, u_int length)
 
    /* The usual hardware address type is 1 (10Mb Ethernet) */
    if (bp->bp_htype != 1)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", htype-#%d", bp->bp_htype);
+      ARGUSBUF_APPEND(", htype-#%d", bp->bp_htype);
 
    /* The usual length for 10Mb Ethernet address is 6 bytes */
    if (bp->bp_htype != 1 || bp->bp_hlen != 6)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hlen:%d", bp->bp_hlen);
+      ARGUSBUF_APPEND(", hlen:%d", bp->bp_hlen);
 
    /* Only print interesting fields */
    if (bp->bp_hops)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", hops:%d", bp->bp_hops);
+      ARGUSBUF_APPEND(", hops:%d", bp->bp_hops);
    if (bp->bp_xid)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", xid:0x%x", EXTRACT_32BITS(&bp->bp_xid));
+      ARGUSBUF_APPEND(", xid:0x%x", EXTRACT_32BITS(&bp->bp_xid));
    if (bp->bp_secs)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)],", secs:%d", EXTRACT_16BITS(&bp->bp_secs));
+      ARGUSBUF_APPEND(", secs:%d", EXTRACT_16BITS(&bp->bp_secs));
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],", flags: [%s]",
+   ARGUSBUF_APPEND(", flags: [%s]",
           bittok2str(bootp_flag_values, "none", EXTRACT_16BITS(&bp->bp_flags)));
    if (ArgusParser->vflag>1)
-     sprintf(&ArgusBuf[strlen(ArgusBuf)], " (0x%04x)", EXTRACT_16BITS(&bp->bp_flags));
+     ARGUSBUF_APPEND(" (0x%04x)", EXTRACT_16BITS(&bp->bp_flags));
 
    /* Client's ip address */
    TCHECK(bp->bp_ciaddr);
    if (bp->bp_ciaddr.s_addr) {
       iaddr = ntohl(bp->bp_ciaddr.s_addr);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client IP: %s", ipaddr_string(&iaddr));
+      ARGUSBUF_APPEND(" Client IP: %s", ipaddr_string(&iaddr));
    }
 
    /* 'your' ip address (bootp client) */
    TCHECK(bp->bp_yiaddr);
    if (bp->bp_yiaddr.s_addr) {
       iaddr = ntohl(bp->bp_yiaddr.s_addr);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Your IP: %s", ipaddr_string(&iaddr));
+      ARGUSBUF_APPEND(" Your IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Server's ip address */
    TCHECK(bp->bp_siaddr);
    if (bp->bp_siaddr.s_addr) {
       iaddr = ntohl(bp->bp_siaddr.s_addr);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Server IP: %s", ipaddr_string(&iaddr));
+      ARGUSBUF_APPEND(" Server IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Gateway's ip address */
    TCHECK(bp->bp_giaddr);
    if (bp->bp_giaddr.s_addr) {
       iaddr = ntohl(bp->bp_giaddr.s_addr);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Gateway IP: %s", ipaddr_string(&iaddr));
+      ARGUSBUF_APPEND(" Gateway IP: %s", ipaddr_string(&iaddr));
    }
 
    /* Client's Ethernet address */
    if (bp->bp_htype == 1 && bp->bp_hlen == 6) {
       TCHECK2(bp->bp_chaddr[0], 6);
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," Client Ethernet Address: %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
+      ARGUSBUF_APPEND(" Client Ethernet Address: %s", etheraddr_string(ArgusParser, (u_char *)bp->bp_chaddr));
    }
 
    TCHECK2(bp->bp_sname[0], 1);      /* check first char only */
    if (*bp->bp_sname) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," sname \"");
-      if (fn_print(bp->bp_sname, snapend, ArgusBuf)) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
+      ARGUSBUF_APPEND(" sname \"");
+      if (fn_print(bp->bp_sname, snapend, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf))) {
+         ARGUSBUF_APPEND("%c", '"');
+         ARGUSBUF_APPEND("%s", tstr + 1);
          return ArgusBuf;
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+      ARGUSBUF_APPEND("%c", '"');
    }
    TCHECK2(bp->bp_file[0], 1);      /* check first char only */
    if (*bp->bp_file) {
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," file \"");
-      if (fn_print(bp->bp_file, snapend, ArgusBuf)) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr + 1);
+      ARGUSBUF_APPEND(" file \"");
+      if (fn_print(bp->bp_file, snapend, ArgusBuf, MAXSTRLEN - strlen(ArgusBuf))) {
+         ARGUSBUF_APPEND("%c", '"');
+         ARGUSBUF_APPEND("%s", tstr + 1);
          return ArgusBuf;
       }
-      sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+      ARGUSBUF_APPEND("%c", '"');
    }
 
    /* Decode the vendor buffer */
@@ -180,12 +180,12 @@ bootp_print(register const u_char *cp, u_int length)
 
       ul = EXTRACT_32BITS(&bp->bp_vend);
       if (ul != 0)
-         sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-#0x%x", ul);
+         ARGUSBUF_APPEND(" Vendor-#0x%x", ul);
    }
 
    return ArgusBuf;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 
    return ArgusBuf;
 }
@@ -365,10 +365,10 @@ rfc1048_print(register const u_char *bp)
    u_int16_t us;
    u_int8_t uc;
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," Vendor-rfc1048:");
+   ARGUSBUF_APPEND(" Vendor-rfc1048:");
 
    /* Step over magic cookie */
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], " MAGIC:0x%08x", EXTRACT_32BITS(bp));
+   ARGUSBUF_APPEND(" MAGIC:0x%08x", EXTRACT_32BITS(bp));
    bp += sizeof(int32_t);
 
    /* Loop while we there is a tag left in the buffer */
@@ -389,31 +389,31 @@ rfc1048_print(register const u_char *bp)
       } else
          cp = tok2str(tag2str, "?T%u", tag);
       c = *cp++;
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:", cp);
+      ARGUSBUF_APPEND(" %s:", cp);
 
       /* Get the length; check for truncation */
       if (bp + 1 >= snapend) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+         ARGUSBUF_APPEND("%s", tstr);
          return;
       }
       len = *bp++;
       if (bp + len >= snapend) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[|bootp %u]", len);
+         ARGUSBUF_APPEND("[|bootp %u]", len);
          return;
       }
 
       if (tag == TAG_DHCP_MESSAGE && len == 1) {
          uc = *bp++;
          switch (uc) {
-         case DHCPDISCOVER:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"DISCOVER");   break;
-         case DHCPOFFER:      sprintf(&ArgusBuf[strlen(ArgusBuf)],"OFFER");   break;
-         case DHCPREQUEST:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"REQUEST");   break;
-         case DHCPDECLINE:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"DECLINE");   break;
-         case DHCPACK:      sprintf(&ArgusBuf[strlen(ArgusBuf)],"ACK");      break;
-         case DHCPNAK:      sprintf(&ArgusBuf[strlen(ArgusBuf)],"NACK");      break;
-         case DHCPRELEASE:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"RELEASE");   break;
-         case DHCPINFORM:   sprintf(&ArgusBuf[strlen(ArgusBuf)],"INFORM");   break;
-         default:      sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", uc);   break;
+         case DHCPDISCOVER:   ARGUSBUF_APPEND("DISCOVER");   break;
+         case DHCPOFFER:      ARGUSBUF_APPEND("OFFER");   break;
+         case DHCPREQUEST:   ARGUSBUF_APPEND("REQUEST");   break;
+         case DHCPDECLINE:   ARGUSBUF_APPEND("DECLINE");   break;
+         case DHCPACK:      ARGUSBUF_APPEND("ACK");      break;
+         case DHCPNAK:      ARGUSBUF_APPEND("NACK");      break;
+         case DHCPRELEASE:   ARGUSBUF_APPEND("RELEASE");   break;
+         case DHCPINFORM:   ARGUSBUF_APPEND("INFORM");   break;
+         default:      ARGUSBUF_APPEND("%u", uc);   break;
          }
          continue;
       }
@@ -424,8 +424,8 @@ rfc1048_print(register const u_char *bp)
             uc = *bp++;
             cp = tok2str(tag2str, "?T%u", uc);
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '+');
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", cp + 1);
+               ARGUSBUF_APPEND("%c", '+');
+            ARGUSBUF_APPEND("%s", cp + 1);
             first = 0;
          }
          continue;
@@ -438,8 +438,8 @@ rfc1048_print(register const u_char *bp)
             bp += 2;
             cp = tok2str(xtag2str, "?xT%u", us);
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '+');
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", cp + 1);
+               ARGUSBUF_APPEND("%c", '+');
+            ARGUSBUF_APPEND("%s", cp + 1);
             first = 0;
          }
          continue;
@@ -461,12 +461,12 @@ rfc1048_print(register const u_char *bp)
 
       case 'a':
          /* ascii strings */
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-         if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         ARGUSBUF_APPEND("%c", '"');
+               if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL) {
+            ARGUSBUF_APPEND("%c", '"');
             goto trunc;
          }
-         sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+         ARGUSBUF_APPEND("%c", '"');
          bp += size;
          size = 0;
          break;
@@ -477,15 +477,15 @@ rfc1048_print(register const u_char *bp)
          /* ip addresses/32-bit words */
          while (size >= sizeof(ul)) {
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
             ul = EXTRACT_32BITS(bp);
             if (c == 'i') {
 //             ul = htonl(ul);
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ipaddr_string(&ul));
+               ARGUSBUF_APPEND("%s", ipaddr_string(&ul));
             } else if (c == 'L')
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%d", ul);
+               ARGUSBUF_APPEND("%d", ul);
             else
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", ul);
+               ARGUSBUF_APPEND("%u", ul);
             bp += sizeof(ul);
             size -= sizeof(ul);
             first = 0;
@@ -496,12 +496,12 @@ rfc1048_print(register const u_char *bp)
          /* IP address pairs */
          while (size >= 2*sizeof(ul)) {
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
             memcpy((char *)&ul, (const char *)bp, sizeof(ul));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%s:", ipaddr_string(&ul));
+            ARGUSBUF_APPEND("(%s:", ipaddr_string(&ul));
             bp += sizeof(ul);
             memcpy((char *)&ul, (const char *)bp, sizeof(ul));
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s)", ipaddr_string(&ul));
+            ARGUSBUF_APPEND("%s)", ipaddr_string(&ul));
             bp += sizeof(ul);
             size -= 2*sizeof(ul);
             first = 0;
@@ -512,9 +512,9 @@ rfc1048_print(register const u_char *bp)
          /* shorts */
          while (size >= sizeof(us)) {
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
             us = EXTRACT_16BITS(bp);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", us);
+            ARGUSBUF_APPEND("%u", us);
             bp += sizeof(us);
             size -= sizeof(us);
             first = 0;
@@ -525,16 +525,16 @@ rfc1048_print(register const u_char *bp)
          /* boolean */
          while (size > 0) {
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ',');
+               ARGUSBUF_APPEND("%c", ',');
             switch (*bp) {
             case 0:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", 'N');
+               ARGUSBUF_APPEND("%c", 'N');
                break;
             case 1:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", 'Y');
+               ARGUSBUF_APPEND("%c", 'Y');
                break;
             default:
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u?", *bp);
+               ARGUSBUF_APPEND("%u?", *bp);
                break;
             }
             ++bp;
@@ -549,11 +549,11 @@ rfc1048_print(register const u_char *bp)
          /* Bytes */
          while (size > 0) {
             if (!first)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", c == 'x' ? ':' : '.');
+               ARGUSBUF_APPEND("%c", c == 'x' ? ':' : '.');
             if (c == 'x')
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", *bp);
+               ARGUSBUF_APPEND("%02x", *bp);
             else
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u", *bp);
+               ARGUSBUF_APPEND("%u", *bp);
             ++bp;
             --size;
             first = 0;
@@ -567,32 +567,32 @@ rfc1048_print(register const u_char *bp)
          case TAG_NETBIOS_NODE:
             tag = *bp++;
             --size;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tok2str(nbo2str, NULL, tag));
+            ARGUSBUF_APPEND("%s", tok2str(nbo2str, NULL, tag));
             break;
 
          case TAG_OPT_OVERLOAD:
             tag = *bp++;
             --size;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tok2str(oo2str, NULL, tag));
+            ARGUSBUF_APPEND("%s", tok2str(oo2str, NULL, tag));
             break;
 
          case TAG_CLIENT_FQDN:
             /* option 81 should be at least 4 bytes long */
             if (len < 4)  {
-                                        sprintf(&ArgusBuf[strlen(ArgusBuf)],"ERROR: options 81 len %u < 4 bytes", len);
+                                        ARGUSBUF_APPEND("ERROR: options 81 len %u < 4 bytes", len);
                break;
             }
             if (*bp++)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"[svrreg]");
+               ARGUSBUF_APPEND("[svrreg]");
             if (*bp)
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%u/%u/", *bp, *(bp+1));
+               ARGUSBUF_APPEND("%u/%u/", *bp, *(bp+1));
             bp += 2;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-            if (fn_printn(bp, size - 3, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+            ARGUSBUF_APPEND("%c", '"');
+            if (fn_printn(bp, size - 3, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL) {
+               ARGUSBUF_APPEND("%c", '"');
                goto trunc;
             }
-            sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+            ARGUSBUF_APPEND("%c", '"');
             bp += size - 3;
             size = 0;
             break;
@@ -601,22 +601,22 @@ rfc1048_print(register const u_char *bp)
              {   int type = *bp++;
             size--;
             if (type == 0) {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
-               if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)]) == NULL) {
-                  sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+               ARGUSBUF_APPEND("%c", '"');
+         if (fn_printn(bp, size, snapend, &ArgusBuf[strlen(ArgusBuf)], MAXSTRLEN - strlen(ArgusBuf)) == NULL) {
+                  ARGUSBUF_APPEND("%c", '"');
                   goto trunc;
                }
-               sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", '"');
+               ARGUSBUF_APPEND("%c", '"');
                bp += size;
                size = 0;
                break;
             } else {
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"[%s]", tok2str(arp2str, "type-%d", type));
+               ARGUSBUF_APPEND("[%s]", tok2str(arp2str, "type-%d", type));
             }
             while (size > 0) {
                if (!first)
-                  sprintf(&ArgusBuf[strlen(ArgusBuf)], "%c", ':');
-               sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x", *bp);
+                  ARGUSBUF_APPEND("%c", ':');
+               ARGUSBUF_APPEND("%02x", *bp);
                ++bp;
                --size;
                first = 0;
@@ -625,7 +625,7 @@ rfc1048_print(register const u_char *bp)
              }
 
          default:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"[unknown special tag %u, size %u]",
+            ARGUSBUF_APPEND("[unknown special tag %u, size %u]",
                 tag, size);
             bp += size;
             size = 0;
@@ -635,13 +635,13 @@ rfc1048_print(register const u_char *bp)
       }
       /* Data left over? */
       if (size) {
-         sprintf(&ArgusBuf[strlen(ArgusBuf)],"[len %u]", len);
+         ARGUSBUF_APPEND("[len %u]", len);
          bp += size;
       }
    }
    return;
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)],"|[rfc1048]");
+   ARGUSBUF_APPEND("|[rfc1048]");
    return;
 }
 
@@ -652,15 +652,15 @@ cmu_print(register const u_char *bp)
 
 #define PRINTCMUADDR(m, s) { TCHECK(cmu->m); \
     if (cmu->m.s_addr != 0) \
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," %s:%s", s, ipaddr_string(&cmu->m.s_addr)); }
+   ARGUSBUF_APPEND(" %s:%s", s, ipaddr_string(&cmu->m.s_addr)); }
 
-   sprintf(&ArgusBuf[strlen(ArgusBuf)]," vend-cmu");
+   ARGUSBUF_APPEND(" vend-cmu");
    cmu = (const struct cmu_vend *)bp;
 
    /* Only print if there are unknown bits */
    TCHECK(cmu->v_flags);
    if ((cmu->v_flags & ~(VF_SMASK)) != 0)
-      sprintf(&ArgusBuf[strlen(ArgusBuf)]," F:0x%x", cmu->v_flags);
+      ARGUSBUF_APPEND(" F:0x%x", cmu->v_flags);
    PRINTCMUADDR(v_dgate, "DG");
    PRINTCMUADDR(v_smask, cmu->v_flags & VF_SMASK ? "SM" : "SM*");
    PRINTCMUADDR(v_dns1, "NS1");
@@ -672,6 +672,6 @@ cmu_print(register const u_char *bp)
    return;
 
 trunc:
-   sprintf(&ArgusBuf[strlen(ArgusBuf)], "%s", tstr);
+   ARGUSBUF_APPEND("%s", tstr);
 #undef PRINTCMUADDR
 }

@@ -1041,7 +1041,7 @@ RaMySQLInit ()
             RaHost = strdup(rhost);
          }
          free(RaDatabase);
-         RaDatabase = strdup(dbptr);
+         RaDatabase = (dbptr != NULL) ? strdup(dbptr) : strdup("argus");
       }
    }
 

@@ -543,12 +543,12 @@ isoclns_print(const u_int8_t *p, u_int length, u_int caplen)
 	header = (const struct isis_common_header *)p;
 */
         if (caplen <= 1) { /* enough bytes on the wire ? */
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"|OSI");
+            ARGUSBUF_APPEND("|OSI");
             return ArgusBuf;
         }
 
         if (ArgusParser->eflag)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"OSI NLPID %s (0x%02x): ",
+            ARGUSBUF_APPEND("OSI NLPID %s (0x%02x): ",
                    tok2str(nlpid_values,"Unknown",*p),
                    *p);
         
@@ -569,7 +569,7 @@ isoclns_print(const u_int8_t *p, u_int length, u_int caplen)
 		break;
 
 	case NLPID_NULLNS:
-		(void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%slength: %u",
+		ARGUSBUF_APPEND("%slength: %u",
 		             ArgusParser->eflag ? "" : ", ",
                              length);
 		break;
@@ -594,8 +594,8 @@ isoclns_print(const u_int8_t *p, u_int length, u_int caplen)
 */
 	default:
                 if (!ArgusParser->eflag)
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"OSI NLPID 0x%02x unknown",*p);
-		(void)sprintf(&ArgusBuf[strlen(ArgusBuf)],"%slength: %u",
+                    ARGUSBUF_APPEND("OSI NLPID 0x%02x unknown",*p);
+		ARGUSBUF_APPEND("%slength: %u",
 		             ArgusParser->eflag ? "" : ", ",
                              length);
 		if (caplen > 1)
@@ -656,14 +656,14 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         optr = pptr;
 
         if (!ArgusParser->eflag)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"CLNP");
+            ARGUSBUF_APPEND("CLNP");
 
         /*
          * Sanity checking of the header.
          */
 
         if (clnp_header->version != CLNP_VERSION) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"version %d packet not supported", clnp_header->version);
+            ARGUSBUF_APPEND("version %d packet not supported", clnp_header->version);
             return (0);
         }
 
@@ -686,7 +686,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         li -= (1 + source_address_length);
 
         if (ArgusParser->vflag < 1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s > %s, %s, length %u",
+            ARGUSBUF_APPEND("%s%s > %s, %s, length %u",
                    ArgusParser->eflag ? "" : ", ",
                    isonsap_string(source_address, source_address_length),
                    isonsap_string(dest_address, dest_address_length),
@@ -694,9 +694,9 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
                    length);
             return (1);
         }
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%slength %u",ArgusParser->eflag ? "" : ", ",length);
+        ARGUSBUF_APPEND("%slength %u",ArgusParser->eflag ? "" : ", ",length);
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t%s PDU, hlen: %u, v: %u, lifetime: %u.%us, Segment PDU length: %u, checksum: 0x%04x ",
+        ARGUSBUF_APPEND("\n\t%s PDU, hlen: %u, v: %u, lifetime: %u.%us, Segment PDU length: %u, checksum: 0x%04x ",
                tok2str(clnp_pdu_values, "unknown (%u)",clnp_pdu_type),
                clnp_header->length_indicator,
                clnp_header->version,
@@ -707,13 +707,13 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
 
         /* do not attempt to verify the checksum if it is zero */
         if (EXTRACT_16BITS(clnp_header->cksum) == 0)
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"(unverified)");
-            else sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%s)", osi_cksum(optr, clnp_header->length_indicator) ? "incorrect" : "correct");
+                ARGUSBUF_APPEND("(unverified)");
+            else ARGUSBUF_APPEND("(%s)", osi_cksum(optr, clnp_header->length_indicator) ? "incorrect" : "correct");
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tFlags [%s]",
+        ARGUSBUF_APPEND("\n\tFlags [%s]",
                bittok2str(clnp_flag_values,"none",clnp_flags));
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tsource address (length %u): %s\n\tdest   address (length %u): %s",
+        ARGUSBUF_APPEND("\n\tsource address (length %u): %s\n\tdest   address (length %u): %s",
                source_address_length,
                isonsap_string(source_address, source_address_length),
                dest_address_length,
@@ -722,7 +722,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         if (clnp_flags & CLNP_SEGMENT_PART) {
             	clnp_segment_header = (const struct clnp_segment_header_t *) pptr;
                 TCHECK(*clnp_segment_header);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\tData Unit ID: 0x%04x, Segment Offset: %u, Total PDU Length: %u",
+                ARGUSBUF_APPEND("\n\tData Unit ID: 0x%04x, Segment Offset: %u, Total PDU Length: %u",
                        EXTRACT_16BITS(clnp_segment_header->data_unit_id),
                        EXTRACT_16BITS(clnp_segment_header->segment_offset),
                        EXTRACT_16BITS(clnp_segment_header->total_length));
@@ -737,7 +737,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
             
             TCHECK2(*pptr, 2);
             if (li < 2) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad opts/li");
+                ARGUSBUF_APPEND(", bad opts/li");
                 return (0);
             }
             op = *pptr++;
@@ -745,14 +745,14 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
             li -= 2;
             TCHECK2(*pptr, opli);
             if (opli > li) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", opt (%d) too long", op);
+                ARGUSBUF_APPEND(", opt (%d) too long", op);
                 return (0);
             }
             li -= opli;
             tptr = pptr;
             tlen = opli;
             
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Option #%u, length %u, value: ",
+            ARGUSBUF_APPEND("\n\t  %s Option #%u, length %u, value: ",
                    tok2str(clnp_option_values,"Unknown",op),
                    op,
                    opli);
@@ -762,17 +762,17 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
 
             case CLNP_OPTION_ROUTE_RECORDING: /* those two options share the format */
             case CLNP_OPTION_SOURCE_ROUTING:  
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s %s",
+                    ARGUSBUF_APPEND("%s %s",
                            tok2str(clnp_option_sr_rr_values,"Unknown",*tptr),
                            tok2str(clnp_option_sr_rr_string_values,"Unknown Option %u",op));
                     nsap_offset=*(tptr+1);
                     if (nsap_offset == 0) {
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," Bad NSAP offset (0)");
+                            ARGUSBUF_APPEND(" Bad NSAP offset (0)");
                             break;
                     }
                     nsap_offset-=1; /* offset to nsap list */
                     if (nsap_offset > tlen) {
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)]," Bad NSAP offset (past end of option)");
+                            ARGUSBUF_APPEND(" Bad NSAP offset (past end of option)");
                             break;
                     }
                     tptr+=nsap_offset;
@@ -780,13 +780,13 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
                     while (tlen > 0) {
                             source_address_length=*tptr;
                             if (tlen < source_address_length+1) {
-                                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    NSAP address goes past end of option");
+                                    ARGUSBUF_APPEND("\n\t    NSAP address goes past end of option");
                                     break;
                             }
                             if (source_address_length > 0) {
                                     source_address=(tptr+1);
                                     TCHECK2(*source_address, source_address_length);
-                                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    NSAP address (length %u): %s",
+                                    ARGUSBUF_APPEND("\n\t    NSAP address (length %u): %s",
                                            source_address_length,
                                            isonsap_string(source_address, source_address_length));
                             }
@@ -795,22 +795,22 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
                     break;
 
             case CLNP_OPTION_PRIORITY:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"0x%1x", *tptr&0x0f);
+                    ARGUSBUF_APPEND("0x%1x", *tptr&0x0f);
                     break;
 
             case CLNP_OPTION_QOS_MAINTENANCE:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Format Code: %s",
+                    ARGUSBUF_APPEND("\n\t    Format Code: %s",
                            tok2str(clnp_option_scope_values,"Reserved",*tptr&CLNP_OPTION_SCOPE_MASK));
 
                     if ((*tptr&CLNP_OPTION_SCOPE_MASK) == CLNP_OPTION_SCOPE_GLOBAL)
-                            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    QoS Flags [%s]",
+                            ARGUSBUF_APPEND("\n\t    QoS Flags [%s]",
                                    bittok2str(clnp_option_qos_global_values,
                                               "none",
                                               *tptr&CLNP_OPTION_OPTION_QOS_MASK));
                     break;
 
             case CLNP_OPTION_SECURITY:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Format Code: %s, Security-Level %u",
+                    ARGUSBUF_APPEND("\n\t    Format Code: %s, Security-Level %u",
                            tok2str(clnp_option_scope_values,"Reserved",*tptr&CLNP_OPTION_SCOPE_MASK),
                            *(tptr+1));
                     break;
@@ -818,7 +818,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
             case CLNP_OPTION_DISCARD_REASON:
                 rfd_error_major = (*tptr&0xf0) >> 4;
                 rfd_error_minor = *tptr&0x0f;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    Class: %s Error (0x%01x), %s (0x%01x)",
+                ARGUSBUF_APPEND("\n\t    Class: %s Error (0x%01x), %s (0x%01x)",
                        tok2str(clnp_option_rfd_class_values,"Unknown",rfd_error_major),
                        rfd_error_major,
                        tok2str(clnp_option_rfd_error_class[rfd_error_major],"Unknown",rfd_error_minor),
@@ -826,7 +826,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
                 break;
 
             case CLNP_OPTION_PADDING:
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"padding data");
+                    ARGUSBUF_APPEND("padding data");
                 break;
 
                 /*
@@ -849,7 +849,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         case 	CLNP_PDU_ERP:
             TCHECK(*pptr);
             if (*(pptr) == NLPID_CLNP) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t-----original packet-----\n\t");
+                ARGUSBUF_APPEND("\n\t-----original packet-----\n\t");
                 /* FIXME recursion protection */
                 clnp_print(pptr, length-clnp_header->length_indicator);
                 break;
@@ -862,7 +862,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         default:
             /* dump the PDU specific data */
             if (length-(pptr-optr) > 0) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  undecoded non-header data, length %u",length-clnp_header->length_indicator);
+                ARGUSBUF_APPEND("\n\t  undecoded non-header data, length %u",length-clnp_header->length_indicator);
                 print_unknown_data(pptr,"\n\t  ",length-(pptr-optr));
             }
         }
@@ -870,7 +870,7 @@ static int clnp_print (const u_int8_t *pptr, u_int length)
         return (1);
 
  trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)], "[|clnp]");
+    ARGUSBUF_APPEND("[|clnp]");
     return (1);
 
 }
@@ -905,13 +905,13 @@ esis_print(const u_int8_t *pptr, u_int length)
 	const struct esis_header_t *esis_header;
 
         if (!ArgusParser->eflag)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"ES-IS");
+            ARGUSBUF_APPEND("ES-IS");
 
 	if (length <= 2) {
 		if (ArgusParser->qflag)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"bad pkt!");
+			ARGUSBUF_APPEND("bad pkt!");
 		else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"no header at all!");
+			ARGUSBUF_APPEND("no header at all!");
 		return;
 	}
 
@@ -925,51 +925,51 @@ esis_print(const u_int8_t *pptr, u_int length)
          */
 
         if (esis_header->nlpid != NLPID_ESIS) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," nlpid 0x%02x packet not supported", esis_header->nlpid);
+            ARGUSBUF_APPEND(" nlpid 0x%02x packet not supported", esis_header->nlpid);
             return;
         }
 
         if (esis_header->version != ESIS_VERSION) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," version %d packet not supported", esis_header->version);
+            ARGUSBUF_APPEND(" version %d packet not supported", esis_header->version);
             return;
         }
                 
 	if (li > length) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," length indicator(%d) > PDU size (%d)!", li, length);
+            ARGUSBUF_APPEND(" length indicator(%d) > PDU size (%d)!", li, length);
             return;
 	}
 
 	if (li < sizeof(struct esis_header_t) + 2) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," length indicator < min PDU size %d:", li);
+            ARGUSBUF_APPEND(" length indicator < min PDU size %d:", li);
             while (--length != 0)
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02X", *pptr++);
+                ARGUSBUF_APPEND("%02X", *pptr++);
             return;
 	}
 
         esis_pdu_type = esis_header->type & ESIS_PDU_TYPE_MASK;
 
         if (ArgusParser->vflag < 1) {
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s, length %u",
+            ARGUSBUF_APPEND("%s%s, length %u",
                    ArgusParser->eflag ? "" : ", ",
                    tok2str(esis_pdu_values,"unknown type (%u)",esis_pdu_type),
                    length);
             return;
         } else
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%slength %u\n\t%s (%u)",
+            ARGUSBUF_APPEND("%slength %u\n\t%s (%u)",
                    ArgusParser->eflag ? "" : ", ",
                    length,
                    tok2str(esis_pdu_values,"unknown type: %u", esis_pdu_type),
                    esis_pdu_type);
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", v: %u%s", esis_header->version, esis_header->version == ESIS_VERSION ? "" : "unsupported" );
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", checksum: 0x%04x ", EXTRACT_16BITS(esis_header->cksum));
+        ARGUSBUF_APPEND(", v: %u%s", esis_header->version, esis_header->version == ESIS_VERSION ? "" : "unsupported" );
+        ARGUSBUF_APPEND(", checksum: 0x%04x ", EXTRACT_16BITS(esis_header->cksum));
         /* do not attempt to verify the checksum if it is zero */
         if (EXTRACT_16BITS(esis_header->cksum) == 0)
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"(unverified)");
+                ARGUSBUF_APPEND("(unverified)");
         else
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%s)", osi_cksum(pptr, li) ? "incorrect" : "correct");
+                ARGUSBUF_APPEND("(%s)", osi_cksum(pptr, li) ? "incorrect" : "correct");
 
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", holding time: %us, length indicator: %u",EXTRACT_16BITS(esis_header->holdtime),li);
+        ARGUSBUF_APPEND(", holding time: %us, length indicator: %u",EXTRACT_16BITS(esis_header->holdtime),li);
 
         if (ArgusParser->vflag > 1)
             print_unknown_data(optr,"\n\t",sizeof(struct esis_header_t));
@@ -984,7 +984,7 @@ esis_print(const u_int8_t *pptr, u_int length)
 
 		TCHECK(*pptr);
 		if (li < 1) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		dstl = *pptr;
@@ -992,17 +992,17 @@ esis_print(const u_int8_t *pptr, u_int length)
 		li--;
 		TCHECK2(*pptr, dstl);
 		if (li < dstl) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		dst = pptr;
 		pptr += dstl;
                 li -= dstl;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s", isonsap_string(dst,dstl));
+		ARGUSBUF_APPEND("\n\t  %s", isonsap_string(dst,dstl));
 
 		TCHECK(*pptr);
 		if (li < 1) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		snpal = *pptr;
@@ -1010,7 +1010,7 @@ esis_print(const u_int8_t *pptr, u_int length)
 		li--;
 		TCHECK2(*pptr, snpal);
 		if (li < snpal) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		snpa = pptr;
@@ -1018,14 +1018,14 @@ esis_print(const u_int8_t *pptr, u_int length)
                 li -= snpal;
 		TCHECK(*pptr);
 		if (li < 1) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		netal = *pptr;
 		pptr++;
 		TCHECK2(*pptr, netal);
 		if (li < netal) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad redirect/li");
+			ARGUSBUF_APPEND(", bad redirect/li");
 			return;
 		}
 		neta = pptr;
@@ -1033,28 +1033,28 @@ esis_print(const u_int8_t *pptr, u_int length)
                 li -= netal;
 
 		if (netal == 0)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s", etheraddr_string(ArgusParser, (unsigned char *)snpa));
+			ARGUSBUF_APPEND("\n\t  %s", etheraddr_string(ArgusParser, (unsigned char *)snpa));
 		else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s", isonsap_string(neta,netal));
+			ARGUSBUF_APPEND("\n\t  %s", isonsap_string(neta,netal));
 		break;
 	}
 
 	case ESIS_PDU_ESH:
             TCHECK(*pptr);
             if (li < 1) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad esh/li");
+                ARGUSBUF_APPEND(", bad esh/li");
                 return;
             }
             source_address_number = *pptr;
             pptr++;
             li--;
 
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  Number of Source Addresses: %u", source_address_number);
+            ARGUSBUF_APPEND("\n\t  Number of Source Addresses: %u", source_address_number);
            
             while (source_address_number > 0) {
                 TCHECK(*pptr);
             	if (li < 1) {
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad esh/li");
+                    ARGUSBUF_APPEND(", bad esh/li");
             	    return;
             	}
                 source_address_length = *pptr;
@@ -1063,10 +1063,10 @@ esis_print(const u_int8_t *pptr, u_int length)
 
                 TCHECK2(*pptr, source_address_length);
             	if (li < source_address_length) {
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad esh/li");
+                    ARGUSBUF_APPEND(", bad esh/li");
             	    return;
             	}
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  NET (length: %u): %s",
+                ARGUSBUF_APPEND("\n\t  NET (length: %u): %s",
                        source_address_length,
                        isonsap_string(pptr,source_address_length));
                 pptr += source_address_length;
@@ -1079,7 +1079,7 @@ esis_print(const u_int8_t *pptr, u_int length)
 	case ESIS_PDU_ISH: {
             TCHECK(*pptr);
             if (li < 1) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad ish/li");
+                ARGUSBUF_APPEND(", bad ish/li");
                 return;
             }
             source_address_length = *pptr;
@@ -1087,10 +1087,10 @@ esis_print(const u_int8_t *pptr, u_int length)
             li--;
             TCHECK2(*pptr, source_address_length);
             if (li < source_address_length) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad ish/li");
+                ARGUSBUF_APPEND(", bad ish/li");
                 return;
             }
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  NET (length: %u): %s", source_address_length, isonsap_string(pptr, source_address_length));
+            ARGUSBUF_APPEND("\n\t  NET (length: %u): %s", source_address_length, isonsap_string(pptr, source_address_length));
             pptr += source_address_length;
             li -= source_address_length;
             break;
@@ -1111,20 +1111,20 @@ esis_print(const u_int8_t *pptr, u_int length)
             
             TCHECK2(*pptr, 2);
             if (li < 2) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", bad opts/li");
+                ARGUSBUF_APPEND(", bad opts/li");
                 return;
             }
             op = *pptr++;
             opli = *pptr++;
             li -= 2;
             if (opli > li) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],", opt (%d) too long", op);
+                ARGUSBUF_APPEND(", opt (%d) too long", op);
                 return;
             }
             li -= opli;
             tptr = pptr;
             
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  %s Option #%u, length %u, value: ",
+            ARGUSBUF_APPEND("\n\t  %s Option #%u, length %u, value: ",
                    tok2str(esis_option_values,"Unknown",op),
                    op,
                    opli);
@@ -1133,19 +1133,19 @@ esis_print(const u_int8_t *pptr, u_int length)
 
             case ESIS_OPTION_ES_CONF_TIME:
                 TCHECK2(*pptr, 2);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%us", EXTRACT_16BITS(tptr));
+                ARGUSBUF_APPEND("%us", EXTRACT_16BITS(tptr));
                 break;
 
             case ESIS_OPTION_PROTOCOLS:
                 while (opli>0) {
                     TCHECK(*pptr);
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s (0x%02x)",
+                    ARGUSBUF_APPEND("%s (0x%02x)",
                            tok2str(nlpid_values,
                                    "unknown",
                                    *tptr),
                            *tptr);
                     if (opli>1) /* further NPLIDs ? - put comma */
-                        sprintf(&ArgusBuf[strlen(ArgusBuf)],", ");
+                        ARGUSBUF_APPEND(", ");
                     tptr++;
                     opli--;
                 }
@@ -1201,19 +1201,19 @@ isis_print_id(const u_int8_t *cp, int id_len)
 static int
 isis_print_metric_block (const struct isis_metric_block *isis_metric_block)
 {
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],", Default Metric: %d, %s",
+    ARGUSBUF_APPEND(", Default Metric: %d, %s",
            ISIS_LSP_TLV_METRIC_VALUE(isis_metric_block->metric_default),
            ISIS_LSP_TLV_METRIC_IE(isis_metric_block->metric_default) ? "External" : "Internal");
     if (!ISIS_LSP_TLV_METRIC_SUPPORTED(isis_metric_block->metric_delay))
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t  Delay Metric: %d, %s",
+        ARGUSBUF_APPEND("\n\t\t  Delay Metric: %d, %s",
                ISIS_LSP_TLV_METRIC_VALUE(isis_metric_block->metric_delay),
                ISIS_LSP_TLV_METRIC_IE(isis_metric_block->metric_delay) ? "External" : "Internal");
     if (!ISIS_LSP_TLV_METRIC_SUPPORTED(isis_metric_block->metric_expense))
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t  Expense Metric: %d, %s",
+        ARGUSBUF_APPEND("\n\t\t  Expense Metric: %d, %s",
                ISIS_LSP_TLV_METRIC_VALUE(isis_metric_block->metric_expense),
                ISIS_LSP_TLV_METRIC_IE(isis_metric_block->metric_expense) ? "External" : "Internal");
     if (!ISIS_LSP_TLV_METRIC_SUPPORTED(isis_metric_block->metric_error))
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t  Error Metric: %d, %s",
+        ARGUSBUF_APPEND("\n\t\t  Error Metric: %d, %s",
                ISIS_LSP_TLV_METRIC_VALUE(isis_metric_block->metric_error),
                ISIS_LSP_TLV_METRIC_IE(isis_metric_block->metric_error) ? "External" : "Internal");
 
@@ -1230,7 +1230,7 @@ isis_print_tlv_ip_reach (const u_int8_t *cp, const char *ident, int length)
 
 	while (length > 0) {
 		if ((size_t)length < sizeof(*tlv_ip_reach)) {
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"short IPv4 Reachability (%d vs %lu)",
+			ARGUSBUF_APPEND("short IPv4 Reachability (%d vs %lu)",
                                length,
                                (unsigned long)sizeof(*tlv_ip_reach));
 			return (0);
@@ -1242,35 +1242,35 @@ isis_print_tlv_ip_reach (const u_int8_t *cp, const char *ident, int length)
 		prefix_len = mask2plen(EXTRACT_32BITS(tlv_ip_reach->mask));
 
 		if (prefix_len == -1)
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sIPv4 prefix: %s mask %s",
+			ARGUSBUF_APPEND("%sIPv4 prefix: %s mask %s",
                                ident,
 			       ipaddr_string((tlv_ip_reach->prefix)),
 			       ipaddr_string((tlv_ip_reach->mask)));
 		else
-			sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sIPv4 prefix: %15s/%u",
+			ARGUSBUF_APPEND("%sIPv4 prefix: %15s/%u",
                                ident,
 			       ipaddr_string((tlv_ip_reach->prefix)),
 			       prefix_len);
 
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],", Distribution: %s, Metric: %u, %s",
+		ARGUSBUF_APPEND(", Distribution: %s, Metric: %u, %s",
                        ISIS_LSP_TLV_METRIC_UPDOWN(tlv_ip_reach->isis_metric_block.metric_default) ? "down" : "up",
                        ISIS_LSP_TLV_METRIC_VALUE(tlv_ip_reach->isis_metric_block.metric_default),
                        ISIS_LSP_TLV_METRIC_IE(tlv_ip_reach->isis_metric_block.metric_default) ? "External" : "Internal");
 
 		if (!ISIS_LSP_TLV_METRIC_SUPPORTED(tlv_ip_reach->isis_metric_block.metric_delay))
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Delay Metric: %u, %s",
+                    ARGUSBUF_APPEND("%s  Delay Metric: %u, %s",
                            ident,
                            ISIS_LSP_TLV_METRIC_VALUE(tlv_ip_reach->isis_metric_block.metric_delay),
                            ISIS_LSP_TLV_METRIC_IE(tlv_ip_reach->isis_metric_block.metric_delay) ? "External" : "Internal");
                 
 		if (!ISIS_LSP_TLV_METRIC_SUPPORTED(tlv_ip_reach->isis_metric_block.metric_expense))
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Expense Metric: %u, %s",
+                    ARGUSBUF_APPEND("%s  Expense Metric: %u, %s",
                            ident,
                            ISIS_LSP_TLV_METRIC_VALUE(tlv_ip_reach->isis_metric_block.metric_expense),
                            ISIS_LSP_TLV_METRIC_IE(tlv_ip_reach->isis_metric_block.metric_expense) ? "External" : "Internal");
                 
 		if (!ISIS_LSP_TLV_METRIC_SUPPORTED(tlv_ip_reach->isis_metric_block.metric_error))
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Error Metric: %u, %s",
+                    ARGUSBUF_APPEND("%s  Error Metric: %u, %s",
                            ident,
                            ISIS_LSP_TLV_METRIC_VALUE(tlv_ip_reach->isis_metric_block.metric_error),
                            ISIS_LSP_TLV_METRIC_IE(tlv_ip_reach->isis_metric_block.metric_error) ? "External" : "Internal");
@@ -1290,7 +1290,7 @@ static int
 isis_print_ip_reach_subtlv (const u_int8_t *tptr,int subt,int subl,const char *ident) {
 
         /* first lets see if we know the subTLVs name*/
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s subTLV #%u, length: %u",
+	ARGUSBUF_APPEND("%s%s subTLV #%u, length: %u",
 	       ident,
                tok2str(isis_ext_ip_reach_subtlv_values,
                        "unknown",
@@ -1305,7 +1305,7 @@ isis_print_ip_reach_subtlv (const u_int8_t *tptr,int subt,int subl,const char *i
     case ISIS_SUBTLV_EXTD_IP_REACH_MGMT_PREFIX_COLOR: /* fall through */
     case ISIS_SUBTLV_EXTD_IP_REACH_ADMIN_TAG32:
         while (subl >= 4) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", 0x%08x (=%u)",
+	    ARGUSBUF_APPEND(", 0x%08x (=%u)",
 		   EXTRACT_32BITS(tptr),
 		   EXTRACT_32BITS(tptr));
 	    tptr+=4;
@@ -1314,7 +1314,7 @@ isis_print_ip_reach_subtlv (const u_int8_t *tptr,int subt,int subl,const char *i
 	break;
     case ISIS_SUBTLV_EXTD_IP_REACH_ADMIN_TAG64:
         while (subl >= 8) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", 0x%08x%08x",
+	    ARGUSBUF_APPEND(", 0x%08x%08x",
 		   EXTRACT_32BITS(tptr),
 		   EXTRACT_32BITS(tptr+4));
 	    tptr+=8;
@@ -1330,7 +1330,7 @@ isis_print_ip_reach_subtlv (const u_int8_t *tptr,int subt,int subl,const char *i
     return(1);
 	
 trunctlv:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%spacket exceeded snapshot",ident);
+    ARGUSBUF_APPEND("%spacket exceeded snapshot",ident);
     return(0);
 }
 
@@ -1349,7 +1349,7 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
         } bw;
 
         /* first lets see if we know the subTLVs name*/
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s subTLV #%u, length: %u",
+	ARGUSBUF_APPEND("%s%s subTLV #%u, length: %u",
 	       ident,
                tok2str(isis_ext_is_reach_subtlv_values,
                        "unknown",
@@ -1365,28 +1365,28 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
         case ISIS_SUBTLV_EXT_IS_REACH_LINK_LOCAL_REMOTE_ID:
         case ISIS_SUBTLV_EXT_IS_REACH_LINK_REMOTE_ID:
 	    if (subl >= 4) {
-	      sprintf(&ArgusBuf[strlen(ArgusBuf)],", 0x%08x", EXTRACT_32BITS(tptr));
+	      ARGUSBUF_APPEND(", 0x%08x", EXTRACT_32BITS(tptr));
 	      if (subl == 8) /* draft-ietf-isis-gmpls-extensions */
-	        sprintf(&ArgusBuf[strlen(ArgusBuf)],", 0x%08x", EXTRACT_32BITS(tptr+4));
+	        ARGUSBUF_APPEND(", 0x%08x", EXTRACT_32BITS(tptr+4));
 	    }
 	    break;
         case ISIS_SUBTLV_EXT_IS_REACH_IPV4_INTF_ADDR:
         case ISIS_SUBTLV_EXT_IS_REACH_IPV4_NEIGHBOR_ADDR:
             if (subl >= sizeof(struct in_addr))
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s", ipaddr_string(tptr));
+              ARGUSBUF_APPEND(", %s", ipaddr_string(tptr));
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_MAX_LINK_BW :
 	case ISIS_SUBTLV_EXT_IS_REACH_RESERVABLE_BW:  
             if (subl >= 4) {
               bw.i = EXTRACT_32BITS(tptr);
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],", %.3f Mbps", bw.f*8/1000000 );
+              ARGUSBUF_APPEND(", %.3f Mbps", bw.f*8/1000000 );
             }
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_UNRESERVED_BW :
             if (subl >= 32) {
               for (te_class = 0; te_class < 8; te_class++) {
                 bw.i = EXTRACT_32BITS(tptr);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  TE-Class %u: %.3f Mbps",
+                ARGUSBUF_APPEND("%s  TE-Class %u: %.3f Mbps",
                        ident,
                        te_class,
                        bw.f*8/1000000 );
@@ -1396,7 +1396,7 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_BW_CONSTRAINTS: /* fall through */
         case ISIS_SUBTLV_EXT_IS_REACH_BW_CONSTRAINTS_OLD:
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sBandwidth Constraints Model ID: %s (%u)",
+            ARGUSBUF_APPEND("%sBandwidth Constraints Model ID: %s (%u)",
                    ident,
                    tok2str(diffserv_te_bc_values, "unknown", *tptr),
                    *tptr);
@@ -1404,7 +1404,7 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
             /* decode BCs until the subTLV ends */
             for (te_class = 0; te_class < (subl-1)/4; te_class++) {
                 bw.i = EXTRACT_32BITS(tptr);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Bandwidth constraint CT%u: %.3f Mbps",
+                ARGUSBUF_APPEND("%s  Bandwidth constraint CT%u: %.3f Mbps",
                        ident,
                        te_class,
                        bw.f*8/1000000 );
@@ -1413,27 +1413,27 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_TE_METRIC:
             if (subl >= 3)
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],", %u", EXTRACT_24BITS(tptr));
+              ARGUSBUF_APPEND(", %u", EXTRACT_24BITS(tptr));
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_LINK_PROTECTION_TYPE:
             if (subl >= 2) {
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s, Priority %u",
+              ARGUSBUF_APPEND(", %s, Priority %u",
 		   bittok2str(gmpls_link_prot_values, "none", *tptr),
                    *(tptr+1));
             }
             break;
         case ISIS_SUBTLV_EXT_IS_REACH_INTF_SW_CAP_DESCR:
             if (subl >= 36) {
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Interface Switching Capability:%s",
+              ARGUSBUF_APPEND("%s  Interface Switching Capability:%s",
                    ident,
                    tok2str(gmpls_switch_cap_values, "Unknown", *(tptr)));
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],", LSP Encoding: %s",
+              ARGUSBUF_APPEND(", LSP Encoding: %s",
                    tok2str(gmpls_encoding_values, "Unknown", *(tptr+1)));
 	      tptr+=4;
-              sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s  Max LSP Bandwidth:",ident);
+              ARGUSBUF_APPEND("%s  Max LSP Bandwidth:",ident);
               for (priority_level = 0; priority_level < 8; priority_level++) {
                 bw.i = EXTRACT_32BITS(tptr);
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s    priority level %d: %.3f Mbps",
+                ARGUSBUF_APPEND("%s    priority level %d: %.3f Mbps",
                        ident,
                        priority_level,
                        bw.f*8/1000000 );
@@ -1458,7 +1458,7 @@ isis_print_is_reach_subtlv (const u_int8_t *tptr,u_int subt,u_int subl,const cha
         return(1);
 
 trunctlv:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%spacket exceeded snapshot",ident);
+    ARGUSBUF_APPEND("%spacket exceeded snapshot",ident);
     return(0);
 }
 
@@ -1478,13 +1478,13 @@ isis_print_ext_is_reach (const u_int8_t *tptr,const char *ident, int tlv_type) {
     if (!TTEST2(*tptr, NODE_ID_LEN))
         return(0);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sIS Neighbor: %s", ident, isis_print_id(tptr, NODE_ID_LEN));
+    ARGUSBUF_APPEND("%sIS Neighbor: %s", ident, isis_print_id(tptr, NODE_ID_LEN));
     tptr+=(NODE_ID_LEN);
 
     if (tlv_type != ISIS_TLV_IS_ALIAS_ID) { /* the Alias TLV Metric field is implicit 0 */
         if (!TTEST2(*tptr, 3))    /* and is therefore skipped */
 	    return(0);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],", Metric: %d",EXTRACT_24BITS(tptr));
+	ARGUSBUF_APPEND(", Metric: %d",EXTRACT_24BITS(tptr));
 	tptr+=3;
     }
         
@@ -1492,9 +1492,9 @@ isis_print_ext_is_reach (const u_int8_t *tptr,const char *ident, int tlv_type) {
         return(0);
     subtlv_sum_len=*(tptr++); /* read out subTLV length */
     proc_bytes=NODE_ID_LEN+3+1;
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],", %ssub-TLVs present",subtlv_sum_len ? "" : "no ");
+    ARGUSBUF_APPEND(", %ssub-TLVs present",subtlv_sum_len ? "" : "no ");
     if (subtlv_sum_len) {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%u)",subtlv_sum_len);
+        ARGUSBUF_APPEND(" (%u)",subtlv_sum_len);
         while (subtlv_sum_len>0) {
             if (!TTEST2(*tptr,2))
                 return(0);
@@ -1523,13 +1523,13 @@ isis_print_mtid (const u_int8_t *tptr,const char *ident) {
     if (!TTEST2(*tptr, 2))
         return(0);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s",
+    ARGUSBUF_APPEND("%s%s",
            ident,
            tok2str(isis_mt_values,
                    "Reserved for IETF Consensus",
                    ISIS_MASK_MTID(EXTRACT_16BITS(tptr))));
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)]," Topology (0x%03x), Flags: [%s]",
+    ARGUSBUF_APPEND(" Topology (0x%03x), Flags: [%s]",
            ISIS_MASK_MTID(EXTRACT_16BITS(tptr)),
            bittok2str(isis_mt_flag_values, "none",ISIS_MASK_MTFLAGS(EXTRACT_16BITS(tptr))));
 
@@ -1583,27 +1583,27 @@ isis_print_extd_ip_reach (const u_int8_t *tptr, const char *ident, u_int16_t afi
     processed+=byte_length;
 
     if (afi == IPV4)
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sIPv4 prefix: %15s/%u",
+        ARGUSBUF_APPEND("%sIPv4 prefix: %15s/%u",
                ident,
                ipaddr_string(prefix),
                bit_length);
 #ifdef INET6
     if (afi == IPV6)
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%sIPv6 prefix: %s/%u",
+        ARGUSBUF_APPEND("%sIPv6 prefix: %s/%u",
                ident,
                ip6addr_string(prefix),
                bit_length);
 #endif 
    
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],", Distribution: %s, Metric: %u",
+    ARGUSBUF_APPEND(", Distribution: %s, Metric: %u",
            ISIS_MASK_TLV_EXTD_IP_UPDOWN(status_byte) ? "down" : "up",
            metric);
 
     if (afi == IPV4 && ISIS_MASK_TLV_EXTD_IP_SUBTLV(status_byte))
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", sub-TLVs present");
+        ARGUSBUF_APPEND(", sub-TLVs present");
 #ifdef INET6
     if (afi == IPV6)
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],", %s%s",
+        ARGUSBUF_APPEND(", %s%s",
                ISIS_MASK_TLV_EXTD_IP6_IE(status_byte) ? "External" : "Internal",
                ISIS_MASK_TLV_EXTD_IP6_SUBTLV(status_byte) ? ", sub-TLVs present" : "");
 #endif
@@ -1618,7 +1618,7 @@ isis_print_extd_ip_reach (const u_int8_t *tptr, const char *ident, u_int16_t afi
             return (0);
         sublen=*(tptr++);
         processed+=sublen+1;
-        sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%u)",sublen);   /* print out subTLV length */
+        ARGUSBUF_APPEND(" (%u)",sublen);   /* print out subTLV length */
         
         while (sublen>0) {
             if (!TTEST2(*tptr,2))
@@ -1675,25 +1675,25 @@ static int isis_print (const u_int8_t *p, u_int length)
     header_psnp = (const struct isis_psnp_header *)pptr;
 
     if (!ArgusParser->eflag)
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"IS-IS");
+        ARGUSBUF_APPEND("IS-IS");
 
     /*
      * Sanity checking of the header.
      */
 
     if (isis_header->version != ISIS_VERSION) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"version %d packet not supported", isis_header->version);
+	ARGUSBUF_APPEND("version %d packet not supported", isis_header->version);
 	return (0);
     }
 
     if ((isis_header->id_length != SYSTEM_ID_LEN) && (isis_header->id_length != 0)) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"system ID length of %d is not supported",
+	ARGUSBUF_APPEND("system ID length of %d is not supported",
 	       isis_header->id_length);
 	return (0);
     }
 
     if (isis_header->pdu_version != ISIS_VERSION) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"version %d packet not supported", isis_header->pdu_version);
+	ARGUSBUF_APPEND("version %d packet not supported", isis_header->pdu_version);
 	return (0);
     }
 
@@ -1703,7 +1703,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	max_area = 3;	 /* silly shit */
 	break;
     case 255:
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"bad packet -- 255 areas");
+	ARGUSBUF_APPEND("bad packet -- 255 areas");
 	return (0);
     default:
 	break;
@@ -1732,7 +1732,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 
     /* toss any non 6-byte sys-ID len PDUs */
     if (id_length != 6 ) { 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"bad packet -- illegal sys-ID length (%u)", id_length);
+	ARGUSBUF_APPEND("bad packet -- illegal sys-ID length (%u)", id_length);
 	return (0);
     }
 
@@ -1740,7 +1740,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 
     /* in non-verbose mode print the basic PDU Type plus PDU specific brief information*/
     if (ArgusParser->vflag < 1) {
-        sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s%s",
+        ARGUSBUF_APPEND("%s%s",
                ArgusParser->eflag ? "" : ", ",
                tok2str(isis_pdu_values,"unknown PDU-Type %u",pdu_type));
 
@@ -1748,41 +1748,41 @@ static int isis_print (const u_int8_t *p, u_int length)
 
 	case ISIS_PDU_L1_LAN_IIH:
 	case ISIS_PDU_L2_LAN_IIH:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", src-id %s",
+	    ARGUSBUF_APPEND(", src-id %s",
                    isis_print_id(header_iih_lan->source_id,SYSTEM_ID_LEN));
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", lan-id %s, prio %u",
+	    ARGUSBUF_APPEND(", lan-id %s, prio %u",
                    isis_print_id(header_iih_lan->lan_id,NODE_ID_LEN),
                    header_iih_lan->priority);
 	    break;
 	case ISIS_PDU_PTP_IIH:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", src-id %s", isis_print_id(header_iih_ptp->source_id,SYSTEM_ID_LEN));
+	    ARGUSBUF_APPEND(", src-id %s", isis_print_id(header_iih_ptp->source_id,SYSTEM_ID_LEN));
 	    break;
 	case ISIS_PDU_L1_LSP:
 	case ISIS_PDU_L2_LSP:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", lsp-id %s, seq 0x%08x, lifetime %5us",
+	    ARGUSBUF_APPEND(", lsp-id %s, seq 0x%08x, lifetime %5us",
 		   isis_print_id(header_lsp->lsp_id, LSP_ID_LEN),
 		   EXTRACT_32BITS(header_lsp->sequence_number),
 		   EXTRACT_16BITS(header_lsp->remaining_lifetime));
 	    break;
 	case ISIS_PDU_L1_CSNP:
 	case ISIS_PDU_L2_CSNP:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", src-id %s", isis_print_id(header_csnp->source_id,NODE_ID_LEN));
+	    ARGUSBUF_APPEND(", src-id %s", isis_print_id(header_csnp->source_id,NODE_ID_LEN));
 	    break;
 	case ISIS_PDU_L1_PSNP:
 	case ISIS_PDU_L2_PSNP:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", src-id %s", isis_print_id(header_psnp->source_id,NODE_ID_LEN));
+	    ARGUSBUF_APPEND(", src-id %s", isis_print_id(header_psnp->source_id,NODE_ID_LEN));
 	    break;
 
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],", length %u", length);
+	ARGUSBUF_APPEND(", length %u", length);
 
         return(1);
     }
 
     /* ok they seem to want to know everything - lets fully decode it */
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%slength %u", ArgusParser->eflag ? "" : ", ",length);
+    ARGUSBUF_APPEND("%slength %u", ArgusParser->eflag ? "" : ", ",length);
 
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t%s, hlen: %u, v: %u, pdu-v: %u, sys-id-len: %u (%u), max-area: %u (%u)",
+    ARGUSBUF_APPEND("\n\t%s, hlen: %u, v: %u, pdu-v: %u, sys-id-len: %u (%u), max-area: %u (%u)",
            tok2str(isis_pdu_values,
                    "unknown, type %u",
                    pdu_type),
@@ -1804,7 +1804,7 @@ static int isis_print (const u_int8_t *p, u_int length)
     case ISIS_PDU_L1_LAN_IIH:
     case ISIS_PDU_L2_LAN_IIH:
 	if (isis_header->fixed_len != (ISIS_COMMON_HEADER_SIZE+ISIS_IIH_LAN_HEADER_SIZE)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bogus fixed header length %u should be %lu",
+	    ARGUSBUF_APPEND(", bogus fixed header length %u should be %lu",
 		   isis_header->fixed_len, (unsigned long)ISIS_IIH_LAN_HEADER_SIZE);
 	    return (0);
 	}
@@ -1816,14 +1816,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
 	TCHECK(*header_iih_lan);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  source-id: %s,  holding time: %us, Flags: [%s]",
+	ARGUSBUF_APPEND("\n\t  source-id: %s,  holding time: %us, Flags: [%s]",
                isis_print_id(header_iih_lan->source_id,SYSTEM_ID_LEN),
                EXTRACT_16BITS(header_iih_lan->holding_time),
                tok2str(isis_iih_circuit_type_values,
                        "unknown circuit type 0x%02x",
                        header_iih_lan->circuit_type));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  lan-id:    %s, Priority: %u, PDU length: %u",
+	ARGUSBUF_APPEND("\n\t  lan-id:    %s, Priority: %u, PDU length: %u",
                isis_print_id(header_iih_lan->lan_id, NODE_ID_LEN),
                (header_iih_lan->priority) & ISIS_LAN_PRIORITY_MASK,
                pdu_len);
@@ -1839,7 +1839,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 
     case ISIS_PDU_PTP_IIH:
 	if (isis_header->fixed_len != (ISIS_COMMON_HEADER_SIZE+ISIS_IIH_PTP_HEADER_SIZE)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bogus fixed header length %u should be %lu",
+	    ARGUSBUF_APPEND(", bogus fixed header length %u should be %lu",
 		   isis_header->fixed_len, (unsigned long)ISIS_IIH_PTP_HEADER_SIZE);
 	    return (0);
 	}
@@ -1851,14 +1851,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
 	TCHECK(*header_iih_ptp);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  source-id: %s, holding time: %us, Flags: [%s]",
+	ARGUSBUF_APPEND("\n\t  source-id: %s, holding time: %us, Flags: [%s]",
                isis_print_id(header_iih_ptp->source_id,SYSTEM_ID_LEN),
                EXTRACT_16BITS(header_iih_ptp->holding_time),
                tok2str(isis_iih_circuit_type_values,
                        "unknown circuit type 0x%02x",
                        header_iih_ptp->circuit_type));
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  circuit-id: 0x%02x, PDU length: %u",
+	ARGUSBUF_APPEND("\n\t  circuit-id: 0x%02x, PDU length: %u",
                header_iih_ptp->circuit_id,
                pdu_len);
 
@@ -1874,7 +1874,7 @@ static int isis_print (const u_int8_t *p, u_int length)
     case ISIS_PDU_L1_LSP:
     case ISIS_PDU_L2_LSP:
 	if (isis_header->fixed_len != (ISIS_COMMON_HEADER_SIZE+ISIS_LSP_HEADER_SIZE)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bogus fixed header length %u should be %lu",
+	    ARGUSBUF_APPEND(", bogus fixed header length %u should be %lu",
 		   isis_header->fixed_len, (unsigned long)ISIS_LSP_HEADER_SIZE);
 	    return (0);
 	}
@@ -1886,7 +1886,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
 	TCHECK(*header_lsp);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  lsp-id: %s, seq: 0x%08x, lifetime: %5us\n\t  chksum: 0x%04x",
+	ARGUSBUF_APPEND("\n\t  lsp-id: %s, seq: 0x%08x, lifetime: %5us\n\t  chksum: 0x%04x",
                isis_print_id(header_lsp->lsp_id, LSP_ID_LEN),
                EXTRACT_32BITS(header_lsp->sequence_number),
                EXTRACT_16BITS(header_lsp->remaining_lifetime),
@@ -1895,26 +1895,26 @@ static int isis_print (const u_int8_t *p, u_int length)
         /* if this is a purge do not attempt to verify the checksum */
         if ( EXTRACT_16BITS(header_lsp->remaining_lifetime) == 0 &&
              EXTRACT_16BITS(header_lsp->checksum) == 0)
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (purged)");
+            ARGUSBUF_APPEND(" (purged)");
         else
             /* verify the checksum -
              * checking starts at the lsp-id field at byte position [12]
              * hence the length needs to be reduced by 12 bytes */
-            sprintf(&ArgusBuf[strlen(ArgusBuf)]," (%s)", (osi_cksum((u_int8_t *)header_lsp->lsp_id, length-12)) ? "incorrect" : "correct");
+            ARGUSBUF_APPEND(" (%s)", (osi_cksum((u_int8_t *)header_lsp->lsp_id, length-12)) ? "incorrect" : "correct");
 
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],", PDU length: %u, Flags: [ %s",
+	ARGUSBUF_APPEND(", PDU length: %u, Flags: [ %s",
                pdu_len,
                ISIS_MASK_LSP_OL_BIT(header_lsp->typeblock) ? "Overload bit set, " : "");
 
 	if (ISIS_MASK_LSP_ATT_BITS(header_lsp->typeblock)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ISIS_MASK_LSP_ATT_DEFAULT_BIT(header_lsp->typeblock) ? "default " : "");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ISIS_MASK_LSP_ATT_DELAY_BIT(header_lsp->typeblock) ? "delay " : "");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ISIS_MASK_LSP_ATT_EXPENSE_BIT(header_lsp->typeblock) ? "expense " : "");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ISIS_MASK_LSP_ATT_ERROR_BIT(header_lsp->typeblock) ? "error " : "");
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"ATT bit set, ");
+	    ARGUSBUF_APPEND("%s", ISIS_MASK_LSP_ATT_DEFAULT_BIT(header_lsp->typeblock) ? "default " : "");
+	    ARGUSBUF_APPEND("%s", ISIS_MASK_LSP_ATT_DELAY_BIT(header_lsp->typeblock) ? "delay " : "");
+	    ARGUSBUF_APPEND("%s", ISIS_MASK_LSP_ATT_EXPENSE_BIT(header_lsp->typeblock) ? "expense " : "");
+	    ARGUSBUF_APPEND("%s", ISIS_MASK_LSP_ATT_ERROR_BIT(header_lsp->typeblock) ? "error " : "");
+	    ARGUSBUF_APPEND("ATT bit set, ");
 	}
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s", ISIS_MASK_LSP_PARTITION_BIT(header_lsp->typeblock) ? "P bit set, " : "");
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s ]", tok2str(isis_lsp_istype_values,"Unknown(0x%x)",ISIS_MASK_LSP_ISTYPE_BITS(header_lsp->typeblock)));
+	ARGUSBUF_APPEND("%s", ISIS_MASK_LSP_PARTITION_BIT(header_lsp->typeblock) ? "P bit set, " : "");
+	ARGUSBUF_APPEND("%s ]", tok2str(isis_lsp_istype_values,"Unknown(0x%x)",ISIS_MASK_LSP_ISTYPE_BITS(header_lsp->typeblock)));
 
         if (ArgusParser->vflag > 1) {
             if(!print_unknown_data(pptr,"\n\t  ",ISIS_LSP_HEADER_SIZE))
@@ -1928,7 +1928,7 @@ static int isis_print (const u_int8_t *p, u_int length)
     case ISIS_PDU_L1_CSNP:
     case ISIS_PDU_L2_CSNP:
 	if (isis_header->fixed_len != (ISIS_COMMON_HEADER_SIZE+ISIS_CSNP_HEADER_SIZE)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", bogus fixed header length %u should be %lu",
+	    ARGUSBUF_APPEND(", bogus fixed header length %u should be %lu",
 		   isis_header->fixed_len, (unsigned long)ISIS_CSNP_HEADER_SIZE);
 	    return (0);
 	}
@@ -1940,12 +1940,12 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
 	TCHECK(*header_csnp);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  source-id:    %s, PDU length: %u",
+	ARGUSBUF_APPEND("\n\t  source-id:    %s, PDU length: %u",
                isis_print_id(header_csnp->source_id, NODE_ID_LEN),
                pdu_len);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  start lsp-id: %s",
+	ARGUSBUF_APPEND("\n\t  start lsp-id: %s",
                isis_print_id(header_csnp->start_lsp_id, LSP_ID_LEN));
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  end lsp-id:   %s",
+	ARGUSBUF_APPEND("\n\t  end lsp-id:   %s",
                isis_print_id(header_csnp->end_lsp_id, LSP_ID_LEN));
 
         if (ArgusParser->vflag > 1) {
@@ -1960,7 +1960,7 @@ static int isis_print (const u_int8_t *p, u_int length)
     case ISIS_PDU_L1_PSNP:
     case ISIS_PDU_L2_PSNP:
 	if (isis_header->fixed_len != (ISIS_COMMON_HEADER_SIZE+ISIS_PSNP_HEADER_SIZE)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"- bogus fixed header length %u should be %lu",
+	    ARGUSBUF_APPEND("- bogus fixed header length %u should be %lu",
 		   isis_header->fixed_len, (unsigned long)ISIS_PSNP_HEADER_SIZE);
 	    return (0);
 	}
@@ -1972,7 +1972,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
 	TCHECK(*header_psnp);
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t  source-id:    %s, PDU length: %u",
+	ARGUSBUF_APPEND("\n\t  source-id:    %s, PDU length: %u",
                isis_print_id(header_psnp->source_id, NODE_ID_LEN),
                pdu_len);
 
@@ -2001,7 +2001,7 @@ static int isis_print (const u_int8_t *p, u_int length)
         }
 
 	if (!TTEST2(*pptr, 2)) {
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t packet exceeded snapshot (%ld) bytes",
+	    ARGUSBUF_APPEND("\n\t\t packet exceeded snapshot (%ld) bytes",
                    (long)(pptr-snapend));
 	    return (1);
 	}
@@ -2015,7 +2015,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	}
 
         /* first lets see if we know the TLVs name*/
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t    %s TLV #%u, length: %u",
+	ARGUSBUF_APPEND("\n\t    %s TLV #%u, length: %u",
                tok2str(isis_tlv_values,
                        "unknown",
                        tlv_type),
@@ -2032,7 +2032,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 		goto trunctlv;
 	    alen = *tptr++;
 	    while (tmp && alen < tmp) {
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Area address (length: %u): %s",
+		ARGUSBUF_APPEND("\n\t      Area address (length: %u): %s",
                        alen,
                        isonsap_string(tptr,alen));
 		tptr += alen;
@@ -2048,7 +2048,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	    while (tmp >= ETHER_ADDR_LEN) {
                 if (!TTEST2(*tptr, ETHER_ADDR_LEN))
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      SNPA: %s",isis_print_id(tptr,ETHER_ADDR_LEN));
+                ARGUSBUF_APPEND("\n\t      SNPA: %s",isis_print_id(tptr,ETHER_ADDR_LEN));
                 tmp -= ETHER_ADDR_LEN;
                 tptr += ETHER_ADDR_LEN;
 	    }
@@ -2059,15 +2059,15 @@ static int isis_print (const u_int8_t *p, u_int length)
 		goto trunctlv;
 	    lan_alen = *tptr++; /* LAN address length */
 	    if (lan_alen == 0) {
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      LAN address length 0 bytes (invalid)");
+                ARGUSBUF_APPEND("\n\t      LAN address length 0 bytes (invalid)");
                 break;
             }
             tmp --;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      LAN address length %u bytes ",lan_alen);
+            ARGUSBUF_APPEND("\n\t      LAN address length %u bytes ",lan_alen);
 	    while (tmp >= lan_alen) {
                 if (!TTEST2(*tptr, lan_alen))
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\tIS Neighbor: %s",isis_print_id(tptr,lan_alen));
+                ARGUSBUF_APPEND("\n\t\tIS Neighbor: %s",isis_print_id(tptr,lan_alen));
                 tmp -= lan_alen;
                 tptr +=lan_alen;
             }
@@ -2115,7 +2115,7 @@ static int isis_print (const u_int8_t *p, u_int length)
         case ISIS_TLV_IS_REACH:
 	    if (!TTEST2(*tptr,1))  /* check if there is one byte left to read out the virtual flag */
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      %s",
+            ARGUSBUF_APPEND("\n\t      %s",
                    tok2str(isis_is_reach_virtual_values,
                            "bogus virtual flag 0x%02x",
                            *tptr++));
@@ -2123,7 +2123,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             while (tmp >= sizeof(struct isis_tlv_is_reach)) {
 		if (!TTEST(*tlv_is_reach))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IS Neighbor: %s",
+		ARGUSBUF_APPEND("\n\t      IS Neighbor: %s",
 		       isis_print_id(tlv_is_reach->neighbor_nodeid, NODE_ID_LEN));
                 isis_print_metric_block(&tlv_is_reach->isis_metric_block);
 		tmp -= sizeof(struct isis_tlv_is_reach);
@@ -2136,7 +2136,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             while (tmp >= sizeof(struct isis_tlv_es_reach)) {
 		if (!TTEST(*tlv_es_reach))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      ES Neighbor: %s",
+		ARGUSBUF_APPEND("\n\t      ES Neighbor: %s",
                        isis_print_id(tlv_es_reach->neighbor_sysid,SYSTEM_ID_LEN));
                 isis_print_metric_block(&tlv_es_reach->isis_metric_block);
 		tmp -= sizeof(struct isis_tlv_es_reach);
@@ -2209,7 +2209,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 		if (!TTEST2(*tptr, sizeof(struct in6_addr)))
 		    goto trunctlv;
 
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv6 interface address: %s",
+                ARGUSBUF_APPEND("\n\t      IPv6 interface address: %s",
 		       ip6addr_string(tptr));
 
 		tptr += sizeof(struct in6_addr);
@@ -2221,7 +2221,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	    if (!TTEST2(*tptr, 1))
 		goto trunctlv;
 
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      %s: ",
+            ARGUSBUF_APPEND("\n\t      %s: ",
                    tok2str(isis_subtlv_auth_values,
                            "unknown Authentication type 0x%02x",
                            *tptr));
@@ -2231,17 +2231,17 @@ static int isis_print (const u_int8_t *p, u_int length)
 		for(i=1;i<tlv_len;i++) {
 		    if (!TTEST2(*(tptr+i), 1))
 			goto trunctlv;
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c",*(tptr+i));
+		    ARGUSBUF_APPEND("%c",*(tptr+i));
 		}
 		break;
 	    case ISIS_SUBTLV_AUTH_MD5:
 		for(i=1;i<tlv_len;i++) {
 		    if (!TTEST2(*(tptr+i), 1))
 			goto trunctlv;
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"%02x",*(tptr+i));
+		    ARGUSBUF_APPEND("%02x",*(tptr+i));
 		}
 		if (tlv_len != ISIS_SUBTLV_AUTH_MD5_LEN+1)
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],", (malformed subTLV) ");
+                    ARGUSBUF_APPEND(", (malformed subTLV) ");
 		break;
 	    case ISIS_SUBTLV_AUTH_PRIVATE:
 	    default:
@@ -2256,7 +2256,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	    if(tmp>=1) {
 		if (!TTEST2(*tptr, 1))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Adjacency State: %s (%u)",
+		ARGUSBUF_APPEND("\n\t      Adjacency State: %s (%u)",
 		       tok2str(isis_ptp_adjancey_values, "unknown", *tptr),
                         *tptr);
 		tmp--;
@@ -2265,14 +2265,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 		if (!TTEST2(tlv_ptp_adj->extd_local_circuit_id,
                             sizeof(tlv_ptp_adj->extd_local_circuit_id)))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Extended Local circuit-ID: 0x%08x",
+		ARGUSBUF_APPEND("\n\t      Extended Local circuit-ID: 0x%08x",
 		       EXTRACT_32BITS(tlv_ptp_adj->extd_local_circuit_id));
 		tmp-=sizeof(tlv_ptp_adj->extd_local_circuit_id);
 	    }
 	    if(tmp>=SYSTEM_ID_LEN) {
 		if (!TTEST2(tlv_ptp_adj->neighbor_sysid, SYSTEM_ID_LEN))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Neighbor System-ID: %s",
+		ARGUSBUF_APPEND("\n\t      Neighbor System-ID: %s",
 		       isis_print_id(tlv_ptp_adj->neighbor_sysid,SYSTEM_ID_LEN));
 		tmp-=SYSTEM_ID_LEN;
 	    }
@@ -2280,23 +2280,23 @@ static int isis_print (const u_int8_t *p, u_int length)
 		if (!TTEST2(tlv_ptp_adj->neighbor_extd_local_circuit_id,
                             sizeof(tlv_ptp_adj->neighbor_extd_local_circuit_id)))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Neighbor Extended Local circuit-ID: 0x%08x",
+		ARGUSBUF_APPEND("\n\t      Neighbor Extended Local circuit-ID: 0x%08x",
 		       EXTRACT_32BITS(tlv_ptp_adj->neighbor_extd_local_circuit_id));
 	    }
 	    break;
 
 	case ISIS_TLV_PROTOCOLS:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      NLPID(s): ");
+	    ARGUSBUF_APPEND("\n\t      NLPID(s): ");
 	    while (tmp>0) {
 		if (!TTEST2(*(tptr), 1))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%s (0x%02x)",
+		ARGUSBUF_APPEND("%s (0x%02x)",
                        tok2str(nlpid_values,
                                "unknown",
                                *tptr),
                        *tptr);
 		if (tmp>1) /* further NPLIDs ? - put comma */
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],", ");
+		    ARGUSBUF_APPEND(", ");
                 tptr++;
                 tmp--;
 	    }
@@ -2305,25 +2305,25 @@ static int isis_print (const u_int8_t *p, u_int length)
 	case ISIS_TLV_TE_ROUTER_ID:
 	    if (!TTEST2(*pptr, sizeof(struct in_addr)))
 		goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Traffic Engineering Router ID: %s", ipaddr_string(pptr));
+	    ARGUSBUF_APPEND("\n\t      Traffic Engineering Router ID: %s", ipaddr_string(pptr));
 	    break;
 
 	case ISIS_TLV_IPADDR:
 	    while (tmp>=sizeof(struct in_addr)) {
 		if (!TTEST2(*tptr, sizeof(struct in_addr)))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv4 interface address: %s", ipaddr_string(tptr));
+		ARGUSBUF_APPEND("\n\t      IPv4 interface address: %s", ipaddr_string(tptr));
 		tptr += sizeof(struct in_addr);
 		tmp -= sizeof(struct in_addr);
 	    }
 	    break;
 
 	case ISIS_TLV_HOSTNAME:
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Hostname: ");
+	    ARGUSBUF_APPEND("\n\t      Hostname: ");
 	    while (tmp>0) {
 		if (!TTEST2(*tptr, 1))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"%c",*tptr++);
+		ARGUSBUF_APPEND("%c",*tptr++);
                 tmp--;
 	    }
 	    break;
@@ -2333,7 +2333,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
 	    if (!TTEST2(*tptr, NODE_ID_LEN))
                 goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IS Neighbor: %s", isis_print_id(tptr, NODE_ID_LEN));
+	    ARGUSBUF_APPEND("\n\t      IS Neighbor: %s", isis_print_id(tptr, NODE_ID_LEN));
 	    tptr+=(NODE_ID_LEN);
 	    tmp-=(NODE_ID_LEN);
 
@@ -2341,14 +2341,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
 	    if (!TTEST2(*tptr, 1))
                 goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],", Flags: [%s]", ISIS_MASK_TLV_SHARED_RISK_GROUP(*tptr++) ? "numbered" : "unnumbered");
+	    ARGUSBUF_APPEND(", Flags: [%s]", ISIS_MASK_TLV_SHARED_RISK_GROUP(*tptr++) ? "numbered" : "unnumbered");
 	    tmp--;
 
 	    if (tmp < sizeof(struct in_addr))
 	        break;
 	    if (!TTEST2(*tptr,sizeof(struct in_addr)))
                 goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv4 interface address: %s", ipaddr_string(tptr));
+	    ARGUSBUF_APPEND("\n\t      IPv4 interface address: %s", ipaddr_string(tptr));
 	    tptr+=sizeof(struct in_addr);
 	    tmp-=sizeof(struct in_addr);
 
@@ -2356,14 +2356,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
 	    if (!TTEST2(*tptr,sizeof(struct in_addr)))
                 goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      IPv4 neighbor address: %s", ipaddr_string(tptr));
+	    ARGUSBUF_APPEND("\n\t      IPv4 neighbor address: %s", ipaddr_string(tptr));
 	    tptr+=sizeof(struct in_addr);
 	    tmp-=sizeof(struct in_addr);
 
 	    while (tmp>=4) {
                 if (!TTEST2(*tptr, 4))
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Link-ID: 0x%08x", EXTRACT_32BITS(tptr));
+                ARGUSBUF_APPEND("\n\t      Link-ID: 0x%08x", EXTRACT_32BITS(tptr));
                 tptr+=4;
                 tmp-=4;
 	    }
@@ -2374,17 +2374,17 @@ static int isis_print (const u_int8_t *p, u_int length)
 	    while(tmp>=sizeof(struct isis_tlv_lsp)) {
 		if (!TTEST((tlv_lsp->lsp_id)[LSP_ID_LEN-1]))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      lsp-id: %s",
+		ARGUSBUF_APPEND("\n\t      lsp-id: %s",
                        isis_print_id(tlv_lsp->lsp_id, LSP_ID_LEN));
 		if (!TTEST2(tlv_lsp->sequence_number, 4))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],", seq: 0x%08x",EXTRACT_32BITS(tlv_lsp->sequence_number));
+		ARGUSBUF_APPEND(", seq: 0x%08x",EXTRACT_32BITS(tlv_lsp->sequence_number));
 		if (!TTEST2(tlv_lsp->remaining_lifetime, 2))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],", lifetime: %5ds",EXTRACT_16BITS(tlv_lsp->remaining_lifetime));
+		ARGUSBUF_APPEND(", lifetime: %5ds",EXTRACT_16BITS(tlv_lsp->remaining_lifetime));
 		if (!TTEST2(tlv_lsp->checksum, 2))
 		    goto trunctlv;
-		sprintf(&ArgusBuf[strlen(ArgusBuf)],", chksum: 0x%04x",EXTRACT_16BITS(tlv_lsp->checksum));
+		ARGUSBUF_APPEND(", chksum: 0x%04x",EXTRACT_16BITS(tlv_lsp->checksum));
 		tmp-=sizeof(struct isis_tlv_lsp);
 		tlv_lsp++;
 	    }
@@ -2395,15 +2395,15 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
 	    if (!TTEST2(*tptr, ISIS_TLV_CHECKSUM_MINLEN))
 		goto trunctlv;
-	    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      checksum: 0x%04x ", EXTRACT_16BITS(tptr));
+	    ARGUSBUF_APPEND("\n\t      checksum: 0x%04x ", EXTRACT_16BITS(tptr));
             /* do not attempt to verify the checksum if it is zero
              * most likely a HMAC-MD5 TLV is also present and
              * to avoid conflicts the checksum TLV is zeroed.
              * see rfc3358 for details
              */
             if (EXTRACT_16BITS(tptr) == 0)
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"(unverified)");
-            else sprintf(&ArgusBuf[strlen(ArgusBuf)],"(%s)", osi_cksum(optr, length) ? "incorrect" : "correct");
+                ARGUSBUF_APPEND("(unverified)");
+            else ARGUSBUF_APPEND("(%s)", osi_cksum(optr, length) ? "incorrect" : "correct");
 	    break;
 
 	case ISIS_TLV_MT_SUPPORTED:
@@ -2419,7 +2419,7 @@ static int isis_print (const u_int8_t *p, u_int length)
                     tptr+=mt_len;
                     tmp-=mt_len;
 		} else {
-		    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      malformed MT-ID");
+		    ARGUSBUF_APPEND("\n\t      malformed MT-ID");
 		    break;
 		}
 	    }
@@ -2431,7 +2431,7 @@ static int isis_print (const u_int8_t *p, u_int length)
                 break;
             if (!TTEST2(*tptr, ISIS_TLV_RESTART_SIGNALING_FLAGLEN))
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Flags [%s]",
+            ARGUSBUF_APPEND("\n\t      Flags [%s]",
                    bittok2str(isis_restart_flag_values, "none", *tptr));
             tptr+=ISIS_TLV_RESTART_SIGNALING_FLAGLEN;
             tmp-=ISIS_TLV_RESTART_SIGNALING_FLAGLEN;
@@ -2445,7 +2445,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             if (!TTEST2(*tptr, ISIS_TLV_RESTART_SIGNALING_HOLDTIMELEN))
                 goto trunctlv;
 
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],", Remaining holding time %us", EXTRACT_16BITS(tptr+1));
+            ARGUSBUF_APPEND(", Remaining holding time %us", EXTRACT_16BITS(tptr+1));
             tptr+=ISIS_TLV_RESTART_SIGNALING_HOLDTIMELEN;
             tmp-=ISIS_TLV_RESTART_SIGNALING_HOLDTIMELEN;
 
@@ -2453,7 +2453,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             if (tmp == SYSTEM_ID_LEN) {
                     if (!TTEST2(*tptr, SYSTEM_ID_LEN))
                             goto trunctlv;
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],", for %s",isis_print_id(tptr,SYSTEM_ID_LEN));
+                    ARGUSBUF_APPEND(", for %s",isis_print_id(tptr,SYSTEM_ID_LEN));
             } 
 	    break;
 
@@ -2462,7 +2462,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
             if (!TTEST2(*tptr, ISIS_TLV_IDRP_INFO_MINLEN))
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Inter-Domain Information Type: %s",
+            ARGUSBUF_APPEND("\n\t      Inter-Domain Information Type: %s",
                    tok2str(isis_subtlv_idrp_values,
                            "Unknown (0x%02x)",
                            *tptr));
@@ -2470,7 +2470,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             case ISIS_SUBTLV_IDRP_ASN:
                 if (!TTEST2(*tptr, 2)) /* fetch AS number */
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"AS Number: %u",EXTRACT_16BITS(tptr));
+                ARGUSBUF_APPEND("AS Number: %u",EXTRACT_16BITS(tptr));
                 break;
             case ISIS_SUBTLV_IDRP_LOCAL:
             case ISIS_SUBTLV_IDRP_RES:
@@ -2486,14 +2486,14 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
             if (!TTEST2(*tptr, ISIS_TLV_LSP_BUFFERSIZE_MINLEN))
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      LSP Buffersize: %u",EXTRACT_16BITS(tptr));
+            ARGUSBUF_APPEND("\n\t      LSP Buffersize: %u",EXTRACT_16BITS(tptr));
             break;
 
         case ISIS_TLV_PART_DIS:
             while (tmp >= SYSTEM_ID_LEN) {
                 if (!TTEST2(*tptr, SYSTEM_ID_LEN))
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      %s",isis_print_id(tptr,SYSTEM_ID_LEN));
+                ARGUSBUF_APPEND("\n\t      %s",isis_print_id(tptr,SYSTEM_ID_LEN));
                 tptr+=SYSTEM_ID_LEN;
                 tmp-=SYSTEM_ID_LEN;
             }
@@ -2504,7 +2504,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
             if (!TTEST2(*tptr, sizeof(struct isis_metric_block)))
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Metric Block");
+            ARGUSBUF_APPEND("\n\t      Metric Block");
             isis_print_metric_block((const struct isis_metric_block *)tptr);
             tptr+=sizeof(struct isis_metric_block);
             tmp-=sizeof(struct isis_metric_block);
@@ -2514,7 +2514,7 @@ static int isis_print (const u_int8_t *p, u_int length)
                     goto trunctlv;
                 prefix_len=*tptr++; /* read out prefix length in semioctets*/
                 if (prefix_len < 2) {
-                    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\tAddress: prefix length %u < 2", prefix_len);
+                    ARGUSBUF_APPEND("\n\t\tAddress: prefix length %u < 2", prefix_len);
                     break;
                 }
                 tmp--;
@@ -2522,7 +2522,7 @@ static int isis_print (const u_int8_t *p, u_int length)
                     break;
                 if (!TTEST2(*tptr, prefix_len/2))
                     goto trunctlv;
-                sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\tAddress: %s/%u",
+                ARGUSBUF_APPEND("\n\t\tAddress: %s/%u",
                        isonsap_string(tptr,prefix_len/2),
                        prefix_len*4);
                 tptr+=prefix_len/2;
@@ -2535,7 +2535,7 @@ static int isis_print (const u_int8_t *p, u_int length)
 	        break;
             if (!TTEST2(*tptr, ISIS_TLV_IIH_SEQNR_MINLEN)) /* check if four bytes are on the wire */
                 goto trunctlv;
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Sequence number: %u", EXTRACT_32BITS(tptr) );
+            ARGUSBUF_APPEND("\n\t      Sequence number: %u", EXTRACT_32BITS(tptr) );
             break;
 
         case ISIS_TLV_VENDOR_PRIVATE:
@@ -2544,7 +2544,7 @@ static int isis_print (const u_int8_t *p, u_int length)
             if (!TTEST2(*tptr, ISIS_TLV_VENDOR_PRIVATE_MINLEN)) /* check if enough byte for a full oui */
                 goto trunctlv;
             vendor_id = EXTRACT_24BITS(tptr);
-            sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      Vendor: %s (%u)",
+            ARGUSBUF_APPEND("\n\t      Vendor: %s (%u)",
                    tok2str(oui_values,"Unknown",vendor_id),
                    vendor_id);
             tptr+=3;
@@ -2582,16 +2582,16 @@ static int isis_print (const u_int8_t *p, u_int length)
     }
 
     if (packet_len != 0) {
-	sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t      %u straggler bytes", packet_len);
+	ARGUSBUF_APPEND("\n\t      %u straggler bytes", packet_len);
     }
     return (1);
 
  trunc:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)], "[|isis]");
+    ARGUSBUF_APPEND("[|isis]");
     return (1);
 
  trunctlv:
-    sprintf(&ArgusBuf[strlen(ArgusBuf)],"\n\t\t packet exceeded snapshot");
+    ARGUSBUF_APPEND("\n\t\t packet exceeded snapshot");
     return(1);
 }
 

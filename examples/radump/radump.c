@@ -549,13 +549,20 @@ void ArgusWindowClose(void) {
 /*
  * Print out a null-terminated filename (or other ascii string).
  * If ep is NULL, assume no truncation check is needed.
- * Return true if truncated.
+ * "buflen" is the number of bytes remaining in "buf" (not including a
+ * terminating NUL) that this call is allowed to write, so a caller
+ * appending to a shared buffer (e.g. &ArgusBuf[strlen(ArgusBuf)]) can pass
+ * the buffer's actual remaining capacity and this function will never
+ * write past it, regardless of how many bytes the record being decoded
+ * claims to contain.
+ * Return true if truncated (either by "ep" or by running out of "buflen").
  */
 int
-fn_print(register const u_char *s, register const u_char *ep, char *buf)
+fn_print(register const u_char *s, register const u_char *ep, char *buf, size_t buflen)
 {
    register int ret;
    register u_char c;
+   char *lim = buf + buflen;
 
    ret = 1;                        /* assume truncated */
    while (ep == NULL || s < ep) {
@@ -564,6 +571,8 @@ fn_print(register const u_char *s, register const u_char *ep, char *buf)
          ret = 0;
          break;
       }
+      if ((buf + strlen(buf) + 4) >= lim)
+         break;                    /* out of room; report truncated */
       if (!isascii(c)) {
          c = toascii(c);
          sprintf(&buf[strlen(buf)], "%c", 'M');
@@ -581,18 +590,24 @@ fn_print(register const u_char *s, register const u_char *ep, char *buf)
 /*                      
  * Print out a counted filename (or other ascii string).
  * If ep is NULL, assume no truncation check is needed.
- * Return true if truncated.
+ * "buflen" is the number of bytes remaining in "buf" (not including a
+ * terminating NUL); see fn_print() above for why this matters.
+ * Returns a pointer to the NUL terminator on success, or NULL if
+ * truncated by "ep" or by running out of "buflen".
  */                     
 
 char *
 fn_printn(register const u_char *s, register u_int n,
-          register const u_char *ep, char *buf)
+          register const u_char *ep, char *buf, size_t buflen)
 {
    register u_char c;
    int len = strlen(buf);
    char *ebuf = &buf[len];
+   char *lim = buf + buflen;
 
    while ((n > 0) && (ep == NULL || s < ep)) {
+      if ((ebuf + 4) >= lim)
+         return (NULL);            /* out of room */
       n--;
       c = *s++;
       if (!isascii(c)) {
@@ -606,6 +621,7 @@ fn_printn(register const u_char *s, register u_int n,
       }
       *ebuf++ = c;
    }
+   *ebuf = '\0';
    return (n == 0) ? ebuf : NULL;
 }
 

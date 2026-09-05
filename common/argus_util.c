@@ -3348,14 +3348,15 @@ ArgusParseWiresharkManufEntry (struct ArgusParserStruct *parser, char *str)
          switch (state) {
                         case RA_READING_ETHER_PART: {
                            char *sptr, *tptr = optarg;
-                           int result, cnt = 0;
+                           unsigned int result;
+                           int cnt = 0;
 
                            addr = 0;
                            bzero(eaddr, sizeof(eaddr));
 
                            if ((sptr = strchr(optarg, '/')) != NULL) {  // if masklen, then terminate and store
                               *sptr++ = '\0';
-                              if (sscanf (sptr, "%d", &result) == 1) {
+                              if (sscanf (sptr, "%u", &result) == 1) {
                                  masklen = result;
                               }
                            }
@@ -22402,9 +22403,17 @@ ArgusPrintSrcUserDataLabel (struct ArgusParserStruct *parser, char *buf, int len
       }
  
       if (len > 10) slen++;
-      sprintf (buf, "%*ssrcUdata%*s ", (slen)/2, " ", (slen)/2, " ");
+
+      /* buf is a MAXSTRLEN-sized buffer (see ArgusGenerateLabel()); clamp
+       * slen so that the padding plus "srcUdata"/trailer text below cannot
+       * exceed that buffer, and use snprintf/bounds checks throughout.
+       */
+      if (slen > (MAXSTRLEN - 16))
+         slen = MAXSTRLEN - 16;
+
+      snprintf (buf, MAXSTRLEN, "%*ssrcUdata%*s ", (slen)/2, " ", (slen)/2, " ");
       if (slen & 0x01)
-         sprintf (&buf[strlen(buf)], " ");
+         snprintf (&buf[strlen(buf)], MAXSTRLEN - strlen(buf), " ");
    }
 }
 
@@ -22428,9 +22437,17 @@ ArgusPrintDstUserDataLabel (struct ArgusParserStruct *parser, char *buf, int len
       }
 
       if (len > 10) slen++;
-      sprintf (buf, "%*sdstUdata%*s ", (slen)/2, " ", (slen)/2, " ");
+
+      /* buf is a MAXSTRLEN-sized buffer (see ArgusGenerateLabel()); clamp
+       * slen so that the padding plus "dstUdata"/trailer text below cannot
+       * exceed that buffer, and use snprintf/bounds checks throughout.
+       */
+      if (slen > (MAXSTRLEN - 16))
+         slen = MAXSTRLEN - 16;
+
+      snprintf (buf, MAXSTRLEN, "%*sdstUdata%*s ", (slen)/2, " ", (slen)/2, " ");
       if (slen & 0x01)
-         sprintf (&buf[strlen(buf)], " ");
+         snprintf (&buf[strlen(buf)], MAXSTRLEN - strlen(buf), " ");
    }
 }
 
@@ -26525,7 +26542,7 @@ ArgusPrintTime(struct ArgusParserStruct *parser, char *buf, size_t buflen,
                   if (strstr(sbuf, "0000")) {
                      sprintf (sbuf, "Z");
                   } else {
-                     if ((slen = strlen(sbuf)) > 0) {
+                     if ((slen = strlen(sbuf)) > 2) {
                         for (i = 0; i < 2; i++)
                            sbuf[slen - i] = sbuf[slen - (i + 1)];
                         sbuf[slen - 2] = ':';
@@ -31032,7 +31049,7 @@ ArgusGenerateCanonRecord (struct ArgusRecordStruct *argus)
       bcopy ((char *)&argus->hdr, (char *)&canon->hdr, sizeof(canon->hdr));
    
       for (i = 0; i < ARGUSMAXDSRTYPE; i++) {
-         ind = (1 << i);
+         ind = (1U << i);
          switch (ind) {
             case ARGUS_FLOW_INDEX:
                if (argus->dsrindex & (0x1 << ARGUS_FLOW_INDEX))
@@ -31141,7 +31158,7 @@ ArgusConvertRecord (struct ArgusInput *input, char *ptr)
             dsr++;
 
             for (i = 0; i < 32; i++) {
-               ind = (1 << i);
+               ind = (1U << i);
                if (ArgusThisFarStatus & ind) {
                   switch (ind) {
                      case ARGUS_V2_FAR_DSR_STATUS: {
@@ -32174,8 +32191,16 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 #endif
                               input->type = ARGUS_V2_DATA_SOURCE;
                               if ((argusid == ARGUS_V2_COOKIE) && (sequence == 0)) {
+                                 if (length < sizeof(argus2->ahdr) || length > sizeof(*argus2)) {
+                                    ArgusLog (LOG_ALERT, "ArgusReadConnection: invalid Argus-2.0 MAR length %d.", length);
+                                    close (input->fd);
+                                    input->fd = -1;
+                                    goto out;
+                                 }
+
+                                 {
                                  int size = length - sizeof(argus2->ahdr);
-                  
+
                                  if ((cnt = read (input->fd, &argus2->argus_mar, size)) != size) {
 #ifdef ARGUSDEBUG
                                     ArgusDebug (1, "ArgusReadConnection() read failed for ARGUS_START Mar %s.\n", strerror(errno));
@@ -32188,6 +32213,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                                  input->offset += cnt;
                                  ptr = ArgusConvertRecord(input, (char *)argus2);
                                  bcopy ((char *) ptr, (char *)&input->ArgusInitCon, sizeof (*argus2));
+                                 }
 
                                  fstat(input->fd, &input->statbuf);
 #ifdef _LITTLE_ENDIAN
@@ -32413,8 +32439,16 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 #endif
                                           input->type = ARGUS_V2_DATA_SOURCE;
                                           if ((argusid == ARGUS_V2_COOKIE) && (sequence == 0)) {
+                                             if (length < sizeof(argus2->ahdr) || length > sizeof(*argus2)) {
+                                                ArgusLog (LOG_ALERT, "ArgusReadConnection: invalid Argus-2.0 MAR length %d.", length);
+                                                close (input->fd);
+                                                input->fd = -1;
+                                                goto out;
+                                             }
+
+                                             {
                                              int size = length - sizeof(argus2->ahdr);
-                              
+
                                              if ((cnt = read (input->fd, &argus2->argus_mar, size)) != size) {
 #ifdef ARGUSDEBUG
                                                 ArgusDebug (1, "ArgusReadConnection() read failed for ARGUS_START Mar %s.\n", strerror(errno));
@@ -32427,6 +32461,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                                              input->offset += cnt;
                                              ptr = ArgusConvertRecord(input, (char *)argus2);
                                              bcopy ((char *) ptr, (char *)&input->ArgusInitCon, sizeof (*argus2));
+                                             }
 
                                              fstat(input->fd, &input->statbuf);
 #ifdef _LITTLE_ENDIAN
@@ -34016,7 +34051,13 @@ setArgusID(struct ArgusAddrStruct *srcid, void *ptr, int len, unsigned int type)
       int offset                   = 0;
 
       switch (type & ~ARGUS_TYPE_INTERFACE) {
-         case ARGUS_TYPE_STRING: bcopy((char *)ptr, &srcid->a_un.str, 4); break;
+         case ARGUS_TYPE_STRING: {
+            int slen = (len < 4) ? len : 4;
+            bzero(&srcid->a_un.str, sizeof(srcid->a_un.str));
+            if (slen > 0)
+               bcopy((char *)ptr, &srcid->a_un.str, slen);
+            break;
+         }
          case ARGUS_TYPE_INT:    srcid->a_un.value = atoi((char *)ptr); offset = sizeof(unsigned int); break;
          case ARGUS_TYPE_IPV4:   srcid->a_un.ipv4 = ntohl(*(unsigned int *)ptr); offset = sizeof(unsigned int); break;
          case ARGUS_TYPE_IPV6:   bcopy((char *)ptr, &srcid->a_un.ipv6, 16); offset = sizeof(srcid->a_un.ipv6); break;
@@ -34804,6 +34845,15 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
 
                if (RaNewLength < 1)
                   ArgusLog (LOG_ERR, "-s %s:%d length must be greater than 0\n", soption, RaNewLength);
+
+               /* Field-print routines (e.g. ArgusPrintSrcUserData()) use
+                * this length directly against fixed-size internal buffers
+                * (MAXSTRLEN-sized).  Clamp it here, at the single point
+                * where it comes in from user/CLI input, so it can never
+                * drive an out-of-bounds write downstream.
+                */
+               if (RaNewLength > MAXSTRLEN)
+                  RaNewLength = MAXSTRLEN;
             }
 
             if ((sptr = strchr(ptr, ':')) != NULL) {
@@ -34940,10 +34990,15 @@ ArgusIndexV2Record (struct ArgusV2Record *argus, struct ArgusV2FarHeaderStruct *
 {
    unsigned int retn = 0;
    struct ArgusV2FarHeaderStruct *far = (struct ArgusV2FarHeaderStruct *) &argus->argus_far;
-   unsigned int length = argus->ahdr.length - sizeof(argus->ahdr);
+   unsigned int length;
    unsigned int farlen;
- 
+
    bzero ((char *) hdrs, 32 * sizeof(struct ArgusFarHeaderStruct *));
+
+   if (argus->ahdr.length < sizeof(argus->ahdr))
+      return (retn);
+
+   length = argus->ahdr.length - sizeof(argus->ahdr);
 
    if (argus->ahdr.type & ARGUS_V2_FAR) {
       while ((length > 0) && (far->length > 0) && (length >= far->length)) {
