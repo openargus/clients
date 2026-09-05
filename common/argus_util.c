@@ -1163,8 +1163,8 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
                       
       if ((parser->ArgusProgramArgs = (char *) ArgusCalloc (len, sizeof(char))) != NULL) { 
          for (i = 0, *parser->ArgusProgramArgs = '\0'; i < argc; i++) { 
-            strncat (parser->ArgusProgramArgs, argv[i], (1024 - strlen(parser->ArgusProgramArgs))); 
-            strncat (parser->ArgusProgramArgs, " ", (1024 - strlen(parser->ArgusProgramArgs))); 
+            strncat (parser->ArgusProgramArgs, argv[i], (len - strlen(parser->ArgusProgramArgs) - 1)); 
+            strncat (parser->ArgusProgramArgs, " ", (len - strlen(parser->ArgusProgramArgs) - 1)); 
          }
       } else             
          ArgusLog (LOG_ERR, "ArgusCalloc(%d, %d) failed %s", len, sizeof(char), strerror(errno));
@@ -1424,7 +1424,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
                      while ((Hptr = strchr (Hstr, '"')) == NULL) {
                         if ((optarg = argv[optind]) != NULL) {
-                           strncat (Hstr, optarg, (1024 - strlen(Hstr)));
+                           strncat (Hstr, optarg, (1024 - strlen(Hstr) - 1));
                            optind++;
                         } else
                            break;
@@ -1493,7 +1493,7 @@ ArgusParseArgs(struct ArgusParserStruct *parser, int argc, char **argv)
 
                   while ((Mptr = strchr (Mstr, '"')) == NULL) {
                      if ((optarg = argv[optind]) != NULL) {
-                        strncat (Mstr, optarg, (1024 - strlen(Mstr)));
+                        strncat (Mstr, optarg, (1024 - strlen(Mstr) - 1));
                         optind++;
                      } else
                         break;
@@ -27369,13 +27369,13 @@ ArgusGetTCPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
 
    if (parser->zflag || parser->Zflag) {
       if (parser->zflag) {
-         if (status & ARGUS_SAW_SYN)         strncat (ArgusStatusBuf, "s", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_SAW_SYN_SENT)    strncat (ArgusStatusBuf, "S", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_CON_ESTABLISHED) strncat (ArgusStatusBuf, "E", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_FIN)             strncat (ArgusStatusBuf, "f", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_FIN_ACK)         strncat (ArgusStatusBuf, "F", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_NORMAL_CLOSE)    strncat (ArgusStatusBuf, "C", (32 - strlen(ArgusStatusBuf)));
-         if (status & ARGUS_RESET)           strncat (ArgusStatusBuf, "R", (32 - strlen(ArgusStatusBuf)));
+         if (status & ARGUS_SAW_SYN)         strncat (ArgusStatusBuf, "s", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_SAW_SYN_SENT)    strncat (ArgusStatusBuf, "S", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_CON_ESTABLISHED) strncat (ArgusStatusBuf, "E", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_FIN)             strncat (ArgusStatusBuf, "f", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_FIN_ACK)         strncat (ArgusStatusBuf, "F", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_NORMAL_CLOSE)    strncat (ArgusStatusBuf, "C", (32 - strlen(ArgusStatusBuf) - 1));
+         if (status & ARGUS_RESET)           strncat (ArgusStatusBuf, "R", (32 - strlen(ArgusStatusBuf) - 1));
 
       } else {
          if (parser->Zflag) {
@@ -27388,10 +27388,10 @@ ArgusGetTCPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
 
             for (i = 0, index = 1; i < 8; i++) {
                if (sflags & index) {
-                  strncat (SrcTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(SrcTCPFlagsStr)));
+                  strncat (SrcTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(SrcTCPFlagsStr) - 1));
                }
                if (dflags & index) {
-                  strncat (DstTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(SrcTCPFlagsStr)));
+                  strncat (DstTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(DstTCPFlagsStr) - 1));
                }
                index <<= 1;
             }
@@ -27611,28 +27611,28 @@ ArgusGetICMPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          case ICMP_UNREACH:
             switch (ra_icmp_code) {
                case ICMP_UNREACH_NET:
-                  strncat (icmptype, "N", (32 - strlen(icmptype)));
+                  strncat (icmptype, "N", (32 - strlen(icmptype) - 1));
                   if (ra_dst_addr) {
                      u_long addr = ra_dst_addr;
                      snprintf (ArgusResponseString, 256, "net %s", ArgusGetName (ArgusParser, (unsigned char *)&addr));
                   }
                   break;
                case ICMP_UNREACH_HOST:
-                  strncat (icmptype, "H", (32 - strlen(icmptype)));
+                  strncat (icmptype, "H", (32 - strlen(icmptype) - 1));
 
                   if (ra_dst_addr)
                      snprintf (ArgusResponseString, 256, "host %s", ArgusGetName (ArgusParser, (unsigned char *)&ra_dst_addr));
                   break;
 
                case ICMP_UNREACH_PROTOCOL:
-                  strncat (icmptype, "O", (32 - strlen(icmptype)));
+                  strncat (icmptype, "O", (32 - strlen(icmptype) - 1));
                   if (ra_icmp_data && (ra_icmp_data < IPPROTOSTR))
                      snprintf (ArgusResponseString, 256, "proto %s", ip_proto_string[ra_icmp_data]);
                   break;
 
                case ICMP_UNREACH_PORT: {
                   int index = icmpFlow->tp_p;
-                  strncat (icmptype, "P", (32 - strlen(icmptype)));
+                  strncat (icmptype, "P", (32 - strlen(icmptype) - 1));
 
                   if ((ra_icmp_data && ((index < IPPROTOSTR)) && (index > 0))) {
                      snprintf (ArgusResponseString, 256, "%s_port     %d", ip_proto_string[index], ra_icmp_data);
@@ -27642,78 +27642,78 @@ ArgusGetICMPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
                   break;
                }
                case ICMP_UNREACH_NEEDFRAG:
-                  strncat (icmptype, "F", (32 - strlen(icmptype))); break;
+                  strncat (icmptype, "F", (32 - strlen(icmptype) - 1)); break;
                case ICMP_UNREACH_SRCFAIL:
-                  strncat (icmptype, "S", (32 - strlen(icmptype))); break;
+                  strncat (icmptype, "S", (32 - strlen(icmptype) - 1)); break;
 
 #ifndef ICMP_UNREACH_NET_UNKNOWN
 #define ICMP_UNREACH_NET_UNKNOWN        6
 #endif
                case ICMP_UNREACH_NET_UNKNOWN:
-                  strncat (icmptype, "NU", (32 - strlen(icmptype)));
+                  strncat (icmptype, "NU", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "dst_net unknown"); break;
                
 #ifndef ICMP_UNREACH_HOST_UNKNOWN
 #define ICMP_UNREACH_HOST_UNKNOWN       7
 #endif
                case ICMP_UNREACH_HOST_UNKNOWN:
-                  strncat (icmptype, "HU", (32 - strlen(icmptype)));
+                  strncat (icmptype, "HU", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "dst_host unknown"); break;
 
 #ifndef ICMP_UNREACH_ISOLATED
 #define ICMP_UNREACH_ISOLATED           8
 #endif
                case ICMP_UNREACH_ISOLATED:
-                  strncat (icmptype, "ISO", (32 - strlen(icmptype)));
+                  strncat (icmptype, "ISO", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "src_host isolated"); break;
 
 #ifndef ICMP_UNREACH_NET_PROHIB
 #define ICMP_UNREACH_NET_PROHIB         9
 #endif
                case ICMP_UNREACH_NET_PROHIB:
-                  strncat (icmptype, "NPRO", (32 - strlen(icmptype)));
+                  strncat (icmptype, "NPRO", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "admin_net prohib"); break;
 
 #ifndef ICMP_UNREACH_HOST_PROHIB
 #define ICMP_UNREACH_HOST_PROHIB        10
 #endif
                case ICMP_UNREACH_HOST_PROHIB:
-                  strncat (icmptype, "HPRO", (32 - strlen(icmptype)));
+                  strncat (icmptype, "HPRO", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "admin_host prohib"); break;
 
 #ifndef ICMP_UNREACH_TOSNET
 #define ICMP_UNREACH_TOSNET             11
 #endif
                case ICMP_UNREACH_TOSNET:
-                  strncat (icmptype, "NTOS", (32 - strlen(icmptype)));
+                  strncat (icmptype, "NTOS", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "tos_net prohib"); break;
 
 #ifndef ICMP_UNREACH_TOSHOST
 #define ICMP_UNREACH_TOSHOST            12
 #endif
                case ICMP_UNREACH_TOSHOST:
-                  strncat (icmptype, "HTOS", (32 - strlen(icmptype)));
+                  strncat (icmptype, "HTOS", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "tos_host prohib"); break;
     
 #ifndef ICMP_UNREACH_FILTER_PROHIB
 #define ICMP_UNREACH_FILTER_PROHIB      13
 #endif
                case ICMP_UNREACH_FILTER_PROHIB:
-                  strncat (icmptype, "FIL", (32 - strlen(icmptype)));
+                  strncat (icmptype, "FIL", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "admin_filter prohib"); break;
 
 #ifndef ICMP_UNREACH_HOST_PRECEDENCE
 #define ICMP_UNREACH_HOST_PRECEDENCE    14
 #endif
                case ICMP_UNREACH_HOST_PRECEDENCE:
-                  strncat (icmptype, "PRE", (32 - strlen(icmptype)));
+                  strncat (icmptype, "PRE", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "precedence violation"); break;
 
 #ifndef ICMP_UNREACH_PRECEDENCE_CUTOFF
 #define ICMP_UNREACH_PRECEDENCE_CUTOFF  15
 #endif
                case ICMP_UNREACH_PRECEDENCE_CUTOFF:
-                  strncat (icmptype, "CUT", (32 - strlen(icmptype)));
+                  strncat (icmptype, "CUT", (32 - strlen(icmptype) - 1));
                   snprintf (ArgusResponseString, 256, "precedence cutoff"); break;
 
             }
@@ -30620,8 +30620,8 @@ ArgusParseTimeArg(char **argp, char *args[], int ind, struct tm *tm,
                retn = 0;
                if (args[ind + 1] != NULL) {
                   if (!(ArgusCheckTimeFormat (tm, args[ind + 1]))) {
-                     strncat (buf, "-", (64 - strlen(buf)));
-                     strncat (buf, args[ind + 1], (64 - strlen(buf)));
+                     strncat (buf, "-", (64 - strlen(buf) - 1));
+                     strncat (buf, args[ind + 1], (64 - strlen(buf) - 1));
                      if (ArgusParser->timearg != NULL)
                         free(ArgusParser->timearg);
                      ArgusParser->timearg = strdup(buf);
@@ -30632,7 +30632,7 @@ ArgusParseTimeArg(char **argp, char *args[], int ind, struct tm *tm,
             } else {
                tmp = args[ind];
                if (isdigit((int)*(tmp + 1))) {
-                  strncat (buf, args[ind], (64 - strlen(buf)));
+                  strncat (buf, args[ind], (64 - strlen(buf) - 1));
                   if (ArgusParser->timearg != NULL)
                      free(ArgusParser->timearg);
                   ArgusParser->timearg = strdup(buf);
@@ -31690,8 +31690,8 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                         else
                            strncpy(cmd, "zcat \"", 7);
             
-                        strncat(cmd, input->filename, (256 - strlen(cmd)));
-                        strncat(cmd, "\" 2>/dev/null", (256 - strlen(cmd)));
+                        strncat(cmd, input->filename, (256 - strlen(cmd) - 1));
+                        strncat(cmd, "\" 2>/dev/null", (256 - strlen(cmd) - 1));
              
                         if ((input->pipe = popen(cmd, "r")) == NULL)
                            ArgusLog (LOG_ERR, "ArgusReadConnection: popen(%s) failed. %s", cmd, strerror(errno));

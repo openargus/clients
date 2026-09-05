@@ -815,7 +815,7 @@ ArgusInitOutput (struct ArgusOutputStruct *output)
 
                if (wfile->filterstr != NULL) {
                   if (ArgusFilterCompile (&client->ArgusNFFcode, wfile->filterstr, 1) < 0)
-                     ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusFilter syntax error: %s", wfile->filter);
+                     ArgusLog (LOG_ERR, "ArgusInitOutput: ArgusFilter syntax error: %s", wfile->filterstr);
                   client->ArgusFilterInitialized++;
                }
 
@@ -1001,7 +1001,7 @@ ArgusInitControlChannel (struct ArgusOutputStruct *output)
 
                if (wfile->filterstr != NULL) {
                   if (ArgusFilterCompile (&client->ArgusNFFcode, wfile->filterstr, 1) < 0)
-                     ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusFilter syntax error: %s", wfile->filter);
+                     ArgusLog (LOG_ERR, "ArgusInitControlChannel: ArgusFilter syntax error: %s", wfile->filterstr);
                   client->ArgusFilterInitialized++;
                }
 
@@ -2225,7 +2225,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
             retn->hdr.len = dsrlen;
 
             if (((char *)dsrptr - (char *)retn) != (dsrlen * 4))
-               ArgusLog (LOG_ERR, "ArgusGenerateRecord: parse length error %d:%d", ((char *)dsrptr - (char *)retn), dsrlen);
+               ArgusLog (LOG_ERR, "ArgusGenerateRecord: parse length error %d:%d", (int)((char *)dsrptr - (char *)retn), dsrlen);
 
             break;
          }
@@ -3188,7 +3188,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
             retn->hdr.len = dsrlen;
 
             if (((char *)dsrptr - (char *)retn) != (dsrlen * 4))
-               ArgusLog (LOG_ERR, "ArgusGenerateV5Record: parse length error %d:%d", ((char *)dsrptr - (char *)retn), dsrlen);
+               ArgusLog (LOG_ERR, "ArgusGenerateV5Record: parse length error %d:%d", (int)((char *)dsrptr - (char *)retn), dsrlen);
 
             break;
          }
@@ -4593,7 +4593,7 @@ ArgusGenerateInitialMar (struct ArgusOutputStruct *output, char version)
    struct ArgusRecord *retn;
 
    if ((retn = (struct ArgusRecord *) ArgusCalloc (1, sizeof(struct ArgusRecord))) == NULL)
-     ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
+     ArgusLog (LOG_ERR, "ArgusGenerateInitialMar(%p) ArgusCalloc error %s\n", output, strerror(errno));
 
    switch (version) {
       case ARGUS_VERSION_3:
@@ -4709,7 +4709,7 @@ ArgusGenerateStatusMarRecord(struct ArgusOutputStruct *output,
    struct timeval now;
 
    if ((retn = (struct ArgusRecordStruct *) ArgusCalloc (1, sizeof(*retn))) == NULL)
-     ArgusLog (LOG_ERR, "ArgusGenerateStatusMarRecord(0x%x) ArgusCalloc error %s\n", output, strerror(errno));
+     ArgusLog (LOG_ERR, "ArgusGenerateStatusMarRecord(%p) ArgusCalloc error %s\n", output, strerror(errno));
 
    retn->hdr.type  = ARGUS_MAR | ARGUS_VERSION_5;
    retn->hdr.cause = ARGUS_STATUS | ARGUS_SRC_RADIUM;
@@ -5288,13 +5288,13 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                            default:
                            case EPIPE:
                            case ENOSPC: {
-                              if (asock->filename != NULL)
-                                 ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x, 0x%x) closing %s, %s\n", output, client, client->filename, strerror(errno));
-                              else
-                              if (client->hostname != NULL)
-                                 ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x, 0x%x) %s disconnecting %s\n", output, client, client->hostname, strerror(errno));
-                              else
-                                 ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x, 0x%x) disconnecting %s\n", output, client, strerror(errno));
+                               if (asock->filename != NULL)
+                                  ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p, %p) closing %s, %s\n", output, client, client->filename, strerror(errno));
+                               else
+                               if (client->hostname != NULL)
+                                  ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p, %p) %s disconnecting %s\n", output, client, client->hostname, strerror(errno));
+                               else
+                                  ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p, %p) disconnecting %s\n", output, client, strerror(errno));
 
                               close(asock->fd);
                               asock->fd = -1;
@@ -5333,7 +5333,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
          }
 
          if (asock->errornum >= ARGUS_MAXERROR) {
-            ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x) client not processing (%d errors): disconnecting\n", asock, asock->errornum);
+            ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p) client not processing (%d errors): disconnecting\n", asock, asock->errornum);
             close(asock->fd);
             asock->fd = -1;
             if (asock->rec != NULL) {
@@ -5350,11 +5350,11 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
          if ((ArgusGetListCount(list)) > ArgusMaxListLength) {
             if (client->clientid == NULL) {
                ArgusLog(LOG_WARNING,
-                        "ArgusWriteOutSocket(0x%x) max queue exceeded %d on client hostname %s\n",
+                        "ArgusWriteOutSocket(%p) max queue exceeded %d on client hostname %s\n",
                         asock, ArgusMaxListLength, client->hostname);
             } else {
                ArgusLog(LOG_WARNING,
-                        "ArgusWriteOutSocket(0x%x) max queue exceeded %d on client hostname %s %s\n",
+                        "ArgusWriteOutSocket(%p) max queue exceeded %d on client hostname %s %s\n",
                         asock, ArgusMaxListLength, client->hostname, client->clientid);
             }
             retn = -1;

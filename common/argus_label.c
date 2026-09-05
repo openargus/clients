@@ -3924,8 +3924,8 @@ RaPrintSrvTree (struct ArgusLabelerStruct *labeler, struct RaSrvTreeNode *node, 
 
    if (node != NULL) {
       if (dir == RA_SRV_LEFT) {
-         strncat (str, "   |", (MAXSTRLEN - strlen(str)));
-         strncat (RaSrvTreeArray, str, (MAXSTRLEN - olen));
+         strncat (str, "   |", (MAXSTRLEN - strlen(str) - 1));
+         strncat (RaSrvTreeArray, str, (MAXSTRLEN - olen - 1));
          printf ("%s\n", RaSrvTreeArray);
       }
 

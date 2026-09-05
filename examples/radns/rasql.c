@@ -2021,7 +2021,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
          }
 
       } else 
-         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), cnt, strerror(errno));
+         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) error %s\n", (int)(sizeof(struct ArgusQueueHeader *) * (cnt + 1)), strerror(errno));
    }
 
    RaSortItems = x;
