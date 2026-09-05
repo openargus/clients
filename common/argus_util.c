@@ -2473,38 +2473,38 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
 
                if ((dbstr = strstr(topt, "inventory")) != NULL) {
                   if (!(ArgusAddMaskList (parser, "sid,inf,smac,saddr")))
-                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", argv, topt);
                   parser->ArgusPerformCorrection = 0;
                } else
                if ((dbstr = strstr(topt, "services")) != NULL) {
                   if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr,proto,dport")))
-                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", argv, topt);
                   parser->ArgusPerformCorrection = 0;
                } else
                if ((dbstr = strstr(topt, "ether")) != NULL) {
                   if (!(ArgusAddMaskList (parser, "sid,inf,smac,etype")))
-                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", argv, topt);
                   parser->ArgusPerformCorrection = 0;
                } else
                if ((dbstr = strstr(topt, "ipMatrix")) != NULL) {
                   if (!(ArgusAddMaskList (parser, "sid,inf,saddr,daddr")))
-                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", argv, topt);
                   parser->ArgusPerformCorrection = 0;
                } else
                if ((dbstr = strstr(topt, "etherMatrix")) != NULL) {
                   if (!(ArgusAddMaskList (parser, "sid,inf,smac,dmac")))
-                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", *argv, topt);
+                     ArgusLog(LOG_ERR, "%s: error: mask arg %s", argv, topt);
                   parser->ArgusPerformCorrection = 0;
                }
 
                if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
-                  ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+                  ArgusLog(LOG_ERR, "%s: error: arg %s", argv, optarg);
 
                parser->ArgusCompareBaseline = 1;
 #endif
             } else {
                if (!(ArgusAddBaselineList (parser, baseline, type, -1, -1)))
-                  ArgusLog(LOG_ERR, "%s: error: arg %s", *argv, optarg);
+                  ArgusLog(LOG_ERR, "%s: error: arg %s", argv, optarg);
                stat(baseline, &((struct ArgusFileInput *) ArgusParser->ArgusBaselineListTail)->statbuf);
 
                parser->ArgusCompareBaseline = 1;

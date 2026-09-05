@@ -3726,15 +3726,18 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                   if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
                      int slen = strlen(label);
                      int len = (slen + 3)/4;
+                     char *newlabel;
+
+                     if ((newlabel = calloc(1, (len * 4) + 1)) == NULL)
+                        ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
+
+                     bcopy (label, newlabel, slen + 1);
 
                      if (l1->l_un.label != NULL)
                         free(l1->l_un.label);
 
-                     if ((l1->l_un.label = calloc(1, (len * 4) + 1)) == NULL)
-                        ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
-
+                     l1->l_un.label = newlabel;
                      l1->hdr.argus_dsrvl8.len = 1 + len;
-                     bcopy (label, l1->l_un.label, slen + 1);
 #if defined(ARGUSDEBUG)
                      ArgusDebug (3, "ArgusCorrelateRecord (0x%x) merged label: %s", pns, label); 
 #endif
@@ -3913,7 +3916,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
          }
 
       } else 
-         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), cnt, strerror(errno));
+         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusCalloc(%d, %d) error %s\n", 1, (int)(sizeof(struct ArgusQueueHeader *) * (cnt + 1)), strerror(errno));
    }
 
    bzero (&ArgusParser->ArgusStartTimeVal, sizeof(ArgusParser->ArgusStartTimeVal));
@@ -4652,7 +4655,7 @@ RaSQLProcessQueue (struct ArgusQueueStruct *queue)
                               bcopy (RaFormat, fbuf, strlen(RaFormat));
                            }
 
-                           secs = (fstruct->second/RaPeriod) * RaPeriod;
+                           secs = ((time_t)fstruct->second/RaPeriod) * RaPeriod;
                            strftime (directorypath, MAXSTRLEN, fbuf, localtime(&secs));
                         }
 

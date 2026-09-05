@@ -389,7 +389,7 @@ RaSQLOptimizeTables (MYSQL *RaMySQL, const char **tables)
 
    query = ArgusMalloc(MAXSTRLEN);
    if (query == NULL)
-      ArgusLog(LOG_ERR, "%s unable to allocate query string\n");
+      ArgusLog(LOG_ERR, "%s unable to allocate query string\n", __func__);
 
    for (i = 0; tables[i]; i++) {
       len = snprintf(query, MAXSTRLEN, "OPTIMIZE TABLE %s", tables[i]);
