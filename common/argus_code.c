@@ -589,7 +589,7 @@ backpatch(struct ablock *list, struct ablock *target)
    }
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (9, "backpatch (0x%x, 0x%x) returning 0x%x\n", list, target);
+   ArgusDebug (9, "backpatch (0x%x, 0x%x)\n", list, target);
 #endif
 }
 
@@ -669,7 +669,7 @@ Argusgen_not(struct ablock *b)
    b->sense = !b->sense;
 
 #if defined(ARGUSDEBUG)
-   ArgusDebug (7, "Argusgen_not (0x%x, 0x%x)\n", b);
+   ArgusDebug (7, "Argusgen_not (0x%x)\n", b);
 #endif
 }
 

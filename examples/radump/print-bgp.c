@@ -662,20 +662,26 @@ decode_labeled_vpn_l2(const u_char *pptr, char *buf, u_int buflen)
 
             switch(tlv_type) {
             case 1:
+                if ((u_int)strlen >= buflen)
+                    break;
                 strlen+=snprintf(buf+strlen,buflen-strlen, " circuit status vector (%u) length: %u: 0x",
                                  tlv_type,
                                  tlv_len);
                 ttlv_len=ttlv_len/8+1; /* how many bytes do we need to read ? */
                 while (ttlv_len>0) {
                     TCHECK(pptr[0]);
-                    strlen+=snprintf(buf+strlen,buflen-strlen, "%02x",*pptr++);
+                    if ((u_int)strlen < buflen)
+                        strlen+=snprintf(buf+strlen,buflen-strlen, "%02x",*pptr++);
+                    else
+                        pptr++;
                     ttlv_len--;
                 }
                 break;
             default:
-                snprintf(buf+strlen,buflen-strlen, " unknown TLV #%u, length: %u",
-                         tlv_type,
-                         tlv_len);
+                if ((u_int)strlen < buflen)
+                    snprintf(buf+strlen,buflen-strlen, " unknown TLV #%u, length: %u",
+                             tlv_type,
+                             tlv_len);
                 break;
             }
             tlen-=(tlv_len<<3); /* the tlv-length is expressed in bits so lets shift it tright */

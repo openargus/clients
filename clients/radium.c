@@ -666,7 +666,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteServerList(parser);
 
          if (!(ArgusAddServerList (parser, optarg, ARGUS_DATA_SOURCE, IPPROTO_TCP)))
-            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", __func__, optarg);
          break;
 
       case RADIUM_CISCONETFLOW_PORT: {
@@ -675,7 +675,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteServerList(parser);
 
          if (!(ArgusAddServerList (parser, optarg, ARGUS_CISCO_DATA_SOURCE, IPPROTO_UDP)))
-            ArgusLog (LOG_ERR, "%s: host %s unknown\n", optarg);
+            ArgusLog (LOG_ERR, "%s: host %s unknown\n", __func__, optarg);
 
          break;
       }
@@ -694,7 +694,7 @@ RadiumParseResourceLine (struct ArgusParserStruct *parser, int linenum,
             ArgusDeleteFileList(parser);
 
          if (!(ArgusAddFileList (parser, optarg, (parser->Cflag ? ARGUS_CISCO_DATA_SOURCE : ARGUS_DATA_SOURCE), -1, -1))) {
-            ArgusLog (LOG_ERR, "%s: error: file arg %s\n", optarg);
+            ArgusLog (LOG_ERR, "%s: error: file arg %s\n", __func__, optarg);
          }
          break;
 
@@ -926,68 +926,66 @@ extern struct cnamemem converttable[HASHNAMESIZE];
 int 
 RadiumParseSrcidConversionFile (char *file)
 {
-   struct stat statbuf;
    FILE *fd = NULL;
    int retn = 0;
 
    if (file != NULL) {
-      if (stat(file, &statbuf) >= 0) {
-         if ((fd = fopen(file, "r")) != NULL) {
-            char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
-            char *srcid = NULL, *convert = NULL;
+      if ((fd = fopen(file, "r")) != NULL) {
+         char strbuf[MAXSTRLEN], *str = strbuf, *optarg = NULL;
+         char *srcid = NULL, *convert = NULL;
 
-            retn = 1;
+         retn = 1;
 
-            while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
-               str = strbuf;
-               while (*str && isspace((int)*str))
-                   str++;
+         while ((fgets(strbuf, MAXSTRLEN, fd)) != NULL)  {
+            str = strbuf;
+            while (*str && isspace((int)*str))
+                str++;
 
 #define RA_READING_SRCID                0
 #define RA_READING_ALIAS                1
 
-               if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
-                  int state = RA_READING_SRCID;
-                  struct cnamemem  *ap;
-                  int done = 0;
-                  u_int hash;
+            if (*str && (*str != '#') && (*str != '\n') && (*str != '!')) {
+               int state = RA_READING_SRCID;
+               struct cnamemem  *ap;
+               int done = 0;
+               u_int hash;
 
-                  while ((optarg = strtok(str, " \t\n")) != NULL) {
-                     switch (state) {
-                        case RA_READING_SRCID: {
-                           int i, len = strlen(optarg);
-                           for (i = 0; i < len; i++)
-                              optarg[i] = tolower(optarg[i]);
-                           srcid = optarg;
-                           state = RA_READING_ALIAS;
-                           break;
-                        }
-
-                        case RA_READING_ALIAS: {
-                           convert = optarg;
-                           done = 1;
-                           break;
-                        }
-                     }
-                     str = NULL;
-                    
-                     if (done)
+               while ((optarg = strtok(str, " \t\n")) != NULL) {
+                  switch (state) {
+                     case RA_READING_SRCID: {
+                        int i, len = strlen(optarg);
+                        for (i = 0; i < len; i++)
+                           optarg[i] = tolower(optarg[i]);
+                        srcid = optarg;
+                        state = RA_READING_ALIAS;
                         break;
+                     }
+
+                     case RA_READING_ALIAS: {
+                        convert = optarg;
+                        done = 1;
+                        break;
+                     }
                   }
-
-                  hash = getnamehash((const u_char *)srcid);
-                  ap = &converttable[hash % (HASHNAMESIZE-1)];
-                  while (ap->n_nxt)
-                     ap = ap->n_nxt;
-     
-                  ap->hashval = hash;
-                  ap->name = strdup((char *) srcid);
-
-                  ap->type = RadiumParseSourceID(&ap->addr, convert);
-                  ap->n_nxt = (struct cnamemem *)calloc(1, sizeof(*ap));
+                  str = NULL;
+                 
+                  if (done)
+                     break;
                }
+
+               hash = getnamehash((const u_char *)srcid);
+               ap = &converttable[hash % (HASHNAMESIZE-1)];
+               while (ap->n_nxt)
+                  ap = ap->n_nxt;
+  
+               ap->hashval = hash;
+               ap->name = strdup((char *) srcid);
+
+               ap->type = RadiumParseSourceID(&ap->addr, convert);
+               ap->n_nxt = (struct cnamemem *)calloc(1, sizeof(*ap));
             }
          }
+         fclose(fd);
       }
    }
 

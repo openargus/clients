@@ -1297,7 +1297,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
 #endif
                         if ((bind (s, (struct sockaddr *)&server, sizeof(server))) < 0)
                            ArgusLog (LOG_ERR, "bind (%d, %s:%hu, %d) failed '%s'", s, "INADDR_ANY",
-                                                          ntohs(server.sin_port), sizeof(server), strerror(errno));
+                                                          ntohs(server.sin_port), (int)sizeof(server), strerror(errno));
 
                         if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&optval, sizeof(int)) < 0) {
 #ifdef ARGUSDEBUG
@@ -1385,6 +1385,7 @@ ArgusGetServerSocket (struct ArgusInput *input, int timeout)
 
 #ifdef ARGUSDEBUG
                      ArgusDebug (1, "Binding TCP to source INADDR_ANY:%d Expecting %s records",
+                          ArgusParser->ArgusSourcePort,
                           ArgusGetName(ArgusParser, ArgusParser->ArgusSourcePort, ArgusRecordType));
 #endif
                      if ((bind (s, (struct sockaddr *)&server, sizeof(server))) < 0)
@@ -5249,7 +5250,7 @@ ArgusNewHashTable (size_t size)
    struct ArgusHashTable *retn = NULL;
 
    if ((retn = (struct ArgusHashTable *) ArgusCalloc (1, sizeof(*retn))) == NULL)
-      ArgusLog (LOG_ERR, "ArgusNewHashTable: ArgusCalloc(1, %d) error %s\n", size, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusNewHashTable: ArgusCalloc(1, %d) error %s\n", (int)size, strerror(errno));
 
    if ((retn->array = (struct ArgusHashTableHdr **) ArgusCalloc (size, sizeof (struct ArgusHashTableHdr *))) == NULL)
       ArgusLog (LOG_ERR, "RaMergeQueue: ArgusCalloc error %s\n", strerror(errno));
@@ -5407,14 +5408,14 @@ ArgusAddHashEntry (struct ArgusHashTable *table, void *ns, struct ArgusHashStruc
 
    if (hstruct != NULL) {
       if ((retn = (struct ArgusHashTableHdr *) ArgusCalloc (1, sizeof (struct ArgusHashTableHdr))) == NULL)
-         ArgusLog (LOG_ERR, "ArgusAddHashEntry(%p, %p, %d) ArgusCalloc returned error %s\n", table, ns, hstruct, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusAddHashEntry(%p, %p, %p) ArgusCalloc returned error %s\n", table, ns, hstruct, strerror(errno));
 
       retn->object = ns;
 
       if (hstruct->len > 0) {
          retn->hstruct = *hstruct;
          if ((retn->hstruct.buf = (unsigned int *) ArgusCalloc (1, hstruct->len)) == NULL)
-            ArgusLog (LOG_ERR, "ArgusAddHashEntry(%p, %p, %d) ArgusCalloc returned error %s\n", table, ns, hstruct, strerror(errno));
+            ArgusLog (LOG_ERR, "ArgusAddHashEntry(%p, %p, %p) ArgusCalloc returned error %s\n", table, ns, hstruct, strerror(errno));
 
          bcopy (hstruct->buf, retn->hstruct.buf, hstruct->len);
       }
@@ -5457,11 +5458,11 @@ ArgusAddHashEntry (struct ArgusHashTable *table, void *ns, struct ArgusHashStruc
 void
 ArgusRemoveHashEntry (struct ArgusHashTableHdr **htblhdr)
 {
-   unsigned int hash = (*htblhdr)->hstruct.hash;
-   struct ArgusHashTable *table = (*htblhdr)->htbl;
-   int ind = hash % table->size;
-
    if (htblhdr && *htblhdr) {
+      unsigned int hash = (*htblhdr)->hstruct.hash;
+      struct ArgusHashTable *table = (*htblhdr)->htbl;
+      int ind = hash % table->size;
+
 #ifdef ARGUSDEBUG
       ArgusDebug (6, "ArgusRemoveHashEntry (%p)\n", *htblhdr);
 #endif
@@ -7542,7 +7543,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                  if (a1->act.minval > value)
                                     a1->act.minval = value;
 
-                              sum1  = a1->act.meanval * a1->act.n;
+                              sum1  = (double)a1->act.meanval * a1->act.n;
                               sum1 += value;
 
                               if (a1->act.stdev != 0) {
@@ -7708,7 +7709,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                           ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
 
                               if (j1->dst.act.n) {
-                                 double sum  =  j1->dst.act.meanval * j1->dst.act.n;
+                                 double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
                                  sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
                                             (sum * sum)/j1->dst.act.n;
                               }
@@ -8594,7 +8595,7 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
                                  ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
 
                      if (j1->dst.act.n) {
-                        double sum  =  j1->dst.act.meanval * j1->dst.act.n;
+                        double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
                         sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
                                    (sum * sum)/j1->dst.act.n;
                      }
@@ -15597,7 +15598,7 @@ ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+   ArgusDebug (10, "ArgusFetchSrcLocality (%p) returning %f", ns, retn);
 #endif
    return (retn);
 }
@@ -15637,7 +15638,7 @@ ArgusFetchDstLocality (struct ArgusRecordStruct *ns)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "ArgusFetchSrcLocality (%p, %p)", ns);
+   ArgusDebug (10, "ArgusFetchDstLocality (%p) returning %f", ns, retn);
 #endif
    return (retn);
 }

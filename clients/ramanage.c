@@ -1292,7 +1292,7 @@ __upload(CURL *hnd, const char * const filename, off_t filesz,
                "failed to add upload option to curl commandline\n");
       ret = -1;
    } else if ((size_t)slen >= rem) {
-      ArgusLog(LOG_WARNING, "curl commandline too long (%d > %u)\n",
+      ArgusLog(LOG_WARNING, "curl commandline too long (%d > %zu)\n",
                slen, rem);
       ret = -1;
    } else {

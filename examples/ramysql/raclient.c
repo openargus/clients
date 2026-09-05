@@ -2410,15 +2410,18 @@ ArgusCorrelateRecord (struct ArgusRecordStruct *ns)
                if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
                   int slen = strlen(label);
                   int len = 4 * ((slen + 3)/4);
+                  char *newlabel;
+
+                  if ((newlabel = calloc(1, len)) == NULL)
+                     ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
+
+                  bcopy (label, newlabel, slen);
 
                   if (l1->l_un.label != NULL)
                      free(l1->l_un.label);
 
-                  if ((l1->l_un.label = calloc(1, len)) == NULL)
-                     ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
-
+                  l1->l_un.label = newlabel;
                   l1->hdr.argus_dsrvl8.len = 1 + ((len + 3)/4);
-                  bcopy (label, l1->l_un.label, strlen(label));
                }
             }
 #if defined(ARGUSDEBUG)
@@ -2529,7 +2532,7 @@ RaClientSortQueue (struct ArgusSorterStruct *sorter, struct ArgusQueueStruct *qu
          }
 
       } else 
-         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) %s\n", sizeof(struct ArgusRecord *), cnt, strerror(errno));
+         ArgusLog (LOG_ERR, "RaClientSortQueue: ArgusMalloc(%d) error %s\n", (int)(sizeof(struct ArgusQueueHeader *) * (cnt + 1)), strerror(errno));
    }
 
    RaSortItems = x;

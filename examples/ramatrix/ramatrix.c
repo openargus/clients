@@ -360,8 +360,8 @@ ArgusProcessMatrix(struct ArgusParserStruct *parser)
    }
 
    if ((n = agg->queue->count) > 1) {
-      double (*matrix)[n] = (double(*)[n])calloc(sizeof(double), n * n);
-      double (*category)[n] = (double(*)[n])calloc(sizeof(double), n * n);
+      double (*matrix)[n] = (double(*)[n])calloc(sizeof(double), (size_t)n * n);
+      double (*category)[n] = (double(*)[n])calloc(sizeof(double), (size_t)n * n);
       int rank = 0;
 
       ArgusSortQueue (ArgusSorter, agg->queue, ARGUS_LOCK);
@@ -707,7 +707,7 @@ RaParseComplete (int sig)
                } else {
                   snprintf(cmd, MAXSTRLEN, "gzip -q '%s'\n", file->filename);
                   if (system(cmd) < 0)
-                     ArgusLog (LOG_ERR, "compressing file %s failed");
+                     ArgusLog (LOG_ERR, "compressing file %s failed", file->filename);
                }
             } else
             if (ArgusParser->ArgusReplaceMode & ARGUS_REPLACE_COMPRESSED_BZ) {
@@ -718,7 +718,7 @@ RaParseComplete (int sig)
                } else {
                   snprintf(cmd, MAXSTRLEN, "bzip2 -f -q '%s'\n", file->filename);
                   if (system(cmd) < 0)
-                     ArgusLog (LOG_ERR, "compressing file %s failed");
+                     ArgusLog (LOG_ERR, "compressing file %s failed", file->filename);
                }
             }
          }

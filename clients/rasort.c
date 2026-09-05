@@ -260,7 +260,7 @@ RaParseComplete (int sig)
             } else {
                snprintf(cmd, MAXSTRLEN, "gzip -q '%s'\n", file->filename);
                if (system(cmd) < 0)
-                  ArgusLog (LOG_ERR, "compressing file %s failed");
+                  ArgusLog (LOG_ERR, "compressing file %s failed", file->filename);
             }
          } else
          if (ArgusParser->ArgusReplaceMode & ARGUS_REPLACE_COMPRESSED_BZ) {
@@ -271,7 +271,7 @@ RaParseComplete (int sig)
             } else {
                snprintf(cmd, MAXSTRLEN, "bzip2 -f -q '%s'\n", file->filename);
                if (system(cmd) < 0)
-                  ArgusLog (LOG_ERR, "compressing file %s failed");
+                  ArgusLog (LOG_ERR, "compressing file %s failed", file->filename);
             }
          }
       }
@@ -385,7 +385,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((tns = ArgusCopyRecordStruct(ns)) == NULL)
-            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct(0x%x) error\n", ns);
+            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct(%p) error\n", ns);
 
          ArgusAddToQueue (ArgusSorter->ArgusRecordQueue, &tns->qhdr, ARGUS_NOLOCK);
          break;

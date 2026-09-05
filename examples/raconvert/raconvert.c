@@ -1107,7 +1107,7 @@ ArgusParseRank (struct ArgusParserStruct *parser, char *buf)
 
    unsigned int value = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseRank(0x%xs, %s) format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseRank(%p, %s) format error\n", (void *)parser, buf);
 
    argus->rank = value;
 }
@@ -1120,7 +1120,7 @@ ArgusParseAutoId (struct ArgusParserStruct *parser, char *buf)
 
    unsigned int value = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseAutoId(0x%xs, %s) format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseAutoId(%p, %s) format error\n", (void *)parser, buf);
 
    argus->autoid = value;
 }
@@ -1144,7 +1144,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
    if (RaConvertTmPtr == NULL) {
       gettimeofday(tvp, 0);
       if ((RaConvertTmPtr = localtime(&tvp->tv_sec)) == NULL)
-         ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) localtime error\n", parser, buf, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusParseStartDate(%p, %s) localtime error\n", (void *)parser, buf, strerror(errno));
       bcopy ((char *)RaConvertTmPtr, (char *)&timebuf, sizeof (timebuf));
       RaConvertTmPtr = &timebuf;
    }
@@ -1162,7 +1162,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
       frac++;
       useconds = strtol(frac, &endptr, 10);
       if (endptr == frac)
-         ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) fractonal format error\n", parser, buf);
+         ArgusLog (LOG_ERR, "ArgusParseStartDate(%p, %s) fractonal format error\n", (void *)parser, buf);
       sprintf(fstr, "%d", useconds);
 
       if (*endptr != '\0') {
@@ -1204,7 +1204,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
       if (unixtime) {
          tvp->tv_sec = strtol(date, &endptr, 10);
          if (endptr == date)
-            ArgusLog (LOG_ERR, "ArgusParseStartDate(0x%xs, %s) fractonal format error\n", parser, buf);
+            ArgusLog (LOG_ERR, "ArgusParseStartDate(%p, %s) fractonal format error\n", (void *)parser, buf);
       } else {
          if (RaConvertTimeFormats[0] == NULL) {
             char *sptr;
@@ -1229,7 +1229,7 @@ ArgusParseStartDate (struct ArgusParserStruct *parser, char *buf)
          if (done) {
             tvp->tv_sec = mktime(RaConvertTmPtr);
          } else {
-            ArgusLog (LOG_ERR, "ArgusParseStartTime(0x%xs, %s) time format not defined\n", parser, buf);
+            ArgusLog (LOG_ERR, "ArgusParseStartTime(%p, %s) time format not defined\n", (void *)parser, buf);
          }
       }
    }
@@ -1310,7 +1310,7 @@ ArgusParseType (struct ArgusParserStruct *parser, char *buf)
    }  
 
    if (!found)
-      ArgusLog (LOG_ERR, "ArgusParseType(0x%xs, %s) type not found\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseType(%p, %s) type not found\n", (void *)parser, buf);
 }
 
 /*
@@ -1656,7 +1656,7 @@ ArgusParseProto (struct ArgusParserStruct *parser, char *buf)
          } else {
             int retn = argus_nametoeproto(ptr);
             if (retn == PROTO_UNDEF)
-               ArgusLog (LOG_ERR, "ArgusParseProto(0x%xs, %s) proto not found\n", parser, buf);
+               ArgusLog (LOG_ERR, "ArgusParseProto(%p, %s) proto not found\n", (void *)parser, buf);
 	    else
                ArgusThisProto = retn;
          }
@@ -1962,7 +1962,7 @@ ArgusParseSrcPort (struct ArgusParserStruct *parser, char *buf)
    if (isdigit((int)*ptr)) {
       value = strtol(ptr, &endptr, 0);
       if (endptr == ptr)
-         ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
    } else {
       if (*ptr == '*')
          value = 0x00;
@@ -2061,7 +2061,7 @@ ArgusParseDstPort (struct ArgusParserStruct *parser, char *buf)
    if (isdigit((int)*ptr)) {
       value = strtol(ptr, &endptr, 0);
       if (endptr == ptr)
-         ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusParseSrcPortLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
    } else {
       if (*ptr == '*')
          value = 0x00;
@@ -2208,7 +2208,7 @@ ArgusParseSrcTtl (struct ArgusParserStruct *parser, char *buf)
    
    int value = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(0x%xs, %s) fractonal format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(%p, %s) fractonal format error\n", (void *)parser, buf);
 
    if (argus->dsrs[ARGUS_IPATTR_INDEX] == NULL) {
       argus->dsrs[ARGUS_IPATTR_INDEX] = &parser->canon.attr.hdr;
@@ -2228,7 +2228,7 @@ ArgusParseDstTtl (struct ArgusParserStruct *parser, char *buf)
   
    int value = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(0x%xs, %s) fractonal format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseSrcTtl(%p, %s) fractonal format error\n", (void *)parser, buf);
 
    if (argus->dsrs[ARGUS_IPATTR_INDEX] == NULL) {
       argus->dsrs[ARGUS_IPATTR_INDEX] = &parser->canon.attr.hdr;
@@ -2280,7 +2280,7 @@ ArgusParsePackets (struct ArgusParserStruct *parser, char *buf)
    if (strlen(buf)) {
       parser->canon.metric.src.pkts = strtoll(buf, &endptr, 10);
       if (endptr == buf)
-         ArgusLog (LOG_ERR, "ArgusParsePackets(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusParsePackets(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
    } else
       parser->canon.metric.src.pkts = 0;
 
@@ -2364,7 +2364,7 @@ ArgusParseBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.bytes = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
@@ -2394,7 +2394,7 @@ ArgusParseSrcBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.bytes = strtoll(ptr, &endptr, 10);
 
    if (endptr == ptr)
-      ArgusLog (LOG_ERR, "ArgusParseSrcBytes(%p, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcBytes(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
@@ -2414,7 +2414,7 @@ ArgusParseDstBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.dst.bytes = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 
@@ -2435,7 +2435,7 @@ ArgusParseAppBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.appbytes = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
@@ -2455,7 +2455,7 @@ ArgusParseSrcAppBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.appbytes = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcBytesLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcBytesLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
@@ -2475,7 +2475,7 @@ ArgusParseDstAppBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.dst.appbytes = strtoll(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 }
 
 void
@@ -2505,7 +2505,7 @@ ArgusParseSrcIntPkt (struct ArgusParserStruct *parser, char *buf)
    parser->canon.jitter.hdr.argus_dsrvl8.qual |= ARGUS_SRC_ACTIVE_JITTER;
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 
 /*
    sprintf (&buf[strlen(buf)], "%*.*s ", len, len, "SrcIntPkt");
@@ -2558,7 +2558,7 @@ ArgusParseDstIntPkt (struct ArgusParserStruct *parser, char *buf)
    parser->canon.jitter.hdr.argus_dsrvl8.qual |= ARGUS_DST_ACTIVE_JITTER;
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcPacketsLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 
 
 /*
@@ -2912,7 +2912,7 @@ ArgusParseTCPRTT (struct ArgusParserStruct *parser, char *buf)
    tcprtt = strtol(buf, &endptr, 10);
 
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseTCPRTTLabel(0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseTCPRTTLabel(%p, %s) strtol error %s\n", (void *)parser, buf, strerror(errno));
 
    if (argus->dsrs[ARGUS_NETWORK_INDEX] == NULL) {
       argus->dsrs[ARGUS_NETWORK_INDEX] = &parser->canon.net.hdr;
@@ -3480,7 +3480,7 @@ ArgusParseDuration (struct ArgusParserStruct *parser, char *buf)
       *frac++ = '\0';
       tvp->tv_usec = strtol(frac, &endptr, 10);
       if (endptr == frac)
-         ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
+         ArgusLog (LOG_ERR, "ArgusParseDuration(%p, %s) fractonal format error\n", (void *)parser, buf);
 
       if ((precision = strlen(frac)) > 0) {
          int n, power = 6 - precision;
@@ -3493,7 +3493,7 @@ ArgusParseDuration (struct ArgusParserStruct *parser, char *buf)
 
    tvp->tv_sec = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseDuration(%p, %s) fractonal format error\n", (void *)parser, buf);
 
    if (parser->canon.time.src.start.tv_sec != 0) {
       parser->canon.time.src.end = parser->canon.time.src.start;
@@ -3583,7 +3583,7 @@ ArgusParseSequenceNumber (struct ArgusParserStruct *parser, char *buf)
 
    int value = strtol(buf, &endptr, 10);
    if (endptr == buf)
-      ArgusLog (LOG_ERR, "ArgusParseDuration(0x%xs, %s) fractonal format error\n", parser, buf);
+      ArgusLog (LOG_ERR, "ArgusParseDuration(%p, %s) fractonal format error\n", (void *)parser, buf);
 
    if (argus->dsrs[ARGUS_TRANSPORT_INDEX] == NULL) {
       argus->dsrs[ARGUS_TRANSPORT_INDEX] = &parser->canon.trans.hdr;

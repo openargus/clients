@@ -675,15 +675,18 @@ ArgusAddToRecordLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruc
       if ((label = ArgusMergeLabel(l1->l_un.label, l2->l_un.label, buf, MAXSTRLEN, ARGUS_UNION)) != NULL) {
          int slen = strlen(label);
          int len = 4 * ((slen + 3)/4);
+         char *newlabel;
+
+         if ((newlabel = calloc(1, len + 1)) == NULL)
+            ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
+
+         bcopy (label, newlabel, slen);
 
          if (l1->l_un.label != NULL) 
             free(l1->l_un.label);
 
-         if ((l1->l_un.label = calloc(1, len + 1)) == NULL)
-            ArgusLog (LOG_ERR, "RaProcessRecord: calloc error %s", strerror(errno));
-
+         l1->l_un.label = newlabel;
          l1->hdr.argus_dsrvl8.len = 1 + len;
-         bcopy (label, l1->l_un.label, slen);
       }
 
       free(l2->l_un.label);
@@ -2879,7 +2882,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
             }
 
             case ARGUS_PARSING_LOCALITY: {
-               if (*sptr == '-')
+               if (sptr != NULL && *sptr == '-')
                   state = ARGUS_PARSING_END_ADDRESS;
                else {
                if (sptr != NULL) {
@@ -3049,7 +3052,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (10, "RaInsertLocalityTree (%p, %p, %s, %s) returning %d\n", parser, labeler, str, retn);
+   ArgusDebug (10, "RaInsertLocalityTree (%p, %p, %s) returning %d\n", parser, labeler, str, retn);
 #endif
 
    return (retn);
@@ -3390,7 +3393,7 @@ RaParsePortEntry (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
          *ptr = '\0';
    }
 
-   if ((port == NULL) || (proto == NULL)) {
+   if (proto == NULL) {
    } else {
       char *endptr;
 
@@ -3924,8 +3927,8 @@ RaPrintSrvTree (struct ArgusLabelerStruct *labeler, struct RaSrvTreeNode *node, 
 
    if (node != NULL) {
       if (dir == RA_SRV_LEFT) {
-         strncat (str, "   |", (MAXSTRLEN - strlen(str)));
-         strncat (RaSrvTreeArray, str, (MAXSTRLEN - olen));
+         strncat (str, "   |", (MAXSTRLEN - strlen(str) - 1));
+         strncat (RaSrvTreeArray, str, (MAXSTRLEN - olen - 1));
          printf ("%s\n", RaSrvTreeArray);
       }
 

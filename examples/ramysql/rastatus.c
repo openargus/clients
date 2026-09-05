@@ -480,7 +480,7 @@ RaMySQLInit (int ncons)
     
       for (con = 0; con < ncons; con++)
          if ((mysql_init(RaMySQL+con)) == NULL)
-            ArgusLog(LOG_ERR, "mysql_init error %s");
+            ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
       if (!mysql_thread_safe())
          ArgusLog(LOG_INFO, "mysql not thread-safe");

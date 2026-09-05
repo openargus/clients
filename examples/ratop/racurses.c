@@ -1591,7 +1591,7 @@ ArgusProcessNewPage(WINDOW *win, int status, int ch)
    ArgusDisplayNeedsClearing = 1;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessNewPage(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessNewPage(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1664,7 +1664,7 @@ ArgusProcessDeviceControl(WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessDeviceControl(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessDeviceControl(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1785,7 +1785,7 @@ ArgusProcessEscape(WINDOW *win, int status, int ch)
 #endif
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessEscape(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessEscape(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
 
    return (retn);
@@ -1801,7 +1801,7 @@ ArgusProcessEndofTransmission (WINDOW *win, int status, int ch)
    RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessEndOfTransmission(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessEndOfTransmission(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
 
    return (retn);
@@ -1867,7 +1867,7 @@ ArgusProcessKeyUp (WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessKeyUp(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyUp(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
 
    return (retn);
@@ -1944,7 +1944,7 @@ ArgusProcessKeyDown (WINDOW *win, int status, int ch)
    }
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessKeyDown(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyDown(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1958,7 +1958,7 @@ ArgusProcessKeyLeft (WINDOW *win, int status, int ch)
       RaCursorOffset = RaCommandIndex;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessKeyLeft(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyLeft(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1972,7 +1972,7 @@ ArgusProcessKeyRight (WINDOW *win, int status, int ch)
       RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessKeyRight(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessKeyRight(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -1987,7 +1987,7 @@ ArgusProcessBell (WINDOW *win, int status, int ch)
    ArgusTouchScreen();
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessBell(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessBell(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -2019,7 +2019,7 @@ ArgusProcessBackspace (WINDOW *win, int status, int ch)
       RaCommandIndex = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessBackspace(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessBackspace(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }
@@ -2035,7 +2035,7 @@ ArgusProcessDeleteLine (WINDOW *win, int status, int ch)
    RaCursorOffset = 0;
 
 #ifdef ARGUSDEBUG
-   ArgusDebug (5, "ArgusProcessDeleteLine(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch);
+   ArgusDebug (5, "ArgusProcessDeleteLine(%p, 0x%x, 0x%x) returned 0x%x\n", win, status, ch, retn);
 #endif
    return (retn);
 }

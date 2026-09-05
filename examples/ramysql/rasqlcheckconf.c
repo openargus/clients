@@ -499,7 +499,7 @@ RaMySQLInit ()
          ArgusLog(LOG_ERR, "RaMySQLInit: ArgusCalloc error %s", strerror(errno));
 
    if ((mysql_init(RaMySQL)) == NULL)
-      ArgusLog(LOG_ERR, "mysql_init error %s");
+      ArgusLog(LOG_ERR, "mysql_init error %s", strerror(errno));
 
    if (!mysql_thread_safe())
       ArgusLog(LOG_INFO, "mysql not thread-safe");
@@ -1361,7 +1361,7 @@ RaParseArgusResourceFile (struct ArgusResourceStruct *recs , char *file)
                         case ARGUS_ARP_TIMEOUT:
                         case ARGUS_OTHER_TIMEOUT: {
                            int value, matches;
-                           if ((matches = sscanf(optarg,"%d", &value)) == 0) {
+                           if ((matches = sscanf(optarg,"%d", &value)) != 1) {
                               parseOk = 0;
                            }
                            break;
@@ -1376,7 +1376,7 @@ RaParseArgusResourceFile (struct ArgusResourceStruct *recs , char *file)
                         case ARGUS_MAR_STATUS_INTERVAL: {
                            int matches;
                            float value;
-                           if ((matches = sscanf(optarg,"%f", &value)) == 0) {
+                           if ((matches = sscanf(optarg,"%f", &value)) != 1) {
                               parseOk = 0;
                            }
                            break;

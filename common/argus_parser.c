@@ -85,7 +85,7 @@ ArgusNewParser(char *progname)
          progname = ptr;
       }
    } else 
-      ArgusLog (LOG_ERR, "ArgusNewParser(%s) no program name");
+      ArgusLog (LOG_ERR, "ArgusNewParser() no program name");
 
    if ((retn  = (struct ArgusParserStruct *) ArgusCalloc(1, sizeof(*retn))) == NULL)
       ArgusLog (LOG_ERR, "ArgusNewParser(%s) ArgusCalloc error %s", progname, strerror(errno));
