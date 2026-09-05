@@ -63,6 +63,7 @@ void ArgusParseDstMacAddress (struct ArgusParserStruct *, char *);
 void ArgusParseMacAddress (struct ArgusParserStruct *, char *);
 void ArgusParseEtherType (struct ArgusParserStruct *, char *);
 void ArgusParseProto (struct ArgusParserStruct *, char *);
+void ArgusParseType (struct ArgusParserStruct *, char *);
 void ArgusParseAddr (struct ArgusParserStruct *, char *);
 void ArgusParseSrcNet (struct ArgusParserStruct *, char *);
 void ArgusParseSrcAddr (struct ArgusParserStruct *, char *);

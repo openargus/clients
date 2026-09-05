@@ -463,7 +463,9 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
    switch (argus->hdr.type & 0xF0) {
       case ARGUS_MAR: {
          struct ArgusRecord *rec = (struct ArgusRecord *)argus->dsrs[0];
+
          if (rec && parser->ArgusAdjustTime) {
+/*
             struct timeval drift;
 
             drift.tv_sec  = parser->ArgusRealTime.tv_sec  - ntohl(rec->argus_mar.now.tv_sec);
@@ -480,6 +482,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
                              argus->input, argus->input->ArgusTimeDrift);
 #endif
 #endif
+*/
          }
          break;
       }

@@ -651,7 +651,7 @@ ArgusConnectRemotes (void *arg)
 #if defined(ARGUS_THREADS)
    struct ArgusQueueStruct *queue = arg;
    struct ArgusInput *addr = NULL;
-   struct timespec tsbuf = {0, 250000000};
+   struct timespec tsbuf = {0, 25000000};
    struct timespec *ts = &tsbuf;
    int status, retn, done = 0;
    pthread_attr_t attr;
@@ -801,7 +801,7 @@ ArgusReadStream (struct ArgusParserStruct *parser, struct ArgusQueueStruct *queu
    struct timeval rtime;
 
 #if defined(ARGUS_THREADS)
-   struct timespec tsbuf = {0, 50000000};
+   struct timespec tsbuf = {0, 25000000};
    struct timespec *ts = &tsbuf;
 #endif
 
@@ -4802,7 +4802,7 @@ ArgusGenerateHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusRecordSt
                                                 case IPPROTO_ICMP: {
                                                    if (i == ARGUS_MASK_SPORT) {
                                                       slen = 1;
-                                                      offset = na->ArgusMaskDefs[i].offset;
+                                                      offset = ((void *)&flow->flow_un.icmp.type - (void *)flow);
                                                    } else {
                                                       switch (flow->icmp_flow.type) {
                                                          case ICMP_ECHO:
@@ -4990,9 +4990,31 @@ ArgusGenerateReverseHashStruct (struct ArgusAggregatorStruct *na,  struct ArgusR
                                        }
 
                                        case IPPROTO_ICMP: { 
-                                          slen = 1;
-                                          offset = (i == ARGUS_MASK_SPORT) ? na->ArgusMaskDefs[i].offset :
-                                                                             na->ArgusMaskDefs[i].offset - 1;
+                                          if (i == ARGUS_MASK_SPORT) {
+                                             slen = 1;
+                                             offset = ((void *)&flow->flow_un.icmp.type - (void *)flow);
+                                          } else {
+                                             switch (flow->icmp_flow.type) {
+                                                case ICMP_ECHO:
+                                                case ICMP_ECHOREPLY:
+                                                   slen = -1;
+                                                   break;
+                                 
+                                                case ICMP_MASKREQ:
+                                                case ICMP_TSTAMP:
+                                                case ICMP_IREQ:
+                                                case ICMP_MASKREPLY:
+                                                case ICMP_TSTAMPREPLY:
+                                                case ICMP_IREQREPLY:
+                                                   offset = na->ArgusMaskDefs[i].offset - 1;
+                                                   slen = 5;
+                                                   break;
+
+                                                default:
+                                                   offset = na->ArgusMaskDefs[i].offset - 1;
+                                                   slen = 1;
+                                             }
+                                          }
                                           break;
                                        }
                                     }
@@ -5942,6 +5964,14 @@ RaFlowModelOverRides(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
 }
 
 
+/*
+ * The purpose of ArgusGenerateNewFlow is to take a flow record and generate
+ * the flow structure that you need to find matching flows in the flow cache.
+ * There are 2 fundamental reasons for this function, the use of the '-m mask'
+ * option, and the P1 / P2 flow matching logic within argus.
+ *
+ */
+
 void
 ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct *ns)
 {
@@ -5954,6 +5984,10 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
 
    if (na->mask && (flow != NULL)) {
       len = flow->hdr.argus_dsrvl8.len * 4;
+      if (len > sizeof(tflow)) {
+         len = sizeof(tflow);
+         flow->hdr.argus_dsrvl8.len = len / 4;
+      }
 
       if (len > sizeof(tflow)) {
          len = sizeof(tflow);
@@ -6240,6 +6274,35 @@ ArgusGenerateNewFlow(struct ArgusAggregatorStruct *na, struct ArgusRecordStruct 
                                  case IPPROTO_ESP: {
                                     break;
                                  }
+                                 case IPPROTO_ICMP: {
+                                    if (ICMP_INFOTYPE(flow->icmp_flow.type)) {
+                                       switch (flow->icmp_flow.type) {
+                                          case ICMP_ECHO:
+                                          case ICMP_TSTAMP:
+                                          case ICMP_IREQ:
+                                          case ICMP_MASKREQ:
+                                             tflow.icmp_flow.type = flow->icmp_flow.type;
+                                             break;
+
+                                          case ICMP_ECHOREPLY:
+                                             tflow.icmp_flow.type = ICMP_ECHO;
+                                             break;
+                                          case ICMP_TSTAMPREPLY:
+                                             tflow.icmp_flow.type = ICMP_TSTAMP;
+                                             break;
+                                          case ICMP_IREQREPLY:
+                                             tflow.icmp_flow.type = ICMP_IREQ;
+                                             break;
+                                          case ICMP_MASKREPLY:
+                                             tflow.icmp_flow.type = ICMP_MASKREPLY;
+                                             break;
+					  default:
+                                             tflow.icmp_flow.type = flow->icmp_flow.type;
+                                             break;
+                                       }
+                                    }
+                                    break;
+                                 }
                                  default:
                                     tflow.ip_flow.sport = flow->ip_flow.sport;
                                     break;
@@ -6433,7 +6496,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                      man1->startime          = man2->startime;
                      man1->nextMrSequenceNum = man2->nextMrSequenceNum;
                      man1->interfaceStatus   = man2->interfaceStatus;
-                     man1->drift             = man2->drift;
+                     man1->interfaces        = man2->interfaces;
                      man1->clients           = man2->clients;
                   }
 
@@ -6442,7 +6505,7 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
 
                   man1->pktsRcvd  += man2->pktsRcvd;
                   man1->bytesRcvd += man2->bytesRcvd;
-                  man1->drift      = man2->drift;
+                  man1->fallow     = man2->fallow;
                   man1->records   += man2->records;
                   man1->queue      = man2->queue;
                   man1->output    += man2->output;
@@ -15413,6 +15476,7 @@ ArgusFetchDeltaDuration (struct ArgusRecordStruct *ns)
    return (retn);
 }
 
+double ArgusLastStartTime = 0.0;
 double
 ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns)
 {
@@ -15422,8 +15486,17 @@ ArgusFetchDeltaStartTime (struct ArgusRecordStruct *ns)
    
    } else {
       struct ArgusCorrelateStruct *cor = (void *)ns->dsrs[ARGUS_COR_INDEX];
-      if (cor != NULL) 
+      if (cor != NULL) {
          retn = cor->metrics.deltaStart / 1000000.0;
+      } else {
+         double stime;
+         if ((stime = ArgusFetchStartTime(ns)) > 0.0) {
+            if (ArgusLastStartTime != 0.0) {
+               retn = stime - ArgusLastStartTime;
+            }
+            ArgusLastStartTime = stime;
+         }
+      }
    }
    return (retn);
 }
@@ -15589,7 +15662,7 @@ ArgusNewSorter (struct ArgusParserStruct *parser)
       for (i = 0; i < parser->RaSortOptionIndex; i++) {
          char *ptr, *str = parser->RaSortOptionStrings[i];
          for (x = 0; x < MAX_SORT_ALG_TYPES; x++) {
-            if (!strncmp (ArgusSortKeyWords[x], str, strlen(ArgusSortKeyWords[x]))) {
+            if (!strcmp (str, ArgusSortKeyWords[x])) {
                retn->ArgusSortAlgorithms[s++] = ArgusSortAlgorithmTable[x];
                if (ArgusSortAlgorithmTable[x] == ArgusSortSrcAddr) {
                   if ((ptr = strchr(str, '/')) != NULL) {
@@ -15906,7 +15979,7 @@ ArgusSortScore (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2)
    int retn = 0;
 
    if (n1 && n2) {
-      retn = (n2->score > n1->score) ? 1 : 0;
+      retn = (n1->score > n2->score) ? 1 : (n1->score == n2->score) ? 0 : -1;
    }
 
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
@@ -16542,46 +16615,59 @@ int ArgusSortSrcPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
    int retn = 0;
 
    if (f1 && f2) {
-      unsigned short p1 = 0, p2 = 0;
+      int p1 = 0, p2 = 0;
     
       switch (f1->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f1->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f1->ip_flow.ip_p == IPPROTO_TCP) || (f1->ip_flow.ip_p == IPPROTO_UDP))
-                     p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ip_flow.dport : f1->ip_flow.sport;
-                  break;
-               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_IPV4: {
+                  switch (f1->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p1 = f1->ip_flow.sport;
+                        break;
+                     }
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ipv6_flow.dport : f1->ipv6_flow.sport;
+                        p1 = f1->ipv6_flow.sport;
                         break;
                      }
                   }
                   break;
+               }
             }
             break;
          }
-    
          default:
             break;
       }
       switch (f2->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f2->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f2->ip_flow.ip_p == IPPROTO_TCP) || (f2->ip_flow.ip_p == IPPROTO_UDP))
-                     p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ip_flow.dport : f2->ip_flow.sport;
-                  break;
-               case ARGUS_TYPE_IPV6:
-                  switch (f2->ipv6_flow.ip_p) {
+               case ARGUS_TYPE_IPV4: {
+                  switch (f2->ip_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ipv6_flow.dport : f2->ipv6_flow.sport;
+                        p2 = f2->ip_flow.sport;
                         break;
                      }
                   }
+                  break;
+               }
+               case ARGUS_TYPE_IPV6: {
+                  switch (f2->ipv6_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p2 = f2->ip_flow.sport;
+                        break;
+                     }
+                  }
+                  break;
+               }
             }
             break;
          }
@@ -16601,25 +16687,31 @@ int ArgusSortDstPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
    int retn = 0;
 
    if (f1 && f2) {
-      unsigned short p1 = 0, p2 = 0;
-    
+      int p1 = 0, p2 = 0;
+
       switch (f1->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f1->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f1->ip_flow.ip_p == IPPROTO_TCP) || (f1->ip_flow.ip_p == IPPROTO_UDP))
-                     p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ip_flow.sport : f1->ip_flow.dport;
+               case ARGUS_TYPE_IPV4: {
+                  switch (f1->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p1 = f1->ip_flow.dport;
+                        break;
+                     }
                   break;
-               case ARGUS_TYPE_IPV6:
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p1 = (f1->hdr.subtype & ARGUS_REVERSE) ? f1->ipv6_flow.sport : f1->ipv6_flow.dport;
+                        p1 = f1->ipv6_flow.dport;
                         break;
                      }
                   }
-
                   break;
+               }
             }
             break;
          }
@@ -16630,19 +16722,26 @@ int ArgusSortDstPort (struct ArgusRecordStruct *n1, struct ArgusRecordStruct *n2
       switch (f2->hdr.subtype & 0x3F) {
          case ARGUS_FLOW_CLASSIC5TUPLE: {
             switch (f2->hdr.argus_dsrvl8.qual & 0x1F) {
-               case ARGUS_TYPE_IPV4:
-                  if ((f2->ip_flow.ip_p == IPPROTO_TCP) || (f2->ip_flow.ip_p == IPPROTO_UDP))
-                     p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ip_flow.sport : f2->ip_flow.dport;
-                  break;
-               case ARGUS_TYPE_IPV6:
+               case ARGUS_TYPE_IPV4: {
+                  switch (f2->ip_flow.ip_p) {
+                     case IPPROTO_TCP:
+                     case IPPROTO_UDP: {
+                        p2 = f2->ip_flow.dport;
+                        break;
+                     }
+                     break;
+                  }
+               }
+               case ARGUS_TYPE_IPV6: {
                   switch (f1->ipv6_flow.ip_p) {
                      case IPPROTO_TCP:
                      case IPPROTO_UDP: {
-                        p2 = (f2->hdr.subtype & ARGUS_REVERSE) ? f2->ipv6_flow.sport : f2->ipv6_flow.dport;
+                        p2 = f2->ipv6_flow.dport;
                         break;
                      }
                   }
                   break;
+               }
             }
             break;
          }
@@ -17462,8 +17561,8 @@ ArgusSortDstAppByteCount (struct ArgusRecordStruct *n1, struct ArgusRecordStruct
 int
 ArgusSortSrvSignatures (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
 {
-   struct RaSrvSignature *data1 = *(struct RaSrvSignature **)argus1;
-   struct RaSrvSignature *data2 = *(struct RaSrvSignature **)argus2;
+   struct RaSrvSignature *data1 = (struct RaSrvSignature *)argus1;
+   struct RaSrvSignature *data2 = (struct RaSrvSignature *)argus2;
    int cnt1 = data1->count;
    int cnt2 = data2->count;
    int retn = 0;

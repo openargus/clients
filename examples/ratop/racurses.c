@@ -66,6 +66,7 @@ int ArgusCursesProcessInitialized = 0;
 char ArgusRecordBuffer[ARGUS_MAXRECORDSIZE];
 
 extern int argus_version;
+extern int ArgusFailOnSOption;
 
 int
 main(int argc, char **argv)
@@ -74,6 +75,7 @@ main(int argc, char **argv)
    pthread_attr_t attr;
    int ArgusExitStatus;
 
+   ArgusFailOnSOption = 0;
    ArgusThreadsInit(&attr);
 
    if ((parser = ArgusNewParser(argv[0])) != NULL) {
@@ -1255,7 +1257,7 @@ ArgusProcessTerminator(WINDOW *win, int status, int ch)
             bzero(srtalg, sizeof(srtalg));
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
+                  if (!strcmp (ArgusSortKeyWords[x], tok)) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
@@ -2746,7 +2748,6 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                            case ARGUS_V2_DATA_SOURCE:
                            case ARGUS_NAMED_PIPE_SOURCE:
                            case ARGUS_DOMAIN_SOURCE:
-                           case ARGUS_BASELINE_SOURCE:
                            case ARGUS_DATAGRAM_SOURCE:
                               break;
                            case ARGUS_SFLOW_DATA_SOURCE:
@@ -2791,6 +2792,7 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                   }
 
                   case 's': {
+				    /*
                      int x, y;
                      retn = RAGETTINGs;
                      RaInputString = RAGETTINGsSTR;
@@ -2798,14 +2800,33 @@ ArgusProcessCharacter(WINDOW *win, int status, int ch)
                         if (ArgusSorter->ArgusSortAlgorithms[x]) {
                            for (y = 0; y < ARGUS_MAX_SORT_ALG; y++) {
                               if (ArgusSorter->ArgusSortAlgorithms[x] == ArgusSortAlgorithmTable[y]) {
-                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", 
-                                       ArgusSortKeyWords[y]);
+                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", ArgusSortKeyWords[y]);
                                  break;
                               }
                            }
                         }
                      }
                      RaCommandIndex = strlen(RaCommandInputStr); 
+                     break;
+				    */
+                     int x, y;
+                  
+                     RaInputString = RAGETTINGFSTR;
+                     retn = RAGETTINGF;
+                  
+                     for (x = 0; x < MAX_PRINT_ALG_TYPES; x++) {
+                        if (parser->RaPrintAlgorithmList[x] != NULL) {
+                           for (y = 0; y < MAX_PRINT_ALG_TYPES; y++) {
+                              if ((void *) parser->RaPrintAlgorithmList[x]->print == (void *) RaPrintAlgorithmTable[y].print) {
+                                 sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s:%d ",
+                                    RaPrintAlgorithmTable[y].field, RaPrintAlgorithmTable[y].length);
+                                 break;
+                              }
+                           }
+                        } else
+                           break;
+                     }
+                     RaCommandIndex = strlen(RaCommandInputStr);
                      break;
                   }
 
@@ -3506,8 +3527,8 @@ RaInitCurses ()
 
       RaColorAlgorithms[0] = ArgusColorAvailability;
       RaColorAlgorithms[1] = ArgusColorAddresses;
-      RaColorAlgorithms[2] = ArgusColorFlowFields;
-      RaColorAlgorithms[3] = ArgusColorGeoLocation;
+      RaColorAlgorithms[2] = ArgusColorGeoLocation;
+      RaColorAlgorithms[3] = ArgusColorFlowFields;
    }
 
 #endif
@@ -4676,7 +4697,7 @@ argus_command_string(void)
             strncpy (strbuf, RaCommandInputStr, MAXSTRLEN);
             while ((tok = strtok(ptr, " ")) != NULL) {
                for (x = 0; x < ARGUS_MAX_SORT_ALG; x++) {
-                  if (!strncmp (ArgusSortKeyWords[x], tok, strlen(tok))) {
+                  if (!strcmp (ArgusSortKeyWords[x], tok)) {
                      srtalg[ind++] = ArgusSortAlgorithmTable[x];
                      break;
                   }
@@ -4880,6 +4901,7 @@ argus_command_string(void)
 #endif
                   fflush(wfile->fd);
                   fclose(wfile->fd);
+		  wfile->fd = NULL;
                   clearArgusWfile(ArgusParser);
                   ArgusParser->ArgusWfileList = wlist;
                }
@@ -5198,7 +5220,6 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
                   case ARGUS_V2_DATA_SOURCE:
                   case ARGUS_NAMED_PIPE_SOURCE:
                   case ARGUS_DOMAIN_SOURCE:
-                  case ARGUS_BASELINE_SOURCE:
                   case ARGUS_DATAGRAM_SOURCE:
                      break;
                   case ARGUS_SFLOW_DATA_SOURCE:
@@ -5254,8 +5275,7 @@ argus_process_command (struct ArgusParserStruct *parser, int status)
                 if (ArgusSorter->ArgusSortAlgorithms[x]) {
                    for (y = 0; y < ARGUS_MAX_SORT_ALG; y++) {
                       if (ArgusSorter->ArgusSortAlgorithms[x] == ArgusSortAlgorithmTable[y]) {
-                         sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", 
-                               ArgusSortKeyWords[y]);
+                         sprintf (&RaCommandInputStr[strlen(RaCommandInputStr)], "%s ", ArgusSortKeyWords[y]);
                          break;
                       }
                    }
@@ -6174,7 +6194,6 @@ ArgusGenerateProgramArgs(struct ArgusParserStruct *parser)
                      case ARGUS_V2_DATA_SOURCE:
                      case ARGUS_NAMED_PIPE_SOURCE:
                      case ARGUS_DOMAIN_SOURCE:
-                     case ARGUS_BASELINE_SOURCE:
                      case ARGUS_DATAGRAM_SOURCE:
                         break;
                      case ARGUS_SFLOW_DATA_SOURCE:
@@ -6292,7 +6311,7 @@ ArgusColorAddresses(struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          }
 
          case ARGUS_NETFLOW:
-      case ARGUS_AFLOW:
+         case ARGUS_AFLOW:
          case ARGUS_FAR: {
             if (flow) {
                int i, done;
@@ -6484,7 +6503,6 @@ ArgusColorFlowFields(struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                               cols[offset + x].pair = pair;
                               cols[offset + x].attr = attr;
                            }
-                           done = 1;
                         }
                      } else
                         done = 1;
@@ -6569,8 +6587,10 @@ ArgusGetDisplayLineColor(struct ArgusParserStruct *parser, WINDOW *win, struct A
    }
 
    for (i = 0; i < ARGUS_MAX_COLOR_ALG; i++)
-      if (RaColorAlgorithms[i] != NULL)
+      if (RaColorAlgorithms[i] != NULL) {
          RaColorAlgorithms[i](parser, ns, cols, pair, attr);
+      } else
+         break;
 
    return (retn);
 }

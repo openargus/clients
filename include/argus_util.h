@@ -51,6 +51,11 @@ extern "C" {
 #define ARGUS_MAX_PRINT_ALG     	256
 #define MAX_PRINT_ALG_TYPES     	256
 
+#define ARGUS_PTYPE_INT         0
+#define ARGUS_PTYPE_UINT        1
+#define ARGUS_PTYPE_DOUBLE      2
+#define ARGUS_PTYPE_STRING      4
+
 
 #include <argus/CflowdFlowPdu.h>
 
@@ -1009,11 +1014,6 @@ void ArgusPrintCorLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstVirtualNIDLabel (struct ArgusParserStruct *, char *, int);
 
-#define ARGUS_PTYPE_INT         0
-#define ARGUS_PTYPE_UINT        1
-#define ARGUS_PTYPE_DOUBLE      2
-#define ARGUS_PTYPE_STRING      4
-
 
 struct ArgusPrintFieldStruct 
 RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
@@ -1432,11 +1432,11 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTINODELONGITUDE	206
    { "ilon", "", 3 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTINODELONGITUDE, ArgusPrintInodeLongitude, ArgusPrintInodeLongitudeLabel, "double", 0},
 #define ARGUSPRINTSRCLOCAL		207
-   { "sloc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCLOCAL, ArgusPrintSrcLocal, ArgusPrintSrcLocalLabel, "tinyint unsigned", 0},
+   { "sloc", "%d", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTSRCLOCAL, ArgusPrintSrcLocal, ArgusPrintSrcLocalLabel, "tinyint unsigned", 0},
 #define ARGUSPRINTDSTLOCAL		208
-   { "dloc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTLOCAL, ArgusPrintDstLocal, ArgusPrintDstLocalLabel, "tinyint unsigned", 0},
+   { "dloc", "%d", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTDSTLOCAL, ArgusPrintDstLocal, ArgusPrintDstLocalLabel, "tinyint unsigned", 0},
 #define ARGUSPRINTLOCAL			209
-   { "loc", "", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTLOCAL, ArgusPrintLocal, ArgusPrintLocalLabel, "tinyint unsigned", 0},
+   { "loc", "%d", 3 , 1, ARGUS_PTYPE_INT, ARGUSPRINTLOCAL, ArgusPrintLocal, ArgusPrintLocalLabel, "tinyint unsigned", 0},
 #define ARGUSPRINTSID			210
    { "sid", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSID, ArgusPrintSID, ArgusPrintSIDLabel, "varchar(64)", 0},
 #define ARGUSPRINTNODE			211
@@ -1996,6 +1996,20 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 #define ARGUSPRINTIDLEINTFLOWSDEV	239
 #define ARGUSPRINTSRCVNID		240
 #define ARGUSPRINTDSTVNID		241
+#define ARGUSPRINTTYPE			242
+#define ARGUSPRINTSRCMACOUI    		243
+#define ARGUSPRINTDSTOUINAME		244
+#define ARGUSPRINTSRCMACCLASS		245
+#define ARGUSPRINTDSTMACCLASS		246
+#define ARGUSPRINTGRESRCADDR		247
+#define ARGUSPRINTGREDSTADDR		248
+#define ARGUSPRINTGREPROTO		249
+#define ARGUSPRINTGENSRCADDR		250
+#define ARGUSPRINTGENDSTADDR		251
+#define ARGUSPRINTGENPROTO		252
+#define ARGUSPRINTSRCENCAPSBUFFER	253
+#define ARGUSPRINTDSTENCAPSBUFFER	254
+#define ARGUSPRINTDSRS			255
 
 
 extern struct ArgusPrintFieldStruct RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES];

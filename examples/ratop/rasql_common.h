@@ -15,6 +15,15 @@
 
 #define ARGUSSQLMAXCOLUMNS	256
 
+struct RaOutputProcessStruct {
+   int status, timeout;
+   int value, size;
+   struct ArgusRecordStruct *ns;
+   struct ArgusQueueStruct *queue, *delqueue;
+   struct ArgusHashTable *htable;
+   struct nff_program filter;
+};
+
 char **
 ArgusCreateSQLTimeTableNames (struct ArgusParserStruct *parser,
                               time_t *ArgusTableStartSecs,

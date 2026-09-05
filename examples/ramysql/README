@@ -17,6 +17,20 @@
  * THIS SOFTWARE.
  */
 
+Tue Jul 22 01:48:08 PM EDT 2025
+rasrvs - This routine is a version of raservices.1 that can be used to generate alerts
+   for services based on comparisons to baseline metric definitions, and whether the
+   contents match the expected patterns for the port definitions.
+
+   In the JHU/APL HA Pilot, it is called 
+      rasrvs -S localhost -M baseline=mysql://root@localhost/services -M events:/home/administrator/argus_alerts/argus_alerts.%Y.%m.%d.jsonl -D3 -M json -m -sport -s +sport sloc:6:%s dloc:6:%s  -M correct -f /usr/local/argus/rasrvmetrics.conf - \(tcp or udp\) and inf e224
+
+   The baseline is generated using the modified routine rahisto.1.
+   rasrvmetrics.conf is a ralabel.conf file supporting the extensions RALABEL SERVICES directives.
+
+      RALABEL_ARGUS_FLOW_SERVICE=yes
+      RALABEL_SERVICE_SIGNATURES="/usr/local/argus/std.sig"
+      RALABEL_SERVICE_STATS_SIGNATURES="/usr/local/argus/services.2025.sig"
 
 
 Tue Feb 11 20:32:09 EST 2014

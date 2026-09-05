@@ -324,7 +324,8 @@ struct ArgusParserStruct {
 
    char RaParseCompleting, RaParseDone;
    char RaDonePending, RaShutDown, RaSortedInput;
-   char RaTasksToDo, ArgusReliableConnection, ArgusPrintWarnings;
+   char RaTasksToDo, ArgusReliableConnection;
+   char ArgusPrintWarnings, ArgusCompareBaseline;
    char ArgusCorrelateEvents, ArgusPerformCorrection;
    char ArgusExitStatus, ArgusPassNum, ArgusLabelRecord;
    char ArgusLoadingData, ArgusFractionalDate;
@@ -420,6 +421,7 @@ struct ArgusParserStruct {
    char ArgusConnectTime;
    char ArgusReverse;
    char ArgusGenerateManRecords;
+   char ArgusReadJson;
    char ArgusPrintMan, ArgusPrintEvent;
    char ArgusPrintXml, ArgusAsnFormat;
    char ArgusPrintJson, ArgusPrintNewick;
@@ -572,7 +574,7 @@ struct ArgusParserStruct {
    struct ArgusFileInput *ArgusInputFileListTail;	/* last element in file list */
 
    size_t ArgusBaselineCount;
-   struct ArgusFileInput *ArgusBaselineList;	/* first element in file list */
+   struct ArgusFileInput *ArgusBaselineList;	        /* first element in file list */
    struct ArgusFileInput *ArgusBaselineListTail;	/* last element in file list */
 
    struct ArgusInput *ArgusRemoteServerList;
@@ -586,7 +588,7 @@ struct ArgusParserStruct {
    struct ArgusInput *ArgusCurrentInput;
 
    struct ArgusPrintFieldStruct *RaPrintAlgorithm;
-   struct ArgusPrintFieldStruct *RaPrintAlgorithmList[ARGUS_MAX_PRINT_ALG];
+   struct ArgusPrintFieldStruct *RaPrintAlgorithmList[ARGUS_MAX_PRINT_ALG + 1];
 
 #if defined(HAVE_DNS_SD_H)
    DNSServiceRef dnsSrvRef;

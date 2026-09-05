@@ -67,6 +67,7 @@
 #define Q_INTRANET	186
 #define Q_INTERNET	187
 
+#define Q_SCORE		197
 #define Q_PROTO		6
 #define Q_IPID		7
 #define Q_TTL		8
@@ -300,8 +301,10 @@
 #define Q_UNREACHHOSTPRECEDENCE	174
 #define Q_UNREACHPRECUTOFF	175
 
-#define Q_LAT			176
-#define Q_LON			177
+#define Q_ICMPPAR		176
+
+#define Q_LAT			177
+#define Q_LON			178
 
 #define Q_DEFAULT	0
 #define Q_UNDEF		255

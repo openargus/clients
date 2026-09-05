@@ -391,6 +391,7 @@ ArgusCloseParser(struct ArgusParserStruct *parser)
 #endif
 
 #if defined(ARGUS_THREADS)
+   pthread_mutex_unlock(&parser->lock);
    pthread_mutex_destroy(&parser->lock);
 #endif
 

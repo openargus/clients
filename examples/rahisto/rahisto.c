@@ -511,6 +511,9 @@ ArgusHistoTallyMetric (int RaHistoConfigIndex, struct ArgusRecordStruct *ns,
 
       if (value < (end + bsize))
          i++;
+
+      if (value == end)
+         i = RaHistoConfig->RaHistoBins;
    }
 
    if (RaHistoRecords[i] != NULL) {
@@ -692,7 +695,8 @@ PrintHistograms(struct PerFlowHistoData *data)
 
       for (i = 0; i < RaHistoConfig->RaHistoBins + 2; i++) {
          struct ArgusRecordStruct *argus = RaHistoRecords[i];
-         if ((!ArgusProcessOutLayers && ((i > 0) && (i <= RaHistoConfig->RaHistoBins))) || ArgusProcessOutLayers) {
+//       if ((!ArgusProcessOutLayers && ((i > 0) && (i <= RaHistoConfig->RaHistoBins))) || ArgusProcessOutLayers) {
+         if ((i > 0) && (i <= RaHistoConfig->RaHistoBins)) {
             if (argus) {
                if (i < start) start = i;
                if (i > end)   end   = i;
@@ -714,10 +718,22 @@ PrintHistograms(struct PerFlowHistoData *data)
                double median = 0.0, percentile = 0.0;
                char *meanStr = NULL, *medianStr = NULL, *percentStr = NULL;
                char *stdStr = NULL, *maxValStr = NULL, *minValStr = NULL;
-               char *modeStr = NULL;
+               char *modeStr = NULL, *fptr = NULL;
+               char *service = NULL, *metric = NULL;
                long long ind;
                char c;
                char modelstr[256];
+
+               if (parser->ArgusRemoteFilter != NULL) {
+                  service = strdup(parser->ArgusRemoteFilter);
+                  if ((fptr = strstr (service, "and dst ")) != NULL) {
+                     char *tptr = &fptr[8];
+                     while (*tptr != '\0') {
+                        *fptr++ = *tptr++;
+	             }
+                     *fptr = '\0';
+	          }
+	       }
 
                modelstr[0] = 0;
 
@@ -790,24 +806,23 @@ PrintHistograms(struct PerFlowHistoData *data)
                if (percentStr && (len < (tlen = strlen(percentStr)))) len = tlen;
                if (stdStr && (len < (tlen = strlen(stdStr))))         len = tlen;
 
-               if (!ArgusParser->qflag) {
                   if (ArgusPerFlowHistograms)
-                     FormatModelInstanceString(parser,
-                                               RaHistoModelPrinters,
-                                               ns, modelstr,
-                                               sizeof(modelstr));
+                     FormatModelInstanceString(parser, RaHistoModelPrinters, ns, modelstr, sizeof(modelstr));
+
                   if (ArgusParser->ArgusPrintJson) {
-                     printf ("{\n");
-                     printf (" \"N\":\"%d\", \"bins\":\"%d\", \"size\": \"%.*f\", \n \"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\",",
-                                  tagr->act.n, RaHistoConfig->RaHistoBins, pflag, RaHistoConfig->RaHistoBinSize, meanStr, stdStr, maxValStr, minValStr);
-                     printf ("\n \"median\": \"%s\", \"95%%\": \"%s\", ", medianStr, percentStr);
-                     if (RaHistoConfigCount > 1) {
-                        printf ("\"metric\": \"%s\",",
-                                RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field);
+                     metric = RaFetchAlgorithmTable[RaHistoAggregators[cid]->ArgusMetricIndex].field;
+
+                     printf ("{\"service\": \"%s\", \"metric\": \"%s\", \"n\":\"%d\", \"bins\":\"%d\", \"size\": \"%.*f\",\"mean\": \"%s\", \"stddev\": \"%s\", \"max\": \"%s\", \"min\": \"%s\"",
+                        service, metric, tagr->act.n, RaHistoConfig->RaHistoBins, pflag, RaHistoConfig->RaHistoBinSize, meanStr, stdStr, maxValStr, minValStr);
+                     
+                     if (parser->qflag == 0) {
+                         printf ("\n \"median\": \"%s\", \"95%%\": \"%s\", ", medianStr, percentStr);
+                         if (RaHistoConfigCount > 1) {
+                         }
+                         if (ArgusPerFlowHistograms)
+                            printf (" \"instance\": %s", modelstr);
                      }
-                     printf("\n");
-                     if (ArgusPerFlowHistograms)
-                        printf (" \"instance\": %s,\n", modelstr);
+                     printf ("}\n");
                   } else {
                      if ((c = ArgusParser->RaFieldDelimiter) != '\0') {
                         printf ("N=%d%cmean=%s%cstddev=%s%cmax=%s%cmin=%s%c",
@@ -828,6 +843,7 @@ PrintHistograms(struct PerFlowHistoData *data)
                      }
                   }
 
+                  if (parser->qflag == 0) {
                   if (numModes > 0) {
                      int tlen = strlen(modeStr);
                      if (tlen > len)
@@ -845,7 +861,7 @@ PrintHistograms(struct PerFlowHistoData *data)
                            printf ("\n");
                      }
                   }
-               }
+                  }
 
                if (stdStr)     free(stdStr);
                if (meanStr)    free(meanStr);
@@ -902,11 +918,14 @@ PrintHistograms(struct PerFlowHistoData *data)
          }
          bsize = RaHistoConfig->RaHistoBinSize;
 
+         if (ArgusProcessOutLayers) 
+            class = 0;
+
          for (i = 0; i < RaHistoConfig->RaHistoBins + 2; i++) {
             struct ArgusRecordStruct *argus = RaHistoRecords[i];
 
             if (i == 0) {
-               bs = -HUGE_VAL;
+               bs = 0;
                be = start;
                if (RaHistoConfig->RaHistoMetricLog)
                   be = (be > 0 ) ? pow(10.0, be) : 0;
@@ -926,6 +945,7 @@ PrintHistograms(struct PerFlowHistoData *data)
 
             if ((!ArgusProcessOutLayers && ((i > 0) && (i <= RaHistoConfig->RaHistoBins))) || ArgusProcessOutLayers) {
                if (!ArgusProcessNoZero || (ArgusProcessNoZero && ((i >= start) && (i <= end)))) {
+//             if (!(ArgusProcessOutLayers && (argus == NULL) && (i == 0))) {
                   if (parser->ArgusWfileList != NULL) {
                      if (argus) {
                         struct ArgusTimeObject *time = NULL;
@@ -975,7 +995,6 @@ PrintHistograms(struct PerFlowHistoData *data)
                            }
                         }
                      }
-
                   }
 
                   if (!_writing_records_to_stdout &&
@@ -1075,6 +1094,7 @@ PrintHistograms(struct PerFlowHistoData *data)
                         }
                      }
                   }
+//                }
                }
             }
          }
