@@ -2394,7 +2394,7 @@ ArgusParseSrcBytes (struct ArgusParserStruct *parser, char *buf)
    parser->canon.metric.src.bytes = strtoll(ptr, &endptr, 10);
 
    if (endptr == ptr)
-      ArgusLog (LOG_ERR, "ArgusParseSrcBytes(%p, 0x%xs, %s) strtol error %s\n", parser, buf, strerror(errno));
+      ArgusLog (LOG_ERR, "ArgusParseSrcBytes(%p, %s) strtol error %s\n", parser, buf, strerror(errno));
 }
 
 void
