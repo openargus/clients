@@ -6213,7 +6213,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               if (parser->ArgusPrintJson) {
                                  if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
                                                            (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
-                                    slen = snprintf(&buf[blen], dlen, "%c%s%c:%s%c", 
+                                    slen = snprintf(&buf[blen], (len - blen), "%c%s%c:%s%c", 
                                        parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
                                        tmpbuf, parser->RaFieldDelimiter);
 				    
@@ -6271,7 +6271,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                            }
 
                         } else {
-                           slen = snprintf(&buf[blen], dlen, "%s%c", tmpbuf, parser->RaFieldDelimiter);
+                           slen = snprintf(&buf[blen], (len - blen), "%s%c", tmpbuf, parser->RaFieldDelimiter);
                         }
 
                      } else {
@@ -6336,7 +6336,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               break;
 		        }
                      } else
-                        slen = snprintf(&buf[blen], dlen, "%c%s%c%c", 
+                        slen = snprintf(&buf[blen], (len - blen), "%c%s%c%c", 
 			         parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
                   }
                   parser->RaPrintAlgorithm->offset = blen;
