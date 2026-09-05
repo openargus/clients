@@ -5457,11 +5457,11 @@ ArgusAddHashEntry (struct ArgusHashTable *table, void *ns, struct ArgusHashStruc
 void
 ArgusRemoveHashEntry (struct ArgusHashTableHdr **htblhdr)
 {
-   unsigned int hash = (*htblhdr)->hstruct.hash;
-   struct ArgusHashTable *table = (*htblhdr)->htbl;
-   int ind = hash % table->size;
-
    if (htblhdr && *htblhdr) {
+      unsigned int hash = (*htblhdr)->hstruct.hash;
+      struct ArgusHashTable *table = (*htblhdr)->htbl;
+      int ind = hash % table->size;
+
 #ifdef ARGUSDEBUG
       ArgusDebug (6, "ArgusRemoveHashEntry (%p)\n", *htblhdr);
 #endif

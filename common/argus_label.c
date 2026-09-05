@@ -2882,7 +2882,7 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
             }
 
             case ARGUS_PARSING_LOCALITY: {
-               if (*sptr == '-')
+               if (sptr != NULL && *sptr == '-')
                   state = ARGUS_PARSING_END_ADDRESS;
                else {
                if (sptr != NULL) {
@@ -3393,7 +3393,7 @@ RaParsePortEntry (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *l
          *ptr = '\0';
    }
 
-   if ((port == NULL) || (proto == NULL)) {
+   if (proto == NULL) {
    } else {
       char *endptr;
 

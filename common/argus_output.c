@@ -5254,9 +5254,9 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                   } else {
                      if (retn == 0) {
                         if (client->hostname)
-                           ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x, 0x%x) client %s write 0: disconnecting\n", output, client, client->hostname, asock->errornum);
+                           ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p, %p) client %s write 0: disconnecting (%d errors)\n", output, client, client->hostname, asock->errornum);
                         else
-                           ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(0x%x, 0x%x) write 0: disconnecting\n", output, client, asock->errornum);
+                           ArgusLog (LOG_WARNING, "ArgusWriteOutSocket(%p, %p) write 0: disconnecting (%d errors)\n", output, client, asock->errornum);
                         close(asock->fd);
                         asock->fd = -1;
                         asock->writen = 0;
@@ -5427,16 +5427,16 @@ ArgusSendFile (struct ArgusOutputStruct *output, struct ArgusClientData *client,
             ArgusLog (LOG_NOTICE, "ArgusSendFile: file %s error %s", file, strerror(errno));
          } else {
 #ifdef ARGUSDEBUG
-            ArgusDebug (3, "ArgusSendFile: sent %d bytes");
+            ArgusDebug (3, "ArgusSendFile: sent %d bytes", cnt);
 #endif
          }
 
          if ((cnt = recv (fd, sbuf, MAXBUFFERLEN, 0)) <= 0) {
             if (cnt < 0) {
-               ArgusLog (LOG_ERR, "ArgusSendFile (0x%x, %d) recv() returned error %s\n", client, fd, strerror(errno));
+               ArgusLog (LOG_ERR, "ArgusSendFile (%p, %d) recv() returned error %s\n", client, fd, strerror(errno));
 
             } else {
-               ArgusLog (LOG_ERR, "ArgusSendFile (0x%x, %d) recv() returned %d bytes\n", client, fd, cnt);
+               ArgusLog (LOG_ERR, "ArgusSendFile (%p, %d) recv() returned %d bytes\n", client, fd, cnt);
             }
          }
 

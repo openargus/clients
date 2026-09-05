@@ -385,7 +385,7 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
       case ARGUS_AFLOW:
       case ARGUS_FAR: {
          if ((tns = ArgusCopyRecordStruct(ns)) == NULL)
-            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct(0x%x) error\n", ns);
+            ArgusLog (LOG_ERR, "RaProcessRecord: ArgusCopyRecordStruct(%p) error\n", ns);
 
          ArgusAddToQueue (ArgusSorter->ArgusRecordQueue, &tns->qhdr, ARGUS_NOLOCK);
          break;
