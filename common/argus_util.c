@@ -33604,7 +33604,22 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
       if (strncmp(file, "/dev/null", 9)) {
 
          if (parser->ArgusRealTime.tv_sec > wfile->laststat.tv_sec) {
-            if ((stat (file, &wfile->statbuf) < 0)) {
+            /* Was: stat(file, &wfile->statbuf) followed, later in this
+             * function, by a separate open() of the same path -- a
+             * classic check-then-act TOCTOU race (an attacker with
+             * write access to the containing directory could swap the
+             * path for a symlink between the two calls). Get the same
+             * information (existence + size) race-free by doing the
+             * existence check with an O_NOFOLLOW probe open() and
+             * fstat()'ing the resulting fd; the fd, not the path, is
+             * what's inspected, so nothing can be swapped out from
+             * under us between the check and the use. This probe fd is
+             * closed immediately; the real (re)open with locking, if
+             * needed, still happens below via the wfile->fd == NULL path.
+             */
+            int rawfd = open(file, O_CREAT|O_APPEND|O_WRONLY|O_NOFOLLOW, 0644);
+
+            if (rawfd < 0) {
                if (wfile->fd != NULL) {
                   if (fflush (wfile->fd) != 0)
                      ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fflush error %s", file, (void *)argus, strerror(errno));
@@ -33613,12 +33628,17 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
                }
 
             } else {
-               if (wfile->statbuf.st_size == 0)
-                  wfile->firstWrite++;
+               if (fstat(rawfd, &wfile->statbuf) == 0) {
+                  if (wfile->statbuf.st_size == 0)
+                     wfile->firstWrite++;
+               }
+               close(rawfd);
             }
             wfile->laststat = parser->ArgusRealTime;
-            if (fflush (wfile->fd) != 0)
-               ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fflush error %s", file, (void *)argus, strerror(errno));
+            if (wfile->fd != NULL) {
+               if (fflush (wfile->fd) != 0)
+                  ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fflush error %s", file, (void *)argus, strerror(errno));
+            }
          }
       }
 
