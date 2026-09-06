@@ -537,7 +537,7 @@ if test "x$HAVE_SWIG" = "xyes" ; then
         ;;
   *)
 if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
-   if test "x$with_pythonllib" = "xyes"; then
+   if test "x$with_pythonlib" = "xyes"; then
         DIRS="$DIRS ./pythonlib"
    fi
 fi
