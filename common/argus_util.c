@@ -1168,7 +1168,7 @@ ArgusMainInit (struct ArgusParserStruct *parser, int argc, char **argv)
             strncat (parser->ArgusProgramArgs, " ", (len - strlen(parser->ArgusProgramArgs) - 1)); 
          }
       } else             
-         ArgusLog (LOG_ERR, "ArgusCalloc(%d, %d) failed %s", len, sizeof(char), strerror(errno));
+         ArgusLog (LOG_ERR, "ArgusCalloc(%d, %zu) failed %s", len, sizeof(char), strerror(errno));
    } 
 
    if (gettimeofday(&parser->ArgusRealTime, &tz) < 0)
@@ -6209,7 +6209,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               if (parser->ArgusPrintJson) {
                                  if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
                                                            (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
-                                    slen = snprintf(&buf[blen], (len - blen), "%c%s%c:%s%c", 
+                                    slen = snprintf(&buf[blen], (blen < len) ? (len - blen) : 0, "%c%s%c:%s%c", 
                                        parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
                                        tmpbuf, parser->RaFieldDelimiter);
 				    
@@ -6267,11 +6267,11 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                            }
 
                         } else {
-                           slen = snprintf(&buf[blen], (len - blen), "%s%c", tmpbuf, parser->RaFieldDelimiter);
+                           slen = snprintf(&buf[blen], (blen < len) ? (len - blen) : 0, "%s%c", tmpbuf, parser->RaFieldDelimiter);
                         }
 
                      } else {
-                        dlen = len - blen;
+                        dlen = (blen < len) ? (len - blen) : 0;
                         slen = snprintf(&buf[blen], dlen, "%s", tmpbuf);
                      }
 
@@ -6332,7 +6332,7 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               break;
 		        }
                      } else
-                        slen = snprintf(&buf[blen], (len - blen), "%c%s%c%c", 
+                        slen = snprintf(&buf[blen], (blen < len) ? (len - blen) : 0, "%c%s%c%c", 
 			         parser->RaFieldQuoted, tmpbuf, parser->RaFieldQuoted, parser->RaFieldDelimiter);
                   }
                   parser->RaPrintAlgorithm->offset = blen;
@@ -32040,7 +32040,7 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 #endif
 
                default:
-                  ArgusLog (LOG_ERR, "ArgusReadConnection(0x%x) unknown source type", input);
+                  ArgusLog (LOG_ERR, "ArgusReadConnection(%p) unknown source type", (void *)input);
                   break;
             }
 
@@ -32353,13 +32353,28 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                               }
                            }
 
-                           if (input->major_version >= MAJOR_VERSION_3) {
-                              if (!parser->RaPollMode) {
-                                 char *cmd = parser->ArgusProgramName;
-                                 struct passwd *pw = getpwuid(parser->uid);
-                                 pid_t pid = parser->pid;
+                            if (input->major_version >= MAJOR_VERSION_3) {
+                               if (!parser->RaPollMode) {
+                                  char *cmd = parser->ArgusProgramName;
+                                  struct passwd *pw = getpwuid(parser->uid);
+                                  pid_t pid = parser->pid;
 
-                                 snprintf ((char *) buf, ARGUS_RINGBUFFER_MAX, "START: user='%s',cmd='%s[%d]'", pw->pw_name, cmd, pid);
+                                  /* CodeQL: cpp/cleartext-transmission of system data.
+                                   * This intentionally sends the local user name, program
+                                   * name and pid to the remote argus/radium server as a
+                                   * client session-identification string. The server only
+                                   * ever uses this value (client->clientid, see
+                                   * ArgusCheckClientMessage()/RADIUM_START in
+                                   * argus_output.c) for human-readable log/diagnostic
+                                   * messages -- it is never used for authentication,
+                                   * authorization, or any other access-control decision.
+                                   * Treated as an accepted risk of the existing wire
+                                   * protocol rather than an accidental data leak; operators
+                                   * who consider this sensitive on untrusted networks
+                                   * should run argus/radium connections over an encrypted
+                                   * transport (e.g. TLS or an SSH tunnel).
+                                   */
+                                  snprintf ((char *) buf, ARGUS_RINGBUFFER_MAX, "START: user='%s',cmd='%s[%d]'", pw->pw_name, cmd, pid);
 
                                  len = strlen((char *) buf);
                                  if (ArgusWriteConnection (parser, input, (u_char *) buf, len) < 0) {
@@ -32530,14 +32545,14 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                break;
 
             default:
-               ArgusLog (LOG_ERR, "ArgusReadConnection(0x%x) unknown source type", input);
+               ArgusLog (LOG_ERR, "ArgusReadConnection(%p) unknown source type", (void *)input);
                break;
          }
          break;
       }
 
       default:
-         ArgusLog (LOG_ERR, "ArgusReadConnection(0x%x) unknown stream type", input);
+         ArgusLog (LOG_ERR, "ArgusReadConnection(%p) unknown stream type", (void *)input);
          break;
    }
 
@@ -33592,7 +33607,7 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
             if ((stat (file, &wfile->statbuf) < 0)) {
                if (wfile->fd != NULL) {
                   if (fflush (wfile->fd) != 0)
-                     ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, 0x%x) fflush error %s", file, argus, strerror(errno));
+                     ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fflush error %s", file, (void *)argus, strerror(errno));
                   fclose (wfile->fd);
                   wfile->fd = NULL;
                }
@@ -33603,15 +33618,28 @@ ArgusWriteNewLogfile (struct ArgusParserStruct *parser, struct ArgusInput *input
             }
             wfile->laststat = parser->ArgusRealTime;
             if (fflush (wfile->fd) != 0)
-               ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, 0x%x) fflush error %s", file, argus, strerror(errno));
+               ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fflush error %s", file, (void *)argus, strerror(errno));
          }
       }
 
       if (wfile->fd == NULL) {
          ArgusMkdirPath(file);
 
-         if ((wfile->fd = fopen (file, "a+")) == NULL)
-            ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, 0x%x) fopen %s", file, argus, strerror(errno));
+         {
+            /* Open with O_NOFOLLOW so that if an attacker has swapped
+             * this path for a symlink in the window since the stat()
+             * above, we fail closed rather than transparently writing
+             * through the symlink (TOCTOU hardening).
+             */
+            int rawfd = open(file, O_CREAT|O_APPEND|O_WRONLY|O_NOFOLLOW, 0644);
+            if (rawfd < 0)
+               wfile->fd = NULL;
+            else
+               wfile->fd = fdopen(rawfd, "a");
+         }
+
+         if (wfile->fd == NULL)
+            ArgusLog (LOG_ERR, "ArgusWriteNewLogfile(%s, %p) fopen %s", file, (void *)argus, strerror(errno));
          else {
 #ifdef HAVE_FCNTL_H
             /* Locks are dropped when the file is closed or the process
@@ -33963,47 +33991,40 @@ setArgusWfile(struct ArgusParserStruct *parser, char *file, char *filter)
          } else
          if ((strncmp(parser->ArgusProgramName,  "rasplit", 7)) &&
              (strncmp(parser->ArgusProgramName, "rastream", 8))) {
-            struct stat statbuf;
+            /* Avoid a stat()-then-open() TOCTOU race: rather than probing
+             * for existence with stat() and separately acting on the
+             * path afterward, just try realpath() first (which requires
+             * the target to exist) and fall back to atomically creating
+             * it with open(O_CREAT|O_EXCL) only if it does not.
+             */
+            if ((ptr = realpath (file, NULL)) != NULL) {
+               ptr = strdup(ptr);
+            } else if (errno == ENOENT) {
+               int rawfd;
 
-            if ((stat(file, &statbuf)) < 0) {
-               switch (errno) {
-                  case ENOENT: {
-                     int rawfd;
+               rawfd = open(file, O_CREAT|O_EXCL|O_RDWR, 0644);
+               if ((rawfd < 0) && ((errno == ENOENT) || (errno == ENOTDIR))) {
+                  if (strncmp(parser->ArgusProgramName, "radium", 6))
+                     ArgusMkdirPath(file);
 
-                     rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
-                     if ((rawfd < 0) && ((errno == ENOENT) || (errno == ENOTDIR))) {
-                        if (strncmp(parser->ArgusProgramName, "radium", 6))
-                           ArgusMkdirPath(file);
-
-                        rawfd = open(file, O_CREAT|O_EXCL|O_WRONLY, 0644);
-                     }
-
-                     if (rawfd < 0)
-                        ArgusLog (LOG_ERR, "setArgusWfile open %s %s", file, strerror(errno));
-                     else
-                        fd = fdopen(rawfd, "a+");
-
-                     if (fd != NULL) {
-                        fclose (fd);
-                        if ((ptr = realpath (file, NULL)) == NULL)
-                           ArgusLog (LOG_ERR, "setArgusWfile, realpath %s %s", file, strerror(errno));
-                        else
-                           ptr = strdup(ptr);
-                        unlink(file);
-                     }
-                     break;
-                  }
-
-                  default:
-                     ArgusLog (LOG_ERR, "%s %s", file, strerror(errno));
-                     break;
+                  rawfd = open(file, O_CREAT|O_EXCL|O_RDWR, 0644);
                }
 
-            } else {
-               if ((ptr = realpath (file, NULL)) == NULL)
-                  ArgusLog (LOG_ERR, "setArgusWfile, realpath %s %s", file, strerror(errno));
+               if (rawfd < 0)
+                  ArgusLog (LOG_ERR, "setArgusWfile open %s %s", file, strerror(errno));
                else
-                  ptr = strdup(ptr);
+                  fd = fdopen(rawfd, "a+");
+
+               if (fd != NULL) {
+                  fclose (fd);
+                  if ((ptr = realpath (file, NULL)) == NULL)
+                     ArgusLog (LOG_ERR, "setArgusWfile, realpath %s %s", file, strerror(errno));
+                  else
+                     ptr = strdup(ptr);
+                  unlink(file);
+               }
+            } else {
+               ArgusLog (LOG_ERR, "%s %s", file, strerror(errno));
             }
 /*
             So do we remove the file and start anew, or are we appending to the data?
@@ -35322,17 +35343,33 @@ bittok2str(const struct tok *lp, const char *fmt, int v)
           */
          if (tokval == (v&rotbit)) {
             /* ok we have found something */
-            buflen+=snprintf(buf+buflen, sizeof(buf)-buflen, "%s, ",lp->s);
+            int n = snprintf(buf+buflen, sizeof(buf)-buflen, "%s, ",lp->s);
+            if (n < 0)
+               break;
+            /* snprintf() returns the number of bytes that *would* have
+             * been written had the buffer been large enough; clamp so
+             * we never index buf[] out of bounds on a subsequent
+             * iteration or in the buflen-2 trim below.
+             */
+            if (n > (int)(sizeof(buf) - buflen - 1)) {
+               buflen = sizeof(buf) - 1;
+               goto full;
+            }
+            buflen += n;
             break;
          }
          rotbit=rotbit<<1; /* no match - lets shift and try again */
       }
       lp++;
    }
+full:
 
    if (buflen != 0) { /* did we find anything */
       /* yep, set the the trailing zero 2 bytes before to eliminate the last comma & whitespace */
-      buf[buflen-2] = '\0';
+      if (buflen >= 2)
+         buf[buflen-2] = '\0';
+      else
+         buf[0] = '\0';
       return (buf);
    } else {
       /* bummer - lets print the "unknown" message as advised in the fmt string if we got one */

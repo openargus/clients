@@ -1148,7 +1148,7 @@ RaTimeSortQueue (struct ArgusQueueStruct *queue)
          qsort ((char *) queue->array, i, sizeof (struct ArgusQueueHeader *), RaTimeSortRoutine);
 
       } else
-         ArgusLog (LOG_ERR, "RaSortQueue: ArgusCalloc(%d, %d) %s\n", sizeof(struct ArgusRecord *),
+         ArgusLog (LOG_ERR, "RaSortQueue: ArgusCalloc(%zu, %d) %s\n", sizeof(struct ArgusRecord *),
                                                                      cnt, strerror(errno));
    }
 #ifdef ARGUSDEBUG
