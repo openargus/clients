@@ -4154,7 +4154,15 @@ char *ArgusClientCommands[ARGUSMAXCLIENTCOMMANDS] =
    "FILTER:",
    "MODEL:",
    "PROJECT:",
-   "FILE:",
+   /*
+    * "FILE:" (RADIUM_FILE) intentionally disabled -- see the commented-out
+    * case RADIUM_FILE block below for detail. Setting this entry to NULL
+    * means the command-matching loop's "ArgusClientCommands[i] != NULL"
+    * guard skips it entirely, so a client sending "FILE:..." now just falls
+    * through to the generic "unrecognized command" log path instead of
+    * ever reaching ArgusSendFile().
+    */
+   NULL,
 };
 
 
@@ -4290,12 +4298,32 @@ ArgusCheckClientMessage (struct ArgusOutputStruct *output, struct ArgusClientDat
                                  break;
 
                               case RADIUM_FILE: {
-                                 char *file = &ptr[6];
+                                 /*
+                                  * Remote-file-read support disabled: this command let any
+                                  * connected client request that this server read an
+                                  * arbitrary local file (via ArgusSendFile() below, which
+                                  * takes the client-supplied path unvalidated into stat()
+                                  * and fopen()) and stream its contents back over the
+                                  * client connection, with no authentication or path
+                                  * restriction of any kind. Rather than build out proper
+                                  * access control (an explicit opt-in configuration option,
+                                  * path allow-listing, and/or requiring an authenticated
+                                  * session) for a feature with no currently known caller
+                                  * relying on it, this handler is disabled outright.
+                                  *
+                                  * ArgusClientCommands[RADIUM_FILE] is set to NULL above,
+                                  * so this case is not reachable via that dispatch path
+                                  * regardless; this block is also commented out so that
+                                  * restoring the NULL entry alone is not sufficient to
+                                  * re-enable this behavior.
+                                  *
+                                  * char *file = &ptr[6];
 #ifdef ARGUSDEBUG
                                  ArgusDebug (3, "ArgusCheckClientMessage: ArgusFile %s requested.\n", file);
 #endif
                                  ArgusSendFile (output, client, file, 0);
                                  retn = 5;
+                                 */
                                  break;
                               }
                            }
