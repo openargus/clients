@@ -31738,7 +31738,20 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 #ifdef ARGUSDEBUG
                                  ArgusDebug (1, "ArgusReadConnection() read returned zero %s.\n", strerror(errno));
 #endif
-/*
+                              /*
+                               * fread() returning <= 0 here means either EOF (feof()) or a
+                               * read error (ferror()) -- in both cases there are no more
+                               * bytes coming and this loop must not keep spinning waiting
+                               * for cnt to reach size, since no future fread() call will
+                               * make more progress. This exit path was previously commented
+                               * out entirely, which meant a truncated or otherwise-short
+                               * MAR record on this path put ArgusReadConnection() into an
+                               * unconditional infinite loop -- a caller-supplied truncated
+                               * native or compressed input file, or a decompression
+                               * subprocess that exits early/produces less output than
+                               * expected, would hang the client indefinitely with no way to
+                               * make progress or exit.
+                               */
                               if (feof(input->file) || ferror(input->file)) {
                                  if (input->pipe != NULL) {
                                     pclose(input->pipe);
@@ -31749,7 +31762,6 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                                  input->file = NULL;
                                  goto out;
                               }
-*/
                            }
                         }
 #ifdef ARGUSDEBUG
@@ -32143,16 +32155,27 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
 #ifdef ARGUSDEBUG
                                        ArgusDebug (1, "ArgusReadConnection() read returned zero %s.\n", strerror(errno));
 #endif
-                                       if (br < 0) {
-                                          if (input->pipe != NULL) {
-                                             pclose(input->pipe);
-                                             input->pipe = NULL;
-                                          } else {
-                                             close (input->fd);
-                                          }
-                                          input->fd = -1;
-                                          goto out;
+                                       /*
+                                        * read() returning 0 here means the peer closed the
+                                        * connection cleanly (EOF) mid-handshake, not an error --
+                                        * br < 0 alone does not cover that case. Previously only
+                                        * br < 0 broke out of this loop, so a peer that
+                                        * disconnected (or never sent the remaining MAR bytes)
+                                        * right after the initial 16-byte header left this loop
+                                        * spinning on repeated zero-byte read() calls forever,
+                                        * since cnt can never reach size once the peer has
+                                        * nothing more to send. Treat br <= 0 as terminal, same
+                                        * as the sibling ARGUS_FILE case's equivalent fread()
+                                        * loop just above in this function.
+                                        */
+                                       if (input->pipe != NULL) {
+                                          pclose(input->pipe);
+                                          input->pipe = NULL;
+                                       } else {
+                                          close (input->fd);
                                        }
+                                       input->fd = -1;
+                                       goto out;
                                     }
                                  }
 #ifdef ARGUSDEBUG
