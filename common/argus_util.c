@@ -59,6 +59,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #if defined(__NetBSD__)
 #include <machine/limits.h>
@@ -31669,26 +31670,40 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                          ((ptr[0] == 0xFD) &&  (ptr[1] == 0x37) && (ptr[2] == 0x7A) && (ptr[3] == 0x58) &&  (ptr[4] == 0x5A) && (ptr[5] == 0x00)) || 
                          ((ptr[0] == 0xFD) && ((ptr[1] == 0x37) || (ptr[2] == 0x7A))) ||
                          ((ptr[0] == 'B') && (ptr[1] == 'Z') && (ptr[2] == 'h'))) {
-                        char cmd[256];
-                        bzero(cmd, 256);
+                        char cmd[2 * PATH_MAX];
+                        const char *decomp;
 
                         fclose(input->file);
                         input->file = NULL;
 
                         if (ptr[0] == 'B')
-                           strncpy(cmd, "bzip2 -dc \"", 12);
+                           decomp = "bzip2 -dc";
                         else
                         if (ptr[1] == 0x8B)
-                           strncpy(cmd, "gzip -dc \"", 12);
+                           decomp = "gzip -dc";
                         else
                         if ((ptr[0] == 0xFD) && (ptr[1] == 0x37) && (ptr[2] == 0x7A) && (ptr[3] == 0x58) &&  (ptr[4] == 0x5A) && (ptr[5] == 0x00))
-                           strncpy(cmd, "xzcat \"", 8);
+                           decomp = "xzcat";
                         else
-                           strncpy(cmd, "zcat \"", 7);
-            
-                        strncat(cmd, input->filename, (256 - strlen(cmd) - 1));
-                        strncat(cmd, "\" 2>/dev/null", (256 - strlen(cmd) - 1));
-             
+                           decomp = "zcat";
+
+                        /*
+                         * input->filename is wrapped in single quotes below, rather than the
+                         * double quotes this used to use, because a shell's double-quoted
+                         * strings still allow $(...), backtick, and variable-expansion
+                         * substitution -- double-quoting alone does not neutralize shell
+                         * metacharacters. Single quotes do, provided the string contains no
+                         * embedded single quote (which can't itself be escaped from inside a
+                         * single-quoted string), so any filename containing one is rejected
+                         * instead of passed through. Same fix pattern as F-CL-18/F-CL-25
+                         * (clients/rastream.c, examples/raconvert/raconvert.c).
+                         */
+                        if (strchr(input->filename, '\'') != NULL) {
+                           ArgusLog (LOG_ERR, "ArgusReadConnection: filename contains a single quote: %s", input->filename);
+                        }
+
+                        snprintf(cmd, sizeof(cmd), "%s '%s' 2>/dev/null", decomp, input->filename);
+
                         if ((input->pipe = popen(cmd, "r")) == NULL)
                            ArgusLog (LOG_ERR, "ArgusReadConnection: popen(%s) failed. %s", cmd, strerror(errno));
 
