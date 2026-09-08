@@ -345,9 +345,13 @@ clients/
 ```bash
 ./configure              # Detect system capabilities
 make                     # Build all components
-make check               # Run tests
 sudo make install        # Install to system
 ```
+
+There is no `make check` target — this project does not have an automated test suite runnable via
+the standard Autotools `check:` convention. Changes are verified via functional smoke testing against
+real capture data (e.g. `ra`/`radump`/`radns` against a known-good `.argus` file) and, for the
+`common/` record-parsing code, the fuzz-regression corpus under `security-review/fuzz/`.
 
 ---
 
