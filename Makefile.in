@@ -81,7 +81,7 @@ examples: common
 include: common
 
 install: install-perl force installdirs
-	@for i in  $(INSTDIRS) ; do \
+	@set -e ; for i in  $(INSTDIRS) ; do \
 		if [ -d $$i ] ; then \
 		echo "making in $$i"; \
 		(cd $$i > /dev/null; $(MAKE) install); \
