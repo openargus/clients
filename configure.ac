@@ -31,7 +31,7 @@ m4_include([m4/python.m4])
 
 
 AC_PREREQ([2.69])
-AC_INIT([Argus-5.0 Client Programs],[5.0],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
+AC_INIT([Argus-5.0 Client Programs],[5.0.4],[bug-report@qosient.com],[argus-clients],[http://qosient.com/argus])
 PACKAGE_RELEASE='3.6'
 AC_CONFIG_MACRO_DIR([./m4])
 AC_CONFIG_SRCDIR([clients/ra.c])

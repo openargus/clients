@@ -448,5 +448,5 @@ real capture data (e.g. `ra`/`radump`/`radns` against a known-good `.argus` file
 
 ---
 
-*Last updated: 2026-07-02*
-*Argus Clients Version: 5.0.x*
+*Last updated: 2026-09-08*
+*Argus Clients Version: 5.0.4*
