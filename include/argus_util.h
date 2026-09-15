@@ -1104,7 +1104,7 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTDSTMACADDRESS		42
    { "dmac", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTMACADDRESS, ArgusPrintDstMacAddress, ArgusPrintDstMacAddressLabel, "varchar(24)", 0},
 #define ARGUSPRINTDIR			43
-   { "dir", "", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDIR, ArgusPrintDirection, ArgusPrintDirectionLabel, "varchar(3)", 0},
+   { "dir", "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDIR, ArgusPrintDirection, ArgusPrintDirectionLabel, "varchar(3)", 0},
 #define ARGUSPRINTSRCINTPKT		44
    { "sintpkt", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTSRCINTPKT, ArgusPrintSrcIntPkt, ArgusPrintSrcIntPktLabel, "double", 0},
 #define ARGUSPRINTDSTINTPKT		45

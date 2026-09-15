@@ -13928,51 +13928,92 @@ ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
             }
 
          } else {
-            char dirStr[16];
-            sprintf (dirStr, "%s", "<->");
+            if (strcmp("%d", format) == 0)  {
+               int dirInt = 0;
+               if ((dst_count = metric->dst.pkts) == 0)
+                  dirInt = 1;
+               if ((src_count = metric->src.pkts) == 0)
+                  dirInt = -1;
+               if ((src_count == 0) && (dst_count == 0))
+                  dirInt = 0;
 
-            if ((dst_count = metric->dst.pkts) == 0)
-               dirStr[0] = ' ';
-            if ((src_count = metric->src.pkts) == 0)
-               dirStr[2] = ' ';
-            if ((src_count == 0) && (dst_count == 0))
-               dirStr[1] = ' ';
-
-            if (flow != NULL) {
-               switch (flow->hdr.subtype & 0x3F) {
-                  case ARGUS_FLOW_CLASSIC5TUPLE: {
-                     switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-                        case ARGUS_TYPE_IPV4:
-                           switch (flow->ip_flow.ip_p) {
-                              case IPPROTO_TCP: {
-                                 if (net != NULL) {
-                                    struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                                    if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
-                                       dirStr[1] = '?';
-                                    }
-                                    if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
-                                       if (flow->hdr.subtype & ARGUS_REVERSE) {
-                                          dirStr[0] = '<';
-                                          dirStr[2] = ' ';
-                                       } else {
-                                          dirStr[0] = ' ';
-                                          dirStr[2] = '>';
+               if (flow != NULL) {
+                  switch (flow->hdr.subtype & 0x3F) {
+                     case ARGUS_FLOW_CLASSIC5TUPLE: {
+                        switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                           case ARGUS_TYPE_IPV4:
+                              switch (flow->ip_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if (net != NULL) {
+                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                          dirInt = 0;
+                                       }
+                                       if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
+                                          if (flow->hdr.subtype & ARGUS_REVERSE) {
+                                             dirInt = -1;
+                                          } else {
+                                             dirInt =  1;
+                                          }
                                        }
                                     }
                                  }
+                                 break;
                               }
-                              break;
-                           }
-                           break;  
+                              break;  
 
-                        case ARGUS_TYPE_IPV6:
-                           switch (flow->ipv6_flow.ip_p) {
-                              case IPPROTO_TCP: {
-                                 if (net != NULL) {
-                                    struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                                    if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
-                                       dirStr[1] = '?';
-                                    } else {
+                           case ARGUS_TYPE_IPV6:
+                              switch (flow->ipv6_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if (net != NULL) {
+                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                          dirInt = 0;
+                                       } else {
+                                          if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
+                                             if (flow->hdr.subtype & ARGUS_REVERSE) {
+                                                dirInt = -1;
+                                             } else {
+                                                dirInt =  1;
+                                             }
+                                          }
+                                       }
+                                    }
+                                 }
+                                 break;
+                              }
+                              break;  
+                        } 
+                        break;
+                     }
+                  }
+               }
+
+               sprintf (buf, "%*d ", len, dirInt);
+               
+            } else {
+               char dirStr[16];
+               sprintf (dirStr, "%s", "<->");
+
+               if ((dst_count = metric->dst.pkts) == 0)
+                  dirStr[0] = ' ';
+               if ((src_count = metric->src.pkts) == 0)
+                  dirStr[2] = ' ';
+               if ((src_count == 0) && (dst_count == 0))
+                  dirStr[1] = ' ';
+
+               if (flow != NULL) {
+                  switch (flow->hdr.subtype & 0x3F) {
+                     case ARGUS_FLOW_CLASSIC5TUPLE: {
+                        switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                           case ARGUS_TYPE_IPV4:
+                              switch (flow->ip_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if (net != NULL) {
+                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                          dirStr[1] = '?';
+                                       }
                                        if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
                                           if (flow->hdr.subtype & ARGUS_REVERSE) {
                                              dirStr[0] = '<';
@@ -13984,49 +14025,73 @@ ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
                                        }
                                     }
                                  }
+                                 break;
                               }
+                              break;  
+
+                           case ARGUS_TYPE_IPV6:
+                              switch (flow->ipv6_flow.ip_p) {
+                                 case IPPROTO_TCP: {
+                                    if (net != NULL) {
+                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                          dirStr[1] = '?';
+                                       } else {
+                                          if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
+                                             if (flow->hdr.subtype & ARGUS_REVERSE) {
+                                                dirStr[0] = '<';
+                                                dirStr[2] = ' ';
+                                             } else {
+                                                dirStr[0] = ' ';
+                                                dirStr[2] = '>';
+                                             }
+                                          }
+                                       }
+                                    }
+                                 }
+                                 break;
+                              }
+                              break;  
+
+                           case ARGUS_TYPE_RARP:
+                              sprintf (dirStr, "%s", "tel");
                               break;
-                           }
-                           break;  
 
-                        case ARGUS_TYPE_RARP:
-                           sprintf (dirStr, "%s", "tel");
-                           break;
+                           case ARGUS_TYPE_ARP:
+                              sprintf (dirStr, "%s", "who");
+                              break;
+                        } 
+                        break;
+                     }
 
-                        case ARGUS_TYPE_ARP:
-                           sprintf (dirStr, "%s", "who");
-                           break;
-                     } 
-                     break;
-                  }
-
-                  case ARGUS_FLOW_ARP: {
-                     sprintf (dirStr, "%s", "who");
-                     break;
+                     case ARGUS_FLOW_ARP: {
+                        sprintf (dirStr, "%s", "who");
+                        break;
+                     }
                   }
                }
-            }
-            if (parser->ArgusPrintXml) {
-               char ndirStr[16], *dptr = dirStr;
-               int i, tlen;
+               if (parser->ArgusPrintXml) {
+                  char ndirStr[16], *dptr = dirStr;
+                  int i, tlen;
 
-               bzero(ndirStr, 16);
-               for (i = 0, tlen = strlen(dirStr); i < tlen; i++) {
-                  if (*dptr == '<')
-                     sprintf (&ndirStr[strlen(ndirStr)], "&lt;");
-                  else if (*dptr == '>')
-                     sprintf (&ndirStr[strlen(ndirStr)], "&gt;");
-                  else 
-                     sprintf (&ndirStr[strlen(ndirStr)], "%c", *dptr);
-                  dptr++;
-               }
-               snprintf (buf, len, " Dir = \"%s\"", ndirStr);
+                  bzero(ndirStr, 16);
+                  for (i = 0, tlen = strlen(dirStr); i < tlen; i++) {
+                     if (*dptr == '<')
+                        sprintf (&ndirStr[strlen(ndirStr)], "&lt;");
+                     else if (*dptr == '>')
+                        sprintf (&ndirStr[strlen(ndirStr)], "&gt;");
+                     else 
+                        sprintf (&ndirStr[strlen(ndirStr)], "%c", *dptr);
+                     dptr++;
+                  }
+                  snprintf (buf, len, " Dir = \"%s\"", ndirStr);
 
-            } else {
-               if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
-                  sprintf (buf, "%s ", dirStr);
                } else {
-                  sprintf (buf, "%*.*s ", len, len, dirStr);
+                  if ((parser->RaFieldDelimiter != ' ') && (parser->RaFieldDelimiter != '\0')) {
+                     sprintf (buf, "%s ", dirStr);
+                  } else {
+                     sprintf (buf, "%*.*s ", len, len, dirStr);
+                  }
                }
             }
          }
@@ -34967,10 +35032,10 @@ ArgusProcessSOptions(struct ArgusParserStruct *parser)
                      }
                      if (RaNewFormat) {
                         RaPrintAlgorithmTable[x].format = strdup(RaNewFormat);
-                        if (strcmp(RaNewFormat, "%d") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_INT;
-                        if (strcmp(RaNewFormat, "%u") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_UINT;
-                        if (strcmp(RaNewFormat, "%s") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_STRING;
-                        if (strcmp(RaNewFormat, "%f") == 0) RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_DOUBLE;
+                        if (strcmp(RaNewFormat, "%d") == 0) { RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_INT; RaPrintAlgorithmTable[x].dbformat = "int"; }
+                        if (strcmp(RaNewFormat, "%u") == 0) { RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_UINT; RaPrintAlgorithmTable[x].dbformat = "int unsigned"; }
+                        if (strcmp(RaNewFormat, "%s") == 0) { RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_STRING; RaPrintAlgorithmTable[x].dbformat = "varchar(64) not null"; }
+                        if (strcmp(RaNewFormat, "%f") == 0) { RaPrintAlgorithmTable[x].type = ARGUS_PTYPE_DOUBLE; RaPrintAlgorithmTable[x].dbformat = "double"; }
                      }
                      switch (RaOptionOperation) {
                         case RA_ADD_OPTION:
