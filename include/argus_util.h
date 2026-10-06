@@ -48,8 +48,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	256
-#define MAX_PRINT_ALG_TYPES     	256
+#define ARGUS_MAX_PRINT_ALG     	257
+#define MAX_PRINT_ALG_TYPES     	257
 
 #define ARGUS_PTYPE_INT         0
 #define ARGUS_PTYPE_UINT        1
@@ -1104,7 +1104,8 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTDSTMACADDRESS		42
    { "dmac", "", 18 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTMACADDRESS, ArgusPrintDstMacAddress, ArgusPrintDstMacAddressLabel, "varchar(24)", 0},
 #define ARGUSPRINTDIR			43
-   { "dir", "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDIR, ArgusPrintDirection, ArgusPrintDirectionLabel, "varchar(3)", 0},
+   { "dir",  "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDIR, ArgusPrintDirection, ArgusPrintDirectionLabel, "varchar(3)", 0},
+   { "ndir", "%d", 5 , 1, ARGUS_PTYPE_INT,    ARGUSPRINTDIR, ArgusPrintDirection, ArgusPrintDirectionLabel, "tinyint", 0},
 #define ARGUSPRINTSRCINTPKT		44
    { "sintpkt", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTSRCINTPKT, ArgusPrintSrcIntPkt, ArgusPrintSrcIntPktLabel, "double", 0},
 #define ARGUSPRINTDSTINTPKT		45

@@ -15564,6 +15564,103 @@ ArgusFetchLocality (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchNdir (struct ArgusRecordStruct *ns)
+{
+   double retn = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+   } else {
+      struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *)ns->dsrs[ARGUS_METRIC_INDEX];
+      struct ArgusFlow *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
+      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)ns->dsrs[ARGUS_NETWORK_INDEX];
+      int type, src_count = 0, dst_count = 0;
+
+      int sloc = ArgusFetchSrcLocality(ns);
+      int dloc = ArgusFetchDstLocality(ns);
+      int dValue = 1, dFactor = 0;
+
+      if (sloc >= dloc)
+         dFactor = 1;
+      if (sloc < dloc)
+         dFactor = -1;
+
+      if (flow != NULL) {
+         switch (flow->hdr.subtype & 0x3F) {
+            case ARGUS_FLOW_CLASSIC5TUPLE: {
+               switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
+                  case ARGUS_TYPE_IPV4:
+                     switch (flow->ip_flow.ip_p) {
+                        case IPPROTO_TCP: {
+                           if (net != NULL) {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                 dFactor *= 1;
+                              }
+                              if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
+                                 if (flow->hdr.subtype & ARGUS_REVERSE) {
+                                    dFactor *= -1;
+                                 } else {
+                                    dFactor *=  1;
+                                 }
+                              }
+                           }
+                        }
+                        break;
+                     }
+                     break;  
+
+                  case ARGUS_TYPE_IPV6:
+                     switch (flow->ipv6_flow.ip_p) {
+                        case IPPROTO_TCP: {
+                           if (net != NULL) {
+                              struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
+                              if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
+                                 dFactor *= 1;
+                              } else {
+                                 if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
+                                    if (flow->hdr.subtype & ARGUS_REVERSE) {
+                                       dFactor *= -1;
+                                    } else {
+                                       dFactor *=  1;
+                                    }
+                                 }
+                              }
+                           }
+                        }
+                        break;
+                     }
+                     break;  
+               } 
+               break;
+            }
+         }
+      }
+/*            
+   2 is for both directions
+   3 payloads in both directions
+*/            
+      src_count = metric->src.pkts;
+      dst_count = metric->dst.pkts;
+
+      if (dst_count == src_count) {
+         dValue = 0;
+      }
+      if ((dst_count > 0) && (src_count > 0)) {
+         dValue = 2;
+         if ((ArgusFetchSrcAppByteCount(ns) > 0) && (ArgusFetchDstAppByteCount(ns) > 0)) {
+            dValue = 3;
+         }
+      }
+      retn = (dFactor * dValue) * 1.0;
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusFetchNdir (%p) returning %f", ns, retn);
+#endif
+   return (retn);
+}
+
+double
 ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
 {
    struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) ns->dsrs[ARGUS_LOCAL_INDEX];

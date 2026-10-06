@@ -32,8 +32,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		134
-#define MAX_METRIC_ALG_TYPES		134
+#define ARGUS_MAX_METRIC_ALG		135
+#define MAX_METRIC_ALG_TYPES		135
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -200,6 +200,7 @@ double ArgusFetchSrcJitterIdl (struct ArgusRecordStruct *ns);
 double ArgusFetchDstJitter (struct ArgusRecordStruct *ns);
 double ArgusFetchDstJitterAct (struct ArgusRecordStruct *ns);
 double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
+double ArgusFetchNdir (struct ArgusRecordStruct *ns);
 
 struct ArgusFetchValueStruct 
 RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
@@ -471,6 +472,8 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    { "intflowmin", ArgusFetchIntFlowMin},
 #define ARGUSMETRICINTFLOWSTDDEV   133
    { "intflowsdev", ArgusFetchIntFlowStdDev},
+#define ARGUSMETRICNDIR            134
+   {"ndir", ArgusFetchNdir},
 };
 
 #else
@@ -610,6 +613,8 @@ extern double ArgusFetchDstJitterIdl (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcMaxSeg (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 
+extern double ArgusFetchNdir (struct ArgusRecordStruct *ns);
+
 #define ARGUSMETRICSRCID		0
 #define ARGUSMETRICSTARTTIME		1
 #define ARGUSMETRICLASTTIME		2
@@ -740,6 +745,11 @@ extern double ArgusFetchDstMaxSeg (struct ArgusRecordStruct *ns);
 #define ARGUSMETRICMAXIDLE       	127
 #define ARGUSMETRICSRCMSS        	128
 #define ARGUSMETRICDSTMSS        	129
+#define ARGUSMETRICINTFLOW              130
+#define ARGUSMETRICINTFLOWMAX           131
+#define ARGUSMETRICINTFLOWMIN           132
+#define ARGUSMETRICINTFLOWSTDDEV        133
+#define ARGUSMETRICNDIR                 134
 #endif
 #ifdef __cplusplus
 }
