@@ -44,6 +44,7 @@ struct ArgusFetchValueStruct {
 
 long long ArgusFetchStartuSecTime (struct ArgusRecordStruct *ns);
 long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
+long long ArgusFetchCreateuSecTime (struct ArgusRecordStruct *ns);
 
 double ArgusFetchSrcId (struct ArgusRecordStruct *ns);
 double ArgusFetchSID (struct ArgusRecordStruct *ns);
@@ -52,6 +53,7 @@ double ArgusFetchSrcStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchDstStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 double ArgusFetchLastTime (struct ArgusRecordStruct *ns);
+double ArgusFetchCreateTime (struct ArgusRecordStruct *ns);
 double ArgusFetchAvgDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchMinDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchMaxDuration (struct ArgusRecordStruct *ns);
@@ -486,6 +488,8 @@ extern double ArgusFetchDstStartTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchStartTime (struct ArgusRecordStruct *ns);
 extern long long ArgusFetchLastuSecTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchLastTime (struct ArgusRecordStruct *ns);
+extern long long ArgusFetchCreateuSecTime (struct ArgusRecordStruct *ns);
+extern double ArgusFetchCreateTime (struct ArgusRecordStruct *ns);
 extern double ArgusFetchAvgDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchMinDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchMaxDuration (struct ArgusRecordStruct *ns);

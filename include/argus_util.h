@@ -48,8 +48,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	256
-#define MAX_PRINT_ALG_TYPES     	256
+#define ARGUS_MAX_PRINT_ALG     	257
+#define MAX_PRINT_ALG_TYPES     	257
 
 #define ARGUS_PTYPE_INT         0
 #define ARGUS_PTYPE_UINT        1
@@ -469,6 +469,7 @@ void ArgusPrintSsid (struct ArgusParserStruct *, char *, struct ArgusRecordStruc
 void ArgusPrintCause (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintLastDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintCreateDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcLastDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -744,6 +745,7 @@ void ArgusPrintSsidLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCauseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintStartDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintLastDateLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintCreateDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcStartDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcLastDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstStartDateLabel (struct ArgusParserStruct *, char *, int);
@@ -1529,6 +1531,8 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "dencbuf", "", 12 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSTENCAPSBUFFER, ArgusPrintDstEncapsBuffer, ArgusPrintDstEncapsBufferLabel, "varchar(32)", 0},
 #define ARGUSPRINTDSRS			255
    { "dsrs", "", 32 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSRS, ArgusPrintDsrs, ArgusPrintDsrsLabel, "varchar(128)", 0},
+#define ARGUSPRINTCREATEDATE		256
+   { "ctime", "%T.%f", 12 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTCREATEDATE, ArgusPrintCreateDate, ArgusPrintCreateDateLabel, "double(18,6) unsigned not null", 0},
 };
 
 

@@ -307,7 +307,7 @@ extern "C" {
  
 /* Argus Record Data Specific Record (DSR) Types */
 
-#define ARGUSMAXDSRTYPE				29
+#define ARGUSMAXDSRTYPE				30
 
 /* Argus Data Specific Record (DSR) Formats
       There are two types of DSR, 1) a Type Value (TV) record
@@ -1686,6 +1686,13 @@ extern "C" {
 #define ARGUS_SRC_IDLE_JITTER		0x02
 #define ARGUS_DST_ACTIVE_JITTER		0x04
 #define ARGUS_DST_IDLE_JITTER		0x08
+#define ARGUS_JITTER_DIRECTION_MASK	(ARGUS_SRC_ACTIVE_JITTER | ARGUS_SRC_IDLE_JITTER | ARGUS_DST_ACTIVE_JITTER | ARGUS_DST_IDLE_JITTER)
+
+/* Zero preserves the legacy on-wire unit: microseconds. */
+#define ARGUS_JITTER_SCALE_MASK		0xF0
+#define ARGUS_JITTER_SCALE_MICROSECONDS	0x00
+#define ARGUS_JITTER_SCALE_MILLISECONDS	0x10
+#define ARGUS_JITTER_SCALE_SECONDS		0x20
 
 
 /* Argus Histogram DSR Type */
@@ -1820,6 +1827,11 @@ extern "C" {
 #define ARGUS_DST_GENEVE                0x02
 
 #define ARGUS_ADDR_MASK         	0x07
+
+/* Context DSR Type */
+#define ARGUS_CONTEXT_DSR                0x52
+#define ARGUS_CONTEXT_INDEX              29
+
 
 /*
     0                   1                   2                   3
@@ -2509,4 +2521,3 @@ extern "C" {
 }
 #endif
 #endif/*Argus_def_h*/
-

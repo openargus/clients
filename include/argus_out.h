@@ -879,6 +879,11 @@ struct ArgusBehaviorStruct {
    } behavior_union;
 };
 
+struct ArgusContextStruct {
+   struct ArgusDSRHeader hdr;
+   struct ArgusTime ctime;
+};
+
 struct ArgusScoreStruct {
    struct ArgusDSRHeader hdr;
    union {
@@ -1059,6 +1064,7 @@ struct ArgusCanonRecord {
    struct ArgusJitterStruct      jitter;
    struct ArgusPacketSizeStruct  psize;
    struct ArgusBehaviorStruct    actor;
+   struct ArgusContextStruct     context;
    struct ArgusCountryCodeStruct cocode;
    struct ArgusGeoLocationStruct geo;
    struct ArgusNetspatialStruct  local;

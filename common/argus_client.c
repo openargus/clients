@@ -119,6 +119,46 @@ ArgusClampDoubleToInt(double val)
    return (int) val;
 }
 
+static void
+ArgusNormalizeJitterScale(struct ArgusJitterStruct *jitter)
+{
+   struct ArgusStatObject *stats[4] = {
+      &jitter->src.act, &jitter->src.idle,
+      &jitter->dst.act, &jitter->dst.idle
+   };
+   unsigned char scale;
+   double factor;
+   int i;
+
+   scale = jitter->hdr.argus_dsrvl8.qual & ARGUS_JITTER_SCALE_MASK;
+   switch (scale) {
+      case ARGUS_JITTER_SCALE_MICROSECONDS:
+         return;
+
+      case ARGUS_JITTER_SCALE_MILLISECONDS:
+         factor = 1000.0;
+         break;
+
+      case ARGUS_JITTER_SCALE_SECONDS:
+         factor = 1000000.0;
+         break;
+
+      default:
+         return;
+   }
+
+   for (i = 0; i < 4; i++) {
+      if (stats[i]->n > 0) {
+         stats[i]->minval  = (float)(stats[i]->minval * factor);
+         stats[i]->meanval = (float)(stats[i]->meanval * factor);
+         stats[i]->stdev   = (float)(stats[i]->stdev * factor);
+         stats[i]->maxval  = (float)(stats[i]->maxval * factor);
+      }
+   }
+
+   jitter->hdr.argus_dsrvl8.qual &= ~ARGUS_JITTER_SCALE_MASK;
+}
+
 #ifndef ETH_ALEN
 #define ETH_ALEN  6
 #endif
@@ -2981,11 +3021,12 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                  tjit++;
                                  break;
                            }
-                        } else
-                           bzero((char *)&jitter->dst.idle, sizeof(jitter->dst.idle));
+                         } else
+                            bzero((char *)&jitter->dst.idle, sizeof(jitter->dst.idle));
 
-                        canon->jitter.hdr.argus_dsrvl8.len = (sizeof(struct ArgusJitterStruct) + 3)/4;
-                        retn->dsrs[ARGUS_JITTER_INDEX] = (struct ArgusDSRHeader*) &canon->jitter;
+                         ArgusNormalizeJitterScale(jitter);
+                         canon->jitter.hdr.argus_dsrvl8.len = (sizeof(struct ArgusJitterStruct) + 3)/4;
+                         retn->dsrs[ARGUS_JITTER_INDEX] = (struct ArgusDSRHeader*) &canon->jitter;
                         retn->dsrindex |= (0x01 << ARGUS_JITTER_INDEX);
 #endif
                         break;
@@ -3030,6 +3071,14 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         bcopy((char *)actor, (char *)&canon->actor, sizeof(*actor));
                         retn->dsrs[ARGUS_BEHAVIOR_INDEX] = (struct ArgusDSRHeader*) &canon->actor;
                         retn->dsrindex |= (0x01 << ARGUS_BEHAVIOR_INDEX);
+                        break;
+                     }
+
+                     case ARGUS_CONTEXT_DSR: {
+                        struct ArgusContextStruct *context = (struct ArgusContextStruct *) dsr;
+                        bcopy((char *)context, (char *)&canon->context, sizeof(*context));
+                        retn->dsrs[ARGUS_CONTEXT_INDEX] = (struct ArgusDSRHeader*) &canon->context;
+                        retn->dsrindex |= (0x01 << ARGUS_CONTEXT_INDEX);
                         break;
                      }
 
@@ -6470,6 +6519,38 @@ ArgusMergeAddress(unsigned int *a1, unsigned int *a2, int type, int dir, unsigne
 }
 
 
+static void
+ArgusMergeJitterStats(struct ArgusStatObject *stats1, const struct ArgusStatObject *stats2)
+{
+   double n1, n2, n, delta, m2, meanval, variance;
+
+   if (stats2->n <= 0)
+      return;
+
+   if (stats1->n <= 0) {
+      bcopy((const char *)stats2, (char *)stats1, sizeof(*stats1));
+      return;
+   }
+
+   n1 = stats1->n;
+   n2 = stats2->n;
+   n = n1 + n2;
+   delta = (double)stats2->meanval - (double)stats1->meanval;
+   meanval = (double)stats1->meanval + (delta * n2 / n);
+   m2 = n1 * (double)stats1->stdev * (double)stats1->stdev;
+   m2 += n2 * (double)stats2->stdev * (double)stats2->stdev;
+   m2 += delta * delta * n1 * n2 / n;
+   variance = m2 / n;
+
+   stats1->n       = ArgusClampDoubleToInt(n);
+   stats1->meanval = (float)meanval;
+   stats1->stdev   = (float)sqrt((variance > 0.0) ? variance : 0.0);
+   if (stats1->minval > stats2->minval)
+      stats1->minval = stats2->minval;
+   if (stats1->maxval < stats2->maxval)
+      stats1->maxval = stats2->maxval;
+}
+
 void
 ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                    struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
@@ -7580,42 +7661,20 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
 
                      case ARGUS_JITTER_INDEX: {
                         struct ArgusJitterStruct *j1 = (struct ArgusJitterStruct *) ns1->dsrs[ARGUS_JITTER_INDEX];
-                        struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
+                         struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
 
-                        if (j1 && j2) {
-                           if (j1->hdr.argus_dsrvl8.len == 0) {
-                              bcopy ((char *) j2, (char *) j1, sizeof (*j1));
-                              break;
-                           }
+                          if (j1 && j2) {
+                             ArgusNormalizeJitterScale(j1);
+                             ArgusNormalizeJitterScale(j2);
+                             j1->hdr.argus_dsrvl8.qual |= j2->hdr.argus_dsrvl8.qual & ARGUS_JITTER_DIRECTION_MASK;
 
-                           if (j2->src.act.n > 0) {
-                              unsigned int n, stdev = 0;
-                              double meanval, sumsqrd = 0.0;
-                              
-                              n = (j1->src.act.n + j2->src.act.n);
-                              meanval = (((double)j1->src.act.meanval * (double)j1->src.act.n) +
-                                         ((double)j2->src.act.meanval * (double)j2->src.act.n)) / n;
+                            if (j1->hdr.argus_dsrvl8.len == 0) {
+                               bcopy ((char *) j2, (char *) j1, sizeof (*j1));
+                               break;
+                            }
 
-                              if (j1->src.act.n) {
-                                 double sum = (double)j1->src.act.meanval * (double)j1->src.act.n;
-                                 sumsqrd += (j1->src.act.n * ((double)j1->src.act.stdev * (double)j1->src.act.stdev)) +
-                                            (sum * sum)/j1->src.act.n;
-                              }
-
-                              if (j2->src.act.n) {
-                                 double sum  =  (double)j2->src.act.meanval * (double)j2->src.act.n;
-                                 sumsqrd += (j2->src.act.n * ((double)j2->src.act.stdev * (double)j2->src.act.stdev)) +
-                                            (sum * sum)/j2->src.act.n;
-                              }
-                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                              j1->src.act.n       = n;
-                              j1->src.act.meanval = (unsigned int) meanval;
-                              j1->src.act.stdev   = stdev;
-                              if (j1->src.act.minval > j2->src.act.minval)
-                                 j1->src.act.minval = j2->src.act.minval;
-                              if (j1->src.act.maxval < j2->src.act.maxval)
-                                 j1->src.act.maxval = j2->src.act.maxval;
+                            if (j2->src.act.n > 0) {
+                               ArgusMergeJitterStats(&j1->src.act, &j2->src.act);
 
                               switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
                                  case ARGUS_HISTO_EXP: {
@@ -7642,36 +7701,10 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     break;
                                  }
                               }
-                           }
+                            }
 
-                           if (j2->src.idle.n > 0) {
-                              unsigned int n, stdev = 0;
-                              double meanval, sumsqrd = 0.0;
-                              
-                              n = (j1->src.idle.n + j2->src.idle.n);
-                              meanval  = (((double) j1->src.idle.meanval * (double) j1->src.idle.n) +
-                                          ((double) j2->src.idle.meanval * (double) j2->src.idle.n)) / n;
-
-                              if (j1->src.idle.n) {
-                                 double sum  =  (double) j1->src.idle.meanval * (double) j1->src.idle.n;
-                                 sumsqrd += (j1->src.idle.n * ((double)j1->src.idle.stdev * (double)j1->src.idle.stdev)) +
-                                            ((double)sum *(double)sum)/j1->src.idle.n;
-                              }
-
-                              if (j2->src.idle.n) {
-                                 double sum  =  (double) j2->src.idle.meanval * (double) j2->src.idle.n;
-                                 sumsqrd += (j2->src.idle.n * ((double)j2->src.idle.stdev * (double)j2->src.idle.stdev)) +
-                                            ((double)sum *(double)sum)/j2->src.idle.n;
-                              }
-                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                              j1->src.idle.n       = n;
-                              j1->src.idle.meanval = (unsigned int) meanval;
-                              j1->src.idle.stdev   = stdev;
-                              if (j1->src.idle.minval > j2->src.idle.minval)
-                                 j1->src.idle.minval = j2->src.idle.minval;
-                              if (j1->src.idle.maxval < j2->src.idle.maxval)
-                                 j1->src.idle.maxval = j2->src.idle.maxval;
+                            if (j2->src.idle.n > 0) {
+                               ArgusMergeJitterStats(&j1->src.idle, &j2->src.idle);
 
                               switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
                                  case ARGUS_HISTO_EXP: {
@@ -7698,36 +7731,10 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     break;
                                  }
                               }  
-                           }
+                            }
 
-                           if (j2->dst.act.n > 0) {
-                              unsigned int n, stdev = 0;
-                              double meanval, sumsqrd = 0.0;
-                              
-                              n = (j1->dst.act.n + j2->dst.act.n);
-                              meanval  = (((double) j1->dst.act.meanval * (double) j1->dst.act.n) +
-                                          ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
-
-                              if (j1->dst.act.n) {
-                                 double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
-                                 sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
-                                            (sum * sum)/j1->dst.act.n;
-                              }
-
-                              if (j2->dst.act.n) {
-                                 double sum  =  (double) j2->dst.act.meanval * (double) j2->dst.act.n;
-                                 sumsqrd += (j2->dst.act.n * ((double)j2->dst.act.stdev * (double)j2->dst.act.stdev)) +
-                                            ((double)sum *(double)sum)/j2->dst.act.n;
-                              }
-                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                              j1->dst.act.n       = n;
-                              j1->dst.act.meanval = (unsigned int) meanval;
-                              j1->dst.act.stdev   = stdev;
-                              if (j1->dst.act.minval > j2->dst.act.minval)
-                                 j1->dst.act.minval = j2->dst.act.minval;
-                              if (j1->dst.act.maxval < j2->dst.act.maxval)
-                                 j1->dst.act.maxval = j2->dst.act.maxval;
+                            if (j2->dst.act.n > 0) {
+                               ArgusMergeJitterStats(&j1->dst.act, &j2->dst.act);
 
                               switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
                                  case ARGUS_HISTO_EXP: {
@@ -7754,36 +7761,10 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     break;
                                  }
                               }  
-                           }
+                            }
 
-                           if (j2->dst.idle.n > 0) {
-                              unsigned int n, stdev = 0;
-                              double meanval, sumsqrd = 0.0;
-                              
-                              n = (j1->dst.idle.n + j2->dst.idle.n);
-                              meanval  = (((double) j1->dst.idle.meanval * (double) j1->dst.idle.n) +
-                                          ((double) j2->dst.idle.meanval * (double) j2->dst.idle.n)) / n;
-
-                              if (j1->dst.idle.n) {
-                                 int sum  =  (double) j1->dst.idle.meanval * (double) j1->dst.idle.n;
-                                 sumsqrd += (j1->dst.idle.n * ((double)j1->dst.idle.stdev * (double)j1->dst.idle.stdev)) +
-                                            ((double)sum *(double)sum)/j1->dst.idle.n;
-                              }
-
-                              if (j2->dst.idle.n) {
-                                 double sum  =  (double) j2->dst.idle.meanval * (double) j2->dst.idle.n;
-                                 sumsqrd += (j2->dst.idle.n * ((double)j2->dst.idle.stdev * (double)j2->dst.idle.stdev)) +
-                                            ((double)sum *(double)sum)/j2->dst.idle.n;
-                              }
-                              stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                              j1->dst.idle.n       = n;
-                              j1->dst.idle.meanval = (unsigned int) meanval;
-                              j1->dst.idle.stdev   = stdev;
-                              if (j1->dst.idle.minval > j2->dst.idle.minval)
-                                 j1->dst.idle.minval = j2->dst.idle.minval;
-                              if (j1->dst.idle.maxval < j2->dst.idle.maxval)
-                                 j1->dst.idle.maxval = j2->dst.idle.maxval;
+                            if (j2->dst.idle.n > 0) {
+                               ArgusMergeJitterStats(&j1->dst.idle, &j2->dst.idle);
 
                               switch (j1->hdr.subtype & (ARGUS_HISTO_EXP | ARGUS_HISTO_LINEAR)) {
                                  case ARGUS_HISTO_EXP: {
@@ -7812,11 +7793,12 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                               }  
                            }
 
-                        } else {
-                           if (!j1 && j2) {
-                              if ((j1 = (void *) ArgusCalloc (1, sizeof(*j1))) == NULL)
-                                 ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
-                              bcopy ((char *) j2, (char *)j1, sizeof (*j1));
+                         } else {
+                            if (!j1 && j2) {
+                               if ((j1 = (void *) ArgusCalloc (1, sizeof(*j1))) == NULL)
+                                  ArgusLog (LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                               ArgusNormalizeJitterScale(j2);
+                               bcopy ((char *) j2, (char *)j1, sizeof (*j1));
                               ns1->dsrs[i] = (struct ArgusDSRHeader *) j1;
                               ns1->dsrindex |= (0x01 << i);
                            }
@@ -8523,128 +8505,28 @@ ArgusIntersectRecords (struct ArgusAggregatorStruct *na, struct ArgusRecordStruc
 
             case ARGUS_JITTER_INDEX: {
                struct ArgusJitterStruct *j1 = (struct ArgusJitterStruct *) ns1->dsrs[ARGUS_JITTER_INDEX];
-               struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
+                struct ArgusJitterStruct *j2 = (struct ArgusJitterStruct *) ns2->dsrs[ARGUS_JITTER_INDEX];
 
-               if (j1 && j2) {
-                  if (j2->src.act.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->src.act.n + j2->src.act.n);
-                     meanval  = (((double)j1->src.act.meanval * (double)j1->src.act.n) +
-                                 ((double)j2->src.act.meanval * (double)j2->src.act.n)) / n;
+                 if (j1 && j2) {
+                    ArgusNormalizeJitterScale(j1);
+                    ArgusNormalizeJitterScale(j2);
+                    j1->hdr.argus_dsrvl8.qual |= j2->hdr.argus_dsrvl8.qual & ARGUS_JITTER_DIRECTION_MASK;
 
-                     if (j1->src.act.n) {
-                        double sum  =  (double)j1->src.act.meanval * (double)j1->src.act.n;
-                        sumsqrd += (j1->src.act.n * ((double)j1->src.act.stdev * (double)j1->src.act.stdev)) +
-                                   (sum * sum)/j1->src.act.n;
-                     }
+                    if (j2->src.act.n > 0) {
+                      ArgusMergeJitterStats(&j1->src.act, &j2->src.act);
+                   }
 
-                     if (j2->src.act.n) {
-                        double sum  =  (double)j2->src.act.meanval * (double)j2->src.act.n;
-                        sumsqrd += (j2->src.act.n * ((double)j2->src.act.stdev * (double)j2->src.act.stdev)) +
-                                   (sum * sum)/j2->src.act.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
+                   if (j2->src.idle.n > 0) {
+                      ArgusMergeJitterStats(&j1->src.idle, &j2->src.idle);
+                   }
 
-                     j1->src.act.n       = n;
-                     j1->src.act.meanval = (unsigned int) meanval;
-                     j1->src.act.stdev   = stdev;
-                     if (j1->src.act.minval > j2->src.act.minval)
-                        j1->src.act.minval = j2->src.act.minval;
-                     if (j1->src.act.maxval < j2->src.act.maxval)
-                        j1->src.act.maxval = j2->src.act.maxval;
-                  }
+                   if (j2->dst.act.n > 0) {
+                      ArgusMergeJitterStats(&j1->dst.act, &j2->dst.act);
+                   }
 
-                  if (j2->src.idle.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->src.idle.n + j2->src.idle.n);
-                     meanval  = (((double) j1->src.idle.meanval * (double) j1->src.idle.n) +
-                                 ((double) j2->src.idle.meanval * (double) j2->src.idle.n)) / n;
-
-                     if (j1->src.idle.n) {
-                        double sum  =  (double) j1->src.idle.meanval * (double) j1->src.idle.n;
-                        sumsqrd += (j1->src.idle.n * ((double)j1->src.idle.stdev * (double)j1->src.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j1->src.idle.n;
-                     }
-
-                     if (j2->src.idle.n) {
-                        double sum  =  (double) j2->src.idle.meanval * (double) j2->src.idle.n;
-                        sumsqrd += (j2->src.idle.n * ((double)j2->src.idle.stdev * (double)j2->src.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j2->src.idle.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->src.idle.n       = n;
-                     j1->src.idle.meanval = (unsigned int) meanval;
-                     j1->src.idle.stdev   = stdev;
-                     if (j1->src.idle.minval > j2->src.idle.minval)
-                        j1->src.idle.minval = j2->src.idle.minval;
-                     if (j1->src.idle.maxval < j2->src.idle.maxval)
-                        j1->src.idle.maxval = j2->src.idle.maxval;
-                  }
-
-                  if (j2->dst.act.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->dst.act.n + j2->dst.act.n);
-                     meanval  = (((double) j1->dst.act.meanval * (double) j1->dst.act.n) +
-                                 ((double) j2->dst.act.meanval * (double) j2->dst.act.n)) / n;
-
-                     if (j1->dst.act.n) {
-                        double sum  =  (double)j1->dst.act.meanval * j1->dst.act.n;
-                        sumsqrd += (j1->dst.act.n * ((double)j1->dst.act.stdev * (double)j1->dst.act.stdev)) +
-                                   (sum * sum)/j1->dst.act.n;
-                     }
-
-                     if (j2->dst.act.n) {
-                        double sum  =  (double) j2->dst.act.meanval * (double) j2->dst.act.n;
-                        sumsqrd += (j2->dst.act.n * ((double)j2->dst.act.stdev * (double)j2->dst.act.stdev)) +
-                                   ((double)sum *(double)sum)/j2->dst.act.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->dst.act.n       = n;
-                     j1->dst.act.meanval = (unsigned int) meanval;
-                     j1->dst.act.stdev   = stdev;
-                     if (j1->dst.act.minval > j2->dst.act.minval)
-                        j1->dst.act.minval = j2->dst.act.minval;
-                     if (j1->dst.act.maxval < j2->dst.act.maxval)
-                        j1->dst.act.maxval = j2->dst.act.maxval;
-                  }
-
-                  if (j2->dst.idle.n > 0) {
-                     unsigned int n, stdev = 0;
-                     double meanval, sumsqrd = 0.0;
-                     
-                     n = (j1->dst.idle.n + j2->dst.idle.n);
-                     meanval  = (((double) j1->dst.idle.meanval * (double) j1->dst.idle.n) +
-                                 ((double) j2->dst.idle.meanval * (double) j2->dst.idle.n)) / n;
-
-                     if (j1->dst.idle.n) {
-                        int sum  =  (double) j1->dst.idle.meanval * (double) j1->dst.idle.n;
-                        sumsqrd += (j1->dst.idle.n * ((double)j1->dst.idle.stdev * (double)j1->dst.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j1->dst.idle.n;
-                     }
-
-                     if (j2->dst.idle.n) {
-                        double sum  =  (double) j2->dst.idle.meanval * (double) j2->dst.idle.n;
-                        sumsqrd += (j2->dst.idle.n * ((double)j2->dst.idle.stdev * (double)j2->dst.idle.stdev)) +
-                                   ((double)sum *(double)sum)/j2->dst.idle.n;
-                     }
-                     stdev = (int) sqrt (fabs((sumsqrd/n) - ((double)meanval * (double)meanval)));
-
-                     j1->dst.idle.n       = n;
-                     j1->dst.idle.meanval = (unsigned int) meanval;
-                     j1->dst.idle.stdev   = stdev;
-                     if (j1->dst.idle.minval > j2->dst.idle.minval)
-                        j1->dst.idle.minval = j2->dst.idle.minval;
-                     if (j1->dst.idle.maxval < j2->dst.idle.maxval)
-                        j1->dst.idle.maxval = j2->dst.idle.maxval;
-                  }
+                   if (j2->dst.idle.n > 0) {
+                      ArgusMergeJitterStats(&j1->dst.idle, &j2->dst.idle);
+                   }
 
                } else
                   ns1->dsrs[ARGUS_JITTER_INDEX] = NULL;
@@ -11788,6 +11670,45 @@ ArgusFetchLastTime (struct ArgusRecordStruct *ns)
    double retn = ArgusFetchLastuSecTime(ns) / 1000000.0;
    return (retn);
 }
+
+long long
+ArgusFetchCreateuSecTime (struct ArgusRecordStruct *ns)
+{
+   long long retn = 0;
+   long long sec = 0, usec = 0;
+
+   if (ns->hdr.type & ARGUS_MAR) {
+      struct ArgusRecord *rec = (struct ArgusRecord *) ns->dsrs[0];
+      if (rec != NULL) {
+         sec  = rec->argus_mar.now.tv_sec;
+         usec = rec->argus_mar.now.tv_usec;
+      }
+
+   } else {
+      struct ArgusContextStruct *context = (void *)ns->dsrs[ARGUS_CONTEXT_INDEX];
+
+      if (context != NULL) {
+         struct ArgusTime *ctime = &context->ctime;
+         sec  = ctime->tv_sec;
+         usec = ctime->tv_usec;
+
+         if (usec >= 1000000)
+            usec /= 1000;
+      }
+   }
+
+   retn = (sec * 1000000LL) + usec;
+   return(retn);
+}
+
+double
+ArgusFetchCreateTime (struct ArgusRecordStruct *ns)
+{
+   double retn = ArgusFetchCreateuSecTime(ns) / 1000000.0;
+   return (retn);
+}
+
+
 
 double
 ArgusFetchMean (struct ArgusRecordStruct *ns)

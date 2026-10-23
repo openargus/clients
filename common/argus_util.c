@@ -471,6 +471,10 @@ struct evendmem  ethermask[48];
 #define ARGUS_LOCAL_INDEX               23
 #define ARGUS_FLOW_HASH_INDEX           24
 #define ARGUS_SCORE_INDEX               25
+#define ARGUS_GRE_INDEX                 26
+#define ARGUS_GENEVE_INDEX              27
+#define ARGUS_SCORE_INDEX               28
+#define ARGUS_CONTEXT_INDEX             29
 */
  
 char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
@@ -499,7 +503,11 @@ char *ArgusDSRKeyWords[ARGUSMAXDSRTYPE] = {
    "geo",
    "local",
    "hash",
+   "vxlan",
+   "gre",
+   "geneve",
    "score",
+   "context",
 };
    
 void setArguspidflag (struct ArgusParserStruct *, int);
@@ -7072,6 +7080,64 @@ ArgusPrintLastDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintLastDate (%p, %p %d)", buf, argus, len);
+#endif
+}
+
+
+void
+ArgusPrintCreateDate (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   struct timeval tvpbuf, *tvp = &tvpbuf;
+   char tbuf[256];
+          
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: {
+         struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
+         tvp->tv_sec  = rec->argus_mar.startime.tv_sec;
+         tvp->tv_usec = rec->argus_mar.startime.tv_usec;
+         break;
+      }
+
+      case ARGUS_EVENT:
+      case ARGUS_AFLOW: 
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         long long ctime = ArgusFetchCreateuSecTime(argus);
+         long long stime = ArgusFetchStartuSecTime(argus);
+
+         if ((ctime == 0) || (ctime > stime))
+            ctime = stime;
+
+         tvp->tv_sec  = ctime / 1000000;
+         tvp->tv_usec = ctime % 1000000;
+      }
+   }
+             
+   tbuf[0] = '\0';
+   ArgusPrintTime(parser, tbuf, sizeof(tbuf), tvp);
+
+   if (strchr (tbuf, '.'))
+      len += parser->pflag;
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " CreateTime = \"%s\"", tbuf);
+   } else 
+   if (parser->ArgusPrintD3) {
+      sprintf (buf, "new Date(%lld)", (tvp->tv_sec * 1000LL) + (tvp->tv_usec / 1000LL));
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(tbuf);
+      } else {
+         if (strlen(tbuf) > len) {
+            tbuf[len - 2] = '*';
+            tbuf[len - 1] = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, tbuf);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintCreateDate (%p, %p, %d)", buf, argus, len);
 #endif
 }
 
@@ -21451,6 +21517,21 @@ ArgusPrintLastDateLabel (struct ArgusParserStruct *parser, char *buf, int len)
 }
 
 void
+ArgusPrintCreateDateLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   char *format = NULL;
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if (strcmp("%d", format) != 0) {
+      if ((parser->ArgusFractionalDate) || (strstr("%f", format) != NULL))
+         len += parser->pflag;
+   }
+   sprintf (buf, "%*.*s ", len, len, "CreateTime");
+}
+
+void
 ArgusPrintSrcStartDateLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    if (parser->ArgusFractionalDate)
@@ -28806,6 +28887,13 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
+                  case ARGUS_CONTEXT_DSR: {
+                     struct ArgusContextStruct *context = (struct ArgusContextStruct *) dsr;
+                     context->ctime.tv_sec  = ntohl(context->ctime.tv_sec);
+                     context->ctime.tv_usec = ntohl(context->ctime.tv_usec);
+                     break;
+                  }
+
                   case ARGUS_SCORE_DSR:
                      break;
 
@@ -29502,6 +29590,13 @@ ArgusHtoN (struct ArgusRecord *argus)
                            break;
                         }
                      }
+                     break;
+                  }
+
+                  case ARGUS_CONTEXT_DSR: {
+                     struct ArgusContextStruct *context = (struct ArgusContextStruct *) dsr;
+                     context->ctime.tv_sec  = htonl(context->ctime.tv_sec);
+                     context->ctime.tv_usec = htonl(context->ctime.tv_usec);
                      break;
                   }
 
