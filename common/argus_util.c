@@ -4911,6 +4911,7 @@ ArgusZeroRecordWithFlag (struct ArgusRecordStruct *argus, int flag)
                case ARGUS_FLOW_INDEX:
                case ARGUS_MAC_INDEX: 
                case ARGUS_TRANSPORT_INDEX:
+               case ARGUS_CONTEXT_INDEX:
                case ARGUS_ENCAPS_INDEX:
                case ARGUS_LABEL_INDEX:
                case ARGUS_VLAN_INDEX:

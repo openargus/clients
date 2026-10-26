@@ -29,6 +29,10 @@ consistent with the sensor repo's own precedent for its equivalent finding (F-49
 verified via `make`-level fault injection, not a program input, and doesn't fit this directory's
 per-fix-test pattern.
 
+- **Jitter DSR scaling**: `test_jitter_scale_merge.sh` verifies that millisecond and second
+  Jitter DSRs normalize to microseconds before client aggregation, and that merged source and
+  destination statistics retain their direction qualifiers.
+
 ## Running locally
 
 ```sh

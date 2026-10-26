@@ -3971,6 +3971,7 @@ ArgusCopyRecordStruct (struct ArgusRecordStruct *rec)
                                  case ARGUS_COR_INDEX: 
                                  case ARGUS_GEO_INDEX: 
                                  case ARGUS_JITTER_INDEX: 
+                                 case ARGUS_CONTEXT_INDEX: 
                                  case ARGUS_LOCAL_INDEX: {
                                     if ((retn->dsrs[i] = ArgusCalloc(1, len * 4)) == NULL)
                                        ArgusLog (LOG_ERR, "ArgusCopyRecordStruct: ArgusCalloc error %s\n", strerror(errno));

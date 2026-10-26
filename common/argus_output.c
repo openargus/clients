@@ -2403,6 +2403,12 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                            *dsrptr++ = ((unsigned int *)rec->dsrs[y])[x];
                         break;
 
+                     case ARGUS_CONTEXT_INDEX: {
+                        for (x = 0; x < len; x++)
+                           *dsrptr++ = ((unsigned int *)rec->dsrs[y])[x];
+                        break;
+                     }
+
                      case ARGUS_TIME_INDEX: {
                         struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *) rec->dsrs[ARGUS_METRIC_INDEX];
                         struct ArgusTimeObject *dtime = (struct ArgusTimeObject *) dsr;
