@@ -2380,8 +2380,10 @@ RaParseResourceLine(struct ArgusParserStruct *parser, int linenum, char *optarg,
 
             RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].length = len - parser->pflag;
             RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].length  = len - parser->pflag;
+            RaPrintAlgorithmTable[ARGUSPRINTCREATEDATE].length  = len - parser->pflag;
             RaPrintAlgorithmTable[ARGUSPRINTSTARTDATE].format = strdup(optarg);
             RaPrintAlgorithmTable[ARGUSPRINTLASTDATE].format = strdup(optarg);
+            RaPrintAlgorithmTable[ARGUSPRINTCREATEDATE].format = strdup(optarg);
             break;
          }
 
@@ -6218,7 +6220,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                               
                               if (parser->ArgusPrintJson) {
                                  if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
-                                                           (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
+                                                              (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ) ||
+                                                              (parser->RaPrintAlgorithm->print == ArgusPrintCreateDate ))) {
                                     slen = snprintf(&buf[blen], (blen < len) ? (len - blen) : 0, "%c%s%c:%s%c", 
                                        parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
                                        tmpbuf, parser->RaFieldDelimiter);
@@ -6590,7 +6593,8 @@ ArgusPrintRecord (struct ArgusParserStruct *parser, char *buf, struct ArgusRecor
                         
                      if (parser->ArgusPrintJson) {
                         if (parser->ArgusPrintD3 && ((parser->RaPrintAlgorithm->print == ArgusPrintStartDate ) ||
-                                                     (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ))) {
+                                                     (parser->RaPrintAlgorithm->print == ArgusPrintLastDate ) ||
+                                                     (parser->RaPrintAlgorithm->print == ArgusPrintCreateDate ))) {
                            snprintf(&buf[slen], dlen, "%c%s%c:%s%c", 
                               parser->RaFieldQuoted, parser->RaPrintAlgorithm->field, parser->RaFieldQuoted,
                               tmpbuf, parser->RaFieldDelimiter);
