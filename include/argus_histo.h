@@ -43,6 +43,7 @@ extern double ArgusFetchLastTime (struct ArgusRecordStruct *);
 extern double ArgusFetchTransactions (struct ArgusRecordStruct *);
 extern double ArgusFetchuSecDuration (struct ArgusRecordStruct *);
 extern double ArgusFetchDuration (struct ArgusRecordStruct *);
+extern double ArgusFetchTotalDuration (struct ArgusRecordStruct *);
 extern double ArgusFetchMean (struct ArgusRecordStruct *);
 extern double ArgusFetchMin (struct ArgusRecordStruct *);
 extern double ArgusFetchMax (struct ArgusRecordStruct *);

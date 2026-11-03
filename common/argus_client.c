@@ -11871,6 +11871,14 @@ ArgusFetchDuration (struct ArgusRecordStruct *ns)
 }
 
 double
+ArgusFetchTotalDuration (struct ArgusRecordStruct *ns)
+{  
+   float dur = RaGetFloatTotalDuration(ns);
+   double retn = dur;
+   return (retn);
+}  
+
+double
 ArgusFetchSrcDuration (struct ArgusRecordStruct *ns)
 {
    float dur = RaGetFloatDuration(ns);
@@ -16233,9 +16241,25 @@ ArgusSortDuration (struct ArgusRecordStruct *n2, struct ArgusRecordStruct *n1)
 
    if (n1)
       d1 = ArgusFetchDuration(n1);
+ 
+   if (n2) 
+      d2 = ArgusFetchDuration(n2);
+ 
+   retn = (d1 > d2) ? 1 : ((d1 == d2) ? 0 : -1);
+   return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);
+}
+
+int
+ArgusSortTotalDuration (struct ArgusRecordStruct *n2, struct ArgusRecordStruct *n1)
+{
+   double d1 = 0.0, d2 = 0.0;
+   int retn = 0;
+
+   if (n1)
+      d1 = ArgusFetchTotalDuration(n1);
 
    if (n2)
-      d2 = ArgusFetchDuration(n2);
+      d2 = ArgusFetchTotalDuration(n2);
 
    retn = (d1 > d2) ? 1 : ((d1 == d2) ? 0 : -1);
    return (ArgusReverseSortDir ? ((retn > 0) ? -1 : ((retn == 0) ? 0 : 1)) : retn);

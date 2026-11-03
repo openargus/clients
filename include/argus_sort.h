@@ -32,8 +32,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_SORT_ALG		90
-#define MAX_SORT_ALG_TYPES		90
+#define ARGUS_MAX_SORT_ALG		91
+#define MAX_SORT_ALG_TYPES		91
 
 struct ArgusSortRecord {
    struct ArgusQueueHeader qhdr;
@@ -177,6 +177,7 @@ int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortLastTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortTransactions (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+int ArgusSortTotalDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortMean (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 int ArgusSortMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
@@ -373,6 +374,8 @@ int (*ArgusSortAlgorithmTable[MAX_SORT_ALG_TYPES])(struct ArgusRecordStruct *, s
    ArgusSortDstNStroke,
    ArgusSortSrcPktSize,
    ArgusSortDstPktSize,
+
+   ArgusSortTotalDuration,
 };
 
 char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
@@ -474,6 +477,7 @@ char *ArgusSortKeyWords[MAX_SORT_ALG_TYPES] = {
    "dnstroke",
    "spktsz",
    "dpktsz",
+   "tdur",
 };
 
 #else
@@ -502,6 +506,7 @@ extern int ArgusSortStartTime (struct ArgusRecordStruct *, struct ArgusRecordStr
 extern int ArgusSortLastTime (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortTransactions (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
+extern int ArgusSortTotalDuration (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortMean (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortMin (struct ArgusRecordStruct *, struct ArgusRecordStruct *);
 extern int ArgusSortMax (struct ArgusRecordStruct *, struct ArgusRecordStruct *);

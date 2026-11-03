@@ -32,8 +32,8 @@
 extern "C" {
 #endif
 
-#define ARGUS_MAX_METRIC_ALG		135
-#define MAX_METRIC_ALG_TYPES		135
+#define ARGUS_MAX_METRIC_ALG		136
+#define MAX_METRIC_ALG_TYPES		136
 
 struct ArgusFetchValueStruct {
    char *field;
@@ -60,6 +60,7 @@ double ArgusFetchMaxDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchDstDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchDuration (struct ArgusRecordStruct *ns);
+double ArgusFetchTotalDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchuSecDuration (struct ArgusRecordStruct *ns);
 double ArgusFetchSrcMac (struct ArgusRecordStruct *ns);
 double ArgusFetchDstMac (struct ArgusRecordStruct *ns);
@@ -476,6 +477,8 @@ RaFetchAlgorithmTable[ARGUS_MAX_METRIC_ALG] = {
    { "intflowsdev", ArgusFetchIntFlowStdDev},
 #define ARGUSMETRICNDIR            134
    {"ndir", ArgusFetchNdir},
+#define ARGUSMETRICTOTALDURATION   135
+   {"tdur", ArgusFetchTotalDuration},
 };
 
 #else
@@ -497,6 +500,7 @@ extern double ArgusFetchAvgDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchMinDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchMaxDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDuration (struct ArgusRecordStruct *ns);
+extern double ArgusFetchTotalDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchuSecDuration (struct ArgusRecordStruct *ns);
 extern double ArgusFetchSrcMac (struct ArgusRecordStruct *ns);
 extern double ArgusFetchDstMac (struct ArgusRecordStruct *ns);
