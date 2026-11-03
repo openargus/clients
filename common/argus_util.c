@@ -13986,8 +13986,6 @@ ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
          struct ArgusMetricStruct *metric = (struct ArgusMetricStruct *)argus->dsrs[ARGUS_METRIC_INDEX];
          struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
          struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX];
-         struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
-
          int type, src_count = 0, dst_count = 0;
 
          if (metric == NULL) {
@@ -13998,81 +13996,9 @@ ArgusPrintDirection (struct ArgusParserStruct *parser, char *buf, struct ArgusRe
 
          } else {
             if (strcmp("%d", format) == 0)  {
-               int dFactor = 1;
-               int dValue  = 1;
-
-               if (local != NULL) {
-                  if (local->sloc >= local->dloc)
-                     dFactor = 1;
-                  if (local->sloc < local->dloc)
-                     dFactor = -1;
-               }
-
-               if (flow != NULL) {
-                  switch (flow->hdr.subtype & 0x3F) {
-                     case ARGUS_FLOW_CLASSIC5TUPLE: {
-                        switch (type = (flow->hdr.argus_dsrvl8.qual & 0x1F)) {
-                           case ARGUS_TYPE_IPV4:
-                              switch (flow->ip_flow.ip_p) {
-                                 case IPPROTO_TCP: {
-                                    if (net != NULL) {
-                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
-                                          dFactor = 0;
-                                       }
-                                       if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
-                                          if (flow->hdr.subtype & ARGUS_REVERSE) {
-                                             dFactor = -1;
-                                          } else {
-                                             dFactor =  1;
-                                          }
-                                       }
-                                    }
-                                 }
-                                 break;
-                              }
-                              break;  
-
-                           case ARGUS_TYPE_IPV6:
-                              switch (flow->ipv6_flow.ip_p) {
-                                 case IPPROTO_TCP: {
-                                    if (net != NULL) {
-                                       struct ArgusTCPObject *tcp = (struct ArgusTCPObject *)&net->net_union.tcp;
-                                       if (!((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT))) {
-                                          dFactor = 0;
-                                       } else {
-                                          if ((tcp->status & ARGUS_SAW_SYN) || (tcp->status & ARGUS_SAW_SYN_SENT)) {
-                                             if (flow->hdr.subtype & ARGUS_REVERSE) {
-                                                dFactor = -1;
-                                             } else {
-                                                dFactor =  1;
-                                             }
-                                          }
-                                       }
-                                    }
-                                 }
-                                 break;
-                              }
-                              break;  
-                        } 
-                        break;
-                     }
-                  }
-               }
-/*            
-   2 is for both directions
-   3 payloads in both directions
-*/            
-               if (((dst_count = metric->dst.pkts) > 0) &&
-                   ((src_count = metric->src.pkts) > 0)) {
-                  dValue = 2;
-                  if ((ArgusFetchSrcAppByteCount(argus) > 0) &&
-                      (ArgusFetchDstAppByteCount(argus) > 0)) {
-                     dValue = 3;
-                  }
-               }
-
-               sprintf (buf, "%*d ", len, (dFactor * dValue));
+               double ndirValue = ArgusFetchNdir(argus);
+               int dValue = (int) ndirValue;
+               sprintf (buf, "%*d ", len, dValue);
                
             } else {
                char dirStr[16];
