@@ -48,8 +48,8 @@ extern "C" {
 #include <argus/cons_out.h>
 #include <argus/cflowd.h>
 
-#define ARGUS_MAX_PRINT_ALG     	257
-#define MAX_PRINT_ALG_TYPES     	257
+#define ARGUS_MAX_PRINT_ALG     	259
+#define MAX_PRINT_ALG_TYPES     	259
 
 #define ARGUS_PTYPE_INT         0
 #define ARGUS_PTYPE_UINT        1
@@ -470,6 +470,7 @@ void ArgusPrintCause (struct ArgusParserStruct *, char *, struct ArgusRecordStru
 void ArgusPrintStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintLastDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintCreateDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintTotalDuration (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcLastDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstStartDate (struct ArgusParserStruct *, char *, struct ArgusRecordStruct *, int);
@@ -746,6 +747,7 @@ void ArgusPrintCauseLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintStartDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintLastDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintCreateDateLabel (struct ArgusParserStruct *, char *, int);
+void ArgusPrintTotalDurationLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcStartDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintSrcLastDateLabel (struct ArgusParserStruct *, char *, int);
 void ArgusPrintDstStartDateLabel (struct ArgusParserStruct *, char *, int);
@@ -1534,6 +1536,8 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
    { "dsrs", "", 32 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTDSRS, ArgusPrintDsrs, ArgusPrintDsrsLabel, "varchar(128)", 0},
 #define ARGUSPRINTCREATEDATE		256
    { "ctime", "%T.%f", 12 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTCREATEDATE, ArgusPrintCreateDate, ArgusPrintCreateDateLabel, "double(18,6) unsigned not null", 0},
+#define ARGUSPRINTTOTALDUR		257
+   { "tdur", "%f", 10 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTTOTALDUR, ArgusPrintTotalDuration, ArgusPrintTotalDurationLabel, "double(18,6) not null", 0},
 };
 
 
@@ -2015,6 +2019,8 @@ void ArgusInputFromFile(struct ArgusInput *input, struct ArgusFileInput *afi);
 #define ARGUSPRINTSRCENCAPSBUFFER	253
 #define ARGUSPRINTDSTENCAPSBUFFER	254
 #define ARGUSPRINTDSRS			255
+#define ARGUSPRINTCREATEDATE		256
+#define ARGUSPRINTTOTALDUR		257
 
 
 extern struct ArgusPrintFieldStruct RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES];

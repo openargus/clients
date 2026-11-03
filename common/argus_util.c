@@ -7669,6 +7669,193 @@ RaGetFloatDuration (struct ArgusRecordStruct *argus)
    return (retn);
 }
 
+float
+RaGetFloatTotalDuration (struct ArgusRecordStruct *argus)
+{
+   float retn = 0;
+   int sec = 0, usec = 0;
+
+   switch (argus->hdr.type & 0xF0) {
+      case ARGUS_MAR: {
+         struct ArgusRecord *rec = (struct ArgusRecord *) argus->dsrs[0];
+         if (rec != NULL) {
+            sec  = rec->argus_mar.now.tv_sec  - rec->argus_mar.startime.tv_sec;
+            usec = rec->argus_mar.now.tv_usec - rec->argus_mar.startime.tv_usec;
+            if (usec < 0) {
+               sec--;
+               usec += 1000000;
+            }
+         }
+         break;
+      }
+
+      case ARGUS_EVENT:
+      case ARGUS_AFLOW: 
+      case ARGUS_NETFLOW:
+      case ARGUS_FAR: {
+         struct ArgusTimeObject *dtime = (void *)argus->dsrs[ARGUS_TIME_INDEX];
+         long long suTime = ArgusFetchStartuSecTime(argus);
+         long long cuTime = ArgusFetchCreateuSecTime(argus);
+
+         if (dtime != NULL) {
+            struct timeval stbuf, *st = &stbuf;
+            struct timeval ltbuf, *lt = &ltbuf;
+            struct timeval stimebuf = {0, 0}, *stime = &stimebuf;
+            struct timeval ltimebuf = {0, 0}, *ltime = &ltimebuf;
+
+            unsigned char subtype = dtime->hdr.subtype & (ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                                                          ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END);
+            if (subtype) {
+               switch (subtype) {
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                       ARGUS_TIME_DST_END: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.start.tv_sec;
+                     lt->tv_usec = dtime->dst.start.tv_usec;
+                     *stime = *RaMinTime(st, lt);
+
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.end.tv_sec;
+                     lt->tv_usec = dtime->dst.end.tv_usec;
+                     *ltime = *RaMaxTime(st, lt);
+                     break;
+                  }
+
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                       ARGUS_TIME_SRC_END: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.start.tv_sec;
+                     lt->tv_usec = dtime->dst.start.tv_usec;
+                     *stime = *RaMinTime(st, lt);
+
+                     st->tv_sec  = dtime->dst.start.tv_sec;
+                     st->tv_usec = dtime->dst.start.tv_usec;
+                     lt->tv_sec  = dtime->src.end.tv_sec;
+                     lt->tv_usec = dtime->src.end.tv_usec;
+                     *ltime = *RaMaxTime(st, lt);
+                  }
+
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START |
+                       ARGUS_TIME_SRC_END   | ARGUS_TIME_DST_END: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.start.tv_sec;
+                     lt->tv_usec = dtime->dst.start.tv_usec;
+                     *stime = *RaMinTime(st, lt);
+
+                     st->tv_sec  = dtime->src.end.tv_sec;
+                     st->tv_usec = dtime->src.end.tv_usec;
+                     lt->tv_sec  = dtime->dst.end.tv_sec;
+                     lt->tv_usec = dtime->dst.end.tv_usec;
+                     *ltime = *RaMaxTime(st, lt);
+                     break;
+                  }
+
+                  case ARGUS_TIME_SRC_START: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *st;
+                     break;
+                  }
+
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_SRC_END: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->src.end.tv_sec;
+                     lt->tv_usec = dtime->src.end.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *lt;
+                     break;
+                  }
+
+                  case ARGUS_TIME_DST_START: {
+                     st->tv_sec  = dtime->dst.start.tv_sec;
+                     st->tv_usec = dtime->dst.start.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *st;
+                     break;
+                  }
+
+                  case ARGUS_TIME_DST_START | ARGUS_TIME_DST_END: {
+                     st->tv_sec  = dtime->dst.start.tv_sec;
+                     st->tv_usec = dtime->dst.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.end.tv_sec;
+                     lt->tv_usec = dtime->dst.end.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *lt;
+                     break;
+                  }
+
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_DST_END: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.end.tv_sec;
+                     lt->tv_usec = dtime->dst.end.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *lt;
+                     break;
+                  }
+
+                  case ARGUS_TIME_DST_START | ARGUS_TIME_SRC_END: {
+                     st->tv_sec  = dtime->dst.start.tv_sec;
+                     st->tv_usec = dtime->dst.start.tv_usec;
+                     lt->tv_sec  = dtime->src.end.tv_sec;
+                     lt->tv_usec = dtime->src.end.tv_usec;
+
+                     *stime = *st;
+                     *ltime = *lt;
+                     break;
+                  }
+
+                  case ARGUS_TIME_SRC_START | ARGUS_TIME_DST_START: {
+                     st->tv_sec  = dtime->src.start.tv_sec;
+                     st->tv_usec = dtime->src.start.tv_usec;
+                     lt->tv_sec  = dtime->dst.start.tv_sec;
+                     lt->tv_usec = dtime->dst.start.tv_usec;
+                     *stime = *RaMinTime(st, lt);
+                     *ltime = *RaMaxTime(st, lt);
+                     break;
+                  }
+
+                  default:
+                     break;
+               }
+
+            } else {
+               st->tv_sec  = dtime->src.start.tv_sec;
+               st->tv_usec = dtime->src.start.tv_usec;
+               lt->tv_sec  = dtime->src.end.tv_sec;
+               lt->tv_usec = dtime->src.end.tv_usec;
+               stime = st;
+               ltime = lt;
+            }
+
+            if ((cuTime > 0) && (cuTime < suTime)) {
+               stime->tv_sec  = cuTime / 1000000;
+               stime->tv_usec = cuTime % 1000000;
+            }
+
+            if (stime && ltime) {
+               sec  = ltime->tv_sec  - stime->tv_sec;
+               usec = ltime->tv_usec - stime->tv_usec;
+            }
+         }
+         break;
+      }
+   }
+   retn  = (sec * 1.0) + usec/1000000.0;
+   return (retn);
+}
+
 
 float
 RaGetFloatSrcDuration (struct ArgusRecordStruct *argus)
@@ -8169,6 +8356,7 @@ void ArgusPrintSrcDSByte (struct ArgusParserStruct *parser, char *, struct Argus
 void ArgusPrintDstDSByte (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintWindow (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDuration (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
+void ArgusPrintTotalDuration (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintSrcDuration (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintDstDuration (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
 void ArgusPrintMean (struct ArgusParserStruct *parser, char *, struct ArgusRecordStruct *, int);
@@ -9049,6 +9237,43 @@ ArgusPrintDuration (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusPrintDuration (%p, %p, %p, %d)", parser, buf, argus, len);
+#endif
+}
+
+
+void
+ArgusPrintTotalDuration (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   float fdur = RaGetFloatTotalDuration (argus);
+   char durbuf[128];
+   char *format = NULL;
+      
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if ((format == NULL) || (strlen(format) == 0)) {
+      format = "%f";
+   }
+
+   bzero(durbuf, sizeof(durbuf));
+   sprintf (durbuf, "%0.*f", parser->pflag, fdur);
+
+   if (parser->ArgusPrintXml) {
+      sprintf (buf, " TotalDuration = \"%s\"", durbuf);
+   } else {
+      if (parser->RaFieldWidth != RA_FIXED_WIDTH) {
+         len = strlen(durbuf);
+      } else {
+         if (strlen(durbuf) > len) {
+            durbuf[len - 2] = '*';
+            durbuf[len - 1] = '\0';
+         }
+      }
+      sprintf (buf, "%*.*s ", len, len, durbuf);
+   }
+
+#ifdef ARGUSDEBUG
+   ArgusDebug (10, "ArgusPrintTotalDuration (%p, %p, %p, %d)", parser, buf, argus, len);
 #endif
 }
 
@@ -22947,6 +23172,12 @@ void
 ArgusPrintDurationLabel (struct ArgusParserStruct *parser, char *buf, int len)
 {
    sprintf (buf, "%*.*s ", len, len, "Dur");
+}
+
+void
+ArgusPrintTotalDurationLabel (struct ArgusParserStruct *parser, char *buf, int len)
+{
+   sprintf (buf, "%*.*s ", len, len, "TotDur");
 }
 
 void
