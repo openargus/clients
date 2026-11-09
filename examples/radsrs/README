@@ -1,0 +1,69 @@
+# radsrs
+
+`radsrs` is a diagnostic Argus client that emits a lossless, struct-oriented
+JSON dump of each matching record. It uses the standard client input options,
+including `-r` for files and `-S` for native Argus servers.
+
+## Output
+
+Each record is written as a pretty RFC 7464 JSON Text Sequence value: an ASCII
+record-separator byte (`0x1e`) followed by one JSON object. This framing is
+safe for indefinitely live `-S` streams and can be consumed by tools that
+support `application/json-seq`, such as `jq --seq`.
+
+Every object has three relevant sections:
+
+- `record` preserves the record header and complete wire record as Base64.
+- `dsrs` walks the original DSRs in wire order, preserving repeated, unknown,
+  and variable-length DSRs as Base64.
+- `canonical` displays the parser's `ArgusRecordStruct` slots using names and
+  fields from `include/argus_out.h`.
+
+The raw record and `dsrs` array are authoritative. Canonicalization can
+reorder, normalize, combine, or omit fields, so the `canonical` view is a
+readable supplement rather than a reconstruction source.
+
+## Fidelity
+
+For native V3/V5 Argus records read from a file or a native server, `radsrs`
+serializes `argus->input->ArgusOriginal` during `RaProcessRecord()`. The input
+buffer is reused for the next record, so no raw pointer is retained after that
+callback returns.
+
+Legacy V2 and imported formats can arrive as synthesized current-format
+records. They are emitted with a derived fidelity label instead of claiming
+source-byte preservation.
+
+## Examples
+
+```sh
+bin/radsrs -X -r capture.argus
+bin/radsrs -X -S argus-tcp://127.0.0.1:561
+bin/radsrs -X -r capture.argus | jq --seq .
+```
+
+## Python
+
+`radsrs.py` is the in-process Python counterpart. It uses `argusPython.Reader`
+and writes the same RFC 7464 byte sequence without launching `bin/radsrs`.
+Build and install the extension for the interpreter that will run the script:
+
+```sh
+PYTHON=python3 ./configure --with-pythonlib=yes
+make
+make -C pythonlib install-user
+python3 examples/radsrs/radsrs.py -r capture.argus
+python3 examples/radsrs/radsrs.py -S argus-tcp://127.0.0.1:561
+```
+
+For a source-tree-only run, use:
+
+```sh
+PYTHONPATH=pythonlib python3 examples/radsrs/radsrs.py -r capture.argus
+```
+
+The compiled extension is specific to its Python minor version. Do not build
+with one interpreter and invoke the script with another.
+
+See [the raw-record capture decision](../../docs/decisions/0001-radsrs-wire-record-capture.md)
+for the callback capture rationale and its source-code evidence.
