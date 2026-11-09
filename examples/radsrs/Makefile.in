@@ -1,0 +1,66 @@
+#
+# Argus-5.0 Client Software. Tools to read, analyze and manage Argus data.
+# Copyright (c) 2026 QoSient, LLC
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+datarootdir = @datarootdir@
+
+BINDIR = @bindir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+CC = @CC@
+CCOPT = @V_CCOPT@
+INCLS = -I. -I../../include -I../../common @V_INCLS_EXAMPLES@
+DEFS = @DEFS@
+COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @DNSLIB@ @ZLIB@ @LIBMAXMINDDB_LIBS@
+CFLAGS = $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
+
+INSTALL = @INSTALL@
+INSTALLBIN = ../@INSTALL_BIN@
+INSTALLLIB = ../@INSTALL_LIB@
+
+.c.o:
+	@rm -f $@
+	$(CC) $(CFLAGS) -c $(srcdir)/$*.c
+
+LIB = $(INSTALLLIB)/argus_parse.a $(INSTALLLIB)/argus_common.a $(INSTALLLIB)/argus_client.a
+SRC = radsrs.c
+PROGS = $(INSTALLBIN)/radsrs
+OBJ = $(SRC:.c=.o)
+CLEANFILES = $(OBJ) $(PROGS)
+
+all: $(PROGS)
+
+$(INSTALLBIN)/radsrs: radsrs.o $(LIB)
+	$(CC) $(CFLAGS) -o $@ radsrs.o $(LIB) $(COMPATLIB)
+
+install: force all
+	[ -d $(DESTDIR)$(BINDIR) ] || \
+		(mkdir -p $(DESTDIR)$(BINDIR); chmod 755 $(DESTDIR)$(BINDIR))
+	$(INSTALL) $(INSTALLBIN)/radsrs $(DESTDIR)$(BINDIR)
+
+uninstall: force all
+	rm -f $(DESTDIR)$(BINDIR)/radsrs
+
+.PHONY: clean mostlyclean distclean realclean clobber
+
+clean:
+	rm -f $(CLEANFILES)
+
+mostlyclean: clean
+
+clobber realclean distclean:
+	rm -f $(CLEANFILES) Makefile
+
+force: /tmp
+
+depend: force
+	../../bin/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
