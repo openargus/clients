@@ -16,6 +16,7 @@ bin/racount usr/bin/
 bin/radark usr/bin/
 bin/radecode usr/bin/
 bin/radump usr/bin/
+bin/radsrs usr/bin/
 bin/raevent usr/bin/
 bin/rafilteraddr usr/bin/
 bin/ragraph usr/bin/

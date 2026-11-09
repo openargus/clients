@@ -41,18 +41,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             bison flex zlib1g-dev libreadline-dev libncurses-dev \
-            libmaxminddb-dev libsasl2-dev uuid-dev default-libmysqlclient-dev
+            libmaxminddb-dev libsasl2-dev uuid-dev default-libmysqlclient-dev \
+            python3-dev python3-numpy python3-setuptools swig
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install zlib readline libmaxminddb mysql-client
+          brew install zlib readline libmaxminddb mysql-client python swig
+          python3 -m pip install numpy setuptools
 
       - name: Configure
-        run: ./configure
+        run: ./configure --with-pythonlib=yes
 
       - name: Build
         run: make -j4
+
+      - name: Run radsrs regression
+        run: sh examples/radsrs/test_radsrs.sh
+
+      - name: Run pythonlib regression
+        run: make -C pythonlib test
 
   fuzz-regression:
     name: Fuzz corpus regression
@@ -107,4 +115,3 @@ jobs:
 
       - name: Run security-review regression tests
         run: sh security-review/regression-tests/run_all.sh
-

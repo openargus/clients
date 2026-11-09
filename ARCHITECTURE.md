@@ -445,6 +445,7 @@ real capture data (e.g. `ra`/`radump`/`radns` against a known-good `.argus` file
 - [../ARCHITECTURE.md](../ARCHITECTURE.md) - Daemon architecture
 - [INSTALL](INSTALL) - Build instructions
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guidelines
+- [docs/decisions/0001-radsrs-wire-record-capture.md](docs/decisions/0001-radsrs-wire-record-capture.md) - raw record capture contract for radsrs
 
 ---
 

@@ -132,6 +132,9 @@ extern "C" {
 #define ARGUS_READINGBLOCK	4
 #define ARGUS_READINGDATAGRAM	8
 
+/* ArgusReadConnection() received an explicit negative filter response. */
+#define ARGUS_READ_CONNECTION_FILTER_REJECTED -2
+
 
 #define TSEQ_HASHSIZE		0x10000
 #define HASHNAMESIZE		65536

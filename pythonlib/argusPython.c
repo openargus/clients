@@ -45,6 +45,7 @@
 #include <argus_threads.h>
 
 #include "argusPython.h"
+#include "argusPython_reader.h"
 
 void RaArgusInputComplete (struct ArgusInput *input) { return; }
 void RaParseComplete (int sig) { }
@@ -94,29 +95,12 @@ unsigned int ArgusIdType = 0;
 
 extern struct ArgusParserStruct *ArgusParser;
 
-static struct PyModuleDef argusPythonmodule = {
-    PyModuleDef_HEAD_INIT,
-    "argusPython",   /* name of module */
-};
-
 typedef char *(*func_ptr_t)(void);
 
-PyMODINIT_FUNC
-PyInit_argusPython(void) {
-   PyObject *m = PyModule_Create(&argusPythonmodule);
-   struct ArgusParserStruct *parser = NULL;
-   
-   if ((parser = ArgusParser) == NULL) {
-      if ((ArgusParser = ArgusNewParser("argusPython")) == NULL)
-         ArgusLog (LOG_ERR, "ArgusNewParser failed %s", strerror(errno));
-      parser = ArgusParser; 
-      ArgusClientInit (parser);
-   }
-
-   if (PyArray_API == NULL) {
-      import_array(); 
-   }
-   return m;
+static int
+ArgusPythonLegacyParserAvailable(void)
+{
+   return !ArgusPythonReaderIsActive();
 }
 
 char *RaConvertDaemonModes[RASCII_MAXMODES] = {
@@ -128,6 +112,8 @@ argusInit(void) {
    struct ArgusParserStruct *parser = NULL;
    int retn = 0;
 
+   if (!ArgusPythonLegacyParserAvailable())
+      return -1;
    if ((parser = ArgusParser) == NULL) {
       if ((ArgusParser = ArgusNewParser("argusPython")) == NULL)
          ArgusLog (LOG_ERR, "ArgusNewParser failed %s", strerror(errno));
@@ -190,6 +176,9 @@ void RaProcessThisRecord (struct ArgusParserStruct *, struct ArgusRecordStruct *
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *ns)
 {
+   if (ArgusPythonReaderProcessRecord(parser, ns))
+      return;
+
    {
       double nowTime = ArgusFetchStartTime(ns);
       if (parser->ArgusLastRecordTime == 0) {
@@ -1064,6 +1053,8 @@ setArgusSchema (char *str)
 {
    int retn = -1;
 
+   if (!ArgusPythonLegacyParserAvailable())
+      return -1;
    if (str != NULL) {
       RaConvertParseTitleString(str);
       retn = 1;
@@ -1086,6 +1077,8 @@ readArgusData (char *optarg)
    int retn = 1;
    char *ptr, *eptr;
 
+   if (!ArgusPythonLegacyParserAvailable())
+      return -1;
    if ((parser = ArgusParser) != NULL) {
 #if defined(ARGUS_MYSQL)
       if (!(strncmp ("mysql:", optarg, 6))) {
@@ -1161,6 +1154,8 @@ setArgusBaseline (char *optarg)
    int retn = 1;
    char *ptr, *eptr;
 
+   if (!ArgusPythonLegacyParserAvailable())
+      return -1;
    if ((parser = ArgusParser) != NULL) {
 #if defined(ARGUS_MYSQL)
       if (!(strncmp ("mysql:", optarg, 6))) {
@@ -1435,6 +1430,12 @@ argus_critic (PyObject *y_true, PyObject *y_pred)
    NpyIter_IterNextFunc *iternext;
    NpyIter *iter;
 
+   if (!ArgusPythonLegacyParserAvailable()) {
+      PyErr_SetString(PyExc_RuntimeError,
+                      "legacy parser APIs cannot run while Reader.run() is active");
+      return NULL;
+   }
+
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "argus_critic(%p, %p) called\n", y_true, y_pred);
 #endif
@@ -1617,6 +1618,12 @@ argus_match (PyObject *y_true)
    PyArrayObject *arrays[2];  // holds input and results array 
    PyObject *output = NULL;          // holds output array 
    double *out = NULL;
+
+   if (!ArgusPythonLegacyParserAvailable()) {
+      PyErr_SetString(PyExc_RuntimeError,
+                      "legacy parser APIs cannot run while Reader.run() is active");
+      return NULL;
+   }
 
 #ifdef ARGUSDEBUG
    ArgusDebug (1, "argus_match(%p): called\n", y_true);
@@ -5815,4 +5822,3 @@ ArgusCompareTCPRTT (struct ArgusRecordStruct *argus, struct ArgusRecordStruct *m
 #endif
    return retn;
 }
-

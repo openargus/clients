@@ -47,7 +47,7 @@ docdir = @datadir@/doc/argus-clients-3.0
 
 SHELL = /bin/sh
 
-DIRS = ./rabehave ./raconvert ./radecode ./radns ./radump ./raevent ./rafilter ./ragraph ./ragrep ./rahisto \
+DIRS = ./rabehave ./raconvert ./radecode ./radns ./radump ./radsrs ./raevent ./rafilter ./ragraph ./ragrep ./rahisto \
 	./ralabel ./ramatrix ./rapath ./rapolicy ./raports ./raqsort ./rarpwatch ./raservices ./rastrip \
 	./ratrace ./ratop ./ratimerange ./ratemplate @ARGUS_MYSQL@
 
@@ -72,6 +72,7 @@ raconvert: ../common
 radark: ../common
 radns: ../common
 radump: ../common
+radsrs: ../common
 raevent: ../common
 rafilter: ../common
 ragraph: ../common

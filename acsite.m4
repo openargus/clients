@@ -105,10 +105,11 @@ m4_define([AC_LBL_C_INIT],
             [AS_HELP_STRING([--with-perllib],[Compile perl libraries])],
             with_perllib="yes",
             with_perllib="no")
-    AC_ARG_WITH(pythonlib,
-            [AS_HELP_STRING([--with-pythonlib],[Compile python libraries])],
-            with_pythonlib="yes",
-            with_pythonlib="no")
+    AC_ARG_WITH([pythonlib],
+            [AS_HELP_STRING([--with-pythonlib@<:@=auto|yes|no@:>@],
+                            [Build the binary Argus Python extension @<:@default=auto@:>@])],
+            [with_pythonlib=$withval],
+            [with_pythonlib=auto])
     AC_ARG_WITH(pluribus,
             [AS_HELP_STRING([--with-pluribus],[Compile for pluribus])],
             with_pluribus="yes",

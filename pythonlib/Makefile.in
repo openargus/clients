@@ -20,9 +20,11 @@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
-pythonextlib = @PYTHON_EXT_LIB@
-PYTHON = python3
-PYTHON_CFLAGS = $(shell $(PYTHON)-config --cflags)
+PYTHON ?= @PYTHON@
+PYTHON_EXT_SUFFIX = $(shell $(PYTHON)-config --extension-suffix)
+PYTHON_INCLUDES = $(shell $(PYTHON)-config --includes) $(shell $(PYTHON) -c 'import numpy; print("-I" + numpy.get_include())')
+PYTHON_SITE_PACKAGES ?= $(shell $(PYTHON) -c 'import sysconfig; print(sysconfig.get_path("platlib"))')
+PYTHON_USER_SITE_PACKAGES = $(shell $(PYTHON) -m site --user-site)
 
 # Pathname of directory to install the system binaries
 SBINDIR = @sbindir@
@@ -39,9 +41,9 @@ VPATH = @srcdir@
 
 CC = @CC@
 CCOPT = @V_CCOPT@
-INCLS = -I. -I../include -I../common @V_INCLS_EXAMPLES@ @MYSQL_INCLS@
-DEFS = @DEFS@
-COMPATLIB = @COMPATLIB@ @LIB_SASL@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_PCRE@ @V_FTDEP@ @ZLIB@ @WRAPLIBS@
+INCLS = -I. -I../include -I../common @V_INCLS@ @MYSQL_INCLS@
+DEFS = @DEFS@ -DSYSCONFDIR=\"@sysconfdir@\" -DSHAREDSTATEDIR=\"@sharedstatedir@\"
+COMPATLIB = @V_PCRE@ @COMPATLIB@ @LIB_SASL@ @LIB_XDR@ @LIBS@ @V_THREADS@ @V_GEOIPDEP@ @V_FTDEP@ @ZLIB@ @DNSLIB@ @LIBMAXMINDDB_LIBS@
 
 MYSQLLIB = @MYSQL_LDFLAGS@ 
 
@@ -49,29 +51,46 @@ MYSQLLIB = @MYSQL_LDFLAGS@
 CFLAGS = -fPIC $(CCOPT) $(INCLS) $(DEFS) $(EXTRA_CFLAGS)
 INSTALL = /usr/bin/install -c
         
-.PHONY: TOP all depend
-        
-all: TOP
-SRC = argusPython.c
-        
-TOP: _argusPython.cpython-38-darwin.so
+.PHONY: TOP all depend install install-user uninstall uninstall-user test
 
-_argusPython.cpython-38-darwin.so:  swig.stamp
+all: TOP
+SRC = argusPython.c argusPython_reader.c
+EXTENSION = _argusPython$(PYTHON_EXT_SUFFIX)
+
+TOP: $(EXTENSION)
+
+$(EXTENSION): swig.stamp
 
 # multiple targets (left side of the colon) seems to confuse parallel make.
 # create intermediate file swig.stamp instead.
 argusPython_wrap.c: swig.stamp
-qosient/XS/util.pm: swig.stamp
-swig.stamp: argusPython.i argusPython.c setup.py
+swig.stamp: argusPython.i argusPython.c argusPython_reader.c argusPython_reader.h setup.py
 	swig -python argusPython.i
-	python3 setup.py build_ext --include-dirs=../include --library-dirs=../lib
+	# setup.py invokes its own compiler, so forward configure's compiler and linker flags.
+	CPPFLAGS="$(CPPFLAGS) $(INCLS)" ARGUS_PYTHON_LINK_ARGS="$(COMPATLIB) $(MYSQLLIB)" $(PYTHON) setup.py build_ext --inplace
 	touch swig.stamp
 
-install: _argusPython.cpython-38-darwin.so
-	python3 -m pip install .
+install: $(EXTENSION)
+	[ -d "$(DESTDIR)$(PYTHON_SITE_PACKAGES)" ] || \
+		(mkdir -p "$(DESTDIR)$(PYTHON_SITE_PACKAGES)"; chmod 755 "$(DESTDIR)$(PYTHON_SITE_PACKAGES)")
+	$(INSTALL) -m 0644 argusPython.py "$(DESTDIR)$(PYTHON_SITE_PACKAGES)/argusPython.py"
+	$(INSTALL) -m 0755 $(EXTENSION) "$(DESTDIR)$(PYTHON_SITE_PACKAGES)/$(EXTENSION)"
 
-uninstall: all
-	python3 -m pip uninstall argusPython
+install-user:
+	$(MAKE) install PYTHON_SITE_PACKAGES="$(PYTHON_USER_SITE_PACKAGES)"
+
+uninstall:
+	rm -f "$(DESTDIR)$(PYTHON_SITE_PACKAGES)/argusPython.py"
+	rm -f "$(DESTDIR)$(PYTHON_SITE_PACKAGES)/$(EXTENSION)"
+
+uninstall-user:
+	$(MAKE) uninstall PYTHON_SITE_PACKAGES="$(PYTHON_USER_SITE_PACKAGES)"
+
+test:
+	$(MAKE) -C ../common
+	$(MAKE) -C ../examples/radsrs
+	$(MAKE) $(EXTENSION)
+	PYTHONPATH=. $(PYTHON) test/test_reader.py
 
 distclean: clean
 	rm -f Makefile
@@ -80,5 +99,4 @@ clean:
 	rm -f *.o *.so argusPython.py argusPython_wrap.c swig.stamp
 
 depend: $(SRC)
-	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_CFLAGS) $(SRC)
-
+	../bin/mkdep -c $(CC) $(CFLAGS) $(PYTHON_INCLUDES) $(SRC)

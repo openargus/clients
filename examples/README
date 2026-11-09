@@ -73,6 +73,7 @@ data.  The types of functions that these examples provide include:
       ratimerange - argus data file time span
 
    development
+      radsrs       - lossless, struct-oriented JSON dump of native Argus records.
       ratemplate  - ra client development template when using the argus clients library.
 
 Problems, bugs, questions, desirable enhancements, source code
@@ -100,4 +101,3 @@ not be considered a valid bug report.
 
 Carter Bullard
 carter@qosient.com
-

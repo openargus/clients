@@ -32678,14 +32678,15 @@ ArgusReadConnection (struct ArgusParserStruct *parser, struct ArgusInput *input,
                                     goto out;
                                  }
 
-                                 if (strncmp((char *)buf, "OK", 2)) {
-                                    if (!strncmp((char *)buf, "SY", 2))
-                                       ArgusLog (LOG_ALERT, "remote filter syntax error.");
-                                    else if (!strncmp((char *)buf, "TI", 2))
-                                       ArgusLog (LOG_ALERT, "remote filter compiler timed out.");
-                                    close(input->fd);
-                                    input->fd = -1;
-                                    goto out;
+                                  if (strncmp((char *)buf, "OK", 2)) {
+                                     if (!strncmp((char *)buf, "SY", 2))
+                                        ArgusLog (LOG_ALERT, "remote filter syntax error.");
+                                     else if (!strncmp((char *)buf, "TI", 2))
+                                        ArgusLog (LOG_ALERT, "remote filter compiler timed out.");
+                                     retn = ARGUS_READ_CONNECTION_FILTER_REJECTED;
+                                     close(input->fd);
+                                     input->fd = -1;
+                                     goto out;
                                  }
                               }
                            }

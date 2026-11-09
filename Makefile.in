@@ -59,7 +59,7 @@ CLEANDIRS = @DIRS@ ./pkg ./perllib
 
 DISTFILES = AUTHORS CHANGES CREDITS ChangeLog INSTALL MANIFEST Makefile.in \
 	include lib man support aclocal.m4 acsite.m4 config configure configure.ac \
-	.threads bin clients examples common debian pkg perllib pythonlib README.rst VERSION 
+	.threads bin clients examples common debian docs pkg perllib pythonlib README.rst VERSION
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
@@ -260,7 +260,7 @@ clean: force
 	rm -f config.log
 	rm -f pkg/osx/*.pkg
 	@for i in $(CLEANDIRS) ; do \
-		if [ -d $$i ] ; then \
+		if [ -f $$i/Makefile ] ; then \
 		(cd $$i > /dev/null; $(MAKE) clean ); \
 		fi; \
 	done
@@ -275,7 +275,7 @@ distclean: force
 	rm -f Makefile
 	rm -f *~
 	@for i in $(CLEANDIRS) ; do \
-		if [ -d $$i ] ; then \
+		if [ -f $$i/Makefile ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
 	done
@@ -293,7 +293,7 @@ clobber realclean: force
 	rm -rf autom4te.cache
 
 	@for i in $(CLEANDIRS) ; do \
-		if [ -d $$i ] ; then \
+		if [ -f $$i/Makefile ] ; then \
 		(cd $$i > /dev/null; $(MAKE) distclean); \
 		fi; \
 	done

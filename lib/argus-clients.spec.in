@@ -167,6 +167,7 @@ distribution.
 %{_bindir}/raconvert
 %{_bindir}/radecode
 %{_bindir}/radump
+%{_bindir}/radsrs
 %{_bindir}/raevent
 %{_bindir}/rafilteraddr
 %{_bindir}/ragrep
@@ -399,4 +400,3 @@ Copyright 2024 QoSient, LLC
 %changelog
 * Tue May 02 2017 eric@qosient.com
 - rebuilt
-

@@ -442,10 +442,6 @@ if test "$with_perllib" != no; then
    DIRS="$DIRS ./perllib"
 fi    
 
-if test "$with_pythonlib" != no; then
-   DIRS="$DIRS ./pythonlib"
-fi    
-
 if test "$with_pluribus" != no; then
    AC_DEFINE([ARGUS_PLURIBUS], [], [Building for pluribus])
 fi
@@ -503,51 +499,28 @@ CPPFLAGS="${saved_CPPFLAGS}"
 # Python stuff
 #
 
-case "$target_os" in 
-darwin*)
-        am_cv_python_inc="/Library/Frameworks/Python.framework/Versions/"$PYTHON_VERSION"/include/python"$PYTHON_VERSION
-        ;;
-*) 
-        am_cv_python_inc="/usr/include/python"$PYTHON_VERSION
-        ;;
-esac
- 
-V_PYTHON_INCLS="-I"$am_cv_python_inc
-CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
-AC_CHECK_HEADERS(Python.h)
-CPPFLAGS="${saved_CPPFLAGS}"
-
-AC_ARG_ENABLE(python,
-   AS_HELP_STRING([--disable-python], [Disable scripts that depends on python]),
-   [case "${enableval}" in
-          yes) HAVE_PYTHON=yes ;;
-          no)  HAVE_PYTHON=no ;;
-          *) AC_MSG_ERROR([bad value ${enableval} for --enable-python]) ;;
-   esac],[HAVE_PYTHON=yes])
-
-if test "x$HAVE_PYTHON" = "xyes" ; then
+HAVE_PYTHONLIB=no
+if test "x$with_pythonlib" != "xno"; then
    AM_PATH_PYTHON([3],, [:])
-   AM_CHECK_PYMOD(numpy,,[HAVE_PYTHON_NUMPY=yes],[HAVE_PYTHON_NUMPY=no])
+   if test "x$PYTHON" != "x:" && test "x$PYTHON" != "x"; then
+      V_PYTHON_INCLS=`$PYTHON -c 'import sysconfig; print("-I" + sysconfig.get_path("include"))'`
+      PYTHON_NUMPY_INCLS=`$PYTHON -c 'import numpy; print("-I" + numpy.get_include())' 2>/dev/null`
+      saved_CPPFLAGS=$CPPFLAGS
+      CPPFLAGS="${saved_CPPFLAGS} ${V_PYTHON_INCLS}"
+      AC_CHECK_HEADERS([Python.h], [HAVE_PYTHON_HEADERS=yes], [HAVE_PYTHON_HEADERS=no])
+      CPPFLAGS=$saved_CPPFLAGS
+      if test "x$HAVE_PYTHON_HEADERS" = "xyes" && test "x$PYTHON_NUMPY_INCLS" != "x"; then
+         AC_CHECK_PROG([HAVE_SWIG], [swig], [yes], [no])
+         if test "x$HAVE_SWIG" = "xyes"; then
+            HAVE_PYTHONLIB=yes
+            DIRS="$DIRS ./pythonlib"
+         fi
+      fi
+   fi
 fi
 
-AC_CHECK_PROG([HAVE_SWIG], [swig], ["yes"], ["no"])
-if test "x$HAVE_SWIG" = "xyes" ; then
-  case "$target_os" in
-  darwin*)
-        ;;
-  *)
-if test "x$HAVE_PYTHON_NUMPY" = "xyes"; then
-   if test "x$with_pythonlib" = "xyes"; then
-        DIRS="$DIRS ./pythonlib"
-   fi
-fi
-if test "x$ac_cv_header_EXTERN_h" = "xyes"; then
-   if test "x$with_perllib" = "xyes"; then
-        DIRS="$DIRS ./perllib"
-   fi
-fi
-        ;;
-  esac
+if test "x$with_pythonlib" = "xyes" && test "x$HAVE_PYTHONLIB" != "xyes"; then
+   AC_MSG_ERROR([--with-pythonlib=yes requires Python development headers, NumPy, and SWIG])
 fi
 
 AC_SUBST(PACKAGE_VERSION)
@@ -559,6 +532,7 @@ AC_SUBST(V_CCOPT)
 AC_SUBST(V_INCLS)
 AC_SUBST(V_INCLS_EXAMPLES)
 AC_SUBST(V_PYTHON_INCLS)
+AC_SUBST(PYTHON_NUMPY_INCLS)
 AC_SUBST(V_RANLIB)
 AC_SUBST(V_YACC)
 AC_SUBST(V_LEX)
@@ -598,7 +572,7 @@ AS_IF([test "$with_perllib" != no],
    ])]
 )
 
-AS_IF([test "$with_pythonlib" != no],
+AS_IF([test "$HAVE_PYTHONLIB" = yes],
    [AC_CONFIG_FILES([
       ./pythonlib/Makefile
    ])]
@@ -613,6 +587,7 @@ AS_IF([test "$with_examples" != no],
       ./examples/radecode/Makefile
       ./examples/radns/Makefile
       ./examples/radump/Makefile
+      ./examples/radsrs/Makefile
       ./examples/raevent/Makefile
       ./examples/rafilter/Makefile
       ./examples/ragraph/Makefile
