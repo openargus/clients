@@ -13214,9 +13214,20 @@ ArgusFetchRetrans (struct ArgusRecordStruct *ns)
       } else {
          struct ArgusNetworkStruct *net = (void *) ns->dsrs[ARGUS_NETWORK_INDEX];
 
-         if ((net != NULL) && (net->hdr.subtype == ARGUS_UDT_FLOW)) {
-            struct ArgusUDTObject *udt = (void *)&net->net_union.udt;
-            retn = (udt->src.retrans) * 1.0;
+         if (net != NULL) {
+            switch (net->hdr.subtype) {
+               case ARGUS_TCP_PERF: {
+                  struct ArgusTCPObject *tcp = (void *)&net->net_union.tcp;
+                  retn = (tcp->src.retrans + tcp->dst.retrans) * 1.0;
+                  break;
+               }
+
+               case ARGUS_UDT_FLOW: {
+                  struct ArgusUDTObject *udt = (void *)&net->net_union.udt;
+                  retn = (udt->src.retrans) * 1.0;
+                  break;
+               }
+            }
          }
       }
    }
@@ -13235,10 +13246,21 @@ ArgusFetchSrcRetrans (struct ArgusRecordStruct *ns)
       } else {
          struct ArgusNetworkStruct *net = (void *) ns->dsrs[ARGUS_NETWORK_INDEX];
 
-         if ((net != NULL) && (net->hdr.subtype == ARGUS_UDT_FLOW)) {
-            struct ArgusUDTObject *udt = (void *)&net->net_union.udt;
-            retn = (udt->src.retrans) * 1.0;
-         }                    
+         if (net != NULL) {
+            switch (net->hdr.subtype) {
+               case ARGUS_TCP_PERF: {
+                  struct ArgusTCPObject *tcp = (void *)&net->net_union.tcp;
+                  retn = tcp->src.retrans * 1.0;
+                  break;
+               }
+
+               case ARGUS_UDT_FLOW: {
+                  struct ArgusUDTObject *udt = (void *)&net->net_union.udt;
+                  retn = udt->src.retrans * 1.0;
+                  break;
+               }
+            }
+         }
       }
    }
 
@@ -13256,8 +13278,10 @@ ArgusFetchDstRetrans (struct ArgusRecordStruct *ns)
       } else {
          struct ArgusNetworkStruct *net = (void *) ns->dsrs[ARGUS_NETWORK_INDEX];
 
-         if ((net != NULL) && (net->hdr.subtype == ARGUS_UDT_FLOW)) {
-         }                    
+         if ((net != NULL) && (net->hdr.subtype == ARGUS_TCP_PERF)) {
+            struct ArgusTCPObject *tcp = (void *)&net->net_union.tcp;
+            retn = tcp->dst.retrans * 1.0;
+         }
       }
    }
 
