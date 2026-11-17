@@ -27644,18 +27644,28 @@ static char ArgusStatusBuf[32];
 char *
 ArgusGetManStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
+   char *format = NULL; 
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
    bzero (ArgusStatusBuf, 32);
 
-   switch (argus->hdr.cause & 0xF0) {
-      case ARGUS_START:         sprintf (ArgusStatusBuf, "STA"); break;
-      case ARGUS_STATUS:        sprintf (ArgusStatusBuf, "CON"); break;
-      case ARGUS_STOP:          sprintf (ArgusStatusBuf, "STP"); break;
-      case ARGUS_SHUTDOWN:      sprintf (ArgusStatusBuf, "SHT"); break;
-      case ARGUS_ERROR: {
-         switch (argus->hdr.cause & 0x0F) {
-            case ARGUS_ACCESSDENIED:  sprintf (ArgusStatusBuf, "ADN"); break;
-            case ARGUS_MAXLISTENEXCD: sprintf (ArgusStatusBuf, "MAX"); break;
-            default:                  sprintf (ArgusStatusBuf, "ERR"); break;
+   if (strcmp("%s", format) != 0) {
+      sprintf (ArgusStatusBuf, format, (argus->hdr.cause >> 4));
+   } else {
+
+      switch (argus->hdr.cause & 0xF0) {
+         case ARGUS_START:         sprintf (ArgusStatusBuf, "STA"); break;
+         case ARGUS_STATUS:        sprintf (ArgusStatusBuf, "CON"); break;
+         case ARGUS_STOP:          sprintf (ArgusStatusBuf, "STP"); break;
+         case ARGUS_SHUTDOWN:      sprintf (ArgusStatusBuf, "SHT"); break;
+         case ARGUS_ERROR: {
+            switch (argus->hdr.cause & 0x0F) {
+               case ARGUS_ACCESSDENIED:  sprintf (ArgusStatusBuf, "ADN"); break;
+               case ARGUS_MAXLISTENEXCD: sprintf (ArgusStatusBuf, "MAX"); break;
+               default:                  sprintf (ArgusStatusBuf, "ERR"); break;
+            }
          }
       }
    }
@@ -27671,6 +27681,10 @@ ArgusGetTCPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
    struct ArgusNetworkStruct *net;
    unsigned int status = 0;
    unsigned char sflags = 0, dflags = 0;
+   char *format = NULL; 
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((net = (struct ArgusNetworkStruct *)argus->dsrs[ARGUS_NETWORK_INDEX]) != NULL) {
       switch (net->hdr.subtype) {
@@ -27686,79 +27700,94 @@ ArgusGetTCPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *a
       }
    }
    
-   *ArgusStatusBuf = '\0';
-
-   if (parser->zflag || parser->Zflag) {
-      if (parser->zflag) {
-         if (status & ARGUS_SAW_SYN)         strncat (ArgusStatusBuf, "s", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_SAW_SYN_SENT)    strncat (ArgusStatusBuf, "S", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_CON_ESTABLISHED) strncat (ArgusStatusBuf, "E", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_FIN)             strncat (ArgusStatusBuf, "f", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_FIN_ACK)         strncat (ArgusStatusBuf, "F", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_NORMAL_CLOSE)    strncat (ArgusStatusBuf, "C", (32 - strlen(ArgusStatusBuf) - 1));
-         if (status & ARGUS_RESET)           strncat (ArgusStatusBuf, "R", (32 - strlen(ArgusStatusBuf) - 1));
-
-      } else {
-         if (parser->Zflag) {
-            char SrcTCPFlagsStr[16], DstTCPFlagsStr[16], tmp[16];
-            int i, index;
-
-            bzero(SrcTCPFlagsStr, sizeof(SrcTCPFlagsStr));
-            bzero(DstTCPFlagsStr, sizeof(DstTCPFlagsStr));
-            bzero(tmp, sizeof(tmp));
-
-            for (i = 0, index = 1; i < 8; i++) {
-               if (sflags & index) {
-                  strncat (SrcTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(SrcTCPFlagsStr) - 1));
-               }
-               if (dflags & index) {
-                  strncat (DstTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(DstTCPFlagsStr) - 1));
-               }
-               index <<= 1;
-            }
-
-            if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
-               if ((strlen(SrcTCPFlagsStr) && (metric->src.pkts == 0)) ||
-                   (strlen(DstTCPFlagsStr) && (metric->dst.pkts == 0))) {
-                  bcopy(SrcTCPFlagsStr, tmp, sizeof(tmp));
-                  bcopy(DstTCPFlagsStr, SrcTCPFlagsStr, sizeof(tmp));
-                  bcopy(tmp, DstTCPFlagsStr, sizeof(tmp));
-               }
-            }
-
-            switch (parser->Zflag) {
-               case 'b':
-                  sprintf (ArgusStatusBuf, "%s_%s", SrcTCPFlagsStr, DstTCPFlagsStr);
-                  break;
-               case 's':
-                  sprintf (ArgusStatusBuf, "%s", SrcTCPFlagsStr);
-                  break;
-               case 'd':
-                  sprintf (ArgusStatusBuf, "%s", DstTCPFlagsStr);
-                  break;
-            }
-         }
-      }
-
-   } else {
+   if (strcmp("%s", format) != 0) {
+      bzero(ArgusStatusBuf, sizeof(ArgusStatusBuf));
       if (status) {
-         if (status & ARGUS_RESET)             sprintf (ArgusStatusBuf, "RST"); else
-         if (status & ARGUS_FIN)               sprintf (ArgusStatusBuf, "FIN"); else
-         if (status & ARGUS_FIN_ACK)           sprintf (ArgusStatusBuf, "FIN"); else
-         if (status & ARGUS_NORMAL_CLOSE)      sprintf (ArgusStatusBuf, "CLO"); else
-         if (argus->hdr.cause & ARGUS_TIMEOUT) sprintf (ArgusStatusBuf, "TIM"); else
-         if (status & ARGUS_CON_ESTABLISHED)   sprintf (ArgusStatusBuf, "CON"); else
-         if (status & ARGUS_SAW_SYN_SENT)      sprintf (ArgusStatusBuf, "ACC"); else
-         if (status & ARGUS_SAW_SYN)           sprintf (ArgusStatusBuf, "REQ"); else
-                                               sprintf (ArgusStatusBuf, "CON");
+         sprintf (ArgusStatusBuf, format, status);
       } else {
          if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
             if (metric->src.pkts && metric->dst.pkts)
-               sprintf (ArgusStatusBuf, "CON");
+               sprintf (ArgusStatusBuf, "3");
             else
-               sprintf (ArgusStatusBuf, "INT");
+               sprintf (ArgusStatusBuf, "1");
          } else
-            sprintf (ArgusStatusBuf, "INT");
+            sprintf (ArgusStatusBuf, "1");
+      }
+
+   } else {
+      *ArgusStatusBuf = '\0';
+      if (parser->zflag || parser->Zflag) {
+         if (parser->zflag) {
+            if (status & ARGUS_SAW_SYN)         strncat (ArgusStatusBuf, "s", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_SAW_SYN_SENT)    strncat (ArgusStatusBuf, "S", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_CON_ESTABLISHED) strncat (ArgusStatusBuf, "E", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_FIN)             strncat (ArgusStatusBuf, "f", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_FIN_ACK)         strncat (ArgusStatusBuf, "F", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_NORMAL_CLOSE)    strncat (ArgusStatusBuf, "C", (32 - strlen(ArgusStatusBuf) - 1));
+            if (status & ARGUS_RESET)           strncat (ArgusStatusBuf, "R", (32 - strlen(ArgusStatusBuf) - 1));
+
+         } else {
+            if (parser->Zflag) {
+               char SrcTCPFlagsStr[16], DstTCPFlagsStr[16], tmp[16];
+               int i, index;
+
+               bzero(SrcTCPFlagsStr, sizeof(SrcTCPFlagsStr));
+               bzero(DstTCPFlagsStr, sizeof(DstTCPFlagsStr));
+               bzero(tmp, sizeof(tmp));
+
+               for (i = 0, index = 1; i < 8; i++) {
+                  if (sflags & index) {
+                     strncat (SrcTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(SrcTCPFlagsStr) - 1));
+                  }
+                  if (dflags & index) {
+                     strncat (DstTCPFlagsStr, ArgusTCPFlags[i], (16 - strlen(DstTCPFlagsStr) - 1));
+                  }
+                  index <<= 1;
+               }
+
+               if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
+                  if ((strlen(SrcTCPFlagsStr) && (metric->src.pkts == 0)) ||
+                      (strlen(DstTCPFlagsStr) && (metric->dst.pkts == 0))) {
+                     bcopy(SrcTCPFlagsStr, tmp, sizeof(tmp));
+                     bcopy(DstTCPFlagsStr, SrcTCPFlagsStr, sizeof(tmp));
+                     bcopy(tmp, DstTCPFlagsStr, sizeof(tmp));
+                  }
+               }
+
+               switch (parser->Zflag) {
+                  case 'b':
+                     sprintf (ArgusStatusBuf, "%s_%s", SrcTCPFlagsStr, DstTCPFlagsStr);
+                     break;
+                  case 's':
+                     sprintf (ArgusStatusBuf, "%s", SrcTCPFlagsStr);
+                     break;
+                  case 'd':
+                     sprintf (ArgusStatusBuf, "%s", DstTCPFlagsStr);
+                     break;
+               }
+            }
+         }
+
+      } else {
+         if (status) {
+            if (status & ARGUS_RESET)             sprintf (ArgusStatusBuf, "RST"); else
+            if (status & ARGUS_FIN)               sprintf (ArgusStatusBuf, "FIN"); else
+            if (status & ARGUS_FIN_ACK)           sprintf (ArgusStatusBuf, "FIN"); else
+            if (status & ARGUS_NORMAL_CLOSE)      sprintf (ArgusStatusBuf, "CLO"); else
+            if (argus->hdr.cause & ARGUS_TIMEOUT) sprintf (ArgusStatusBuf, "TIM"); else
+            if (status & ARGUS_CON_ESTABLISHED)   sprintf (ArgusStatusBuf, "CON"); else
+            if (status & ARGUS_SAW_SYN_SENT)      sprintf (ArgusStatusBuf, "ACC"); else
+            if (status & ARGUS_SAW_SYN)           sprintf (ArgusStatusBuf, "REQ"); else
+                                                  sprintf (ArgusStatusBuf, "CON");
+         } else {
+            if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
+               if (metric->src.pkts && metric->dst.pkts)
+                  sprintf (ArgusStatusBuf, "CON");
+               else
+                  sprintf (ArgusStatusBuf, "INT");
+            } else
+               sprintf (ArgusStatusBuf, "INT");
+         }
       }
    }
    return (ArgusStatusBuf);
@@ -27775,113 +27804,122 @@ ArgusGetICMPv6Status (struct ArgusParserStruct *parser, struct ArgusRecordStruct
 {
    struct ArgusFlow *flow;
    char *retn = "UNK";
+   char *format = NULL; 
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    if ((flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX]) != NULL) {
       struct ArgusICMPv6Flow *icmp = (void *) &flow->icmpv6_flow;
+      int icmpstatus = 0;
 
-      if (icmp->type < ICMP6_INFOMSG_MASK) {
-         switch (icmp->type) {
-            case ICMP6_DST_UNREACH:
-
-               switch (icmp->code) {
-                  case ICMP6_DST_UNREACH_NOROUTE:
-                     retn = "URNR";
-                     break;
-                  case ICMP6_DST_UNREACH_ADMIN:
-                     retn = "URAD";
-                     break;
-                  case ICMP6_DST_UNREACH_BEYONDSCOPE:
-                     retn = "URBS";
-                     break;
-                  case ICMP6_DST_UNREACH_ADDR:
-                     retn = "URAR";
-                     break;
-                  case ICMP6_DST_UNREACH_NOPORT:
-                     retn = "URP";
-                     break;
-                  case ICMP6_DST_UNREACH_SRC_FAIL:
-                     retn = "URSF";
-                     break;
-                  case ICMP6_DST_UNREACH_REJECT_ROUTE:
-                     retn = "URRR";
-                     break;
-                  case ICMP6_DST_UNREACH_ERROR_SRC_ROUTE:
-                     retn = "URES";
-                     break;
-               }
-               break;
-            case ICMP6_PACKET_TOO_BIG:
-               retn = "PTB";
-               break;
-            case ICMP6_TIME_EXCEEDED:
-               switch (icmp->code) {
-                  case ICMP6_TIME_EXCEED_TRANSIT:
-                     retn = "TXT";
-                     break;
-                  case ICMP6_TIME_EXCEED_REASSEMBLY:
-                     retn = "TXR";
-                     break;
-               }
-               break;
-            case ICMP6_PARAM_PROB:
-               switch (icmp->code) {
-                  case ICMP6_PARAMPROB_HEADER:
-                     retn = "PPH";
-                     break;
-                  case ICMP6_PARAMPROB_NEXTHEADER:
-                     retn = "PPNH";
-                     break;
-                  case ICMP6_PARAMPROB_OPTION:
-                     retn = "PPO";
-                     break;
-               }
-               break;
-         }
-
+      if (strcmp("%s", format) != 0) {
+         icmpstatus = (icmp->type << 8) + icmp->code;
+         sprintf (ArgusStatusBuf, format, icmpstatus);
       } else {
-         switch (icmp->type) {
-            case ICMP6_ECHO_REQUEST:
-               retn = icmptypestr[8];
-               break;
-            case ICMP6_ECHO_REPLY:
-               retn = icmptypestr[0];
-               break;
-            case ICMP6_MEMBERSHIP_QUERY:
-               retn = icmptypestr[35];
-               break;
-            case ICMP6_MEMBERSHIP_REPORT:
-               retn = icmptypestr[32];
-               break;
-            case ICMP6_MEMBERSHIP_REPORT_V2:
-               retn = icmptypestr[32];
-               break;
-            case ND_ROUTER_SOLICIT:
-               retn = icmptypestr[41];
-               break;
-            case ND_ROUTER_ADVERT:
-               retn = icmptypestr[42];
-               break;
-            case ND_NEIGHBOR_SOLICIT:
-               retn = icmptypestr[43];
-               break;
-            case ND_NEIGHBOR_ADVERT:
-               retn = icmptypestr[44];
-               break;
-            case ND_REDIRECT:
-               retn = icmptypestr[5];
-               break;
+         if (icmp->type < ICMP6_INFOMSG_MASK) {
+            switch (icmp->type) {
+               case ICMP6_DST_UNREACH:
+                  switch (icmp->code) {
+                     case ICMP6_DST_UNREACH_NOROUTE:
+                        retn = "URNR";
+                        break;
+                     case ICMP6_DST_UNREACH_ADMIN:
+                        retn = "URAD";
+                        break;
+                     case ICMP6_DST_UNREACH_BEYONDSCOPE:
+                        retn = "URBS";
+                        break;
+                     case ICMP6_DST_UNREACH_ADDR:
+                        retn = "URAR";
+                        break;
+                     case ICMP6_DST_UNREACH_NOPORT:
+                        retn = "URP";
+                        break;
+                     case ICMP6_DST_UNREACH_SRC_FAIL:
+                        retn = "URSF";
+                        break;
+                     case ICMP6_DST_UNREACH_REJECT_ROUTE:
+                        retn = "URRR";
+                        break;
+                     case ICMP6_DST_UNREACH_ERROR_SRC_ROUTE:
+                        retn = "URES";
+                        break;
+                  }
+                  break;
+               case ICMP6_PACKET_TOO_BIG:
+                  retn = "PTB";
+                  break;
+               case ICMP6_TIME_EXCEEDED:
+                  switch (icmp->code) {
+                     case ICMP6_TIME_EXCEED_TRANSIT:
+                        retn = "TXT";
+                        break;
+                     case ICMP6_TIME_EXCEED_REASSEMBLY:
+                        retn = "TXR";
+                        break;
+                  }
+                  break;
+               case ICMP6_PARAM_PROB:
+                  switch (icmp->code) {
+                     case ICMP6_PARAMPROB_HEADER:
+                        retn = "PPH";
+                        break;
+                     case ICMP6_PARAMPROB_NEXTHEADER:
+                        retn = "PPNH";
+                        break;
+                     case ICMP6_PARAMPROB_OPTION:
+                        retn = "PPO";
+                        break;
+                  }
+                  break;
+            }
 
-            case ICMP6_MEMBERSHIP_REDUCTION:
-            case ICMP6_HOME_AGENT_ADDR_REQUEST:
-            case ICMP6_HOME_AGENT_ADDR_REPLY:
-            case ICMP6_MOBILE_PREFIX_SOL:
-            case ICMP6_MOBILE_PREFIX_ADV:
-            case ICMP6_CERT_PATH_SOL:
-            case ICMP6_CERT_PATH_ADV:
-            case ICMP6_EXPER_MOBILITY:
-            case ICMP6_MULTICAST_ROUTER_ADV:
-            case ICMP6_MULTICAST_ROUTER_SOL:
-               break;
+         } else {
+            switch (icmp->type) {
+               case ICMP6_ECHO_REQUEST:
+                  retn = icmptypestr[8];
+                  break;
+               case ICMP6_ECHO_REPLY:
+                  retn = icmptypestr[0];
+                  break;
+               case ICMP6_MEMBERSHIP_QUERY:
+                  retn = icmptypestr[35];
+                  break;
+               case ICMP6_MEMBERSHIP_REPORT:
+                  retn = icmptypestr[32];
+                  break;
+               case ICMP6_MEMBERSHIP_REPORT_V2:
+                  retn = icmptypestr[32];
+                  break;
+               case ND_ROUTER_SOLICIT:
+                  retn = icmptypestr[41];
+                  break;
+               case ND_ROUTER_ADVERT:
+                  retn = icmptypestr[42];
+                  break;
+               case ND_NEIGHBOR_SOLICIT:
+                  retn = icmptypestr[43];
+                  break;
+               case ND_NEIGHBOR_ADVERT:
+                  retn = icmptypestr[44];
+                  break;
+               case ND_REDIRECT:
+                  retn = icmptypestr[5];
+                  break;
+
+               case ICMP6_MEMBERSHIP_REDUCTION:
+               case ICMP6_HOME_AGENT_ADDR_REQUEST:
+               case ICMP6_HOME_AGENT_ADDR_REPLY:
+               case ICMP6_MOBILE_PREFIX_SOL:
+               case ICMP6_MOBILE_PREFIX_ADV:
+               case ICMP6_CERT_PATH_SOL:
+               case ICMP6_CERT_PATH_ADV:
+               case ICMP6_EXPER_MOBILITY:
+               case ICMP6_MULTICAST_ROUTER_ADV:
+               case ICMP6_MULTICAST_ROUTER_SOL:
+                  break;
+            }
          }
       }
    }
@@ -27895,6 +27933,11 @@ ArgusGetICMPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
    struct ArgusFlow *flow;
    char ArgusResponseString[256];
    char icmptype[32];
+   int icmpstatus = 0;
+   char *format = NULL; 
+
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
    bzero (ArgusResponseString, 256);
    bzero (icmptype, 32);
@@ -27920,6 +27963,7 @@ ArgusGetICMPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
          ra_icmp_code = icmpFlow->code;
       }
 
+      icmpstatus = (ra_icmp_type << 8) + ra_icmp_code;
       ra_icmp_data = icmpFlow->id;
       
       if (ra_icmp_type < (unsigned char) (ICMP_MAXTYPE + 1)) {
@@ -28132,7 +28176,11 @@ ArgusGetICMPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *
       }
    }
 
-   strncpy (ArgusStatusBuf, icmptype, 32);
+   if (strcmp("%s", format) != 0) {
+      sprintf (ArgusStatusBuf, format, icmpstatus);
+   } else {
+      strncpy (ArgusStatusBuf, icmptype, 32);
+   }
    return (ArgusStatusBuf);
 }
 
@@ -28141,8 +28189,21 @@ char *
 ArgusGetIPStatus (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
    struct ArgusMetricStruct *metric;
+   char *format = NULL; 
 
-   if ((metric = (struct ArgusMetricStruct *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
+   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
+      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
+
+   if (strcmp("%s", format) != 0) {
+      if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
+         if (metric->src.pkts && metric->dst.pkts)
+            sprintf (ArgusStatusBuf, "3");
+         else
+            sprintf (ArgusStatusBuf, "1");
+      } else
+         sprintf (ArgusStatusBuf, "1");
+   } else
+   if ((metric = (void *)argus->dsrs[ARGUS_METRIC_INDEX]) != NULL) {
       if (metric->src.pkts && metric->dst.pkts)
          sprintf (ArgusStatusBuf, "CON");
       else {

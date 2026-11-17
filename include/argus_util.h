@@ -1160,7 +1160,7 @@ RaPrintAlgorithmTable[MAX_PRINT_ALG_TYPES] = {
 #define ARGUSPRINTIDLEDSTJITTER		68
    { "djitidl", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTIDLEDSTJITTER, ArgusPrintIdleDstJitter, ArgusPrintIdleDstJitterLabel, "double", 0},
 #define ARGUSPRINTSTATE			69
-   { "state", "", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSTATE, ArgusPrintState, ArgusPrintStateLabel, "varchar(32)", 0},
+   { "state", "%s", 5 , 1, ARGUS_PTYPE_STRING, ARGUSPRINTSTATE, ArgusPrintState, ArgusPrintStateLabel, "varchar(32)", 0},
 #define ARGUSPRINTDELTADURATION		70
    { "dldur", "", 12 , 1, ARGUS_PTYPE_DOUBLE, ARGUSPRINTDELTADURATION, ArgusPrintDeltaDuration, ArgusPrintDeltaDurationLabel, "double", 0},
 #define ARGUSPRINTDELTASTARTTIME	71
