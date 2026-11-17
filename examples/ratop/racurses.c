@@ -4690,7 +4690,7 @@ argus_command_string(void)
 
             if ((strbuf = ArgusCalloc(1, MAXSTRLEN)) == NULL)
                ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
-            if ((srtalg = (int (**)()) ArgusCalloc(ARGUS_MAX_SORT_ALG, sizeof(void *))) == NULL)
+            if ((srtalg = (int (**)(struct ArgusRecordStruct *, struct ArgusRecordStruct *)) ArgusCalloc(ARGUS_MAX_SORT_ALG, sizeof(void *))) == NULL)
                ArgusLog (LOG_ERR, "argus_command_string: ArgusCalloc error\n");
 
             ptr = strbuf;

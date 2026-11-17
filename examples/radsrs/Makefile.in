@@ -59,6 +59,7 @@ mostlyclean: clean
 
 clobber realclean distclean:
 	rm -f $(CLEANFILES) Makefile
+	rm -rf __pycache__
 
 force: /tmp
 
