@@ -550,7 +550,6 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
          case ARGUS_JSON_STRING: {
             if (strcmp(p1->value.string, p2->value.string)) {
                json_add_value(p1, p2);
-               p2->type = ARGUS_JSON_NULL;
             } else
                p1->status |= ARGUS_JSON_MODIFIED;
             break;
@@ -623,22 +622,21 @@ json_merge_value(ArgusJsonValue *p1, ArgusJsonValue *p2) {
                ArgusJsonValue *p1value = &p1data[i +1];
 
                for (x = 0; x < p2size; x += 2) {
-                  if (strcmp(p2data[x].value.string, key) == 0) {
+                  if ((p2data[x].type == ARGUS_JSON_KEY) &&
+                      (p2data[x].value.string != NULL) &&
+                      (strcmp(p2data[x].value.string, key) == 0)) {
                      ArgusJsonValue *p2value = &p2data[x + 1];
-                     json_merge_value(p1value, p2value);
-                     ((ArgusJsonValue *)&p2data[x])->type = ARGUS_JSON_NULL;
-                     ((ArgusJsonValue *)&p2data[x + 1])->type = ARGUS_JSON_NULL;
 
-                     if (p1value->status & ARGUS_JSON_MODIFIED) {
-                        json_zero_value(&p2data[x]);
-                        json_zero_value(&p2data[x + 1]);
-                        p1value->status &= ~ARGUS_JSON_MODIFIED;
-                     }
-                     if (p2value->status & ARGUS_JSON_MODIFIED) {
-                        json_zero_value(&p1data[x]);
-                        json_zero_value(&p1data[x + 1]);
-                        p2value->status &= ~ARGUS_JSON_MODIFIED;
-                     }
+                     json_merge_value(p1value, p2value);
+
+                     /*
+                      * Matching keys are not transferred to p1.  Values
+                      * explicitly transferred by json_merge_value() have
+                      * already been marked ARGUS_JSON_NULL, so this frees
+                      * only the second object's remaining ownership.
+                      */
+                     json_free_value(&p2data[x]);
+                     json_free_value(&p2data[x + 1]);
                   }
                }
             }

@@ -185,6 +185,7 @@ struct ArgusRecordStruct *ArgusIPProtoRecs[0x10000];
 struct ArgusRecordStruct *ArgusEtherProtoRecs[0x10000];
 struct ArgusRecordStruct *ArgusArpRecords;
 struct ArgusRecordStruct *ArgusRarpRecords;
+struct ArgusRecordStruct *ArgusWlanRecords;
 struct ArgusRecordStruct *ArgusUnknownRecords;
 
 signed long long ArgusTotalFlowRecs = 0;
@@ -254,6 +255,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
       ArgusArpRecords = NULL;
       ArgusRarpRecords = NULL;
+      ArgusWlanRecords = NULL;
       ArgusUnknownRecords = NULL;
 
       ArgusSrcAddrTable = ArgusNewHashTable(0x10000);
@@ -549,7 +551,14 @@ RaProcessThisRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct 
                      break;
                   }
 
-                  case ARGUS_TYPE_WLAN: 
+                  /* WLAN flow data has no Ethernet ether_type. */
+                  case ARGUS_TYPE_WLAN:
+                     if ((tns = ArgusWlanRecords) == NULL)
+                        ArgusWlanRecords = ArgusCopyRecordStruct(argus);
+                     else
+                        ArgusMergeRecords (parser->ArgusAggregator, tns, argus);
+                     break;
+
                   case ARGUS_TYPE_ETHER: {
                      unsigned short proto = flow->mac_flow.mac_union.ether.ehdr.ether_type;
 
@@ -906,7 +915,7 @@ RaPrintProtoTally(void)
             buf, recs, pkts, spkts, dpkts, bytes, sbytes, dbytes);
       }
    }
-   for (i = 0; i < 0x1000; i++) {
+   for (i = 0; i < 0x10000; i++) {
       buf[0] = '\0';
       if ((ns = ArgusEtherProtoRecs[i]) != NULL) {
          double value;
@@ -936,6 +945,36 @@ RaPrintProtoTally(void)
 #endif
             buf, recs, pkts, spkts, dpkts, bytes, sbytes, dbytes);
       }
+   }
+
+   if ((ns = ArgusWlanRecords) != NULL) {
+      double value;
+      long long recs,  pkts, spkts, dpkts;
+      long long bytes, sbytes, dbytes;
+
+      buf[0] = '\0';
+      ArgusPrintProto (ArgusParser, buf, ns, 32);
+      value  = ArgusFetchTransactions (ns);
+      recs   = value;
+      value  = ArgusFetchPktsCount (ns);
+      pkts   = value;
+      value  = ArgusFetchSrcPktsCount (ns);
+      spkts  = value;
+      value  = ArgusFetchDstPktsCount (ns);
+      dpkts  = value;
+      value  = ArgusFetchByteCount (ns);
+      bytes  = value;
+      value  = ArgusFetchSrcByteCount (ns);
+      sbytes = value;
+      value  = ArgusFetchDstByteCount (ns);
+      dbytes = value;
+
+#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__APPLE_CC__) || defined(__APPLE__) || defined(ARGUS_SOLARIS)
+      printf ("%8.8s  %-11lld %-14lld %-14lld %-14lld %-18lld %-18lld %-18lld\n",
+#else
+      printf ("%8.8s  %-11Ld %-14Ld %-14Ld %-14Ld %-18Ld %-18Ld %-18Ld\n",
+#endif
+         buf, recs, pkts, spkts, dpkts, bytes, sbytes, dbytes);
    }
 
    if ((ns = ArgusArpRecords) != NULL) {
