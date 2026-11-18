@@ -2428,8 +2428,8 @@ RaInsertRIRTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruct *la
 #define ARGUS_PARSING_END_ADDRESS	1
 #define ARGUS_PARSING_LABEL		2
 #define ARGUS_PARSING_LOCALITY		3
-#define ARGUS_PARSING_ASN		4
-#define ARGUS_PARSING_GROUP		5
+#define ARGUS_PARSING_GROUP		4
+#define ARGUS_PARSING_ASN		5
 #define ARGUS_PARSING_DONE		6
 
 
@@ -2888,26 +2888,17 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
                if (sptr != NULL) {
                   char *endptr = NULL;
                   locality = strtod(sptr, &endptr);
-                  if (endptr == sptr) {
+                  if (strstr(sptr, "//")) {
                      state = ARGUS_PARSING_DONE;
-                  } else 
-                     state = ARGUS_PARSING_ASN;
+                  } else {
+                     if (endptr == sptr) {
+                        state = ARGUS_PARSING_DONE;
+                     } else 
+                        state = ARGUS_PARSING_GROUP;
+                  }
                } else
                   state = ARGUS_PARSING_DONE;
                }
-               break;
-            }
-
-            case ARGUS_PARSING_ASN: {
-               if (sptr != NULL) {
-                  char *endptr = NULL;
-                  asn = strtod(sptr, &endptr);
-                  if (endptr == sptr) {
-                     state = ARGUS_PARSING_DONE;
-                  } else
-                     state = ARGUS_PARSING_GROUP;
-               } else
-                  state = ARGUS_PARSING_DONE;
                break;
             }
 
@@ -2915,8 +2906,20 @@ RaInsertLocalityTree (struct ArgusParserStruct *parser, struct ArgusLabelerStruc
                if (sptr != NULL) {
                   if (strstr(sptr, "//")) {
                      state = ARGUS_PARSING_DONE;
-                  } else {
+                  } else
                      group = sptr;
+               } else
+                  state = ARGUS_PARSING_DONE;
+               break;
+            }
+
+            case ARGUS_PARSING_ASN: {
+               if (sptr != NULL) {
+                  char *endptr = NULL;
+                  if (strstr(sptr, "//")) {
+                     state = ARGUS_PARSING_DONE;
+                  } else {
+                     asn = strtod(sptr, &endptr);
                   }
                } else
                   state = ARGUS_PARSING_DONE;
