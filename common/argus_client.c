@@ -15513,8 +15513,7 @@ ArgusFetchIpId (struct ArgusRecordStruct *ns)
 double
 ArgusFetchLocality (struct ArgusRecordStruct *ns)
 {
-   double retn = 0;
-   return (retn);
+   return ArgusResolveLocality (ArgusParser, ns, ARGUS_SRC_LOCAL | ARGUS_DST_LOCAL);
 }
 
 double
@@ -15617,36 +15616,10 @@ ArgusFetchNdir (struct ArgusRecordStruct *ns)
 double
 ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
 {
-   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) ns->dsrs[ARGUS_LOCAL_INDEX];
-   struct ArgusLabelerStruct *labeler;
    double retn = 0;
 
-   if (ns->hdr.type & ARGUS_MAR) {
-   } else {
-      int locValue = -1;
-
-      if (local != NULL) {
-         locValue = local->sloc;
-      } else {
-         struct ArgusFlow *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
-         if (flow != NULL) {
-            switch (flow->hdr.subtype & 0x3F) {
-               case ARGUS_FLOW_CLASSIC5TUPLE:
-               case ARGUS_FLOW_LAYER_3_MATRIX: {
-                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4: {
-                        if ((labeler = ArgusParser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (ArgusParser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           break;
-                        }
-                     }
-                  }
-               }
-            }
-         }
-      }
-      retn = locValue;
-   }
+   if (!(ns->hdr.type & ARGUS_MAR))
+      retn = ArgusResolveLocality (ArgusParser, ns, ARGUS_SRC_LOCAL);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusFetchSrcLocality (%p) returning %f", ns, retn);
@@ -15657,36 +15630,10 @@ ArgusFetchSrcLocality (struct ArgusRecordStruct *ns)
 double
 ArgusFetchDstLocality (struct ArgusRecordStruct *ns)
 {
-   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) ns->dsrs[ARGUS_LOCAL_INDEX];
-   struct ArgusLabelerStruct *labeler;
    double retn = 0;
 
-   if (ns->hdr.type & ARGUS_MAR) {
-   } else {
-      int locValue = -1;
-
-      if (local != NULL) {
-         locValue = local->dloc;
-      } else {
-         struct ArgusFlow *flow = (struct ArgusFlow *)ns->dsrs[ARGUS_FLOW_INDEX];
-         if (flow != NULL) {
-            switch (flow->hdr.subtype & 0x3F) {
-               case ARGUS_FLOW_CLASSIC5TUPLE:
-               case ARGUS_FLOW_LAYER_3_MATRIX: {
-                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4: {
-                        if ((labeler = ArgusParser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (ArgusParser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           break;
-                        }
-                     }
-                  }
-               }
-            }
-         }
-      }
-      retn = locValue;
-   }
+   if (!(ns->hdr.type & ARGUS_MAR))
+      retn = ArgusResolveLocality (ArgusParser, ns, ARGUS_DST_LOCAL);
 
 #ifdef ARGUSDEBUG
    ArgusDebug (10, "ArgusFetchDstLocality (%p) returning %f", ns, retn);
@@ -18073,16 +18020,9 @@ ArgusSortDstASNum (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *a
 int
 ArgusSortLocality (struct ArgusRecordStruct *argus1, struct ArgusRecordStruct *argus2)
 {
-   struct ArgusNetspatialStruct *nss1 = (void *)argus1->dsrs[ARGUS_LOCAL_INDEX];
-   struct ArgusNetspatialStruct *nss2 = (void *)argus2->dsrs[ARGUS_LOCAL_INDEX];
-   int retn = 0, sloc1 = 0, sloc2 = 0, dloc1 = 0, dloc2 = 0, value;
+   double value = ArgusFetchLocality (argus1) - ArgusFetchLocality (argus2);
+   int retn;
 
-   if (nss1 && (nss1->hdr.argus_dsrvl8.qual & ARGUS_SRC_LOCAL)) sloc1 = nss1->sloc;
-   if (nss1 && (nss1->hdr.argus_dsrvl8.qual & ARGUS_DST_LOCAL)) dloc1 = nss1->dloc;
-   if (nss2 && (nss2->hdr.argus_dsrvl8.qual & ARGUS_SRC_LOCAL)) sloc2 = nss2->sloc;
-   if (nss2 && (nss2->hdr.argus_dsrvl8.qual & ARGUS_DST_LOCAL)) dloc2 = nss2->dloc;
-
-   value = ((sloc1 > dloc1) ? sloc1 : dloc1) - ((sloc2 > dloc2) ? sloc2 : dloc2);
    retn = (value < 0) ? 1 : ((value == 0) ? 0 : -1);
    retn = ArgusReverseSortDir ? ((retn < 0) ? 1 : ((retn == 0) ? 0 : -1)) : retn;
 

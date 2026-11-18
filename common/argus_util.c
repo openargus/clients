@@ -15613,22 +15613,70 @@ ArgusPrintInodeLongitude (struct ArgusParserStruct *parser, char *buf, struct Ar
 
 
 
+static int
+ArgusResolveEndpointLocality (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, int side)
+{
+   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
+   struct ArgusFlow *flow = (struct ArgusFlow *) argus->dsrs[ARGUS_FLOW_INDEX];
+   struct ArgusLabelerStruct *labeler;
+   int src = (side == ARGUS_SRC_LOCAL);
+
+   /* Locality scores are unsigned on the wire, despite the signed struct fields. */
+   if (local != NULL && (local->hdr.argus_dsrvl8.qual & side))
+      return (unsigned char)(src ? local->sloc : local->dloc);
+
+   if (flow == NULL || parser == NULL || (labeler = parser->ArgusLocalLabeler) == NULL)
+      return -1;
+
+   switch (flow->hdr.subtype & 0x3F) {
+      case ARGUS_FLOW_CLASSIC5TUPLE:
+      case ARGUS_FLOW_LAYER_3_MATRIX:
+         switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
+            case ARGUS_TYPE_IPV4:
+               return RaFetchAddressLocality (parser, labeler,
+                  src ? &flow->ip_flow.ip_src : &flow->ip_flow.ip_dst,
+                  src ? flow->ip_flow.smask : flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
+            case ARGUS_TYPE_IPV6:
+               return RaFetchAddressLocality (parser, labeler,
+                  (unsigned int *)(src ? &flow->ipv6_flow.ip_src : &flow->ipv6_flow.ip_dst),
+                  0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
+         }
+         break;
+   }
+
+   return -1;
+}
+
+/* Pass both endpoint flags to resolve loc. A negative result means unknown. */
+int
+ArgusResolveLocality (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus, int sides)
+{
+   int sloc, dloc;
+
+   if (argus->hdr.type & ARGUS_MAR)
+      return -1;
+
+   if (sides == ARGUS_SRC_LOCAL || sides == ARGUS_DST_LOCAL)
+      return ArgusResolveEndpointLocality (parser, argus, sides);
+   if (sides != (ARGUS_SRC_LOCAL | ARGUS_DST_LOCAL))
+      return -1;
+
+   sloc = ArgusResolveEndpointLocality (parser, argus, ARGUS_SRC_LOCAL);
+   dloc = ArgusResolveEndpointLocality (parser, argus, ARGUS_DST_LOCAL);
+
+   return (sloc < 0 || dloc < 0) ? -1 : ((sloc < dloc) ? sloc : dloc);
+}
+
 void
 ArgusPrintLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
    char tmpbuf[128], *ptr = tmpbuf;
-   int locValue = -1;
+   int locValue = ArgusResolveLocality (parser, argus, ARGUS_SRC_LOCAL | ARGUS_DST_LOCAL);
 
-   if (argus->hdr.type & ARGUS_MAR) {
+   if (locValue < 0)
       sprintf (ptr, " ");
-   } else {
-      if (local != NULL) {
-         locValue = (local->sloc > local->dloc) ? local->sloc : local->dloc;
-         sprintf (ptr, "%d", locValue);
-      } else
-         sprintf (ptr, " ");
-   }
+   else
+      sprintf (ptr, "%d", locValue);
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " Local = \"%s\"", ptr);
@@ -15650,78 +15698,41 @@ ArgusPrintLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecord
 }
 
 
-char *locString[] = {
+static const char *locString[] = {
    "",
    "wan",
    "man",
    "can",
    "lan",
-   "lan",
-   NULL
+   "lan"
 };
 
-
-void
-ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+static void
+ArgusFormatEndpointLocality (struct ArgusParserStruct *parser, char *buf, int locValue)
 {
-   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
-   struct ArgusLabelerStruct *labeler;
-   char *format = NULL;
-   char tmpbuf[128], *ptr = tmpbuf;
-   int locValue = -1;
-
+   const char *format = NULL;
 
    if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
       format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
 
-   if ((format == NULL) || (strlen(format) == 0)) {
-      format = "%d";
-   }
+   if (locValue < 0)
+      sprintf (buf, " ");
+   else if (format == NULL || *format == '\0')
+      sprintf (buf, "%d", locValue);
+   else if (strcmp("%s", format))
+      sprintf (buf, format, locValue);
+   else if ((size_t)locValue < sizeof(locString) / sizeof(locString[0]))
+      sprintf (buf, "%s", locString[locValue]);
+   else
+      sprintf (buf, " ");
+}
 
-   if (argus->hdr.type & ARGUS_MAR) {
-      sprintf (ptr, " ");
-   } else {
-      sprintf (ptr, " ");
-      if (local != NULL) {
-         locValue = local->sloc;
-         if (strcmp("%s", format)) 
-            sprintf (ptr, format, locValue);
-         else
-            sprintf (ptr, format, locString[locValue]);
-      } else {
+void
+ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
+{
+   char tmpbuf[128], *ptr = tmpbuf;
 
-         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
-         if (flow != NULL) {
-            switch (flow->hdr.subtype & 0x3F) {
-               case ARGUS_FLOW_CLASSIC5TUPLE:
-               case ARGUS_FLOW_LAYER_3_MATRIX: {
-                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4: {
-                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_src, flow->ip_flow.smask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           if (strcmp("%s", format)) 
-                              sprintf (ptr, format, locValue);
-                           else
-                              sprintf (ptr, format, locString[locValue]);
-                        }
-                        break;
-                     }
-                     case ARGUS_TYPE_IPV6: {
-                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_src, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
-                           if (strcmp("%s", format)) 
-                              sprintf (ptr, format, locValue);
-                           else
-                              sprintf (ptr, format, locString[locValue]);
-                        }
-                        break;
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
+   ArgusFormatEndpointLocality (parser, ptr, ArgusResolveLocality (parser, argus, ARGUS_SRC_LOCAL));
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " SrcLocal = \"%s\"", ptr);
@@ -15747,65 +15758,9 @@ ArgusPrintSrcLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRec
 void
 ArgusPrintDstLocal (struct ArgusParserStruct *parser, char *buf, struct ArgusRecordStruct *argus, int len)
 {
-   struct ArgusNetspatialStruct *local = (struct ArgusNetspatialStruct *) argus->dsrs[ARGUS_LOCAL_INDEX];
-   struct ArgusLabelerStruct *labeler;
    char tmpbuf[128], *ptr = tmpbuf;
-   char *format = NULL;
-   int locValue = -1;
 
-   if (parser->RaPrintAlgorithmList[parser->RaPrintIndex] != NULL)
-      format = parser->RaPrintAlgorithmList[parser->RaPrintIndex]->format;
-
-   if ((format == NULL) || (strlen(format) == 0)) {
-      format = "%d";
-   }
-
-   if (argus->hdr.type & ARGUS_MAR) {
-      sprintf (ptr, " ");
-   } else {
-      sprintf (ptr, " ");
-      if (local != NULL) {
-         locValue = local->dloc;
-         if (strcmp("%s", format))
-            sprintf (ptr, format, locValue);
-         else
-            sprintf (ptr, format, locString[locValue]);
-
-      } else {
-
-         struct ArgusFlow *flow = (struct ArgusFlow *)argus->dsrs[ARGUS_FLOW_INDEX];
-         if (flow != NULL) {
-            switch (flow->hdr.subtype & 0x3F) {
-               case ARGUS_FLOW_CLASSIC5TUPLE:
-               case ARGUS_FLOW_LAYER_3_MATRIX: {
-                  switch (flow->hdr.argus_dsrvl8.qual & 0x1F) {
-                     case ARGUS_TYPE_IPV4: {
-                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (parser, labeler, &flow->ip_flow.ip_dst, flow->ip_flow.dmask, ARGUS_TYPE_IPV4, ARGUS_NODE_MATCH);
-                           if (strcmp("%s", format))
-                              sprintf (ptr, format, locValue);
-                           else
-                              sprintf (ptr, format, locString[locValue]);
-                           break;
-                        }
-                     }
-                     case ARGUS_TYPE_IPV6: {
-                        if ((labeler = parser->ArgusLocalLabeler) != NULL) {
-                           locValue = RaFetchAddressLocality (parser, labeler, (unsigned int *) &flow->ipv6_flow.ip_dst, 0, ARGUS_TYPE_IPV6, ARGUS_NODE_MATCH);
-                           if (strcmp("%s", format))
-                              sprintf (ptr, format, locValue);
-                           else
-                              sprintf (ptr, format, locString[locValue]);
-                           break;
-                        }
-                        break;
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
+   ArgusFormatEndpointLocality (parser, ptr, ArgusResolveLocality (parser, argus, ARGUS_DST_LOCAL));
 
    if (parser->ArgusPrintXml) {
       sprintf (buf, " DstLocal = \"%s\"", ptr);

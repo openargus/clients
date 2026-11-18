@@ -1675,6 +1675,7 @@ int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStr
 char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+int ArgusResolveLocality (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 
 struct ArgusQueueStruct *ArgusNewQueue (void);
 void ArgusDeleteQueue (struct ArgusQueueStruct *);
@@ -2106,6 +2107,7 @@ extern int RaProcessAddressLocality (struct ArgusParserStruct *, struct ArgusLab
 extern char *RaFetchAddressLocalityLabel (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 extern char *RaFetchAddressLocalityGroup (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
 extern int RaFetchAddressLocality (struct ArgusParserStruct *, struct ArgusLabelerStruct *, unsigned int *, int, int, int);
+extern int ArgusResolveLocality (struct ArgusParserStruct *, struct ArgusRecordStruct *, int);
 
 extern struct ArgusQueueStruct *ArgusNewQueue (void);
 extern void ArgusDeleteQueue (struct ArgusQueueStruct *);
