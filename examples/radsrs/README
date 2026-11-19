@@ -19,6 +19,12 @@ Every object has three relevant sections:
 - `canonical` displays the parser's `ArgusRecordStruct` slots using names and
   fields from `include/argus_out.h`.
 
+For a MAC DSR with subtype `2` (the PRP-1 MAC-v2 extension),
+`canonical.mac.prp` contains `src` and `dst` direction objects.  Each has the
+wire flags, malformed-RCT count, LAN A/B counters, and first/last RCT
+snapshots.  Sixty-four-bit counters are JSON strings so they remain lossless
+for consumers that use IEEE-754 numbers.
+
 The raw record and `dsrs` array are authoritative. Canonicalization can
 reorder, normalize, combine, or omit fields, so the `canonical` view is a
 readable supplement rather than a reconstruction source.

@@ -675,6 +675,51 @@ RadsrsPrintMac(const unsigned char *address)
 }
 
 static void
+RadsrsPrintMacPrpRct(const struct ArgusMacPrpRct *rct)
+{
+   unsigned short lan_size = rct->lan_id_and_lsdu_size;
+
+   fprintf(stdout, "{\"sequence\": %u, \"lan_id_and_lsdu_size\": %u",
+           (unsigned int)rct->sequence, (unsigned int)lan_size);
+   fprintf(stdout, ", \"lan_id\": %u, \"lsdu_size\": %u, \"time\": ",
+           (unsigned int)(lan_size >> 12), (unsigned int)(lan_size & 0x0fff));
+   RadsrsPrintTime(&rct->time);
+   fputc('}', stdout);
+}
+
+static void
+RadsrsPrintMacPrpLan(const struct ArgusMacPrpLan *lan)
+{
+   fputs("{\"packets\": ", stdout);
+   RadsrsJsonUInt64(lan->packets);
+   fputs(", \"gaps\": ", stdout);
+   RadsrsJsonUInt64(lan->gaps);
+   fputs(", \"out_of_order\": ", stdout);
+   RadsrsJsonUInt64(lan->out_of_order);
+   fputs(", \"duplicates\": ", stdout);
+   RadsrsJsonUInt64(lan->duplicates);
+   fputs(", \"first\": ", stdout);
+   RadsrsPrintMacPrpRct(&lan->first);
+   fputs(", \"last\": ", stdout);
+   RadsrsPrintMacPrpRct(&lan->last);
+   fputc('}', stdout);
+}
+
+static void
+RadsrsPrintMacPrpDirection(const struct ArgusMacPrpDirection *direction)
+{
+   fputs("{\"flags\": ", stdout);
+   fprintf(stdout, "%u", direction->flags);
+   fputs(", \"malformed_rcts\": ", stdout);
+   RadsrsJsonUInt64(direction->malformed_rcts);
+   fputs(", \"lan_a\": ", stdout);
+   RadsrsPrintMacPrpLan(&direction->lan_a);
+   fputs(", \"lan_b\": ", stdout);
+   RadsrsPrintMacPrpLan(&direction->lan_b);
+   fputc('}', stdout);
+}
+
+static void
 RadsrsPrintFlow(const struct ArgusFlow *flow)
 {
    unsigned char address_type = flow->hdr.argus_dsrvl8.qual & 0x1f;
@@ -1033,9 +1078,20 @@ RadsrsPrintMacStruct(const struct ArgusMacStruct *mac)
    RadsrsPrintMac((const unsigned char *)ether->ehdr.ether_shost);
    fputs(", \"ether_dhost\": ", stdout);
    RadsrsPrintMac((const unsigned char *)ether->ehdr.ether_dhost);
-   fprintf(stdout, ", \"ether_type\": %u, \"dsap\": %u, \"ssap\": %u}",
+   fprintf(stdout, ", \"ether_type\": %u, \"dsap\": %u, \"ssap\": %u",
            (unsigned int)ether->ehdr.ether_type, (unsigned int)ether->dsap,
            (unsigned int)ether->ssap);
+   if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
+       (mac->hdr.argus_dsrvl8.len >= ARGUS_MAC_DSR_V2_LEN)) {
+      const struct ArgusMacV2Struct *macv2 = (const struct ArgusMacV2Struct *)mac;
+
+      fputs(", \"prp\": {\"src\": ", stdout);
+      RadsrsPrintMacPrpDirection(&macv2->src_prp);
+      fputs(", \"dst\": ", stdout);
+      RadsrsPrintMacPrpDirection(&macv2->dst_prp);
+      fputc('}', stdout);
+   }
+   fputc('}', stdout);
 }
 
 static void

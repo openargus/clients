@@ -908,6 +908,41 @@ struct ArgusMacStruct {
    struct ArgusMacFlow mac;
 };
 
+/*
+ * MAC DSR v2 PRP-1 wire extension.  Clients retain ArgusMacStruct as the
+ * legacy five-word prefix because it is also used by client-generated
+ * metadata records.  ArgusMacV2Struct is used only where the complete,
+ * serialized v2 MAC DSR must be retained or decoded; unlike the sensor-side
+ * flow object, it intentionally has no non-wire PRP working state.
+ */
+struct ArgusMacPrpRct {
+   unsigned short sequence;
+   unsigned short lan_id_and_lsdu_size;
+   struct ArgusTime time;
+};
+
+struct ArgusMacPrpLan {
+   unsigned long long packets;
+   unsigned long long gaps;
+   unsigned long long out_of_order;
+   unsigned long long duplicates;
+   struct ArgusMacPrpRct first, last;
+};
+
+struct ArgusMacPrpDirection {
+   unsigned int flags;
+   unsigned long long malformed_rcts;
+   struct ArgusMacPrpLan lan_a, lan_b;
+};
+
+struct ArgusMacV2Struct {
+   struct ArgusDSRHeader hdr;
+   struct ArgusMacFlow mac;
+   struct ArgusMacPrpDirection src_prp, dst_prp;
+};
+
+#define ARGUS_MAC_DSR_V2_LEN (sizeof(struct ArgusMacV2Struct) / 4)
+
 struct ArgusVxLanStruct {
    struct ArgusDSRHeader hdr;
    unsigned int svnid, dvnid;
@@ -1052,7 +1087,11 @@ struct ArgusCanonRecord {
    struct ArgusIPAttrStruct      attr;
    struct ArgusMetricStruct      metric;
    struct ArgusNetworkStruct     net;
-   struct ArgusMacStruct         mac;
+   /* One MAC DSR storage area.  The subtype selects the legacy or v2 view. */
+   union {
+      struct ArgusMacStruct      mac;
+      struct ArgusMacV2Struct    macv2;
+   };
    struct ArgusVlanStruct        vlan;
    struct ArgusVxLanStruct       vxlan;
    struct ArgusGeneveStruct      gen;

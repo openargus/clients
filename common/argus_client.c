@@ -2748,15 +2748,28 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 
                      case ARGUS_MAC_DSR: {
                         struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
+                        struct ArgusMacStruct *cmac = &canon->mac;
+                        int cmaclen = sizeof(canon->mac);
+                        int copylen;
+
+                        if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
+                            (cnt >= (int)sizeof(canon->macv2))) {
+                           cmac = (struct ArgusMacStruct *)&canon->macv2;
+                           cmaclen = sizeof(canon->macv2);
+                        }
 
                         switch (mac->hdr.subtype & 0x3F) {
                            default:
                            case ARGUS_TYPE_ETHER: {
-                              bcopy((char *)mac, (char *)&canon->mac, cnt);
+                              copylen = (cnt > cmaclen) ? cmaclen : cnt;
+                              bzero((char *)cmac, cmaclen);
+                              bcopy((char *)mac, (char *)cmac, copylen);
+                              if (cnt > cmaclen)
+                                 cmac->hdr.argus_dsrvl8.len = copylen / 4;
                               break;
                            }
                         }
-                        retn->dsrs[ARGUS_MAC_INDEX] = (struct ArgusDSRHeader*) &canon->mac;
+                        retn->dsrs[ARGUS_MAC_INDEX] = (struct ArgusDSRHeader*)cmac;
                         retn->dsrindex |= (0x01 << ARGUS_MAC_INDEX);
                         break;
                      }

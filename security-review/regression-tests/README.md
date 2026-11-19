@@ -32,6 +32,10 @@ per-fix-test pattern.
 - **Jitter DSR scaling**: `test_jitter_scale_merge.sh` verifies that millisecond and second
   Jitter DSRs normalize to microseconds before client aggregation, and that merged source and
   destination statistics retain their direction qualifiers.
+- **PRP-1 MAC-v2 decoding**: `test_radsrs_prp_mac_v2.sh` runs `radsrs` against a
+  sensor-produced MAC-v2 fixture and verifies the decoded directional flags, malformed-RCT
+  counts, LAN counters, and RCT snapshots. It also checks `ra` wire round-tripping and `rmon`
+  reversal of both PRP directions and their qualifier bits.
 
 ## Running locally
 
@@ -54,3 +58,8 @@ tcpdump's public test corpus) -- it contains no real, captured, or otherwise sen
 data, only a single synthetic UDP flow record. Test scripts derive gzip/bzip2-compressed and
 truncated copies of it at runtime (into a scratch temp directory, never committed) as needed;
 only this one base file is committed here.
+
+`fixtures/prp_mac_v2.argus` is likewise synthetic: it is emitted by
+`~/Saber/argus/argus/bin/argus` from deterministic PRP-1 Ethernet frames.  It contains no
+captured traffic and is retained so the radsrs MAC-v2 decoder is covered in CI without requiring
+a sibling sensor checkout.

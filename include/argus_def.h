@@ -1671,11 +1671,31 @@ extern "C" {
 #define ARGUS_MAC_DSR                    0x42
 #define ARGUS_MAC_INDEX                  13 
 
+/* MAC DSR subtypes.  The original five-word MAC DSR has subtype zero.
+ * MAC DSR v2 appends PRP-1 observations while retaining that prefix. */
+#define ARGUS_MAC_DSR_BASE               0x00
+#define ARGUS_MAC_DSR_V2                 0x02
+#define ARGUS_MAC_DSR_BASE_LEN           5
+
 /* Argus Mac Layer DSR Qualifier */
 #define ARGUS_MULTIPATH                  0x03
 #define ARGUS_SRC_MULTIPATH              0x01
 #define ARGUS_DST_MULTIPATH              0x02
 #define ARGUS_PORT_INDEX                 0x04
+
+/* MAC DSR v2 PRP qualifiers.  ARGUS_MAC_SRC_PRP deliberately shares the
+ * legacy ARGUS_PORT_INDEX bit: the meaning is selected by the MAC subtype. */
+#define ARGUS_MAC_SRC_PRP                0x04
+#define ARGUS_MAC_DST_PRP                0x08
+
+/* MAC DSR v2 PRP direction flags. */
+#define ARGUS_MAC_PRP_LAN_A              0x00000001
+#define ARGUS_MAC_PRP_LAN_B              0x00000002
+#define ARGUS_MAC_PRP_MALFORMED_RCT      0x00000004
+#define ARGUS_MAC_PRP_FLOW_SCOPE         0x00000008
+#define ARGUS_MAC_PRP_LAN_A_RESEED       0x00000010
+#define ARGUS_MAC_PRP_LAN_B_RESEED       0x00000020
+#define ARGUS_MAC_PRP_COUNTER_SATURATED  0x00000040
 
 /* Jitter Transport DSR Type */
 #define ARGUS_JITTER_DSR                 0x46
