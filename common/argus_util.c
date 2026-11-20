@@ -5484,7 +5484,7 @@ ArgusReverseRecordWithFlag (struct ArgusRecordStruct *argus, int flags)
                tmac->mac.mac_union.ether.ssap            = mac->mac.mac_union.ether.dsap;
 
                if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
-                   (mac->hdr.argus_dsrvl8.len >= ARGUS_MAC_DSR_V2_LEN)) {
+                   (mac->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_LEN)) {
                   struct ArgusMacV2Struct *macv2 = (struct ArgusMacV2Struct *)mac;
                   struct ArgusMacPrpDirection prp = macv2->src_prp;
                   unsigned char qual = mac->hdr.argus_dsrvl8.qual;
@@ -28388,56 +28388,20 @@ strtof (char *str, char **ptr)
 
 
 static void
-ArgusNtoHMacPrpRct(struct ArgusMacPrpRct *rct)
-{
-   rct->sequence = ntohs(rct->sequence);
-   rct->lan_id_and_lsdu_size = ntohs(rct->lan_id_and_lsdu_size);
-   rct->time.tv_sec = ntohl(rct->time.tv_sec);
-   rct->time.tv_usec = ntohl(rct->time.tv_usec);
-}
-
-
-static void
-ArgusNtoHMacPrpLan(struct ArgusMacPrpLan *lan)
-{
-   lan->packets = ntohll(lan->packets);
-   lan->gaps = ntohll(lan->gaps);
-   lan->out_of_order = ntohll(lan->out_of_order);
-   lan->duplicates = ntohll(lan->duplicates);
-   ArgusNtoHMacPrpRct(&lan->first);
-   ArgusNtoHMacPrpRct(&lan->last);
-}
-
-
-static void
 ArgusNtoHMacPrpDirection(struct ArgusMacPrpDirection *direction)
 {
    direction->flags = ntohl(direction->flags);
-   direction->malformed_rcts = ntohll(direction->malformed_rcts);
-   ArgusNtoHMacPrpLan(&direction->lan_a);
-   ArgusNtoHMacPrpLan(&direction->lan_b);
+   direction->lan_a.packets = ntohll(direction->lan_a.packets);
+   direction->lan_b.packets = ntohll(direction->lan_b.packets);
 }
 
 
 static void
-ArgusHtoNMacPrpRct(struct ArgusMacPrpRct *rct)
+ArgusNtoHMacPrpWireDirection(struct ArgusMacPrpWireDirection *direction)
 {
-   rct->sequence = htons(rct->sequence);
-   rct->lan_id_and_lsdu_size = htons(rct->lan_id_and_lsdu_size);
-   rct->time.tv_sec = htonl(rct->time.tv_sec);
-   rct->time.tv_usec = htonl(rct->time.tv_usec);
-}
-
-
-static void
-ArgusHtoNMacPrpLan(struct ArgusMacPrpLan *lan)
-{
-   lan->packets = htonll(lan->packets);
-   lan->gaps = htonll(lan->gaps);
-   lan->out_of_order = htonll(lan->out_of_order);
-   lan->duplicates = htonll(lan->duplicates);
-   ArgusHtoNMacPrpRct(&lan->first);
-   ArgusHtoNMacPrpRct(&lan->last);
+   direction->flags = ntohl(direction->flags);
+   direction->lan_a.packets = ntohl(direction->lan_a.packets);
+   direction->lan_b.packets = ntohl(direction->lan_b.packets);
 }
 
 
@@ -28445,9 +28409,35 @@ static void
 ArgusHtoNMacPrpDirection(struct ArgusMacPrpDirection *direction)
 {
    direction->flags = htonl(direction->flags);
-   direction->malformed_rcts = htonll(direction->malformed_rcts);
-   ArgusHtoNMacPrpLan(&direction->lan_a);
-   ArgusHtoNMacPrpLan(&direction->lan_b);
+   direction->lan_a.packets = htonll(direction->lan_a.packets);
+   direction->lan_b.packets = htonll(direction->lan_b.packets);
+}
+
+
+static void
+ArgusHtoNMacPrpWireDirection(struct ArgusMacPrpWireDirection *direction)
+{
+   direction->flags = htonl(direction->flags);
+   direction->lan_a.packets = htonl(direction->lan_a.packets);
+   direction->lan_b.packets = htonl(direction->lan_b.packets);
+}
+
+
+static void
+ArgusNtoHPrpSupervision(struct ArgusPrpSupervisionObject *prp)
+{
+   prp->flags = ntohl(prp->flags);
+   prp->version = ntohs(prp->version);
+   prp->sequence = ntohs(prp->sequence);
+}
+
+
+static void
+ArgusHtoNPrpSupervision(struct ArgusPrpSupervisionObject *prp)
+{
+   prp->flags = htonl(prp->flags);
+   prp->version = htons(prp->version);
+   prp->sequence = htons(prp->sequence);
 }
 
 
@@ -28880,10 +28870,15 @@ ArgusNtoH (struct ArgusRecord *argus)
                      break;
                   }
 
-                  case ARGUS_NETWORK_DSR: {
-                     struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
-                     switch (net->hdr.subtype) {
-                        case ARGUS_TCP_INIT: {
+                   case ARGUS_NETWORK_DSR: {
+                      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                      switch (net->hdr.subtype) {
+                         case ARGUS_NETWORK_SUBTYPE_PRP:
+                            if (cnt == (ARGUS_PRP_SUPERVISION_DSR_LEN * 4))
+                               ArgusNtoHPrpSupervision(&net->net_union.prp);
+                            break;
+
+                         case ARGUS_TCP_INIT: {
                            if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
                               struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
                               tcp->status       = ntohl(tcp->status);
@@ -29067,16 +29062,22 @@ ArgusNtoH (struct ArgusRecord *argus)
                   }
 
                   case ARGUS_MAC_DSR: {
-                     struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
+                      struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
 
-                     if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
-                         (cnt >= (ARGUS_MAC_DSR_V2_LEN * 4))) {
-                        struct ArgusMacV2Struct *macv2 = (struct ArgusMacV2Struct *)mac;
+                      if (mac->hdr.subtype == ARGUS_MAC_DSR_V2) {
+                         if (cnt == (ARGUS_MAC_DSR_V2_WIRE_LEN * 4)) {
+                            struct ArgusMacV2WireStruct *wire = (struct ArgusMacV2WireStruct *)mac;
 
-                        ArgusNtoHMacPrpDirection(&macv2->src_prp);
-                        ArgusNtoHMacPrpDirection(&macv2->dst_prp);
-                     }
-                     break;
+                            ArgusNtoHMacPrpWireDirection(&wire->src_prp);
+                            ArgusNtoHMacPrpWireDirection(&wire->dst_prp);
+                         } else if (cnt == (ARGUS_MAC_DSR_V2_LEN * 4)) {
+                            struct ArgusMacV2Struct *macv2 = (struct ArgusMacV2Struct *)mac;
+
+                            ArgusNtoHMacPrpDirection(&macv2->src_prp);
+                            ArgusNtoHMacPrpDirection(&macv2->dst_prp);
+                         }
+                      }
+                      break;
                   }
 
                   case ARGUS_VLAN_DSR: {
@@ -29591,10 +29592,15 @@ ArgusHtoN (struct ArgusRecord *argus)
                      break;
                   }
 
-                  case ARGUS_NETWORK_DSR: {
-                     struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
-                     switch (net->hdr.subtype) {
-                        case ARGUS_TCP_INIT: {
+                   case ARGUS_NETWORK_DSR: {
+                      struct ArgusNetworkStruct *net = (struct ArgusNetworkStruct *)dsr;
+                      switch (net->hdr.subtype) {
+                         case ARGUS_NETWORK_SUBTYPE_PRP:
+                            if (net->hdr.argus_dsrvl8.len == ARGUS_PRP_SUPERVISION_DSR_LEN)
+                               ArgusHtoNPrpSupervision(&net->net_union.prp);
+                            break;
+
+                         case ARGUS_TCP_INIT: {
                            if (net->hdr.argus_dsrvl8.qual == ARGUS_TCP_INIT_V2) {
                               struct ArgusTCPInitStatus *tcp = (void *)&net->net_union.tcpinit;
                               tcp->status       = htonl(tcp->status);
@@ -29779,16 +29785,22 @@ ArgusHtoN (struct ArgusRecord *argus)
                   }
 
                   case ARGUS_MAC_DSR: {
-                     struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
+                      struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
 
-                     if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
-                         (mac->hdr.argus_dsrvl8.len >= ARGUS_MAC_DSR_V2_LEN)) {
-                        struct ArgusMacV2Struct *macv2 = (struct ArgusMacV2Struct *)mac;
+                      if (mac->hdr.subtype == ARGUS_MAC_DSR_V2) {
+                         if (mac->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_WIRE_LEN) {
+                            struct ArgusMacV2WireStruct *wire = (struct ArgusMacV2WireStruct *)mac;
 
-                        ArgusHtoNMacPrpDirection(&macv2->src_prp);
-                        ArgusHtoNMacPrpDirection(&macv2->dst_prp);
-                     }
-                     break;
+                            ArgusHtoNMacPrpWireDirection(&wire->src_prp);
+                            ArgusHtoNMacPrpWireDirection(&wire->dst_prp);
+                         } else if (mac->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_LEN) {
+                            struct ArgusMacV2Struct *macv2 = (struct ArgusMacV2Struct *)mac;
+
+                            ArgusHtoNMacPrpDirection(&macv2->src_prp);
+                            ArgusHtoNMacPrpDirection(&macv2->dst_prp);
+                         }
+                      }
+                      break;
                   }
 
                   case ARGUS_VLAN_DSR: {

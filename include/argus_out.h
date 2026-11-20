@@ -396,6 +396,28 @@ struct ArgusARPObject {
    unsigned char respaddr[6];    
    unsigned short pad; 
 };  
+
+/*
+ * Bounded per-flow PRP supervision summary.  The reporter is the Ethernet
+ * source that emitted the supervision frame; node_a/node_b, redbox, and vdan
+ * are distinct claims carried by its TLVs.  They deliberately remain separate
+ * even when their byte values are equal.
+ */
+struct ArgusPrpSupervisionObject {
+   unsigned int flags;
+   unsigned short version;
+   unsigned short sequence;
+   unsigned char path;
+   unsigned char node_mode;
+   unsigned char reporter[6];
+   unsigned char node_a[6];
+   unsigned char node_b[6];
+   unsigned char redbox[6];
+   unsigned char vdan[6];
+};
+
+/* Four-byte DSR header plus the fixed 40-byte object above. */
+#define ARGUS_PRP_SUPERVISION_DSR_LEN 11
  
 struct ArgusDHCPObject {     
    unsigned int respaddr;   
@@ -472,10 +494,11 @@ struct ArgusNetworkStruct {
       struct ArgusRTPObject     rtp;
       struct ArgusRTCPObject    rtcp;
       struct ArgusIGMPObject    igmp;
-      struct ArgusDHCPObject    dhcp;
-      struct ArgusESPObject     esp;
-      struct ArgusARPObject     arp;
-      struct ArgusAHObject      ah;
+       struct ArgusDHCPObject    dhcp;
+       struct ArgusESPObject     esp;
+       struct ArgusARPObject     arp;
+       struct ArgusPrpSupervisionObject prp;
+       struct ArgusAHObject      ah;
       struct ArgusFragObject    frag;
       struct ArgusIsisObject    isis;
    } net_union;  
@@ -909,38 +932,42 @@ struct ArgusMacStruct {
 };
 
 /*
- * MAC DSR v2 PRP-1 wire extension.  Clients retain ArgusMacStruct as the
- * legacy five-word prefix because it is also used by client-generated
- * metadata records.  ArgusMacV2Struct is used only where the complete,
- * serialized v2 MAC DSR must be retained or decoded; unlike the sensor-side
- * flow object, it intentionally has no non-wire PRP working state.
+ * Sensors serialize compact PRP direction totals using unsigned int packet
+ * counters.  Clients decode that wire form into the long long counters below
+ * so aggregation can safely exceed a sensor report's counter range.
  */
-struct ArgusMacPrpRct {
-   unsigned short sequence;
-   unsigned short lan_id_and_lsdu_size;
-   struct ArgusTime time;
+struct ArgusMacPrpWireLan {
+   unsigned int packets;
+};
+
+struct ArgusMacPrpWireDirection {
+   unsigned int flags;
+   struct ArgusMacPrpWireLan lan_a, lan_b;
+};
+
+struct ArgusMacV2WireStruct {
+   struct ArgusDSRHeader hdr;
+   struct ArgusMacFlow mac;
+   struct ArgusMacPrpWireDirection src_prp, dst_prp;
 };
 
 struct ArgusMacPrpLan {
-   unsigned long long packets;
-   unsigned long long gaps;
-   unsigned long long out_of_order;
-   unsigned long long duplicates;
-   struct ArgusMacPrpRct first, last;
+   long long packets;
 };
 
 struct ArgusMacPrpDirection {
    unsigned int flags;
-   unsigned long long malformed_rcts;
    struct ArgusMacPrpLan lan_a, lan_b;
 };
 
+/* Client canonical form used for decoded records and generated output. */
 struct ArgusMacV2Struct {
    struct ArgusDSRHeader hdr;
    struct ArgusMacFlow mac;
    struct ArgusMacPrpDirection src_prp, dst_prp;
 };
 
+#define ARGUS_MAC_DSR_V2_WIRE_LEN (sizeof(struct ArgusMacV2WireStruct) / 4)
 #define ARGUS_MAC_DSR_V2_LEN (sizeof(struct ArgusMacV2Struct) / 4)
 
 struct ArgusVxLanStruct {

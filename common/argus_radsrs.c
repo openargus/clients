@@ -674,34 +674,63 @@ RadsrsPrintMac(const unsigned char *address)
    RadsrsJsonString(text);
 }
 
-static void
-RadsrsPrintMacPrpRct(const struct ArgusMacPrpRct *rct)
-{
-   unsigned short lan_size = rct->lan_id_and_lsdu_size;
 
-   fprintf(stdout, "{\"sequence\": %u, \"lan_id_and_lsdu_size\": %u",
-           (unsigned int)rct->sequence, (unsigned int)lan_size);
-   fprintf(stdout, ", \"lan_id\": %u, \"lsdu_size\": %u, \"time\": ",
-           (unsigned int)(lan_size >> 12), (unsigned int)(lan_size & 0x0fff));
-   RadsrsPrintTime(&rct->time);
-   fputc('}', stdout);
+static void
+RadsrsPrintObservedMac(const struct ArgusPrpSupervisionObject *prp,
+                       unsigned int flag, const unsigned char *address)
+{
+   if (prp->flags & flag)
+      RadsrsPrintMac(address);
+   else
+      fputs("null", stdout);
+}
+
+
+static void
+RadsrsPrintPrpSupervision(const struct ArgusPrpSupervisionObject *prp)
+{
+   fputs("\"flags\": ", stdout);
+   fprintf(stdout, "%u", prp->flags);
+   fputs(", \"version\": ", stdout);
+   fprintf(stdout, "%u", (unsigned int)prp->version);
+   fputs(", \"path\": ", stdout);
+   fprintf(stdout, "%u", (unsigned int)prp->path);
+   fputs(", \"sequence\": ", stdout);
+   if (prp->flags & ARGUS_PRP_SUPERVISION_HAS_SEQUENCE)
+      fprintf(stdout, "%u", (unsigned int)prp->sequence);
+   else
+      fputs("null", stdout);
+   fputs(", \"node_mode\": ", stdout);
+   if (prp->node_mode != 0)
+      fprintf(stdout, "%u", (unsigned int)prp->node_mode);
+   else
+      fputs("null", stdout);
+
+   /* These are separately observed, unauthenticated announcement claims.
+    * Do not coalesce equal byte strings into a single node identity. */
+   fputs(", \"reporter\": ", stdout);
+   RadsrsPrintObservedMac(prp, ARGUS_PRP_SUPERVISION_REPORTER,
+                           prp->reporter);
+   fputs(", \"claimed_node_a\": ", stdout);
+   RadsrsPrintObservedMac(prp, ARGUS_PRP_SUPERVISION_NODE_A,
+                           prp->node_a);
+   fputs(", \"claimed_node_b\": ", stdout);
+   RadsrsPrintObservedMac(prp, ARGUS_PRP_SUPERVISION_NODE_B,
+                           prp->node_b);
+   fputs(", \"redbox\": ", stdout);
+   RadsrsPrintObservedMac(prp, ARGUS_PRP_SUPERVISION_REDBOX,
+                           prp->redbox);
+   fputs(", \"vdan\": ", stdout);
+   RadsrsPrintObservedMac(prp, ARGUS_PRP_SUPERVISION_VDAN,
+                           prp->vdan);
+   fputs(", \"identities_authenticated\": false", stdout);
 }
 
 static void
 RadsrsPrintMacPrpLan(const struct ArgusMacPrpLan *lan)
 {
    fputs("{\"packets\": ", stdout);
-   RadsrsJsonUInt64(lan->packets);
-   fputs(", \"gaps\": ", stdout);
-   RadsrsJsonUInt64(lan->gaps);
-   fputs(", \"out_of_order\": ", stdout);
-   RadsrsJsonUInt64(lan->out_of_order);
-   fputs(", \"duplicates\": ", stdout);
-   RadsrsJsonUInt64(lan->duplicates);
-   fputs(", \"first\": ", stdout);
-   RadsrsPrintMacPrpRct(&lan->first);
-   fputs(", \"last\": ", stdout);
-   RadsrsPrintMacPrpRct(&lan->last);
+   RadsrsJsonInt64(lan->packets);
    fputc('}', stdout);
 }
 
@@ -710,8 +739,6 @@ RadsrsPrintMacPrpDirection(const struct ArgusMacPrpDirection *direction)
 {
    fputs("{\"flags\": ", stdout);
    fprintf(stdout, "%u", direction->flags);
-   fputs(", \"malformed_rcts\": ", stdout);
-   RadsrsJsonUInt64(direction->malformed_rcts);
    fputs(", \"lan_a\": ", stdout);
    RadsrsPrintMacPrpLan(&direction->lan_a);
    fputs(", \"lan_b\": ", stdout);
@@ -952,7 +979,9 @@ RadsrsPrintTcpMetrics(const struct ArgusTCPObjectMetrics *metrics)
 static void
 RadsrsPrintNetwork(const struct ArgusNetworkStruct *net)
 {
-   unsigned char subtype = net->hdr.subtype & 0x3f;
+   /* Network subtypes are full octets: the existing fragment subtype and the
+    * PRP supervision subtype both intentionally use values above 0x3f. */
+   unsigned char subtype = net->hdr.subtype;
 
    fputs("{\"struct\": \"ArgusNetworkStruct\", \"header\": ", stdout);
    RadsrsPrintDsrHeader(&net->hdr);
@@ -976,12 +1005,19 @@ RadsrsPrintNetwork(const struct ArgusNetworkStruct *net)
       }
 
       case ARGUS_NETWORK_SUBTYPE_FRAG:
-         fprintf(stdout, "\"fragnum\": %u, \"frag_id\": %u, \"totlen\": %u, \"currlen\": %u, \"maxfraglen\": %u",
-                 net->net_union.frag.fragnum, net->net_union.frag.frag_id,
-                 (unsigned int)net->net_union.frag.totlen,
-                 (unsigned int)net->net_union.frag.currlen,
-                 (unsigned int)net->net_union.frag.maxfraglen);
-         break;
+          fprintf(stdout, "\"fragnum\": %u, \"frag_id\": %u, \"totlen\": %u, \"currlen\": %u, \"maxfraglen\": %u",
+                  net->net_union.frag.fragnum, net->net_union.frag.frag_id,
+                  (unsigned int)net->net_union.frag.totlen,
+                  (unsigned int)net->net_union.frag.currlen,
+                  (unsigned int)net->net_union.frag.maxfraglen);
+          break;
+
+      case ARGUS_NETWORK_SUBTYPE_PRP:
+          if (net->hdr.argus_dsrvl8.len == ARGUS_PRP_SUPERVISION_DSR_LEN)
+             RadsrsPrintPrpSupervision(&net->net_union.prp);
+          else
+             fputs("\"decoded_union\": false", stdout);
+          break;
 
       default:
          fputs("\"decoded_union\": false", stdout);
@@ -1082,7 +1118,7 @@ RadsrsPrintMacStruct(const struct ArgusMacStruct *mac)
            (unsigned int)ether->ehdr.ether_type, (unsigned int)ether->dsap,
            (unsigned int)ether->ssap);
    if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
-       (mac->hdr.argus_dsrvl8.len >= ARGUS_MAC_DSR_V2_LEN)) {
+       (mac->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_LEN)) {
       const struct ArgusMacV2Struct *macv2 = (const struct ArgusMacV2Struct *)mac;
 
       fputs(", \"prp\": {\"src\": ", stdout);

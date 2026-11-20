@@ -166,6 +166,9 @@ extern "C" {
 #ifndef ETHERTYPE_TIPC
 #define ETHERTYPE_TIPC          0x88ca
 #endif
+#ifndef ETHERTYPE_PRP
+#define ETHERTYPE_PRP           0x88fb
+#endif
 #ifndef	ETHERTYPE_8021Q
 #define	ETHERTYPE_8021Q		0x8100
 #endif
@@ -267,4 +270,3 @@ extern "C" {
 }
 #endif
 #endif
-

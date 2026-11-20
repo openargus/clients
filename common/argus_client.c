@@ -2639,18 +2639,27 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                               }
                               break;
                            }
-                           case ARGUS_RTCP_FLOW: {
-                              struct ArgusRTCPObject *rtcp = (void *) &net->net_union.rtcp;
-                              if (cnt == (sizeof(*rtcp) + 4))
-                                 bcopy((char *)net, (char *)&canon->net, cnt);
+                            case ARGUS_RTCP_FLOW: {
+                               struct ArgusRTCPObject *rtcp = (void *) &net->net_union.rtcp;
+                               if (cnt == (sizeof(*rtcp) + 4))
+                                  bcopy((char *)net, (char *)&canon->net, cnt);
                               else {
                                  retn->dsrs[ARGUS_NETWORK_INDEX] = NULL;
                                  retn->dsrindex &= ~(0x01 << ARGUS_NETWORK_INDEX);
-                              }
-                              break;
-                           }
+                               }
+                               break;
+                            }
 
-                           default:
+                            case ARGUS_NETWORK_SUBTYPE_PRP:
+                               if (cnt == (ARGUS_PRP_SUPERVISION_DSR_LEN * 4))
+                                  bcopy((char *)net, (char *)&canon->net, cnt);
+                               else {
+                                  retn->dsrs[ARGUS_NETWORK_INDEX] = NULL;
+                                  retn->dsrindex &= ~(0x01 << ARGUS_NETWORK_INDEX);
+                               }
+                               break;
+
+                            default:
                            case ARGUS_NETWORK_SUBTYPE_FRAG: {
                               bcopy((char *)net, (char *)&canon->net, cnt);
                               break;
@@ -2746,29 +2755,50 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                         break;
                      }
 
-                     case ARGUS_MAC_DSR: {
-                        struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
-                        struct ArgusMacStruct *cmac = &canon->mac;
-                        int cmaclen = sizeof(canon->mac);
-                        int copylen;
+                      case ARGUS_MAC_DSR: {
+                         struct ArgusMacStruct *mac = (struct ArgusMacStruct *) dsr;
+                         struct ArgusMacStruct *cmac = &canon->mac;
+                         int copylen;
 
-                        if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
-                            (cnt >= (int)sizeof(canon->macv2))) {
-                           cmac = (struct ArgusMacStruct *)&canon->macv2;
-                           cmaclen = sizeof(canon->macv2);
-                        }
+                         switch (mac->hdr.subtype & 0x3F) {
+                            default:
+                            case ARGUS_TYPE_ETHER: {
+                               if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
+                                   (cnt == (int)sizeof(struct ArgusMacV2WireStruct))) {
+                                  struct ArgusMacV2WireStruct *wire = (struct ArgusMacV2WireStruct *)mac;
+                                  struct ArgusMacV2Struct *macv2 = &canon->macv2;
 
-                        switch (mac->hdr.subtype & 0x3F) {
-                           default:
-                           case ARGUS_TYPE_ETHER: {
-                              copylen = (cnt > cmaclen) ? cmaclen : cnt;
-                              bzero((char *)cmac, cmaclen);
-                              bcopy((char *)mac, (char *)cmac, copylen);
-                              if (cnt > cmaclen)
-                                 cmac->hdr.argus_dsrvl8.len = copylen / 4;
-                              break;
-                           }
-                        }
+                                  bzero((char *)macv2, sizeof(*macv2));
+                                  macv2->hdr = wire->hdr;
+                                  macv2->mac = wire->mac;
+                                  macv2->src_prp.flags = wire->src_prp.flags;
+                                  macv2->src_prp.lan_a.packets = wire->src_prp.lan_a.packets;
+                                  macv2->src_prp.lan_b.packets = wire->src_prp.lan_b.packets;
+                                  macv2->dst_prp.flags = wire->dst_prp.flags;
+                                  macv2->dst_prp.lan_a.packets = wire->dst_prp.lan_a.packets;
+                                  macv2->dst_prp.lan_b.packets = wire->dst_prp.lan_b.packets;
+                                  macv2->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_V2_LEN;
+                                  cmac = (struct ArgusMacStruct *)macv2;
+                               } else if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
+                                          (cnt == (int)sizeof(canon->macv2))) {
+                                  bzero((char *)&canon->macv2, sizeof(canon->macv2));
+                                  bcopy((char *)mac, (char *)&canon->macv2, sizeof(canon->macv2));
+                                  cmac = (struct ArgusMacStruct *)&canon->macv2;
+                               } else {
+                                  copylen = (cnt > (int)sizeof(canon->mac)) ? sizeof(canon->mac) : cnt;
+                                  bzero((char *)cmac, sizeof(canon->mac));
+                                  bcopy((char *)mac, (char *)cmac, copylen);
+                                  if (mac->hdr.subtype == ARGUS_MAC_DSR_V2) {
+                                     cmac->hdr.subtype = ARGUS_MAC_DSR_BASE;
+                                     cmac->hdr.argus_dsrvl8.qual &= ~(ARGUS_MAC_SRC_PRP | ARGUS_MAC_DST_PRP);
+                                     cmac->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_BASE_LEN;
+                                  } else if (cnt > (int)sizeof(canon->mac)) {
+                                     cmac->hdr.argus_dsrvl8.len = copylen / 4;
+                                  }
+                               }
+                               break;
+                            }
+                         }
                         retn->dsrs[ARGUS_MAC_INDEX] = (struct ArgusDSRHeader*)cmac;
                         retn->dsrindex |= (0x01 << ARGUS_MAC_INDEX);
                         break;
@@ -6565,6 +6595,85 @@ ArgusMergeJitterStats(struct ArgusStatObject *stats1, const struct ArgusStatObje
       stats1->maxval = stats2->maxval;
 }
 
+
+static void
+ArgusMergeMacPrpDirection(struct ArgusMacPrpDirection *direction1,
+                           const struct ArgusMacPrpDirection *direction2)
+{
+   direction1->flags |= direction2->flags;
+   direction1->lan_a.packets += direction2->lan_a.packets;
+   direction1->lan_b.packets += direction2->lan_b.packets;
+}
+
+
+
+static void
+ArgusMergePrpSupervisionClaim(struct ArgusPrpSupervisionObject *prp1,
+                              unsigned char *target, unsigned int flag,
+                              const struct ArgusPrpSupervisionObject *prp2,
+                              const unsigned char *value)
+{
+   if (!(prp2->flags & flag))
+      return;
+
+   if (!(prp1->flags & flag)) {
+      bcopy(value, target, 6);
+   } else if (bcmp(target, value, 6)) {
+      prp1->flags |= ARGUS_PRP_SUPERVISION_CLAIM_CONFLICT;
+   }
+}
+
+
+/*
+ * Supervision identities are bounded observations, not a topology database.
+ * Retain the first value seen for each distinct role and make a later,
+ * incompatible claim explicit instead of coalescing roles or overwriting it.
+ */
+static void
+ArgusMergePrpSupervision(struct ArgusPrpSupervisionObject *prp1,
+                         const struct ArgusPrpSupervisionObject *prp2)
+{
+   if (prp2->flags & ARGUS_PRP_SUPERVISION_VALID) {
+      if (!(prp1->flags & ARGUS_PRP_SUPERVISION_VALID)) {
+         prp1->version = prp2->version;
+         prp1->path = prp2->path;
+      } else if ((prp1->version != prp2->version) ||
+                 (prp1->path != prp2->path)) {
+         prp1->flags |= ARGUS_PRP_SUPERVISION_CLAIM_CONFLICT;
+      }
+   }
+
+   if (prp2->node_mode != 0) {
+      if (prp1->node_mode == 0)
+         prp1->node_mode = prp2->node_mode;
+      else if (prp1->node_mode != prp2->node_mode)
+         prp1->flags |= ARGUS_PRP_SUPERVISION_CLAIM_CONFLICT;
+   }
+
+   /* This is the supervision-header sequence, never an RCT sequence.  Like
+    * the sensor's report-window summary, retain the latest merged value. */
+   if (prp2->flags & ARGUS_PRP_SUPERVISION_HAS_SEQUENCE)
+      prp1->sequence = prp2->sequence;
+
+   ArgusMergePrpSupervisionClaim(prp1, prp1->reporter,
+                                 ARGUS_PRP_SUPERVISION_REPORTER, prp2,
+                                 prp2->reporter);
+   ArgusMergePrpSupervisionClaim(prp1, prp1->node_a,
+                                 ARGUS_PRP_SUPERVISION_NODE_A, prp2,
+                                 prp2->node_a);
+   ArgusMergePrpSupervisionClaim(prp1, prp1->node_b,
+                                 ARGUS_PRP_SUPERVISION_NODE_B, prp2,
+                                 prp2->node_b);
+   ArgusMergePrpSupervisionClaim(prp1, prp1->redbox,
+                                 ARGUS_PRP_SUPERVISION_REDBOX, prp2,
+                                 prp2->redbox);
+   ArgusMergePrpSupervisionClaim(prp1, prp1->vdan,
+                                 ARGUS_PRP_SUPERVISION_VDAN, prp2,
+                                 prp2->vdan);
+
+   prp1->flags |= prp2->flags;
+}
+
 void
 ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                    struct ArgusRecordStruct *ns1, struct ArgusRecordStruct *ns2)
@@ -7282,24 +7391,52 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     break;
                                  }
 
-                                 case ARGUS_ESP_DSR: {
-                                    struct ArgusESPObject *e1 = &n1->net_union.esp;
-                                    struct ArgusESPObject *e2 = &n2->net_union.esp;
+                                  case ARGUS_ESP_DSR: {
+                                     struct ArgusESPObject *e1 = &n1->net_union.esp;
+                                     struct ArgusESPObject *e2 = &n2->net_union.esp;
 
                                     n1->hdr.argus_dsrvl8.qual |= n2->hdr.argus_dsrvl8.qual;
 
                                     e1->lastseq = e2->lastseq;
                                     e1->lostseq += e2->lostseq;
-                                    if (e1->spi != e2->spi) {
-                                       e1->spi = 0;
-                                    }
-                                 }
-                              }
+                                     if (e1->spi != e2->spi) {
+                                        e1->spi = 0;
+                                      }
+                                     break;
+                                  }
+                                  case ARGUS_NETWORK_SUBTYPE_PRP: {
+                                     struct ArgusPrpSupervisionObject *p1 =
+                                        &n1->net_union.prp;
+                                     const struct ArgusPrpSupervisionObject *p2 =
+                                        &n2->net_union.prp;
 
-                           }
-                        }
-                        break;
-                     }
+                                     if ((n1->hdr.argus_dsrvl8.len == ARGUS_PRP_SUPERVISION_DSR_LEN) &&
+                                         (n2->hdr.argus_dsrvl8.len == ARGUS_PRP_SUPERVISION_DSR_LEN))
+                                        ArgusMergePrpSupervision(p1, p2);
+                                     else {
+                                        ArgusFree(ns1->dsrs[i]);
+                                        ns1->dsrs[i] = NULL;
+                                        ns1->dsrindex &= ~(0x01 << i);
+                                     }
+                                     break;
+                                  }
+                               }
+
+                            }
+                         } else if ((n1 == NULL) && (n2 != NULL) &&
+                                    (n2->hdr.subtype == ARGUS_NETWORK_SUBTYPE_PRP) &&
+                                    (n2->hdr.argus_dsrvl8.len == ARGUS_PRP_SUPERVISION_DSR_LEN)) {
+                            int len = ARGUS_PRP_SUPERVISION_DSR_LEN * 4;
+
+                            if ((ns1->dsrs[i] = ArgusCalloc(1, len)) == NULL) {
+                               ArgusLog(LOG_ERR, "ArgusMergeRecords: ArgusCalloc error %s", strerror(errno));
+                            } else {
+                               bcopy((char *)n2, (char *)ns1->dsrs[i], len);
+                               ns1->dsrindex |= (0x01 << i);
+                            }
+                         }
+                         break;
+                      }
 
 // Merging IP Attribute objects involves
 // of rollover any time soon, as we're working with 64 bit
@@ -7885,9 +8022,9 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                         break;
                      }
 
-                     case ARGUS_MAC_INDEX: {
-                        struct ArgusMacStruct *m1 = (struct ArgusMacStruct *) ns1->dsrs[ARGUS_MAC_INDEX];
-                        struct ArgusMacStruct *m2 = (struct ArgusMacStruct *) ns2->dsrs[ARGUS_MAC_INDEX];
+                      case ARGUS_MAC_INDEX: {
+                         struct ArgusMacStruct *m1 = (struct ArgusMacStruct *) ns1->dsrs[ARGUS_MAC_INDEX];
+                         struct ArgusMacStruct *m2 = (struct ArgusMacStruct *) ns2->dsrs[ARGUS_MAC_INDEX];
 
                         if (m1 && m2) {
                            if (m1->hdr.subtype == m2->hdr.subtype) {
@@ -7903,13 +8040,26 @@ ArgusMergeRecords (const struct ArgusAggregatorStruct * const na,
                                     if (bcmp(&e1->ether_dhost, &e2->ether_dhost, sizeof(e1->ether_dhost)))
                                        bzero ((char *)&e1->ether_dhost, sizeof(e1->ether_dhost));
 
-                                    if (e1->ether_type != e2->ether_type) 
-                                       e1->ether_type = 0;
-                                    break;
-                                 }
-                              }
+                                     if (e1->ether_type != e2->ether_type)
+                                        e1->ether_type = 0;
+                                     break;
+                                  }
+                               }
 
-                           } else {
+                               if ((m1->hdr.subtype == ARGUS_MAC_DSR_V2) &&
+                                   (m1->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_LEN) &&
+                                   (m2->hdr.argus_dsrvl8.len == ARGUS_MAC_DSR_V2_LEN)) {
+                                  struct ArgusMacV2Struct *mac1 = (struct ArgusMacV2Struct *)m1;
+                                  const struct ArgusMacV2Struct *mac2 = (const struct ArgusMacV2Struct *)m2;
+
+                                  mac1->hdr.argus_dsrvl8.qual |=
+                                     mac2->hdr.argus_dsrvl8.qual &
+                                     (ARGUS_MAC_SRC_PRP | ARGUS_MAC_DST_PRP);
+                                  ArgusMergeMacPrpDirection(&mac1->src_prp, &mac2->src_prp);
+                                  ArgusMergeMacPrpDirection(&mac1->dst_prp, &mac2->dst_prp);
+                               }
+
+                            } else {
                               ArgusFree(ns1->dsrs[ARGUS_MAC_INDEX]);
                               ns1->dsrs[ARGUS_MAC_INDEX] = NULL;
                               ns1->dsrindex &= ~(0x01 << i);

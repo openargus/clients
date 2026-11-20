@@ -1,13 +1,10 @@
 #!/bin/sh
-# Regression coverage for client-side PRP-1 MAC-DSR v2 support.
+# Regression coverage for compact sensor-side PRP-1 MAC-DSR v2 support.
 #
-# The retained fixture was emitted by the sensor from deterministic PRP frames.
-# Check all three client paths that must understand its 67-word MAC DSR:
-#
-#   * radsrs's canonical JSON view, including the host-order PRP values;
-#   * normal ra read/write, which must preserve the complete v2 wire DSR; and
-#   * rmon reversal, which must exchange the v2 directions and their qualifier
-#     bits before serializing the result.
+# Sensors write an 11-word MAC-v2 DSR with unsigned 32-bit LAN totals.
+# Clients promote it to their 15-word canonical form with long long totals.
+# Check decoding, output conversion, aggregation, and source/destination
+# reversal without reintroducing sequence or RCT snapshot state.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -15,6 +12,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 RADSRS_BIN="${RADSRS_BIN:-$REPO_ROOT/bin/radsrs}"
 RA_BIN="${RA_BIN:-$REPO_ROOT/bin/ra}"
+RACLUSTER_BIN="${RACLUSTER_BIN:-$REPO_ROOT/bin/racluster}"
 FIXTURE="$SCRIPT_DIR/fixtures/prp_mac_v2.argus"
 TMPDIR_TEST="$(mktemp -d "${TMPDIR:-/tmp}/argus_radsrs_prp_v2.XXXXXX")"
 REGRESSION_FAIL_MARKER="$TMPDIR_TEST/fail"
@@ -23,18 +21,17 @@ ROUNDTRIP_OUTPUT="$TMPDIR_TEST/roundtrip.argus"
 REVERSE_OUTPUT="$TMPDIR_TEST/reverse.argus"
 ONE_WAY_FIXTURE="$TMPDIR_TEST/one-way-prp.argus"
 ONE_WAY_REVERSE_OUTPUT="$TMPDIR_TEST/one-way-reverse.argus"
+AGGREGATE_INPUT="$TMPDIR_TEST/aggregate-input.argus"
+AGGREGATE_OUTPUT="$TMPDIR_TEST/aggregate-output.argus"
+AGGREGATE_JSON_OUTPUT="$TMPDIR_TEST/aggregate.jsonseq"
 
 cleanup() {
    rm -rf "$TMPDIR_TEST"
 }
 trap cleanup EXIT HUP INT TERM
 
-if [ ! -x "$RADSRS_BIN" ]; then
-   echo "error: $RADSRS_BIN not found or not executable -- build it first (make -j4)" >&2
-   exit 2
-fi
-if [ ! -x "$RA_BIN" ]; then
-   echo "error: $RA_BIN not found or not executable -- build it first (make -j4)" >&2
+if [ ! -x "$RADSRS_BIN" ] || [ ! -x "$RA_BIN" ] || [ ! -x "$RACLUSTER_BIN" ]; then
+   echo "error: bin/radsrs, bin/ra, and bin/racluster must be built first (make -j4)" >&2
    exit 2
 fi
 if [ ! -f "$FIXTURE" ]; then
@@ -49,15 +46,15 @@ fi
 mkdir -p "$TMPDIR_TEST/home"
 
 if HOME="$TMPDIR_TEST/home" "$RADSRS_BIN" -X -r "$FIXTURE" >"$JSON_OUTPUT" 2>"$TMPDIR_TEST/radsrs.log"; then
-   pass "radsrs processed the sensor-produced PRP MAC-v2 fixture"
+   pass "radsrs processed the compact sensor PRP MAC-v2 fixture"
 else
    fail "radsrs could not process the PRP MAC-v2 fixture (see $TMPDIR_TEST/radsrs.log)"
 fi
 
 if HOME="$TMPDIR_TEST/home" "$RA_BIN" -X -r "$FIXTURE" -w "$ROUNDTRIP_OUTPUT" >"$TMPDIR_TEST/roundtrip.log" 2>&1; then
-   pass "ra read and rewrote the PRP MAC-v2 fixture"
+   pass "ra preserved the compact PRP MAC-v2 fixture"
 else
-   fail "ra could not rewrite the PRP MAC-v2 fixture (see $TMPDIR_TEST/roundtrip.log)"
+   fail "ra could not preserve the PRP MAC-v2 fixture (see $TMPDIR_TEST/roundtrip.log)"
 fi
 
 if HOME="$TMPDIR_TEST/home" "$RA_BIN" -X -M rmon -r "$FIXTURE" -w "$REVERSE_OUTPUT" >"$TMPDIR_TEST/reverse.log" 2>&1; then
@@ -66,9 +63,8 @@ else
    fail "ra could not reverse the PRP MAC-v2 record (see $TMPDIR_TEST/reverse.log)"
 fi
 
-# The fixture carries both direction qualifier bits.  Derive a source-only
-# variant so the reversal check also detects a regression that swaps the
-# observations but leaves a one-sided qualifier unchanged.
+# The fixture carries both direction qualifier bits. Derive a source-only
+# variant so reversal also proves that one-sided PRP status follows direction.
 if python3 - "$FIXTURE" "$ONE_WAY_FIXTURE" <<'PY'
 import struct
 import sys
@@ -93,8 +89,7 @@ while offset < len(data):
             dsr_type, subtype, _, dsr_words = struct.unpack_from("!BBBB", data, cursor)
             if dsr_words == 0 or cursor + dsr_words * 4 > end:
                 raise SystemExit("invalid DSR length")
-            if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 67):
-                # Preserve legacy qualifier bits and retain only source PRP.
+            if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 11):
                 data[cursor + 2] = (data[cursor + 2] & ~0x0c) | 0x04
                 open(output_path, "wb").write(data)
                 raise SystemExit(0)
@@ -102,10 +97,10 @@ while offset < len(data):
 
     offset = end
 
-raise SystemExit("MAC-v2 DSR not found")
+raise SystemExit("compact MAC-v2 DSR not found")
 PY
 then
-   pass "derived a source-only PRP qualifier fixture"
+   pass "derived a source-only compact PRP qualifier fixture"
 else
    fail "could not derive a source-only PRP qualifier fixture"
 fi
@@ -117,8 +112,82 @@ else
    fail "ra could not reverse the source-only PRP qualifier fixture (see $TMPDIR_TEST/one-way-reverse.log)"
 fi
 
+# Give two otherwise-identical sensor records different 32-bit totals. Their
+# source LAN-A sum exceeds UINT_MAX, proving client aggregation uses and emits
+# the 64-bit canonical counters rather than sensor-width arithmetic.
+if python3 - "$FIXTURE" "$AGGREGATE_INPUT" <<'PY'
+import struct
+import sys
+
+source_path, output_path = sys.argv[1:]
+data = open(source_path, "rb").read()
+offset = 0
+mar = None
+far = None
+
+while offset < len(data):
+    if len(data) - offset < 4:
+        raise SystemExit("truncated record header")
+    record_type, _, words = struct.unpack_from("!BBH", data, offset)
+    end = offset + words * 4
+    if words == 0 or end > len(data):
+        raise SystemExit("invalid record length")
+    if record_type == 0x85:
+        mar = data[offset:end]
+    elif (record_type & 0xf0) == 0x10:
+        far = data[offset:end]
+    offset = end
+
+if mar is None or far is None:
+    raise SystemExit("fixture must contain a MAR and FAR")
+
+
+def set_prp_totals(record, qualifier, src, dst):
+    cursor = 4
+    while cursor < len(record):
+        if len(record) - cursor < 4:
+            raise SystemExit("truncated DSR header")
+        dsr_type, subtype, _, dsr_words = struct.unpack_from("!BBBB", record, cursor)
+        if dsr_words == 0 or cursor + dsr_words * 4 > len(record):
+            raise SystemExit("invalid DSR length")
+        if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 11):
+            record[cursor + 2] = (record[cursor + 2] & ~0x0c) | qualifier
+            struct.pack_into("!III", record, cursor + 20, *src)
+            struct.pack_into("!III", record, cursor + 32, *dst)
+            return
+        cursor += dsr_words * 4
+    raise SystemExit("compact MAC-v2 DSR not found")
+
+
+first = bytearray(far)
+second = bytearray(far)
+set_prp_totals(first, 0x04, (0x03, 4000000000, 10), (0x00, 0, 0))
+set_prp_totals(second, 0x08, (0x04, 500000000, 30), (0x05, 40, 50))
+open(output_path, "wb").write(mar + first + second)
+PY
+then
+   pass "built compact PRP records for 64-bit aggregation"
+else
+   fail "could not build compact PRP aggregation input"
+fi
+
+if [ -f "$AGGREGATE_INPUT" ] &&
+   HOME="$TMPDIR_TEST/home" "$RACLUSTER_BIN" -M nocorrect -M norep -r "$AGGREGATE_INPUT" -w "$AGGREGATE_OUTPUT" >"$TMPDIR_TEST/aggregate.log" 2>&1; then
+   pass "racluster merged compact PRP records"
+else
+   fail "racluster could not merge compact PRP records (see $TMPDIR_TEST/aggregate.log)"
+fi
+
+if [ -f "$AGGREGATE_OUTPUT" ] &&
+   HOME="$TMPDIR_TEST/home" "$RADSRS_BIN" -X -r "$AGGREGATE_OUTPUT" >"$AGGREGATE_JSON_OUTPUT" 2>"$TMPDIR_TEST/aggregate-radsrs.log"; then
+   pass "radsrs decoded the canonical aggregated PRP record"
+else
+   fail "radsrs could not decode the canonical aggregated PRP record (see $TMPDIR_TEST/aggregate-radsrs.log)"
+fi
+
 if python3 - "$FIXTURE" "$JSON_OUTPUT" "$ROUNDTRIP_OUTPUT" "$REVERSE_OUTPUT" \
-              "$ONE_WAY_FIXTURE" "$ONE_WAY_REVERSE_OUTPUT" <<'PY'
+               "$ONE_WAY_FIXTURE" "$ONE_WAY_REVERSE_OUTPUT" "$AGGREGATE_OUTPUT" \
+               "$AGGREGATE_JSON_OUTPUT" <<'PY'
 import base64
 import json
 import struct
@@ -131,11 +200,16 @@ import sys
     reverse_path,
     one_way_path,
     one_way_reverse_path,
+    aggregate_path,
+    aggregate_json_path,
 ) = sys.argv[1:]
+
+SENSOR_MAC_WORDS = 11
+CLIENT_MAC_WORDS = 15
 
 
 def records(path):
-    """Return raw records and their DSRs without interpreting their payloads."""
+    """Return raw records and their DSRs without interpreting payloads."""
     data = open(path, "rb").read()
     offset = 0
     result = []
@@ -192,21 +266,44 @@ def flow_records(items):
     return [item for item in items if (item["type"] & 0xf0) == 0x10]
 
 
-def mac_dsr(record):
+def mac_dsr(record, words):
     values = [item for item in record["dsrs"] if (item["type"] & 0x7f) == 0x42]
     if len(values) != 1:
         raise AssertionError("expected one MAC DSR, got %d" % len(values))
     value = values[0]
-    if (value["subtype"], value["words"]) != (2, 67):
-        raise AssertionError("MAC DSR is not a 67-word v2 DSR: %r" %
+    if (value["subtype"], value["words"]) != (2, words):
+        raise AssertionError("MAC DSR has unexpected subtype/length: %r" %
                              ((value["subtype"], value["words"]),))
     return value
 
 
+def sensor_directions(raw):
+    if len(raw) != SENSOR_MAC_WORDS * 4:
+        raise AssertionError("unexpected compact sensor MAC-v2 size")
+    return (struct.unpack_from("!III", raw, 20),
+            struct.unpack_from("!III", raw, 32))
+
+
+def canonical_directions(raw):
+    if len(raw) != CLIENT_MAC_WORDS * 4:
+        raise AssertionError("unexpected canonical client MAC-v2 size")
+    return (struct.unpack_from("!Iqq", raw, 20),
+            struct.unpack_from("!Iqq", raw, 40))
+
+
+def promoted_mac_wire(raw):
+    """Expected client canonical MAC-v2 bytes from an 11-word sensor DSR."""
+    result = bytearray(raw[:20])
+    for direction in sensor_directions(raw):
+        result.extend(struct.pack("!Iqq", *direction))
+    result[3] = CLIENT_MAC_WORDS
+    return bytes(result)
+
+
 def reverse_mac_wire(raw):
-    """Expected network-order MAC-v2 bytes after ArgusReverseRecord()."""
-    if len(raw) != 67 * 4:
-        raise AssertionError("unexpected MAC-v2 size")
+    """Expected network-order canonical MAC-v2 bytes after reversal."""
+    if len(raw) != CLIENT_MAC_WORDS * 4:
+        raise AssertionError("unexpected canonical MAC-v2 size")
 
     result = bytearray(raw)
     qualifier = raw[2]
@@ -217,42 +314,14 @@ def reverse_mac_wire(raw):
     result[18] = raw[19]
     result[19] = raw[18]
 
-    # MAC-v2 source/destination qualifier bits and the complete PRP snapshots.
     result[2] = qualifier & ~0x0c
     if qualifier & 0x04:
         result[2] |= 0x08
     if qualifier & 0x08:
         result[2] |= 0x04
-    result[20:144] = raw[144:268]
-    result[144:268] = raw[20:144]
+    result[20:40] = raw[40:60]
+    result[40:60] = raw[20:40]
     return bytes(result)
-
-
-def check_rct(actual, sequence, lan_size, sec, usec):
-    expected = {
-        "sequence": sequence,
-        "lan_id_and_lsdu_size": lan_size,
-        "lan_id": lan_size >> 12,
-        "lsdu_size": lan_size & 0x0fff,
-        "time": {"tv_sec": sec, "tv_usec": usec},
-    }
-    if actual != expected:
-        raise AssertionError("wrong RCT snapshot: %r != %r" % (actual, expected))
-
-
-def check_lan(actual, counters, first, last):
-    expected_counters = {
-        "packets": str(counters[0]),
-        "gaps": str(counters[1]),
-        "out_of_order": str(counters[2]),
-        "duplicates": str(counters[3]),
-    }
-    for name, expected in expected_counters.items():
-        if actual.get(name) != expected:
-            raise AssertionError("wrong %s counter: %r != %r" %
-                                 (name, actual.get(name), expected))
-    check_rct(actual.get("first"), *first)
-    check_rct(actual.get("last"), *last)
 
 
 fixture_records = records(fixture_path)
@@ -262,12 +331,16 @@ fixture_flows = flow_records(fixture_records)
 if len(fixture_flows) != 1:
     raise AssertionError("fixture must contain exactly one flow record")
 fixture_flow = fixture_flows[0]
-fixture_mac = mac_dsr(fixture_flow)
-if (fixture_mac["type"], fixture_mac["qualifier"]) != (0x42, 0x0d):
-    raise AssertionError("unexpected MAC-v2 fixture header")
+fixture_mac = mac_dsr(fixture_flow, SENSOR_MAC_WORDS)
+if (fixture_mac["type"], fixture_mac["qualifier"]) != (0x42, 0x0c):
+    raise AssertionError("unexpected compact MAC-v2 fixture header")
+sensor_src, sensor_dst = sensor_directions(fixture_mac["raw"])
+if (sensor_src, sensor_dst) != ((0x07, 2, 1), (0x05, 1, 0)):
+    raise AssertionError("fixture does not contain the expected compact PRP totals")
+canonical_mac = promoted_mac_wire(fixture_mac["raw"])
 
-# radsrs must retain every source record byte-for-byte while exposing the
-# already-NtoH-converted PRP fields in canonical.mac.prp.
+# radsrs preserves original sensor bytes but exposes the promoted 64-bit
+# client canonical values in its readable view.
 json_values = [json.loads(value) for value in open(json_path, "rb").read().split(b"\x1e") if value.strip()]
 if len(json_values) != len(fixture_records):
     raise AssertionError("expected %d JSON sequence values, got %d" %
@@ -296,73 +369,95 @@ if mac.get("header") != {
     "type": 66,
     "name": "mac",
     "subtype": 2,
-    "qualifier": 13,
-    "length_words": 67,
+    "qualifier": 12,
+    "length_words": CLIENT_MAC_WORDS,
 }:
     raise AssertionError("wrong canonical MAC-v2 header: %r" % mac.get("header"))
 if (mac.get("ether_shost"), mac.get("ether_dhost"), mac.get("ether_type"),
         mac.get("dsap"), mac.get("ssap")) != (
             "02:00:00:00:00:01", "02:00:00:00:00:02", 2048, 0, 0):
     raise AssertionError("wrong canonical legacy MAC fields")
+expected_prp = {
+    "src": {"flags": 0x07, "lan_a": {"packets": "2"}, "lan_b": {"packets": "1"}},
+    "dst": {"flags": 0x05, "lan_a": {"packets": "1"}, "lan_b": {"packets": "0"}},
+}
+if mac.get("prp") != expected_prp:
+    raise AssertionError("wrong canonical compact PRP view: %r" % mac.get("prp"))
 
-prp = mac.get("prp")
-if not prp or set(prp) != {"src", "dst"}:
-    raise AssertionError("radsrs did not expose both PRP directions")
-src = prp["src"]
-dst = prp["dst"]
-if (src.get("flags"), src.get("malformed_rcts")) != (15, "1"):
-    raise AssertionError("wrong source PRP flags or malformed total")
-if (dst.get("flags"), dst.get("malformed_rcts")) != (13, "1"):
-    raise AssertionError("wrong destination PRP flags or malformed total")
-check_lan(src["lan_a"], (4, 1, 1, 1),
-          (100, 0xa000 | 35, 1, 100000000),
-          (101, 0xa000 | 35, 1, 140000000))
-check_lan(src["lan_b"], (3, 1, 0, 0),
-          (100, 0xb000 | 35, 1, 110000000),
-          (103, 0xb000 | 35, 1, 200000000))
-check_lan(dst["lan_a"], (2, 0, 1, 0),
-          (500, 0xa000 | 35, 1, 160000000),
-          (499, 0xa000 | 35, 1, 170000000))
-check_lan(dst["lan_b"], (0, 0, 0, 0),
-          (0, 0, 0, 0), (0, 0, 0, 0))
-
-# ra's normal output reaches ArgusHtoN() after canonicalization.  Its FAR,
-# including the MAC-v2 DSR, must exactly reproduce the sensor's wire bytes.
+# An unmodified `ra -w` record preserves the original sensor wire bytes. The
+# canonical form is used when a client generates a modified/derived record.
 roundtrip_flows = flow_records(records(roundtrip_path))
-if len(roundtrip_flows) != 1 or roundtrip_flows[0]["raw"] != fixture_flow["raw"]:
-    raise AssertionError("normal ra output did not round-trip the PRP FAR")
-if mac_dsr(roundtrip_flows[0])["raw"] != fixture_mac["raw"]:
-    raise AssertionError("normal ra output did not round-trip the MAC-v2 DSR")
+if len(roundtrip_flows) != 1:
+    raise AssertionError("normal ra output did not contain one PRP FAR")
+roundtrip_flow = roundtrip_flows[0]
+roundtrip_mac = mac_dsr(roundtrip_flow, SENSOR_MAC_WORDS)
+if roundtrip_flow["raw"] != fixture_flow["raw"] or roundtrip_mac["raw"] != fixture_mac["raw"]:
+    raise AssertionError("normal ra output did not preserve the sensor MAC-v2 DSR")
 
-# rmon emits the original and a reversed copy.  Compare complete wire DSRs so
-# every counter/RCT field, not only the displayed counters, is covered.
-reverse_macs = [mac_dsr(record)["raw"] for record in flow_records(records(reverse_path))]
-expected_reverse = reverse_mac_wire(fixture_mac["raw"])
+# rmon preserves the original sensor record and emits a generated canonical
+# reversed copy. Compare complete MAC DSRs so long-long totals and qualifier
+# bits are both used by the generated output.
+reverse_macs = []
+for record in flow_records(records(reverse_path)):
+    values = [item for item in record["dsrs"] if (item["type"] & 0x7f) == 0x42]
+    if len(values) != 1:
+        raise AssertionError("rmon output does not contain one MAC DSR")
+    reverse_macs.append(values[0]["raw"])
+expected_reverse = reverse_mac_wire(canonical_mac)
 if len(reverse_macs) != 2 or fixture_mac["raw"] not in reverse_macs or \
         expected_reverse not in reverse_macs:
-    raise AssertionError("rmon did not preserve and reverse the full MAC-v2 DSR")
+    raise AssertionError("rmon did not preserve and reverse canonical MAC-v2 totals")
 
-# Source-only PRP must become destination-only in the rmon copy.  This catches
-# a qualifier-bit regression that the fixture's both-directions header cannot.
+# Source-only PRP must become destination-only in the rmon copy.
 one_way_flow = flow_records(records(one_way_path))
 if len(one_way_flow) != 1:
     raise AssertionError("source-only fixture does not contain one flow")
-one_way_mac = mac_dsr(one_way_flow[0])["raw"]
-if one_way_mac[2] != 0x05:
+one_way_sensor_mac = mac_dsr(one_way_flow[0], SENSOR_MAC_WORDS)["raw"]
+if one_way_sensor_mac[2] != 0x04:
     raise AssertionError("source-only fixture has the wrong MAC qualifier")
-one_way_reverse_macs = [mac_dsr(record)["raw"]
-                        for record in flow_records(records(one_way_reverse_path))]
-expected_one_way_reverse = reverse_mac_wire(one_way_mac)
-if expected_one_way_reverse[2] != 0x09:
+one_way_canonical_mac = promoted_mac_wire(one_way_sensor_mac)
+one_way_reverse_macs = []
+for record in flow_records(records(one_way_reverse_path)):
+    values = [item for item in record["dsrs"] if (item["type"] & 0x7f) == 0x42]
+    if len(values) != 1:
+        raise AssertionError("one-way rmon output does not contain one MAC DSR")
+    one_way_reverse_macs.append(values[0]["raw"])
+expected_one_way_reverse = reverse_mac_wire(one_way_canonical_mac)
+if expected_one_way_reverse[2] != 0x08:
     raise AssertionError("test did not derive the expected destination-only qualifier")
-if len(one_way_reverse_macs) != 2 or one_way_mac not in one_way_reverse_macs or \
+if len(one_way_reverse_macs) != 2 or one_way_sensor_mac not in one_way_reverse_macs or \
         expected_one_way_reverse not in one_way_reverse_macs:
     raise AssertionError("rmon did not reverse the one-sided PRP qualifier")
+
+# Aggregation ORs directional status and adds LAN totals in the client-width
+# representation. The LAN-A sum is intentionally larger than UINT_MAX.
+aggregate_flows = flow_records(records(aggregate_path))
+if len(aggregate_flows) != 1:
+    raise AssertionError("racluster did not emit one aggregated PRP FAR")
+aggregate_mac = mac_dsr(aggregate_flows[0], CLIENT_MAC_WORDS)
+if (aggregate_mac["qualifier"] & 0x0c) != 0x0c:
+    raise AssertionError("racluster did not merge PRP direction qualifiers")
+if canonical_directions(aggregate_mac["raw"]) != (
+        (0x07, 4500000000, 40), (0x05, 40, 50)):
+    raise AssertionError("racluster did not retain 64-bit compact PRP totals")
+
+# Reading the generated record back must use the canonical 15-word decoder,
+# including byte-order conversion of counters above the sensor-width range.
+aggregate_json = [json.loads(value) for value in open(aggregate_json_path, "rb").read().split(b"\x1e") if value.strip()]
+aggregate_flow_json = [value for value in aggregate_json if value["record"]["type"] == "flow"]
+if len(aggregate_flow_json) != 1:
+    raise AssertionError("radsrs did not emit one aggregated PRP JSON record")
+aggregate_prp = aggregate_flow_json[0]["canonical"].get("mac", {}).get("prp")
+if aggregate_prp != {
+    "src": {"flags": 0x07, "lan_a": {"packets": "4500000000"}, "lan_b": {"packets": "40"}},
+    "dst": {"flags": 0x05, "lan_a": {"packets": "40"}, "lan_b": {"packets": "50"}},
+}:
+    raise AssertionError("canonical PRP decoder did not retain 64-bit totals: %r" % aggregate_prp)
 PY
 then
-   pass "radsrs PRP JSON, wire round-trip, and direction reversal are correct"
+   pass "PRP JSON, promotion, aggregation, serialization, and reversal are correct"
 else
-   fail "PRP MAC-v2 JSON, wire round-trip, or direction reversal validation failed"
+   fail "PRP JSON, promotion, aggregation, serialization, or reversal validation failed"
 fi
 
 if [ -s "$REGRESSION_FAIL_MARKER" ]; then
