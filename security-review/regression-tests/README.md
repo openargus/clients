@@ -32,9 +32,11 @@ per-fix-test pattern.
 - **Jitter DSR scaling**: `test_jitter_scale_merge.sh` verifies that millisecond and second
   Jitter DSRs normalize to microseconds before client aggregation, and that merged source and
   destination statistics retain their direction qualifiers.
-- **PRP-1 MAC-v2 decoding**: `test_radsrs_prp_mac_v2.sh` runs `radsrs` against a
+- **PRP MAC-v2 decoding**: Pre-pairing records (11 or 15 words) retain their LAN totals;
+  `radsrs` reports `matched_pairs` and `skew_sum_us` as null when not measured.
+  `test_radsrs_prp_mac_v2.sh` covers both older layouts and runs `radsrs` against a
   sensor-produced compact MAC-v2 fixture and verifies the decoded directional flags and LAN
-  packet totals. It also checks client promotion to its 64-bit canonical form, raw `ra`
+  packet totals, matched pairs, and signed skew sums. It also checks client promotion to its 64-bit canonical form, raw `ra`
   pass-through, generated-record aggregation/serialization, and `rmon` reversal of both PRP
   directions and their qualifier bits.
 - **PRP supervision decoding**: `test_radsrs_prp_supervision.sh` builds fixed-size Network
@@ -66,5 +68,5 @@ only this one base file is committed here.
 
 `fixtures/prp_mac_v2.argus` is likewise synthetic: it is emitted by
 `~/Saber/argus/argus/bin/argus` from deterministic PRP-1 Ethernet frames.  It contains no
-captured traffic and contains the sensor's compact 11-word MAC-v2 DSR. It is retained so the
+captured traffic and contains the sensor's compact 17-word MAC-v2 DSR. It is retained so the
 radsrs MAC-v2 decoder is covered in CI without requiring a sibling sensor checkout.

@@ -743,6 +743,14 @@ RadsrsPrintMacPrpDirection(const struct ArgusMacPrpDirection *direction)
    RadsrsPrintMacPrpLan(&direction->lan_a);
    fputs(", \"lan_b\": ", stdout);
    RadsrsPrintMacPrpLan(&direction->lan_b);
+   if (direction->matched_pairs == ARGUS_PRP_PAIRS_UNAVAILABLE) {
+      fputs(", \"matched_pairs\": null, \"skew_sum_us\": null}", stdout);
+      return;
+   }
+   fputs(", \"matched_pairs\": ", stdout);
+   RadsrsJsonInt64(direction->matched_pairs);
+   fputs(", \"skew_sum_us\": ", stdout);
+   RadsrsJsonInt64(direction->skew_sum_us);
    fputc('}', stdout);
 }
 

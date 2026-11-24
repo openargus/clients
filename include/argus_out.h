@@ -943,6 +943,8 @@ struct ArgusMacPrpWireLan {
 struct ArgusMacPrpWireDirection {
    unsigned int flags;
    struct ArgusMacPrpWireLan lan_a, lan_b;
+   unsigned int matched_pairs;
+   long long skew_sum_us;
 };
 
 struct ArgusMacV2WireStruct {
@@ -955,9 +957,21 @@ struct ArgusMacPrpLan {
    long long packets;
 };
 
+/* Pre-pairing MAC v2: 11 words from sensors or 15 from clients. */
+struct ArgusMacPrpLegacyWire {
+   struct ArgusMacStruct base;
+   struct { unsigned int flags, lan_a, lan_b; } dir[2];
+};
+struct ArgusMacPrpLegacyWide {
+   struct ArgusMacStruct base;
+   struct { unsigned int flags; long long lan_a, lan_b; } dir[2];
+};
+#define ARGUS_PRP_PAIRS_UNAVAILABLE (-1LL)
+
 struct ArgusMacPrpDirection {
    unsigned int flags;
    struct ArgusMacPrpLan lan_a, lan_b;
+   long long matched_pairs, skew_sum_us;
 };
 
 /* Client canonical form used for decoded records and generated output. */

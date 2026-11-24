@@ -28388,11 +28388,35 @@ strtof (char *str, char **ptr)
 
 
 static void
+ArgusSwapLegacyMacPrp(struct ArgusMacStruct *mac, unsigned int bytes)
+{
+   int i;
+   /* Host/network swaps are symmetric. */
+   if (bytes == sizeof(struct ArgusMacPrpLegacyWire)) {
+      struct ArgusMacPrpLegacyWire *p = (void *)mac;
+      for (i = 0; i < 2; i++) {
+         p->dir[i].flags = ntohl(p->dir[i].flags);
+         p->dir[i].lan_a = ntohl(p->dir[i].lan_a);
+         p->dir[i].lan_b = ntohl(p->dir[i].lan_b);
+      }
+   } else if (bytes == sizeof(struct ArgusMacPrpLegacyWide)) {
+      struct ArgusMacPrpLegacyWide *p = (void *)mac;
+      for (i = 0; i < 2; i++) {
+         p->dir[i].flags = ntohl(p->dir[i].flags);
+         p->dir[i].lan_a = ntohll(p->dir[i].lan_a);
+         p->dir[i].lan_b = ntohll(p->dir[i].lan_b);
+      }
+   }
+}
+
+static void
 ArgusNtoHMacPrpDirection(struct ArgusMacPrpDirection *direction)
 {
    direction->flags = ntohl(direction->flags);
    direction->lan_a.packets = ntohll(direction->lan_a.packets);
    direction->lan_b.packets = ntohll(direction->lan_b.packets);
+   direction->matched_pairs = ntohll(direction->matched_pairs);
+   direction->skew_sum_us = ntohll(direction->skew_sum_us);
 }
 
 
@@ -28402,6 +28426,8 @@ ArgusNtoHMacPrpWireDirection(struct ArgusMacPrpWireDirection *direction)
    direction->flags = ntohl(direction->flags);
    direction->lan_a.packets = ntohl(direction->lan_a.packets);
    direction->lan_b.packets = ntohl(direction->lan_b.packets);
+   direction->matched_pairs = ntohl(direction->matched_pairs);
+   direction->skew_sum_us = ntohll(direction->skew_sum_us);
 }
 
 
@@ -28411,6 +28437,8 @@ ArgusHtoNMacPrpDirection(struct ArgusMacPrpDirection *direction)
    direction->flags = htonl(direction->flags);
    direction->lan_a.packets = htonll(direction->lan_a.packets);
    direction->lan_b.packets = htonll(direction->lan_b.packets);
+   direction->matched_pairs = htonll(direction->matched_pairs);
+   direction->skew_sum_us = htonll(direction->skew_sum_us);
 }
 
 
@@ -28420,6 +28448,8 @@ ArgusHtoNMacPrpWireDirection(struct ArgusMacPrpWireDirection *direction)
    direction->flags = htonl(direction->flags);
    direction->lan_a.packets = htonl(direction->lan_a.packets);
    direction->lan_b.packets = htonl(direction->lan_b.packets);
+   direction->matched_pairs = htonl(direction->matched_pairs);
+   direction->skew_sum_us = htonll(direction->skew_sum_us);
 }
 
 
@@ -29075,7 +29105,8 @@ ArgusNtoH (struct ArgusRecord *argus)
 
                             ArgusNtoHMacPrpDirection(&macv2->src_prp);
                             ArgusNtoHMacPrpDirection(&macv2->dst_prp);
-                         }
+                         } else
+                            ArgusSwapLegacyMacPrp(mac, cnt);
                       }
                       break;
                   }
@@ -29798,7 +29829,8 @@ ArgusHtoN (struct ArgusRecord *argus)
 
                             ArgusHtoNMacPrpDirection(&macv2->src_prp);
                             ArgusHtoNMacPrpDirection(&macv2->dst_prp);
-                         }
+                         } else
+                            ArgusSwapLegacyMacPrp(mac, mac->hdr.argus_dsrvl8.len * 4);
                       }
                       break;
                   }

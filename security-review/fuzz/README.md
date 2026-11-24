@@ -20,7 +20,7 @@ separately from this repo, for the full writeup of findings F-CL-1 through F-CL-
 - `corpus/` — a seed corpus of real, valid Argus v3 records extracted directly from two
   capture files used elsewhere in this review (a MAR record plus a variety of FAR records
   spanning different DSR combinations/lengths).  `prp_mac_v2_far.bin` is the FAR from the
-  retained sensor-produced PRP fixture and includes the compact 11-word sensor MAC-v2 DSR. Used both
+  retained sensor-produced PRP fixture and includes the compact 17-word sensor MAC-v2 DSR. Used both
   as an initial AFL seed corpus and as a basic smoke-test set.
 - `crashes/` — hand-saved reproducers for findings caught by this harness, kept for
   readability/documentation purposes. Currently: 3 reproducers for the double-to-int overflow

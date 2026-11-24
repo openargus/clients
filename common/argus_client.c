@@ -2774,11 +2774,40 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                   macv2->src_prp.flags = wire->src_prp.flags;
                                   macv2->src_prp.lan_a.packets = wire->src_prp.lan_a.packets;
                                   macv2->src_prp.lan_b.packets = wire->src_prp.lan_b.packets;
+                                  macv2->src_prp.matched_pairs = wire->src_prp.matched_pairs;
+                                  macv2->src_prp.skew_sum_us = wire->src_prp.skew_sum_us;
                                   macv2->dst_prp.flags = wire->dst_prp.flags;
                                   macv2->dst_prp.lan_a.packets = wire->dst_prp.lan_a.packets;
                                   macv2->dst_prp.lan_b.packets = wire->dst_prp.lan_b.packets;
+                                  macv2->dst_prp.matched_pairs = wire->dst_prp.matched_pairs;
+                                  macv2->dst_prp.skew_sum_us = wire->dst_prp.skew_sum_us;
                                   macv2->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_V2_LEN;
-                                  cmac = (struct ArgusMacStruct *)macv2;
+                                   cmac = (struct ArgusMacStruct *)macv2;
+                               } else if (mac->hdr.subtype == ARGUS_MAC_DSR_V2 &&
+                                          (cnt == sizeof(struct ArgusMacPrpLegacyWire) ||
+                                           cnt == sizeof(struct ArgusMacPrpLegacyWide))) {
+                                  struct ArgusMacV2Struct *v = &canon->macv2;
+                                  int j;
+                                  bzero(v, sizeof(*v));
+                                  v->hdr = mac->hdr;
+                                  v->mac = mac->mac;
+                                  v->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_V2_LEN;
+                                  for (j = 0; j < 2; j++) {
+                                     struct ArgusMacPrpDirection *d = j ? &v->dst_prp : &v->src_prp;
+                                     if (cnt == sizeof(struct ArgusMacPrpLegacyWire)) {
+                                        const struct ArgusMacPrpLegacyWire *p = (void *)mac;
+                                        d->flags = p->dir[j].flags;
+                                        d->lan_a.packets = p->dir[j].lan_a;
+                                        d->lan_b.packets = p->dir[j].lan_b;
+                                     } else {
+                                        const struct ArgusMacPrpLegacyWide *p = (void *)mac;
+                                        d->flags = p->dir[j].flags;
+                                        d->lan_a.packets = p->dir[j].lan_a;
+                                        d->lan_b.packets = p->dir[j].lan_b;
+                                     }
+                                     d->matched_pairs = ARGUS_PRP_PAIRS_UNAVAILABLE;
+                                  }
+                                  cmac = (struct ArgusMacStruct *)v;
                                } else if ((mac->hdr.subtype == ARGUS_MAC_DSR_V2) &&
                                           (cnt == (int)sizeof(canon->macv2))) {
                                   bzero((char *)&canon->macv2, sizeof(canon->macv2));
@@ -6603,6 +6632,14 @@ ArgusMergeMacPrpDirection(struct ArgusMacPrpDirection *direction1,
    direction1->flags |= direction2->flags;
    direction1->lan_a.packets += direction2->lan_a.packets;
    direction1->lan_b.packets += direction2->lan_b.packets;
+   if (direction1->matched_pairs == ARGUS_PRP_PAIRS_UNAVAILABLE ||
+       direction2->matched_pairs == ARGUS_PRP_PAIRS_UNAVAILABLE) {
+      direction1->matched_pairs = ARGUS_PRP_PAIRS_UNAVAILABLE;
+      direction1->skew_sum_us = 0;
+      return;
+   }
+   direction1->matched_pairs += direction2->matched_pairs;
+   direction1->skew_sum_us = (long long)((unsigned long long)direction1->skew_sum_us + direction2->skew_sum_us);
 }
 
 

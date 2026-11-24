@@ -1,8 +1,8 @@
 #!/bin/sh
 # Regression coverage for compact sensor-side PRP-1 MAC-DSR v2 support.
 #
-# Sensors write an 11-word MAC-v2 DSR with unsigned 32-bit LAN totals.
-# Clients promote it to their 15-word canonical form with long long totals.
+# Sensors write a 17-word MAC-v2 DSR with unsigned 32-bit packet counts.
+# Clients promote it to their 23-word canonical form with long long counts.
 # Check decoding, output conversion, aggregation, and source/destination
 # reversal without reintroducing sequence or RCT snapshot state.
 
@@ -44,6 +44,38 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 mkdir -p "$TMPDIR_TEST/home"
+
+# Repack the retained FAR into both pre-pairing formats. The wide form also
+# exercises a counter above UINT_MAX. Pairing was not measured in either.
+if python3 - "$RADSRS_BIN" "$FIXTURE" <<'PY'
+import json, struct, subprocess, sys
+exe, fixture = sys.argv[1:]
+data = open(fixture, 'rb').read()
+start = 4 * struct.unpack_from('!H', data, 2)[0]
+far = data[start:]
+off = 4
+while far[off:off+2] != b'\x42\x02':
+    words = far[off+3]
+    assert words
+    off += 4 * words
+for fmt, count in [('!III', 4000000000), ('!IQQ', 5000000000)]:
+    mac = bytearray(far[off:off+20]) + struct.pack(fmt, 3, count, 17) + struct.pack(fmt, 2, 0, 19)
+    mac[3] = len(mac)//4
+    record = bytearray(far[:off] + mac + far[off+68:])
+    struct.pack_into('!H', record, 2, len(record)//4)
+    out = subprocess.check_output([exe, '-X', '-r', '-'], input=data[:start]+record)
+    prp, = [v['canonical']['mac']['prp'] for s in out.split(b'\x1e') if s.strip()
+            for v in [json.loads(s)] if v['record']['type'] == 'flow']
+    for key, a, b in [('src', count, 17), ('dst', 0, 19)]:
+        d = prp[key]
+        assert (int(d['lan_a']['packets']), int(d['lan_b']['packets'])) == (a,b)
+        assert d['matched_pairs'] is None and d['skew_sum_us'] is None
+PY
+then
+   pass "decoded historical MAC v2 counts without inventing pairing measurements"
+else
+   fail "legacy MAC v2 decode failed"
+fi
 
 if HOME="$TMPDIR_TEST/home" "$RADSRS_BIN" -X -r "$FIXTURE" >"$JSON_OUTPUT" 2>"$TMPDIR_TEST/radsrs.log"; then
    pass "radsrs processed the compact sensor PRP MAC-v2 fixture"
@@ -89,7 +121,7 @@ while offset < len(data):
             dsr_type, subtype, _, dsr_words = struct.unpack_from("!BBBB", data, cursor)
             if dsr_words == 0 or cursor + dsr_words * 4 > end:
                 raise SystemExit("invalid DSR length")
-            if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 11):
+            if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 17):
                 data[cursor + 2] = (data[cursor + 2] & ~0x0c) | 0x04
                 open(output_path, "wb").write(data)
                 raise SystemExit(0)
@@ -150,10 +182,10 @@ def set_prp_totals(record, qualifier, src, dst):
         dsr_type, subtype, _, dsr_words = struct.unpack_from("!BBBB", record, cursor)
         if dsr_words == 0 or cursor + dsr_words * 4 > len(record):
             raise SystemExit("invalid DSR length")
-        if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 11):
+        if (dsr_type & 0x7f, subtype, dsr_words) == (0x42, 2, 17):
             record[cursor + 2] = (record[cursor + 2] & ~0x0c) | qualifier
-            struct.pack_into("!III", record, cursor + 20, *src)
-            struct.pack_into("!III", record, cursor + 32, *dst)
+            struct.pack_into("!IIIIq", record, cursor + 20, *src)
+            struct.pack_into("!IIIIq", record, cursor + 44, *dst)
             return
         cursor += dsr_words * 4
     raise SystemExit("compact MAC-v2 DSR not found")
@@ -161,8 +193,8 @@ def set_prp_totals(record, qualifier, src, dst):
 
 first = bytearray(far)
 second = bytearray(far)
-set_prp_totals(first, 0x04, (0x03, 4000000000, 10), (0x00, 0, 0))
-set_prp_totals(second, 0x08, (0x04, 500000000, 30), (0x05, 40, 50))
+set_prp_totals(first, 0x04, (0x03, 4000000000, 10, 8, -500), (0x00, 0, 0, 0, 0))
+set_prp_totals(second, 0x0c, (0x04, 500000000, 30, 9, 200), (0x05, 40, 50, 2, 80))
 open(output_path, "wb").write(mar + first + second)
 PY
 then
@@ -204,8 +236,8 @@ import sys
     aggregate_json_path,
 ) = sys.argv[1:]
 
-SENSOR_MAC_WORDS = 11
-CLIENT_MAC_WORDS = 15
+SENSOR_MAC_WORDS = 17
+CLIENT_MAC_WORDS = 23
 
 
 def records(path):
@@ -280,22 +312,22 @@ def mac_dsr(record, words):
 def sensor_directions(raw):
     if len(raw) != SENSOR_MAC_WORDS * 4:
         raise AssertionError("unexpected compact sensor MAC-v2 size")
-    return (struct.unpack_from("!III", raw, 20),
-            struct.unpack_from("!III", raw, 32))
+    return (struct.unpack_from("!IIIIq", raw, 20),
+            struct.unpack_from("!IIIIq", raw, 44))
 
 
 def canonical_directions(raw):
     if len(raw) != CLIENT_MAC_WORDS * 4:
         raise AssertionError("unexpected canonical client MAC-v2 size")
-    return (struct.unpack_from("!Iqq", raw, 20),
-            struct.unpack_from("!Iqq", raw, 40))
+    return (struct.unpack_from("!Iqqqq", raw, 20),
+            struct.unpack_from("!Iqqqq", raw, 56))
 
 
 def promoted_mac_wire(raw):
-    """Expected client canonical MAC-v2 bytes from an 11-word sensor DSR."""
+    """Expected client canonical MAC-v2 bytes from a sensor DSR."""
     result = bytearray(raw[:20])
     for direction in sensor_directions(raw):
-        result.extend(struct.pack("!Iqq", *direction))
+        result.extend(struct.pack("!Iqqqq", *direction))
     result[3] = CLIENT_MAC_WORDS
     return bytes(result)
 
@@ -319,8 +351,8 @@ def reverse_mac_wire(raw):
         result[2] |= 0x08
     if qualifier & 0x08:
         result[2] |= 0x04
-    result[20:40] = raw[40:60]
-    result[40:60] = raw[20:40]
+    result[20:56] = raw[56:92]
+    result[56:92] = raw[20:56]
     return bytes(result)
 
 
@@ -335,7 +367,7 @@ fixture_mac = mac_dsr(fixture_flow, SENSOR_MAC_WORDS)
 if (fixture_mac["type"], fixture_mac["qualifier"]) != (0x42, 0x0c):
     raise AssertionError("unexpected compact MAC-v2 fixture header")
 sensor_src, sensor_dst = sensor_directions(fixture_mac["raw"])
-if (sensor_src, sensor_dst) != ((0x07, 2, 1), (0x05, 1, 0)):
+if (sensor_src, sensor_dst) != ((0x07, 2, 1, 1, -10000), (0x05, 1, 0, 0, 0)):
     raise AssertionError("fixture does not contain the expected compact PRP totals")
 canonical_mac = promoted_mac_wire(fixture_mac["raw"])
 
@@ -378,8 +410,8 @@ if (mac.get("ether_shost"), mac.get("ether_dhost"), mac.get("ether_type"),
             "02:00:00:00:00:01", "02:00:00:00:00:02", 2048, 0, 0):
     raise AssertionError("wrong canonical legacy MAC fields")
 expected_prp = {
-    "src": {"flags": 0x07, "lan_a": {"packets": "2"}, "lan_b": {"packets": "1"}},
-    "dst": {"flags": 0x05, "lan_a": {"packets": "1"}, "lan_b": {"packets": "0"}},
+    "src": {"flags": 0x07, "lan_a": {"packets": "2"}, "lan_b": {"packets": "1"}, "matched_pairs": "1", "skew_sum_us": "-10000"},
+    "dst": {"flags": 0x05, "lan_a": {"packets": "1"}, "lan_b": {"packets": "0"}, "matched_pairs": "0", "skew_sum_us": "0"},
 }
 if mac.get("prp") != expected_prp:
     raise AssertionError("wrong canonical compact PRP view: %r" % mac.get("prp"))
@@ -438,10 +470,10 @@ aggregate_mac = mac_dsr(aggregate_flows[0], CLIENT_MAC_WORDS)
 if (aggregate_mac["qualifier"] & 0x0c) != 0x0c:
     raise AssertionError("racluster did not merge PRP direction qualifiers")
 if canonical_directions(aggregate_mac["raw"]) != (
-        (0x07, 4500000000, 40), (0x05, 40, 50)):
+        (0x07, 4500000000, 40, 17, -300), (0x05, 40, 50, 2, 80)):
     raise AssertionError("racluster did not retain 64-bit compact PRP totals")
 
-# Reading the generated record back must use the canonical 15-word decoder,
+# Reading the generated record back must use the canonical 23-word decoder,
 # including byte-order conversion of counters above the sensor-width range.
 aggregate_json = [json.loads(value) for value in open(aggregate_json_path, "rb").read().split(b"\x1e") if value.strip()]
 aggregate_flow_json = [value for value in aggregate_json if value["record"]["type"] == "flow"]
@@ -449,8 +481,8 @@ if len(aggregate_flow_json) != 1:
     raise AssertionError("radsrs did not emit one aggregated PRP JSON record")
 aggregate_prp = aggregate_flow_json[0]["canonical"].get("mac", {}).get("prp")
 if aggregate_prp != {
-    "src": {"flags": 0x07, "lan_a": {"packets": "4500000000"}, "lan_b": {"packets": "40"}},
-    "dst": {"flags": 0x05, "lan_a": {"packets": "40"}, "lan_b": {"packets": "50"}},
+    "src": {"flags": 0x07, "lan_a": {"packets": "4500000000"}, "lan_b": {"packets": "40"}, "matched_pairs": "17", "skew_sum_us": "-300"},
+    "dst": {"flags": 0x05, "lan_a": {"packets": "40"}, "lan_b": {"packets": "50"}, "matched_pairs": "2", "skew_sum_us": "80"},
 }:
     raise AssertionError("canonical PRP decoder did not retain 64-bit totals: %r" % aggregate_prp)
 PY
