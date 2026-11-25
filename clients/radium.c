@@ -49,6 +49,7 @@
 #include <argus_compat.h>
 #include <argus_util.h>
 #include <argus_output.h>
+#include <argus_radsrs.h>
 #include "argus_clientconfig.h"
 
 #include <rabins.h>
@@ -176,6 +177,7 @@ ArgusClientInit (struct ArgusParserStruct *parser)
 
    parser->RaWriteOut = 1;
    parser->ArgusReverse = 1;
+   parser->ArgusRelayNativeV5 = 1;
 
    if (!(parser->RaInitialized)) {
       if ((mode = parser->ArgusModeList) != NULL) {
@@ -455,6 +457,121 @@ usage ()
 }
 
 
+/* The classifier edits only these DSRs. Serialize them separately so that
+ * normalizing a record for analytics doesn't rewrite sensor measurements. */
+static const int RadiumMetadata[] = { ARGUS_COCODE_INDEX, ARGUS_LABEL_INDEX,
+   ARGUS_ASN_INDEX, ARGUS_GEO_INDEX, ARGUS_LOCAL_INDEX };
+#define RADIUM_METADATA_COUNT (sizeof(RadiumMetadata) / sizeof(RadiumMetadata[0]))
+
+static size_t
+RadiumWireWords(const unsigned char *p)
+{
+   return p[0] & ARGUS_IMMEDIATE_DATA ? 1 :
+          p[1] & ARGUS_LEN_16BITS ? p[2] * 256U + p[3] : p[3];
+}
+
+static void
+RadiumMergeWireMetadata(struct ArgusRecordStruct *ns, struct ArgusRecordStruct *meta,
+                        const unsigned char *raw, size_t len)
+{
+   unsigned int encoded[1 + RADIUM_METADATA_COUNT * 255];
+   unsigned char *replacement[256] = {0};
+   size_t size[256] = {0}, total = len, pos;
+   const unsigned char *end = raw + len;
+   struct ArgusRecord *wire;
+
+   {
+      if (!ArgusGenerateRecord(meta, 0, (char *)encoded, ARGUS_VERSION_5))
+         return;
+      wire = (struct ArgusRecord *)encoded;
+      unsigned int words = wire->hdr.len;
+      ArgusHtoN(wire);
+      for (unsigned int i = 1; i < words;) {
+         unsigned char *dsr = (unsigned char *)&encoded[i];
+         if (!dsr[3] || dsr[3] > words - i)
+            return;
+         replacement[dsr[0]] = dsr;
+         size[dsr[0]] = dsr[3] * 4;
+         total += size[dsr[0]];
+         i += dsr[3];
+      }
+   }
+
+   /* The input decoder has already validated the entire chain. */
+   for (const unsigned char *p = raw + 4; p < end;) {
+      size_t words = RadiumWireWords(p);
+      size_t n = words * 4;
+      if (replacement[p[0]])
+         total -= n;
+      p += n;
+   }
+   if (total / 4 > 65535)
+      return;
+   wire = ArgusAllocRelayWire(ns, total);
+   if (wire == NULL)
+      ArgusLog(LOG_ERR, "RadiumMergeWireMetadata: allocation failed");
+   memcpy(wire, raw, 4);
+   pos = 4;
+   for (const unsigned char *p = raw + 4; p < end;) {
+      size_t n = 4 * RadiumWireWords(p);
+      if (!replacement[p[0]]) {
+         memcpy((char *)wire + pos, p, n);
+         pos += n;
+      }
+      p += n;
+   }
+   for (size_t i = 0; i < 256; ++i) {
+      if (replacement[i]) {
+         memcpy((char *)wire + pos, replacement[i], size[i]);
+         pos += size[i];
+      }
+   }
+   wire->hdr.len = htons(total / 4);
+}
+
+static void
+RadiumPrepareWire(struct ArgusRecordStruct *ns, const struct ArgusRecordStruct *before,
+                  const unsigned char *raw, size_t len, int classified)
+{
+   struct ArgusRecord *wire;
+
+   if (classified) {
+      struct ArgusRecordStruct meta = {0};
+      meta.hdr = ns->hdr;
+      meta.status = ARGUS_RECORD_MODIFIED;
+      for (size_t i = 0; i < RADIUM_METADATA_COUNT; ++i) {
+         int index = RadiumMetadata[i];
+         struct ArgusDSRHeader *old = before->dsrs[index], *cur = ns->dsrs[index];
+         if (cur == NULL) {
+            if (old != NULL) /* A deletion requires full serialization. */
+               return;
+            continue;
+         }
+         if (index == ARGUS_LABEL_INDEX) {
+            struct ArgusLabelStruct *label = (void *)cur, *prior = (void *)old;
+            if (prior && label->l_un.label && prior->l_un.label &&
+                !memcmp(old, cur, sizeof(*cur)) && !strcmp(prior->l_un.label, label->l_un.label))
+               continue;
+            if (label->l_un.label && strlen(label->l_un.label) > 254 * 4)
+               return;
+         } else if (old && old->argus_dsrvl8.len == cur->argus_dsrvl8.len &&
+                    !memcmp(old, cur, cur->argus_dsrvl8.len * 4))
+            continue;
+         meta.dsrs[index] = cur;
+         meta.dsrindex |= 1U << index;
+      }
+      if (meta.dsrindex) {
+         RadiumMergeWireMetadata(ns, &meta, raw, len);
+         return;
+      }
+   }
+
+   wire = ArgusAllocRelayWire(ns, len);
+   if (wire == NULL)
+      ArgusLog(LOG_ERR, "RadiumPrepareWire: allocation failed");
+   memcpy(wire, raw, len);
+}
+
 void
 RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *argus)
 {
@@ -577,8 +694,22 @@ RaProcessRecord (struct ArgusParserStruct *parser, struct ArgusRecordStruct *arg
             break;
       }
 
-      if (ns != NULL)
+      if (ns != NULL) {
+         const unsigned char *raw;
+         size_t len;
+         if (ns->hdr.type == (ARGUS_FAR | ARGUS_VERSION_5) &&
+             !parser->ArgusAdjustTime && !parser->ArgusStripFields && !parser->ArgusPerformCorrection &&
+             argus->input && argus == &argus->input->ArgusGenerateRecordStructBuf &&
+             ((argus->input->type & ARGUS_DATA_TYPE) == ARGUS_DATA_SOURCE ||
+              (argus->input->type & ARGUS_DATA_TYPE) == ARGUS_DOMAIN_SOURCE) &&
+             (!RadiumAnalyticAlgorithmTable[0] ||
+              (RadiumAnalyticAlgorithmTable[0] == ArgusLabelRecord && !RadiumAnalyticAlgorithmTable[1])) &&
+             !(argus->status & ARGUS_RECORD_MODIFIED) &&
+             ArgusRadsrsGetRawRecord(argus, &raw, &len) && len == argus->relayValidatedLen &&
+             raw[0] == ns->hdr.type)
+            RadiumPrepareWire(ns, argus, raw, len, RadiumAnalyticAlgorithmTable[0] != NULL);
          ArgusPushBackList(parser->ArgusOutput->ArgusOutputList, (struct ArgusListRecord *) ns, ARGUS_LOCK);
+      }
    }
 
 #if defined(ARGUS_THREADS)

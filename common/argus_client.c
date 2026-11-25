@@ -1726,6 +1726,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
       bzero ((char *)&retn->qhdr, sizeof(retn->qhdr));
 
       retn->status   = 0;
+      retn->relayValidatedLen = 0;
       retn->dsrindex = 0;
       retn->score    = 0;
       retn->input = input;
@@ -1796,11 +1797,30 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   if (argusend < ((char *)dsr + cnt))
                      break;
 
+                  /* Stop at a broken ENCAPS boundary, retaining the valid
+                   * prefix. Skipping its advertised length can land inside
+                   * another field and manufacture an unrelated DSR. */
+                  if (type == ARGUS_ENCAPS_DSR) {
+                     struct ArgusEncapsStruct *enc = (struct ArgusEncapsStruct *)dsr;
+                     if ((subtype & ARGUS_LEN_16BITS) || cnt < 12 ||
+                         (cnt > 12 && ArgusEncapsWords(enc->slen, enc->dlen) != cnt / 4))
+                        break;
+                  }
+
                   /* The decoders below expect TLVs. An immediate DSR has
                    * only a header, even if its low type bits match a TLV. */
                   switch (type) {
                      case ARGUS_FLOW_DSR: {
                         struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
+
+                        /* Classify in sensor direction when forwarding the original
+                         * v5 flow. Only the decoder's scratch copy is modified. */
+                        if (parser && parser->ArgusRelayNativeV5 && !parser->ArgusPerformCorrection &&
+                            !parser->ArgusAdjustTime && !parser->ArgusStripFields && input &&
+                            ((input->type & ARGUS_DATA_TYPE) == ARGUS_DATA_SOURCE ||
+                             (input->type & ARGUS_DATA_TYPE) == ARGUS_DOMAIN_SOURCE) &&
+                            hdr->type == (ARGUS_FAR | ARGUS_VERSION_5))
+                           flow->hdr.subtype &= ~ARGUS_REVERSE;
 
                         bzero ((char *)&canon->flow, sizeof(canon->flow));
                         switch (subtype & 0x3F) {
@@ -2068,7 +2088,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                     arp->op      = tarp->op;
                                     arp->arp_spa = tarp->arp_spa;
                                     arp->arp_tpa = tarp->arp_tpa;
-                                    bcopy ((char *)&arp->haddr, &arp->haddr, arp->hln);
+                                    if (arp->hln <= sizeof(arp->haddr) &&
+                                        cnt >= (char *)&tarp->haddr - (char *)dsr + arp->hln)
+                                       memcpy(&arp->haddr, &tarp->haddr, arp->hln);
                                     break;
                                  }
 
@@ -2130,11 +2152,6 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 // the structure for encaps is 3 ints of basic data, and if there is an encapsulation
 // header buffer, then the 4th int holds the sbuf and dbuf lengths. 
 // if these lengths are > 0, then allocate buffers and copy into sbuf, and dbuf ...
-
-                        if (len < tlen)
-                           break;
-                        if (len > 3 && 4 + (encaps->slen + 3) / 4 + (encaps->dlen + 3) / 4 > len)
-                           break;
 
                         /* Short ENCAPS records omit both lengths and buffers. */
                         memset(cncaps, 0, sizeof(*cncaps));
@@ -3117,7 +3134,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 //                      bzero((char *)&canon->label, sizeof(*tlabel));
                         bzero((char *)label, llen + 1);
                         bcopy((char *)&tlabel->hdr, (char *)&canon->label.hdr, 4);
-                        bcopy((char *)&tlabel->l_un.label, label, llen);
+                        memcpy(label, dsr + 1, llen);
                         canon->label.l_un.label = ArgusCanonLabelBuffer;
                         bcopy(label, (char *)ArgusCanonLabelBuffer, llen);
                         ArgusCanonLabelBuffer[llen] = '\0';
@@ -3267,6 +3284,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   break;
                }
             }
+
+            if (retn != NULL && (char *)dsr == argusend)
+               retn->relayValidatedLen = dsrlen;
 
             if (retn != NULL && parser->ArgusStripFields) {
                int x;
@@ -4239,6 +4259,8 @@ ArgusDeleteRecordStruct (struct ArgusParserStruct *parser, struct ArgusRecordStr
          ns->agg = NULL;
       }
 
+      if (ns->relayWire != NULL)
+         ArgusReleaseWireBuffer(ns->relayWire);
       ArgusFree(ns);
    }
 #ifdef ARGUSDEBUG

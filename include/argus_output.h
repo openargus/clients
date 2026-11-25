@@ -247,6 +247,8 @@ unsigned int getArgusZeroConf(struct ArgusParserStruct *);
 void clearRadiumConfiguration (void);
 
 struct ArgusRecordStruct *ArgusCopyRecordStruct (struct ArgusRecordStruct *);
+struct ArgusRecord *ArgusAllocRelayWire(struct ArgusRecordStruct *, size_t);
+void ArgusReleaseWireBuffer(struct ArgusWireFmtBuffer *);
 
 void *ArgusListenProcess(void *arg);
 void *ArgusOutputProcess(void *);
@@ -284,4 +286,3 @@ extern struct ArgusControlHandlerStruct ArgusControlCommands[];
 }
 #endif
 #endif /* #ifndef ArgusRadium_h */
-

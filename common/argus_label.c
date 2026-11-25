@@ -657,6 +657,9 @@ ArgusAddToRecordLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruc
    char *buf, *label = NULL;
    int len = 0, retn = 0, tlen = strlen(tlabel);
 
+   if (l1 && l1->l_un.label && strcmp(l1->l_un.label, tlabel) == 0)
+      return retn;
+
    if ((buf = (char *) ArgusCalloc(1, MAXSTRLEN)) == NULL)
       ArgusLog (LOG_ERR, "ArgusAddToRecordLabel: ArgusCalloc error %s", strerror(errno));
 
@@ -686,7 +689,7 @@ ArgusAddToRecordLabel (struct ArgusParserStruct *parser, struct ArgusRecordStruc
             free(l1->l_un.label);
 
          l1->l_un.label = newlabel;
-         l1->hdr.argus_dsrvl8.len = 1 + len;
+         l1->hdr.argus_dsrvl8.len = 1 + len / 4;
       }
 
       free(l2->l_un.label);

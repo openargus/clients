@@ -251,6 +251,10 @@ struct ArgusRecordStruct {
    float srate, drate, sload, dload, dur, mean;
    float pcr, sploss, dploss;
    long long offset;
+   /* Optional owned v5 wire image for a queued Radium output record. */
+   struct ArgusWireFmtBuffer *relayWire;
+   /* Nonzero only on the input scratch record after a complete DSR walk. */
+   unsigned int relayValidatedLen;
 };
 
 struct ArgusRemoteStruct {
@@ -327,6 +331,7 @@ struct ArgusParserStruct {
    char RaTasksToDo, ArgusReliableConnection;
    char ArgusPrintWarnings, ArgusCompareBaseline;
    char ArgusCorrelateEvents, ArgusPerformCorrection;
+   char ArgusRelayNativeV5;
    char ArgusExitStatus, ArgusPassNum, ArgusLabelRecord;
    char ArgusLoadingData, ArgusFractionalDate;
 
