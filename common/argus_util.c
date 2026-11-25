@@ -3787,6 +3787,8 @@ time that needs to lapse */
 
 char ArgusHandleRecordBuffer[ARGUS_MAXRECORDSIZE];
 
+static int ArgusNtoHChecked(struct ArgusRecord *);
+
 int
 ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, struct ArgusRecord *ptr, unsigned long length, struct nff_program *filter)
 {
@@ -3795,17 +3797,20 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
 
    if (ptr != NULL) {
       int len = ntohs(ptr->hdr.len) * 4;
+      int complete = 1;
       struct nff_insn *fcode = filter->bf_insns;
 
       if (length && (len > length)) {
          int hdrlen = (length + 3)/ 4;
          len = length;
+         complete = 0;
          ptr->hdr.len = htons(hdrlen);
       }
       if (len < sizeof(input->ArgusOriginalBuffer)) {
          bcopy ((char *)ptr, (char *)input->ArgusOriginal, len);
 #ifdef _LITTLE_ENDIAN
-         ArgusNtoH(ptr);
+         if (!ArgusNtoHChecked(ptr))
+            complete = 0;
 #endif
          switch (ptr->hdr.type & 0xF0) {
             case ARGUS_MAR:
@@ -3830,6 +3835,8 @@ ArgusHandleRecord (struct ArgusParserStruct *parser, struct ArgusInput *input, s
             return (ptr->hdr.len * 4);
 
          if ((argus = ArgusGenerateRecordStruct (parser, input, (struct ArgusRecord *) ptr)) != NULL) {
+            if (!complete)
+               argus->relayValidatedLen = 0;
             if ((retn = ArgusCheckTime (parser, argus, ArgusTimeRangeStrategy)) != 0) {
                ArgusProcessDirection(parser, argus);
 
@@ -28474,6 +28481,12 @@ ArgusHtoNPrpSupervision(struct ArgusPrpSupervisionObject *prp)
 void
 ArgusNtoH (struct ArgusRecord *argus)
 {
+   (void)ArgusNtoHChecked(argus);
+}
+
+static int
+ArgusNtoHChecked(struct ArgusRecord *argus)
+{
 #if defined(_LITTLE_ENDIAN)
    struct ArgusRecordHeader *hdr = &argus->hdr;
    struct ArgusDSRHeader *dsr = (struct ArgusDSRHeader *) (hdr + 1);
@@ -28546,16 +28559,21 @@ ArgusNtoH (struct ArgusRecord *argus)
             char *end = (char *)argus + (hdr->len * 4);
             int cnt;
             while ((char *) dsr < end) {
-               cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
-                      ((dsr->subtype & ARGUS_LEN_16BITS)  ? ntohs(dsr->argus_dsrvl16.len) :
-                                                                  dsr->argus_dsrvl8.len))) * 4;
+               /* Immediate DSRs occupy one word and have no TLV payload
+                * or length field to byte-swap. */
+               if (dsr->type & ARGUS_IMMEDIATE_DATA) {
+                  dsr++;
+                  continue;
+               }
+               cnt = ((dsr->subtype & ARGUS_LEN_16BITS) ? ntohs(dsr->argus_dsrvl16.len) :
+                                                          dsr->argus_dsrvl8.len) * 4;
                if (cnt == 0)
-                  break;
+                  return 0;
 
                if (end < ((char *)dsr + cnt))
-                  break;
+                  return 0;
 
-               switch (dsr->type & 0x7F) {
+               switch (dsr->type) {
                   case ARGUS_FLOW_DSR: {
                      struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 
@@ -28689,11 +28707,15 @@ ArgusNtoH (struct ArgusRecord *argus)
 
                   case ARGUS_ENCAPS_DSR: {
                      struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                     if (cnt < 12 || (dsr->subtype & ARGUS_LEN_16BITS))
+                        return 0;
                      encaps->src = ntohl(encaps->src);
                      encaps->dst = ntohl(encaps->dst);
                      if (encaps->hdr.argus_dsrvl8.len > 3) {
                         encaps->slen = ntohs(encaps->slen);
                         encaps->dlen = ntohs(encaps->dlen);
+                        if (ArgusEncapsWords(encaps->slen, encaps->dlen) != cnt / 4)
+                           return 0; /* The next DSR boundary cannot be trusted. */
 		     }
                      break;
                   }
@@ -29209,6 +29231,7 @@ ArgusNtoH (struct ArgusRecord *argus)
       }
    }
 #endif
+   return 1;
 }
 
 
@@ -29280,7 +29303,11 @@ ArgusHtoN (struct ArgusRecord *argus)
          if (argus->hdr.len > 1) {
             int cnt;
             while ((char *) dsr < ((char *) argus + (hdr->len * 4))) {
-               switch (dsr->type & 0x7F) {
+               if (dsr->type & ARGUS_IMMEDIATE_DATA) {
+                  dsr++;
+                  continue;
+               }
+               switch (dsr->type) {
                   case ARGUS_FLOW_DSR: {
                      struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 
@@ -29924,9 +29951,8 @@ ArgusHtoN (struct ArgusRecord *argus)
                   }
                }
 
-               if ((cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
-                           ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
-                                                                 dsr->argus_dsrvl8.len))) * 4) > 0) {
+               if ((cnt = ((dsr->subtype & ARGUS_LEN_16BITS) ? dsr->argus_dsrvl16.len :
+                                                               dsr->argus_dsrvl8.len) * 4) > 0) {
                   if (dsr->subtype & ARGUS_LEN_16BITS)  
                      dsr->argus_dsrvl16.len = htons(dsr->argus_dsrvl16.len);
 

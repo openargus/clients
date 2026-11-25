@@ -121,10 +121,34 @@ FreeArgusQueueNode(struct ArgusQueueNode *n)
    ArgusFree(n);
 }
 
+/* Build the queue's owned wire image directly in its final output buffer.
+ * The producer finishes writing before publishing the record to the queue;
+ * subsequent references and socket writes belong to the output thread. */
+struct ArgusRecord *
+ArgusAllocRelayWire(struct ArgusRecordStruct *rec, size_t len)
+{
+   struct ArgusWireFmtBuffer *awf;
+
+   if (len < sizeof(struct ArgusRecordHeader) || len > ARGUS_MAXRECORD)
+      return NULL;
+   awf = ArgusMalloc(offsetof(struct ArgusWireFmtBuffer, data) + len);
+   if (awf == NULL)
+      return NULL;
+   awf->refcount = 1;
+   awf->len = len;
+   rec->relayWire = awf;
+   return &awf->data.rec;
+}
+
 static struct ArgusWireFmtBuffer *
 NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format, char version)
 {
    struct ArgusWireFmtBuffer *awf;
+
+   if (format == ARGUS_DATA && version == ARGUS_VERSION_5 && rec && rec->relayWire) {
+      rec->relayWire->refcount++;
+      return rec->relayWire;
+   }
 
    awf = ArgusMallocAligned(sizeof(*awf), 64);
    if (awf == NULL)
@@ -159,8 +183,8 @@ NewArgusWireFmtBuffer(struct ArgusRecordStruct *rec, int format, char version)
    return awf;
 }
 
-static void
-FreeArgusWireFmtBuffer(struct ArgusWireFmtBuffer *awf)
+void
+ArgusReleaseWireBuffer(struct ArgusWireFmtBuffer *awf)
 {
    awf->refcount--;
    if (awf->refcount == 0) {
@@ -182,7 +206,7 @@ DrainArgusSocketQueue(struct ArgusClientData *client)
    while ((node = (struct ArgusQueueNode *)ArgusPopFrontList(list, ARGUS_NOLOCK)) != NULL) {
       awf = node->datum;
       FreeArgusQueueNode(node);
-      FreeArgusWireFmtBuffer(awf);
+      ArgusReleaseWireBuffer(awf);
    }
 #ifdef ARGUSDEBUG
    ArgusDebug (2, "DrainArgusSocketQueue(%p) returning\n", client);
@@ -2163,6 +2187,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                      case ARGUS_ENCAPS_INDEX: {
                         struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        struct ArgusDSRHeader *hdr = (struct ArgusDSRHeader *) dsrptr;
                         int slen = 0, dlen = 0;
 
                         *dsrptr++ = *(unsigned int *)&encaps->hdr;
@@ -2194,6 +2219,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               len += dlen;
                            }
                         }
+                        hdr->argus_dsrvl8.len = len;
                         break;
                      }
                   }
@@ -3092,6 +3118,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                      case ARGUS_ENCAPS_INDEX: {
                         struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        struct ArgusDSRHeader *hdr = (struct ArgusDSRHeader *) dsrptr;
                         int slen = 0, dlen = 0;
 
                         *dsrptr++ = *(unsigned int *)&encaps->hdr;
@@ -3123,6 +3150,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               len += dlen;
                            }
                         }
+                        hdr->argus_dsrvl8.len = len;
                         break;
                      }
 
@@ -3701,11 +3729,11 @@ __ArgusOutputProcess(struct ArgusOutputStruct *output,
                         client = (void *) client->qhdr.nxt;
 
                         if (have_argus_client)
-                           FreeArgusWireFmtBuffer(arg);
+                           ArgusReleaseWireBuffer(arg);
                         if (have_argusv3_client)
-                           FreeArgusWireFmtBuffer(argv3);
+                           ArgusReleaseWireBuffer(argv3);
                         if (have_ciscov5_client)
-                           FreeArgusWireFmtBuffer(v5);
+                           ArgusReleaseWireBuffer(v5);
                      }
                   }
 #if defined(ARGUS_THREADS)
@@ -5040,6 +5068,8 @@ ArgusDeleteSocket (struct ArgusOutputStruct *output, struct ArgusClientData *cli
 
    if (asock != NULL) {
       DrainArgusSocketQueue(client);
+      if (asock->rec != NULL)
+         ArgusReleaseWireBuffer(asock->rec);
       ArgusDeleteList(asock->ArgusOutputList, ARGUS_OUTPUT_LIST);
 
       close(asock->fd);
@@ -5108,7 +5138,7 @@ ArgusWriteSocket(struct ArgusOutputStruct *output,
 
          tawf = node->datum;
          FreeArgusQueueNode(node);
-         FreeArgusWireFmtBuffer(tawf);
+         ArgusReleaseWireBuffer(tawf);
          i++;
       }
 
@@ -5189,9 +5219,11 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                  outputbuf = NULL;
 
                                  awfsasl = NewArgusWireFmtBuffer(NULL, -1, -1);
-                                 if (awfsasl == NULL)
+                                 if (awfsasl == NULL) {
                                     /* no memory, try to keep going */
+                                    ArgusReleaseWireBuffer(awf);
                                     continue;
+                                 }
 #ifdef ARGUSDEBUG
                                  ArgusDebug (7, "ArgusHandleClientData: sasl_encode(0x%x, %d, 0x%x, 0x%x)\n",
                                                             client->sasl_conn, awf->len, &outputbuf, &outputlen);
@@ -5210,7 +5242,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                                      * the entire buffer this time.
                                      */
                                     memcpy(&awfsasl->data.buf[0], outputbuf, outputlen);
-                                    FreeArgusWireFmtBuffer(awf);
+                                    ArgusReleaseWireBuffer(awf);
                                     awf = awfsasl;
                                     awf->len = outputlen;
 
@@ -5297,7 +5329,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                         asock->length = 0;
 
                         if (asock->rec != NULL) {
-                           FreeArgusWireFmtBuffer(asock->rec);
+                           ArgusReleaseWireBuffer(asock->rec);
                            asock->rec = NULL;
                         }
                         DrainArgusSocketQueue(client);
@@ -5335,7 +5367,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                               asock->rec = NULL;
                               asock->writen = 0;
                               asock->length = 0;
-                              FreeArgusWireFmtBuffer(awf);
+                              ArgusReleaseWireBuffer(awf);
                               DrainArgusSocketQueue(client);
 
                               count = 0;
@@ -5349,7 +5381,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
                
                if ((asock->writen > 0) && (asock->writen >= asock->length)) {
                   gettimeofday(&list->outputTime, 0L);
-                  FreeArgusWireFmtBuffer(awf);
+                  ArgusReleaseWireBuffer(awf);
                   asock->rec = NULL;
 
                } else {
@@ -5371,7 +5403,7 @@ ArgusWriteOutSocket(struct ArgusOutputStruct *output,
             close(asock->fd);
             asock->fd = -1;
             if (asock->rec != NULL) {
-               FreeArgusWireFmtBuffer(asock->rec);
+               ArgusReleaseWireBuffer(asock->rec);
                asock->rec = NULL;
                asock->writen = 0;
                asock->length = 0;

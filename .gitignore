@@ -47,6 +47,9 @@ include/argus_config.h
 /examples/rahisto/rahisto-updatesql
 /man/man5/ramanage.conf.5
 
+# LLM maintained /docs folder
+/docs
+
 # configured perl scripts
 /examples/*/*.pl
 
@@ -78,6 +81,7 @@ include/argus_config.h
 /pythonlib/swig.stamp
 /pythonlib/argusPython.py
 /pythonlib/argusPython_wrap.c
+/pythonlib/_argusPython.cpython-314-darwin.so
 
 # security-review fuzz harness build artifacts (rebuilt by build.sh / CI, not committed)
 /security-review/fuzz/build/

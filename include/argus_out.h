@@ -795,6 +795,13 @@ struct ArgusEncapsStruct {
    unsigned char *sbuf, *dbuf;
 };
 
+/* Length of the extended wire form, including the word holding both sizes. */
+static inline unsigned int
+ArgusEncapsWords(unsigned short slen, unsigned short dlen)
+{
+   return 4 + (slen + 3) / 4 + (dlen + 3) / 4;
+}
+
 struct ArgusUniStats {
    long long pkts, bytes, appbytes;
 };
