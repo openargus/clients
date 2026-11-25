@@ -1796,7 +1796,9 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                   if (argusend < ((char *)dsr + cnt))
                      break;
 
-                  switch (type & 0x7F) {
+                  /* The decoders below expect TLVs. An immediate DSR has
+                   * only a header, even if its low type bits match a TLV. */
+                  switch (type) {
                      case ARGUS_FLOW_DSR: {
                         struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 

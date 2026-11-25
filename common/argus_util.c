@@ -28446,16 +28446,21 @@ ArgusNtoH (struct ArgusRecord *argus)
             char *end = (char *)argus + (hdr->len * 4);
             int cnt;
             while ((char *) dsr < end) {
-               cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
-                      ((dsr->subtype & ARGUS_LEN_16BITS)  ? ntohs(dsr->argus_dsrvl16.len) :
-                                                                  dsr->argus_dsrvl8.len))) * 4;
+               /* Immediate DSRs occupy one word and have no TLV payload
+                * or length field to byte-swap. */
+               if (dsr->type & ARGUS_IMMEDIATE_DATA) {
+                  dsr++;
+                  continue;
+               }
+               cnt = ((dsr->subtype & ARGUS_LEN_16BITS) ? ntohs(dsr->argus_dsrvl16.len) :
+                                                          dsr->argus_dsrvl8.len) * 4;
                if (cnt == 0)
                   break;
 
                if (end < ((char *)dsr + cnt))
                   break;
 
-               switch (dsr->type & 0x7F) {
+               switch (dsr->type) {
                   case ARGUS_FLOW_DSR: {
                      struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 
@@ -29162,7 +29167,11 @@ ArgusHtoN (struct ArgusRecord *argus)
          if (argus->hdr.len > 1) {
             int cnt;
             while ((char *) dsr < ((char *) argus + (hdr->len * 4))) {
-               switch (dsr->type & 0x7F) {
+               if (dsr->type & ARGUS_IMMEDIATE_DATA) {
+                  dsr++;
+                  continue;
+               }
+               switch (dsr->type) {
                   case ARGUS_FLOW_DSR: {
                      struct ArgusFlow *flow = (struct ArgusFlow *) dsr;
 
@@ -29788,9 +29797,8 @@ ArgusHtoN (struct ArgusRecord *argus)
                   }
                }
 
-               if ((cnt = (((dsr->type & ARGUS_IMMEDIATE_DATA) ? (1 * 4) :
-                           ((dsr->subtype & ARGUS_LEN_16BITS)  ? dsr->argus_dsrvl16.len :
-                                                                 dsr->argus_dsrvl8.len))) * 4) > 0) {
+               if ((cnt = ((dsr->subtype & ARGUS_LEN_16BITS) ? dsr->argus_dsrvl16.len :
+                                                               dsr->argus_dsrvl8.len) * 4) > 0) {
                   if (dsr->subtype & ARGUS_LEN_16BITS)  
                      dsr->argus_dsrvl16.len = htons(dsr->argus_dsrvl16.len);
 
