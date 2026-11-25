@@ -2129,6 +2129,13 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
 // header buffer, then the 4th int holds the sbuf and dbuf lengths. 
 // if these lengths are > 0, then allocate buffers and copy into sbuf, and dbuf ...
 
+                        if (len < tlen)
+                           break;
+                        if (len > 3 && 4 + (encaps->slen + 3) / 4 + (encaps->dlen + 3) / 4 > len)
+                           break;
+
+                        /* Short ENCAPS records omit both lengths and buffers. */
+                        memset(cncaps, 0, sizeof(*cncaps));
                         memcpy((char *) cncaps, (char *) encaps, tlen * 4);
                         if (len > 3) {
                            unsigned char *cptr = (void *) &encaps->sbuf;
@@ -2136,7 +2143,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                               int clen = encaps->slen;
                               cncaps->sbuf = ArgusCanonSrcEncapsBuffer;
                               memcpy(cncaps->sbuf, cptr, clen);
-                              cptr += clen;
+                              cptr += ((clen + 3) / 4) * 4;
 			   }
 			   if (encaps->dlen > 0) {
                               int clen = encaps->dlen;

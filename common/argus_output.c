@@ -2163,6 +2163,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                      case ARGUS_ENCAPS_INDEX: {
                         struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        struct ArgusDSRHeader *hdr = (struct ArgusDSRHeader *) dsrptr;
                         int slen = 0, dlen = 0;
 
                         *dsrptr++ = *(unsigned int *)&encaps->hdr;
@@ -2194,6 +2195,7 @@ ArgusGenerateV3Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               len += dlen;
                            }
                         }
+                        hdr->argus_dsrvl8.len = len;
                         break;
                      }
                   }
@@ -3092,6 +3094,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
 
                      case ARGUS_ENCAPS_INDEX: {
                         struct ArgusEncapsStruct *encaps = (struct ArgusEncapsStruct *) dsr;
+                        struct ArgusDSRHeader *hdr = (struct ArgusDSRHeader *) dsrptr;
                         int slen = 0, dlen = 0;
 
                         *dsrptr++ = *(unsigned int *)&encaps->hdr;
@@ -3123,6 +3126,7 @@ ArgusGenerateV5Record (struct ArgusRecordStruct *rec, unsigned char state, char 
                               len += dlen;
                            }
                         }
+                        hdr->argus_dsrvl8.len = len;
                         break;
                      }
 
