@@ -2847,6 +2847,7 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                      cmac->hdr.subtype = ARGUS_MAC_DSR_BASE;
                                      cmac->hdr.argus_dsrvl8.qual &= ~(ARGUS_MAC_SRC_PRP | ARGUS_MAC_DST_PRP);
                                      cmac->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_BASE_LEN;
+                                     retn->status |= ARGUS_RECORD_MODIFIED;
                                   } else if (cnt > (int)sizeof(canon->mac)) {
                                      cmac->hdr.argus_dsrvl8.len = copylen / 4;
                                   }
@@ -2854,6 +2855,16 @@ ArgusGenerateRecordStruct (struct ArgusParserStruct *parser, struct ArgusInput *
                                break;
                             }
                          }
+                        /* All supported v2 layouts have now been decoded. A malformed
+                         * suffix alone doesn't justify retaining the PRP extension. */
+                        if (cmac->hdr.subtype == ARGUS_MAC_DSR_V2 &&
+                            !canon->macv2.src_prp.lan_a.packets && !canon->macv2.src_prp.lan_b.packets &&
+                            !canon->macv2.dst_prp.lan_a.packets && !canon->macv2.dst_prp.lan_b.packets) {
+                           cmac->hdr.subtype = ARGUS_MAC_DSR_BASE;
+                           cmac->hdr.argus_dsrvl8.len = ARGUS_MAC_DSR_BASE_LEN;
+                           cmac->hdr.argus_dsrvl8.qual &= ~(ARGUS_MAC_SRC_PRP | ARGUS_MAC_DST_PRP);
+                           retn->status |= ARGUS_RECORD_MODIFIED;
+                        }
                         retn->dsrs[ARGUS_MAC_INDEX] = (struct ArgusDSRHeader*)cmac;
                         retn->dsrindex |= (0x01 << ARGUS_MAC_INDEX);
                         break;

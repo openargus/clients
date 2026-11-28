@@ -47,9 +47,9 @@ mkdir -p "$TMPDIR_TEST/home"
 
 # Repack the retained FAR into both pre-pairing formats. The wide form also
 # exercises a counter above UINT_MAX. Pairing was not measured in either.
-if python3 - "$RADSRS_BIN" "$FIXTURE" <<'PY'
+if python3 - "$RADSRS_BIN" "$FIXTURE" "$TMPDIR_TEST/empty-prp.argus" <<'PY'
 import json, struct, subprocess, sys
-exe, fixture = sys.argv[1:]
+exe, fixture, empty_path = sys.argv[1:]
 data = open(fixture, 'rb').read()
 start = 4 * struct.unpack_from('!H', data, 2)[0]
 far = data[start:]
@@ -70,12 +70,26 @@ for fmt, count in [('!III', 4000000000), ('!IQQ', 5000000000)]:
         d = prp[key]
         assert (int(d['lan_a']['packets']), int(d['lan_b']['packets'])) == (a,b)
         assert d['matched_pairs'] is None and d['skew_sum_us'] is None
+
+# Malformed-only observations in every supported v2 layout. Keep both legacy
+# multipath bits set to check that the repair clears only PRP qualifiers.
+with open(empty_path, 'wb') as output:
+    output.write(data[:start])
+    for fmt in ('!III', '!IQQ', '!IIIIq', '!IQQQq'):
+        side = struct.pack('!I', 4) + bytes(struct.calcsize(fmt) - 4)
+        mac = bytearray(far[off:off+20]) + side * 2
+        mac[2:4] = bytes((0x0f, len(mac)//4))
+        record = bytearray(far[:off] + mac + far[off+68:])
+        struct.pack_into('!H', record, 2, len(record)//4)
+        output.write(record)
 PY
 then
    pass "decoded historical MAC v2 counts without inventing pairing measurements"
 else
    fail "legacy MAC v2 decode failed"
 fi
+
+"$RA_BIN" -X -r "$TMPDIR_TEST/empty-prp.argus" -w "$TMPDIR_TEST/repaired.argus" || fail "ra could not rewrite empty PRP records"
 
 if HOME="$TMPDIR_TEST/home" "$RADSRS_BIN" -X -r "$FIXTURE" >"$JSON_OUTPUT" 2>"$TMPDIR_TEST/radsrs.log"; then
    pass "radsrs processed the compact sensor PRP MAC-v2 fixture"
@@ -219,7 +233,7 @@ fi
 
 if python3 - "$FIXTURE" "$JSON_OUTPUT" "$ROUNDTRIP_OUTPUT" "$REVERSE_OUTPUT" \
                "$ONE_WAY_FIXTURE" "$ONE_WAY_REVERSE_OUTPUT" "$AGGREGATE_OUTPUT" \
-               "$AGGREGATE_JSON_OUTPUT" <<'PY'
+               "$AGGREGATE_JSON_OUTPUT" "$TMPDIR_TEST/repaired.argus" <<'PY'
 import base64
 import json
 import struct
@@ -234,6 +248,7 @@ import sys
     one_way_reverse_path,
     aggregate_path,
     aggregate_json_path,
+    repaired_path,
 ) = sys.argv[1:]
 
 SENSOR_MAC_WORDS = 17
@@ -364,6 +379,11 @@ if len(fixture_flows) != 1:
     raise AssertionError("fixture must contain exactly one flow record")
 fixture_flow = fixture_flows[0]
 fixture_mac = mac_dsr(fixture_flow, SENSOR_MAC_WORDS)
+repaired = flow_records(records(repaired_path))
+assert len(repaired) == 4
+for record in repaired:
+    mac, = [d for d in record['dsrs'] if d['type'] == 0x42]
+    assert mac['raw'] == bytes((0x42, 0, 3, 5)) + fixture_mac['raw'][4:20]
 if (fixture_mac["type"], fixture_mac["qualifier"]) != (0x42, 0x0c):
     raise AssertionError("unexpected compact MAC-v2 fixture header")
 sensor_src, sensor_dst = sensor_directions(fixture_mac["raw"])
